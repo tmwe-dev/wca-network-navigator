@@ -27,10 +27,7 @@ const FALLBACK_IDENTITY: IdentityRow = {
   content: `Sei il Direttore Operativo del CRM WCA. Italiano, diretto. Usa i tool quando servono. Se manca contesto chiedi.`,
 };
 
-export async function loadIdentity(
-  supabase: SupabaseClient,
-  scope: string,
-): Promise<IdentityRow> {
+export async function loadIdentity(supabase: SupabaseClient, scope: string): Promise<IdentityRow> {
   const cached = cache.get(scope);
   if (cached && cached.expires > Date.now()) return cached.data;
 

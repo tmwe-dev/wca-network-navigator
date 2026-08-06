@@ -6,11 +6,13 @@ tags: [operative, procedures, email, quote, quote-request]
 # Risposta a richiesta preventivo
 
 ## Obiettivo
+
 Rispondere a richieste di preventivo (quote) in modo professionale, completo e orientato alla conversione.
 
 ## Come strutturare un preventivo
 
 ### Elementi obbligatori
+
 1. **Conferma ricezione richiesta**: "Grazie per il tuo interesse. Ho ricevuto i dettagli..."
 2. **Recap dei parametri**: Ripeti back quello che hai compreso (quantità, tempi, zone geografiche)
 3. **Proposta tariffaria**: Presenta tariffe con chiarezza, includi:
@@ -23,11 +25,13 @@ Rispondere a richieste di preventivo (quote) in modo professionale, completo e o
 6. **Call to action**: Una sola azione chiara ("Confermo questa offerta?")
 
 ### Tono professionale
+
 - Preciso e concreto: dati reali, non promesse vaghe
 - Consultivo: aiuta il cliente a capire il valore
 - Accogliente: disponibile per chiarimenti
 
 ## Elemento chiave
+
 Non dare mai tariffe in prima battuta senza una conversazione. Se il cliente chiede solo prezzo senza contesto, rispondi con: "Per proporre il prezzo più competitivo, ho bisogno di capire meglio i vostri volumi e tempi. Possiamo fare una chiamata breve?"
 
 ## Esempio template
@@ -51,7 +55,9 @@ Volete confermarlo o approfondire qualche aspetto?
 ```
 
 ## Escalation
+
 Se il cliente dice "È troppo caro":
+
 - Non fare sconto immediato
 - Riforma il valore totale, non il prezzo unitario
 - Chiedi: "Quali sono i costi nascosti nel vostro ciclo attuale? (es. stoccaggio, ritardi, resi)"

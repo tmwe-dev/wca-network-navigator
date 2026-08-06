@@ -15,20 +15,34 @@ interface CircuitBreaker {
 }
 
 function createCircuitBreaker(threshold = 5, cooldownMs = 60_000): CircuitBreaker {
-  return { state: "closed", failureCount: 0, lastFailureTime: 0, threshold, cooldownMs, halfOpenSuccessNeeded: 2, halfOpenSuccessCount: 0 };
+  return {
+    state: "closed",
+    failureCount: 0,
+    lastFailureTime: 0,
+    threshold,
+    cooldownMs,
+    halfOpenSuccessNeeded: 2,
+    halfOpenSuccessCount: 0,
+  };
 }
 
 function recordSuccess(cb: CircuitBreaker): void {
   if (cb.state === "half_open") {
     cb.halfOpenSuccessCount++;
     if (cb.halfOpenSuccessCount >= cb.halfOpenSuccessNeeded) {
-      cb.state = "closed"; cb.failureCount = 0; cb.halfOpenSuccessCount = 0;
+      cb.state = "closed";
+      cb.failureCount = 0;
+      cb.halfOpenSuccessCount = 0;
     }
-  } else { cb.failureCount = 0; }
+  } else {
+    cb.failureCount = 0;
+  }
 }
 
 function recordFailure(cb: CircuitBreaker): void {
-  cb.failureCount++; cb.lastFailureTime = Date.now(); cb.halfOpenSuccessCount = 0;
+  cb.failureCount++;
+  cb.lastFailureTime = Date.now();
+  cb.halfOpenSuccessCount = 0;
   if (cb.state === "half_open") cb.state = "open";
   else if (cb.failureCount >= cb.threshold) cb.state = "open";
 }
@@ -36,7 +50,11 @@ function recordFailure(cb: CircuitBreaker): void {
 function canAttempt(cb: CircuitBreaker): boolean {
   if (cb.state === "closed") return true;
   if (cb.state === "open") {
-    if (Date.now() - cb.lastFailureTime >= cb.cooldownMs) { cb.state = "half_open"; cb.halfOpenSuccessCount = 0; return true; }
+    if (Date.now() - cb.lastFailureTime >= cb.cooldownMs) {
+      cb.state = "half_open";
+      cb.halfOpenSuccessCount = 0;
+      return true;
+    }
     return false;
   }
   return true;
@@ -57,9 +75,12 @@ describe("Circuit Breaker", () => {
 
   it("opens after threshold failures", () => {
     const cb = createCircuitBreaker(3);
-    recordFailure(cb); expect(cb.state).toBe("closed");
-    recordFailure(cb); expect(cb.state).toBe("closed");
-    recordFailure(cb); expect(cb.state).toBe("open");
+    recordFailure(cb);
+    expect(cb.state).toBe("closed");
+    recordFailure(cb);
+    expect(cb.state).toBe("closed");
+    recordFailure(cb);
+    expect(cb.state).toBe("open");
     expect(canAttempt(cb)).toBe(false);
   });
 
@@ -85,17 +106,21 @@ describe("Circuit Breaker", () => {
 
   it("closes from half_open after enough successes", () => {
     const cb = createCircuitBreaker(2, 100);
-    recordFailure(cb); recordFailure(cb);
+    recordFailure(cb);
+    recordFailure(cb);
     cb.lastFailureTime = Date.now() - 200;
     canAttempt(cb); // triggers half_open
     expect(cb.state).toBe("half_open");
-    recordSuccess(cb); expect(cb.state).toBe("half_open");
-    recordSuccess(cb); expect(cb.state).toBe("closed");
+    recordSuccess(cb);
+    expect(cb.state).toBe("half_open");
+    recordSuccess(cb);
+    expect(cb.state).toBe("closed");
   });
 
   it("re-opens from half_open on failure", () => {
     const cb = createCircuitBreaker(2, 100);
-    recordFailure(cb); recordFailure(cb);
+    recordFailure(cb);
+    recordFailure(cb);
     cb.lastFailureTime = Date.now() - 200;
     canAttempt(cb);
     expect(cb.state).toBe("half_open");

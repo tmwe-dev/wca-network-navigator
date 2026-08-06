@@ -30,8 +30,17 @@ interface TutorialChapterProps {
 }
 
 const TutorialChapter = ({
-  chapter, area, icon: Icon, title, subtitle, path, description,
-  operations, tests, screenshotContent, reversed = false,
+  chapter,
+  area,
+  icon: Icon,
+  title,
+  subtitle,
+  path,
+  description,
+  operations,
+  tests,
+  screenshotContent,
+  reversed = false,
 }: TutorialChapterProps) => (
   <SectionWrapper className="bg-[#0a0a0f]">
     <div className="space-y-10">
@@ -99,7 +108,9 @@ const TutorialChapter = ({
                 <p className="text-white/70">{t.action}</p>
                 <p className="flex items-start gap-1.5 text-white/50 mt-0.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-success mt-0.5 shrink-0" />
-                  <span><span className="text-success font-medium">Atteso:</span> {t.expect}</span>
+                  <span>
+                    <span className="text-success font-medium">Atteso:</span> {t.expect}
+                  </span>
                 </p>
               </div>
             </li>

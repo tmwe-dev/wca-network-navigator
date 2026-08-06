@@ -1,6 +1,7 @@
 # Test Strategy
 
 ## Piramide
+
 - **Unit (vitest)** — DAL (`src/data/`), utility (`src/lib/`), reducer, helper puri. Target: 80% line coverage.
 - **Component (vitest + RTL)** — atomi/molecole. Target: smoke render + interaction principali.
 - **Integration (vitest)** — hook + DAL + Supabase wrapper. Mock `supabase` client.
@@ -10,6 +11,7 @@
 - **A11y (axe-core su E2E)** — route pubbliche + 5 critical.
 
 ## Security tests
+
 - `e2e/auth-guard.spec.ts` — protezione route.
 - `e2e/mailbox-access-guard.spec.ts` — ownership server-side.
 - `e2e/lead-status-guard.spec.ts` — transizioni controllate.
@@ -17,9 +19,11 @@
 - `e2e/prompt-injection-high-block.spec.ts` — block AI su pattern HIGH.
 
 ## AI tests
+
 - `prompt-test-runner` — regression su `prompt_test_cases`.
 - AI Lab — eval flow campaign output.
 
 ## CI gating
+
 Bloccanti: unit + edge + smoke E2E + a11y + bundle + lint + typecheck strict + debt budget + function-auth.
 Non bloccanti (warn): Lighthouse, i18n parity (eccetto inferiore a soglia).

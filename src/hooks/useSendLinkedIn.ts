@@ -130,7 +130,10 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
     }
     setSending(true);
     try {
-      const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
+      const note = draft.body
+        .replace(/<[^>]+>/g, "")
+        .trim()
+        .slice(0, 300);
       await enqueue({
         action_type: "linkedin_connect",
         partner_id: null,

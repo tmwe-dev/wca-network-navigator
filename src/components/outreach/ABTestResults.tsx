@@ -11,14 +11,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ABTestCreator } from "./ABTestCreator";
 
-function VariantColumn({ label, sent, responses, rate, isWinner }: {
-  label: string; sent: number; responses: number; rate: number; isWinner: boolean;
+function VariantColumn({
+  label,
+  sent,
+  responses,
+  rate,
+  isWinner,
+}: {
+  label: string;
+  sent: number;
+  responses: number;
+  rate: number;
+  isWinner: boolean;
 }) {
   return (
-    <div className={cn(
-      "flex-1 rounded-lg border p-3 space-y-2 transition-colors",
-      isWinner ? "border-yellow-500/50 bg-yellow-500/5" : "border-border/60 bg-card/30"
-    )}>
+    <div
+      className={cn(
+        "flex-1 rounded-lg border p-3 space-y-2 transition-colors",
+        isWinner ? "border-yellow-500/50 bg-yellow-500/5" : "border-border/60 bg-card/30",
+      )}
+    >
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-muted-foreground uppercase">{label}</span>
         {isWinner && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
@@ -52,7 +64,8 @@ function TestCard({ test, onComplete }: { test: ABTestRow; onComplete: (id: stri
   const variantBText = Object.values(test.variant_b)[0] || "—";
   const isSignificant = test.confidence_level >= 95;
   const StatusIcon = test.status === "completed" ? CheckCircle2 : test.status === "cancelled" ? XCircle : Clock;
-  const statusColor = test.status === "completed" ? "text-green-500" : test.status === "cancelled" ? "text-red-500" : "text-amber-500";
+  const statusColor =
+    test.status === "completed" ? "text-green-500" : test.status === "cancelled" ? "text-red-500" : "text-amber-500";
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/50 p-4 space-y-3">
@@ -60,7 +73,9 @@ function TestCard({ test, onComplete }: { test: ABTestRow; onComplete: (id: stri
         <div className="flex items-center gap-2">
           <FlaskConical className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">{test.test_name}</span>
-          <Badge variant="outline" className="text-[10px] h-5">{test.test_type}</Badge>
+          <Badge variant="outline" className="text-[10px] h-5">
+            {test.test_type}
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
           <StatusIcon className={cn("w-3.5 h-3.5", statusColor)} />
@@ -76,14 +91,29 @@ function TestCard({ test, onComplete }: { test: ABTestRow; onComplete: (id: stri
 
       {/* Results */}
       <div className="flex gap-3">
-        <VariantColumn label="Variante A" sent={test.total_sent_a} responses={test.responses_a} rate={test.open_rate_a} isWinner={test.winner === "a"} />
-        <VariantColumn label="Variante B" sent={test.total_sent_b} responses={test.responses_b} rate={test.open_rate_b} isWinner={test.winner === "b"} />
+        <VariantColumn
+          label="Variante A"
+          sent={test.total_sent_a}
+          responses={test.responses_a}
+          rate={test.open_rate_a}
+          isWinner={test.winner === "a"}
+        />
+        <VariantColumn
+          label="Variante B"
+          sent={test.total_sent_b}
+          responses={test.responses_b}
+          rate={test.open_rate_b}
+          isWinner={test.winner === "b"}
+        />
       </div>
 
       {/* Confidence */}
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground">
-          Confidenza: <span className={cn("font-semibold", isSignificant ? "text-green-500" : "text-foreground")}>{test.confidence_level}%</span>
+          Confidenza:{" "}
+          <span className={cn("font-semibold", isSignificant ? "text-green-500" : "text-foreground")}>
+            {test.confidence_level}%
+          </span>
           {isSignificant && <span className="ml-1.5 text-green-500">✓ Significativo</span>}
         </div>
         {test.status === "running" && (
@@ -114,7 +144,7 @@ export function ABTestResults() {
 
   const completeMutation = useMutation({
     mutationFn: async (testId: string) => {
-      const test = tests.find(t => t.id === testId);
+      const test = tests.find((t) => t.id === testId);
       if (!test) return;
       const winner: "a" | "b" = test.open_rate_a >= test.open_rate_b ? "a" : "b";
       await completeAbTest(testId, winner);
@@ -126,7 +156,11 @@ export function ABTestResults() {
   });
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-12"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   if (tests.length === 0) {
@@ -148,7 +182,7 @@ export function ABTestResults() {
           </h2>
           <ABTestCreator />
         </div>
-        {tests.map(t => (
+        {tests.map((t) => (
           <TestCard key={t.id} test={t} onComplete={(id) => completeMutation.mutate(id)} />
         ))}
       </div>

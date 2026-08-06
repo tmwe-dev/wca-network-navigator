@@ -53,11 +53,7 @@ function isEvidenceBacked(term: string, normalizedSource: string): boolean {
   return normalizedSource.includes(normalizeForEvidence(cleanTerm));
 }
 
-function replaceUnbackedTerm(
-  text: string,
-  term: string,
-  replacement: string,
-): { text: string; changed: boolean } {
+function replaceUnbackedTerm(text: string, term: string, replacement: string): { text: string; changed: boolean } {
   const pattern = new RegExp(`\\b${escapeRegExp(term)}\\b`, "g");
   const next = text.replace(pattern, replacement);
   return { text: next, changed: next !== text };

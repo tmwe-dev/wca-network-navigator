@@ -5,9 +5,7 @@
 
 import { supabase } from "./supabaseClient.ts";
 
-async function resolvePartnerId(
-  args: Record<string, unknown>
-): Promise<{ id: string; name: string } | null> {
+async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
   if (args.partner_id) {
     const { data } = await supabase
       .from("partners")
@@ -28,15 +26,11 @@ async function resolvePartnerId(
   return null;
 }
 
-export async function handleManagePartnerContact(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleManagePartnerContact(args: Record<string, unknown>): Promise<unknown> {
   const action = String(args.action);
   if (action === "delete" && args.contact_id) {
     const { error } = await supabase.from("partner_contacts").delete().eq("id", args.contact_id);
-    return error
-      ? { error: error.message }
-      : { success: true, message: "Contatto eliminato." };
+    return error ? { error: error.message } : { success: true, message: "Contatto eliminato." };
   }
   if (action === "update" && args.contact_id) {
     const updates: Record<string, unknown> = {};
@@ -45,13 +39,8 @@ export async function handleManagePartnerContact(
     if (args.email) updates.email = args.email;
     if (args.direct_phone) updates.direct_phone = args.direct_phone;
     if (args.mobile) updates.mobile = args.mobile;
-    const { error } = await supabase
-      .from("partner_contacts")
-      .update(updates)
-      .eq("id", args.contact_id);
-    return error
-      ? { error: error.message }
-      : { success: true, message: "Contatto aggiornato." };
+    const { error } = await supabase.from("partner_contacts").update(updates).eq("id", args.contact_id);
+    return error ? { error: error.message } : { success: true, message: "Contatto aggiornato." };
   }
   if (action === "add") {
     let pid = args.partner_id as string;
@@ -66,9 +55,7 @@ export async function handleManagePartnerContact(
       title: args.title ? String(args.title) : null,
       email: args.email ? String(args.email) : null,
     });
-    return error
-      ? { error: error.message }
-      : { success: true, message: `Contatto "${args.name}" aggiunto.` };
+    return error ? { error: error.message } : { success: true, message: `Contatto "${args.name}" aggiunto.` };
   }
   return { error: "Azione non valida" };
 }

@@ -29,13 +29,7 @@ export function FilterSection({
   );
 }
 
-export function ChipGroup({
-  children,
-  columns,
-}: {
-  children: React.ReactNode;
-  columns?: 2 | 3;
-}) {
+export function ChipGroup({ children, columns }: { children: React.ReactNode; columns?: 2 | 3 }) {
   if (columns) {
     const colsClass = columns === 2 ? "grid-cols-2" : "grid-cols-3";
     return <div className={cn("grid gap-1.5", colsClass)}>{children}</div>;
@@ -62,7 +56,7 @@ export function Chip({
         block && "w-full",
         active
           ? "bg-primary/15 border-primary text-primary shadow-sm shadow-primary/10"
-          : "border-border/60 bg-background/40 text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:border-border"
+          : "border-border/60 bg-background/40 text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:border-border",
       )}
     >
       {children}

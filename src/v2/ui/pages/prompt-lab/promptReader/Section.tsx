@@ -3,7 +3,10 @@ import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Section({
-  title, meta, children, onCopy,
+  title,
+  meta,
+  children,
+  onCopy,
 }: {
   title: string;
   meta?: string;

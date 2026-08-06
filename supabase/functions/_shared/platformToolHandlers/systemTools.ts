@@ -2,7 +2,15 @@
  * systemTools.ts — Business cards, blacklist, and operations dashboard.
  */
 import { escapeLike } from "../sqlEscape.ts";
-import { supabase, type CountryStatRow, type DirectoryCountRow, type DownloadJobRow, type EmailQueueRow, type AgentTaskRow, type ActivityRow } from "../platformToolHelpers.ts";
+import {
+  supabase,
+  type CountryStatRow,
+  type DirectoryCountRow,
+  type DownloadJobRow,
+  type EmailQueueRow,
+  type AgentTaskRow,
+  type ActivityRow,
+} from "../platformToolHelpers.ts";
 
 export async function executeSystemToolHandler(
   name: string,
@@ -31,10 +39,7 @@ export async function executeSystemToolHandler(
       ]);
       const rows = (statsRes.data || []) as CountryStatRow[];
       const totals = rows.reduce(
-        (
-          acc: { partners: number; with_profile: number; with_email: number },
-          r: CountryStatRow,
-        ) => ({
+        (acc: { partners: number; with_profile: number; with_email: number }, r: CountryStatRow) => ({
           partners: acc.partners + (Number(r.total_partners) || 0),
           with_profile: acc.with_profile + (Number(r.with_profile) || 0),
           with_email: acc.with_email + (Number(r.with_email) || 0),
@@ -93,9 +98,7 @@ export async function executeSystemToolHandler(
       ]);
       return {
         downloads: {
-          active: (dlJobs.data || []).filter((j: DownloadJobRow) =>
-            ["running", "pending"].includes(j.status),
-          ).length,
+          active: (dlJobs.data || []).filter((j: DownloadJobRow) => ["running", "pending"].includes(j.status)).length,
           jobs: (dlJobs.data || []).map((j: DownloadJobRow) => ({
             id: j.id,
             country: j.country_name,
@@ -108,9 +111,7 @@ export async function executeSystemToolHandler(
           sent: (emailQ.data || []).filter((e: EmailQueueRow) => e.status === "sent").length,
         },
         agent_tasks: {
-          running: (agTasks.data || []).filter((t: AgentTaskRow) =>
-            ["pending", "running"].includes(t.status),
-          ).length,
+          running: (agTasks.data || []).filter((t: AgentTaskRow) => ["pending", "running"].includes(t.status)).length,
           recent: (agTasks.data || []).slice(0, 8),
         },
         activities: {

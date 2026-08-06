@@ -25,14 +25,7 @@ function timeAgo(iso: string): string {
   return `${days}g fa`;
 }
 
-export default function ConversationSidebar({
-  conversations,
-  activeId,
-  collapsed,
-  onSelect,
-  onNew,
-  onArchive,
-}: Props) {
+export default function ConversationSidebar({ conversations, activeId, collapsed, onSelect, onNew, onArchive }: Props) {
   return (
     <AnimatePresence>
       {!collapsed && (
@@ -59,9 +52,7 @@ export default function ConversationSidebar({
             {conversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-4">
                 <MessageSquare className="w-6 h-6 text-muted-foreground mb-3" />
-                <p className="text-[11px] text-muted-foreground font-light">
-                  Nessuna conversazione
-                </p>
+                <p className="text-[11px] text-muted-foreground font-light">Nessuna conversazione</p>
               </div>
             ) : (
               <div className="space-y-0.5">
@@ -78,24 +69,18 @@ export default function ConversationSidebar({
                   >
                     <MessageSquare
                       className={`w-3 h-3 flex-shrink-0 ${
-                        c.id === activeId
-                          ? "text-primary"
-                          : "text-muted-foreground"
+                        c.id === activeId ? "text-primary" : "text-muted-foreground"
                       }`}
                     />
                     <div className="flex-1 min-w-0">
                       <p
                         className={`text-[11px] truncate ${
-                          c.id === activeId
-                            ? "text-foreground"
-                            : "text-foreground"
+                          c.id === activeId ? "text-foreground" : "text-foreground"
                         } font-light`}
                       >
                         {c.title || "Senza titolo"}
                       </p>
-                      <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
-                        {timeAgo(c.last_message_at)}
-                      </p>
+                      <p className="text-[9px] text-muted-foreground font-mono mt-0.5">{timeAgo(c.last_message_at)}</p>
                     </div>
                     <button
                       onClick={(e) => {

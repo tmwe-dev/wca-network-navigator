@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  EDGE_ERROR_CODES,
-  parseEdgeErrorBody,
-  toEdgeErrorCode,
-} from "@/lib/api/edgeErrorContract";
+import { EDGE_ERROR_CODES, parseEdgeErrorBody, toEdgeErrorCode } from "@/lib/api/edgeErrorContract";
 
 describe("edgeErrorContract", () => {
   it("riconosce tutti i codici canonici", () => {
@@ -14,9 +10,7 @@ describe("edgeErrorContract", () => {
   });
 
   it("parsa il contratto canonico { error, code, details }", () => {
-    expect(
-      parseEdgeErrorBody({ error: "no_password", code: "INTERNAL_ERROR", details: "imap" }),
-    ).toEqual({
+    expect(parseEdgeErrorBody({ error: "no_password", code: "INTERNAL_ERROR", details: "imap" })).toEqual({
       code: "INTERNAL_ERROR",
       rawCode: "INTERNAL_ERROR",
       message: "no_password",

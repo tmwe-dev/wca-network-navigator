@@ -14,12 +14,14 @@ export async function executePartnerToolHandler(
   switch (name) {
     case "search_partners": {
       const isCount = !!args.count_only;
-      let query = supabase.from("partners").select(
-        isCount
-          ? "id"
-          : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, profile_description, is_favorite, office_type, lead_status",
-        isCount ? { count: "exact", head: true } : undefined,
-      );
+      let query = supabase
+        .from("partners")
+        .select(
+          isCount
+            ? "id"
+            : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, profile_description, is_favorite, office_type, lead_status",
+          isCount ? { count: "exact", head: true } : undefined,
+        );
       if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
       if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
       if (args.search_name) query = query.ilike("company_name", `%${escapeLike(String(args.search_name))}%`);
@@ -66,11 +68,7 @@ export async function executePartnerToolHandler(
     case "get_partner_detail": {
       let partner: PartnerSummary | null = null;
       if (args.partner_id) {
-        const { data } = await supabase
-          .from("partners")
-          .select("*")
-          .eq("id", args.partner_id)
-          .single();
+        const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single();
         partner = data as PartnerSummary | null;
       } else if (args.company_name) {
         const { data } = await supabase

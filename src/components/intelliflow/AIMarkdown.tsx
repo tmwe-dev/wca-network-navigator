@@ -48,7 +48,9 @@ export default function AIMarkdown({ content }: Props) {
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.text}</ReactMarkdown>
           </div>
         ) : (
-          <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>{seg.text}</ReactMarkdown>
+          <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>
+            {seg.text}
+          </ReactMarkdown>
         ),
       )}
     </>

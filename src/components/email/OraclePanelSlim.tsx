@@ -156,7 +156,9 @@ export function OraclePanelSlim({
                     <FileText className="w-4 h-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-[10px]">Template</TooltipContent>
+                <TooltipContent side="bottom" className="text-[10px]">
+                  Template
+                </TooltipContent>
               </Tooltip>
 
               <Tooltip>
@@ -177,7 +179,9 @@ export function OraclePanelSlim({
                     <ImageIcon className="w-4 h-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-[10px]">Immagini</TooltipContent>
+                <TooltipContent side="bottom" className="text-[10px]">
+                  Immagini
+                </TooltipContent>
               </Tooltip>
             </>
           )}

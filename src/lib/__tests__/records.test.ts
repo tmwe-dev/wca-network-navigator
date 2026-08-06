@@ -27,10 +27,7 @@ describe("records — narrowing runtime", () => {
   });
 
   it("toRecords scarta gli elementi non-record (fail closed)", () => {
-    expect(toRecords([{ a: 1 }, null, 3, [4], new Date(), { b: 2 }])).toEqual([
-      { a: 1 },
-      { b: 2 },
-    ]);
+    expect(toRecords([{ a: 1 }, null, 3, [4], new Date(), { b: 2 }])).toEqual([{ a: 1 }, { b: 2 }]);
   });
 
   it("toRecords ritorna [] per input non-array", () => {

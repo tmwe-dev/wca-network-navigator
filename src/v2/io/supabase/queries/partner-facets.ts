@@ -25,13 +25,11 @@ export async function fetchPartnerFacets(): Promise<Result<PartnerFacets, AppErr
       return err(ioError("DATABASE_ERROR", countriesRes.error.message, {}, "fetchPartnerFacets"));
     }
 
-    const uniqueCountries = [...new Set(
-      (countriesRes.data ?? []).map((r) => r.country_code).filter(Boolean)
-    )].sort();
+    const uniqueCountries = [...new Set((countriesRes.data ?? []).map((r) => r.country_code).filter(Boolean))].sort();
 
-    const uniqueCities = [...new Set(
-      (citiesRes.data ?? []).map((r) => r.city).filter((c): c is string => c != null && c !== "")
-    )].sort();
+    const uniqueCities = [
+      ...new Set((citiesRes.data ?? []).map((r) => r.city).filter((c): c is string => c != null && c !== "")),
+    ].sort();
 
     const rawTypes = (typesRes.data ?? []).map((r) => r.partner_type);
     const uniqueTypes: string[] = [...new Set(rawTypes.filter((t): t is NonNullable<typeof t> => t != null))];

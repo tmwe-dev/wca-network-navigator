@@ -22,7 +22,9 @@ export function BCACreateContact({ card }: Props) {
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [partnerResults, setPartnerResults] = useState<Array<{ id: string; company_name: string; country_code?: string; city?: string }>>([]);
+  const [partnerResults, setPartnerResults] = useState<
+    Array<{ id: string; company_name: string; country_code?: string; city?: string }>
+  >([]);
   const [_searching, setSearching] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(card.matched_partner_id);
 
@@ -47,9 +49,14 @@ export function BCACreateContact({ card }: Props) {
     setSearching(true);
     try {
       const data = await searchPartnersByNameAlias(form.company_name.trim(), "id, company_name, country_code, city");
-      setPartnerResults((data ?? []) as unknown as Array<{ id: string; company_name: string; country_code?: string; city?: string }>);
-    } catch { /* ignore */ }
-    finally { setSearching(false); }
+      setPartnerResults(
+        (data ?? []) as unknown as Array<{ id: string; company_name: string; country_code?: string; city?: string }>,
+      );
+    } catch {
+      /* ignore */
+    } finally {
+      setSearching(false);
+    }
   }, [form.company_name]);
 
   const handleCreate = useCallback(async () => {
@@ -83,14 +90,24 @@ export function BCACreateContact({ card }: Props) {
       setShowForm(false);
     } catch (e: unknown) {
       toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
-    } finally { setCreating(false); }
+    } finally {
+      setCreating(false);
+    }
   }, [form, selectedPartnerId, card, qc]);
 
   if (card.matched_contact_id) return null;
 
   if (!showForm) {
     return (
-      <Button variant="outline" size="sm" className="w-full text-xs gap-2 border-emerald-500/20 hover:bg-emerald-500/10 text-emerald-400" onClick={() => { setShowForm(true); searchPartners(); }}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full text-xs gap-2 border-emerald-500/20 hover:bg-emerald-500/10 text-emerald-400"
+        onClick={() => {
+          setShowForm(true);
+          searchPartners();
+        }}
+      >
         <UserPlus className="w-3.5 h-3.5" /> Crea Contatto
       </Button>
     );
@@ -107,8 +124,18 @@ export function BCACreateContact({ card }: Props) {
           <Input
             key={field}
             value={form[field]}
-            onChange={(e) => setForm(prev => ({ ...prev, [field]: e.target.value }))}
-            placeholder={field === "name" ? "Nome" : field === "company_name" ? "Azienda" : field === "email" ? "Email" : field === "phone" ? "Telefono" : "Posizione"}
+            onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
+            placeholder={
+              field === "name"
+                ? "Nome"
+                : field === "company_name"
+                  ? "Azienda"
+                  : field === "email"
+                    ? "Email"
+                    : field === "phone"
+                      ? "Telefono"
+                      : "Posizione"
+            }
             className="h-7 text-xs"
           />
         ))}
@@ -119,9 +146,14 @@ export function BCACreateContact({ card }: Props) {
         <div className="space-y-1">
           <p className="text-[10px] text-muted-foreground">Partner simili trovati:</p>
           {partnerResults.slice(0, 3).map((p) => (
-            <button key={p.id}
-              className={cn("w-full text-left px-2 py-1.5 rounded-md border transition-colors text-xs",
-                selectedPartnerId === p.id ? "bg-primary/15 border-primary/30 text-primary" : "border-border/30 hover:bg-muted/50")}
+            <button
+              key={p.id}
+              className={cn(
+                "w-full text-left px-2 py-1.5 rounded-md border transition-colors text-xs",
+                selectedPartnerId === p.id
+                  ? "bg-primary/15 border-primary/30 text-primary"
+                  : "border-border/30 hover:bg-muted/50",
+              )}
               onClick={() => setSelectedPartnerId(p.id === selectedPartnerId ? null : p.id)}
             >
               <div className="flex items-center gap-2">
@@ -139,7 +171,9 @@ export function BCACreateContact({ card }: Props) {
           {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
           Conferma
         </Button>
-        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowForm(false)}>Annulla</Button>
+        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowForm(false)}>
+          Annulla
+        </Button>
       </div>
     </div>
   );

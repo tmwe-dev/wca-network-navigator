@@ -51,84 +51,115 @@ export function useCommandRealtime(): RealtimeSnapshot {
     let userId: string | null = null;
 
     const setup = async () => {
-      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+      const { data } = await supabase.auth.getSession().then((r) => ({ data: { user: r.data.session?.user ?? null } }));
       userId = data.user?.id ?? null;
       if (!userId || !mountedRef.current) return;
 
       const channel = supabase
         .channel("command_live")
         // download_jobs
-        .on("postgres_changes", { event: "*", schema: "public", table: "download_jobs", filter: `user_id=eq.${userId}` }, (payload) => {
-          if (!mountedRef.current) return;
-          const row = (payload.new ?? payload.old) as Record<string, unknown>;
-          const status = String(row?.status ?? "running");
-          setActivities((prev) => pushActivity(prev, {
-            id: `dj-${String(row?.id ?? "")}`,
-            kind: "scrape",
-            label: `Download · ${String(row?.country_code ?? row?.target ?? "")}`,
-            detail: `${status}${row?.progress ? ` · ${row.progress}%` : ""}`,
-            status: status === "completed" ? "success" : status === "failed" ? "error" : "running",
-            ts: Date.now(),
-          }));
-          setJobUpdates((n) => n + 1);
-        })
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "download_jobs", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (!mountedRef.current) return;
+            const row = (payload.new ?? payload.old) as Record<string, unknown>;
+            const status = String(row?.status ?? "running");
+            setActivities((prev) =>
+              pushActivity(prev, {
+                id: `dj-${String(row?.id ?? "")}`,
+                kind: "scrape",
+                label: `Download · ${String(row?.country_code ?? row?.target ?? "")}`,
+                detail: `${status}${row?.progress ? ` · ${row.progress}%` : ""}`,
+                status: status === "completed" ? "success" : status === "failed" ? "error" : "running",
+                ts: Date.now(),
+              }),
+            );
+            setJobUpdates((n) => n + 1);
+          },
+        )
         // outreach_queue
-        .on("postgres_changes", { event: "*", schema: "public", table: "outreach_queue", filter: `user_id=eq.${userId}` }, (payload) => {
-          if (!mountedRef.current) return;
-          const row = (payload.new ?? payload.old) as Record<string, unknown>;
-          const status = String(row?.status ?? "");
-          if (!["sent", "failed", "delivered", "replied"].includes(status)) return;
-          setActivities((prev) => pushActivity(prev, {
-            id: `oq-${String(row?.id ?? "")}`,
-            kind: "outreach",
-            label: `Outreach · ${String(row?.recipient_email ?? "")}`.slice(0, 44),
-            detail: status,
-            status: status === "sent" || status === "delivered" ? "success" : status === "replied" ? "success" : "error",
-            ts: Date.now(),
-          }));
-          setOutreachUpdates((n) => n + 1);
-        })
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "outreach_queue", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (!mountedRef.current) return;
+            const row = (payload.new ?? payload.old) as Record<string, unknown>;
+            const status = String(row?.status ?? "");
+            if (!["sent", "failed", "delivered", "replied"].includes(status)) return;
+            setActivities((prev) =>
+              pushActivity(prev, {
+                id: `oq-${String(row?.id ?? "")}`,
+                kind: "outreach",
+                label: `Outreach · ${String(row?.recipient_email ?? "")}`.slice(0, 44),
+                detail: status,
+                status:
+                  status === "sent" || status === "delivered" ? "success" : status === "replied" ? "success" : "error",
+                ts: Date.now(),
+              }),
+            );
+            setOutreachUpdates((n) => n + 1);
+          },
+        )
         // agent_action_log (insert only — every tool call)
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "agent_action_log", filter: `user_id=eq.${userId}` }, (payload) => {
-          if (!mountedRef.current) return;
-          const row = payload.new as Record<string, unknown>;
-          setActivities((prev) => pushActivity(prev, {
-            id: `aa-${String(row?.id ?? "")}`,
-            kind: "agent",
-            label: `Agent · ${String(row?.tool_name ?? "tool")}`,
-            detail: "eseguito",
-            status: "success",
-            ts: Date.now(),
-          }));
-        })
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "agent_action_log", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (!mountedRef.current) return;
+            const row = payload.new as Record<string, unknown>;
+            setActivities((prev) =>
+              pushActivity(prev, {
+                id: `aa-${String(row?.id ?? "")}`,
+                kind: "agent",
+                label: `Agent · ${String(row?.tool_name ?? "tool")}`,
+                detail: "eseguito",
+                status: "success",
+                ts: Date.now(),
+              }),
+            );
+          },
+        )
         // mission_actions
-        .on("postgres_changes", { event: "*", schema: "public", table: "mission_actions", filter: `user_id=eq.${userId}` }, (payload) => {
-          if (!mountedRef.current) return;
-          const row = (payload.new ?? payload.old) as Record<string, unknown>;
-          const status = String(row?.status ?? "");
-          setActivities((prev) => pushActivity(prev, {
-            id: `ma-${String(row?.id ?? "")}`,
-            kind: "mission",
-            label: `Mission step · ${String(row?.action_type ?? "")}`,
-            detail: status,
-            status: status === "completed" ? "success" : status === "failed" ? "error" : "running",
-            ts: Date.now(),
-          }));
-        })
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "mission_actions", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (!mountedRef.current) return;
+            const row = (payload.new ?? payload.old) as Record<string, unknown>;
+            const status = String(row?.status ?? "");
+            setActivities((prev) =>
+              pushActivity(prev, {
+                id: `ma-${String(row?.id ?? "")}`,
+                kind: "mission",
+                label: `Mission step · ${String(row?.action_type ?? "")}`,
+                detail: status,
+                status: status === "completed" ? "success" : status === "failed" ? "error" : "running",
+                ts: Date.now(),
+              }),
+            );
+          },
+        )
         // campaign_jobs
-        .on("postgres_changes", { event: "*", schema: "public", table: "campaign_jobs", filter: `user_id=eq.${userId}` }, (payload) => {
-          if (!mountedRef.current) return;
-          const row = (payload.new ?? payload.old) as Record<string, unknown>;
-          const status = String(row?.status ?? "");
-          setActivities((prev) => pushActivity(prev, {
-            id: `cj-${String(row?.id ?? "")}`,
-            kind: "campaign",
-            label: `Campagna · ${String(row?.company_name ?? "")}`.slice(0, 44),
-            detail: status,
-            status: status === "completed" ? "success" : status === "failed" ? "error" : "running",
-            ts: Date.now(),
-          }));
-        })
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "campaign_jobs", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (!mountedRef.current) return;
+            const row = (payload.new ?? payload.old) as Record<string, unknown>;
+            const status = String(row?.status ?? "");
+            setActivities((prev) =>
+              pushActivity(prev, {
+                id: `cj-${String(row?.id ?? "")}`,
+                kind: "campaign",
+                label: `Campagna · ${String(row?.company_name ?? "")}`.slice(0, 44),
+                detail: status,
+                status: status === "completed" ? "success" : status === "failed" ? "error" : "running",
+                ts: Date.now(),
+              }),
+            );
+          },
+        )
         .subscribe();
 
       return () => {

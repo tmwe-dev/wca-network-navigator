@@ -10,7 +10,11 @@ import { fetchKbEntriesForOutreach } from "./kbFetcher.ts";
 import { loadConversationContextOutreach } from "./conversationContext.ts";
 import { buildChannelDeclaration } from "./channelDeclaration.ts";
 import { loadActivePlaybook } from "./playbookLoader.ts";
-import { assemblePartnerEnrichmentContext, getEnrichmentMetadata, type RecipientIntelligence } from "./enrichmentAssembler.ts";
+import {
+  assemblePartnerEnrichmentContext,
+  getEnrichmentMetadata,
+  type RecipientIntelligence,
+} from "./enrichmentAssembler.ts";
 import { analyzePartnerRelationship } from "./relationshipAnalyzer.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -52,15 +56,24 @@ export interface OutreachContextBlocks {
 }
 
 export async function assembleOutreachContext(
-  supabase: SupabaseClient, userId: string, channel: Channel, quality: Quality,
+  supabase: SupabaseClient,
+  userId: string,
+  channel: Channel,
+  quality: Quality,
   params: {
-    company_name?: string; contact_name?: string; contact_email?: string;
-    country_code?: string; linkedin_profile?: Record<string, string>;
+    company_name?: string;
+    contact_name?: string;
+    contact_email?: string;
+    country_code?: string;
+    linkedin_profile?: Record<string, string>;
     email_type_id?: string;
   },
 ): Promise<OutreachContextBlocks> {
   const intelligence: RecipientIntelligence = {
-    sources_checked: [], data_found: {}, enrichment_snippet: "", warning: null,
+    sources_checked: [],
+    data_found: {},
+    enrichment_snippet: "",
+    warning: null,
   };
   const contextParts: string[] = [];
 
@@ -70,8 +83,12 @@ export async function assembleOutreachContext(
   if (params.company_name) {
     const safeName = params.company_name.replace(/[\\%_]/g, (c: string) => `\\${c}`);
     const { data: partnerRows } = await supabase
-      .from("partners").select("id, company_name, company_alias, enrichment_data, profile_description, city, country_code, website, lead_status")
-      .ilike("company_name", `%${safeName}%`).limit(1);
+      .from("partners")
+      .select(
+        "id, company_name, company_alias, enrichment_data, profile_description, city, country_code, website, lead_status",
+      )
+      .ilike("company_name", `%${safeName}%`)
+      .limit(1);
     const partner = partnerRows?.[0];
     if (partner) {
       intelligence.data_found.partner = true;
@@ -90,9 +107,7 @@ export async function assembleOutreachContext(
 
       // LOVABLE-77B: unified enrichment (Base + Deep Local + Sherlock + Legacy)
       try {
-        await assemblePartnerEnrichmentContext(
-          supabase, partner.id, quality, contextParts, intelligence
-        );
+        await assemblePartnerEnrichmentContext(supabase, partner.id, quality, contextParts, intelligence);
       } catch (e) {
         console.warn("[assembleOutreachContext] enrichment assembly failed:", e instanceof Error ? e.message : e);
       }
@@ -104,7 +119,11 @@ export async function assembleOutreachContext(
   // 2-4) Partner contacts, networks, services
   if (partnerId) {
     const [contactsRes, netsRes, svcsRes] = await Promise.all([
-      supabase.from("partner_contacts").select("name, title, email, contact_alias").eq("partner_id", partnerId).limit(5),
+      supabase
+        .from("partner_contacts")
+        .select("name, title, email, contact_alias")
+        .eq("partner_id", partnerId)
+        .limit(5),
       supabase.from("partner_networks").select("network_name").eq("partner_id", partnerId).limit(10),
       supabase.from("partner_services").select("service_category").eq("partner_id", partnerId).limit(20),
     ]);
@@ -112,24 +131,39 @@ export async function assembleOutreachContext(
 
     if (contactsRes.data?.length) {
       intelligence.data_found.contacts = true;
-      contextParts.push(`[CONTATTI AZIENDA]\n${contactsRes.data.map((c: Record<string, unknown>) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ")}`);
-    } else { intelligence.data_found.contacts = false; }
+      contextParts.push(
+        `[CONTATTI AZIENDA]\n${contactsRes.data.map((c: Record<string, unknown>) => `${c.name}${c.title ? ` (${c.title})` : ""}${c.email ? ` - ${c.email}` : ""}`).join("; ")}`,
+      );
+    } else {
+      intelligence.data_found.contacts = false;
+    }
 
     if (netsRes.data?.length) {
       intelligence.data_found.networks = true;
-      contextParts.push(`[NETWORK CONDIVISI]\n${netsRes.data.map((n: Record<string, unknown>) => n.network_name).join(", ")}`);
-    } else { intelligence.data_found.networks = false; }
+      contextParts.push(
+        `[NETWORK CONDIVISI]\n${netsRes.data.map((n: Record<string, unknown>) => n.network_name).join(", ")}`,
+      );
+    } else {
+      intelligence.data_found.networks = false;
+    }
 
     if (svcsRes.data?.length) {
       intelligence.data_found.services = true;
-      contextParts.push(`[SERVIZI]\n${svcsRes.data.map((s: Record<string, unknown>) => s.service_category).join(", ")}`);
-    } else { intelligence.data_found.services = false; }
+      contextParts.push(
+        `[SERVIZI]\n${svcsRes.data.map((s: Record<string, unknown>) => s.service_category).join(", ")}`,
+      );
+    } else {
+      intelligence.data_found.services = false;
+    }
   }
 
   // 5) Imported contacts
   intelligence.sources_checked.push("imported_contacts");
   if (params.contact_email || params.company_name) {
-    const q = supabase.from("imported_contacts").select("name, company_name, note, enrichment_data, deep_search_at").limit(1);
+    const q = supabase
+      .from("imported_contacts")
+      .select("name, company_name, note, enrichment_data, deep_search_at")
+      .limit(1);
     if (params.contact_email) q.ilike("email", params.contact_email);
     else if (params.company_name) q.ilike("company_name", `%${params.company_name}%`);
     const { data: icRows } = await q;
@@ -138,9 +172,14 @@ export async function assembleOutreachContext(
       intelligence.data_found.imported_contacts = true;
       const parts: string[] = [];
       if (ic.note) parts.push(`Note: ${String(ic.note).slice(0, 300)}`);
-      if (ic.enrichment_data) { const ed = ic.enrichment_data as Record<string, unknown>; if (ed.summary) parts.push(`Enrichment: ${String(ed.summary).slice(0, 300)}`); }
+      if (ic.enrichment_data) {
+        const ed = ic.enrichment_data as Record<string, unknown>;
+        if (ed.summary) parts.push(`Enrichment: ${String(ed.summary).slice(0, 300)}`);
+      }
       if (parts.length) contextParts.push(`[CRM CONTATTO]\n${parts.join("\n")}`);
-    } else { intelligence.data_found.imported_contacts = false; }
+    } else {
+      intelligence.data_found.imported_contacts = false;
+    }
   }
 
   // 6) Interaction history + Relationship
@@ -150,17 +189,22 @@ export async function assembleOutreachContext(
   // 7) Met in Person
   let metInPersonContext = "";
   if (partnerId) {
-    const { data: bcaRows } = await supabase.from("business_cards")
-      .select("contact_name, event_name, met_at, location").eq("matched_partner_id", partnerId).limit(3);
+    const { data: bcaRows } = await supabase
+      .from("business_cards")
+      .select("contact_name, event_name, met_at, location")
+      .eq("matched_partner_id", partnerId)
+      .limit(3);
     if (bcaRows?.length) {
-      const encounters = bcaRows.map((bc: Record<string, unknown>) => {
-        const parts: string[] = [];
-        if (bc.event_name) parts.push(`Evento: ${bc.event_name}`);
-        if (bc.contact_name) parts.push(`Contatto: ${bc.contact_name}`);
-        if (bc.met_at) parts.push(`Data: ${bc.met_at}`);
-        if (bc.location) parts.push(`Luogo: ${bc.location}`);
-        return parts.join(", ");
-      }).join("\n");
+      const encounters = bcaRows
+        .map((bc: Record<string, unknown>) => {
+          const parts: string[] = [];
+          if (bc.event_name) parts.push(`Evento: ${bc.event_name}`);
+          if (bc.contact_name) parts.push(`Contatto: ${bc.contact_name}`);
+          if (bc.met_at) parts.push(`Data: ${bc.met_at}`);
+          if (bc.location) parts.push(`Luogo: ${bc.location}`);
+          return parts.join(", ");
+        })
+        .join("\n");
       metInPersonContext = `\nINCONTRO DI PERSONA — IMPORTANTE:\nHai incontrato questa azienda di persona. Questo cambia il tono della comunicazione.\n${encounters}\nISTRUZIONI: Usa un tono più caldo e familiare. Fai riferimento all'incontro di persona. NON trattare come un contatto freddo.\n`;
     }
   }
@@ -168,15 +212,27 @@ export async function assembleOutreachContext(
   // 8) Activities
   intelligence.sources_checked.push("activities");
   if (partnerId) {
-    const { data: actRows } = await supabase.from("activities")
+    const { data: actRows } = await supabase
+      .from("activities")
       .select("email_subject, sent_at, activity_type, status")
-      .eq("source_id", partnerId).in("status", ["completed"])
-      .order("created_at", { ascending: false }).limit(10);
+      .eq("source_id", partnerId)
+      .in("status", ["completed"])
+      .order("created_at", { ascending: false })
+      .limit(10);
     if (actRows?.length) {
       intelligence.data_found.activities = true;
-      const acts = actRows.map((a: Record<string, unknown>) => `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`).join("\n");
-      contextParts.push(`[ATTIVITÀ PRECEDENTI]\nQueste comunicazioni sono GIÀ state inviate — NON ripetere lo stesso messaggio:\n${acts}`);
-    } else { intelligence.data_found.activities = false; }
+      const acts = actRows
+        .map(
+          (a: Record<string, unknown>) =>
+            `[${a.sent_at?.slice(0, 10) || "?"}] ${a.activity_type}: "${a.email_subject || "N/A"}"`,
+        )
+        .join("\n");
+      contextParts.push(
+        `[ATTIVITÀ PRECEDENTI]\nQueste comunicazioni sono GIÀ state inviate — NON ripetere lo stesso messaggio:\n${acts}`,
+      );
+    } else {
+      intelligence.data_found.activities = false;
+    }
   }
 
   // 8b) LinkedIn profile from client
@@ -216,7 +272,9 @@ export async function assembleOutreachContext(
   void userId;
   const { data: settingsRows } = await supabase.from("app_settings").select("key, value").like("key", "ai_%");
   const settings: Record<string, string> = {};
-  (settingsRows || []).forEach((r: { key: string; value: string | null }) => { settings[r.key] = r.value || ""; });
+  (settingsRows || []).forEach((r: { key: string; value: string | null }) => {
+    settings[r.key] = r.value || "";
+  });
 
   // Sales KB
   const kbResult = await fetchKbEntriesForOutreach(supabase, quality, channel, userId);

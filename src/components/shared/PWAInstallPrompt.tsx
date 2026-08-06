@@ -33,9 +33,7 @@ export function PWAInstallPrompt() {
   return (
     <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-card border border-border rounded-lg shadow-lg p-4 z-50">
       <p className="text-sm font-medium mb-2">Installa WCA Navigator</p>
-      <p className="text-xs text-muted-foreground mb-3">
-        Accesso rapido dalla home del tuo dispositivo
-      </p>
+      <p className="text-xs text-muted-foreground mb-3">Accesso rapido dalla home del tuo dispositivo</p>
       <div className="flex gap-2">
         <button
           onClick={handleInstall}

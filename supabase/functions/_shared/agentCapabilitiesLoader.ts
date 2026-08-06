@@ -20,7 +20,7 @@ export type AgentExecutionMode = "autonomous" | "supervised" | "read_only";
 
 export interface AgentCapabilities {
   agentId: string | null;
-  allowedTools: string[];           // empty => all registry tools allowed
+  allowedTools: string[]; // empty => all registry tools allowed
   blockedTools: string[];
   approvalRequiredTools: string[];
   maxConcurrentTools: number;
@@ -54,10 +54,18 @@ export const DEFAULT_CAPABILITIES: AgentCapabilities = {
  * Anything not in this set is silently filtered out from the available tools.
  */
 export const READ_ONLY_TOOL_SET: ReadonlySet<string> = new Set([
-  "navigate", "read_page", "read_dom", "read_table",
-  "list_kb", "read_kb", "scrape_url",
-  "ask_user", "finish",
-  "wait_for", "scroll_to", "take_snapshot",
+  "navigate",
+  "read_page",
+  "read_dom",
+  "read_table",
+  "list_kb",
+  "read_kb",
+  "scrape_url",
+  "ask_user",
+  "finish",
+  "wait_for",
+  "scroll_to",
+  "take_snapshot",
 ]);
 
 export async function loadAgentCapabilities(
@@ -70,15 +78,17 @@ export async function loadAgentCapabilities(
       .from("agent_capabilities")
       .select(
         "agent_id, allowed_tools, blocked_tools, approval_required_tools, " +
-        "max_concurrent_tools, step_timeout_ms, max_iterations, " +
-        "max_tokens_per_call, temperature, preferred_model, execution_mode",
+          "max_concurrent_tools, step_timeout_ms, max_iterations, " +
+          "max_tokens_per_call, temperature, preferred_model, execution_mode",
       )
       .eq("agent_id", agentId)
       .maybeSingle();
     if (error || !data) {
       // Health-check: l'agente NON ha una riga di capabilities → fallback ai
       // default = TUTTI i tool aperti. Lo segnaliamo per non girare "a vuoto".
-      console.warn(`[agentCapabilitiesLoader] HEALTH: agent ${agentId} senza capabilities${error ? " (" + error.message + ")" : ""} → DEFAULT (tutti i tool aperti)`);
+      console.warn(
+        `[agentCapabilitiesLoader] HEALTH: agent ${agentId} senza capabilities${error ? " (" + error.message + ")" : ""} → DEFAULT (tutti i tool aperti)`,
+      );
       return { ...DEFAULT_CAPABILITIES, agentId };
     }
     const row = data as Record<string, unknown>;
@@ -93,7 +103,7 @@ export async function loadAgentCapabilities(
       maxTokensPerCall: Number(row.max_tokens_per_call ?? DEFAULT_CAPABILITIES.maxTokensPerCall),
       temperature: Number(row.temperature ?? DEFAULT_CAPABILITIES.temperature),
       preferredModel: (row.preferred_model as string | null) ?? null,
-      executionMode: ((row.execution_mode as AgentExecutionMode) ?? "supervised"),
+      executionMode: (row.execution_mode as AgentExecutionMode) ?? "supervised",
       loaded: true,
     };
   } catch (e) {
@@ -115,9 +125,7 @@ export function filterToolsByCapabilities<T extends { name?: string; function?: 
   const allow = new Set(caps.allowedTools);
   const block = new Set(caps.blockedTools);
   return tools.filter((t) => {
-    const name = (t as { name?: string }).name
-      ?? (t as { function?: { name?: string } }).function?.name
-      ?? "";
+    const name = (t as { name?: string }).name ?? (t as { function?: { name?: string } }).function?.name ?? "";
     if (!name) return false;
     if (block.has(name)) return false;
     if (allow.size > 0 && !allow.has(name)) return false;

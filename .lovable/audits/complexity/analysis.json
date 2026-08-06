@@ -3134,9 +3134,7 @@
   "v2_v1_basename_overlaps_sample": [
     {
       "v2": "src/v2/agent/runtime/prompts/system.ts",
-      "v1_candidates": [
-        "src/lib/queryKeysParts/system.ts"
-      ]
+      "v1_candidates": ["src/lib/queryKeysParts/system.ts"]
     },
     {
       "v2": "src/v2/agent/runtime/tools/index.ts",
@@ -3161,83 +3159,55 @@
     },
     {
       "v2": "src/v2/agent/runtime/tools/kb.ts",
-      "v1_candidates": [
-        "src/constants/agentTemplates/kb.ts"
-      ]
+      "v1_candidates": ["src/constants/agentTemplates/kb.ts"]
     },
     {
       "v2": "src/v2/hooks/companyList/useActiveFilterChips.ts",
-      "v1_candidates": [
-        "src/components/shared/entity-toolbar/useActiveFilterChips.ts"
-      ]
+      "v1_candidates": ["src/components/shared/entity-toolbar/useActiveFilterChips.ts"]
     },
     {
       "v2": "src/v2/io/edge/client.ts",
-      "v1_candidates": [
-        "src/integrations/supabase/client.ts"
-      ]
+      "v1_candidates": ["src/integrations/supabase/client.ts"]
     },
     {
       "v2": "src/v2/io/supabase/mutations/activities.ts",
-      "v1_candidates": [
-        "src/data/activities.ts"
-      ]
+      "v1_candidates": ["src/data/activities.ts"]
     },
     {
       "v2": "src/v2/io/supabase/mutations/agents.ts",
-      "v1_candidates": [
-        "src/data/agents.ts"
-      ]
+      "v1_candidates": ["src/data/agents.ts"]
     },
     {
       "v2": "src/v2/io/supabase/mutations/contacts.ts",
-      "v1_candidates": [
-        "src/data/contacts.ts",
-        "src/types/contacts.ts"
-      ]
+      "v1_candidates": ["src/data/contacts.ts", "src/types/contacts.ts"]
     },
     {
       "v2": "src/v2/io/supabase/mutations/partners.ts",
-      "v1_candidates": [
-        "src/data/partners.ts"
-      ]
+      "v1_candidates": ["src/data/partners.ts"]
     },
     {
       "v2": "src/v2/io/supabase/mutations/prospects.ts",
-      "v1_candidates": [
-        "src/data/prospects.ts"
-      ]
+      "v1_candidates": ["src/data/prospects.ts"]
     },
     {
       "v2": "src/v2/io/supabase/queries/activities.ts",
-      "v1_candidates": [
-        "src/data/activities.ts"
-      ]
+      "v1_candidates": ["src/data/activities.ts"]
     },
     {
       "v2": "src/v2/io/supabase/queries/agents.ts",
-      "v1_candidates": [
-        "src/data/agents.ts"
-      ]
+      "v1_candidates": ["src/data/agents.ts"]
     },
     {
       "v2": "src/v2/io/supabase/queries/contacts.ts",
-      "v1_candidates": [
-        "src/data/contacts.ts",
-        "src/types/contacts.ts"
-      ]
+      "v1_candidates": ["src/data/contacts.ts", "src/types/contacts.ts"]
     },
     {
       "v2": "src/v2/io/supabase/queries/partners.ts",
-      "v1_candidates": [
-        "src/data/partners.ts"
-      ]
+      "v1_candidates": ["src/data/partners.ts"]
     },
     {
       "v2": "src/v2/io/supabase/queries/prospects.ts",
-      "v1_candidates": [
-        "src/data/prospects.ts"
-      ]
+      "v1_candidates": ["src/data/prospects.ts"]
     },
     {
       "v2": "src/v2/services/bulkOps/index.ts",
@@ -3280,28 +3250,19 @@
     },
     {
       "v2": "src/v2/services/sherlock/rateLimiter.ts",
-      "v1_candidates": [
-        "src/lib/api/rateLimiter.ts"
-      ]
+      "v1_candidates": ["src/lib/api/rateLimiter.ts"]
     },
     {
       "v2": "src/v2/ui/atoms/EmptyState.tsx",
-      "v1_candidates": [
-        "src/components/shared/EmptyState.tsx",
-        "src/components/ui/EmptyState.tsx"
-      ]
+      "v1_candidates": ["src/components/shared/EmptyState.tsx", "src/components/ui/EmptyState.tsx"]
     },
     {
       "v2": "src/v2/ui/atoms/PageErrorBoundary.tsx",
-      "v1_candidates": [
-        "src/components/ui/PageErrorBoundary.tsx"
-      ]
+      "v1_candidates": ["src/components/ui/PageErrorBoundary.tsx"]
     },
     {
       "v2": "src/v2/ui/molecules/ActiveFiltersBar/ActiveFiltersBar.tsx",
-      "v1_candidates": [
-        "src/components/email-intelligence/manual-grouping/ActiveFiltersBar.tsx"
-      ]
+      "v1_candidates": ["src/components/email-intelligence/manual-grouping/ActiveFiltersBar.tsx"]
     },
     {
       "v2": "src/v2/ui/molecules/ActiveFiltersBar/index.ts",
@@ -3425,9 +3386,7 @@
     },
     {
       "v2": "src/v2/ui/pages/cestinone/tabs.tsx",
-      "v1_candidates": [
-        "src/components/ui/tabs.tsx"
-      ]
+      "v1_candidates": ["src/components/ui/tabs.tsx"]
     },
     {
       "v2": "src/v2/ui/pages/cestinone/utils.ts",
@@ -3448,9 +3407,7 @@
     },
     {
       "v2": "src/v2/ui/pages/command/tools/blacklist.ts",
-      "v1_candidates": [
-        "src/data/blacklist.ts"
-      ]
+      "v1_candidates": ["src/data/blacklist.ts"]
     },
     {
       "v2": "src/v2/ui/pages/command/tools/composeEmail/types.ts",
@@ -3490,15 +3447,11 @@
     },
     {
       "v2": "src/v2/ui/pages/email-forge/DeepSearchCanvas.tsx",
-      "v1_candidates": [
-        "src/components/operations/DeepSearchCanvas.tsx"
-      ]
+      "v1_candidates": ["src/components/operations/DeepSearchCanvas.tsx"]
     },
     {
       "v2": "src/v2/ui/pages/email-lab/FunnemailTab.tsx",
-      "v1_candidates": [
-        "src/components/email-intelligence/FunnemailTab.tsx"
-      ]
+      "v1_candidates": ["src/components/email-intelligence/FunnemailTab.tsx"]
     },
     {
       "v2": "src/v2/ui/pages/funnemail-inbox/utils.ts",
@@ -3564,9 +3517,7 @@
     },
     {
       "v2": "src/v2/ui/pages/prompt-lab/utils/fileParser.ts",
-      "v1_candidates": [
-        "src/lib/import/fileParser.ts"
-      ]
+      "v1_candidates": ["src/lib/import/fileParser.ts"]
     },
     {
       "v2": "src/v2/ui/pages/telemetry/constants.ts",
@@ -3830,12 +3781,7 @@
   ],
   "edge_functions_count": 154,
   "edge_prefix_groups_ge3": {
-    "": [
-      "_shared",
-      "_shared",
-      "_shared",
-      "_shared"
-    ],
+    "": ["_shared", "_shared", "_shared", "_shared"],
     "agent": [
       "agent-audit",
       "agent-autonomous-cycle",
@@ -3860,27 +3806,10 @@
       "ai-tracking-healthcheck",
       "ai-utility"
     ],
-    "analyze": [
-      "analyze-email-edit",
-      "analyze-import-structure",
-      "analyze-partner"
-    ],
-    "check": [
-      "check-external-db",
-      "check-inbox-booking",
-      "check-inbox"
-    ],
-    "classify": [
-      "classify-emails-batch",
-      "classify-inbound-content",
-      "classify-inbound-message"
-    ],
-    "email": [
-      "email-cron-sync",
-      "email-delivery-webhook",
-      "email-imap-proxy",
-      "email-sync-worker"
-    ],
+    "analyze": ["analyze-email-edit", "analyze-import-structure", "analyze-partner"],
+    "check": ["check-external-db", "check-inbox-booking", "check-inbox"],
+    "classify": ["classify-emails-batch", "classify-inbound-content", "classify-inbound-message"],
+    "email": ["email-cron-sync", "email-delivery-webhook", "email-imap-proxy", "email-sync-worker"],
     "funnemail": [
       "funnemail-auto-route",
       "funnemail-backfill-inbound",
@@ -3891,17 +3820,8 @@
       "funnemail-scout-sender",
       "funnemail-send-autoresponder"
     ],
-    "generate": [
-      "generate-aliases",
-      "generate-content",
-      "generate-email",
-      "generate-outreach"
-    ],
-    "get": [
-      "get-linkedin-credentials",
-      "get-ra-credentials",
-      "get-wca-credentials"
-    ],
+    "generate": ["generate-aliases", "generate-content", "generate-email", "generate-outreach"],
+    "get": ["get-linkedin-credentials", "get-ra-credentials", "get-wca-credentials"],
     "kb": [
       "kb-doctrine-audit",
       "kb-embed-backfill",
@@ -3911,17 +3831,8 @@
       "kb-promoter",
       "kb-supervisor"
     ],
-    "process": [
-      "process-ai-import",
-      "process-download-job",
-      "process-email-queue",
-      "process-inbound-enrichment"
-    ],
-    "prompt": [
-      "prompt-copilot-chat",
-      "prompt-registry-drift-check",
-      "prompt-test-runner"
-    ],
+    "process": ["process-ai-import", "process-download-job", "process-email-queue", "process-inbound-enrichment"],
+    "prompt": ["prompt-copilot-chat", "prompt-registry-drift-check", "prompt-test-runner"],
     "save": [
       "save-correction-memory",
       "save-linkedin-cookie",
@@ -3931,11 +3842,7 @@
       "save-wca-contacts",
       "save-wca-cookie"
     ],
-    "send": [
-      "send-email",
-      "send-linkedin",
-      "send-whatsapp"
-    ],
+    "send": ["send-email", "send-linkedin", "send-whatsapp"],
     "tmwe": [
       "tmwe-catalog-sync",
       "tmwe-customer-sync",

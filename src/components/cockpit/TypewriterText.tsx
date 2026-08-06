@@ -2,7 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import DOMPurify from "dompurify";
 
-export function TypewriterText({ text, speed = 20, isHtml = false }: { text: string; speed?: number; isHtml?: boolean }) {
+export function TypewriterText({
+  text,
+  speed = 20,
+  isHtml = false,
+}: {
+  text: string;
+  speed?: number;
+  isHtml?: boolean;
+}) {
   const [displayed, setDisplayed] = useState("");
   const [done, setDone] = useState(false);
   const indexRef = useRef(0);
@@ -28,7 +36,11 @@ export function TypewriterText({ text, speed = 20, isHtml = false }: { text: str
   }, [text, speed]);
 
   const cursor = !done && text && (
-    <motion.span animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.8 }} className="inline-block w-[2px] h-4 bg-primary ml-0.5 align-text-bottom" />
+    <motion.span
+      animate={{ opacity: [1, 0] }}
+      transition={{ repeat: Infinity, duration: 0.8 }}
+      className="inline-block w-[2px] h-4 bg-primary ml-0.5 align-text-bottom"
+    />
   );
 
   if (isHtml) {

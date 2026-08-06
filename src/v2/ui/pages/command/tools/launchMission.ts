@@ -63,7 +63,9 @@ export const launchMissionTool: Tool = {
       };
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return {
         kind: "result",

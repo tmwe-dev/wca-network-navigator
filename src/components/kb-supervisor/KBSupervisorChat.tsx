@@ -30,10 +30,15 @@ const SUGGESTIONS = [
 ];
 
 export function KBSupervisorChat({
-  messages, onSendMessage, isLoading,
-  voiceEnabled, onToggleVoice,
-  isListening, isSpeaking,
-  onStartListening, onStopListening,
+  messages,
+  onSendMessage,
+  isLoading,
+  voiceEnabled,
+  onToggleVoice,
+  isListening,
+  isSpeaking,
+  onStartListening,
+  onStopListening,
 }: Props) {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -86,9 +91,7 @@ export function KBSupervisorChat({
               key={msg.id}
               className={cn(
                 "rounded-lg p-3 text-sm",
-                msg.role === "user"
-                  ? "bg-primary/10 text-foreground ml-8"
-                  : "bg-muted text-foreground mr-8",
+                msg.role === "user" ? "bg-primary/10 text-foreground ml-8" : "bg-muted text-foreground mr-8",
               )}
             >
               <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
@@ -126,21 +129,20 @@ export function KBSupervisorChat({
             {isListening ? "Stop" : "Parla"}
           </Button>
 
-          <Button
-            size="sm"
-            variant={voiceEnabled ? "default" : "outline"}
-            onClick={onToggleVoice}
-            className="gap-1.5"
-          >
+          <Button size="sm" variant={voiceEnabled ? "default" : "outline"} onClick={onToggleVoice} className="gap-1.5">
             {voiceEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
             {voiceEnabled ? "Audio ON" : "Audio OFF"}
           </Button>
 
           {isListening && (
-            <Badge variant="secondary" className="text-[10px] animate-pulse">Ascolto in corso...</Badge>
+            <Badge variant="secondary" className="text-[10px] animate-pulse">
+              Ascolto in corso...
+            </Badge>
           )}
           {isSpeaking && (
-            <Badge variant="secondary" className="text-[10px] animate-pulse">Parlando...</Badge>
+            <Badge variant="secondary" className="text-[10px] animate-pulse">
+              Parlando...
+            </Badge>
           )}
         </div>
 
@@ -153,12 +155,7 @@ export function KBSupervisorChat({
             className="min-h-[60px] max-h-[120px] resize-none text-sm"
             disabled={isLoading}
           />
-          <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            size="icon"
-            className="self-end"
-          >
+          <Button onClick={handleSend} disabled={!input.trim() || isLoading} size="icon" className="self-end">
             <Send className="w-4 h-4" />
           </Button>
         </div>

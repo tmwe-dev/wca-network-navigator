@@ -27,7 +27,11 @@ export function SystemPromptTab() {
     const raw = await getAppSetting(SETTING_KEY, userId);
     let stored: Array<{ id: string; label: string; content: string }> = [];
     if (raw) {
-      try { stored = JSON.parse(raw); } catch { stored = []; }
+      try {
+        stored = JSON.parse(raw);
+      } catch {
+        stored = [];
+      }
     }
     return DEFAULT_SYSTEM_PROMPT_BLOCKS.map((d) => {
       const hit = stored.find((s) => s.id === d.id);
@@ -62,19 +66,22 @@ export function SystemPromptTab() {
     }
   }, [state, userId]);
 
-  const onImprove = useCallback(async (id: string) => {
-    const block = state.blocks.find((b) => b.id === id);
-    if (!block) return;
-    setSaving(id);
-    try {
-      const improved = await lab.improveBlock({ block, tabLabel: "System Prompt" });
-      state.setImproved(id, improved);
-    } catch (e) {
-      toast.error(`Lab Agent: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setSaving(null);
-    }
-  }, [lab, state]);
+  const onImprove = useCallback(
+    async (id: string) => {
+      const block = state.blocks.find((b) => b.id === id);
+      if (!block) return;
+      setSaving(id);
+      try {
+        const improved = await lab.improveBlock({ block, tabLabel: "System Prompt" });
+        state.setImproved(id, improved);
+      } catch (e) {
+        toast.error(`Lab Agent: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setSaving(null);
+      }
+    },
+    [lab, state],
+  );
 
   if (state.loading) return <div className="p-4 text-sm text-muted-foreground">Caricamento...</div>;
 
@@ -86,12 +93,8 @@ export function SystemPromptTab() {
       <div className="flex items-center justify-between flex-shrink-0 gap-2">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
           <span className="font-medium text-foreground">{state.blocks.length} blocchi</span>
-          {dirtyCount > 0 && (
-            <span className="text-warning">· {dirtyCount} non salvati</span>
-          )}
-          {improvedCount > 0 && (
-            <span className="text-success">· {improvedCount} con proposta AI</span>
-          )}
+          {dirtyCount > 0 && <span className="text-warning">· {dirtyCount} non salvati</span>}
+          {improvedCount > 0 && <span className="text-success">· {improvedCount} con proposta AI</span>}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -100,9 +103,8 @@ export function SystemPromptTab() {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs text-xs">
-                System prompt globale archiviato in <code>app_settings.{SETTING_KEY}</code>.
-                Attivo nel Command Center, AI Assistant, missioni agenti e generazioni operative
-                quando viene assemblato il contesto base dell'AI.
+                System prompt globale archiviato in <code>app_settings.{SETTING_KEY}</code>. Attivo nel Command Center,
+                AI Assistant, missioni agenti e generazioni operative quando viene assemblato il contesto base dell'AI.
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -114,12 +116,7 @@ export function SystemPromptTab() {
             </Button>
           )}
           {dirtyCount > 0 && (
-            <Button
-              size="sm"
-              className="h-7 px-3 text-xs"
-              onClick={saveAll}
-              disabled={saving === "__all__"}
-            >
+            <Button size="sm" className="h-7 px-3 text-xs" onClick={saveAll} disabled={saving === "__all__"}>
               {saving === "__all__" ? "Salvo..." : `Salva tutto (${dirtyCount})`}
             </Button>
           )}
@@ -132,7 +129,9 @@ export function SystemPromptTab() {
           onAccept={state.acceptImproved}
           onDiscard={state.discardImproved}
           onImprove={onImprove}
-          onSave={async () => { await saveAll(); }}
+          onSave={async () => {
+            await saveAll();
+          }}
           saving={saving}
         />
       </div>

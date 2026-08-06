@@ -42,7 +42,10 @@ export function envelopeAddrName(addr: Record<string, unknown> | null): string {
 
 export function envelopeAddrList(addrs: Record<string, unknown>[] | null | undefined): string {
   if (!addrs || !Array.isArray(addrs)) return "";
-  return addrs.map(a => envelopeAddr(a)).filter(Boolean).join(", ");
+  return addrs
+    .map((a) => envelopeAddr(a))
+    .filter(Boolean)
+    .join(", ");
 }
 
 // ━━━ Byte concatenation ━━━
@@ -51,7 +54,10 @@ export function concatBytes(chunks: Uint8Array[]): Uint8Array {
   const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
   const result = new Uint8Array(total);
   let offset = 0;
-  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
   return result;
 }
 
@@ -62,9 +68,16 @@ export function extractLiteralBytesFromResponse(lines: (string | Uint8Array)[]):
   const encoder = new TextEncoder();
   let literalStarted = false;
   for (const line of lines) {
-    if (line instanceof Uint8Array) { literalStarted = true; chunks.push(line); continue; }
+    if (line instanceof Uint8Array) {
+      literalStarted = true;
+      chunks.push(line);
+      continue;
+    }
     if (typeof line !== "string") continue;
-    if (/\{\d+\}\s*$/.test(line)) { literalStarted = true; continue; }
+    if (/\{\d+\}\s*$/.test(line)) {
+      literalStarted = true;
+      continue;
+    }
     if (!literalStarted) continue;
     if (/^\* \d+ FETCH/.test(line)) continue;
     if (line.trim() === ")" || /^\S+ OK/.test(line)) continue;
@@ -90,8 +103,13 @@ export function parseRawHeaders(raw: string): Record<string, string> {
     } else {
       if (currentKey) headers[currentKey.toLowerCase()] = currentValue.trim();
       const match = line.match(/^([A-Za-z-]+):\s*(.*)/);
-      if (match) { currentKey = match[1]; currentValue = match[2]; }
-      else { currentKey = ""; currentValue = ""; }
+      if (match) {
+        currentKey = match[1];
+        currentValue = match[2];
+      } else {
+        currentKey = "";
+        currentValue = "";
+      }
     }
   }
   if (currentKey) headers[currentKey.toLowerCase()] = currentValue.trim();

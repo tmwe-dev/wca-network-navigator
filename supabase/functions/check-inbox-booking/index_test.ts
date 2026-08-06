@@ -13,7 +13,7 @@ Deno.test("CORS preflight restituisce 200 con headers corretti", async () => {
   const res = await fetch(FUNCTION_URL, {
     method: "OPTIONS",
     headers: {
-      "Origin": "https://example.com",
+      Origin: "https://example.com",
       "Access-Control-Request-Method": "POST",
     },
   });
@@ -28,13 +28,15 @@ Deno.test("POST senza auth restituisce 401 Unauthorized", async () => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
+      apikey: SUPABASE_ANON_KEY,
     },
     body: JSON.stringify({}),
   });
   // Deve essere 401 o 500 con messaggio "Unauthorized"
   assert([401, 500].includes(res.status), `Expected 401 or 500, got ${res.status}`);
   const body = await res.text();
-  assert(body.toLowerCase().includes("unauthorized") || body.toLowerCase().includes("error"),
-    `Expected unauthorized message, got: ${body.substring(0, 200)}`);
+  assert(
+    body.toLowerCase().includes("unauthorized") || body.toLowerCase().includes("error"),
+    `Expected unauthorized message, got: ${body.substring(0, 200)}`,
+  );
 });

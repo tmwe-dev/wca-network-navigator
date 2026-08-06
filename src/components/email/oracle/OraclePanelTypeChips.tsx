@@ -76,7 +76,7 @@ export function OraclePanelTypeChips({
                   "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] border whitespace-nowrap transition-all",
                   isSelected
                     ? "bg-primary/15 ring-1 ring-primary/30 border-primary/30 text-primary font-medium"
-                    : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                    : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
                 )}
               >
                 {ICON_MAP[t.icon] ? (
@@ -120,7 +120,7 @@ export function OraclePanelTypeChips({
             "shrink-0 flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] border transition-colors",
             showNewType
               ? "border-primary/30 text-primary bg-primary/10"
-              : "border-border text-muted-foreground hover:border-primary/30"
+              : "border-border text-muted-foreground hover:border-primary/30",
           )}
         >
           <Plus className="w-3 h-3" />
@@ -151,20 +151,10 @@ export function OraclePanelTypeChips({
             rows={3}
           />
           <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="default"
-              className="h-6 text-[10px] flex-1"
-              onClick={handleAddType}
-            >
+            <Button size="sm" variant="default" className="h-6 text-[10px] flex-1" onClick={handleAddType}>
               Salva
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 text-[10px]"
-              onClick={() => setShowNewType(false)}
-            >
+            <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowNewType(false)}>
               Annulla
             </Button>
           </div>

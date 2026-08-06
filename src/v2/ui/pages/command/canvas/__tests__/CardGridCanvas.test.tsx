@@ -6,9 +6,7 @@ const items = [
   { id: "c1", name: "Mario Rossi", company: "Acme", lastContact: "2g fa", action: "Followup" },
   { id: "c2", name: "Lara Bianchi", company: "Beta", lastContact: "5g fa", action: "Call" },
 ];
-const bulkActions = [
-  { id: "followup", label: "Invia followup", promptTemplate: "fup per {ids}" },
-];
+const bulkActions = [{ id: "followup", label: "Invia followup", promptTemplate: "fup per {ids}" }];
 
 describe("CardGridCanvas", () => {
   it("renders cards", () => {
@@ -25,13 +23,11 @@ describe("CardGridCanvas", () => {
 
   it("renders bulk bar only when something is selected", () => {
     const { rerender } = render(
-      <CardGridCanvas items={items} selectable selectedIds={new Set()} bulkActions={bulkActions} />
+      <CardGridCanvas items={items} selectable selectedIds={new Set()} bulkActions={bulkActions} />,
     );
     expect(screen.queryByText("Invia followup")).not.toBeInTheDocument();
 
-    rerender(
-      <CardGridCanvas items={items} selectable selectedIds={new Set(["c1"])} bulkActions={bulkActions} />
-    );
+    rerender(<CardGridCanvas items={items} selectable selectedIds={new Set(["c1"])} bulkActions={bulkActions} />);
     expect(screen.getByText("Invia followup")).toBeInTheDocument();
   });
 
@@ -44,7 +40,7 @@ describe("CardGridCanvas", () => {
         selectedIds={new Set(["c1"])}
         bulkActions={bulkActions}
         onBulkAction={onBulk}
-      />
+      />,
     );
     fireEvent.click(screen.getByText("Invia followup"));
     expect(onBulk).toHaveBeenCalledWith(bulkActions[0], ["c1"]);
@@ -59,7 +55,7 @@ describe("CardGridCanvas", () => {
         selectedIds={new Set()}
         bulkActions={bulkActions}
         onSelectAll={onSelectAll}
-      />
+      />,
     );
     fireEvent.click(screen.getByText(/seleziona tutti/i));
     expect(onSelectAll).toHaveBeenCalledWith(["c1", "c2"]);

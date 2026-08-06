@@ -90,9 +90,7 @@ describe("sanitizeHtml", () => {
 
 describe("escapeHtml", () => {
   it("escapes < > & \" '", () => {
-    expect(escapeHtml('<script>"test" & \'x\'')).toBe(
-      "&lt;script&gt;&quot;test&quot; &amp; &#x27;x&#x27;"
-    );
+    expect(escapeHtml("<script>\"test\" & 'x'")).toBe("&lt;script&gt;&quot;test&quot; &amp; &#x27;x&#x27;");
   });
 
   it("returns empty for empty/null", () => {

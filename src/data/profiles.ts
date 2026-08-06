@@ -9,7 +9,11 @@ export async function checkProfileConnection() {
 }
 
 export async function getProfileSummary() {
-  const { data, error } = await supabase.from("profiles").select("id, display_name, onboarding_completed").limit(1).single();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, display_name, onboarding_completed")
+    .limit(1)
+    .single();
   if (error) throw error;
   return data;
 }
@@ -21,11 +25,7 @@ export async function updateProfileOnboarding(userId: string) {
 
 /** Stato onboarding di uno specifico utente (per il gate di AuthenticatedLayout). */
 export async function getOnboardingCompletedForUser(userId: string): Promise<boolean | null> {
-  const { data } = await supabase
-    .from("profiles")
-    .select("onboarding_completed")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data } = await supabase.from("profiles").select("onboarding_completed").eq("user_id", userId).maybeSingle();
   return data?.onboarding_completed ?? null;
 }
 

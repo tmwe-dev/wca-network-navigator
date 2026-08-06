@@ -42,10 +42,7 @@ export function enterExecuting(api: PhaseApi): void {
  * Animazione della "chain" durante il planning: avanza 0→2 con intervallo.
  * Ritorna il cleanup (clearInterval) da chiamare alla fine del planning.
  */
-export function startChainAnimation(
-  setChainHighlight: PhaseApi["setChainHighlight"],
-  stepMs = 600,
-): () => void {
+export function startChainAnimation(setChainHighlight: PhaseApi["setChainHighlight"], stepMs = 600): () => void {
   const id = setInterval(() => {
     setChainHighlight((prev) => {
       if (prev === undefined || prev >= 2) return prev;

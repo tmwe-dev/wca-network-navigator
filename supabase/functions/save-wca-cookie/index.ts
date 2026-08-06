@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
@@ -21,69 +21,61 @@ Deno.serve(async (req) => {
     const auth = await requireExtensionAuth(req, dynCors);
     if (isExtensionAuthError(auth)) return auth;
 
-    const { cookie } = await req.json()
-    if (!cookie || typeof cookie !== 'string') {
-      return respond({ success: false, message: 'Cookie mancante' }, 400)
+    const { cookie } = await req.json();
+    if (!cookie || typeof cookie !== "string") {
+      return respond({ success: false, message: "Cookie mancante" }, 400);
     }
     if (cookie.length > 20000) {
-      return respond({ success: false, message: 'Cookie troppo lungo' }, 413)
+      return respond({ success: false, message: "Cookie troppo lungo" }, 413);
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const now = new Date().toISOString()
-    const hasAspxAuth = cookie.includes('.ASPXAUTH=')
-    const hasWcaCookie = cookie.includes('wca=')
-    const isAuthenticated = hasAspxAuth || hasWcaCookie
-
-    
+    const now = new Date().toISOString();
+    const hasAspxAuth = cookie.includes(".ASPXAUTH=");
+    const hasWcaCookie = cookie.includes("wca=");
+    const isAuthenticated = hasAspxAuth || hasWcaCookie;
 
     // PR-2 Step B: user-scoped session when caller is a real user
     if (auth.authMethod === "jwt" && auth.userId !== "extension-anon") {
-      await supabase.from('user_wca_sessions').upsert(
+      await supabase.from("user_wca_sessions").upsert(
         {
           user_id: auth.userId,
           cookie,
-          status: isAuthenticated ? 'ok' : 'unknown',
+          status: isAuthenticated ? "ok" : "unknown",
           has_aspx_auth: hasAspxAuth,
           has_wca_cookie: hasWcaCookie,
           updated_at: now,
         },
-        { onConflict: 'user_id' },
-      )
+        { onConflict: "user_id" },
+      );
     }
 
     // Legacy global keys (kept for backward compat — to be removed once all
     // extensions ship JWT and EXTENSION_AUTH_STRICT=true).
-    await supabase.from('app_settings').upsert(
-      { key: 'wca_auth_cookie', value: cookie, updated_at: now },
-      { onConflict: 'key' }
-    )
-    await supabase.from('app_settings').upsert(
-      { key: 'wca_session_cookie', value: cookie, updated_at: now },
-      { onConflict: 'key' }
-    )
+    await supabase
+      .from("app_settings")
+      .upsert({ key: "wca_auth_cookie", value: cookie, updated_at: now }, { onConflict: "key" });
+    await supabase
+      .from("app_settings")
+      .upsert({ key: "wca_session_cookie", value: cookie, updated_at: now }, { onConflict: "key" });
 
     // Determine status ONLY from cookie content — NO HTTP requests to WCA
     // If .ASPXAUTH is missing (likely HttpOnly), mark as "unknown" — real verification via extension will confirm
-    const status = isAuthenticated ? 'ok' : 'unknown'
+    const status = isAuthenticated ? "ok" : "unknown";
 
-    await supabase.from('app_settings').upsert(
-      { key: 'wca_session_status', value: status, updated_at: now },
-      { onConflict: 'key' }
-    )
-    await supabase.from('app_settings').upsert(
-      { key: 'wca_session_checked_at', value: now, updated_at: now },
-      { onConflict: 'key' }
-    )
+    await supabase
+      .from("app_settings")
+      .upsert({ key: "wca_session_status", value: status, updated_at: now }, { onConflict: "key" });
+    await supabase
+      .from("app_settings")
+      .upsert({ key: "wca_session_checked_at", value: now, updated_at: now }, { onConflict: "key" });
 
     const message = isAuthenticated
-      ? '✅ Cookie salvato! Sessione WCA attiva.'
-      : '⏳ Cookie salvato. Nessun cookie di autenticazione rilevato, verifica reale necessaria.'
-
-    
+      ? "✅ Cookie salvato! Sessione WCA attiva."
+      : "⏳ Cookie salvato. Nessun cookie di autenticazione rilevato, verifica reale necessaria.";
 
     return respond({
       success: true,
@@ -91,19 +83,19 @@ Deno.serve(async (req) => {
       hasAspxAuth,
       hasWcaCookie,
       message,
-    })
+    });
   } catch (error) {
-    console.error('save-wca-cookie error:', error)
+    console.error("save-wca-cookie error:", error);
     return respond(
-      { success: false, message: 'Errore: ' + (error instanceof Error ? error.message : 'Sconosciuto') },
-      500
-    )
+      { success: false, message: "Errore: " + (error instanceof Error ? error.message : "Sconosciuto") },
+      500,
+    );
   }
-})
+});
 
 function respond(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' },
-  })
+    headers: { ...getCorsHeaders(null), "Content-Type": "application/json" },
+  });
 }

@@ -34,10 +34,7 @@ export interface SelectionContext {
 }
 
 /** Auto-selezione primaria. Restituisce null se blacklisted (= blocco totale). */
-export function selectJournalist(
-  leadStatus: string,
-  context?: SelectionContext,
-): JournalistSelection | null {
+export function selectJournalist(leadStatus: string, context?: SelectionContext): JournalistSelection | null {
   if (leadStatus === "blacklisted") return null;
 
   const mapping = STATUS_TO_JOURNALIST[leadStatus];
@@ -103,10 +100,7 @@ export function validateOverride(
 }
 
 /** Seleziona la variante di prompt in base al canale. */
-export function selectPromptVariant(
-  config: JournalistConfig,
-  channel: ReviewChannel,
-): string {
+export function selectPromptVariant(config: JournalistConfig, channel: ReviewChannel): string {
   switch (channel) {
     case "voice_script":
       return config.prompt_voice;
@@ -120,9 +114,7 @@ export function selectPromptVariant(
 }
 
 /** Defaults per configurazione giornalista — prompt ricchi con 3 varianti. */
-export function getDefaultConfig(
-  role: JournalistRole,
-): Omit<JournalistConfig, "role" | "label"> {
+export function getDefaultConfig(role: JournalistRole): Omit<JournalistConfig, "role" | "label"> {
   switch (role) {
     case "rompighiaccio":
       return {
@@ -180,12 +172,17 @@ NON SCRIVERE MAI:
 - Qualsiasi elenco puntato di servizi
 - Frasi con più di 25 parole`,
 
-        prompt: "Sei il Rompighiaccio. Apri il primo contatto senza vendere. Usi empatia tattica (Chris Voss): labeling, mirroring, domande calibrate, tecnica del no.",
+        prompt:
+          "Sei il Rompighiaccio. Apri il primo contatto senza vendere. Usi empatia tattica (Chris Voss): labeling, mirroring, domande calibrate, tecnica del no.",
         tone: "Curioso, elegante, fermo, mai aggressivo. Come un collega di settore che fa una domanda intelligente.",
-        rules: "Non vendere prima del tempo. Usa labeling, mirroring, domande calibrate, tecnica del no. Porta a riflettere su differenze concrete. Max 1 domanda per messaggio. Max 1-2 differenze concrete per messaggio.",
-        kb_sources: "sales_doctrine, system_doctrine/Progressione_Relazionale, procedures/email-single, procedures/cold-outreach, enrichment/partner_profile",
-        donts: "Non vendere. Non elencare servizi. Non usare urgenza finta. Non adulare. Non promettere ciò che non è in KB. Non dire 'leader nel settore'. Non usare bullet point nei primi contatti. Non superare 150 parole in email.",
-        must_know: "Differenza tra partner WCA (collaborazione tra pari) e cliente finale (relazione operativa). Le specializzazioni del partner dal profilo. Il paese e i corridoi logistici rilevanti. La differenza competitiva dell'azienda dal profilo aziendale.",
+        rules:
+          "Non vendere prima del tempo. Usa labeling, mirroring, domande calibrate, tecnica del no. Porta a riflettere su differenze concrete. Max 1 domanda per messaggio. Max 1-2 differenze concrete per messaggio.",
+        kb_sources:
+          "sales_doctrine, system_doctrine/Progressione_Relazionale, procedures/email-single, procedures/cold-outreach, enrichment/partner_profile",
+        donts:
+          "Non vendere. Non elencare servizi. Non usare urgenza finta. Non adulare. Non promettere ciò che non è in KB. Non dire 'leader nel settore'. Non usare bullet point nei primi contatti. Non superare 150 parole in email.",
+        must_know:
+          "Differenza tra partner WCA (collaborazione tra pari) e cliente finale (relazione operativa). Le specializzazioni del partner dal profilo. Il paese e i corridoi logistici rilevanti. La differenza competitiva dell'azienda dal profilo aziendale.",
       };
 
     case "risvegliatore":
@@ -235,12 +232,17 @@ APPOGGIATI ALLA KB per: trend mercato, dati corridoio, novità settore.
 
 MAI: "volevo fare follow-up", "non ho ricevuto risposta", "spero che stia bene", tono ansioso/colpevolizzante, più di 1 domanda.`,
 
-        prompt: "Sei il Risvegliatore. Intervieni dopo silenzio. Non rincorri: trasformi il silenzio in scelta consapevole.",
+        prompt:
+          "Sei il Risvegliatore. Intervieni dopo silenzio. Non rincorri: trasformi il silenzio in scelta consapevole.",
         tone: "Breve, intelligente, rispettoso, stimolante. Come qualcuno che porta un'idea nuova, non che chiede attenzione.",
-        rules: "Non rincorrere MAI. Trasforma silenzio in scelta. Offri nuova prospettiva. Proponi micro-decisione con 2 opzioni. Entrambe le scelte devono essere accettabili. Max 100 parole email, 60 WA.",
-        kb_sources: "sales_doctrine, system_doctrine/Holding_Pattern, procedures/multi-channel-sequence, sales_doctrine/Chris_Voss, market_data/corridoi",
-        donts: "Non rincorrere. Non supplicare. Mai 'volevo solo fare follow-up'. Mai 'non ho ricevuto risposta'. Mai tono ansioso o colpevolizzante. Mai più di 1 domanda. Mai falsa premura ('spero stia bene').",
-        must_know: "La storia dei contatti precedenti (quanti, quando, quali esiti). Il motivo probabile del silenzio (dal contesto). Trend o dati recenti sul corridoio del partner. Quanto tempo è passato dall'ultimo contatto.",
+        rules:
+          "Non rincorrere MAI. Trasforma silenzio in scelta. Offri nuova prospettiva. Proponi micro-decisione con 2 opzioni. Entrambe le scelte devono essere accettabili. Max 100 parole email, 60 WA.",
+        kb_sources:
+          "sales_doctrine, system_doctrine/Holding_Pattern, procedures/multi-channel-sequence, sales_doctrine/Chris_Voss, market_data/corridoi",
+        donts:
+          "Non rincorrere. Non supplicare. Mai 'volevo solo fare follow-up'. Mai 'non ho ricevuto risposta'. Mai tono ansioso o colpevolizzante. Mai più di 1 domanda. Mai falsa premura ('spero stia bene').",
+        must_know:
+          "La storia dei contatti precedenti (quanti, quando, quali esiti). Il motivo probabile del silenzio (dal contesto). Trend o dati recenti sul corridoio del partner. Quanto tempo è passato dall'ultimo contatto.",
       };
 
     case "chiusore":
@@ -288,12 +290,17 @@ APPOGGIATI ALLA KB per: proposte operative specifiche, gestione obiezioni, dottr
 
 MAI: urgenza finta, manipolazione, forzare risposta, sminuire il no, promesse non verificabili.`,
 
-        prompt: "Sei il Chiusore. Porti a decisione chiara. Proteggi tempo e autorevolezza. Entrambe le scelte vanno bene.",
+        prompt:
+          "Sei il Chiusore. Porti a decisione chiara. Proteggi tempo e autorevolezza. Entrambe le scelte vanno bene.",
         tone: "Pragmatico, competente, solido, diretto. Come un professionista che rispetta il tempo di tutti.",
-        rules: "Chiarisci il valore in termini concreti. Esplicita che entrambe le scelte vanno bene. Proponi passo netto e operativo. Archiviazione elegante è un risultato valido. Mai più di 120 parole.",
-        kb_sources: "sales_doctrine/Tecniche_chiusura, sales_doctrine/Gestione_obiezioni, system_doctrine/Dottrina_Uscite, procedures/lead-qualification-v2, enrichment/partner_value",
-        donts: "Non manipolare. Non creare urgenza finta ('offerta valida fino a...'). Non forzare risposta. Non sminuire la scelta di non procedere. Non promettere risultati specifici non verificabili.",
-        must_know: "Il valore concreto che l'azienda porta a QUESTO partner (non generico). La storia della relazione. Le obiezioni già emerse. Il passo operativo realistico successivo (meeting? quote? pilot?).",
+        rules:
+          "Chiarisci il valore in termini concreti. Esplicita che entrambe le scelte vanno bene. Proponi passo netto e operativo. Archiviazione elegante è un risultato valido. Mai più di 120 parole.",
+        kb_sources:
+          "sales_doctrine/Tecniche_chiusura, sales_doctrine/Gestione_obiezioni, system_doctrine/Dottrina_Uscite, procedures/lead-qualification-v2, enrichment/partner_value",
+        donts:
+          "Non manipolare. Non creare urgenza finta ('offerta valida fino a...'). Non forzare risposta. Non sminuire la scelta di non procedere. Non promettere risultati specifici non verificabili.",
+        must_know:
+          "Il valore concreto che l'azienda porta a QUESTO partner (non generico). La storia della relazione. Le obiezioni già emerse. Il passo operativo realistico successivo (meeting? quote? pilot?).",
       };
 
     case "accompagnatore":
@@ -344,12 +351,17 @@ APPOGGIATI ALLA KB per: procedure operative, checklist post-send, progressione r
 
 MAI: check-in generici, "come va?", ripetere info già note, proporre più di 2 azioni.`,
 
-        prompt: "Sei l'Accompagnatore. Continui la relazione con passi progressivi e operativi. Consulente che riduce complessità.",
+        prompt:
+          "Sei l'Accompagnatore. Continui la relazione con passi progressivi e operativi. Consulente che riduce complessità.",
         tone: "Utile, costante, consulenziale, operativo. Come un project manager che ha già pensato ai prossimi passi.",
-        rules: "Proponi passi progressivi concreti. Trasmetti presenza e competenza. Riduci complessità. Costruisci continuità. Max 1-2 azioni per messaggio. Ogni messaggio richiama il precedente.",
-        kb_sources: "sales_doctrine/Follow-up_pipeline, procedures/post-send-checklist, system_doctrine/Progressione_Relazionale, enrichment/partner_history",
-        donts: "Non essere generico. Non ripetere ciò che il partner già sa. Non proporre troppo in una volta. Non perdere concretezza. Non fare check-in vuoti ('Come va?'). Non dire 'restiamo in contatto' senza passo concreto.",
-        must_know: "L'ultimo scambio e il suo esito. Le azioni in corso o completate. Il prossimo passo operativo realistico. I dettagli specifici del caso del partner (corridoi, volumi, specializzazioni).",
+        rules:
+          "Proponi passi progressivi concreti. Trasmetti presenza e competenza. Riduci complessità. Costruisci continuità. Max 1-2 azioni per messaggio. Ogni messaggio richiama il precedente.",
+        kb_sources:
+          "sales_doctrine/Follow-up_pipeline, procedures/post-send-checklist, system_doctrine/Progressione_Relazionale, enrichment/partner_history",
+        donts:
+          "Non essere generico. Non ripetere ciò che il partner già sa. Non proporre troppo in una volta. Non perdere concretezza. Non fare check-in vuoti ('Come va?'). Non dire 'restiamo in contatto' senza passo concreto.",
+        must_know:
+          "L'ultimo scambio e il suo esito. Le azioni in corso o completate. Il prossimo passo operativo realistico. I dettagli specifici del caso del partner (corridoi, volumi, specializzazioni).",
       };
   }
 }
@@ -446,13 +458,8 @@ export async function loadCompanyProfile(
       "(azienda mittente non configurata)",
     site: map.get("company_site") || "",
     offering:
-      map.get("company_offering") ||
-      map.get("ai_focus_areas") ||
-      "Servizi di spedizione e logistica internazionale",
-    audience:
-      map.get("company_audience") ||
-      map.get("ai_custom_goals") ||
-      "Freight forwarders e operatori logistici",
+      map.get("company_offering") || map.get("ai_focus_areas") || "Servizi di spedizione e logistica internazionale",
+    audience: map.get("company_audience") || map.get("ai_custom_goals") || "Freight forwarders e operatori logistici",
     competitive_difference: map.get("company_competitive_difference") || "",
     values: map.get("company_values") || map.get("ai_sector_notes") || "",
     proof: map.get("company_proof") || "",
@@ -477,17 +484,14 @@ export async function loadOptimusSettings(
     .from("app_settings")
     .select("key, value")
     .eq("user_id", userId)
-    .in("key", [
-      "journalist_optimus_mode",
-      "journalist_optimus_strictness",
-    ]);
+    .in("key", ["journalist_optimus_mode", "journalist_optimus_strictness"]);
   const map = new Map<string, string>(
     (data || []).map((s: { key: string; value: string | null }) => [s.key, s.value || ""]),
   );
   const modeRaw = map.get("journalist_optimus_mode") || "review_and_correct";
-  const mode = (["review_and_correct", "review_only", "silent_audit"].includes(modeRaw)
-    ? modeRaw
-    : "review_and_correct") as "review_and_correct" | "review_only" | "silent_audit";
+  const mode = (
+    ["review_and_correct", "review_only", "silent_audit"].includes(modeRaw) ? modeRaw : "review_and_correct"
+  ) as "review_and_correct" | "review_only" | "silent_audit";
   const strictness = Math.max(1, Math.min(10, parseInt(map.get("journalist_optimus_strictness") || "7", 10) || 7));
   return { enabled: true, mode, strictness };
 }

@@ -78,7 +78,10 @@ function loadPersistedState(userId: string): HarmonizeOrchestratorState | null {
   try {
     const raw = window.localStorage.getItem(storageKey(userId));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { v: number; state: Omit<HarmonizeOrchestratorState, "approvedIds"> & { approvedIds: string[] } };
+    const parsed = JSON.parse(raw) as {
+      v: number;
+      state: Omit<HarmonizeOrchestratorState, "approvedIds"> & { approvedIds: string[] };
+    };
     if (parsed.v !== STORAGE_VERSION || !parsed.state) return null;
     const restored: HarmonizeOrchestratorState = {
       ...parsed.state,
@@ -136,7 +139,12 @@ export function useHarmonizeOrchestrator(userId: string) {
       try {
         run = await createHarmonizeRun(userId, params.goal);
       } catch (e) {
-        setState((s) => ({ ...s, phase: "failed", loading: false, error: e instanceof Error ? e.message : "Errore creazione run" }));
+        setState((s) => ({
+          ...s,
+          phase: "failed",
+          loading: false,
+          error: e instanceof Error ? e.message : "Errore creazione run",
+        }));
         return;
       }
 
@@ -164,7 +172,11 @@ export function useHarmonizeOrchestrator(userId: string) {
           collector,
           async (p) => {
             proposals.push(p);
-            try { await appendHarmonizeProposal(run.id, p); } catch { /* skip persist err */ }
+            try {
+              await appendHarmonizeProposal(run.id, p);
+            } catch {
+              /* skip persist err */
+            }
             setState((s) => ({ ...s, proposals: [...proposals] }));
           },
           (current, total) => setState((s) => ({ ...s, progress: { current, total } })),
@@ -175,7 +187,12 @@ export function useHarmonizeOrchestrator(userId: string) {
         setState((s) => ({ ...s, phase: "review", loading: false }));
       } catch (e) {
         await updateHarmonizeRun(run.id, { status: "failed" }).catch(() => {});
-        setState((s) => ({ ...s, phase: "failed", loading: false, error: e instanceof Error ? e.message : "Errore analisi" }));
+        setState((s) => ({
+          ...s,
+          phase: "failed",
+          loading: false,
+          error: e instanceof Error ? e.message : "Errore analisi",
+        }));
       }
     },
     [userId],
@@ -265,11 +282,12 @@ export function useHarmonizeOrchestrator(userId: string) {
     const proposals = run.proposals ?? [];
     const approvedIds = new Set(
       proposals
-        .filter((p) =>
-          p.resolution_layer === "text" &&
-          p.action !== "DELETE" &&
-          p.impact !== "high" &&
-          !(p.action === "INSERT" && p.target.table === "agents"),
+        .filter(
+          (p) =>
+            p.resolution_layer === "text" &&
+            p.action !== "DELETE" &&
+            p.impact !== "high" &&
+            !(p.action === "INSERT" && p.target.table === "agents"),
         )
         .map((p) => p.id),
     );
@@ -381,7 +399,11 @@ export function useHarmonizeOrchestrator(userId: string) {
   const reset = useCallback(() => {
     setState(INITIAL);
     if (userId && typeof window !== "undefined") {
-      try { window.localStorage.removeItem(storageKey(userId)); } catch { /* noop */ }
+      try {
+        window.localStorage.removeItem(storageKey(userId));
+      } catch {
+        /* noop */
+      }
     }
   }, [userId]);
 
@@ -415,5 +437,17 @@ export function useHarmonizeOrchestrator(userId: string) {
     [state.runId, state.proposals],
   );
 
-  return { state, start, toggleApproval, approveAllSafe, editProposalAfter, loadRunForReview, execute, executeSingle, discardSingle, cancel, reset };
+  return {
+    state,
+    start,
+    toggleApproval,
+    approveAllSafe,
+    editProposalAfter,
+    loadRunForReview,
+    execute,
+    executeSingle,
+    discardSingle,
+    cancel,
+    reset,
+  };
 }

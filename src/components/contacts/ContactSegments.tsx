@@ -6,13 +6,15 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { findContactsForSegments, findConversationContextsForUser } from "@/data/contacts";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Filter, UserX, Clock, ThumbsUp, ThumbsDown, BellRing, TrendingUp, Undo2,
-} from "lucide-react";
+import { Filter, UserX, Clock, ThumbsUp, ThumbsDown, BellRing, TrendingUp, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -63,7 +65,7 @@ export function ContactSegments({ activeSegment, onSegmentChange }: ContactSegme
       const contexts = await findConversationContextsForUser(userId, 1000);
 
       const contextMap = new Map<string, Record<string, unknown>>();
-      for (const ctx of (contexts || [])) {
+      for (const ctx of contexts || []) {
         contextMap.set(ctx.email_address, ctx);
       }
 
@@ -87,7 +89,7 @@ export function ContactSegments({ activeSegment, onSegmentChange }: ContactSegme
         if (interactionCount > 0 && !ctx) counts.in_attesa_risposta++;
         if (sentiment === "positive") counts.risposta_positiva++;
         if (sentiment === "negative") counts.risposta_negativa++;
-        if (interactionCount > 0 && lastAt > 0 && (now - lastAt) > sevenDays && !ctx) counts.follow_up_dovuto++;
+        if (interactionCount > 0 && lastAt > 0 && now - lastAt > sevenDays && !ctx) counts.follow_up_dovuto++;
         if (successRate > 70 && responseRate > 50) counts.alta_priorita++;
         if (interactionCount > 0 && sentiment === "negative") counts.da_recuperare++;
       }
@@ -107,7 +109,7 @@ export function ContactSegments({ activeSegment, onSegmentChange }: ContactSegme
           size="sm"
           className={cn(
             "h-7 px-2 text-[10px] gap-1",
-            activeSegment ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground"
+            activeSegment ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground",
           )}
         >
           <Filter className="h-3 w-3" />
@@ -131,7 +133,7 @@ export function ContactSegments({ activeSegment, onSegmentChange }: ContactSegme
               onClick={() => onSegmentChange(seg.key)}
               className={cn(
                 "text-xs flex items-center justify-between",
-                activeSegment === seg.key && "bg-primary/10 text-primary"
+                activeSegment === seg.key && "bg-primary/10 text-primary",
               )}
             >
               <span className="flex items-center gap-2">

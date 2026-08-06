@@ -103,7 +103,8 @@ export const HARMONIZE_TOOL_SCHEMA = {
   type: "function" as const,
   function: {
     name: "propose_harmonize_actions",
-    description: "Propone una lista di azioni di armonizzazione del sistema (UPDATE/INSERT/MOVE/DELETE) con evidenza, dipendenze e classificazione del gap.",
+    description:
+      "Propone una lista di azioni di armonizzazione del sistema (UPDATE/INSERT/MOVE/DELETE) con evidenza, dipendenze e classificazione del gap.",
     parameters: {
       type: "object",
       properties: {
@@ -116,11 +117,20 @@ export const HARMONIZE_TOOL_SCHEMA = {
               target_table: {
                 type: "string",
                 enum: [
-                  "kb_entries", "agents", "agent_personas", "operative_prompts",
-                  "email_prompts", "email_address_rules", "commercial_playbooks", "app_settings",
+                  "kb_entries",
+                  "agents",
+                  "agent_personas",
+                  "operative_prompts",
+                  "email_prompts",
+                  "email_address_rules",
+                  "commercial_playbooks",
+                  "app_settings",
                 ],
               },
-              target_id: { type: ["string", "null"], description: "id esistente (per UPDATE/MOVE/DELETE), null per INSERT" },
+              target_id: {
+                type: ["string", "null"],
+                description: "id esistente (per UPDATE/MOVE/DELETE), null per INSERT",
+              },
               target_field: { type: ["string", "null"], description: "campo specifico (per UPDATE parziale)" },
               before: { type: ["string", "null"] },
               after: { type: ["string", "null"] },
@@ -136,8 +146,16 @@ export const HARMONIZE_TOOL_SCHEMA = {
               block_label: { type: "string" },
             },
             required: [
-              "action", "target_table", "evidence_source", "evidence_excerpt",
-              "dependencies", "impact", "tests_required", "resolution_layer", "reasoning", "block_label",
+              "action",
+              "target_table",
+              "evidence_source",
+              "evidence_excerpt",
+              "dependencies",
+              "impact",
+              "tests_required",
+              "resolution_layer",
+              "reasoning",
+              "block_label",
             ],
           },
         },

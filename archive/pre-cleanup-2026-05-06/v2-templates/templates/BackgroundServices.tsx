@@ -33,7 +33,9 @@ function ActiveBackgroundServices({ children }: Props): React.ReactElement {
 }
 
 /** Stub values used while the real services are still deferred. Shape-compatible. */
-const noop = () => { /* deferred */ };
+const noop = () => {
+  /* deferred */
+};
 const STUB: BackgroundServicesValues = {
   outreachQueue: {
     pendingCount: 0,

@@ -13,6 +13,7 @@ I "contratti" sono **schemi tipizzati** che il backend si aspetta dall'AI o pass
 **Dove vive**: `src/v2/core/domain/EmailBrief.ts` (o equivalente).
 
 **Cosa contiene**:
+
 - `recipient_email: string`
 - `recipient_name: string | null`
 - `recipient_company: string | null`
@@ -27,6 +28,7 @@ I "contratti" sono **schemi tipizzati** che il backend si aspetta dall'AI o pass
 - `language: 'it' | 'en' | 'es' | 'fr' | 'de'`
 
 **Cosa manca noto**:
+
 - `recipient_country` (richiesto per personalizzazione locale ma assente)
 - `prior_thread_id` (per conversazioni multi-turn)
 - `compliance_basis` (opt-in implicito vs esplicito)
@@ -36,6 +38,7 @@ I "contratti" sono **schemi tipizzati** che il backend si aspetta dall'AI o pass
 **Dove vive**: `src/v2/core/domain/VoiceBrief.ts`.
 
 **Cosa contiene**:
+
 - `recipient_phone: string` (E.164)
 - `recipient_name: string | null`
 - `script_objective: string`
@@ -45,6 +48,7 @@ I "contratti" sono **schemi tipizzati** che il backend si aspetta dall'AI o pass
 - `recording_consent: boolean`
 
 **Cosa manca noto**:
+
 - `timezone_window` (per non chiamare fuori orario locale)
 - `prior_call_attempts` (per gestione no-answer)
 
@@ -53,6 +57,7 @@ I "contratti" sono **schemi tipizzati** che il backend si aspetta dall'AI o pass
 **Dove vive**: `src/v2/core/domain/ContactLifecycleBrief.ts`.
 
 **Cosa contiene**:
+
 - `contact_id: string`
 - `current_status: LeadStatus` (uno dei 9)
 - `proposed_status: LeadStatus`
@@ -62,6 +67,7 @@ I "contratti" sono **schemi tipizzati** che il backend si aspetta dall'AI o pass
 - `evidence: { activity_id?: string; message_id?: string; manual?: boolean }`
 
 **Cosa manca noto**:
+
 - `auto_blacklist_reason` (per transizioni a blacklisted automatiche)
 - `revival_attempt_count` (per holding pattern)
 
@@ -70,6 +76,7 @@ I "contratti" sono **schemi tipizzati** che il backend si aspetta dall'AI o pass
 **Dove vive**: `src/v2/core/domain/OutreachBrief.ts`.
 
 **Cosa contiene**:
+
 - `mission_id: string`
 - `contact_id: string`
 - `channel: 'email' | 'whatsapp' | 'linkedin'`
@@ -79,6 +86,7 @@ I "contratti" sono **schemi tipizzati** che il backend si aspetta dall'AI o pass
 - `priority: 'low' | 'normal' | 'high'`
 
 **Cosa manca noto**:
+
 - `fallback_channel` (se canale primario fallisce)
 - `quiet_hours_window` (per rispetto orari)
 

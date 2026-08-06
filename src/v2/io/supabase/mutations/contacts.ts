@@ -30,9 +30,7 @@ export interface CreateContactInput {
   readonly note?: string;
 }
 
-export async function createContact(
-  input: CreateContactInput,
-): Promise<Result<Contact, AppError>> {
+export async function createContact(input: CreateContactInput): Promise<Result<Contact, AppError>> {
   try {
     const row = await createImportedContact({ ...input });
     return mapContactRow(row);
@@ -58,9 +56,17 @@ export async function updateContact(
     }
     const row = await getContactById(contactId);
     if (!row) {
-      return err(ioError("NOT_FOUND", `Contact ${contactId} not found`, {
-        contactId, operation: "update",
-      }, "updateContact"));
+      return err(
+        ioError(
+          "NOT_FOUND",
+          `Contact ${contactId} not found`,
+          {
+            contactId,
+            operation: "update",
+          },
+          "updateContact",
+        ),
+      );
     }
     return mapContactRow(row);
   } catch (caught: unknown) {
@@ -68,9 +74,7 @@ export async function updateContact(
   }
 }
 
-export async function deleteContact(
-  contactId: string,
-): Promise<Result<void, AppError>> {
+export async function deleteContact(contactId: string): Promise<Result<void, AppError>> {
   try {
     await deleteContacts([contactId]);
     return ok(undefined);

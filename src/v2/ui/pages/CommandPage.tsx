@@ -101,7 +101,11 @@ const CommandPage = () => {
     const handler = () => {
       if (primed) return;
       primed = true;
-      try { voiceOut.prime(); } catch { /* ignore */ }
+      try {
+        voiceOut.prime();
+      } catch {
+        /* ignore */
+      }
       window.removeEventListener("pointerdown", handler, true);
       window.removeEventListener("keydown", handler, true);
       window.removeEventListener("touchstart", handler, true);
@@ -141,7 +145,6 @@ const CommandPage = () => {
       .trim()
       .slice(0, 200);
     voiceOut.speak(clean);
-     
   }, [state.messages.length]);
 
   // Rehydrate visible chat ONLY when the user explicitly loads a conversation
@@ -182,9 +185,7 @@ const CommandPage = () => {
       }));
     state.setMessages(visible);
 
-    const last = [...conv.messages]
-      .reverse()
-      .find((m) => m.role === "tool" && m.tool_result);
+    const last = [...conv.messages].reverse().find((m) => m.role === "tool" && m.tool_result);
     if (last?.tool_result) {
       const result = last.tool_result as ToolResult;
       state.setLiveResult(result);
@@ -196,7 +197,6 @@ const CommandPage = () => {
       else if (kind === "composer") state.setCanvas("live-composer");
       else if (kind === "report") state.setCanvas("live-report");
     }
-     
   }, [conv.conversationId, conv.messages.length, conv.loading]);
 
   const handleSend = (text?: string) => {
@@ -264,9 +264,7 @@ const CommandPage = () => {
           onArchive={(id) => conv.archive(id)}
         />
         <div
-          className={`flex-1 flex flex-col transition-all duration-700 ease-out ${
-            state.canvas ? "max-w-[50%]" : ""
-          }`}
+          className={`flex-1 flex flex-col transition-all duration-700 ease-out ${state.canvas ? "max-w-[50%]" : ""}`}
         >
           {isEmpty ? (
             <CommandHistory

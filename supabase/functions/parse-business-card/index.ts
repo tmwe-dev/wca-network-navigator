@@ -5,19 +5,20 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseAiJson, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-const BusinessCardSchema = z.object({
-  company_name: z.string().nullish(),
-  contact_name: z.string().nullish(),
-  position: z.string().nullish(),
-  email: z.string().nullish(),
-  phone: z.string().nullish(),
-  mobile: z.string().nullish(),
-  address: z.string().nullish(),
-  website: z.string().nullish(),
-  notes: z.string().nullish(),
-}).passthrough();
+const BusinessCardSchema = z
+  .object({
+    company_name: z.string().nullish(),
+    contact_name: z.string().nullish(),
+    position: z.string().nullish(),
+    email: z.string().nullish(),
+    phone: z.string().nullish(),
+    mobile: z.string().nullish(),
+    address: z.string().nullish(),
+    website: z.string().nullish(),
+    notes: z.string().nullish(),
+  })
+  .passthrough();
 const BC_FALLBACK = {} as z.infer<typeof BusinessCardSchema>;
-
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -35,17 +36,22 @@ serve(async (req) => {
     // Verify user
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authErr } = await anonClient.auth.getUser(token);
+    const {
+      data: { user },
+      error: authErr,
+    } = await anonClient.auth.getUser(token);
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: "Non autorizzato" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     const { imageUrl } = await req.json();
     if (!imageUrl) {
       return new Response(JSON.stringify({ error: "imageUrl richiesto" }), {
-        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -59,7 +65,8 @@ serve(async (req) => {
     const creditRow = creditResult?.[0];
     if (!creditRow?.success) {
       return new Response(JSON.stringify({ error: "Crediti insufficienti" }), {
-        status: 402, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 402,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -79,18 +86,19 @@ serve(async (req) => {
     }
 
     // Call Gemini vision via Lovable AI Gateway
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY non configurata");
 
     const aiResp = await aiFetch({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Analizza questa immagine di un biglietto da visita e estrai TUTTI i dati visibili.
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Analizza questa immagine di un biglietto da visita e estrai TUTTI i dati visibili.
 Restituisci SOLO un JSON valido con questi campi (usa null se non trovato):
 {
   "company_name": "nome azienda",
@@ -104,47 +112,48 @@ Restituisci SOLO un JSON valido con questi campi (usa null se non trovato):
   "notes": "qualsiasi altra info rilevante sul biglietto"
 }
 Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fisso in phone e il mobile in mobile.`,
+            },
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${imageBase64}` },
+            },
+          ],
+        },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "extract_business_card",
+            description: "Extract structured data from a business card image",
+            parameters: {
+              type: "object",
+              properties: {
+                company_name: { type: "string", nullable: true },
+                contact_name: { type: "string", nullable: true },
+                position: { type: "string", nullable: true },
+                email: { type: "string", nullable: true },
+                phone: { type: "string", nullable: true },
+                mobile: { type: "string", nullable: true },
+                address: { type: "string", nullable: true },
+                website: { type: "string", nullable: true },
+                notes: { type: "string", nullable: true },
               },
-              {
-                type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-              },
-            ],
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_business_card",
-              description: "Extract structured data from a business card image",
-              parameters: {
-                type: "object",
-                properties: {
-                  company_name: { type: "string", nullable: true },
-                  contact_name: { type: "string", nullable: true },
-                  position: { type: "string", nullable: true },
-                  email: { type: "string", nullable: true },
-                  phone: { type: "string", nullable: true },
-                  mobile: { type: "string", nullable: true },
-                  address: { type: "string", nullable: true },
-                  website: { type: "string", nullable: true },
-                  notes: { type: "string", nullable: true },
-                },
-                required: ["company_name", "contact_name"],
-              },
+              required: ["company_name", "contact_name"],
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_business_card" } },
-      });
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "extract_business_card" } },
+    });
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
       console.error("AI Gateway error:", aiResp.status, errText);
       if (aiResp.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit AI superato, riprova tra poco" }), {
-          status: 429, headers: { ...dynCors, "Content-Type": "application/json" },
+          status: 429,
+          headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI error: ${aiResp.status}`);
@@ -181,27 +190,31 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
       extracted = r.data as Record<string, unknown>;
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      data: {
-        company_name: extracted.company_name || null,
-        contact_name: extracted.contact_name || null,
-        position: extracted.position || null,
-        email: extracted.email || null,
-        phone: extracted.phone || null,
-        mobile: extracted.mobile || null,
-        address: extracted.address || null,
-        website: extracted.website || null,
-        notes: extracted.notes || null,
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: {
+          company_name: extracted.company_name || null,
+          contact_name: extracted.contact_name || null,
+          position: extracted.position || null,
+          email: extracted.email || null,
+          phone: extracted.phone || null,
+          mobile: extracted.mobile || null,
+          address: extracted.address || null,
+          website: extracted.website || null,
+          notes: extracted.notes || null,
+        },
+        credits_remaining: creditRow.new_balance,
+      }),
+      {
+        headers: { ...dynCors, "Content-Type": "application/json" },
       },
-      credits_remaining: creditRow.new_balance,
-    }), {
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    );
   } catch (e) {
     console.error("parse-business-card error:", e);
     return new Response(JSON.stringify({ error: e.message || "Errore interno" }), {
-      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

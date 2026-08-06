@@ -17,9 +17,17 @@ interface BuildPipelineArgs {
 
 export function buildEmailPipeline(args: BuildPipelineArgs): EmailPipelineStage[] {
   const {
-    partner, tone, hasContact, contactEmailMissing,
-    kbCount = 0, promptsApplied = [], playbookActive = false,
-    model, generationOk, generationWarning, language = "it",
+    partner,
+    tone,
+    hasContact,
+    contactEmailMissing,
+    kbCount = 0,
+    promptsApplied = [],
+    playbookActive = false,
+    model,
+    generationOk,
+    generationWarning,
+    language = "it",
   } = args;
 
   // 1) Oracolo
@@ -49,16 +57,15 @@ export function buildEmailPipeline(args: BuildPipelineArgs): EmailPipelineStage[
   // 2) Architetto (KB + playbook + contesto)
   const architettoStatus: EmailPipelineStage["status"] = kbCount > 0 || playbookActive ? "ok" : "skipped";
   const architettoDetail =
-    kbCount > 0
-      ? `KB·${kbCount}${playbookActive ? " + playbook" : ""}`
-      : playbookActive ? "playbook" : "—";
+    kbCount > 0 ? `KB·${kbCount}${playbookActive ? " + playbook" : ""}` : playbookActive ? "playbook" : "—";
 
   // 3) Prompt Lab
   const promptStatus: EmailPipelineStage["status"] = promptsApplied.length > 0 ? "ok" : "skipped";
   const promptDetail = promptsApplied.length > 0 ? `${promptsApplied.length}` : "—";
-  const promptTooltip = promptsApplied.length > 0
-    ? `Prompt operativi applicati:\n• ${promptsApplied.join("\n• ")}`
-    : "Nessun prompt operativo aggiuntivo";
+  const promptTooltip =
+    promptsApplied.length > 0
+      ? `Prompt operativi applicati:\n• ${promptsApplied.join("\n• ")}`
+      : "Nessun prompt operativo aggiuntivo";
 
   // 4) Giornalista (editorial review obbligatorio in generate-email)
   let giornalistaStatus: EmailPipelineStage["status"] = "skipped";
@@ -86,18 +93,33 @@ export function buildEmailPipeline(args: BuildPipelineArgs): EmailPipelineStage[
   const bozzaTooltip = model ? `Modello: ${model} · tono: ${toneLabel(tone)}` : `Tono: ${toneLabel(tone)}`;
 
   return [
-    { id: "oracolo",     label: "Oracolo",     status: oracoloStatus,     detail: oracoloDetail, tooltip: oracoloTooltip },
-    { id: "architetto",  label: "Architetto",  status: architettoStatus,  detail: architettoDetail,
-      tooltip: kbCount > 0 ? `${kbCount} sezioni KB consultate${playbookActive ? " + playbook attivo" : ""}` : "Nessuna sezione KB" },
-    { id: "prompt-lab",  label: "Prompt Lab",  status: promptStatus,      detail: promptDetail,    tooltip: promptTooltip },
+    { id: "oracolo", label: "Oracolo", status: oracoloStatus, detail: oracoloDetail, tooltip: oracoloTooltip },
+    {
+      id: "architetto",
+      label: "Architetto",
+      status: architettoStatus,
+      detail: architettoDetail,
+      tooltip:
+        kbCount > 0
+          ? `${kbCount} sezioni KB consultate${playbookActive ? " + playbook attivo" : ""}`
+          : "Nessuna sezione KB",
+    },
+    { id: "prompt-lab", label: "Prompt Lab", status: promptStatus, detail: promptDetail, tooltip: promptTooltip },
     {
       id: "calligrafia",
       label: "Calligrafia",
-      status: generationOk === true ? "ok" : (generationOk === false ? "failed" : "skipped"),
+      status: generationOk === true ? "ok" : generationOk === false ? "failed" : "skipped",
       detail: generationOk === true ? "KB" : undefined,
-      tooltip: 'Regole di formattazione email caricate dalla KB "Calligrafia" e iniettate nel prompt (server-side, generate-email).',
+      tooltip:
+        'Regole di formattazione email caricate dalla KB "Calligrafia" e iniettate nel prompt (server-side, generate-email).',
     },
-    { id: "giornalista", label: "Giornalista", status: giornalistaStatus, detail: giornalistaDetail, tooltip: giornalistaTooltip },
-    { id: "bozza",       label: "Bozza",       status: bozzaStatus,       detail: bozzaDetail,     tooltip: bozzaTooltip },
+    {
+      id: "giornalista",
+      label: "Giornalista",
+      status: giornalistaStatus,
+      detail: giornalistaDetail,
+      tooltip: giornalistaTooltip,
+    },
+    { id: "bozza", label: "Bozza", status: bozzaStatus, detail: bozzaDetail, tooltip: bozzaTooltip },
   ];
 }

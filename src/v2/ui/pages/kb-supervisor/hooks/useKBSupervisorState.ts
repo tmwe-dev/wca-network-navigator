@@ -15,12 +15,7 @@ import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 const log = createLogger("useKBSupervisorState");
 
-import {
-  findKbEntries,
-  upsertKbEntry,
-  deleteKbEntry as dalDeleteKbEntry,
-  type KbEntry,
-} from "@/data/kbEntries";
+import { findKbEntries, upsertKbEntry, deleteKbEntry as dalDeleteKbEntry, type KbEntry } from "@/data/kbEntries";
 
 export interface SupervisorMessage {
   readonly id: string;
@@ -113,7 +108,9 @@ export function useKBSupervisorState() {
     supabase.auth.getSession().then(({ data }) => {
       if (alive) setUserId(data.session?.user?.id ?? null);
     });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const loadDocuments = useCallback(async () => {
@@ -131,37 +128,45 @@ export function useKBSupervisorState() {
   }, [userId, loadDocuments]);
 
   // TTS via edge function elevenlabs-tts
-  const speakResponse = useCallback(async (text: string) => {
-    if (!voiceEnabled || !userId || !text.trim()) return;
-    try {
-      setIsSpeaking(true);
-      const settingsMap = await findElevenLabsVoiceSettings(userId);
-      const voiceId = settingsMap.elevenlabs_custom_voice_id || settingsMap.elevenlabs_default_voice_id || DEFAULT_VOICE_ID;
-      const language = settingsMap.elevenlabs_language || "it";
+  const speakResponse = useCallback(
+    async (text: string) => {
+      if (!voiceEnabled || !userId || !text.trim()) return;
+      try {
+        setIsSpeaking(true);
+        const settingsMap = await findElevenLabsVoiceSettings(userId);
+        const voiceId =
+          settingsMap.elevenlabs_custom_voice_id || settingsMap.elevenlabs_default_voice_id || DEFAULT_VOICE_ID;
+        const language = settingsMap.elevenlabs_language || "it";
 
-      const response = await supabase.functions.invoke("elevenlabs-tts", {
-        body: { text: text.slice(0, 4000), voiceId, language },
-      });
+        const response = await supabase.functions.invoke("elevenlabs-tts", {
+          body: { text: text.slice(0, 4000), voiceId, language },
+        });
 
-      if (response.data instanceof Blob) {
-        const url = URL.createObjectURL(response.data);
-        if (audioRef.current) {
-          audioRef.current.pause();
-          try { URL.revokeObjectURL(audioRef.current.src); } catch { /* noop */ }
+        if (response.data instanceof Blob) {
+          const url = URL.createObjectURL(response.data);
+          if (audioRef.current) {
+            audioRef.current.pause();
+            try {
+              URL.revokeObjectURL(audioRef.current.src);
+            } catch {
+              /* noop */
+            }
+          }
+          const audio = new Audio(url);
+          audioRef.current = audio;
+          audio.onended = () => setIsSpeaking(false);
+          audio.onerror = () => setIsSpeaking(false);
+          await audio.play();
+        } else {
+          setIsSpeaking(false);
         }
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        audio.onended = () => setIsSpeaking(false);
-        audio.onerror = () => setIsSpeaking(false);
-        await audio.play();
-      } else {
+      } catch (err) {
+        log.error("TTS error:", { error: err });
         setIsSpeaking(false);
       }
-    } catch (err) {
-      log.error("TTS error:", { error: err });
-      setIsSpeaking(false);
-    }
-  }, [voiceEnabled, userId]);
+    },
+    [voiceEnabled, userId],
+  );
 
   // Run audit via edge function dedicata
   const runAudit = useCallback(async () => {
@@ -186,89 +191,96 @@ export function useKBSupervisorState() {
   }, [userId]);
 
   // Send message
-  const sendMessage = useCallback(async (content: string) => {
-    if (!userId || !content.trim()) return;
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (!userId || !content.trim()) return;
 
-    const userMsg: SupervisorMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    setIsLoading(true);
-    messageHistoryRef.current.push({ role: "user", content });
-
-    try {
-      const result = await invokeAi<SupervisorResponse>("unified-assistant", {
-        scope: "kb-supervisor",
-        context: { source: "useKBSupervisorState.chat", mode: "conversational" },
-        body: {
-          scope: "kb-supervisor",
-          mode: "conversational",
-          messages: messageHistoryRef.current.slice(-20),
-          pageContext: "kb-supervisor",
-          extra_context: {
-            supervisor_mode: mode,
-            active_document_id: activeDocument?.id,
-            active_document_title: activeDocument?.title,
-            total_kb_entries: documentList.length,
-            available_categories: [...new Set(documentList.map(d => d.category))],
-          },
-        },
-      });
-
-      const assistantMsg: SupervisorMessage = {
+      const userMsg: SupervisorMessage = {
         id: crypto.randomUUID(),
-        role: "assistant",
-        content: result.content ?? "",
+        role: "user",
+        content,
         timestamp: new Date(),
-        proposedAction: result.structured?.action
-          ? { ...result.structured.action, status: "pending" }
-          : undefined,
       };
+      setMessages((prev) => [...prev, userMsg]);
+      setIsLoading(true);
+      messageHistoryRef.current.push({ role: "user", content });
 
-      if (result.structured) {
-        const { action, document_id, audit_request } = result.structured;
+      try {
+        const result = await invokeAi<SupervisorResponse>("unified-assistant", {
+          scope: "kb-supervisor",
+          context: { source: "useKBSupervisorState.chat", mode: "conversational" },
+          body: {
+            scope: "kb-supervisor",
+            mode: "conversational",
+            messages: messageHistoryRef.current.slice(-20),
+            pageContext: "kb-supervisor",
+            extra_context: {
+              supervisor_mode: mode,
+              active_document_id: activeDocument?.id,
+              active_document_title: activeDocument?.title,
+              total_kb_entries: documentList.length,
+              available_categories: [...new Set(documentList.map((d) => d.category))],
+            },
+          },
+        });
 
-        if (action) {
-          const proposed: ProposedAction = { ...action, status: "pending" };
-          setProposedChanges(proposed);
-          setCanvasTab("diff");
-          if (action.targetId) {
-            const doc = documentList.find(d => d.id === action.targetId);
-            if (doc) setActiveDocument(doc);
+        const assistantMsg: SupervisorMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: result.content ?? "",
+          timestamp: new Date(),
+          proposedAction: result.structured?.action ? { ...result.structured.action, status: "pending" } : undefined,
+        };
+
+        if (result.structured) {
+          const { action, document_id, audit_request } = result.structured;
+
+          if (action) {
+            const proposed: ProposedAction = { ...action, status: "pending" };
+            setProposedChanges(proposed);
+            setCanvasTab("diff");
+            if (action.targetId) {
+              const doc = documentList.find((d) => d.id === action.targetId);
+              if (doc) setActiveDocument(doc);
+            }
+          }
+
+          if (document_id) {
+            const doc = documentList.find((d) => d.id === document_id);
+            if (doc) {
+              setActiveDocument(doc);
+              setCanvasTab("document");
+            }
+          }
+
+          if (audit_request) {
+            void runAudit();
           }
         }
 
-        if (document_id) {
-          const doc = documentList.find(d => d.id === document_id);
-          if (doc) {
-            setActiveDocument(doc);
-            setCanvasTab("document");
-          }
-        }
+        setMessages((prev) => [...prev, assistantMsg]);
+        messageHistoryRef.current.push({ role: "assistant", content: result.content ?? "" });
 
-        if (audit_request) {
-          void runAudit();
-        }
+        await speakResponse(result.content ?? "");
+      } catch (err) {
+        log.error("Supervisor chat error:", { error: err });
+        toast.error("Errore comunicazione con il supervisor");
+      } finally {
+        setIsLoading(false);
       }
-
-      setMessages(prev => [...prev, assistantMsg]);
-      messageHistoryRef.current.push({ role: "assistant", content: result.content ?? "" });
-
-      await speakResponse(result.content ?? "");
-    } catch (err) {
-      log.error("Supervisor chat error:", { error: err });
-      toast.error("Errore comunicazione con il supervisor");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId, mode, activeDocument, documentList, speakResponse, runAudit]);
+    },
+    [userId, mode, activeDocument, documentList, speakResponse, runAudit],
+  );
 
   // STT
-  const { listening: isListening, start: startListening, stop: stopListening } = useVoiceInput({
-    onTranscript: () => { /* live transcript handled internally */ },
+  const {
+    listening: isListening,
+    start: startListening,
+    stop: stopListening,
+  } = useVoiceInput({
+    onTranscript: () => {
+      /* live transcript handled internally */
+    },
     onAutoSubmit: (text: string) => {
       if (text.trim()) void sendMessage(text);
     },
@@ -295,14 +307,17 @@ export function useKBSupervisorState() {
       }
 
       if (action.type === "create") {
-        await upsertKbEntry({
-          title: action.targetTitle ?? "Nuovo documento",
-          content: action.proposedContent ?? "",
-          category: action.proposedCategory ?? "system_doctrine",
-          tags: action.proposedTags ? [...action.proposedTags] : [],
-          priority: 8,
-          is_active: true,
-        }, userId ?? "");
+        await upsertKbEntry(
+          {
+            title: action.targetTitle ?? "Nuovo documento",
+            content: action.proposedContent ?? "",
+            category: action.proposedCategory ?? "system_doctrine",
+            tags: action.proposedTags ? [...action.proposedTags] : [],
+            priority: 8,
+            is_active: true,
+          },
+          userId ?? "",
+        );
         toast.success(`Nuovo documento "${action.targetTitle}" creato`);
       }
 
@@ -313,12 +328,15 @@ export function useKBSupervisorState() {
       }
 
       if (action.type === "retag" && action.targetId) {
-        const existing = documentList.find(d => d.id === action.targetId);
+        const existing = documentList.find((d) => d.id === action.targetId);
         if (existing) {
-          await upsertKbEntry({
-            ...existing,
-            tags: action.proposedTags ? [...action.proposedTags] : [],
-          }, userId ?? "");
+          await upsertKbEntry(
+            {
+              ...existing,
+              tags: action.proposedTags ? [...action.proposedTags] : [],
+            },
+            userId ?? "",
+          );
           toast.success(`Tag aggiornati per "${action.targetTitle}"`);
         }
       }
@@ -348,20 +366,23 @@ export function useKBSupervisorState() {
   }, []);
 
   const editDocument = useCallback((field: keyof KBDocument, value: string | string[] | number) => {
-    setActiveDocument(prev => prev ? ({ ...prev, [field]: value } as KBDocument) : null);
+    setActiveDocument((prev) => (prev ? ({ ...prev, [field]: value } as KBDocument) : null));
   }, []);
 
   const saveDocument = useCallback(async () => {
     if (!activeDocument) return;
     try {
-      await upsertKbEntry({
-        id: activeDocument.id,
-        title: activeDocument.title,
-        content: activeDocument.content,
-        category: activeDocument.category,
-        tags: activeDocument.tags,
-        priority: activeDocument.priority,
-      }, userId ?? "");
+      await upsertKbEntry(
+        {
+          id: activeDocument.id,
+          title: activeDocument.title,
+          content: activeDocument.content,
+          category: activeDocument.category,
+          tags: activeDocument.tags,
+          priority: activeDocument.priority,
+        },
+        userId ?? "",
+      );
       toast.success("Documento salvato");
       await loadDocuments();
     } catch (err) {
@@ -371,7 +392,7 @@ export function useKBSupervisorState() {
   }, [activeDocument, userId, loadDocuments]);
 
   const toggleVoice = useCallback(() => {
-    setVoiceEnabled(prev => {
+    setVoiceEnabled((prev) => {
       const next = !prev;
       if (!next && audioRef.current) {
         audioRef.current.pause();
@@ -383,15 +404,20 @@ export function useKBSupervisorState() {
 
   return {
     // State
-    mode, setMode,
+    mode,
+    setMode,
     messages,
     isLoading,
-    voiceEnabled, toggleVoice,
-    isListening, isSpeaking,
-    startListening, stopListening,
+    voiceEnabled,
+    toggleVoice,
+    isListening,
+    isSpeaking,
+    startListening,
+    stopListening,
     activeDocument,
     proposedChanges,
-    canvasTab, setCanvasTab,
+    canvasTab,
+    setCanvasTab,
     documentList,
     auditReport,
     auditStatus,

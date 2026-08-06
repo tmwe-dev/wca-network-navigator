@@ -4,11 +4,7 @@
  */
 
 const MAX_PROMPT_CHARS = 80_000;
-const INJECTION_PATTERNS = [
-  /ignore (all|previous) instructions/i,
-  /system prompt[:\s]+you are/i,
-  /<\|im_start\|>/i,
-];
+const INJECTION_PATTERNS = [/ignore (all|previous) instructions/i, /system prompt[:\s]+you are/i, /<\|im_start\|>/i];
 
 export interface PreflightResult {
   ok: boolean;

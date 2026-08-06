@@ -3,15 +3,26 @@
  * Vieta di chiamare dalle UI le edge / hook bulk senza passare dal runner bulkOps.
  */
 const FORBIDDEN_EDGE = new Set([
-  "enrich-partner-website", "batch-enrichment-worker", "sherlock-extract",
-  "process-download-job", "process-inbound-enrichment", "suggest-email-groups",
-  "verify-whatsapp-number", "verify-linkedin-profile", "verify-email-address",
-  "find-import-duplicates", "extension-dispatch-enqueue", "backfill-email-rules",
+  "enrich-partner-website",
+  "batch-enrichment-worker",
+  "sherlock-extract",
+  "process-download-job",
+  "process-inbound-enrichment",
+  "suggest-email-groups",
+  "verify-whatsapp-number",
+  "verify-linkedin-profile",
+  "verify-email-address",
+  "find-import-duplicates",
+  "extension-dispatch-enqueue",
+  "backfill-email-rules",
 ]);
 
 const FORBIDDEN_HOOKS = new Set([
-  "useDeepSearchV2", "useDeepSearchRunner", "useDeepSearchLocal",
-  "useBulkLinkedInDispatch", "useBaseEnrichment",
+  "useDeepSearchV2",
+  "useDeepSearchRunner",
+  "useDeepSearchLocal",
+  "useBulkLinkedInDispatch",
+  "useBaseEnrichment",
 ]);
 
 function isAllowed(filename) {
@@ -21,7 +32,8 @@ function isAllowed(filename) {
     f.includes("/src/data/") ||
     f.includes("/src/lib/api/") ||
     f.includes("/src/lib/ai/") ||
-    f.endsWith(".test.ts") || f.endsWith(".test.tsx")
+    f.endsWith(".test.ts") ||
+    f.endsWith(".test.tsx")
   );
 }
 
@@ -56,10 +68,13 @@ module.exports = {
         const c = node.callee;
         if (
           c.type === "MemberExpression" &&
-          c.property.type === "Identifier" && c.property.name === "invoke" &&
+          c.property.type === "Identifier" &&
+          c.property.name === "invoke" &&
           c.object.type === "MemberExpression" &&
-          c.object.property.type === "Identifier" && c.object.property.name === "functions"
-        ) checkInvoke(node);
+          c.object.property.type === "Identifier" &&
+          c.object.property.name === "functions"
+        )
+          checkInvoke(node);
         if (c.type === "Identifier" && c.name === "invokeEdge") checkInvoke(node);
       },
     };

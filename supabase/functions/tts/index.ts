@@ -31,7 +31,9 @@ serve(async (req) => {
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
       );
-      const { data: { user } } = await sb.auth.getUser(token);
+      const {
+        data: { user },
+      } = await sb.auth.getUser(token);
       if (user) userId = user.id;
     }
 
@@ -41,17 +43,17 @@ serve(async (req) => {
 
     const { text, voiceId } = await req.json();
     if (!text || typeof text !== "string") {
-      return new Response(
-        JSON.stringify({ error: "text required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "text required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!ELEVENLABS_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "ELEVENLABS_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const truncated = text.slice(0, 1500);
@@ -86,10 +88,10 @@ serve(async (req) => {
     if (!res.ok) {
       const err = await res.text();
       console.error("[tts] ElevenLabs error:", err);
-      return new Response(
-        JSON.stringify({ error: err }),
-        { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: err }), {
+        status: res.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Record TTS usage
@@ -106,9 +108,9 @@ serve(async (req) => {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "tts failed";
     console.error("[tts] error:", msg);
-    return new Response(
-      JSON.stringify({ error: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

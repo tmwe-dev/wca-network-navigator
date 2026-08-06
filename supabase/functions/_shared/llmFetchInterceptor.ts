@@ -36,8 +36,7 @@ function detectProvider(url: string): string | null {
 
 function getCallerFunctionName(): string {
   // 1) Esplicito via env (settato da bootstrap edge)
-  const explicit = Deno.env.get("SUPABASE_FUNCTION_NAME") ||
-                   Deno.env.get("FUNCTION_NAME");
+  const explicit = Deno.env.get("SUPABASE_FUNCTION_NAME") || Deno.env.get("FUNCTION_NAME");
   if (explicit) return explicit;
 
   // 2) Stack trace inspection — cerca il primo frame in /functions/<name>/
@@ -99,13 +98,17 @@ function extractUsageFromSse(text: string, isAnthropic: boolean): { tokensIn: nu
     try {
       const u = extractUsage(JSON.parse(payload), isAnthropic);
       if (u.tokensIn || u.tokensOut) last = u;
-    } catch { /* chunk non-JSON */ }
+    } catch {
+      /* chunk non-JSON */
+    }
   }
   return last;
 }
 
 function charsByRole(messages: Array<{ role: string; content?: unknown }>) {
-  let sysChars = 0, userChars = 0, otherChars = 0;
+  let sysChars = 0,
+    userChars = 0,
+    otherChars = 0;
   for (const m of messages) {
     const c = typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "");
     if (m.role === "system") sysChars += c.length;
@@ -168,11 +171,7 @@ function install() {
   const originalFetch = globalThis.fetch.bind(globalThis);
 
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = typeof input === "string"
-      ? input
-      : input instanceof URL
-        ? input.toString()
-        : input.url;
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
     const provider = detectProvider(url);
     if (!provider) return originalFetch(input as RequestInfo, init);
@@ -189,7 +188,9 @@ function install() {
           b.stream_options = { include_usage: true };
           usedInit = { ...init, body: JSON.stringify(b) };
         }
-      } catch { /* body non-JSON: lascia invariato */ }
+      } catch {
+        /* body non-JSON: lascia invariato */
+      }
     }
     const parsed = tryParseRequestBody(usedInit?.body, isAnthropic);
     const functionName = getCallerFunctionName();
@@ -205,44 +206,46 @@ function install() {
       const usagePromise: Promise<{ tokensIn: number; tokensOut: number }> = isStream
         ? cloned.text().then((t) => extractUsageFromSse(t, isAnthropic))
         : cloned.json().then((d) => extractUsage(d, isAnthropic));
-      usagePromise.then(({ tokensIn, tokensOut }) => {
-        if (tokensIn === 0 && tokensOut === 0 && !resp.ok) {
-          // Errore senza token usage: logga comunque come failure
+      usagePromise
+        .then(({ tokensIn, tokensOut }) => {
+          if (tokensIn === 0 && tokensOut === 0 && !resp.ok) {
+            // Errore senza token usage: logga comunque come failure
+            const { sysChars, userChars, otherChars } = charsByRole(parsed.messages);
+            void logCallToDb({
+              functionName,
+              provider,
+              model: parsed.model ?? "unknown",
+              tokensIn: 0,
+              tokensOut: 0,
+              costUsd: 0,
+              latencyMs: Date.now() - startedAt,
+              systemPromptChars: sysChars,
+              userPromptChars: userChars,
+              contextChars: otherChars,
+              success: false,
+              errorMessage: `HTTP ${resp.status}`,
+            });
+            return;
+          }
           const { sysChars, userChars, otherChars } = charsByRole(parsed.messages);
+          const model = parsed.model ?? "unknown";
           void logCallToDb({
             functionName,
             provider,
-            model: parsed.model ?? "unknown",
-            tokensIn: 0,
-            tokensOut: 0,
-            costUsd: 0,
+            model,
+            tokensIn,
+            tokensOut,
+            costUsd: estimateCostUsd(model, tokensIn, tokensOut),
             latencyMs: Date.now() - startedAt,
             systemPromptChars: sysChars,
             userPromptChars: userChars,
             contextChars: otherChars,
-            success: false,
-            errorMessage: `HTTP ${resp.status}`,
+            success: resp.ok,
           });
-          return;
-        }
-        const { sysChars, userChars, otherChars } = charsByRole(parsed.messages);
-        const model = parsed.model ?? "unknown";
-        void logCallToDb({
-          functionName,
-          provider,
-          model,
-          tokensIn,
-          tokensOut,
-          costUsd: estimateCostUsd(model, tokensIn, tokensOut),
-          latencyMs: Date.now() - startedAt,
-          systemPromptChars: sysChars,
-          userPromptChars: userChars,
-          contextChars: otherChars,
-          success: resp.ok,
+        })
+        .catch(() => {
+          // Non-JSON response: non logghiamo
         });
-      }).catch(() => {
-        // Non-JSON response: non logghiamo
-      });
 
       return resp;
     } catch (err) {

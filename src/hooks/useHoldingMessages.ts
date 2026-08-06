@@ -35,7 +35,10 @@ export function useHoldingMessages(channel: HoldingChannel) {
   return useQuery({
     queryKey: queryKeys.contacts.holdingMessages(channel),
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       const userId = user?.id;
       if (!userId) return [] as HoldingMessageGroup[];
 
@@ -49,9 +52,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
       const partnerMap = new Map((holdingPartners || []).map((p) => [p.partner_id, p]));
       const partnerIds = (holdingPartners || []).map((p) => p.partner_id);
 
-      const contactEmails = holdingContacts
-        .map(c => c.email?.toLowerCase())
-        .filter(Boolean) as string[];
+      const contactEmails = holdingContacts.map((c) => c.email?.toLowerCase()).filter(Boolean) as string[];
 
       // Step 2: Get messages for these partners AND contacts on the specified channel
       const [partnerMsgs, contactMsgs] = await Promise.all([
@@ -59,10 +60,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
         findHoldingMessagesByFromAddresses(channel, userId, contactEmails, 100),
       ]);
 
-      const allMessages = [
-        ...partnerMsgs,
-        ...contactMsgs,
-      ];
+      const allMessages = [...partnerMsgs, ...contactMsgs];
 
       // Step 3: Deduplicate
       const seen = new Set<string>();
@@ -132,7 +130,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
       }
 
       return Array.from(groupMap.values()).sort(
-        (a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime()
+        (a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime(),
       );
     },
     staleTime: 30_000,
@@ -143,7 +141,10 @@ export function useHoldingUnreadCounts() {
   return useQuery({
     queryKey: queryKeys.contacts.holdingUnreadCounts,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       const userId = user?.id;
       if (!userId) return { email: 0, whatsapp: 0, linkedin: 0 };
 

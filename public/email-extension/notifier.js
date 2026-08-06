@@ -19,7 +19,7 @@ export async function notifyNewEmails(newEmails, enabled = true) {
   // Deduplicate against already-notified UIDs
   const { [NOTIFIED_KEY]: seen = [] } = await chrome.storage.local.get(NOTIFIED_KEY);
   const seenSet = new Set(seen);
-  const fresh = newEmails.filter(e => !seenSet.has(e.uid));
+  const fresh = newEmails.filter((e) => !seenSet.has(e.uid));
 
   if (!fresh.length) return;
 
@@ -37,15 +37,16 @@ export async function notifyNewEmails(newEmails, enabled = true) {
       type: "basic",
       iconUrl: "icons/icon128.png",
       title: `${fresh.length} nuove email`,
-      message: fresh.slice(0, 3).map(e => 
-        `${extractName(e.from)}: ${(e.subject || "").slice(0, 40)}`
-      ).join("\n"),
+      message: fresh
+        .slice(0, 3)
+        .map((e) => `${extractName(e.from)}: ${(e.subject || "").slice(0, 40)}`)
+        .join("\n"),
       priority: 1,
     });
   }
 
   // Track notified UIDs (keep bounded)
-  const updated = [...seen, ...fresh.map(e => e.uid)].slice(-MAX_TRACKED);
+  const updated = [...seen, ...fresh.map((e) => e.uid)].slice(-MAX_TRACKED);
   await chrome.storage.local.set({ [NOTIFIED_KEY]: updated });
 }
 

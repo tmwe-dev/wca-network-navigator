@@ -6,10 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRADashboard } from "@/hooks/useRADashboard";
-import {
-  Building2, Mail, FileText, Phone, TrendingUp,
-  Zap, Download, Filter, Clock, Activity,
-} from "lucide-react";
+import { Building2, Mail, FileText, Phone, TrendingUp, Zap, Download, Filter, Clock, Activity } from "lucide-react";
 
 function formatRelativeTime(date: string | Date): string {
   const dateObj = typeof date === "string" ? new Date(date) : date;
@@ -47,9 +44,7 @@ function KPICard({ icon, label, value, color }: KPICardProps) {
             {color === "text-success" ? "+2.4%" : "+0.8%"}
           </Badge>
         </div>
-        <div className="text-2xl font-bold text-foreground mb-1 font-mono">
-          {value.toLocaleString("it-IT")}
-        </div>
+        <div className="text-2xl font-bold text-foreground mb-1 font-mono">{value.toLocaleString("it-IT")}</div>
         <div className="text-xs text-muted-foreground">{label}</div>
       </div>
     </div>
@@ -95,8 +90,13 @@ export function RADashboard() {
   const [activeJobsFilter, setActiveJobsFilter] = useState<"all" | "running" | "completed">("all");
 
   const stats = data ?? {
-    totalProspects: 0, withEmail: 0, withPec: 0, withPhone: 0,
-    topAteco: [], recentProspects: [], activeJobs: [],
+    totalProspects: 0,
+    withEmail: 0,
+    withPec: 0,
+    withPhone: 0,
+    topAteco: [],
+    recentProspects: [],
+    activeJobs: [],
   };
 
   const filteredJobs = useMemo(() => {
@@ -124,10 +124,20 @@ export function RADashboard() {
 
         {/* KPI Row */}
         <div className="grid grid-cols-4 gap-4">
-          <KPICard icon={<Building2 className="w-5 h-5" />} label="Prospect Totali" value={stats.totalProspects} color="text-primary" />
+          <KPICard
+            icon={<Building2 className="w-5 h-5" />}
+            label="Prospect Totali"
+            value={stats.totalProspects}
+            color="text-primary"
+          />
           <KPICard icon={<Mail className="w-5 h-5" />} label="Con Email" value={stats.withEmail} color="text-success" />
           <KPICard icon={<FileText className="w-5 h-5" />} label="Con PEC" value={stats.withPec} color="text-success" />
-          <KPICard icon={<Phone className="w-5 h-5" />} label="Con Telefono" value={stats.withPhone} color="text-primary" />
+          <KPICard
+            icon={<Phone className="w-5 h-5" />}
+            label="Con Telefono"
+            value={stats.withPhone}
+            color="text-primary"
+          />
         </div>
 
         {/* Two Column Grid */}
@@ -146,10 +156,14 @@ export function RADashboard() {
                 <div key={sector.code} className="px-6 py-3 hover:bg-primary/5 transition-colors cursor-pointer group">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{sector.description}</div>
+                      <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                        {sector.description}
+                      </div>
                       <div className="text-xs text-muted-foreground mt-0.5 font-mono">ATECO {sector.code}</div>
                     </div>
-                    <Badge variant="secondary" className="text-xs">{sector.count.toLocaleString("it-IT")}</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {sector.count.toLocaleString("it-IT")}
+                    </Badge>
                   </div>
                 </div>
               ))}
@@ -167,14 +181,24 @@ export function RADashboard() {
             </div>
             <div className="divide-y divide-border">
               {(stats.recentProspects ?? []).map((prospect) => (
-                <div key={prospect.id} className="px-6 py-3 hover:bg-primary/5 transition-colors cursor-pointer group" onClick={() => navigate(`/ra/company/${prospect.id}`)}>
+                <div
+                  key={prospect.id}
+                  className="px-6 py-3 hover:bg-primary/5 transition-colors cursor-pointer group"
+                  onClick={() => navigate(`/ra/company/${prospect.id}`)}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{prospect.company_name}</div>
+                    <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                      {prospect.company_name}
+                    </div>
                     <span className="text-xs text-muted-foreground">{formatRelativeTime(prospect.created_at)}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-xs">{prospect.city || "—"}</Badge>
-                    <Badge variant="secondary" className="text-xs">{prospect.codice_ateco || "—"}</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {prospect.city || "—"}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {prospect.codice_ateco || "—"}
+                    </Badge>
                   </div>
                 </div>
               ))}
@@ -207,8 +231,14 @@ export function RADashboard() {
                 <h2 className="text-lg font-semibold text-foreground font-mono">JOB IN CORSO</h2>
               </div>
               <div className="flex gap-2">
-                {(["all", "running", "completed"] as const).map(f => (
-                  <Button key={f} size="sm" variant={activeJobsFilter === f ? "default" : "ghost"} onClick={() => setActiveJobsFilter(f)} className="text-xs">
+                {(["all", "running", "completed"] as const).map((f) => (
+                  <Button
+                    key={f}
+                    size="sm"
+                    variant={activeJobsFilter === f ? "default" : "ghost"}
+                    onClick={() => setActiveJobsFilter(f)}
+                    className="text-xs"
+                  >
                     {f === "all" ? "Tutti" : f === "running" ? "In Corso" : "Completati"}
                   </Button>
                 ))}
@@ -226,23 +256,34 @@ export function RADashboard() {
                   <div key={job.id} className="px-6 py-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${isRunning ? "status-dot-active bg-emerald-400" : "bg-muted-foreground/40"}`} />
+                        <div
+                          className={`w-2 h-2 rounded-full ${isRunning ? "status-dot-active bg-emerald-400" : "bg-muted-foreground/40"}`}
+                        />
                         <div>
-                          <div className="text-sm font-medium text-foreground">{job.job_type.replace(/_/g, " ").toUpperCase()}</div>
+                          <div className="text-sm font-medium text-foreground">
+                            {job.job_type.replace(/_/g, " ").toUpperCase()}
+                          </div>
                           <div className="text-xs text-muted-foreground mt-0.5">
                             {job.started_at ? `Iniziato ${formatRelativeTime(job.started_at)}` : "In attesa..."}
                           </div>
                         </div>
                       </div>
-                      <Badge variant={isRunning ? "secondary" : "outline"} className={`text-xs ${isRunning ? "bg-success/20 text-success border-success/30" : ""}`}>
+                      <Badge
+                        variant={isRunning ? "secondary" : "outline"}
+                        className={`text-xs ${isRunning ? "bg-success/20 text-success border-success/30" : ""}`}
+                      >
                         {isRunning ? "In Corso" : "Completato"}
                       </Badge>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                      <div className={`h-full rounded-full transition-all ${isRunning ? "bg-primary" : "bg-muted-foreground/40"}`} style={{ width: `${progress}%` }} />
+                      <div
+                        className={`h-full rounded-full transition-all ${isRunning ? "bg-primary" : "bg-muted-foreground/40"}`}
+                        style={{ width: `${progress}%` }}
+                      />
                     </div>
                     <div className="text-xs text-muted-foreground mt-2 text-right">
-                      {job.processed_items.toLocaleString("it-IT")} / {job.total_items.toLocaleString("it-IT")} ({progress}%)
+                      {job.processed_items.toLocaleString("it-IT")} / {job.total_items.toLocaleString("it-IT")} (
+                      {progress}%)
                     </div>
                   </div>
                 );

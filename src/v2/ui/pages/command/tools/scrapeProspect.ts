@@ -8,7 +8,8 @@ import { upsertScrapeCacheEntry } from "@/data/scrapeCache";
 import { applyProspectEnrichment, findProspectBySearchTerm } from "@/data/prospects";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
-const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:prospect\s+)?/i;
+const MATCH =
+  /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:prospect\s+)?/i;
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -94,7 +95,11 @@ export const scrapeProspectTool: Tool = {
         body: { url: website, mode: "static" },
       });
       if (sErr || !data) {
-        return { kind: "result", title: "Errore Scraping", message: `Impossibile analizzare ${website}: ${sErr?.message ?? "errore sconosciuto"}` };
+        return {
+          kind: "result",
+          title: "Errore Scraping",
+          message: `Impossibile analizzare ${website}: ${sErr?.message ?? "errore sconosciuto"}`,
+        };
       }
       scraped = data as Record<string, unknown>;
       await setCachedScrape(website, scraped);

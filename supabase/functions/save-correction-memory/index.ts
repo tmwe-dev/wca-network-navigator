@@ -14,21 +14,16 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return edgeError("AUTH_REQUIRED", "Unauthorized", 401, dynCors);
     }
     const token = authHeader.replace("Bearer ", "");
-    const authClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    const authClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return edgeError("AUTH_INVALID", "Unauthorized", 401, dynCors);
@@ -47,7 +42,12 @@ serve(async (req) => {
 
     // 1. Save L1 memory with high importance
     // LOVABLE-93: coerenza Prompt Lab multi-dominio — track domain in tags
-    const tags = ["correzione_utente", correction_type, `da_${original_value || "unknown"}`, `a_${corrected_value || "unknown"}`];
+    const tags = [
+      "correzione_utente",
+      correction_type,
+      `da_${original_value || "unknown"}`,
+      `a_${corrected_value || "unknown"}`,
+    ];
     if (domain) {
       tags.push(`domain:${domain}`);
     }
@@ -73,7 +73,8 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existing) {
-        await supabase.from("email_address_rules")
+        await supabase
+          .from("email_address_rules")
           .update({
             category: corrected_value || undefined,
             interaction_count: (existing.interaction_count || 0) + 1,

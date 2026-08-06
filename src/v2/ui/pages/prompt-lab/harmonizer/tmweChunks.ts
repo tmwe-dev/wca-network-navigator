@@ -19,12 +19,7 @@ import type { ConflictEntry } from "@/data/harmonizerSessions";
  * Helper per generare ConflictEntry "seed" senza UUID runtime
  * (usiamo slug deterministici così sono dedupabili tra run).
  */
-function seedConflict(
-  slug: string,
-  topic: string,
-  notes: string,
-  detectedInChunk: number,
-): ConflictEntry {
+function seedConflict(slug: string, topic: string, notes: string, detectedInChunk: number): ConflictEntry {
   return {
     id: `seed:${slug}`,
     topic,

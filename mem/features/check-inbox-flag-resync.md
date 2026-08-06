@@ -3,6 +3,7 @@ name: Check-Inbox Flag Re-Sync
 description: DISABILITATO (2026-06-15). Le mail NON vengono mai marcate lette in automatico; solo dopo visualizzazione in-app o richiesta esplicita.
 type: feature
 ---
+
 # ⛔ DISABILITATO il 2026-06-15
 
 Per decisione esplicita dell'owner, `resyncUnreadFlags` NON viene più invocato in
@@ -18,6 +19,7 @@ flag `\Seen` del server → indesiderato. Storico sotto.
 **Scope**: ad ogni run di `check-inbox`, dopo il fetch dei nuovi messaggi e prima del disconnect IMAP, viene eseguito `resyncUnreadFlags` (file `supabase/functions/check-inbox/flagResync.ts`).
 
 **Comportamento**:
+
 - Query DB: `channel_messages` user/email/inbound, `read_at IS NULL`, `imap_uid NOT NULL`, `created_at >= now() - 60 giorni`, cap 500 (più recenti prima).
 - IMAP: `UID FETCH <uids> (FLAGS)` in chunk da 100 (no body, no header).
 - Se il server riporta flag `\Seen` → `UPDATE channel_messages SET read_at = now() WHERE id IN (...) AND read_at IS NULL`.

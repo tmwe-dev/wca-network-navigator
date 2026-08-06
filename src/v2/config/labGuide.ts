@@ -36,26 +36,47 @@ export const LAB_GUIDE: readonly LabGuideEntry[] = [
     why: "Verifica che gli orchestratori AI rispettino le aspettative dopo ogni modifica a prompt, capabilities o personas.",
     steps: [
       { title: "1. Seleziona scenari", body: "Spunta gli scenari da eseguire. 'Esegui tutti' lancia l'intera suite." },
-      { title: "2. Avvia run", body: "Il pulsante chiama l'edge function di run; ogni scenario esegue agent-execute con prompt + tool whitelist registrati." },
-      { title: "3. Leggi risultati", body: "Per ogni scenario vedi pass/fail, output AI, tool invocati, latency, costo token." },
-      { title: "4. Edita scenari", body: "Crea/modifica scenari dal pulsante 'Nuovo': prompt, expected_contains, expected_tools." },
+      {
+        title: "2. Avvia run",
+        body: "Il pulsante chiama l'edge function di run; ogni scenario esegue agent-execute con prompt + tool whitelist registrati.",
+      },
+      {
+        title: "3. Leggi risultati",
+        body: "Per ogni scenario vedi pass/fail, output AI, tool invocati, latency, costo token.",
+      },
+      {
+        title: "4. Edita scenari",
+        body: "Crea/modifica scenari dal pulsante 'Nuovo': prompt, expected_contains, expected_tools.",
+      },
     ],
-    expected: "Riga risultato per scenario con badge PASS/FAIL e summary 'X/N test passati'. Nessun side-effect su CRM o invii reali.",
-    editing: "Tabella DB `ai_test_scenarios`. UI editor inline. Per cambiare il runner: edge function `run-ai-test-scenarios`.",
-    caveats: "Gli scenari girano in dry-run: tool come send-email sono mockati. Costo token reale viene comunque consumato dal modello.",
+    expected:
+      "Riga risultato per scenario con badge PASS/FAIL e summary 'X/N test passati'. Nessun side-effect su CRM o invii reali.",
+    editing:
+      "Tabella DB `ai_test_scenarios`. UI editor inline. Per cambiare il runner: edge function `run-ai-test-scenarios`.",
+    caveats:
+      "Gli scenari girano in dry-run: tool come send-email sono mockati. Costo token reale viene comunque consumato dal modello.",
   },
   {
     id: "ai-lab",
-    purpose: "Sandbox per testare la generazione email (generate-email + journalistReview) su contatti reali senza inviare.",
+    purpose:
+      "Sandbox per testare la generazione email (generate-email + journalistReview) su contatti reali senza inviare.",
     why: "Permette di iterare prompt/tono/KB e vedere subito l'output finale post-review editoriale.",
     steps: [
-      { title: "1. Scegli partner/contatto", body: "Seleziona destinatario reale dal CRM per caricare il contesto completo." },
+      {
+        title: "1. Scegli partner/contatto",
+        body: "Seleziona destinatario reale dal CRM per caricare il contesto completo.",
+      },
       { title: "2. Configura tipo + tono", body: "Tipo email, tono, KB on/off, brief strutturato e custom goal." },
-      { title: "3. Genera", body: "Chiama generate-email via invokeAi (scope=lab). Mostra subject, body, review notes." },
+      {
+        title: "3. Genera",
+        body: "Chiama generate-email via invokeAi (scope=lab). Mostra subject, body, review notes.",
+      },
       { title: "4. Itera", body: "Modifica brief/tono e rigenera. Confronta output." },
     ],
-    expected: "Email completa (subject + body) già passata da journalistReview. Nessun invio, nessuna riga in `email_messages`.",
-    editing: "Prompt operativi in DB `operative_prompts` (scope=email). Persone in `agent_personas`. Modifiche istantanee, no redeploy.",
+    expected:
+      "Email completa (subject + body) già passata da journalistReview. Nessun invio, nessuna riga in `email_messages`.",
+    editing:
+      "Prompt operativi in DB `operative_prompts` (scope=email). Persone in `agent_personas`. Modifiche istantanee, no redeploy.",
     caveats: "L'AI consuma token. Non bypassare mai il journalistReview cambiando edge function: è un nodo critico.",
   },
   {
@@ -63,17 +84,25 @@ export const LAB_GUIDE: readonly LabGuideEntry[] = [
     purpose: "Cabina di iterazione su email già in produzione: vedi versioni, diff, simula classify Funnemail.",
     why: "Quando una campagna o una risposta classificata sembra sbagliata, qui ricostruisci l'intera pipeline.",
     steps: [
-      { title: "1. Production tab", body: "Seleziona email reale; mostra payload inviato, prompt usato, versione prompt, output AI." },
+      {
+        title: "1. Production tab",
+        body: "Seleziona email reale; mostra payload inviato, prompt usato, versione prompt, output AI.",
+      },
       { title: "2. Iterations", body: "Confronta versioni successive con DiffView. Capisci cosa è cambiato e perché." },
-      { title: "3. Funnemail tab", body: "Incolla un'email inbound: chiama simulate-funnemail-classify e mostra categoria, confidence, reasoning." },
+      {
+        title: "3. Funnemail tab",
+        body: "Incolla un'email inbound: chiama simulate-funnemail-classify e mostra categoria, confidence, reasoning.",
+      },
     ],
     expected: "Diff testuale lato-lato fra versioni; classificazione simulata senza scrivere su DB.",
-    editing: "Logica simulazione: edge function `simulate-funnemail-classify`. Hook stato: `useFunnemailSimulation`, `useEmailLabIterations`.",
+    editing:
+      "Logica simulazione: edge function `simulate-funnemail-classify`. Hook stato: `useFunnemailSimulation`, `useEmailLabIterations`.",
     caveats: "Il simulator è read-only: non aggiorna `inbound_messages` né triggera escalation lead_status.",
   },
   {
     id: "extensions",
-    purpose: "Verifica che le browser extension (Partner Connect, WA, LinkedIn, RA, Email) siano installate, autorizzate e raggiungibili dal webapp-bridge.",
+    purpose:
+      "Verifica che le browser extension (Partner Connect, WA, LinkedIn, RA, Email) siano installate, autorizzate e raggiungibili dal webapp-bridge.",
     why: "Il sistema multichannel dipende dal bridge: senza estensioni non parte nulla su WA/LI.",
     steps: [
       { title: "1. Health check", body: "La pagina ping-a ogni extension via window.postMessage e mostra stato." },
@@ -81,8 +110,10 @@ export const LAB_GUIDE: readonly LabGuideEntry[] = [
       { title: "3. Auth", body: "Verifica che `requireExtensionAuth` accetti il token corrente." },
     ],
     expected: "Tabella con badge OK/MISSING/STALE per estensione e ultima sincronizzazione.",
-    editing: "Manifesti in `public/<ext>/manifest.json`. Bridge: `webapp-bridge.js`. Auth guard: `_shared/extensionAuth.ts`.",
-    caveats: "Senza estensione installata sul browser, la pagina riporta MISSING: è normale, non è un errore di sistema.",
+    editing:
+      "Manifesti in `public/<ext>/manifest.json`. Bridge: `webapp-bridge.js`. Auth guard: `_shared/extensionAuth.ts`.",
+    caveats:
+      "Senza estensione installata sul browser, la pagina riporta MISSING: è normale, non è un errore di sistema.",
   },
   {
     id: "e2e",
@@ -105,12 +136,16 @@ export const LAB_GUIDE: readonly LabGuideEntry[] = [
     steps: [
       { title: "1. Filtra per scope", body: "scope = email/outreach/classification/agent_loop/…" },
       { title: "2. Apri prompt", body: "Vedi system + user template, variabili attese, tag." },
-      { title: "3. Edita e salva", body: "Salvataggio crea automaticamente snapshot in `prompt_versions` (trigger DB)." },
+      {
+        title: "3. Edita e salva",
+        body: "Salvataggio crea automaticamente snapshot in `prompt_versions` (trigger DB).",
+      },
       { title: "4. Test rapido", body: "Tab Simulator (vedi sotto) per dry-run senza spendere token su flussi reali." },
     ],
     expected: "Prompt aggiornato e versionato. Loader serve la nuova versione alla prossima chiamata AI.",
     editing: "Tabella `operative_prompts` + versioning automatico via trigger.",
-    caveats: "Modifiche entrano in produzione subito. Per rollback: helper SQL `rollback_prompt_to_version(id, version)`.",
+    caveats:
+      "Modifiche entrano in produzione subito. Per rollback: helper SQL `rollback_prompt_to_version(id, version)`.",
   },
   {
     id: "prompt-catalog",
@@ -232,9 +267,7 @@ export const LAB_GUIDE: readonly LabGuideEntry[] = [
     id: "health",
     purpose: "System Health Dashboard: stato infrastrutturale (DB, edge, queue, cron).",
     why: "Diagnosi infra prima di toccare codice.",
-    steps: [
-      { title: "1. Apri dashboard", body: "Mostra heartbeat, queue depth, cron lag." },
-    ],
+    steps: [{ title: "1. Apri dashboard", body: "Mostra heartbeat, queue depth, cron lag." }],
     expected: "Indicatori infra in tempo reale.",
     editing: "Component `SystemHealthDashboard`.",
   },

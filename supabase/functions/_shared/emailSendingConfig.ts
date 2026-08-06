@@ -70,11 +70,7 @@ const SMTP_KEYS = [
   "ai_footer_image_url",
 ] as const;
 
-const RATE_LIMIT_KEYS = [
-  "email_max_per_day",
-  "email_max_per_hour",
-  "email_min_delay_ms",
-] as const;
+const RATE_LIMIT_KEYS = ["email_max_per_day", "email_max_per_hour", "email_min_delay_ms"] as const;
 
 const TIME_GATE_KEYS = [
   "email_send_start_hour",
@@ -87,10 +83,7 @@ const TIME_GATE_KEYS = [
  * Carica la configurazione invio completa per un utente.
  * Un'unica query a app_settings per tutti i parametri.
  */
-export async function loadSendingConfig(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<SendingConfig> {
+export async function loadSendingConfig(supabase: SupabaseClient, userId: string): Promise<SendingConfig> {
   const allKeys = [...SMTP_KEYS, ...RATE_LIMIT_KEYS, ...TIME_GATE_KEYS];
 
   const { data: settings } = await supabase
@@ -100,10 +93,7 @@ export async function loadSendingConfig(
     .in("key", allKeys);
 
   const map = new Map<string, string>(
-    (settings || []).map((s: { key: string; value: string | null }) => [
-      s.key,
-      s.value || "",
-    ]),
+    (settings || []).map((s: { key: string; value: string | null }) => [s.key, s.value || ""]),
   );
 
   const get = (k: string, fallback: string): string => {
@@ -127,12 +117,7 @@ export async function loadSendingConfig(
       senderName: get("default_sender_name", ""),
       signatureImageUrl: get("ai_signature_image_url", ""),
       footerImageUrl: get("ai_footer_image_url", ""),
-      tlsMode:
-        smtpPort === 587
-          ? "starttls"
-          : smtpPort === 465
-          ? "implicit"
-          : "none",
+      tlsMode: smtpPort === 587 ? "starttls" : smtpPort === 465 ? "implicit" : "none",
     },
     rateLimit: {
       maxPerDay: getInt("email_max_per_day", 200),
@@ -266,9 +251,7 @@ export function checkTimeGate(gate: TimeGateConfig): SendingValidation {
 /**
  * Controlla SMTP config è completa e valida.
  */
-export function validateSmtpConfig(
-  smtp: SmtpConfig,
-): { valid: boolean; errors: string[] } {
+export function validateSmtpConfig(smtp: SmtpConfig): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   if (!smtp.host) errors.push("SMTP host non configurato");
   if (!smtp.user) errors.push("SMTP user non configurato");

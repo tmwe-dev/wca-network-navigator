@@ -18,12 +18,7 @@ interface RealScreenshotProps {
 const RealScreenshot = ({ src, alt, title, fallback }: RealScreenshotProps) => (
   <ScreenshotFrame title={title}>
     {src ? (
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        className="block w-full h-auto"
-      />
+      <img src={src} alt={alt} loading="lazy" className="block w-full h-auto" />
     ) : (
       <div className="p-6 min-h-[280px]">{fallback}</div>
     )}

@@ -15,7 +15,7 @@ export default function BulkLinkedInDialog({ open, onOpenChange, targets }: Prop
   const [message, setMessage] = useState("");
   const { dispatch, sending, progress, timing, previewSchedule } = useLinkedInBulkDispatch();
 
-  const eligible = targets.filter(t => !!t.profileUrl);
+  const eligible = targets.filter((t) => !!t.profileUrl);
   const skipped = targets.length - eligible.length;
   const remaining = 300 - message.length;
   const preview = useMemo(() => previewSchedule(eligible.length), [eligible.length, previewSchedule]);
@@ -54,11 +54,15 @@ export default function BulkLinkedInDialog({ open, onOpenChange, targets }: Prop
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" /> Finestra:
               </span>
-              <span className="font-semibold">{timing.startHour}:00 → {timing.endHour}:00</span>
+              <span className="font-semibold">
+                {timing.startHour}:00 → {timing.endHour}:00
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Delay tra invii:</span>
-              <span className="font-semibold">{timing.minDelaySeconds}-{timing.maxDelaySeconds}s</span>
+              <span className="font-semibold">
+                {timing.minDelaySeconds}-{timing.maxDelaySeconds}s
+              </span>
             </div>
             {eligible.length > 0 && (
               <div className="flex justify-between text-primary">
@@ -79,7 +83,9 @@ export default function BulkLinkedInDialog({ open, onOpenChange, targets }: Prop
               disabled={sending}
             />
             <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>Placeholders: <code>{"{{name}}"}</code>, <code>{"{{company}}"}</code></span>
+              <span>
+                Placeholders: <code>{"{{name}}"}</code>, <code>{"{{company}}"}</code>
+              </span>
               <span className={remaining < 30 ? "text-warning" : ""}>{remaining}/300</span>
             </div>
           </div>
@@ -87,18 +93,23 @@ export default function BulkLinkedInDialog({ open, onOpenChange, targets }: Prop
           {sending && progress.total > 0 && (
             <div className="text-xs space-y-1 bg-primary/5 rounded-lg p-2">
               <div className="flex justify-between">
-                <span>Accodamento {progress.current}/{progress.total}</span>
+                <span>
+                  Accodamento {progress.current}/{progress.total}
+                </span>
                 <span className="text-success">✓ {progress.queued}</span>
               </div>
               <div className="h-1 bg-border rounded-full overflow-hidden">
-                <div className="h-full bg-primary transition-all" style={{ width: `${(progress.current / progress.total) * 100}%` }} />
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                />
               </div>
             </div>
           )}
 
           <p className="text-[10px] text-muted-foreground">
-            ⚠️ Timing configurabile in <span className="font-medium">Settings → Connessioni → Timing multichannel</span>.
-            L'invio reale avviene tramite la tua estensione browser.
+            ⚠️ Timing configurabile in <span className="font-medium">Settings → Connessioni → Timing multichannel</span>
+            . L'invio reale avviene tramite la tua estensione browser.
           </p>
         </div>
 

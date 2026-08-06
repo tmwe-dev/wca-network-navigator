@@ -25,7 +25,19 @@ interface Props {
   isFetchingNextPage?: boolean;
 }
 
-export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartnerId, onSelect, onEmailClick, selectedIds, onToggleSelect, loadMoreRef, hasNextPage, isFetchingNextPage }: Props) {
+export function PartnerVirtualList({
+  partners,
+  isLoading,
+  isDark,
+  selectedPartnerId,
+  onSelect,
+  onEmailClick,
+  selectedIds,
+  onToggleSelect,
+  loadMoreRef,
+  hasNextPage,
+  isFetchingNextPage,
+}: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -52,8 +64,29 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
     <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          type PartnerContact = { email?: string; name?: string; is_primary?: boolean; direct_phone?: string; mobile?: string; [k: string]: unknown };
-          const partner = partners[virtualRow.index] as Record<string, unknown> & { id: string; partner_contacts?: PartnerContact[]; company_name?: string; company_alias?: string; city?: string; rating?: number; email?: string; phone?: string; lead_status?: string; member_since?: string | null; country_code?: string; raw_profile_html?: string; enrichment_data?: Record<string, unknown> };
+          type PartnerContact = {
+            email?: string;
+            name?: string;
+            is_primary?: boolean;
+            direct_phone?: string;
+            mobile?: string;
+            [k: string]: unknown;
+          };
+          const partner = partners[virtualRow.index] as Record<string, unknown> & {
+            id: string;
+            partner_contacts?: PartnerContact[];
+            company_name?: string;
+            company_alias?: string;
+            city?: string;
+            rating?: number;
+            email?: string;
+            phone?: string;
+            lead_status?: string;
+            member_since?: string | null;
+            country_code?: string;
+            raw_profile_html?: string;
+            enrichment_data?: Record<string, unknown>;
+          };
           const contacts = partner.partner_contacts || [];
           const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
           const hasEmail = !!partner.email || contacts.some((c: Record<string, unknown>) => c.email);
@@ -85,9 +118,14 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                 "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l",
                 years > 0 ? "before:bg-primary/40" : "before:bg-transparent",
                 isActive
-                  ? isDark ? "bg-sky-950/40" : "bg-sky-50"
-                  : isSelected ? "bg-primary/5"
-                    : isDark ? "hover:bg-white/[0.04]" : "hover:bg-sky-50/40",
+                  ? isDark
+                    ? "bg-sky-950/40"
+                    : "bg-sky-50"
+                  : isSelected
+                    ? "bg-primary/5"
+                    : isDark
+                      ? "hover:bg-white/[0.04]"
+                      : "hover:bg-sky-50/40",
               )}
             >
               <div className="flex items-center gap-2.5">
@@ -111,14 +149,16 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                     src={logoUrl}
                     alt=""
                     className="w-9 h-9 rounded-md object-contain bg-white/10 border border-white/10 shrink-0"
-                    onError={e => (e.target as HTMLImageElement).style.display = 'none'}
+                    onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
                   />
                 )}
 
                 {/* Centro: nome + posizione */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className={cn("font-bold text-[12px] truncate", isDark ? "text-slate-100" : "text-slate-800")}>{partner.company_name}</p>
+                    <p className={cn("font-bold text-[12px] truncate", isDark ? "text-slate-100" : "text-slate-800")}>
+                      {partner.company_name}
+                    </p>
                     {years > 0 && (
                       <span className="flex items-center gap-0.5 shrink-0" title={`${years} anni WCA`}>
                         <Trophy className="w-3 h-3 text-primary fill-primary" />
@@ -131,7 +171,14 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                       </span>
                     )}
                     {partner.company_alias && (
-                      <span className={cn("text-[9px] px-1 py-0.5 rounded shrink-0", isDark ? "bg-emerald-900/30 text-emerald-400" : "bg-emerald-100 text-emerald-700")}>{partner.company_alias}</span>
+                      <span
+                        className={cn(
+                          "text-[9px] px-1 py-0.5 rounded shrink-0",
+                          isDark ? "bg-emerald-900/30 text-emerald-400" : "bg-emerald-100 text-emerald-700",
+                        )}
+                      >
+                        {partner.company_alias}
+                      </span>
                     )}
                   </div>
                   {primaryContact?.name && (
@@ -140,14 +187,20 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                     </div>
                   )}
                   {snippet && (
-                    <p className={cn("text-[9px] truncate italic", isDark ? "text-slate-500" : "text-slate-400")}>{snippet}</p>
+                    <p className={cn("text-[9px] truncate italic", isDark ? "text-slate-500" : "text-slate-400")}>
+                      {snippet}
+                    </p>
                   )}
                 </div>
 
                 {/* Destra: città allineata sinistra + canali */}
                 <div className="flex flex-col items-start justify-center min-w-0 w-[160px] shrink-0 gap-0.5">
                   {partner.city && (
-                    <span className={cn("text-[11px] truncate max-w-full", isDark ? "text-slate-300" : "text-slate-600")}>{partner.city}</span>
+                    <span
+                      className={cn("text-[11px] truncate max-w-full", isDark ? "text-slate-300" : "text-slate-600")}
+                    >
+                      {partner.city}
+                    </span>
                   )}
                   <div className="flex items-center gap-1.5">
                     {(partner.rating ?? 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />}
@@ -164,8 +217,21 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                 {/* Hover actions */}
                 <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {primaryContact?.email && (
-                    <button onClick={(e) => { e.stopPropagation(); onEmailClick({ email: String(primaryContact.email), name: String(primaryContact.name ?? ""), company: partner.company_name ?? "", partnerId: partner.id }); }}
-                      className={cn("p-1 rounded-md transition-all", isDark ? "text-primary hover:bg-primary/20" : "text-primary hover:bg-primary/10")}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEmailClick({
+                          email: String(primaryContact.email),
+                          name: String(primaryContact.name ?? ""),
+                          company: partner.company_name ?? "",
+                          partnerId: partner.id,
+                        });
+                      }}
+                      className={cn(
+                        "p-1 rounded-md transition-all",
+                        isDark ? "text-primary hover:bg-primary/20" : "text-primary hover:bg-primary/10",
+                      )}
+                    >
                       <Send className="w-3 h-3" />
                     </button>
                   )}
@@ -179,9 +245,7 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
       {/* Infinite scroll sentinel */}
       {loadMoreRef && (
         <div ref={loadMoreRef as React.Ref<HTMLDivElement>} className="h-10 flex items-center justify-center">
-          {isFetchingNextPage && (
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-          )}
+          {isFetchingNextPage && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
           {!isFetchingNextPage && hasNextPage && (
             <span className="text-[10px] text-muted-foreground">Scorri per caricare altri...</span>
           )}

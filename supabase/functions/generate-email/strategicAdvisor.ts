@@ -9,11 +9,12 @@ export function buildStrategicAdvisor(context: StrategicAdvisorContext): string 
     ? `\n- Fase commerciale: ${context.commercialState} (touch #${context.touchCount || 0})`
     : "";
   const tc = context.touchCount ?? 0;
-  const toneGuide = tc === 0
-    ? "\n- PRIMO CONTATTO: tono freddo-professionale, breve, CTA basso impegno"
-    : tc <= 3
-      ? "\n- FOLLOW-UP INIZIALE: tono cordiale, riferirsi a scambi precedenti, aggiungere valore"
-      : "\n- RELAZIONE ATTIVA: tono da collega, personalizzazione alta, NON ripetere presentazione";
+  const toneGuide =
+    tc === 0
+      ? "\n- PRIMO CONTATTO: tono freddo-professionale, breve, CTA basso impegno"
+      : tc <= 3
+        ? "\n- FOLLOW-UP INIZIALE: tono cordiale, riferirsi a scambi precedenti, aggiungere valore"
+        : "\n- RELAZIONE ATTIVA: tono da collega, personalizzazione alta, NON ripetere presentazione";
 
   // LOVABLE-77: blocco "Data points disponibili" — guida l'AI a scegliere ancore concrete
   const dp = context.dataPoints || {};
@@ -21,22 +22,24 @@ export function buildStrategicAdvisor(context: StrategicAdvisorContext): string 
   if (dp.hasProfileDescription) availableAnchors.push("profilo partner (servizi/network/città)");
   if (dp.hasWebsite) availableAnchors.push("sito web (analizzato)");
   if (dp.hasLinkedin) availableAnchors.push("LinkedIn azienda");
-  if ((dp.contactProfilesCount ?? 0) > 0) availableAnchors.push(`${dp.contactProfilesCount} decision maker da Deep Search`);
+  if ((dp.contactProfilesCount ?? 0) > 0)
+    availableAnchors.push(`${dp.contactProfilesCount} decision maker da Deep Search`);
   if (dp.hasSherlock) availableAnchors.push("indagine Sherlock");
   if ((dp.bcaCount ?? 0) > 0) availableAnchors.push(`${dp.bcaCount} incontro/i di persona`);
   if ((dp.historyCount ?? 0) > 0) availableAnchors.push(`${dp.historyCount} touch precedenti`);
   if (dp.hasReputation) availableAnchors.push("reputazione online");
 
   const totalAnchors = availableAnchors.length;
-  const dataPointsBlock = totalAnchors > 0
-    ? `
+  const dataPointsBlock =
+    totalAnchors > 0
+      ? `
 ## DATA POINTS DISPONIBILI PER QUESTO PARTNER (${totalAnchors})
 ${availableAnchors.map((a) => `- ✓ ${a}`).join("\n")}
 
 → USA ALMENO ${Math.min(2, totalAnchors)} di questi data points come ancore concrete nel messaggio.
 → Cita un servizio specifico letto dal sito, un nome di decision maker da Sherlock, un evento BCA, un servizio di profilo. NON restare generico.
 `
-    : `
+      : `
 ## DATA POINTS DISPONIBILI: NESSUNO
 ⚠️ Non hai dati specifici su questo partner. Aggiungi tag [GENERIC] nel subject e procedi con presentazione standard onesta.
 `;

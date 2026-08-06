@@ -14,8 +14,16 @@ interface HoldingMessageThreadProps {
   onStrategyChange: (s: HoldingStrategy) => void;
 }
 
-function StrategyCard({ icon: Icon, label, value, color }: {
-  icon: typeof Mail; label: string; value: string; color: string;
+function StrategyCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: typeof Mail;
+  label: string;
+  value: string;
+  color: string;
 }) {
   return (
     <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/10 border border-border/20">
@@ -31,7 +39,11 @@ function StrategyCard({ icon: Icon, label, value, color }: {
 }
 
 export function HoldingMessageThread({
-  selectedMessage, strategy, isAnalyzing, strategyError, onStrategyChange,
+  selectedMessage,
+  strategy,
+  isAnalyzing,
+  strategyError,
+  onStrategyChange,
 }: HoldingMessageThreadProps) {
   return (
     <Tabs defaultValue="risposta" className="flex-1 flex flex-col overflow-hidden">
@@ -70,7 +82,9 @@ export function HoldingMessageThread({
               </div>
             )}
             <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Messaggio originale</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                Messaggio originale
+              </p>
               <div className="text-xs text-foreground whitespace-pre-wrap bg-muted/10 rounded-lg p-3 border border-border/20 max-h-[300px] overflow-auto">
                 {selectedMessage?.body_text || "Nessun contenuto disponibile"}
               </div>
@@ -87,14 +101,27 @@ export function HoldingMessageThread({
           </div>
         ) : strategy ? (
           <div className="space-y-3">
-            <StrategyCard icon={AlertTriangle} label="Sentiment" value={strategy.sentiment} color={
-              strategy.sentiment === "positive" ? "text-emerald-500" :
-              strategy.sentiment === "negative" ? "text-destructive" : "text-muted-foreground"
-            } />
+            <StrategyCard
+              icon={AlertTriangle}
+              label="Sentiment"
+              value={strategy.sentiment}
+              color={
+                strategy.sentiment === "positive"
+                  ? "text-emerald-500"
+                  : strategy.sentiment === "negative"
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+              }
+            />
             <StrategyCard icon={TrendingUp} label="Intent Rilevato" value={strategy.intent} color="text-primary" />
             <StrategyCard icon={Mail} label="Azione Suggerita" value={strategy.suggestedAction} color="text-primary" />
             {strategy.nextStepDate && (
-              <StrategyCard icon={Clock} label="Prossimo Step" value={strategy.nextStepDate} color="text-muted-foreground" />
+              <StrategyCard
+                icon={Clock}
+                label="Prossimo Step"
+                value={strategy.nextStepDate}
+                color="text-muted-foreground"
+              />
             )}
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">

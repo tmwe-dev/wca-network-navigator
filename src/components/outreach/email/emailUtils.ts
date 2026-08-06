@@ -33,16 +33,28 @@ export function decodeRfc2047(input: string): string {
         const binary = atob(text);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        try { return new TextDecoder(cs).decode(bytes); }
-        catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return new TextDecoder("utf-8", { fatal: false }).decode(bytes); }
+        try {
+          return new TextDecoder(cs).decode(bytes);
+        } catch (e) {
+          log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) });
+          return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+        }
       }
-      const decoded = text.replace(/_/g, " ")
+      const decoded = text
+        .replace(/_/g, " ")
         .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
       const bytes = new Uint8Array(decoded.length);
       for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
-      try { return new TextDecoder(cs).decode(bytes); }
-      catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return decoded; }
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return text; }
+      try {
+        return new TextDecoder(cs).decode(bytes);
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+        return decoded;
+      }
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      return text;
+    }
   });
 }
 
@@ -53,7 +65,7 @@ export function decodeRfc2047(input: string): string {
 export function blockRemoteImages(html: string): string {
   return html.replace(
     /(<img[^>]*\s+src\s*=\s*["'])(https?:\/\/[^"']+)(["'][^>]*>)/gi,
-    '$1data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23e5e7eb%22/%3E%3Ctext x=%2224%22 y=%2228%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2210%22%3E🖼%3C/text%3E%3C/svg%3E$3'
+    "$1data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23e5e7eb%22/%3E%3Ctext x=%2224%22 y=%2228%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2210%22%3E🖼%3C/text%3E%3C/svg%3E$3",
   );
 }
 
@@ -61,11 +73,30 @@ export function blockRemoteImages(html: string): string {
  * Known personal email providers — no company logo available.
  */
 const PERSONAL_PROVIDERS = new Set([
-  "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com",
-  "icloud.com", "me.com", "mac.com", "aol.com", "protonmail.com",
-  "fastmail.com", "zoho.com", "mail.com", "yandex.com", "gmx.com",
-  "libero.it", "virgilio.it", "alice.it", "tin.it", "tiscali.it",
-  "yahoo.it", "hotmail.it", "outlook.it", "pec.it",
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "live.com",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "aol.com",
+  "protonmail.com",
+  "fastmail.com",
+  "zoho.com",
+  "mail.com",
+  "yandex.com",
+  "gmx.com",
+  "libero.it",
+  "virgilio.it",
+  "alice.it",
+  "tin.it",
+  "tiscali.it",
+  "yahoo.it",
+  "hotmail.it",
+  "outlook.it",
+  "pec.it",
 ]);
 
 /**
@@ -84,7 +115,7 @@ export function extractSenderBrand(from: string): { brand: string; detail: strin
 
   if (PERSONAL_PROVIDERS.has(domain)) {
     const localPart = emailAddr.split("@")[0] || "";
-    const name = displayName || localPart.replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    const name = displayName || localPart.replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     return { brand: name, detail: emailAddr };
   }
 
@@ -96,7 +127,7 @@ export function extractSenderBrand(from: string): { brand: string; detail: strin
     companySlug = domainParts.slice(0, -1).join(".");
   }
 
-  const brand = companySlug.replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const brand = companySlug.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const detail = displayName ? `${displayName} — ${emailAddr}` : emailAddr;
 
   return { brand, detail };

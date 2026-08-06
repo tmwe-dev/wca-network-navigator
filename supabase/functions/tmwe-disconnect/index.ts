@@ -19,22 +19,13 @@ Deno.serve(async (req) => {
     if (isAuthError(auth)) return auth;
 
     const svc = serviceClient();
-    const { error } = await svc
-      .from("tmwe_user_tokens")
-      .delete()
-      .eq("user_id", auth.userId);
+    const { error } = await svc.from("tmwe_user_tokens").delete().eq("user_id", auth.userId);
     if (error) {
-      return new Response(
-        JSON.stringify({ error: error.message, code: "INTERNAL_ERROR" }),
-        { status: 500, headers },
-      );
+      return new Response(JSON.stringify({ error: error.message, code: "INTERNAL_ERROR" }), { status: 500, headers });
     }
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    return new Response(
-      JSON.stringify({ error: message, code: "INTERNAL_ERROR" }),
-      { status: 500, headers },
-    );
+    return new Response(JSON.stringify({ error: message, code: "INTERNAL_ERROR" }), { status: 500, headers });
   }
 });

@@ -73,8 +73,21 @@ export async function findAgentBadges(agentIds: string[]): Promise<Map<string, {
 }
 
 export interface PartnerTimelineData {
-  activities: Array<{ id: string; created_at: string; activity_type: string; title: string; description: string | null; status: string | null }>;
-  interactions: Array<{ id: string; created_at: string | null; interaction_type: string; subject: string; notes: string | null }>;
+  activities: Array<{
+    id: string;
+    created_at: string;
+    activity_type: string;
+    title: string;
+    description: string | null;
+    status: string | null;
+  }>;
+  interactions: Array<{
+    id: string;
+    created_at: string | null;
+    interaction_type: string;
+    subject: string;
+    notes: string | null;
+  }>;
   emails: Array<{ id: string; sent_at: string | null; subject: string; recipient_email: string; status: string }>;
 }
 
@@ -116,7 +129,10 @@ export interface TimelineInteractionRow {
   outcome: string | null;
 }
 
-export async function findProspectInteractionsTimeline(prospectId: string, limit = 50): Promise<TimelineInteractionRow[]> {
+export async function findProspectInteractionsTimeline(
+  prospectId: string,
+  limit = 50,
+): Promise<TimelineInteractionRow[]> {
   const { data } = await supabase
     .from("prospect_interactions")
     .select("id, created_at, interaction_type, title, description, outcome")
@@ -147,7 +163,10 @@ export async function findHoldingImportedContactsForUser(
   return (data ?? []) as HoldingImportedContactRow[];
 }
 
-export async function findContactInteractionsTimeline(contactId: string, limit = 50): Promise<TimelineInteractionRow[]> {
+export async function findContactInteractionsTimeline(
+  contactId: string,
+  limit = 50,
+): Promise<TimelineInteractionRow[]> {
   const { data } = await supabase
     .from("contact_interactions")
     .select("id, created_at, interaction_type, title, description, outcome")
@@ -168,7 +187,10 @@ export interface ProspectInteractionRecordRow {
 }
 
 /** Interazioni prospect per il drawer contatto (Circuito di Attesa). */
-export async function findProspectInteractionsForRecord(prospectId: string, limit = 20): Promise<ProspectInteractionRecordRow[]> {
+export async function findProspectInteractionsForRecord(
+  prospectId: string,
+  limit = 20,
+): Promise<ProspectInteractionRecordRow[]> {
   const { data } = await supabase
     .from("prospect_interactions")
     .select("id, interaction_type, title, description, outcome, created_by, created_at")

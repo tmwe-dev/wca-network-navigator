@@ -9,9 +9,16 @@ import { type Activity, activityId, partnerId, agentId, userId } from "../domain
 export function mapActivityRow(row: unknown): Result<Activity, AppError> {
   const parsed = ActivityRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `Activity row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "activity-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `Activity row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "activity-mapper",
+      ),
+    );
   }
 
   const r = parsed.data;

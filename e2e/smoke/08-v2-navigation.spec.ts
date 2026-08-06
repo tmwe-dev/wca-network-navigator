@@ -50,7 +50,9 @@ test.describe("smoke: v2 navigation", () => {
       await expect(page.locator("#root")).not.toBeEmpty({ timeout: 10_000 });
 
       // No error boundary
-      const errorBoundary = await page.getByText(/qualcosa è andato storto|something went wrong|errore imprevisto/i).count();
+      const errorBoundary = await page
+        .getByText(/qualcosa è andato storto|something went wrong|errore imprevisto/i)
+        .count();
       expect(errorBoundary, `Error boundary visible on ${route}`).toBe(0);
 
       // No 404

@@ -45,8 +45,7 @@ export function AIExportPanel({ userId }: { userId: string }) {
     const t0 = performance.now();
     try {
       // Parallel fetch from DB
-      const { agentsRes, kbRes, opRes, memRes, settingsRes, personasRes } =
-        await fetchAiExportBundle(userId);
+      const { agentsRes, kbRes, opRes, memRes, settingsRes, personasRes } = await fetchAiExportBundle(userId);
 
       const agents = (agentsRes.data ?? []) as AgentRow[];
       const kb = (kbRes.data ?? []) as KbRow[];
@@ -97,8 +96,10 @@ export function AIExportPanel({ userId }: { userId: string }) {
           body += `- **Tono**: ${p.tone ?? "—"}\n- **Lingua**: ${p.language ?? "—"}\n\n`;
           if (p.custom_tone_prompt) body += `## Tone Prompt\n\n${p.custom_tone_prompt}\n\n`;
           if (p.style_rules?.length) body += `## Style Rules\n\n${p.style_rules.map((r) => `- ${r}`).join("\n")}\n\n`;
-          if (p.vocabulary_do?.length) body += `## Vocabulary DO\n\n${p.vocabulary_do.map((r) => `- ${r}`).join("\n")}\n\n`;
-          if (p.vocabulary_dont?.length) body += `## Vocabulary DON'T\n\n${p.vocabulary_dont.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.vocabulary_do?.length)
+            body += `## Vocabulary DO\n\n${p.vocabulary_do.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.vocabulary_dont?.length)
+            body += `## Vocabulary DON'T\n\n${p.vocabulary_dont.map((r) => `- ${r}`).join("\n")}\n\n`;
           if (p.signature_template) body += `## Signature\n\n\`\`\`\n${p.signature_template}\n\`\`\`\n\n`;
           personasFolder.file(`${safeFilename(name)}.md`, body);
         }
@@ -186,9 +187,9 @@ export function AIExportPanel({ userId }: { userId: string }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Scarica un archivio <code>.zip</code> leggibile con tutti i prompt degli agenti, le voci di
-          knowledge base, i prompt operativi, le memorie consolidate e la logica applicata
-          (scope, template, procedure). Formato Markdown + JSON di backup tecnico.
+          Scarica un archivio <code>.zip</code> leggibile con tutti i prompt degli agenti, le voci di knowledge base, i
+          prompt operativi, le memorie consolidate e la logica applicata (scope, template, procedure). Formato Markdown
+          + JSON di backup tecnico.
         </p>
         <Button onClick={exportAll} disabled={busy} className="w-full sm:w-auto">
           <FileDown className="h-4 w-4 mr-2" />

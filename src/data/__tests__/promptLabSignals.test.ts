@@ -4,15 +4,21 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-interface Call { table: string; method: string; args: unknown[] }
+interface Call {
+  table: string;
+  method: string;
+  args: unknown[];
+}
 const calls: Call[] = [];
 
 function makeBuilder(table: string) {
   const builder: Record<string, unknown> = {};
-  const record = (method: string) => (...args: unknown[]) => {
-    calls.push({ table, method, args });
-    return builder;
-  };
+  const record =
+    (method: string) =>
+    (...args: unknown[]) => {
+      calls.push({ table, method, args });
+      return builder;
+    };
   for (const m of ["select", "gte", "lt", "or", "eq", "contains", "order", "limit"]) {
     builder[m] = record(m);
   }
@@ -26,7 +32,9 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 describe("DAL — promptLabSignals", () => {
-  beforeEach(() => { calls.length = 0; });
+  beforeEach(() => {
+    calls.length = 0;
+  });
 
   it("non referenzia mai la colonna inesistente `action`", async () => {
     const mod = await import("@/data/promptLabSignals");

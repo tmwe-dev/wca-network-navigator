@@ -9,9 +9,16 @@ import { type Agent, agentId, userId } from "../domain/entities";
 export function mapAgentRow(row: unknown): Result<Agent, AppError> {
   const parsed = AgentRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `Agent row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "agent-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `Agent row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "agent-mapper",
+      ),
+    );
   }
 
   const r = parsed.data;

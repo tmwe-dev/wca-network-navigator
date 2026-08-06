@@ -22,8 +22,8 @@ describe("Type helpers", () => {
     it("handles nested contact_profiles", () => {
       const data = {
         contact_profiles: {
-          "abc": { name: "John", email: "john@example.com" }
-        }
+          abc: { name: "John", email: "john@example.com" },
+        },
       };
       const result = asEnrichmentData(data);
       expect(result.contact_profiles?.abc?.name).toBe("John");

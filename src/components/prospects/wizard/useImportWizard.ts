@@ -11,7 +11,7 @@ export interface WizardState {
   filters: ProspectFilters;
 }
 
-const ATECO_GROUPS = ATECO_TREE.filter(e => e.livello === 2);
+const ATECO_GROUPS = ATECO_TREE.filter((e) => e.livello === 2);
 
 export const FATTURATO_PRESETS = [
   { label: "Micro", desc: "< 500K", min: "", max: "500" },
@@ -50,17 +50,17 @@ export function useImportWizard({
   const [dipendentiPreset, setDipendentiPreset] = useState<number | null>(null);
 
   const toggleCode = (code: string) => {
-    setAtecoCodes(prev => prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]);
+    setAtecoCodes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
   };
 
   const toggleSection = (sectionCode: string) => {
-    const groups = ATECO_GROUPS.filter(g => g.padre === sectionCode);
-    const groupCodes = groups.map(g => g.codice);
-    const allSelected = groupCodes.every(c => atecoCodes.includes(c));
+    const groups = ATECO_GROUPS.filter((g) => g.padre === sectionCode);
+    const groupCodes = groups.map((g) => g.codice);
+    const allSelected = groupCodes.every((c) => atecoCodes.includes(c));
     if (allSelected) {
-      setAtecoCodes(prev => prev.filter(c => !groupCodes.includes(c)));
+      setAtecoCodes((prev) => prev.filter((c) => !groupCodes.includes(c)));
     } else {
-      setAtecoCodes(prev => [...new Set([...prev, ...groupCodes])]);
+      setAtecoCodes((prev) => [...new Set([...prev, ...groupCodes])]);
     }
   };
 
@@ -70,28 +70,28 @@ export function useImportWizard({
       setProvinces([]);
       return;
     }
-    setRegions(prev => {
+    setRegions((prev) => {
       if (prev.includes(region)) {
-        const provs = PROVINCE_ITALIANE.filter(p => p.regione === region).map(p => p.sigla);
-        setProvinces(pp => pp.filter(p => !provs.includes(p)));
-        return prev.filter(r => r !== region);
+        const provs = PROVINCE_ITALIANE.filter((p) => p.regione === region).map((p) => p.sigla);
+        setProvinces((pp) => pp.filter((p) => !provs.includes(p)));
+        return prev.filter((r) => r !== region);
       }
       return [...prev, region];
     });
   };
 
   const toggleProvince = (sigla: string) => {
-    setProvinces(prev => prev.includes(sigla) ? prev.filter(p => p !== sigla) : [...prev, sigla]);
+    setProvinces((prev) => (prev.includes(sigla) ? prev.filter((p) => p !== sigla) : [...prev, sigla]));
   };
 
   const applyFatturatoPreset = (idx: number) => {
     const p = FATTURATO_PRESETS[idx];
     if (fatturatoPreset === idx) {
       setFatturatoPreset(null);
-      setFilters(f => ({ ...f, fatturato_min: "", fatturato_max: "" }));
+      setFilters((f) => ({ ...f, fatturato_min: "", fatturato_max: "" }));
     } else {
       setFatturatoPreset(idx);
-      setFilters(f => ({ ...f, fatturato_min: p.min, fatturato_max: p.max }));
+      setFilters((f) => ({ ...f, fatturato_min: p.min, fatturato_max: p.max }));
     }
   };
 
@@ -99,10 +99,10 @@ export function useImportWizard({
     const p = DIPENDENTI_PRESETS[idx];
     if (dipendentiPreset === idx) {
       setDipendentiPreset(null);
-      setFilters(f => ({ ...f, dipendenti_min: "", dipendenti_max: "" }));
+      setFilters((f) => ({ ...f, dipendenti_min: "", dipendenti_max: "" }));
     } else {
       setDipendentiPreset(idx);
-      setFilters(f => ({ ...f, dipendenti_min: p.min, dipendenti_max: p.max }));
+      setFilters((f) => ({ ...f, dipendenti_min: p.min, dipendenti_max: p.max }));
     }
   };
 
@@ -115,16 +115,33 @@ export function useImportWizard({
 
   const handleStart = () => onStart({ atecoCodes, regions, provinces, filters });
 
-  const hasFilters = fatturatoPreset != null || dipendentiPreset != null ||
-    filters.has_phone || filters.has_email || filters.has_phone_and_email;
+  const hasFilters =
+    fatturatoPreset != null ||
+    dipendentiPreset != null ||
+    filters.has_phone ||
+    filters.has_email ||
+    filters.has_phone_and_email;
 
   return {
-    step, setStep,
-    expandedSection, setExpandedSection,
-    atecoCodes, regions, provinces, filters, setFilters,
-    fatturatoPreset, dipendentiPreset,
-    toggleCode, toggleSection, toggleRegion, toggleProvince,
-    applyFatturatoPreset, applyDipendentiPreset,
-    resetFiltersAndSkip, handleStart, hasFilters,
+    step,
+    setStep,
+    expandedSection,
+    setExpandedSection,
+    atecoCodes,
+    regions,
+    provinces,
+    filters,
+    setFilters,
+    fatturatoPreset,
+    dipendentiPreset,
+    toggleCode,
+    toggleSection,
+    toggleRegion,
+    toggleProvince,
+    applyFatturatoPreset,
+    applyDipendentiPreset,
+    resetFiltersAndSkip,
+    handleStart,
+    hasFilters,
   };
 }

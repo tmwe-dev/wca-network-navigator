@@ -44,9 +44,7 @@ export function useWcaActiveFilterChips(): ActiveFilterChip[] {
   const { filters } = useGlobalFilters();
   return useMemo(() => {
     const chips: ActiveFilterChip[] = [];
-    const countries = Array.from(
-      filters.networkSelectedCountries ?? new Set<string>()
-    ) as string[];
+    const countries = Array.from(filters.networkSelectedCountries ?? new Set<string>()) as string[];
     for (const c of countries) {
       chips.push({ key: `country:${c}`, label: countryLabel(c) });
     }
@@ -68,15 +66,11 @@ export function useCrmActiveFilterChips(): ActiveFilterChip[] {
   const { filters } = useGlobalFilters();
   return useMemo(() => {
     const chips: ActiveFilterChip[] = [];
-    const countries = Array.from(
-      filters.crmSelectedCountries ?? new Set<string>()
-    ) as string[];
+    const countries = Array.from(filters.crmSelectedCountries ?? new Set<string>()) as string[];
     for (const c of countries) {
       chips.push({ key: `country:${c}`, label: countryLabel(c) });
     }
-    const origins = Array.from(
-      filters.crmOrigin ?? new Set<string>()
-    ) as string[];
+    const origins = Array.from(filters.crmOrigin ?? new Set<string>()) as string[];
     for (const o of origins) {
       chips.push({ key: `origin:${o}`, label: `Origine: ${o}` });
     }
@@ -95,10 +89,7 @@ export function useCrmActiveFilterChips(): ActiveFilterChip[] {
     if (filters.crmWcaMatch && filters.crmWcaMatch !== "all") {
       chips.push({
         key: `wca:${filters.crmWcaMatch}`,
-        label:
-          filters.crmWcaMatch === "matched"
-            ? "Solo WCA matched"
-            : "Solo non-WCA",
+        label: filters.crmWcaMatch === "matched" ? "Solo WCA matched" : "Solo non-WCA",
         tone: "primary",
       });
     }

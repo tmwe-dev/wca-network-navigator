@@ -4,7 +4,9 @@ test.describe("home @smoke", () => {
   test("la root monta senza errori console critici", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
-    page.on("console", (msg) => { if (msg.type() === "error") errors.push(`console.error: ${msg.text()}`); });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(`console.error: ${msg.text()}`);
+    });
     await page.goto("/");
     await expect(page.locator("#root")).not.toBeEmpty({ timeout: 10_000 });
     expect(errors, errors.join("\n")).toHaveLength(0);

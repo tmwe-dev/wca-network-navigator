@@ -12,7 +12,12 @@
  */
 import { useState, useCallback } from "react";
 import { Loader2 } from "lucide-react";
-import { useHoldingMessages, useHoldingUnreadCounts, type HoldingChannel, type HoldingMessageGroup } from "@/hooks/useHoldingMessages";
+import {
+  useHoldingMessages,
+  useHoldingUnreadCounts,
+  type HoldingChannel,
+  type HoldingMessageGroup,
+} from "@/hooks/useHoldingMessages";
 import { useHoldingStrategy } from "@/hooks/useHoldingStrategy";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
@@ -29,7 +34,14 @@ export function HoldingPatternCommandCenter() {
 
   const { data: groups = [], isLoading } = useHoldingMessages(channel);
   const { data: unreadCounts } = useHoldingUnreadCounts();
-  const { analyze, isAnalyzing, strategy, setStrategy, error: strategyError, reset: resetStrategy } = useHoldingStrategy();
+  const {
+    analyze,
+    isAnalyzing,
+    strategy,
+    setStrategy,
+    error: strategyError,
+    reset: resetStrategy,
+  } = useHoldingStrategy();
   const markAsRead = useMarkAsRead();
 
   // HP1 FIX: Delegate activity creation to server-side edge function
@@ -37,8 +49,13 @@ export function HoldingPatternCommandCenter() {
   const handleApproveResponse = useCallback(async () => {
     if (!selectedMessage || !selectedGroup) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        toast.error("Sessione non valida");
+        return;
+      }
       const { error } = await supabase.functions.invoke("log-action", {
         body: {
           user_id: session.user.id,
@@ -54,7 +71,9 @@ export function HoldingPatternCommandCenter() {
       });
       if (error) throw error;
       toast.success("Risposta approvata e accodata per l'invio");
-    } catch { toast.error("Errore nell'approvazione della risposta"); }
+    } catch {
+      toast.error("Errore nell'approvazione della risposta");
+    }
   }, [selectedMessage, selectedGroup]);
 
   // HP5 FIX: Route ignore through classification update via edge function
@@ -62,8 +81,13 @@ export function HoldingPatternCommandCenter() {
   const handleIgnore = useCallback(async () => {
     if (!selectedMessage) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        toast.error("Sessione non valida");
+        return;
+      }
       // Use edge function to classify + audit, instead of direct channel_messages.update
       const { error } = await supabase.functions.invoke("log-action", {
         body: {
@@ -83,15 +107,22 @@ export function HoldingPatternCommandCenter() {
       // Also update channel_messages category server-side via the same function
       // The edge function handles the category update + audit log atomically
       toast.info("Messaggio contrassegnato come ignorato");
-    } catch { toast.error("Errore nell'aggiornamento"); }
+    } catch {
+      toast.error("Errore nell'aggiornamento");
+    }
   }, [selectedMessage, channel]);
 
   // HP1 FIX: Same pattern for phone escalation — delegate to server
   const handlePhoneEscalation = useCallback(async () => {
     if (!selectedMessage || !selectedGroup) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        toast.error("Sessione non valida");
+        return;
+      }
       const { error } = await supabase.functions.invoke("log-action", {
         body: {
           user_id: session.user.id,
@@ -107,7 +138,9 @@ export function HoldingPatternCommandCenter() {
       });
       if (error) throw error;
       toast.success("Attività di chiamata creata");
-    } catch { toast.error("Errore nella creazione dell'escalation"); }
+    } catch {
+      toast.error("Errore nella creazione dell'escalation");
+    }
   }, [selectedMessage, selectedGroup]);
 
   const handleSelectMessage = async (msg: ChannelMessage, group: HoldingMessageGroup) => {
@@ -131,36 +164,41 @@ export function HoldingPatternCommandCenter() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-1 min-h-0 overflow-hidden">
-      <HoldingContactList
-        channel={channel}
-        onChannelChange={(ch) => { setChannel(ch); setSelectedMessage(null); setSelectedGroup(null); resetStrategy(); }}
-        displayGroups={groups}
-        selectedMessageId={selectedMessage?.id || null}
-        totalUnread={totalUnread}
-        unreadCounts={unreadCounts as Record<string, number> | null}
-        onSelectMessage={handleSelectMessage}
-      />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <HoldingActionBar
-          selectedMessage={selectedMessage}
-          selectedGroup={selectedGroup}
-          onApprove={handleApproveResponse}
-          onIgnore={handleIgnore}
-          onEscalate={handlePhoneEscalation}
-          onRegenerate={() => {
-            if (selectedMessage) analyze(selectedMessage, selectedGroup?.companyName || "");
+        <HoldingContactList
+          channel={channel}
+          onChannelChange={(ch) => {
+            setChannel(ch);
+            setSelectedMessage(null);
+            setSelectedGroup(null);
+            resetStrategy();
           }}
+          displayGroups={groups}
+          selectedMessageId={selectedMessage?.id || null}
+          totalUnread={totalUnread}
+          unreadCounts={unreadCounts as Record<string, number> | null}
+          onSelectMessage={handleSelectMessage}
         />
-        {selectedMessage && (
-          <HoldingMessageThread
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <HoldingActionBar
             selectedMessage={selectedMessage}
-            strategy={strategy}
-            isAnalyzing={isAnalyzing}
-            strategyError={strategyError}
-            onStrategyChange={setStrategy}
+            selectedGroup={selectedGroup}
+            onApprove={handleApproveResponse}
+            onIgnore={handleIgnore}
+            onEscalate={handlePhoneEscalation}
+            onRegenerate={() => {
+              if (selectedMessage) analyze(selectedMessage, selectedGroup?.companyName || "");
+            }}
           />
-        )}
-      </div>
+          {selectedMessage && (
+            <HoldingMessageThread
+              selectedMessage={selectedMessage}
+              strategy={strategy}
+              isAnalyzing={isAnalyzing}
+              strategyError={strategyError}
+              onStrategyChange={setStrategy}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

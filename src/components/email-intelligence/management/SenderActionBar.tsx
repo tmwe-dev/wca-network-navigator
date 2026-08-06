@@ -12,14 +12,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  Settings2, MailCheck, Trash2, Download, Ban, Sparkles, Loader2,
-} from "lucide-react";
+import { Settings2, MailCheck, Trash2, Download, Ban, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAddressRulesRepo } from "@/hooks/emailIntelligence/useAddressRulesRepo";
@@ -44,7 +48,10 @@ export function SenderActionBar({
   const [busy, setBusy] = useState<string | null>(null);
 
   const withUser = async <T,>(fn: (userId: string) => Promise<T>): Promise<T | null> => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (!user) {
       toast.error("Sessione scaduta");
       return null;
@@ -55,9 +62,7 @@ export function SenderActionBar({
   const handleMarkRead = async () => {
     setBusy("mark_read");
     try {
-      await withUser((uid) =>
-        bulkUpdateAutoAction(uid, selectedSenders, "mark_read", { also_mark_read: true }),
-      );
+      await withUser((uid) => bulkUpdateAutoAction(uid, selectedSenders, "mark_read", { also_mark_read: true }));
       toast.success(`${selectedSenders.length} mittenti: segna come letto attivato`);
       onActionComplete?.();
     } catch (e) {
@@ -126,14 +131,17 @@ export function SenderActionBar({
               <AlertDialogTitle>Impostare regola di eliminazione?</AlertDialogTitle>
               <AlertDialogDescription>
                 Per i {selectedSenders.length} mittenti selezionati l'azione automatica diventerà
-                <strong> "elimina"</strong>. Le mail future verranno spostate nel cestino al prossimo
-                ciclo di sincronizzazione. Continuare?
+                <strong> "elimina"</strong>. Le mail future verranno spostate nel cestino al prossimo ciclo di
+                sincronizzazione. Continuare?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annulla</AlertDialogCancel>
               <AlertDialogAction
-                onClick={(e) => { e.preventDefault(); handleDelete(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDelete();
+                }}
                 className="bg-destructive hover:bg-destructive/90"
               >
                 Conferma

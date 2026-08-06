@@ -67,7 +67,8 @@ export const EDGE_FN_REGISTRY: ReadonlyArray<EdgeFnPromptSpec> = [
     id: "fn:classify-inbound-message",
     edgeFunction: "classify-inbound-message",
     label: "Inbound Message Classifier (multi-canale)",
-    description: "Classifica inbound email/WA/LinkedIn (positive/negative/neutral/needs_human/spam) ed estrae metadati.",
+    description:
+      "Classifica inbound email/WA/LinkedIn (positive/negative/neutral/needs_human/spam) ed estrae metadati.",
     defaultModel: "google/gemini-2.5-flash",
     hasTools: true,
     basePrompt:
@@ -171,7 +172,8 @@ export const EDGE_FN_REGISTRY: ReadonlyArray<EdgeFnPromptSpec> = [
     description: "Riassume e aggiorna il contesto conversazione (debounce 5min).",
     defaultModel: "google/gemini-2.5-flash",
     hasTools: false,
-    basePrompt: "[Base prompt dinamico — vedi refresh-conversation-context/index.ts. Tag: conversation-summary, context.]",
+    basePrompt:
+      "[Base prompt dinamico — vedi refresh-conversation-context/index.ts. Tag: conversation-summary, context.]",
     loaderOptions: {
       scope: "general",
       extraContexts: ["conversation-summary"],

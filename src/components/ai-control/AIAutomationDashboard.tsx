@@ -3,22 +3,30 @@
  * Shows email_address_rules with execution stats from ai_decision_log.
  * Visual pattern: 4 gradient stat cards + Card-inside-ScrollArea list with Switch toggle.
  */
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { findEmailAddressRulesWithStats, setEmailAddressRuleActive } from '@/data/emailAddressRules';
-import { findDecisionLogsByEmail, type DecisionLogEntry } from '@/data/aiDecisionLog';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { findEmailAddressRulesWithStats, setEmailAddressRuleActive } from "@/data/emailAddressRules";
+import { findDecisionLogsByEmail, type DecisionLogEntry } from "@/data/aiDecisionLog";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Bot, Activity, CheckCircle2, XCircle, Clock, Mail,
-  TrendingUp, AlertCircle, Edit, Copy, PlayCircle,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-
+  Bot,
+  Activity,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Mail,
+  TrendingUp,
+  AlertCircle,
+  Edit,
+  Copy,
+  PlayCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("AIAutomationDashboard");
@@ -26,8 +34,12 @@ export function AIAutomationDashboard() {
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
   const [executionLogs, setExecutionLogs] = useState<DecisionLogEntry[]>([]);
 
-  const { data: rules = [], isLoading, refetch } = useQuery({
-    queryKey: ['ai-automation-rules'],
+  const {
+    data: rules = [],
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["ai-automation-rules"],
     queryFn: () => findEmailAddressRulesWithStats(),
   });
 
@@ -36,13 +48,13 @@ export function AIAutomationDashboard() {
       const data = await findDecisionLogsByEmail(emailAddress, 10);
       setExecutionLogs(data);
     } catch (error) {
-      log.error('Error fetching logs:', { error: error });
+      log.error("Error fetching logs:", { error: error });
     }
   };
 
   useEffect(() => {
     if (expandedRuleId) {
-      const rule = rules.find(r => r.id === expandedRuleId);
+      const rule = rules.find((r) => r.id === expandedRuleId);
       if (rule) fetchExecutionLogs(rule.email_address);
     } else {
       setExecutionLogs([]);
@@ -51,21 +63,21 @@ export function AIAutomationDashboard() {
 
   const stats = {
     totalRules: rules.length,
-    activeRules: rules.filter(r => r.is_active).length,
+    activeRules: rules.filter((r) => r.is_active).length,
     totalInteractions: rules.reduce((sum, r) => sum + (r.interaction_count || 0), 0),
     avgSuccessRate: rules.length
       ? (rules.reduce((sum, r) => sum + (r.success_rate || 0), 0) / rules.length).toFixed(1)
-      : '0.0',
+      : "0.0",
   };
 
   const handleToggleActive = async (ruleId: string, currentState: boolean) => {
     try {
       await setEmailAddressRuleActive(ruleId, !currentState);
-      toast.success(currentState ? 'Regola disattivata' : 'Regola attivata');
+      toast.success(currentState ? "Regola disattivata" : "Regola attivata");
       refetch();
     } catch (error) {
-      log.error('Error toggling rule:', { error: error });
-      toast.error('Errore aggiornamento stato');
+      log.error("Error toggling rule:", { error: error });
+      toast.error("Errore aggiornamento stato");
     }
   };
 
@@ -148,7 +160,7 @@ export function AIAutomationDashboard() {
                     className={cn(
                       "border transition-all duration-200 hover:border-primary/40",
                       rule.is_active ? "border-green-500/30 bg-green-500/5" : "border-gray-500/30 bg-gray-500/5",
-                      expandedRuleId === rule.id && "ring-2 ring-primary/50"
+                      expandedRuleId === rule.id && "ring-2 ring-primary/50",
                     )}
                   >
                     <CardContent className="pt-6 space-y-4">
@@ -158,9 +170,9 @@ export function AIAutomationDashboard() {
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold text-lg">{rule.display_name || rule.email_address}</h4>
                             <Badge variant={rule.is_active ? "default" : "secondary"}>
-                              {rule.is_active ? 'Attivo' : 'Inattivo'}
+                              {rule.is_active ? "Attivo" : "Inattivo"}
                             </Badge>
-                            {rule.auto_action && rule.auto_action !== 'none' && (
+                            {rule.auto_action && rule.auto_action !== "none" && (
                               <Badge variant="outline" className="text-xs">
                                 {rule.auto_action}
                               </Badge>
@@ -195,8 +207,8 @@ export function AIAutomationDashboard() {
                           <Clock className="h-4 w-4 text-orange-400" />
                           <span className="text-muted-foreground">
                             {rule.last_interaction_at
-                              ? new Date(rule.last_interaction_at).toLocaleDateString('it-IT')
-                              : 'Mai'}
+                              ? new Date(rule.last_interaction_at).toLocaleDateString("it-IT")
+                              : "Mai"}
                           </span>
                         </div>
                       </div>
@@ -209,7 +221,7 @@ export function AIAutomationDashboard() {
                           onClick={() => setExpandedRuleId(expandedRuleId === rule.id ? null : rule.id)}
                         >
                           <Activity className="h-4 w-4 mr-2" />
-                          {expandedRuleId === rule.id ? 'Nascondi' : 'Mostra'} Log
+                          {expandedRuleId === rule.id ? "Nascondi" : "Mostra"} Log
                         </Button>
                         <Button variant="ghost" size="sm" disabled>
                           <Edit className="h-4 w-4 mr-2" />
@@ -239,19 +251,20 @@ export function AIAutomationDashboard() {
                                   key={log.id}
                                   className="flex items-start gap-3 p-3 rounded-lg bg-card/30 border border-border/30 text-xs"
                                 >
-                                  {log.user_review === 'approved' || log.was_auto_executed ? (
+                                  {log.user_review === "approved" || log.was_auto_executed ? (
                                     <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0 mt-0.5" />
-                                  ) : log.user_review === 'rejected' ? (
+                                  ) : log.user_review === "rejected" ? (
                                     <XCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
                                   ) : (
                                     <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                                   )}
                                   <div className="flex-1 space-y-1">
                                     <p className="font-medium">
-                                      {log.decision_type} — {log.confidence ? `${Math.round(log.confidence * 100)}%` : 'N/A'}
+                                      {log.decision_type} —{" "}
+                                      {log.confidence ? `${Math.round(log.confidence * 100)}%` : "N/A"}
                                     </p>
                                     <p className="text-muted-foreground">
-                                      {new Date(log.created_at).toLocaleString('it-IT')}
+                                      {new Date(log.created_at).toLocaleString("it-IT")}
                                     </p>
                                     {log.ai_reasoning && (
                                       <p className="text-muted-foreground text-xs truncate">{log.ai_reasoning}</p>
@@ -270,9 +283,7 @@ export function AIAutomationDashboard() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Nessuna regola AI configurata
-                </p>
+                <p className="text-muted-foreground">Nessuna regola AI configurata</p>
                 <p className="text-sm text-muted-foreground mt-2">
                   Vai su Email Intelligence per configurare regole AI per i tuoi contatti
                 </p>

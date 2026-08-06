@@ -16,9 +16,12 @@ interface ActivityRow {
 export const listAgendaTool: Tool = {
   id: "list-agenda",
   label: "Agenda",
-  description: "Mostra l'agenda operativa: attività aperte ordinate per scadenza (cosa fare oggi e nei prossimi giorni).",
+  description:
+    "Mostra l'agenda operativa: attività aperte ordinate per scadenza (cosa fare oggi e nei prossimi giorni).",
   match: (p) =>
-    /\b(agenda|cosa\s+devo\s+fare|cosa\s+ho\s+da\s+fare|attivit[àa]\s+(di\s+)?oggi|scadenz|to-?do|task\s+(di\s+)?oggi|impegni)\b/i.test(p),
+    /\b(agenda|cosa\s+devo\s+fare|cosa\s+ho\s+da\s+fare|attivit[àa]\s+(di\s+)?oggi|scadenz|to-?do|task\s+(di\s+)?oggi|impegni)\b/i.test(
+      p,
+    ),
 
   execute: async (): Promise<ToolResult> => {
     let rows: ActivityRow[];
@@ -69,7 +72,11 @@ export const listAgendaTool: Tool = {
       idField: "id",
       liveSource: "activities",
       bulkActions: [
-        { id: "complete", label: "Segna completate", promptTemplate: "Segna come completate le attività con id: {ids}" },
+        {
+          id: "complete",
+          label: "Segna completate",
+          promptTemplate: "Segna come completate le attività con id: {ids}",
+        },
       ],
     };
   },

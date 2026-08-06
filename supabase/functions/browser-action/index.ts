@@ -40,7 +40,11 @@ serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { actions, sessionToken, allowedDomains = [] } = body as {
+    const {
+      actions,
+      sessionToken,
+      allowedDomains = [],
+    } = body as {
       actions: BrowserAction[];
       sessionToken?: string;
       allowedDomains?: string[];
@@ -65,7 +69,9 @@ serve(async (req: Request) => {
       if (action.type === "navigate" && action.url) {
         if (!isDomainAllowed(action.url, allowedDomains)) {
           return new Response(
-            JSON.stringify({ error: `Dominio non autorizzato: ${action.url}. Solo domini nella whitelist sono consentiti.` }),
+            JSON.stringify({
+              error: `Dominio non autorizzato: ${action.url}. Solo domini nella whitelist sono consentiti.`,
+            }),
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
@@ -237,14 +243,18 @@ serve(async (req: Request) => {
         const authHeader = req.headers.get("authorization") ?? "";
         const token = authHeader.replace("Bearer ", "");
         if (token) {
-          const { data: { user } } = await sb.auth.getUser(token);
+          const {
+            data: { user },
+          } = await sb.auth.getUser(token);
           if (user) {
             await sb.from("browser_action_log").insert({
               user_id: user.id,
               actions,
               result: { results, finalUrl },
               target_url: actions.find((a) => a.type === "navigate")?.url ?? null,
-              status: results.some((r: Record<string, unknown>) => r && typeof r === "object" && "error" in r) ? "partial" : "success",
+              status: results.some((r: Record<string, unknown>) => r && typeof r === "object" && "error" in r)
+                ? "partial"
+                : "success",
             });
           }
         }
@@ -253,15 +263,14 @@ serve(async (req: Request) => {
       // Audit log failure is non-critical
     }
 
-    return new Response(
-      JSON.stringify({ results, finalScreenshot, finalUrl, console: consoleMessages.slice(-20) }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ results, finalScreenshot, finalUrl, console: consoleMessages.slice(-20) }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
     console.error("browser-action error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

@@ -3,8 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2, CheckCircle2, Globe, RefreshCw, ExternalLink, Download,
-  ClipboardPaste, XCircle, KeyRound,
+  Loader2,
+  CheckCircle2,
+  Globe,
+  RefreshCw,
+  ExternalLink,
+  Download,
+  ClipboardPaste,
+  XCircle,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { downloadWcaExtensionZip, WCA_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
@@ -19,7 +26,15 @@ interface WcaTabProps {
   onSaveCookie: () => void;
 }
 
-export function WcaTab({ isWcaOk, verifying, onVerify, cookieInput, setCookieInput, savingCookie, onSaveCookie }: WcaTabProps) {
+export function WcaTab({
+  isWcaOk,
+  verifying,
+  onVerify,
+  cookieInput,
+  setCookieInput,
+  savingCookie,
+  onSaveCookie,
+}: WcaTabProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -27,8 +42,19 @@ export function WcaTab({ isWcaOk, verifying, onVerify, cookieInput, setCookieInp
           <Globe className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">Connessione WCA World</h2>
         </div>
-        <Badge variant={isWcaOk ? "default" : "destructive"} className={isWcaOk ? "bg-primary text-primary-foreground" : ""}>
-          {isWcaOk ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Connesso</> : <><XCircle className="w-3 h-3 mr-1" /> Non connesso</>}
+        <Badge
+          variant={isWcaOk ? "default" : "destructive"}
+          className={isWcaOk ? "bg-primary text-primary-foreground" : ""}
+        >
+          {isWcaOk ? (
+            <>
+              <CheckCircle2 className="w-3 h-3 mr-1" /> Connesso
+            </>
+          ) : (
+            <>
+              <XCircle className="w-3 h-3 mr-1" /> Non connesso
+            </>
+          )}
         </Badge>
       </div>
 
@@ -45,18 +71,27 @@ export function WcaTab({ isWcaOk, verifying, onVerify, cookieInput, setCookieInp
               </div>
             </div>
             <Badge variant={isWcaOk ? "default" : "secondary"} className={isWcaOk ? "bg-emerald-600 text-white" : ""}>
-              {isWcaOk ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Automatico</> : "Da verificare"}
+              {isWcaOk ? (
+                <>
+                  <CheckCircle2 className="w-3 h-3 mr-1" /> Automatico
+                </>
+              ) : (
+                "Da verificare"
+              )}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Le credenziali WCA sono gestite automaticamente lato server. Non devi inserire username o password.
-            Il sistema effettua il login SSO tramite <code className="font-mono bg-muted px-1 rounded text-xs">wca-app.vercel.app</code>.
+            Le credenziali WCA sono gestite automaticamente lato server. Non devi inserire username o password. Il
+            sistema effettua il login SSO tramite{" "}
+            <code className="font-mono bg-muted px-1 rounded text-xs">wca-app.vercel.app</code>.
           </p>
           <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
             <span className="text-sm">🤖</span>
-            <span className="text-xs text-amber-700 dark:text-amber-300">Claude Engine V8 — Login server-side, cache 8 min</span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              Claude Engine V8 — Login server-side, cache 8 min
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -77,23 +112,45 @@ export function WcaTab({ isWcaOk, verifying, onVerify, cookieInput, setCookieInp
         <div className="mt-3 space-y-3">
           <Card>
             <CardContent className="pt-4 space-y-3">
-              <Button className="w-full" variant="outline" size="sm" onClick={() => {
-                void downloadWcaExtensionZip()
-                  .then(() => toast.success(`WCA Cookie Sync v${WCA_EXTENSION_REQUIRED_VERSION} scaricato!`))
-                  .catch(() => toast.error("File non disponibile"));
-              }}>
+              <Button
+                className="w-full"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  void downloadWcaExtensionZip()
+                    .then(() => toast.success(`WCA Cookie Sync v${WCA_EXTENSION_REQUIRED_VERSION} scaricato!`))
+                    .catch(() => toast.error("File non disponibile"));
+                }}
+              >
                 <Download className="w-4 h-4 mr-2" /> Scarica Estensione WCA v{WCA_EXTENSION_REQUIRED_VERSION}
               </Button>
-              <Button className="w-full" variant="outline" size="sm" onClick={() => window.open("https://www.wcaworld.com/MemberSection", "_blank")}>
+              <Button
+                className="w-full"
+                variant="outline"
+                size="sm"
+                onClick={() => window.open("https://www.wcaworld.com/MemberSection", "_blank")}
+              >
                 <ExternalLink className="w-4 h-4 mr-2" /> Apri WCA World
               </Button>
               <div className="flex gap-2">
-                <Input placeholder="Incolla header Cookie completo..." value={cookieInput} onChange={(e) => setCookieInput(e.target.value)} className="font-mono text-xs" />
-                <Button onClick={onSaveCookie} disabled={savingCookie || !cookieInput.trim()} size="sm" className="shrink-0">
+                <Input
+                  placeholder="Incolla header Cookie completo..."
+                  value={cookieInput}
+                  onChange={(e) => setCookieInput(e.target.value)}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  onClick={onSaveCookie}
+                  disabled={savingCookie || !cookieInput.trim()}
+                  size="sm"
+                  className="shrink-0"
+                >
                   {savingCookie ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardPaste className="w-4 h-4" />}
                 </Button>
               </div>
-              <p className="text-[11px] text-muted-foreground">Emergenza: F12 → Network → Headers → Cookie → incolla qui.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Emergenza: F12 → Network → Headers → Cookie → incolla qui.
+              </p>
             </CardContent>
           </Card>
         </div>

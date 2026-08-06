@@ -1,17 +1,11 @@
 import type { ImapConn } from "./imap-connection.ts";
 import { sendCommand } from "./imap-connection.ts";
 
-export async function imapLogin(
-  imap: ImapConn,
-  email: string,
-  password: string
-): Promise<void> {
+export async function imapLogin(imap: ImapConn, email: string, password: string): Promise<void> {
   const escapedPass = password.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   const res = await sendCommand(imap, `LOGIN "${email}" "${escapedPass}"`);
   if (!res.includes("OK")) {
-    throw new Error(
-      "Autenticazione fallita — verifica le credenziali"
-    );
+    throw new Error("Autenticazione fallita — verifica le credenziali");
   }
 }
 
@@ -25,20 +19,13 @@ export async function imapListFolders(imap: ImapConn): Promise<string[]> {
   return folders.length ? folders : ["INBOX"];
 }
 
-export async function imapSelect(
-  imap: ImapConn,
-  folder: string
-): Promise<{ exists: number }> {
+export async function imapSelect(imap: ImapConn, folder: string): Promise<{ exists: number }> {
   const res = await sendCommand(imap, `SELECT "${folder}"`);
   const existsMatch = res.match(/\* (\d+) EXISTS/);
   return { exists: existsMatch ? parseInt(existsMatch[1]) : 0 };
 }
 
-export async function imapSearchUids(
-  imap: ImapConn,
-  range: string,
-  lastUid: number
-): Promise<number[]> {
+export async function imapSearchUids(imap: ImapConn, range: string, lastUid: number): Promise<number[]> {
   let res: string;
   if (lastUid > 0) {
     res = await sendCommand(imap, `UID SEARCH UID ${range}`);
@@ -59,10 +46,7 @@ export async function imapSearchUids(
   return uids.sort((a, b) => a - b);
 }
 
-export async function imapFetchMessage(
-  imap: ImapConn,
-  uid: number
-): Promise<string> {
+export async function imapFetchMessage(imap: ImapConn, uid: number): Promise<string> {
   // BODY.PEEK[] NON imposta il flag \Seen: la sincronizzazione deve solo
   // scaricare il contenuto, MAI marcare la mail come letta sul server.
   // La lettura (\Seen) avviene esclusivamente su azione utente via

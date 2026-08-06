@@ -83,7 +83,9 @@ describe("logConfig", () => {
   });
 
   it("sink errors do not propagate", () => {
-    logConfig.addSink(() => { throw new Error("broken sink"); });
+    logConfig.addSink(() => {
+      throw new Error("broken sink");
+    });
     const log = createLogger("safe");
     // Should not throw
     expect(() => log.error("test")).not.toThrow();

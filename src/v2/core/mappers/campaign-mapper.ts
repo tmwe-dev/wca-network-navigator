@@ -9,9 +9,16 @@ import { type CampaignJob, campaignJobId, campaignId, partnerId, userId } from "
 export function mapCampaignJobRow(row: unknown): Result<CampaignJob, AppError> {
   const parsed = CampaignJobRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `CampaignJob row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "campaign-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `CampaignJob row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "campaign-mapper",
+      ),
+    );
   }
 
   const r = parsed.data;

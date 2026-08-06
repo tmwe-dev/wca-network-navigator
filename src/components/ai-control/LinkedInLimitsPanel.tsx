@@ -64,7 +64,7 @@ export function LinkedInLimitsPanel(): React.ReactElement {
   }, [settings]);
 
   const handleInputChange = (key: keyof LinkedInLimitSettings, value: string) => {
-    setFormValues(prev => ({ ...prev, [key]: value }));
+    setFormValues((prev) => ({ ...prev, [key]: value }));
     setIsDirty(true);
   };
 

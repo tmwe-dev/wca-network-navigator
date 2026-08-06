@@ -29,13 +29,7 @@ export interface DynamicFilter {
   readonly value: unknown;
 }
 
-const SUPPORTED_OPS: ReadonlySet<string> = new Set<DynamicFilterOp>([
-  "eq",
-  "neq",
-  "ilike",
-  "in",
-  "is",
-]);
+const SUPPORTED_OPS: ReadonlySet<string> = new Set<DynamicFilterOp>(["eq", "neq", "ilike", "in", "is"]);
 
 /**
  * Applica filtri con nome colonna noto solo a runtime a una SELECT già avviata.
@@ -90,7 +84,6 @@ export async function updateValidatedColumn(
     .eq(match.column, match.value);
   if (error) throw error;
 }
-
 
 /** Risultato di lettura già validato: righe come oggetti tipizzati. */
 export interface ValidatedRowsResult<T> {

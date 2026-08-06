@@ -41,7 +41,7 @@ let userIdCache: string | null | undefined = undefined;
 async function getUserId(): Promise<string | null> {
   if (userIdCache !== undefined) return userIdCache;
   try {
-    const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+    const { data } = await supabase.auth.getSession().then((r) => ({ data: { user: r.data.session?.user ?? null } }));
     userIdCache = data?.user?.id ?? null;
   } catch (e) {
     log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
@@ -56,11 +56,7 @@ export function resetTelemetryUser() {
 }
 
 /** Internal: insert one event row, never throws */
-async function insert(
-  eventName: string,
-  page: string,
-  opts: TrackOptions = {}
-): Promise<void> {
+async function insert(eventName: string, page: string, opts: TrackOptions = {}): Promise<void> {
   try {
     const userId = await getUserId();
     const payload = {
@@ -88,29 +84,18 @@ export function trackPage(page: string, props?: Record<string, unknown>): void {
 }
 
 /** Track an arbitrary user event. */
-export function trackEvent(
-  eventName: string,
-  opts: TrackOptions = {}
-): void {
+export function trackEvent(eventName: string, opts: TrackOptions = {}): void {
   const page = opts.page ?? (typeof window !== "undefined" ? window.location.pathname : "unknown");
   void insert(eventName, page, opts);
 }
 
 /** Track an entity open (drawer, detail panel, etc.) */
-export function trackEntityOpen(
-  entityType: string,
-  entityId: string,
-  page?: string
-): void {
+export function trackEntityOpen(entityType: string, entityId: string, page?: string): void {
   trackEvent("entity_open", { entityType, entityId, page });
 }
 
 /** Track an action with optional duration */
-export function trackAction(
-  actionName: string,
-  props?: Record<string, unknown>,
-  durationMs?: number
-): void {
+export function trackAction(actionName: string, props?: Record<string, unknown>, durationMs?: number): void {
   trackEvent(`action.${actionName}`, { props, durationMs });
 }
 
@@ -118,7 +103,7 @@ export function trackAction(
 export async function withTelemetry<T>(
   actionName: string,
   fn: () => Promise<T>,
-  props?: Record<string, unknown>
+  props?: Record<string, unknown>,
 ): Promise<T> {
   const start = performance.now();
   try {
@@ -127,11 +112,7 @@ export async function withTelemetry<T>(
     return result;
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    trackAction(
-      actionName,
-      { ...props, ok: false, error: msg },
-      Math.round(performance.now() - start)
-    );
+    trackAction(actionName, { ...props, ok: false, error: msg }, Math.round(performance.now() - start));
     throw e;
   }
 }

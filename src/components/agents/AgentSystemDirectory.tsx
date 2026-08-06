@@ -71,11 +71,13 @@ export function AgentSystemDirectory() {
               <div key={prompt.id} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{prompt.name}</span>
-                  {!prompt.is_active && <Badge variant="outline" className="text-xs">OFF</Badge>}
+                  {!prompt.is_active && (
+                    <Badge variant="outline" className="text-xs">
+                      OFF
+                    </Badge>
+                  )}
                 </div>
-                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                  {prompt.objective || "—"}
-                </span>
+                <span className="text-xs text-muted-foreground truncate max-w-[200px]">{prompt.objective || "—"}</span>
               </div>
             ))
           )}
@@ -95,11 +97,11 @@ export function AgentSystemDirectory() {
             <div key={i} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{proc.name}</span>
-                <Badge variant="outline" className="text-xs">{proc.section}</Badge>
+                <Badge variant="outline" className="text-xs">
+                  {proc.section}
+                </Badge>
               </div>
-              <span className="text-xs text-muted-foreground truncate max-w-[250px]">
-                {proc.description}
-              </span>
+              <span className="text-xs text-muted-foreground truncate max-w-[250px]">{proc.description}</span>
             </div>
           ))}
         </CardContent>

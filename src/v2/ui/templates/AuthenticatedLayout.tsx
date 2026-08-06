@@ -24,7 +24,6 @@ import { LiveRegion } from "@/components/shared/LiveRegion";
 import { useAiBridgeListener } from "@/hooks/useAiBridgeListener";
 import { DrawerErrorBoundary } from "@/components/ui/DrawerErrorBoundary";
 
-
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,20 +49,42 @@ import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext"
 import { ComposeAiConfigProvider } from "@/contexts/ComposeAiConfigContext";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 
-const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
-const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
-const FiltersDrawer = lazyRetry(() => import("@/components/global/filters-drawer").then(m => ({ default: m.FiltersDrawer })));
+const ContactRecordDrawer = lazyRetry(() =>
+  import("@/components/contact-drawer/ContactRecordDrawer").then((m) => ({ default: m.ContactRecordDrawer })),
+);
+const MissionDrawer = lazyRetry(() =>
+  import("@/components/global/MissionDrawer").then((m) => ({ default: m.MissionDrawer })),
+);
+const FiltersDrawer = lazyRetry(() =>
+  import("@/components/global/filters-drawer").then((m) => ({ default: m.FiltersDrawer })),
+);
 const IntelliFlowOverlay = lazyRetry(() => import("@/components/intelliflow/IntelliFlowOverlay"));
-const CommandPalette = lazyRetry(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
-const FloatingCoPilot = lazyRetry(() => import("@/v2/ui/copilot/FloatingCoPilot").then(m => ({ default: m.FloatingCoPilot })));
+const CommandPalette = lazyRetry(() =>
+  import("@/components/CommandPalette").then((m) => ({ default: m.CommandPalette })),
+);
+const FloatingCoPilot = lazyRetry(() =>
+  import("@/v2/ui/copilot/FloatingCoPilot").then((m) => ({ default: m.FloatingCoPilot })),
+);
 import { CoPilotProvider } from "@/v2/ui/copilot/CoPilotContext";
-const AddContactDialog = lazyRetry(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
-const AgentOperationsDashboard = lazyRetry(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
+const AddContactDialog = lazyRetry(() =>
+  import("@/components/contacts/AddContactDialog").then((m) => ({ default: m.AddContactDialog })),
+);
+const AgentOperationsDashboard = lazyRetry(() =>
+  import("@/components/agents/AgentOperationsDashboard").then((m) => ({ default: m.AgentOperationsDashboard })),
+);
 const TestExtensionsContent = lazyRetry(() => import("@/components/test-extensions/TestExtensionsView"));
-const OnboardingWizard = lazyRetry(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
-const MobileBottomNav = lazyRetry(() => import("@/components/mobile/MobileBottomNav").then(m => ({ default: m.MobileBottomNav })));
-const PWAInstallPrompt = lazyRetry(() => import("@/components/shared/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
-const NotificationsProvider = lazyRetry(() => import("@/components/notifications/NotificationsProvider").then(m => ({ default: m.NotificationsProvider })));
+const OnboardingWizard = lazyRetry(() =>
+  import("@/components/onboarding/OnboardingWizard").then((m) => ({ default: m.OnboardingWizard })),
+);
+const MobileBottomNav = lazyRetry(() =>
+  import("@/components/mobile/MobileBottomNav").then((m) => ({ default: m.MobileBottomNav })),
+);
+const PWAInstallPrompt = lazyRetry(() =>
+  import("@/components/shared/PWAInstallPrompt").then((m) => ({ default: m.PWAInstallPrompt })),
+);
+const NotificationsProvider = lazyRetry(() =>
+  import("@/components/notifications/NotificationsProvider").then((m) => ({ default: m.NotificationsProvider })),
+);
 
 export function AuthenticatedLayout(): React.ReactElement | null {
   const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
@@ -74,19 +95,16 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
   useAiBridgeListener();
 
-
   const { t } = useTranslation();
   useEffect(() => {
     // Prefer the nav label matching the deepest path prefix (e.g. /v2/agents/autopilot → nav.missioni).
-    const match = FULL_NAV_ITEMS
-      .filter((i) => location.pathname === i.path || location.pathname.startsWith(i.path + "/"))
-      .sort((a, b) => b.path.length - a.path.length)[0];
+    const match = FULL_NAV_ITEMS.filter(
+      (i) => location.pathname === i.path || location.pathname.startsWith(i.path + "/"),
+    ).sort((a, b) => b.path.length - a.path.length)[0];
     let title: string;
     if (match) {
       const translated = t(match.labelKey);
-      title = translated && translated !== match.labelKey
-        ? translated
-        : match.labelKey.split(".").pop() ?? "WCA";
+      title = translated && translated !== match.labelKey ? translated : (match.labelKey.split(".").pop() ?? "WCA");
     } else {
       const last = location.pathname.replace("/v2", "").split("/").filter(Boolean).pop() ?? "dashboard";
       title = last.charAt(0).toUpperCase() + last.slice(1).replace(/-/g, " ");
@@ -132,7 +150,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     queryKey: queryKeys.onboarding.completed,
     queryFn: async () => {
       // Use getSession() (local, 0ms) instead of getUser() (network, ~200ms)
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) return true;
       const onboardingCompleted = await getOnboardingCompletedForUser(session.user.id);
       // If no profile row or null, treat as completed (existing user safety)
@@ -150,7 +170,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const wcaSession = useWcaSession();
 
   // Prefetch top routes during idle so navigation is instant.
-  useEffect(() => { scheduleIdlePrefetch(); }, []);
+  useEffect(() => {
+    scheduleIdlePrefetch();
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth", { replace: true });
@@ -158,12 +180,24 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setCommandOpen(o => !o); }
-      if (e.key === "j" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setIntelliflowOpen(o => !o); }
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCommandOpen((o) => !o);
+      }
+      if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setIntelliflowOpen((o) => !o);
+      }
       // Mission Control: Cmd/Ctrl+M
-      if (e.key === "m" && (e.metaKey || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); setMissionOpen(o => !o); }
+      if (e.key === "m" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        e.preventDefault();
+        setMissionOpen((o) => !o);
+      }
       // Filters Drawer: Cmd/Ctrl+Shift+F
-      if (e.key === "F" && (e.metaKey || e.ctrlKey) && e.shiftKey) { e.preventDefault(); setFiltersOpen(o => !o); }
+      if (e.key === "F" && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        e.preventDefault();
+        setFiltersOpen((o) => !o);
+      }
     };
     const drawerHandler = (e: Event) => {
       const d = (e as CustomEvent).detail?.drawer;
@@ -172,7 +206,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     };
     document.addEventListener("keydown", down);
     window.addEventListener("open-drawer", drawerHandler);
-    return () => { document.removeEventListener("keydown", down); window.removeEventListener("open-drawer", drawerHandler); };
+    return () => {
+      document.removeEventListener("keydown", down);
+      window.removeEventListener("open-drawer", drawerHandler);
+    };
   }, []);
 
   useEffect(() => {
@@ -191,9 +228,11 @@ export function AuthenticatedLayout(): React.ReactElement | null {
           break;
         case "open_modal": {
           // Inoltrato al CoPilotContext via custom event interno
-          window.dispatchEvent(new CustomEvent("copilot-open-modal", {
-            detail: { name: detail.modal, params: detail.params || {} },
-          }));
+          window.dispatchEvent(
+            new CustomEvent("copilot-open-modal", {
+              detail: { name: detail.modal, params: detail.params || {} },
+            }),
+          );
           break;
         }
         case "start_download_job":
@@ -229,191 +268,249 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       <GlobalErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <Suspense fallback={null}>
-            <OnboardingWizard onComplete={() => queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed })} />
+            <OnboardingWizard
+              onComplete={() => queryClient.invalidateQueries({ queryKey: queryKeys.onboarding.completed })}
+            />
           </Suspense>
         </QueryClientProvider>
       </GlobalErrorBoundary>
     );
   }
 
-  const wcaStatusColor = wcaSession.sessionActive === true ? "text-success" : wcaSession.isChecking ? "text-primary animate-pulse" : "text-muted-foreground";
-  const wcaStatusLabel = wcaSession.sessionActive === true ? "WCA Online" : wcaSession.isChecking ? "Verifica…" : wcaSession.sessionActive === false ? "WCA Offline" : "WCA";
+  const wcaStatusColor =
+    wcaSession.sessionActive === true
+      ? "text-success"
+      : wcaSession.isChecking
+        ? "text-primary animate-pulse"
+        : "text-muted-foreground";
+  const wcaStatusLabel =
+    wcaSession.sessionActive === true
+      ? "WCA Online"
+      : wcaSession.isChecking
+        ? "Verifica…"
+        : wcaSession.sessionActive === false
+          ? "WCA Offline"
+          : "WCA";
 
   return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ActiveOperatorProvider>
-          <ActiveMailboxProvider>
-            <BulkDeepSearchContext.Provider value={deepSearch}>
-              <GlobalFiltersProvider>
-                <MissionProvider>
-                  <NotificationsProvider>
-                  <CoPilotProvider>
-                      <SonnerToaster position="top-right" richColors closeButton />
-                      <Toaster />
-                      <LiveRegion message="" />
+            <ActiveMailboxProvider>
+              <BulkDeepSearchContext.Provider value={deepSearch}>
+                <GlobalFiltersProvider>
+                  <MissionProvider>
+                    <NotificationsProvider>
+                      <CoPilotProvider>
+                        <SonnerToaster position="top-right" richColors closeButton />
+                        <Toaster />
+                        <LiveRegion message="" />
 
-                    <ComposeAiConfigProvider>
-                    <div className="flex h-screen overflow-hidden overscroll-x-none bg-background">
-                      {/* ComposeAiConfigProvider wraps both main content AND overlays (FiltersDrawer)
+                        <ComposeAiConfigProvider>
+                          <div className="flex h-screen overflow-hidden overscroll-x-none bg-background">
+                            {/* ComposeAiConfigProvider wraps both main content AND overlays (FiltersDrawer)
                           so EmailComposeFiltersSection works in either place. */}
-                      {/* Skip navigation link for accessibility */}
-                      <a
-                        href="#main-content"
-                        data-testid="skip-nav"
-                        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
-                      >
-                        Vai al contenuto principale
-                      </a>
-                      {/* Desktop: il menu ☰ vive ora dentro la top bar (LayoutHeader) — niente più overlay fluttuante */}
-                       {/* Mobile header */}
-                       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2 flex items-center justify-between gap-2" role="banner">
-                        <h2 className="text-sm font-bold text-foreground truncate min-w-0">WCA Partners</h2>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <ThemePicker variant="icon" />
-                          <button
-                            onClick={() => setCommandOpen(true)}
-                            className="min-h-[40px] min-w-[40px] flex items-center justify-center text-primary"
-                            aria-label="Apri Command"
-                            data-testid="mobile-command-button"
-                          >
-                            <Command className="h-5 w-5" />
-                          </button>
-                          <button onClick={() => setIntelliflowOpen(true)} aria-label="Apri IntelliFlow" className="min-h-[40px] min-w-[40px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
-                          <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? "Chiudi menu" : "Apri menu"} className="min-h-[40px] min-w-[40px] flex items-center justify-center">
-                            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Mobile sidebar overlay with Framer Motion */}
-                      <AnimatePresence>
-                        {mobileOpen && (
-                          <div className="md:hidden fixed inset-0 z-40 flex">
-                            <motion.div
-                              initial={{ x: "-100%" }}
-                              animate={{ x: 0 }}
-                              exit={{ x: "-100%" }}
-                              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                              className="w-64 bg-card border-r border-border/40 flex flex-col mt-12"
+                            {/* Skip navigation link for accessibility */}
+                            <a
+                              href="#main-content"
+                              data-testid="skip-nav"
+                              className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
                             >
-                              <LayoutSidebarNav
-                                profileName={profile?.displayName}
-                                wcaStatusColor={wcaStatusColor}
-                                wcaStatusLabel={wcaStatusLabel}
-                                wcaSessionActive={wcaSession.sessionActive}
-                                onWcaReconnect={() => wcaSession.ensureSession()}
-                                isDark={isDark}
-                                onToggleTheme={toggleTheme}
-                                onSignOut={signOut}
-                                onMobileClose={() => setMobileOpen(false)}
-                                onOpenCommandPalette={() => setCommandOpen(true)}
-                              />
-                            </motion.div>
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              className="flex-1 bg-black/50"
-                              onClick={() => setMobileOpen(false)}
-                            />
+                              Vai al contenuto principale
+                            </a>
+                            {/* Desktop: il menu ☰ vive ora dentro la top bar (LayoutHeader) — niente più overlay fluttuante */}
+                            {/* Mobile header */}
+                            <div
+                              className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2 flex items-center justify-between gap-2"
+                              role="banner"
+                            >
+                              <h2 className="text-sm font-bold text-foreground truncate min-w-0">WCA Partners</h2>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <ThemePicker variant="icon" />
+                                <button
+                                  onClick={() => setCommandOpen(true)}
+                                  className="min-h-[40px] min-w-[40px] flex items-center justify-center text-primary"
+                                  aria-label="Apri Command"
+                                  data-testid="mobile-command-button"
+                                >
+                                  <Command className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={() => setIntelliflowOpen(true)}
+                                  aria-label="Apri IntelliFlow"
+                                  className="min-h-[40px] min-w-[40px] flex items-center justify-center"
+                                >
+                                  <Sparkles className="h-5 w-5 text-primary" />
+                                </button>
+                                <button
+                                  onClick={() => setMobileOpen(!mobileOpen)}
+                                  aria-label={mobileOpen ? "Chiudi menu" : "Apri menu"}
+                                  className="min-h-[40px] min-w-[40px] flex items-center justify-center"
+                                >
+                                  {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Mobile sidebar overlay with Framer Motion */}
+                            <AnimatePresence>
+                              {mobileOpen && (
+                                <div className="md:hidden fixed inset-0 z-40 flex">
+                                  <motion.div
+                                    initial={{ x: "-100%" }}
+                                    animate={{ x: 0 }}
+                                    exit={{ x: "-100%" }}
+                                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                    className="w-64 bg-card border-r border-border/40 flex flex-col mt-12"
+                                  >
+                                    <LayoutSidebarNav
+                                      profileName={profile?.displayName}
+                                      wcaStatusColor={wcaStatusColor}
+                                      wcaStatusLabel={wcaStatusLabel}
+                                      wcaSessionActive={wcaSession.sessionActive}
+                                      onWcaReconnect={() => wcaSession.ensureSession()}
+                                      isDark={isDark}
+                                      onToggleTheme={toggleTheme}
+                                      onSignOut={signOut}
+                                      onMobileClose={() => setMobileOpen(false)}
+                                      onOpenCommandPalette={() => setCommandOpen(true)}
+                                    />
+                                  </motion.div>
+                                  <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="flex-1 bg-black/50"
+                                    onClick={() => setMobileOpen(false)}
+                                  />
+                                </div>
+                              )}
+                            </AnimatePresence>
+
+                            {/* Linguetta filtri rimossa: usiamo solo quella contestuale di ContextFiltersRail */}
+                            {pageHasWorkflow(location.pathname) && (
+                              <button
+                                onClick={() => setMissionOpen(true)}
+                                className={cn(
+                                  "hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-l-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
+                                  missionOpen && "opacity-0 pointer-events-none",
+                                )}
+                                style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
+                                aria-label="Apri Mission"
+                              >
+                                <Target className="w-3 h-3 text-primary" />
+                              </button>
+                            )}
+
+                            {/* Main content */}
+                            <BcaFiltersGate>
+                              <div className="flex-1 flex overflow-hidden">
+                                <ContextFiltersRail />
+                                <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
+                                  <OfflineBanner />
+                                  {/* Banner blacklist: mostrato SOLO su rotte di acquisizione/network dove è pertinente. */}
+                                  {(location.pathname.startsWith("/v2/explore") ||
+                                    location.pathname.startsWith("/v2/cestinone") ||
+                                    location.pathname.startsWith("/v2/settings")) && <BlacklistStaleBanner />}
+                                  <BackgroundServices>
+                                    {({ outreachQueue, globalSync }) => (
+                                      <LayoutHeader
+                                        onToggleSidebar={() => setSidebarOpen((o) => !o)}
+                                        onOpenCommandPalette={() => setCommandOpen(true)}
+                                        onAiClick={() => setIntelliflowOpen(true)}
+                                        onAddContact={() => setAddContactOpen(true)}
+                                        onAgentDash={() => setAgentDashOpen(true)}
+                                        onTestExt={() => setTestExtOpen(true)}
+                                        outreachQueue={outreachQueue}
+                                        globalSync={globalSync}
+                                        isDark={isDark}
+                                        onToggleTheme={toggleTheme}
+                                      />
+                                    )}
+                                  </BackgroundServices>
+                                  <main
+                                    id="main-content"
+                                    tabIndex={-1}
+                                    role="main"
+                                    className="flex-1 overflow-y-auto overscroll-x-none md:mt-0 mt-12 pb-16 md:pb-0"
+                                  >
+                                    {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
+                                    <div className="h-full animate-in fade-in duration-150">
+                                      <Outlet />
+                                    </div>
+                                  </main>
+                                  <Suspense fallback={null}>
+                                    <MobileBottomNav />
+                                  </Suspense>
+                                  <Suspense fallback={null}>
+                                    <PWAInstallPrompt />
+                                  </Suspense>
+                                </div>
+                              </div>
+                            </BcaFiltersGate>
                           </div>
-                        )}
-                      </AnimatePresence>
 
-                      {/* Linguetta filtri rimossa: usiamo solo quella contestuale di ContextFiltersRail */}
-                      {pageHasWorkflow(location.pathname) && (
-                      <button
-                        onClick={() => setMissionOpen(true)}
-                        className={cn(
-                          "hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-l-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
-                          missionOpen && "opacity-0 pointer-events-none"
-                        )}
-                        style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
-                        aria-label="Apri Mission"
-                      >
-                        <Target className="w-3 h-3 text-primary" />
-                      </button>
-                      )}
-
-                      {/* Main content */}
-                      <BcaFiltersGate>
-                      <div className="flex-1 flex overflow-hidden">
-                        <ContextFiltersRail />
-                        <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
-                        <OfflineBanner />
-                        {/* Banner blacklist: mostrato SOLO su rotte di acquisizione/network dove è pertinente. */}
-                        {(location.pathname.startsWith("/v2/explore") ||
-                          location.pathname.startsWith("/v2/cestinone") ||
-                          location.pathname.startsWith("/v2/settings")) && (
-                          <BlacklistStaleBanner />
-                        )}
-                        <BackgroundServices>
-                          {({ outreachQueue, globalSync }) => (
-                            <LayoutHeader
-                              onToggleSidebar={() => setSidebarOpen(o => !o)}
-                              onOpenCommandPalette={() => setCommandOpen(true)}
-                              onAiClick={() => setIntelliflowOpen(true)}
-                              onAddContact={() => setAddContactOpen(true)}
-                              onAgentDash={() => setAgentDashOpen(true)}
-                              onTestExt={() => setTestExtOpen(true)}
-                              outreachQueue={outreachQueue}
-                              globalSync={globalSync}
-                              isDark={isDark}
-                              onToggleTheme={toggleTheme}
-                            />
-                          )}
-                        </BackgroundServices>
-                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-x-none md:mt-0 mt-12 pb-16 md:pb-0">
-                          {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
-                          <div className="h-full animate-in fade-in duration-150">
-                            <Outlet />
-                          </div>
-                        </main>
-                        <Suspense fallback={null}><MobileBottomNav /></Suspense>
-                        <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
-                        </div>
-                      </div>
-                      </BcaFiltersGate>
-                    </div>
-
-                    {/* Overlays */}
-                    <Suspense fallback={null}><CommandPalette open={commandOpen} onOpenChange={setCommandOpen} /></Suspense>
-                    <Suspense fallback={null}><MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} /></Suspense>
-                    <Suspense fallback={null}><FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} /></Suspense>
-                    {intelliflowOpen && <Suspense fallback={null}><IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} /></Suspense>}
-                    {addContactOpen && <Suspense fallback={null}><AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} /></Suspense>}
-                    {agentDashOpen && <Suspense fallback={null}><AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} /></Suspense>}
-                    {testExtOpen && (
-                      <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
-                        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-                          <DialogHeader><DialogTitle>🧪 Test Estensioni</DialogTitle></DialogHeader>
-                          <DialogDescription className="sr-only">Pannello per testare le estensioni browser</DialogDescription>
-                          <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}>
-                            <TestExtensionsContent />
+                          {/* Overlays */}
+                          <Suspense fallback={null}>
+                            <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
                           </Suspense>
-                        </DialogContent>
-                      </Dialog>
-                    )}
+                          <Suspense fallback={null}>
+                            <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
+                          </Suspense>
+                          <Suspense fallback={null}>
+                            <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
+                          </Suspense>
+                          {intelliflowOpen && (
+                            <Suspense fallback={null}>
+                              <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
+                            </Suspense>
+                          )}
+                          {addContactOpen && (
+                            <Suspense fallback={null}>
+                              <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
+                            </Suspense>
+                          )}
+                          {agentDashOpen && (
+                            <Suspense fallback={null}>
+                              <AgentOperationsDashboard open={agentDashOpen} onOpenChange={setAgentDashOpen} />
+                            </Suspense>
+                          )}
+                          {testExtOpen && (
+                            <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
+                              <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>🧪 Test Estensioni</DialogTitle>
+                                </DialogHeader>
+                                <DialogDescription className="sr-only">
+                                  Pannello per testare le estensioni browser
+                                </DialogDescription>
+                                <Suspense
+                                  fallback={<div className="p-8 text-center text-muted-foreground">Caricamento...</div>}
+                                >
+                                  <TestExtensionsContent />
+                                </Suspense>
+                              </DialogContent>
+                            </Dialog>
+                          )}
 
-                      <Suspense fallback={null}>
-                        <DrawerErrorBoundary scope="ContactRecordDrawer">
-                          <ContactRecordDrawer />
-                        </DrawerErrorBoundary>
-                      </Suspense>
-                      <ClaudeBadge />
-                      {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
-                      <Suspense fallback={null}>
-                        <FloatingCoPilot />
-                      </Suspense>
-                    </ComposeAiConfigProvider>
-                  </CoPilotProvider>
+                          <Suspense fallback={null}>
+                            <DrawerErrorBoundary scope="ContactRecordDrawer">
+                              <ContactRecordDrawer />
+                            </DrawerErrorBoundary>
+                          </Suspense>
+                          <ClaudeBadge />
+                          {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
+                          <Suspense fallback={null}>
+                            <FloatingCoPilot />
+                          </Suspense>
+                        </ComposeAiConfigProvider>
+                      </CoPilotProvider>
                     </NotificationsProvider>
                   </MissionProvider>
                 </GlobalFiltersProvider>
               </BulkDeepSearchContext.Provider>
-          </ActiveMailboxProvider>
+            </ActiveMailboxProvider>
           </ActiveOperatorProvider>
         </TooltipProvider>
       </QueryClientProvider>

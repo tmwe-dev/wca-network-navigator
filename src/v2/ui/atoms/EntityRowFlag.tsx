@@ -17,12 +17,7 @@ export interface EntityRowFlagProps {
   className?: string;
 }
 
-export function EntityRowFlag({
-  countryCode,
-  label,
-  size = "lg",
-  className,
-}: EntityRowFlagProps): React.ReactElement {
+export function EntityRowFlag({ countryCode, label, size = "lg", className }: EntityRowFlagProps): React.ReactElement {
   const code = (countryCode || "").trim();
   const flag = code ? countryCodeToFlag(code) : "";
   const text = (label ?? code).toUpperCase().slice(0, 3);
@@ -32,29 +27,18 @@ export function EntityRowFlag({
   const hasFlag = !!flag;
   return (
     <div
-      className={cn(
-        "flex flex-col items-center justify-center leading-none select-none",
-        className
-      )}
+      className={cn("flex flex-col items-center justify-center leading-none select-none", className)}
       aria-label={code || "Paese sconosciuto"}
     >
       {hasFlag ? (
         <span className={cn(flagSize, "leading-none")}>{flag}</span>
       ) : (
-        <span
-          className={cn(
-            flagSize,
-            "leading-none text-muted-foreground font-light"
-          )}
-          aria-hidden
-        >
+        <span className={cn(flagSize, "leading-none text-muted-foreground font-light")} aria-hidden>
           ·
         </span>
       )}
       {hasFlag && text && (
-        <span className="text-[8px] text-muted-foreground font-semibold tracking-wide mt-0.5">
-          {text}
-        </span>
+        <span className="text-[8px] text-muted-foreground font-semibold tracking-wide mt-0.5">{text}</span>
       )}
     </div>
   );

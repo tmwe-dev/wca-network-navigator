@@ -36,12 +36,18 @@ vi.mock("@/integrations/supabase/client", () => ({
       // Return the appropriate mock result based on table
       const getResult = () => {
         switch (table) {
-          case "activities": return mockActivitiesResult;
-          case "channel_messages": return mockChannelsResult;
-          case "partners": return mockPartnersResult;
-          case "deals": return mockDealsResult;
-          case "supervisor_audit_log": return mockLogsResult;
-          default: return { data: null, error: null };
+          case "activities":
+            return mockActivitiesResult;
+          case "channel_messages":
+            return mockChannelsResult;
+          case "partners":
+            return mockPartnersResult;
+          case "deals":
+            return mockDealsResult;
+          case "supervisor_audit_log":
+            return mockLogsResult;
+          default:
+            return { data: null, error: null };
         }
       };
       // Make the builder itself thenable (await resolves to result)
@@ -54,17 +60,11 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
 }));
 
-import {
-  getEmailMetrics,
-  getPartnerMetrics,
-  getPipelineMetrics,
-  getActivityTimeline,
-} from "@/data/analytics";
+import { getEmailMetrics, getPartnerMetrics, getPipelineMetrics, getActivityTimeline } from "@/data/analytics";
 
 const dateRange = {
   from: new Date("2025-01-01"),

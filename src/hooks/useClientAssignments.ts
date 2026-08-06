@@ -20,7 +20,10 @@ export function useClientAssignments() {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return [];
       return findAllClientAssignmentsForUser(user.id);
     },
@@ -44,13 +47,11 @@ export function useAssignmentMap() {
 export function useAssignClient() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: {
-      sourceId: string;
-      sourceType: string;
-      agentId: string;
-      managerId?: string;
-    }) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    mutationFn: async (params: { sourceId: string; sourceType: string; agentId: string; managerId?: string }) => {
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       // Check if already assigned
@@ -75,7 +76,10 @@ export function useAgentClients(agentId: string | undefined) {
     queryKey: queryKeys.agents.clients(agentId),
     enabled: !!agentId,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return [];
       return findClientAssignmentsByAgent(agentId!, user.id);
     },

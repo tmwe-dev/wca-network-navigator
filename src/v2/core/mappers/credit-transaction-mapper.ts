@@ -9,9 +9,16 @@ import { type CreditTransaction, creditTransactionId, userId } from "../domain/e
 export function mapCreditTransactionRow(row: unknown): Result<CreditTransaction, AppError> {
   const parsed = CreditTransactionRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `CreditTransaction row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "credit-transaction-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `CreditTransaction row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "credit-transaction-mapper",
+      ),
+    );
   }
   const r = parsed.data;
   return ok({

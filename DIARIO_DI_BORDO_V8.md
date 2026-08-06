@@ -6,21 +6,22 @@ Tutto il sistema WCA ora passa per **un unico file API**: `src/lib/api/wcaAppApi
 
 ### File creati/aggiornati:
 
-| File | Ruolo |
-|------|-------|
-| `src/lib/api/wcaAppApi.ts` | **CLIENT CENTRALIZZATO** — tutte le chiamate a wca-app.vercel.app |
-| `src/hooks/useWcaAppDownload.ts` | Download client-side (discover→scrape→save) + supporto job server-side |
-| `src/hooks/useWcaJobs.ts` | **NUOVO** — Job server-side: start/pause/resume/cancel/status/worker |
-| `src/hooks/useWcaEnrich.ts` | **NUOVO** — Enrichment cross-network (17 network WCA) |
-| `src/hooks/useWcaVerify.ts` | **NUOVO** — Verifica membro su network specifico |
-| `src/hooks/useWcaPartners.ts` | **NUOVO** — Query DB partners + country counts + check IDs server-side |
-| `src/lib/api/wcaScraper.ts` | Facade compatibilità (WcaBrowser, ResyncConfigure) — ora importa da wcaAppApi |
+| File                             | Ruolo                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| `src/lib/api/wcaAppApi.ts`       | **CLIENT CENTRALIZZATO** — tutte le chiamate a wca-app.vercel.app             |
+| `src/hooks/useWcaAppDownload.ts` | Download client-side (discover→scrape→save) + supporto job server-side        |
+| `src/hooks/useWcaJobs.ts`        | **NUOVO** — Job server-side: start/pause/resume/cancel/status/worker          |
+| `src/hooks/useWcaEnrich.ts`      | **NUOVO** — Enrichment cross-network (17 network WCA)                         |
+| `src/hooks/useWcaVerify.ts`      | **NUOVO** — Verifica membro su network specifico                              |
+| `src/hooks/useWcaPartners.ts`    | **NUOVO** — Query DB partners + country counts + check IDs server-side        |
+| `src/lib/api/wcaScraper.ts`      | Facade compatibilità (WcaBrowser, ResyncConfigure) — ora importa da wcaAppApi |
 
 ---
 
 ## API Endpoints disponibili via wcaAppApi.ts
 
 ### Base
+
 - `wcaLogin()` → cookie WCA (auto-cache 8min)
 - `wcaDiscover(country, page, options?)` → membri per paese
 - `wcaDiscoverAll(country, onProgress?)` → TUTTI i membri (tutte le pagine)
@@ -28,6 +29,7 @@ Tutto il sistema WCA ora passa per **un unico file API**: `src/lib/api/wcaAppApi
 - `wcaSave(profile)` → salva su Supabase
 
 ### Job System (server-side worker)
+
 - `wcaJobStart(countries[], options?)` → avvia job download server-side
 - `wcaJobPause(jobId)` → pausa
 - `wcaJobResume(jobId)` → riprendi
@@ -36,10 +38,12 @@ Tutto il sistema WCA ora passa per **un unico file API**: `src/lib/api/wcaAppApi
 - `wcaWorkerTrigger(jobId?)` → trigger manuale worker
 
 ### Enrichment & Verify
+
 - `wcaEnrich(companyName, networkDomain, options?)` → enrichment cross-network
 - `wcaVerify(wcaId, network)` → verifica su network specifico
 
 ### Partners DB
+
 - `wcaPartners(options?)` → query DB con filtri
 - `wcaCountryCounts()` → conteggi per paese
 - `wcaCheckIds(ids[], country?)` → confronto server-side IDs
@@ -49,6 +53,7 @@ Tutto il sistema WCA ora passa per **un unico file API**: `src/lib/api/wcaAppApi
 ## Come usare i nuovi hook
 
 ### useWcaJobs — Download server-side
+
 ```tsx
 const { job, startJob, pauseJob, resumeJob, cancelJob } = useWcaJobs();
 
@@ -64,6 +69,7 @@ const jobId = await startJob([
 ```
 
 ### useWcaEnrich — Enrichment cross-network
+
 ```tsx
 const { enrichPartner, enrichSingle } = useWcaEnrich();
 
@@ -76,6 +82,7 @@ const result = await enrichSingle("ABC Logistics", "lognetglobal.com");
 ```
 
 ### useWcaVerify — Verifica membro
+
 ```tsx
 const { verify, verifyAll } = useWcaVerify();
 
@@ -87,6 +94,7 @@ const results = await verifyAll(12345, ["WCA Projects", "Lognet Global", ...]);
 ```
 
 ### useWcaPartners — Query DB
+
 ```tsx
 const { searchPartners, loadCountryCounts, checkMissing } = useWcaPartners();
 

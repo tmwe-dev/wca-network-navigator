@@ -14,7 +14,8 @@ export interface SearchResult {
 }
 
 export function useRAScrapingState() {
-  const { isAvailable, searchOnly, scrapeSelected, scrapeByAteco, getScrapingStatus, stopScraping } = useRAExtensionBridge();
+  const { isAvailable, searchOnly, scrapeSelected, scrapeByAteco, getScrapingStatus, stopScraping } =
+    useRAExtensionBridge();
   const { data: jobs = [], isLoading: jobsLoading } = useRAJobs();
   const createJobMutation = useCreateRAJob();
   const updateJobMutation = useUpdateRAJob();
@@ -41,56 +42,67 @@ export function useRAScrapingState() {
 
   const toggleSet = (set: Set<string>, value: string): Set<string> => {
     const next = new Set(set);
-    if (next.has(value)) next.delete(value); else next.add(value);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
     return next;
   };
 
-  const toggleAteco = (code: string) => setSelectedAtecoCodes(prev => toggleSet(prev, code));
-  const toggleRegion = (region: string) => setSelectedRegions(prev => toggleSet(prev, region));
-  const toggleProvince = (province: string) => setSelectedProvinces(prev => toggleSet(prev, province));
-  const handleSelectResult = (id: string) => setSelectedResults(prev => toggleSet(prev, id));
+  const toggleAteco = (code: string) => setSelectedAtecoCodes((prev) => toggleSet(prev, code));
+  const toggleRegion = (region: string) => setSelectedRegions((prev) => toggleSet(prev, region));
+  const toggleProvince = (province: string) => setSelectedProvinces((prev) => toggleSet(prev, province));
+  const handleSelectResult = (id: string) => setSelectedResults((prev) => toggleSet(prev, id));
   const handleSelectAll = () => {
-    setSelectedResults(prev => prev.size === searchResults.length ? new Set() : new Set(searchResults.map(r => r.id)));
+    setSelectedResults((prev) =>
+      prev.size === searchResults.length ? new Set() : new Set(searchResults.map((r) => r.id)),
+    );
   };
 
   const addLog = (msg: string) => {
-    setStatusLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-20));
+    setStatusLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-20));
   };
 
-  const pollStatus = useCallback(async (jobId: string) => {
-    const pollInterval = setInterval(async () => {
-      const status = await getScrapingStatus();
-      if (!status) { clearInterval(pollInterval); return; }
-
-      const s = status as Record<string, unknown>;
-      if (Array.isArray(s.log)) {
-        (s.log as string[]).forEach((log: string) => addLog(log));
-      }
-
-      await updateJobMutation.mutateAsync({
-        id: jobId,
-        total_items: (s.total_items as number) || 0,
-        processed_items: s.processed_items as number,
-        saved_items: s.saved_items as number,
-        error_count: s.error_count as number,
-      });
-
-      if (Array.isArray(s.results) && s.results.length) {
-        for (const prospect of s.results) {
-          await upsertProspectMutation.mutateAsync(prospect);
+  const pollStatus = useCallback(
+    async (jobId: string) => {
+      const pollInterval = setInterval(async () => {
+        const status = await getScrapingStatus();
+        if (!status) {
+          clearInterval(pollInterval);
+          return;
         }
-      }
 
-      if (s.status === "completed" || s.status === "error") {
-        clearInterval(pollInterval);
-        const finalStatus = s.status === "error" ? "failed" : "completed";
+        const s = status as Record<string, unknown>;
+        if (Array.isArray(s.log)) {
+          (s.log as string[]).forEach((log: string) => addLog(log));
+        }
+
         await updateJobMutation.mutateAsync({
-          id: jobId, status: finalStatus as "completed" | "failed", completed_at: new Date().toISOString(),
+          id: jobId,
+          total_items: (s.total_items as number) || 0,
+          processed_items: s.processed_items as number,
+          saved_items: s.saved_items as number,
+          error_count: s.error_count as number,
         });
-        setIsScraping(false);
-      }
-    }, 3000);
-  }, [getScrapingStatus, updateJobMutation, upsertProspectMutation]);
+
+        if (Array.isArray(s.results) && s.results.length) {
+          for (const prospect of s.results) {
+            await upsertProspectMutation.mutateAsync(prospect);
+          }
+        }
+
+        if (s.status === "completed" || s.status === "error") {
+          clearInterval(pollInterval);
+          const finalStatus = s.status === "error" ? "failed" : "completed";
+          await updateJobMutation.mutateAsync({
+            id: jobId,
+            status: finalStatus as "completed" | "failed",
+            completed_at: new Date().toISOString(),
+          });
+          setIsScraping(false);
+        }
+      }, 3000);
+    },
+    [getScrapingStatus, updateJobMutation, upsertProspectMutation],
+  );
 
   const handleSearch = useCallback(async () => {
     if (selectedAtecoCodes.size === 0 || selectedRegions.size === 0) {
@@ -117,10 +129,13 @@ export function useRAScrapingState() {
   }, [selectedAtecoCodes, selectedRegions, selectedProvinces, searchOnly]);
 
   const handleScrapeSelected = useCallback(async () => {
-    if (selectedResults.size === 0) { alert("Seleziona almeno un'azienda"); return; }
+    if (selectedResults.size === 0) {
+      alert("Seleziona almeno un'azienda");
+      return;
+    }
     try {
       setIsScraping(true);
-      const selectedItems = searchResults.filter(r => selectedResults.has(r.id));
+      const selectedItems = searchResults.filter((r) => selectedResults.has(r.id));
       addLog(`Scraping di ${selectedItems.length} aziende avviato...`);
       const job = await createJobMutation.mutateAsync({
         job_type: "scrape_batch",
@@ -139,7 +154,19 @@ export function useRAScrapingState() {
       addLog(`Errore durante lo scraping: ${error}`);
       setIsScraping(false);
     }
-  }, [selectedResults, searchResults, selectedAtecoCodes, selectedRegions, selectedProvinces, fatturatoBudget, delaySeconds, batchSize, scrapeSelected, createJobMutation, pollStatus]);
+  }, [
+    selectedResults,
+    searchResults,
+    selectedAtecoCodes,
+    selectedRegions,
+    selectedProvinces,
+    fatturatoBudget,
+    delaySeconds,
+    batchSize,
+    scrapeSelected,
+    createJobMutation,
+    pollStatus,
+  ]);
 
   const handleScrapeFull = useCallback(async () => {
     if (selectedAtecoCodes.size === 0 || selectedRegions.size === 0) {
@@ -171,7 +198,17 @@ export function useRAScrapingState() {
       addLog(`Errore durante lo scraping: ${error}`);
       setIsScraping(false);
     }
-  }, [selectedAtecoCodes, selectedRegions, selectedProvinces, fatturatoBudget, delaySeconds, batchSize, scrapeByAteco, createJobMutation, pollStatus]);
+  }, [
+    selectedAtecoCodes,
+    selectedRegions,
+    selectedProvinces,
+    fatturatoBudget,
+    delaySeconds,
+    batchSize,
+    scrapeByAteco,
+    createJobMutation,
+    pollStatus,
+  ]);
 
   const handleStopScraping = useCallback(async () => {
     try {
@@ -184,20 +221,39 @@ export function useRAScrapingState() {
   }, [stopScraping]);
 
   return {
-    isAvailable, jobs, jobsLoading,
-    selectedAtecoCodes, selectedRegions, selectedProvinces,
-    fatturatoBudget, setFatturatoBudget,
-    dipendentiRange, setDipendentiRange,
-    contactFilters, setContactFilters,
-    delaySeconds, setDelaySeconds,
-    batchSize, setBatchSize,
-    searchResults, selectedResults, searchPerformed,
-    isSearching, isScraping,
-    activeTab, setActiveTab,
+    isAvailable,
+    jobs,
+    jobsLoading,
+    selectedAtecoCodes,
+    selectedRegions,
+    selectedProvinces,
+    fatturatoBudget,
+    setFatturatoBudget,
+    dipendentiRange,
+    setDipendentiRange,
+    contactFilters,
+    setContactFilters,
+    delaySeconds,
+    setDelaySeconds,
+    batchSize,
+    setBatchSize,
+    searchResults,
+    selectedResults,
+    searchPerformed,
+    isSearching,
+    isScraping,
+    activeTab,
+    setActiveTab,
     statusLogs,
     availableProvinces,
-    toggleAteco, toggleRegion, toggleProvince,
-    handleSelectResult, handleSelectAll,
-    handleSearch, handleScrapeSelected, handleScrapeFull, handleStopScraping,
+    toggleAteco,
+    toggleRegion,
+    toggleProvince,
+    handleSelectResult,
+    handleSelectAll,
+    handleSearch,
+    handleScrapeSelected,
+    handleScrapeFull,
+    handleStopScraping,
   };
 }

@@ -42,12 +42,7 @@ function FieldRow({ icon, label, value, editing, onChange, type = "text" }: Fiel
       <span className="text-muted-foreground flex-shrink-0">{icon}</span>
       <span className="text-[11px] text-muted-foreground w-20 flex-shrink-0">{label}</span>
       {editing ? (
-        <Input
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          className="h-7 text-xs flex-1"
-          type={type}
-        />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} className="h-7 text-xs flex-1" type={type} />
       ) : (
         <span className={cn("text-xs flex-1 truncate", value ? "text-foreground" : "text-muted-foreground")}>
           {value || "—"}
@@ -79,7 +74,10 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
     setEditing(true);
   };
 
-  const cancelEdit = () => { setEditing(false); setDraft({}); };
+  const cancelEdit = () => {
+    setEditing(false);
+    setDraft({});
+  };
 
   const handleSave = () => {
     const updates: Record<string, unknown> = {};
@@ -113,8 +111,13 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
     setEditing(false);
   };
 
-  const fieldMap: Record<string, keyof UnifiedRecord> = { contact_name: "contactName", company_name: "companyName", lead_status: "leadStatus" };
-  const val = (key: string) => editing ? (draft[key] || "") : (String(record[fieldMap[key] ?? key as keyof UnifiedRecord] ?? ""));
+  const fieldMap: Record<string, keyof UnifiedRecord> = {
+    contact_name: "contactName",
+    company_name: "companyName",
+    lead_status: "leadStatus",
+  };
+  const val = (key: string) =>
+    editing ? draft[key] || "" : String(record[fieldMap[key] ?? (key as keyof UnifiedRecord)] ?? "");
 
   return (
     <div className="space-y-3">
@@ -138,52 +141,132 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
 
       {/* Status + Holding Pattern */}
       <div className="flex items-center gap-2">
-        <HoldingPatternIndicator status={record.leadStatus as "new" | "first_touch_sent" | "holding" | "engaged" | "qualified" | "negotiation" | "converted" | "archived" | "blacklisted"} />
+        <HoldingPatternIndicator
+          status={
+            record.leadStatus as
+              | "new"
+              | "first_touch_sent"
+              | "holding"
+              | "engaged"
+              | "qualified"
+              | "negotiation"
+              | "converted"
+              | "archived"
+              | "blacklisted"
+          }
+        />
         {editing ? (
-          <Select value={draft.lead_status} onValueChange={v => setDraft(d => ({ ...d, lead_status: v }))}>
+          <Select value={draft.lead_status} onValueChange={(v) => setDraft((d) => ({ ...d, lead_status: v }))}>
             <SelectTrigger className="h-7 w-36 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs font-medium">{STATUS_OPTIONS.find(s => s.value === record.leadStatus)?.label || record.leadStatus}</span>
+          <span className="text-xs font-medium">
+            {STATUS_OPTIONS.find((s) => s.value === record.leadStatus)?.label || record.leadStatus}
+          </span>
         )}
       </div>
 
       {/* Fields grid */}
       <div className="bg-muted/30 rounded-xl p-3 space-y-0.5">
-        <FieldRow icon={<Building2 className="w-3.5 h-3.5" />} label="Azienda" value={val("company_name")} editing={editing} onChange={v => setDraft(d => ({ ...d, company_name: v }))} />
-        <FieldRow icon={<Briefcase className="w-3.5 h-3.5" />} label="Ruolo" value={val("position") || record.position || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, position: v }))} />
+        <FieldRow
+          icon={<Building2 className="w-3.5 h-3.5" />}
+          label="Azienda"
+          value={val("company_name")}
+          editing={editing}
+          onChange={(v) => setDraft((d) => ({ ...d, company_name: v }))}
+        />
+        <FieldRow
+          icon={<Briefcase className="w-3.5 h-3.5" />}
+          label="Ruolo"
+          value={val("position") || record.position || ""}
+          editing={editing}
+          onChange={(v) => setDraft((d) => ({ ...d, position: v }))}
+        />
         <div className="flex items-center gap-2 py-1.5">
           <Mail className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
           <span className="text-[11px] text-muted-foreground w-20 flex-shrink-0">Email</span>
           {editing ? (
-            <Input value={val("email") || record.email || ""} onChange={e => setDraft(d => ({ ...d, email: e.target.value }))} className="h-7 text-xs flex-1" type="email" />
+            <Input
+              value={val("email") || record.email || ""}
+              onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
+              className="h-7 text-xs flex-1"
+              type="email"
+            />
           ) : (
-            <span className={cn("text-xs flex-1 truncate flex items-center gap-1.5", (val("email") || record.email) ? "text-foreground" : "text-muted-foreground")}>
+            <span
+              className={cn(
+                "text-xs flex-1 truncate flex items-center gap-1.5",
+                val("email") || record.email ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
               {val("email") || record.email || "—"}
               {record.emailStatus === "bounced" && (
-                <Badge variant="destructive" className="text-[10px] h-4 px-1.5">Bounced</Badge>
+                <Badge variant="destructive" className="text-[10px] h-4 px-1.5">
+                  Bounced
+                </Badge>
               )}
               {record.emailStatus === "invalid" && (
-                <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-destructive/50 text-destructive">Invalid</Badge>
+                <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-destructive/50 text-destructive">
+                  Invalid
+                </Badge>
               )}
             </span>
           )}
         </div>
-        <FieldRow icon={<Phone className="w-3.5 h-3.5" />} label="Telefono" value={val("phone") || record.phone || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, phone: v }))} />
-        <FieldRow icon={<Phone className="w-3.5 h-3.5" />} label="Mobile" value={val("mobile") || record.mobile || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, mobile: v }))} />
-        <FieldRow icon={<MapPin className="w-3.5 h-3.5" />} label="Città" value={val("city") || record.city || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, city: v }))} />
-        <FieldRow icon={<Globe className="w-3.5 h-3.5" />} label="Paese" value={val("country") || record.country || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, country: v }))} />
-        <FieldRow icon={<Globe className="w-3.5 h-3.5" />} label="Sito web" value={val("website") || record.website || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, website: v }))} />
+        <FieldRow
+          icon={<Phone className="w-3.5 h-3.5" />}
+          label="Telefono"
+          value={val("phone") || record.phone || ""}
+          editing={editing}
+          onChange={(v) => setDraft((d) => ({ ...d, phone: v }))}
+        />
+        <FieldRow
+          icon={<Phone className="w-3.5 h-3.5" />}
+          label="Mobile"
+          value={val("mobile") || record.mobile || ""}
+          editing={editing}
+          onChange={(v) => setDraft((d) => ({ ...d, mobile: v }))}
+        />
+        <FieldRow
+          icon={<MapPin className="w-3.5 h-3.5" />}
+          label="Città"
+          value={val("city") || record.city || ""}
+          editing={editing}
+          onChange={(v) => setDraft((d) => ({ ...d, city: v }))}
+        />
+        <FieldRow
+          icon={<Globe className="w-3.5 h-3.5" />}
+          label="Paese"
+          value={val("country") || record.country || ""}
+          editing={editing}
+          onChange={(v) => setDraft((d) => ({ ...d, country: v }))}
+        />
+        <FieldRow
+          icon={<Globe className="w-3.5 h-3.5" />}
+          label="Sito web"
+          value={val("website") || record.website || ""}
+          editing={editing}
+          onChange={(v) => setDraft((d) => ({ ...d, website: v }))}
+        />
         {record.linkedinUrl && (
           <div className="flex items-center gap-2 py-1.5">
             <Linkedin className="w-3.5 h-3.5 text-[hsl(210,80%,55%)]" />
             <span className="text-[11px] text-muted-foreground w-16 flex-shrink-0">LinkedIn</span>
-            <a href={record.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[hsl(210,80%,55%)] hover:underline truncate">
+            <a
+              href={record.linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-[hsl(210,80%,55%)] hover:underline truncate"
+            >
               {record.linkedinUrl.replace(/https?:\/\/(www\.)?linkedin\.com\/in\//, "")}
             </a>
           </div>
@@ -198,12 +281,17 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
         {editing ? (
           <Textarea
             value={draft.note || ""}
-            onChange={e => setDraft(d => ({ ...d, note: e.target.value }))}
+            onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
             className="min-h-[80px] text-xs"
             placeholder="Aggiungi note..."
           />
         ) : (
-          <p className={cn("text-xs rounded-lg bg-muted/20 p-2 min-h-[40px]", record.note ? "text-foreground" : "text-muted-foreground")}>
+          <p
+            className={cn(
+              "text-xs rounded-lg bg-muted/20 p-2 min-h-[40px]",
+              record.note ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
             {record.note || "Nessuna nota"}
           </p>
         )}

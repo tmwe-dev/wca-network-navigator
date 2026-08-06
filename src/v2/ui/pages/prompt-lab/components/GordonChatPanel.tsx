@@ -21,7 +21,11 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
-interface ChatMsg { role: "user" | "assistant"; content: string; ts?: string }
+interface ChatMsg {
+  role: "user" | "assistant";
+  content: string;
+  ts?: string;
+}
 
 interface Props {
   runId: string;
@@ -45,8 +49,14 @@ const SILENT_AUDIO_SRC = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEA
 
 function cleanReplyForSpeech(content: string) {
   const withoutTechnicalBlocks = content
-    .replace(/\[REGENERATED_AFTER\][\s\S]*?\[\/REGENERATED_AFTER\]/g, "Ho preparato una nuova versione del testo. Dimmi se la accetti o cosa vuoi cambiare.")
-    .replace(/\[SUGGEST_KB_RULE\][\s\S]*?\[\/SUGGEST_KB_RULE\]/g, "Posso anche salvare questa come regola per le prossime armonizzazioni.");
+    .replace(
+      /\[REGENERATED_AFTER\][\s\S]*?\[\/REGENERATED_AFTER\]/g,
+      "Ho preparato una nuova versione del testo. Dimmi se la accetti o cosa vuoi cambiare.",
+    )
+    .replace(
+      /\[SUGGEST_KB_RULE\][\s\S]*?\[\/SUGGEST_KB_RULE\]/g,
+      "Posso anche salvare questa come regola per le prossime armonizzazioni.",
+    );
 
   return withoutTechnicalBlocks
     .replace(/_\(([^)]*)\)_/g, "$1")
@@ -82,7 +92,8 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     audioActivationRef.current = audio;
     audio.muted = true;
     audio.src = SILENT_AUDIO_SRC;
-    void audio.play()
+    void audio
+      .play()
       .then(() => {
         audio.pause();
         audio.currentTime = 0;
@@ -104,7 +115,6 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       audioRef.current.pause();
       audioRef.current = null;
     }
-     
   }, [proposal.id]);
 
   useEffect(() => {
@@ -168,21 +178,21 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
 
   const playTTS = async (text: string) => {
     try {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       const sessionRes = await supabase.auth.getSession();
       const token = sessionRes.data.session?.access_token ?? "";
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: text.slice(0, 3000), voiceId: resolvedVoiceId, language: "it" }),
-        }
-      );
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text: text.slice(0, 3000), voiceId: resolvedVoiceId, language: "it" }),
+      });
       if (!res.ok) {
         toast.error("TTS non disponibile");
         return;
@@ -191,8 +201,14 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); if (audioRef.current === audio) audioRef.current = null; };
-      audio.onerror = () => { URL.revokeObjectURL(url); if (audioRef.current === audio) audioRef.current = null; };
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        if (audioRef.current === audio) audioRef.current = null;
+      };
       await audio.play();
     } catch {
       toast.error("Errore riproduzione voce");
@@ -217,7 +233,6 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       cleanText = "Ho preparato una nuova versione del testo. Dimmi se la applico o cosa vuoi cambiare.";
     }
     void playTTS(cleanText);
-     
   }, [messages, loading, autoVoice, resolvedVoiceId]);
 
   const toggleAutoVoice = () => {
@@ -282,7 +297,11 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
           title={autoVoice ? "Voce automatica attiva — disattiva" : "Voce automatica off — attiva"}
           aria-label={autoVoice ? "Disattiva voce automatica" : "Attiva voce automatica"}
         >
-          {autoVoice ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+          {autoVoice ? (
+            <Volume2 className="w-4 h-4 text-primary" />
+          ) : (
+            <VolumeX className="w-4 h-4 text-muted-foreground" />
+          )}
         </Button>
       </div>
 
@@ -297,10 +316,12 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
         )}
         {messages.map((m, i) => (
           <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-            <div className={cn(
-              "max-w-[88%] rounded-lg px-3 py-2 text-xs leading-relaxed",
-              m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/60",
-            )}>
+            <div
+              className={cn(
+                "max-w-[88%] rounded-lg px-3 py-2 text-xs leading-relaxed",
+                m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/60",
+              )}
+            >
               {m.role === "assistant" ? (
                 <div className="flex items-start gap-2">
                   <div className="whitespace-pre-wrap flex-1">{m.content}</div>
@@ -329,7 +350,6 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
             </div>
           </div>
         )}
-
       </div>
 
       {/* PENDING — sticky sopra l'input bar, sempre visibile finché c'è una proposta da decidere */}
@@ -372,13 +392,12 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
               <p className="text-[11px] font-medium">{pending.ruleSuggestion.title}</p>
               <p className="text-[10px] text-muted-foreground italic">{pending.ruleSuggestion.content}</p>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="h-7 text-[11px] flex-1"
-                  onClick={handleSaveRule}
-                  disabled={savingRule}
-                >
-                  {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
+                <Button size="sm" className="h-7 text-[11px] flex-1" onClick={handleSaveRule} disabled={savingRule}>
+                  {savingRule ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <BookmarkPlus className="w-3 h-3 mr-1" />
+                  )}
                   Salva regola
                 </Button>
                 <Button
@@ -416,7 +435,13 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
         >
           {speech.listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
         </Button>
-        <Button size="icon" className="h-8 w-8 flex-shrink-0" onClick={send} disabled={!input.trim() || loading} aria-label="Invia">
+        <Button
+          size="icon"
+          className="h-8 w-8 flex-shrink-0"
+          onClick={send}
+          disabled={!input.trim() || loading}
+          aria-label="Invia"
+        >
           <Send className="w-3.5 h-3.5" />
         </Button>
       </div>

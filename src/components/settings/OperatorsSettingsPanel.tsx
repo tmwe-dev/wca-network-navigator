@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { useOperators, useUpsertOperator, useDeleteOperator, useCurrentOperator, type Operator } from "@/hooks/useOperators";
+import {
+  useOperators,
+  useUpsertOperator,
+  useDeleteOperator,
+  useCurrentOperator,
+  type Operator,
+} from "@/hooks/useOperators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +38,15 @@ export default function OperatorsSettings() {
   };
 
   const openNew = () => {
-    setEditOp({ name: "", email: "", is_admin: false, is_active: true, imap_host: "imaps.aruba.it", smtp_host: "smtps.aruba.it", smtp_port: 465 });
+    setEditOp({
+      name: "",
+      email: "",
+      is_admin: false,
+      is_active: true,
+      imap_host: "imaps.aruba.it",
+      smtp_host: "smtps.aruba.it",
+      smtp_port: 465,
+    });
     setDialogOpen(true);
   };
 
@@ -42,7 +56,11 @@ export default function OperatorsSettings() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
   }
 
   if (currentOp && !currentOp.is_admin && operators.length > 0) {
@@ -76,7 +94,7 @@ export default function OperatorsSettings() {
       )}
 
       <div className="grid gap-4">
-        {operators.map(op => (
+        {operators.map((op) => (
           <Card key={op.id} className={!op.is_active ? "opacity-60" : ""}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -87,18 +105,33 @@ export default function OperatorsSettings() {
                   <div>
                     <CardTitle className="text-base flex items-center gap-2">
                       {op.name}
-                      {op.is_admin && <Badge variant="secondary" className="gap-1"><Shield className="w-3 h-3" /> Admin</Badge>}
+                      {op.is_admin && (
+                        <Badge variant="secondary" className="gap-1">
+                          <Shield className="w-3 h-3" /> Admin
+                        </Badge>
+                      )}
                       {!op.is_active && <Badge variant="outline">Disabilitato</Badge>}
-                      {op.user_id === currentOp?.user_id && <Badge variant="default" className="text-[10px]">Tu</Badge>}
+                      {op.user_id === currentOp?.user_id && (
+                        <Badge variant="default" className="text-[10px]">
+                          Tu
+                        </Badge>
+                      )}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">{op.email}</p>
                   </div>
                 </div>
                 {isAdmin && (
                   <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(op)}><Edit className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(op)}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
                     {op.user_id !== currentOp?.user_id && (
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteOp.mutate(op.id)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => deleteOp.mutate(op.id)}
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     )}
@@ -108,8 +141,16 @@ export default function OperatorsSettings() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="flex gap-4 text-xs text-muted-foreground">
-                {op.imap_user && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {op.imap_user}</span>}
-                {op.whatsapp_phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {op.whatsapp_phone}</span>}
+                {op.imap_user && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="w-3 h-3" /> {op.imap_user}
+                  </span>
+                )}
+                {op.whatsapp_phone && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="w-3 h-3" /> {op.whatsapp_phone}
+                  </span>
+                )}
               </div>
               {isAdmin && op.id && (
                 <div className="mt-3 pt-3 border-t">
@@ -131,11 +172,11 @@ export default function OperatorsSettings() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Nome *</Label>
-                  <Input value={editOp.name || ""} onChange={e => setEditOp({ ...editOp, name: e.target.value })} />
+                  <Input value={editOp.name || ""} onChange={(e) => setEditOp({ ...editOp, name: e.target.value })} />
                 </div>
                 <div>
                   <Label>Email *</Label>
-                  <Input value={editOp.email || ""} onChange={e => setEditOp({ ...editOp, email: e.target.value })} />
+                  <Input value={editOp.email || ""} onChange={(e) => setEditOp({ ...editOp, email: e.target.value })} />
                 </div>
               </div>
 
@@ -144,11 +185,17 @@ export default function OperatorsSettings() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Host IMAP</Label>
-                    <Input value={editOp.imap_host || ""} onChange={e => setEditOp({ ...editOp, imap_host: e.target.value })} />
+                    <Input
+                      value={editOp.imap_host || ""}
+                      onChange={(e) => setEditOp({ ...editOp, imap_host: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label>Utente IMAP</Label>
-                    <Input value={editOp.imap_user || ""} onChange={e => setEditOp({ ...editOp, imap_user: e.target.value })} />
+                    <Input
+                      value={editOp.imap_user || ""}
+                      onChange={(e) => setEditOp({ ...editOp, imap_user: e.target.value })}
+                    />
                   </div>
                 </div>
               </div>
@@ -158,15 +205,25 @@ export default function OperatorsSettings() {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <Label>Host SMTP</Label>
-                    <Input value={editOp.smtp_host || ""} onChange={e => setEditOp({ ...editOp, smtp_host: e.target.value })} />
+                    <Input
+                      value={editOp.smtp_host || ""}
+                      onChange={(e) => setEditOp({ ...editOp, smtp_host: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label>Utente SMTP</Label>
-                    <Input value={editOp.smtp_user || ""} onChange={e => setEditOp({ ...editOp, smtp_user: e.target.value })} />
+                    <Input
+                      value={editOp.smtp_user || ""}
+                      onChange={(e) => setEditOp({ ...editOp, smtp_user: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label>Porta</Label>
-                    <Input type="number" value={editOp.smtp_port || 465} onChange={e => setEditOp({ ...editOp, smtp_port: Number(e.target.value) })} />
+                    <Input
+                      type="number"
+                      value={editOp.smtp_port || 465}
+                      onChange={(e) => setEditOp({ ...editOp, smtp_port: Number(e.target.value) })}
+                    />
                   </div>
                 </div>
               </div>
@@ -176,22 +233,36 @@ export default function OperatorsSettings() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Telefono WhatsApp</Label>
-                    <Input value={editOp.whatsapp_phone || ""} onChange={e => setEditOp({ ...editOp, whatsapp_phone: e.target.value })} placeholder="+39..." />
+                    <Input
+                      value={editOp.whatsapp_phone || ""}
+                      onChange={(e) => setEditOp({ ...editOp, whatsapp_phone: e.target.value })}
+                      placeholder="+39..."
+                    />
                   </div>
                   <div>
                     <Label>Profilo LinkedIn</Label>
-                    <Input value={editOp.linkedin_profile_url || ""} onChange={e => setEditOp({ ...editOp, linkedin_profile_url: e.target.value })} placeholder="https://linkedin.com/in/..." />
+                    <Input
+                      value={editOp.linkedin_profile_url || ""}
+                      onChange={(e) => setEditOp({ ...editOp, linkedin_profile_url: e.target.value })}
+                      placeholder="https://linkedin.com/in/..."
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="border-t pt-3 flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                  <Switch checked={editOp.is_admin || false} onCheckedChange={v => setEditOp({ ...editOp, is_admin: v })} />
+                  <Switch
+                    checked={editOp.is_admin || false}
+                    onCheckedChange={(v) => setEditOp({ ...editOp, is_admin: v })}
+                  />
                   <Label>Admin</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={editOp.is_active !== false} onCheckedChange={v => setEditOp({ ...editOp, is_active: v })} />
+                  <Switch
+                    checked={editOp.is_active !== false}
+                    onCheckedChange={(v) => setEditOp({ ...editOp, is_active: v })}
+                  />
                   <Label>Attivo</Label>
                 </div>
               </div>

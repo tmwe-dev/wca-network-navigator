@@ -40,7 +40,10 @@ export function useTokenUsage() {
   const query = useQuery({
     queryKey: queryKeys.tokenUsage.all,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) {
         return {
           todayTokens: 0,
@@ -103,7 +106,7 @@ export function useTokenUsage() {
         () => {
           if (unsubscribed) return;
           queryClient.invalidateQueries({ queryKey: queryKeys.tokenUsage.all });
-        }
+        },
       )
       .subscribe();
 

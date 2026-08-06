@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
   const headers = getSecurityHeaders(getCorsHeaders(req.headers.get("origin")));
 
   try {
-    const body: BackfillRequest = await req.json().catch(() => ({} as BackfillRequest));
+    const body: BackfillRequest = await req.json().catch(() => ({}) as BackfillRequest);
     const auth = await requireInternalOrUser(req, body.user_id, headers);
     if (auth.kind === "error") return auth.response;
 
@@ -47,10 +47,7 @@ Deno.serve(async (req) => {
     // 1. Risolvi gruppi pilot
     let groupIds = body.group_ids ?? [];
     if (groupIds.length === 0) {
-      const { data: groups } = await supabase
-        .from("email_sender_groups")
-        .select("id")
-        .eq("funnemail_enabled", true);
+      const { data: groups } = await supabase.from("email_sender_groups").select("id").eq("funnemail_enabled", true);
       groupIds = (groups ?? []).map((g) => g.id);
     }
     if (groupIds.length === 0) {
@@ -104,10 +101,10 @@ Deno.serve(async (req) => {
     }));
 
     if (dryRun) {
-      return new Response(
-        JSON.stringify({ ok: true, dry_run: true, eligible: eligible.length, dispatched: 0, plan }),
-        { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ ok: true, dry_run: true, eligible: eligible.length, dispatched: 0, plan }), {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
     }
 
     // 4. Dispatch reale verso funnemail-classify (sequenziale, soft-fail per riga)
@@ -154,9 +151,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    return new Response(
-      JSON.stringify({ error: String(e instanceof Error ? e.message : e) }),
-      { status: 500, headers: { ...headers, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: String(e instanceof Error ? e.message : e) }), {
+      status: 500,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
   }
 });

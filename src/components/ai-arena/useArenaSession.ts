@@ -35,10 +35,22 @@ export type AnimState = "enter" | "idle" | "confirm" | "skip" | "blacklist";
 export type EffectTrigger = "confirm" | "skip" | "blacklist" | null;
 
 export const LANG_FLAGS: Record<string, string> = {
-  Deutsch: "🇩🇪", Français: "🇫🇷", Español: "🇪🇸", Português: "🇵🇹",
-  Nederlands: "🇳🇱", Polski: "🇵🇱", Italiano: "🇮🇹", English: "🇬🇧",
-  Русский: "🇷🇺", Türkçe: "🇹🇷", "中文": "🇨🇳", "日本語": "🇯🇵",
-  "한국어": "🇰🇷", Svenska: "🇸🇪", Norsk: "🇳🇴", Dansk: "🇩🇰",
+  Deutsch: "🇩🇪",
+  Français: "🇫🇷",
+  Español: "🇪🇸",
+  Português: "🇵🇹",
+  Nederlands: "🇳🇱",
+  Polski: "🇵🇱",
+  Italiano: "🇮🇹",
+  English: "🇬🇧",
+  Русский: "🇷🇺",
+  Türkçe: "🇹🇷",
+  中文: "🇨🇳",
+  日本語: "🇯🇵",
+  한국어: "🇰🇷",
+  Svenska: "🇸🇪",
+  Norsk: "🇳🇴",
+  Dansk: "🇩🇰",
 };
 
 export function useArenaSession() {
@@ -76,12 +88,16 @@ export function useArenaSession() {
   useEffect(() => {
     if (sessionStarted && !sessionEnded) {
       timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
-      return () => { if (timerRef.current) clearInterval(timerRef.current); };
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
     }
     if (timerRef.current) clearInterval(timerRef.current);
   }, [sessionStarted, sessionEnded]);
 
-  const minutes = Math.floor(elapsed / 60).toString().padStart(2, "0");
+  const minutes = Math.floor(elapsed / 60)
+    .toString()
+    .padStart(2, "0");
   const seconds = (elapsed % 60).toString().padStart(2, "0");
 
   // Fetch suggestions
@@ -92,23 +108,20 @@ export function useArenaSession() {
       const token = session?.session?.access_token;
       if (!token) throw new Error("Not authenticated");
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-arena-suggest`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            focus,
-            preferred_channel: channel,
-            send_language: sendLanguage,
-            batch_size: batchSize,
-            excluded_ids: excludedIds,
-          }),
-        }
-      );
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-arena-suggest`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          focus,
+          preferred_channel: channel,
+          send_language: sendLanguage,
+          batch_size: batchSize,
+          excluded_ids: excludedIds,
+        }),
+      });
       if (!res.ok) throw new Error("Failed to fetch suggestions");
       return res.json();
     },
@@ -117,9 +130,14 @@ export function useArenaSession() {
   });
 
   useEffect(() => {
-    const data = queryClient.getQueryData<{ suggestions: Suggestion[] }>(
-      ["arena-suggestions", focus, channel, sendLanguage, batchSize, excludedIds.length]
-    );
+    const data = queryClient.getQueryData<{ suggestions: Suggestion[] }>([
+      "arena-suggestions",
+      focus,
+      channel,
+      sendLanguage,
+      batchSize,
+      excludedIds.length,
+    ]);
     if (data?.suggestions?.length) {
       setSuggestions(data.suggestions);
       setCurrentIndex(0);
@@ -168,7 +186,10 @@ export function useArenaSession() {
     }
 
     setEditing(false);
-    setTimeout(() => { setEffectTrigger(null); advanceToNext(); }, 700);
+    setTimeout(() => {
+      setEffectTrigger(null);
+      advanceToNext();
+    }, 700);
   }, [current, advanceToNext, editing, editSubject, editBody]);
 
   const handleSkip = useCallback(() => {
@@ -179,7 +200,10 @@ export function useArenaSession() {
     setProposed((p) => p + 1);
     setExcludedIds((prev) => [...prev, current.partner_id]);
     setEditing(false);
-    setTimeout(() => { setEffectTrigger(null); advanceToNext(); }, 600);
+    setTimeout(() => {
+      setEffectTrigger(null);
+      advanceToNext();
+    }, 600);
   }, [current, advanceToNext]);
 
   const handleBlacklist = useCallback(async () => {
@@ -192,18 +216,23 @@ export function useArenaSession() {
     setEditing(false);
 
     try {
-      await insertBlacklistBatch([{
-        company_name: current.company_name,
-        country: current.country_name || current.country_code,
-        source: "ai_arena",
-        status: "active",
-      }]);
+      await insertBlacklistBatch([
+        {
+          company_name: current.company_name,
+          country: current.country_name || current.country_code,
+          source: "ai_arena",
+          status: "active",
+        },
+      ]);
       toast.error(`🚫 ${current.company_name} aggiunto alla blacklist`);
     } catch (error) {
       toast.error(`Errore blacklist: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    setTimeout(() => { setEffectTrigger(null); advanceToNext(); }, 700);
+    setTimeout(() => {
+      setEffectTrigger(null);
+      advanceToNext();
+    }, 700);
   }, [current, advanceToNext]);
 
   const handleEdit = useCallback(() => {
@@ -224,30 +253,55 @@ export function useArenaSession() {
     if (timerRef.current) clearInterval(timerRef.current);
   }, []);
 
-  const sessionStats = useMemo(() => ({
-    proposed,
-    confirmed,
-    skipped,
-    blocked,
-    languages: Array.from(usedLanguages),
-    circuitBefore: 0,
-    circuitAfter: confirmed,
-  }), [proposed, confirmed, skipped, blocked, usedLanguages]);
+  const sessionStats = useMemo(
+    () => ({
+      proposed,
+      confirmed,
+      skipped,
+      blocked,
+      languages: Array.from(usedLanguages),
+      circuitBefore: 0,
+      circuitAfter: confirmed,
+    }),
+    [proposed, confirmed, skipped, blocked, usedLanguages],
+  );
 
   return {
     // Config
-    focus, setFocus, channel, setChannel, sendLanguage, setSendLanguage,
-    batchSize, setBatchSize, sessionStarted, sessionEnded,
+    focus,
+    setFocus,
+    channel,
+    setChannel,
+    sendLanguage,
+    setSendLanguage,
+    batchSize,
+    setBatchSize,
+    sessionStarted,
+    sessionEnded,
     // Timer
-    minutes, seconds,
+    minutes,
+    seconds,
     // Counters
-    proposed, confirmed, skipped,
+    proposed,
+    confirmed,
+    skipped,
     // Suggestions
-    current, loadingSuggestions, animState, effectTrigger,
-    editing, editSubject, setEditSubject, editBody, setEditBody,
+    current,
+    loadingSuggestions,
+    animState,
+    effectTrigger,
+    editing,
+    editSubject,
+    setEditSubject,
+    editBody,
+    setEditBody,
     // Actions
-    handleConfirm, handleSkip, handleBlacklist, handleEdit,
-    startSession, endSession,
+    handleConfirm,
+    handleSkip,
+    handleBlacklist,
+    handleEdit,
+    startSession,
+    endSession,
     // Stats
     sessionStats,
   };

@@ -25,10 +25,17 @@ test.describe("P0 funnemail classify pipeline", () => {
 
   test("metriche di classificazione esposte (anche zero)", async ({ page }) => {
     await page.goto("/v2/funnemail-inbox");
-    await page.getByText(/Eval Accuracy|Accuracy/i).first().click().catch(() => {});
+    await page
+      .getByText(/Eval Accuracy|Accuracy/i)
+      .first()
+      .click()
+      .catch(() => {});
     await page.waitForTimeout(1500);
     // Deve comparire almeno uno tra: percentuale, "Nessun", "Caricamento", "decision"
-    const body = await page.locator("body").innerText().catch(() => "");
+    const body = await page
+      .locator("body")
+      .innerText()
+      .catch(() => "");
     expect(body).toMatch(/%|Nessun|Caricamento|decision|categor/i);
   });
 
@@ -68,7 +75,10 @@ deepTest.describe("Deep invariants: /v2/funnemail", () => {
     deepExpect(res?.status() ?? 0).toBeLessThan(500);
     await page.waitForLoadState("networkidle").catch(() => {});
     const url = new URL(page.url());
-    const isAuthOr = url.pathname.includes("/auth") || url.pathname.includes("/v2/login") || url.pathname.startsWith("/v2/funnemail".split("/").slice(0, 3).join("/"));
+    const isAuthOr =
+      url.pathname.includes("/auth") ||
+      url.pathname.includes("/v2/login") ||
+      url.pathname.startsWith("/v2/funnemail".split("/").slice(0, 3).join("/"));
     deepExpect(isAuthOr, `URL atteso /auth o sotto ramo, got ${url.pathname}`).toBeTruthy();
   });
 
@@ -89,9 +99,7 @@ deepTest.describe("Deep invariants: /v2/funnemail", () => {
     await page.goto(DEEP_ROUTE);
     await page.waitForLoadState("networkidle").catch(() => {});
     await page.waitForTimeout(2000);
-    deepExpect(inv.forbiddenAiCalls,
-      `AI provider diretto: ${inv.forbiddenAiCalls.join(" | ")}`
-    ).toHaveLength(0);
+    deepExpect(inv.forbiddenAiCalls, `AI provider diretto: ${inv.forbiddenAiCalls.join(" | ")}`).toHaveLength(0);
   });
 
   deepTest("network: nessuna 5xx ne body con service_role", async ({ page }) => {
@@ -99,9 +107,7 @@ deepTest.describe("Deep invariants: /v2/funnemail", () => {
     await page.goto(DEEP_ROUTE);
     await page.waitForLoadState("networkidle").catch(() => {});
     await page.waitForTimeout(1500);
-    deepExpect(inv.serverErrors,
-      `5xx: ${inv.serverErrors.map(e => e.url).join(" | ")}`
-    ).toHaveLength(0);
+    deepExpect(inv.serverErrors, `5xx: ${inv.serverErrors.map((e) => e.url).join(" | ")}`).toHaveLength(0);
     deepExpect(inv.secretLeaks).toHaveLength(0);
   });
 

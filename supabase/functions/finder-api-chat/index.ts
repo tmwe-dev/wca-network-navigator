@@ -69,73 +69,79 @@ Italiano. Tono diretto, niente "se vuoi posso…": fai la cosa giusta e mostrala
 
 function buildTools(allowedOps: string[]) {
   return [
-  {
-    type: "function",
-    function: {
-      name: "call_tmwe",
-      description: "Invoca un'operazione TMWE/Findair via proxy. L'op DEVE essere tra quelle elencate nel system prompt.",
-      parameters: {
-        type: "object",
-        properties: {
-          op: { type: "string", enum: allowedOps },
-          params: { type: "object", description: "Parametri specifici dell'operazione." },
+    {
+      type: "function",
+      function: {
+        name: "call_tmwe",
+        description:
+          "Invoca un'operazione TMWE/Findair via proxy. L'op DEVE essere tra quelle elencate nel system prompt.",
+        parameters: {
+          type: "object",
+          properties: {
+            op: { type: "string", enum: allowedOps },
+            params: { type: "object", description: "Parametri specifici dell'operazione." },
+          },
+          required: ["op"],
+          additionalProperties: false,
         },
-        required: ["op"],
-        additionalProperties: false,
       },
     },
-  },
-  {
-    type: "function",
-    function: {
-      name: "schema_lookup",
-      description: "Restituisce i campi mappati (field, role, description, example) per una specifica op TMWE. Usalo PRIMA di call_tmwe per sapere quali parametri/risposte aspettarti.",
-      parameters: {
-        type: "object",
-        properties: {
-          op: { type: "string", description: "Nome dell'op TMWE (es. 'shipment.list')." },
+    {
+      type: "function",
+      function: {
+        name: "schema_lookup",
+        description:
+          "Restituisce i campi mappati (field, role, description, example) per una specifica op TMWE. Usalo PRIMA di call_tmwe per sapere quali parametri/risposte aspettarti.",
+        parameters: {
+          type: "object",
+          properties: {
+            op: { type: "string", description: "Nome dell'op TMWE (es. 'shipment.list')." },
+          },
+          required: ["op"],
+          additionalProperties: false,
         },
-        required: ["op"],
-        additionalProperties: false,
       },
     },
-  },
-  {
-    type: "function",
-    function: {
-      name: "propose_kb_entry",
-      description: "Suggerisci un articolo KB per migliorare le risposte future.",
-      parameters: {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          body: { type: "string" },
-          trigger_query: { type: "string" },
-          trigger_op: { type: "string" },
-          trigger_error: { type: "string" },
-          tags: { type: "array", items: { type: "string" } },
+    {
+      type: "function",
+      function: {
+        name: "propose_kb_entry",
+        description: "Suggerisci un articolo KB per migliorare le risposte future.",
+        parameters: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            body: { type: "string" },
+            trigger_query: { type: "string" },
+            trigger_op: { type: "string" },
+            trigger_error: { type: "string" },
+            tags: { type: "array", items: { type: "string" } },
+          },
+          required: ["title", "body", "trigger_query"],
+          additionalProperties: false,
         },
-        required: ["title", "body", "trigger_query"],
-        additionalProperties: false,
       },
     },
-  },
-  {
-    type: "function",
-    function: {
-      name: "final_answer",
-      description: "Chiudi il turno con un messaggio conversazionale per l'utente.",
-      parameters: {
-        type: "object",
-        properties: {
-          text: { type: "string", description: "Messaggio testuale, in italiano. Quando esponi una spedizione includi i campi chiave (LDV, OTP, data, stato, servizio, note)." },
-          spoken_summary: { type: "string", description: "Versione vocale brevissima (max 1 frase)." },
+    {
+      type: "function",
+      function: {
+        name: "final_answer",
+        description: "Chiudi il turno con un messaggio conversazionale per l'utente.",
+        parameters: {
+          type: "object",
+          properties: {
+            text: {
+              type: "string",
+              description:
+                "Messaggio testuale, in italiano. Quando esponi una spedizione includi i campi chiave (LDV, OTP, data, stato, servizio, note).",
+            },
+            spoken_summary: { type: "string", description: "Versione vocale brevissima (max 1 frase)." },
+          },
+          required: ["text"],
+          additionalProperties: false,
         },
-        required: ["text"],
-        additionalProperties: false,
       },
     },
-  },
   ];
 }
 
@@ -152,7 +158,11 @@ async function callTmweProxy(authHeader: string, op: string, params: Record<stri
   });
   const text = await res.text();
   let data: unknown = null;
-  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
   return { ok: res.ok, status: res.status, data };
 }
 
@@ -169,7 +179,9 @@ async function loadApprovedKb(supabase: ReturnType<typeof createClient>): Promis
   return `\n\n=== Knowledge Base approvata (Finder API) ===\n${lines}\n=== fine KB ===`;
 }
 
-async function loadEnabledOps(supabase: ReturnType<typeof createClient>): Promise<Array<{ op: string; desc: string; risk: string; method: string }>> {
+async function loadEnabledOps(
+  supabase: ReturnType<typeof createClient>,
+): Promise<Array<{ op: string; desc: string; risk: string; method: string }>> {
   const { data, error } = await supabase
     .from("tmwe_api_catalog")
     .select("op, description, risk_level, method, api_group")
@@ -211,18 +223,26 @@ function buildSchemaManifest(map: Map<string, SchemaRow[]>): string {
   for (const [op, fields] of map) {
     const roleCounts: Record<string, number> = {};
     for (const f of fields) roleCounts[f.role] = (roleCounts[f.role] ?? 0) + 1;
-    const roles = Object.entries(roleCounts).map(([r, n]) => `${r}×${n}`).join(", ");
+    const roles = Object.entries(roleCounts)
+      .map(([r, n]) => `${r}×${n}`)
+      .join(", ");
     lines.push(`- ${op}: ${fields.length} campi [${roles}]`);
   }
-  return `\n\n=== SCHEMA MAP TMWE — Manifest (${map.size} op, ${[...map.values()].reduce((s, a) => s + a.length, 0)} campi) ===\n` +
+  return (
+    `\n\n=== SCHEMA MAP TMWE — Manifest (${map.size} op, ${[...map.values()].reduce((s, a) => s + a.length, 0)} campi) ===\n` +
     `Per i campi dettagliati di un'op usa il tool 'schema_lookup(op)'.\n` +
     lines.join("\n") +
-    `\n=== fine manifest ===`;
+    `\n=== fine manifest ===`
+  );
 }
 
-function lookupSchema(map: Map<string, SchemaRow[]>, op: string): { op: string; fields: SchemaRow[] } | { op: string; error: string } {
+function lookupSchema(
+  map: Map<string, SchemaRow[]>,
+  op: string,
+): { op: string; fields: SchemaRow[] } | { op: string; error: string } {
   const fields = map.get(op);
-  if (!fields || fields.length === 0) return { op, error: `Nessun campo mappato per '${op}'. Chiama l'op e usa 'discover' dalla UI per popolarla.` };
+  if (!fields || fields.length === 0)
+    return { op, error: `Nessun campo mappato per '${op}'. Chiama l'op e usa 'discover' dalla UI per popolarla.` };
   return { op, fields };
 }
 
@@ -234,16 +254,14 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing Authorization" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { messages = [] } = (await req.json()) as { messages: ChatMsg[] };
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
     const [kbContext, schemaMap, enabledOps] = await Promise.all([
       loadApprovedKb(supabase),
@@ -261,10 +279,12 @@ Deno.serve(async (req) => {
     const allowedOpNames = enabledOps.map((o) => o.op);
     const TOOLS = buildTools(allowedOpNames);
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -279,26 +299,29 @@ Deno.serve(async (req) => {
 
     for (let i = 0; i < 8; i++) {
       const aiRes = await aiFetch({
-          model: "google/gemini-2.5-pro",
-          messages: convo,
-          tools: TOOLS,
-          tool_choice: "auto",
-        });
+        model: "google/gemini-2.5-pro",
+        messages: convo,
+        tools: TOOLS,
+        tool_choice: "auto",
+      });
 
       if (aiRes.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit AI (riprova tra poco)." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiRes.status === 402) {
         return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (!aiRes.ok) {
         const errTxt = await aiRes.text();
         return new Response(JSON.stringify({ error: "AI gateway error", detail: errTxt }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
@@ -318,7 +341,11 @@ Deno.serve(async (req) => {
       for (const tc of toolCalls) {
         const fn = tc.function?.name;
         let args: Record<string, unknown> = {};
-        try { args = JSON.parse(tc.function?.arguments ?? "{}"); } catch { /* ignore */ }
+        try {
+          args = JSON.parse(tc.function?.arguments ?? "{}");
+        } catch {
+          /* ignore */
+        }
 
         if (fn === "call_tmwe") {
           const op = String(args.op ?? "");
@@ -333,9 +360,10 @@ Deno.serve(async (req) => {
           toolResults.push({ op, ok: result.ok, data: result.data });
           // Post-call hint: se la mappa contiene quest'op, allega i campi come riferimento.
           const mapped = schemaMap.get(op);
-          const hint = mapped && mapped.length > 0
-            ? { schema_hint: mapped.map((f) => ({ field: f.field, role: f.role, description: f.description })) }
-            : {};
+          const hint =
+            mapped && mapped.length > 0
+              ? { schema_hint: mapped.map((f) => ({ field: f.field, role: f.role, description: f.description })) }
+              : {};
           convo.push({
             role: "tool",
             tool_call_id: tc.id,
@@ -391,7 +419,8 @@ Deno.serve(async (req) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return new Response(JSON.stringify({ error: msg }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

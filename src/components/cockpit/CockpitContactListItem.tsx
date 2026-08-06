@@ -1,5 +1,17 @@
 import { motion } from "framer-motion";
-import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Sparkles, Building2, FileSearch, Users, CreditCard, MapPin } from "lucide-react";
+import {
+  GripVertical,
+  Mail,
+  Linkedin,
+  MessageCircle,
+  Smartphone,
+  Sparkles,
+  Building2,
+  FileSearch,
+  Users,
+  CreditCard,
+  MapPin,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -39,20 +51,35 @@ interface Props {
 }
 
 const channelIcon: Record<string, React.ComponentType<{ className?: string }>> = {
-  email: Mail, linkedin: Linkedin, whatsapp: MessageCircle, sms: Smartphone,
+  email: Mail,
+  linkedin: Linkedin,
+  whatsapp: MessageCircle,
+  sms: Smartphone,
 };
 
-const originConfig: Record<ContactOrigin, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
-  wca:            { label: "WCA",      icon: Building2,  color: "text-primary" },
+const originConfig: Record<
+  ContactOrigin,
+  { label: string; icon: React.ComponentType<{ className?: string }>; color: string }
+> = {
+  wca: { label: "WCA", icon: Building2, color: "text-primary" },
   report_aziende: { label: "Prospect", icon: FileSearch, color: "text-chart-3" },
-  import:         { label: "Contatto", icon: Users,      color: "text-muted-foreground" },
-  bca:            { label: "BCA",      icon: CreditCard, color: "text-warning" },
-  manual:         { label: "Manuale",  icon: Users,      color: "text-success" },
+  import: { label: "Contatto", icon: Users, color: "text-muted-foreground" },
+  bca: { label: "BCA", icon: CreditCard, color: "text-warning" },
+  manual: { label: "Manuale", icon: Users, color: "text-success" },
 };
 
-const priorityLabel = (p: number) => p >= 9 ? "Urgente" : p >= 7 ? "Alta" : p >= 5 ? "Media" : "Bassa";
+const priorityLabel = (p: number) => (p >= 9 ? "Urgente" : p >= 7 ? "Alta" : p >= 5 ? "Media" : "Bassa");
 
-export function CockpitContactListItem({ contact, cockpitContact, flag, index, isSelected, onToggleSelect, onDragStart, onDragEnd }: Props) {
+export function CockpitContactListItem({
+  contact,
+  cockpitContact,
+  flag,
+  index,
+  isSelected,
+  onToggleSelect,
+  onDragStart,
+  onDragEnd,
+}: Props) {
   const oc = originConfig[contact.origin];
   const isAiProcessed = !!contact.deepSearchAt;
 
@@ -80,8 +107,12 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
         className={cn(
           "group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors border border-transparent",
           isAiProcessed
-            ? isSelected ? "bg-primary/10 border-primary/30" : "bg-primary/[0.06] hover:bg-primary/10"
-            : isSelected ? "bg-primary/10 border-primary/30" : "hover:bg-card/60"
+            ? isSelected
+              ? "bg-primary/10 border-primary/30"
+              : "bg-primary/[0.06] hover:bg-primary/10"
+            : isSelected
+              ? "bg-primary/10 border-primary/30"
+              : "hover:bg-card/60",
         )}
       >
         <Checkbox
@@ -103,7 +134,12 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
               </InfoTooltip>
             )}
             <InfoTooltip content={`Origine: ${contact.originDetail}`}>
-              <span className={cn("inline-flex items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wider flex-shrink-0", oc.color)}>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wider flex-shrink-0",
+                  oc.color,
+                )}
+              >
                 <oc.icon className="w-2.5 h-2.5" />
                 {oc.label}
               </span>
@@ -129,31 +165,36 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
           </div>
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
-          {contact.channels.map(ch => {
+          {contact.channels.map((ch) => {
             const Icon = channelIcon[ch];
             if (!Icon) return null;
-            const isAvailable = ch === "email" ? !!contact.email
-              : ch === "linkedin" ? !!contact.linkedinUrl
-              : !!contact.phone;
+            const isAvailable =
+              ch === "email" ? !!contact.email : ch === "linkedin" ? !!contact.linkedinUrl : !!contact.phone;
             return (
               <InfoTooltip key={ch} content={isAvailable ? `${ch} disponibile` : `${ch} non disponibile`}>
-                <span><Icon className={cn("w-3 h-3", isAvailable ? "text-muted-foreground" : "text-muted-foreground")} /></span>
+                <span>
+                  <Icon className={cn("w-3 h-3", isAvailable ? "text-muted-foreground" : "text-muted-foreground")} />
+                </span>
               </InfoTooltip>
             );
           })}
         </div>
         <InfoTooltip content={`Priorità ${contact.priority} — ${priorityLabel(contact.priority)}`}>
-          <span className={cn(
-            "text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0",
-            contact.priority >= 9 ? "text-destructive bg-destructive/15" :
-            contact.priority >= 7 ? "text-warning bg-warning/15" :
-            "text-muted-foreground bg-muted"
-          )}>
+          <span
+            className={cn(
+              "text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0",
+              contact.priority >= 9
+                ? "text-destructive bg-destructive/15"
+                : contact.priority >= 7
+                  ? "text-warning bg-warning/15"
+                  : "text-muted-foreground bg-muted",
+            )}
+          >
             {contact.priority}
           </span>
         </InfoTooltip>
         {cockpitContact && (
-          <div className="shrink-0" onClick={e => e.stopPropagation()}>
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
             <ContactActionMenu contact={cockpitContact} />
           </div>
         )}

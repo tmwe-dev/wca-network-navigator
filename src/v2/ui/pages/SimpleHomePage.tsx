@@ -23,10 +23,10 @@ type Entry = {
 };
 
 const ENTRIES: ReadonlyArray<Entry> = [
-  { to: "/v2/dashboard", label: "Home",       desc: "Riepilogo giornata e azioni",            icon: Home },
-  { to: "/v2/explore/contacts", label: "Contatti",   desc: "Rubrica unificata, biglietti, lead", icon: Users },
-  { to: "/v2/cockpit", label: "Messaggi",   desc: "Email, WhatsApp, LinkedIn",            icon: Mail },
-  { to: "/v2/intelligence/agents", label: "Agenti", desc: "Chat e missioni AI",                  icon: Bot },
+  { to: "/v2/dashboard", label: "Home", desc: "Riepilogo giornata e azioni", icon: Home },
+  { to: "/v2/explore/contacts", label: "Contatti", desc: "Rubrica unificata, biglietti, lead", icon: Users },
+  { to: "/v2/cockpit", label: "Messaggi", desc: "Email, WhatsApp, LinkedIn", icon: Mail },
+  { to: "/v2/intelligence/agents", label: "Agenti", desc: "Chat e missioni AI", icon: Bot },
 ];
 
 export default function SimpleHomePage() {
@@ -59,10 +59,12 @@ export default function SimpleHomePage() {
             const Icon = e.icon;
             return (
               <Link key={e.to} to={e.to} className="group focus:outline-none">
-                <Card className={cn(
-                  "transition-all border-border/60",
-                  "hover:border-primary/40 hover:shadow-md focus-within:ring-2 focus-within:ring-primary/40",
-                )}>
+                <Card
+                  className={cn(
+                    "transition-all border-border/60",
+                    "hover:border-primary/40 hover:shadow-md focus-within:ring-2 focus-within:ring-primary/40",
+                  )}
+                >
                   <CardContent className="p-6 flex items-start gap-4">
                     <div className="rounded-lg bg-primary/10 text-primary p-2.5 group-hover:bg-primary/15 transition-colors">
                       <Icon className="w-5 h-5" />
@@ -82,8 +84,11 @@ export default function SimpleHomePage() {
         </div>
 
         <p className="text-[11px] text-muted-foreground mt-8 text-center">
-          Aggiungeremo nuove voci qui in funzione delle necessità di sviluppo. Tutto il resto resta
-          accessibile da <Link to="/v2/command" className="underline hover:text-foreground">Sistema avanzato</Link>.
+          Aggiungeremo nuove voci qui in funzione delle necessità di sviluppo. Tutto il resto resta accessibile da{" "}
+          <Link to="/v2/command" className="underline hover:text-foreground">
+            Sistema avanzato
+          </Link>
+          .
         </p>
       </main>
     </div>

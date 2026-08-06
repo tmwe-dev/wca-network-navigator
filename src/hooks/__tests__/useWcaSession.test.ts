@@ -9,7 +9,9 @@ global.fetch = mockFetch;
 
 import { useWcaSession } from "../useWcaSession";
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("useWcaSession", () => {
   it("initializes with sessionActive=null", () => {
@@ -21,7 +23,9 @@ describe("useWcaSession", () => {
     mockFetch.mockResolvedValue({ json: () => Promise.resolve({ success: true, cookies: "abc" }) });
     const { result } = renderHook(() => useWcaSession());
     let success: boolean = false;
-    await act(async () => { success = await result.current.ensureSession(); });
+    await act(async () => {
+      success = await result.current.ensureSession();
+    });
     expect(success).toBe(true);
     expect(result.current.sessionActive).toBe(true);
   });
@@ -29,7 +33,9 @@ describe("useWcaSession", () => {
   it("sets sessionActive=false on failed login", async () => {
     mockFetch.mockResolvedValue({ json: () => Promise.resolve({ success: false, error: "bad" }) });
     const { result } = renderHook(() => useWcaSession());
-    await act(async () => { await result.current.ensureSession(); });
+    await act(async () => {
+      await result.current.ensureSession();
+    });
     expect(result.current.sessionActive).toBe(false);
     expect(result.current.lastError).toBe("bad");
   });
@@ -37,7 +43,9 @@ describe("useWcaSession", () => {
   it("handles network error gracefully", async () => {
     mockFetch.mockRejectedValue(new Error("network down"));
     const { result } = renderHook(() => useWcaSession());
-    await act(async () => { await result.current.ensureSession(); });
+    await act(async () => {
+      await result.current.ensureSession();
+    });
     expect(result.current.sessionActive).toBe(false);
     expect(result.current.lastError).toBe("wca-app non raggiungibile");
   });

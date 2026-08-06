@@ -1,16 +1,7 @@
 /**
  * EmailChart — Line chart showing emails sent/received over time
  */
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -31,9 +22,7 @@ export function EmailChart({ data, loading = false }: EmailChartProps) {
   return (
     <Card className="p-4">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-foreground">
-          Email Inviate e Ricevute
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground">Email Inviate e Ricevute</h3>
         <p className="text-xs text-muted-foreground">Ultimi 30 giorni</p>
       </div>
 
@@ -44,11 +33,7 @@ export function EmailChart({ data, loading = false }: EmailChartProps) {
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="hsl(var(--border))"
-              opacity={0.5}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
             <XAxis
               dataKey="date"
               stroke="hsl(var(--muted-foreground))"
@@ -72,10 +57,7 @@ export function EmailChart({ data, loading = false }: EmailChartProps) {
                 return value;
               }}
             />
-            <Legend
-              wrapperStyle={{ paddingTop: "20px" }}
-              iconType="line"
-            />
+            <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="line" />
             <Line
               type="monotone"
               dataKey="sent"

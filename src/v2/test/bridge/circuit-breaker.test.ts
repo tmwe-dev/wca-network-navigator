@@ -2,11 +2,7 @@
  * Tests: Circuit Breaker
  */
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  withCircuitBreaker,
-  getCircuitState,
-  resetAllCircuits,
-} from "../../bridge/circuit-breaker";
+import { withCircuitBreaker, getCircuitState, resetAllCircuits } from "../../bridge/circuit-breaker";
 import { isOk, isErr } from "../../core/domain/result";
 
 beforeEach(() => {
@@ -21,7 +17,10 @@ describe("Circuit Breaker", () => {
   });
 
   it("opens after 3 failures", async () => {
-    const fail = () => withCircuitBreaker("test", async () => { throw new Error("fail"); });
+    const fail = () =>
+      withCircuitBreaker("test", async () => {
+        throw new Error("fail");
+      });
 
     await fail();
     expect(getCircuitState("test")).toBe("closed");
@@ -32,7 +31,10 @@ describe("Circuit Breaker", () => {
   });
 
   it("rejects immediately when open", async () => {
-    const fail = () => withCircuitBreaker("test", async () => { throw new Error("fail"); });
+    const fail = () =>
+      withCircuitBreaker("test", async () => {
+        throw new Error("fail");
+      });
     await fail();
     await fail();
     await fail();
@@ -44,7 +46,13 @@ describe("Circuit Breaker", () => {
 
   it("transitions to half-open after cooldown", async () => {
     const fail = () =>
-      withCircuitBreaker("test", async () => { throw new Error("fail"); }, { cooldownMs: 10 });
+      withCircuitBreaker(
+        "test",
+        async () => {
+          throw new Error("fail");
+        },
+        { cooldownMs: 10 },
+      );
 
     await fail();
     await fail();

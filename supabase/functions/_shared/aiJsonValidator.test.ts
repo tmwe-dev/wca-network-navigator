@@ -13,25 +13,21 @@ const FALLBACK: Out = { category: "uncategorized", confidence: 0.1 };
 const baseOpts = { fnName: "test-fn", model: "test-model", fallback: FALLBACK };
 
 Deno.test("safeParseAiJson: parses valid JSON", () => {
-  const r = safeParseAiJson(
-    '{"category":"interested","confidence":0.8,"tags":["a","b"]}',
-    Schema,
-    baseOpts,
-  );
+  const r = safeParseAiJson('{"category":"interested","confidence":0.8,"tags":["a","b"]}', Schema, baseOpts);
   assertEquals(r.isFallback, false);
   assertEquals(r.data.category, "interested");
   assertEquals(r.data.confidence, 0.8);
 });
 
 Deno.test("safeParseAiJson: strips markdown fences", () => {
-  const raw = "```json\n{\"category\":\"meeting_request\",\"confidence\":0.9}\n```";
+  const raw = '```json\n{"category":"meeting_request","confidence":0.9}\n```';
   const r = safeParseAiJson(raw, Schema, baseOpts);
   assertEquals(r.isFallback, false);
   assertEquals(r.data.category, "meeting_request");
 });
 
 Deno.test("safeParseAiJson: extracts JSON block from prose", () => {
-  const raw = "Sure! Here is the result: {\"category\":\"spam\",\"confidence\":0.5} hope it helps.";
+  const raw = 'Sure! Here is the result: {"category":"spam","confidence":0.5} hope it helps.';
   const r = safeParseAiJson(raw, Schema, baseOpts);
   assertEquals(r.isFallback, false);
   assertEquals(r.data.category, "spam");
@@ -82,7 +78,9 @@ Deno.test("safeParseToolArgs: fallback on malformed args", () => {
 Deno.test("safeParseAiJson: array schema works", () => {
   const ArrSchema = z.array(z.object({ id: z.string() }));
   const r = safeParseAiJson('[{"id":"a"},{"id":"b"}]', ArrSchema, {
-    fnName: "test", model: "test", fallback: [],
+    fnName: "test",
+    model: "test",
+    fallback: [],
   });
   assertEquals(r.isFallback, false);
   assertEquals(r.data.length, 2);

@@ -2,13 +2,7 @@
  * AnalyticsDashboard — Main dashboard layout with KPIs and charts
  */
 import { useMemo } from "react";
-import {
-  Send,
-  BarChart3,
-  Users,
-  TrendingUp,
-  Zap,
-} from "lucide-react";
+import { Send, BarChart3, Users, TrendingUp, Zap } from "lucide-react";
 import { KPICard } from "./KPICard";
 import { EmailChart } from "./EmailChart";
 import { PartnerDistributionChart } from "./PartnerDistributionChart";
@@ -33,9 +27,7 @@ interface AnalyticsDashboardProps {
 export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
   // Calculate previous period for comparison
   const previousDateRange = useMemo(() => {
-    const daysDiff = Math.floor(
-      (dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysDiff = Math.floor((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
     const prevFrom = new Date(dateRange.from);
     prevFrom.setDate(prevFrom.getDate() - daysDiff);
     const prevTo = new Date(dateRange.from);
@@ -48,17 +40,12 @@ export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
   const { data: outreachMetrics, isLoading: outreachLoading } = useOutreachMetrics(dateRange);
   const { data: aiUsageMetrics, isLoading: aiLoading } = useAIUsageMetrics(dateRange);
   const { data: pipelineMetrics, isLoading: pipelineLoading } = usePipelineMetrics();
-  const { data: comparison, isLoading: _comparisonLoading } = useMetricsComparison(
-    dateRange,
-    previousDateRange
-  );
+  const { data: comparison, isLoading: _comparisonLoading } = useMetricsComparison(dateRange, previousDateRange);
 
   // Prepare chart data
   const emailChartData = useMemo(() => {
     const data: Array<{ date: string; sent: number; received: number }> = [];
-    const daysInRange = Math.floor(
-      (dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysInRange = Math.floor((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
 
     for (let i = 0; i <= daysInRange; i++) {
       const date = new Date(dateRange.from);
@@ -115,10 +102,14 @@ export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
               icon={Send}
               color="blue"
               loading={emailLoading}
-              trend={sentTrend ? {
-                value: sentTrend.changePercent,
-                isPositive: sentTrend.change >= 0,
-              } : undefined}
+              trend={
+                sentTrend
+                  ? {
+                      value: sentTrend.changePercent,
+                      isPositive: sentTrend.change >= 0,
+                    }
+                  : undefined
+              }
             />
 
             <KPICard
@@ -128,10 +119,14 @@ export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
               icon={TrendingUp}
               color="emerald"
               loading={emailLoading}
-              trend={responseTrend ? {
-                value: responseTrend.change,
-                isPositive: responseTrend.change >= 0,
-              } : undefined}
+              trend={
+                responseTrend
+                  ? {
+                      value: responseTrend.change,
+                      isPositive: responseTrend.change >= 0,
+                    }
+                  : undefined
+              }
             />
 
             <KPICard
@@ -163,45 +158,34 @@ export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
         {/* Charts Grid */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Email Chart */}
-          <EmailChart
-            data={emailChartData}
-            loading={emailLoading}
-          />
+          <EmailChart data={emailChartData} loading={emailLoading} />
 
           {/* Partner Distribution */}
-          <PartnerDistributionChart
-            data={partnerDistributionData}
-            loading={partnerLoading}
-          />
+          <PartnerDistributionChart data={partnerDistributionData} loading={partnerLoading} />
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Outreach Funnel */}
           <OutreachFunnel
-            data={outreachMetrics?.conversionFunnel ?? {
-              contacted: 0,
-              replied: 0,
-              interested: 0,
-              meeting: 0,
-              deal: 0,
-            }}
+            data={
+              outreachMetrics?.conversionFunnel ?? {
+                contacted: 0,
+                replied: 0,
+                interested: 0,
+                meeting: 0,
+                deal: 0,
+              }
+            }
             loading={outreachLoading}
           />
 
           {/* AI Usage */}
-          <AIUsageChart
-            data={aiUsageChartData}
-            byType={aiUsageMetrics?.byType}
-            loading={aiLoading}
-          />
+          <AIUsageChart data={aiUsageChartData} byType={aiUsageMetrics?.byType} loading={aiLoading} />
         </section>
 
         {/* Pipeline Chart */}
         <section>
-          <PipelineValueChart
-            data={pipelineChartData}
-            loading={pipelineLoading}
-          />
+          <PipelineValueChart data={pipelineChartData} loading={pipelineLoading} />
         </section>
 
         {/* Detailed Metrics Cards */}
@@ -211,9 +195,7 @@ export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="p-4">
-              <h3 className="text-sm font-semibold mb-3 text-foreground">
-                Email
-              </h3>
+              <h3 className="text-sm font-semibold mb-3 text-foreground">Email</h3>
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Ricevute</dt>
@@ -221,23 +203,17 @@ export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Tasso Apertura</dt>
-                  <dd className="font-medium">
-                    {(emailMetrics?.openRate ?? 0).toFixed(1)}%
-                  </dd>
+                  <dd className="font-medium">{(emailMetrics?.openRate ?? 0).toFixed(1)}%</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Tempo Medio Risposta</dt>
-                  <dd className="font-medium">
-                    {formatHours(emailMetrics?.avgResponseTime ?? 0)}
-                  </dd>
+                  <dd className="font-medium">{formatHours(emailMetrics?.avgResponseTime ?? 0)}</dd>
                 </div>
               </dl>
             </Card>
 
             <Card className="p-4">
-              <h3 className="text-sm font-semibold mb-3 text-foreground">
-                Partner
-              </h3>
+              <h3 className="text-sm font-semibold mb-3 text-foreground">Partner</h3>
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Totale</dt>
@@ -245,29 +221,21 @@ export function AnalyticsDashboard({ dateRange }: AnalyticsDashboardProps) {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Copertura Enrichment</dt>
-                  <dd className="font-medium">
-                    {(partnerMetrics?.enrichmentCoverage ?? 0).toFixed(1)}%
-                  </dd>
+                  <dd className="font-medium">{(partnerMetrics?.enrichmentCoverage ?? 0).toFixed(1)}%</dd>
                 </div>
               </dl>
             </Card>
 
             <Card className="p-4">
-              <h3 className="text-sm font-semibold mb-3 text-foreground">
-                Pipeline
-              </h3>
+              <h3 className="text-sm font-semibold mb-3 text-foreground">Pipeline</h3>
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Forecast Ponderato</dt>
-                  <dd className="font-medium">
-                    {formatCompactCurrency(pipelineMetrics?.weightedForecast ?? 0)}
-                  </dd>
+                  <dd className="font-medium">{formatCompactCurrency(pipelineMetrics?.weightedForecast ?? 0)}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Ratio Vittorie/Perdite</dt>
-                  <dd className="font-medium">
-                    {(pipelineMetrics?.winLossRatio ?? 0).toFixed(2)}
-                  </dd>
+                  <dd className="font-medium">{(pipelineMetrics?.winLossRatio ?? 0).toFixed(2)}</dd>
                 </div>
               </dl>
             </Card>

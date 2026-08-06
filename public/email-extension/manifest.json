@@ -3,19 +3,8 @@
   "name": "Universal Communication Hub",
   "version": "5.0.0",
   "description": "Email, WhatsApp e LinkedIn in un pannello laterale. Invia e ricevi messaggi su tutti i canali.",
-  "permissions": [
-    "storage",
-    "notifications",
-    "alarms",
-    "downloads",
-    "sidePanel",
-    "tabs",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://web.whatsapp.com/*",
-    "https://www.linkedin.com/*"
-  ],
+  "permissions": ["storage", "notifications", "alarms", "downloads", "sidePanel", "tabs", "scripting"],
+  "host_permissions": ["https://web.whatsapp.com/*", "https://www.linkedin.com/*"],
   "action": {
     "default_icon": {
       "48": "icons/icon48.png",

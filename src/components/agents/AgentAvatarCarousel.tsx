@@ -55,7 +55,7 @@ export function AgentAvatarCarousel({ agents, activeId, onSelect }: Props) {
                 "flex-shrink-0 snap-center flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 min-w-[90px]",
                 isActive
                   ? "bg-primary/10 ring-1 ring-primary/40 shadow-[0_0_16px_hsl(var(--primary)/0.15)]"
-                  : "hover:bg-muted/30"
+                  : "hover:bg-muted/30",
               )}
               animate={{ scale: isActive ? 1.08 : 0.95, opacity: isActive ? 1 : 0.6 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -67,11 +67,14 @@ export function AgentAvatarCarousel({ agents, activeId, onSelect }: Props) {
                   <AvatarFallback>{agent.avatar_emoji}</AvatarFallback>
                 </Avatar>
               ) : (
-                <span className={cn("text-2xl transition-all", isActive && "text-3xl")}>
-                  {agent.avatar_emoji}
-                </span>
+                <span className={cn("text-2xl transition-all", isActive && "text-3xl")}>{agent.avatar_emoji}</span>
               )}
-              <span className={cn("text-[11px] font-medium truncate max-w-[80px]", isActive ? "text-foreground" : "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "text-[11px] font-medium truncate max-w-[80px]",
+                  isActive ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
                 {agent.name}
               </span>
               <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium capitalize", badge)}>

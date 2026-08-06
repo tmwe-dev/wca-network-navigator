@@ -30,9 +30,7 @@ export async function logActivity(
       sent_at: now,
       priority: "medium",
       ...(input.agentId ? { executed_by_agent_id: input.agentId } : {}),
-      ...(input.messageIdExternal
-        ? { message_id_external: input.messageIdExternal }
-        : {}),
+      ...(input.messageIdExternal ? { message_id_external: input.messageIdExternal } : {}),
       ...(input.threadId ? { thread_id: input.threadId } : {}),
       source_meta: {
         source: input.source,

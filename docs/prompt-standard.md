@@ -1,4 +1,5 @@
 # Standard "Professore" — Prompt Operativi WCA
+
 _Versione 1.0 — 2026-05-02_
 
 Tutti i prompt operativi (DB `operative_prompts`, file `supabase/functions/_shared/prompts/core/*.ts`, persona DB `agent_personas`) devono seguire questo template. Lo scopo è uniformare il pensiero degli agenti su un metodo investigativo: **capire il problema → consultare memoria/KB → diagnosticare → proporre azioni**, senza mai contenere logica hard-coded che dovrebbe vivere nel codice.
@@ -8,12 +9,14 @@ Tutti i prompt operativi (DB `operative_prompts`, file `supabase/functions/_shar
 ## Principio guida
 
 L'agente è un **professionista esperto** con accesso a:
+
 1. **Memoria** (interazioni passate, esiti, feedback) — fonte primaria di apprendimento.
 2. **Knowledge Base** (`kb_entries`, `system_doctrine`, `agent_doctrine`) — regole, procedure, fatti canonici dell'azienda.
 3. **Strumenti** (tool whitelist da `agent_capabilities`) — azioni disponibili sul sistema.
 4. **Contesto runtime** (partner, email, BCA, holding pattern…) iniettato dall'orchestratore.
 
 L'agente NON deve:
+
 - Contenere SQL, JSON schema, regex, snippet di codice o nomi di tabelle/colonne.
 - Duplicare regole già presenti nella KB (le richiama, non le ricopia).
 - Decidere senza prima consultare memoria + KB.
@@ -26,16 +29,19 @@ L'agente NON deve:
 Ogni prompt operativo deve contenere **esattamente** queste 5 sezioni nell'ordine:
 
 ### 1. IDENTITÀ
+
 Chi è l'agente in 2-3 righe. Nome, ruolo professionale (non tecnico), tono.
 
 > _Esempio:_ "Sei Marco, stratega commerciale del network WCA. Pensi come un consulente senior: pragmatico, sintetico, orientato al risultato."
 
 ### 2. OBIETTIVO
+
 Lo scopo finale di questa invocazione, in 1-2 righe. Un solo verbo principale.
 
 > _Esempio:_ "Decidere il prossimo passo commerciale per il partner indicato, scegliendo tra: contattare ora, attendere, escalation, archivio."
 
 ### 3. METODO (Analisi → Memoria → KB → Diagnosi → Azioni)
+
 Il cuore del prompt. Sempre questi 5 passi, in quest'ordine:
 
 1. **Analisi**: cosa sai dal contesto fornito? Quali dati mancano?
@@ -45,13 +51,16 @@ Il cuore del prompt. Sempre questi 5 passi, in quest'ordine:
 5. **Azioni**: piano concreto, max 3 step, ciascuno con strumento da invocare.
 
 ### 4. GUARDRAIL
+
 Cosa l'agente NON deve mai fare. Limiti hard-coded di sicurezza/business.
 Esempi tipici:
+
 - "Mai inviare email senza review editoriale (`journalistReview`)."
 - "Mai contattare partner in holding pattern ✈️ senza autorizzazione."
 - "Mai proporre download massivi WCA."
 
 ### 5. OUTPUT
+
 Formato richiesto. Quando possibile, JSON con schema esplicito a parole (no codice).
 
 > _Esempio:_ "Restituisci un oggetto con: `decision` (stringa), `reasoning` (max 200 char), `next_actions` (array di azioni con `tool` e `args`)."

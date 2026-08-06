@@ -12,7 +12,6 @@ import { fetchAuthProfile, fetchUserRoles } from "@/data/authRolesProfileV2";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAuth } from "@/providers/AuthProvider";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("useAuthV2");
 // ── Types ────────────────────────────────────────────────────────────
@@ -100,10 +99,7 @@ export function useAuthV2(): UseAuthV2Return {
       // Whitelist is only checked at TMWE OAuth callback.
       // This prevents sign-outs when the DB returns 503.
 
-      const [userProfile, userRoles] = await Promise.allSettled([
-        loadProfile(authUser.id),
-        loadRoles(authUser.id),
-      ]);
+      const [userProfile, userRoles] = await Promise.allSettled([loadProfile(authUser.id), loadRoles(authUser.id)]);
 
       setProfile(userProfile.status === "fulfilled" ? userProfile.value : null);
       setRoles(userRoles.status === "fulfilled" ? (userRoles.value ?? ["user"]) : ["user"]);
@@ -151,7 +147,9 @@ export function useAuthV2(): UseAuthV2Return {
         Object.keys(localStorage)
           .filter((k) => k.startsWith("sb-"))
           .forEach((k) => localStorage.removeItem(k));
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     setProfile(null);
     setRoles([]);
@@ -159,8 +157,13 @@ export function useAuthV2(): UseAuthV2Return {
   }, []);
 
   return {
-    user, session, profile, roles,
-    isLoading, isAuthenticated, isAdmin,
+    user,
+    session,
+    profile,
+    roles,
+    isLoading,
+    isAuthenticated,
+    isAdmin,
     signOut,
   };
 }

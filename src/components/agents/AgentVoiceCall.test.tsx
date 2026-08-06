@@ -28,7 +28,7 @@ vi.mock("@/lib/log", () => ({
 vi.mock("framer-motion", () => ({
   motion: {
     div: React.forwardRef((props: React.HTMLAttributes<HTMLDivElement>, ref: React.Ref<HTMLDivElement>) =>
-      React.createElement("div", { ...props, ref })
+      React.createElement("div", { ...props, ref }),
     ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),

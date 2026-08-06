@@ -54,9 +54,7 @@ export default defineConfig({
         // Opzionale: permette di puntare a un Chromium di sistema quando i
         // binari scaricati da Playwright non sono eseguibili (sandbox senza
         // librerie di sistema). Nessun path è hardcodato nel repo.
-        ...(process.env.E2E_CHROMIUM_PATH
-          ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM_PATH } }
-          : {}),
+        ...(process.env.E2E_CHROMIUM_PATH ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM_PATH } } : {}),
       },
     },
   ],

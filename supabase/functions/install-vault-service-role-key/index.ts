@@ -10,7 +10,10 @@ Deno.serve(async (req) => {
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   if (!serviceKey) {
-    return new Response(JSON.stringify({ error: "service_key_not_in_env" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "service_key_not_in_env" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const admin = createClient(url, serviceKey);
@@ -18,11 +21,23 @@ Deno.serve(async (req) => {
 
   if (u.searchParams.get("verify") === "1") {
     const { data, error } = await admin.rpc("compare_funnemail_vault_key", { p_value: serviceKey });
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    return new Response(JSON.stringify({ ok: true, ...data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (error)
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    return new Response(JSON.stringify({ ok: true, ...data }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const { data, error } = await admin.rpc("install_funnemail_vault_key", { p_value: serviceKey });
-  if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  return new Response(JSON.stringify({ ok: true, vault_id: data, env_len: serviceKey.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (error)
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  return new Response(JSON.stringify({ ok: true, vault_id: data, env_len: serviceKey.length }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 });

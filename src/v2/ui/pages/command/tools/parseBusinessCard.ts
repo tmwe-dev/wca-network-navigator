@@ -22,7 +22,8 @@ export const parseBusinessCardTool: Tool = {
   id: "parse-business-card",
   label: "Leggi biglietto da visita",
   description: "Estrae dati strutturati (nome, azienda, email, telefono) da un'immagine di biglietto da visita.",
-  match: (p) => /\b(biglietto\s+da\s+visita|business\s*card|leggi\s+(?:il\s+)?biglietto|parse.*card|ocr\s+card)\b/i.test(p),
+  match: (p) =>
+    /\b(biglietto\s+da\s+visita|business\s*card|leggi\s+(?:il\s+)?biglietto|parse.*card|ocr\s+card)\b/i.test(p),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     if (!context?.confirmed) {
@@ -75,9 +76,7 @@ export const parseBusinessCardTool: Tool = {
     return {
       kind: "report",
       title: "Biglietto letto",
-      sections: [
-        { heading: "Dati estratti", body: lines || "Nessun campo riconosciuto." },
-      ],
+      sections: [{ heading: "Dati estratti", body: lines || "Nessun campo riconosciuto." }],
       meta: { count: 1, sourceLabel: "Edge · parse-business-card" },
     };
   },

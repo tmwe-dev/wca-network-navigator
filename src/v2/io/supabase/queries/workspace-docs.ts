@@ -14,7 +14,8 @@ export async function fetchWorkspaceDocs(): Promise<Result<WorkspaceDoc[], AppEr
       .from("workspace_documents")
       .select("*")
       .order("created_at", { ascending: false });
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "workspace_documents" }, "fetchWorkspaceDocs"));
+    if (error)
+      return err(ioError("DATABASE_ERROR", error.message, { table: "workspace_documents" }, "fetchWorkspaceDocs"));
     if (!data) return ok([]);
     const docs: WorkspaceDoc[] = [];
     for (const row of data) {

@@ -40,7 +40,10 @@ function VersionRow({ item }: { item: ExtensionCatalogItem }) {
           <span className="text-sm font-medium">v{item.version}</span>
           {item.current ? <Badge>Corrente</Badge> : <Badge variant="secondary">Archivio</Badge>}
         </div>
-        <p className="truncate text-xs text-muted-foreground">{item.filename}{item.note ? ` — ${item.note}` : ""}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {item.filename}
+          {item.note ? ` — ${item.note}` : ""}
+        </p>
       </div>
 
       <Button
@@ -113,7 +116,9 @@ export function ExtensionDownloadCatalog({ channel }: ExtensionDownloadCatalogPr
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium">
         <span>Versioni disponibili{section ? ` (${section.items.length})` : ""}</span>
-        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : "rotate-0"}`} />
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : "rotate-0"}`}
+        />
       </summary>
 
       <div className="space-y-2 border-t border-border px-3 py-3">

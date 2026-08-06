@@ -3,7 +3,16 @@
  * Manage roles, permissions, and role-permission assignments
  */
 import { useState } from "react";
-import { useRoles, usePermissions, useRolePermissions, useAssignPermission, useRemovePermission, useCreateRole, useUpdateRole, useDeleteRole } from "@/hooks/useRBAC";
+import {
+  useRoles,
+  usePermissions,
+  useRolePermissions,
+  useAssignPermission,
+  useRemovePermission,
+  useCreateRole,
+  useUpdateRole,
+  useDeleteRole,
+} from "@/hooks/useRBAC";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -96,7 +105,7 @@ export default function RoleManagementPanel() {
       acc[module].push(perm);
       return acc;
     },
-    {} as Record<string, typeof permissions>
+    {} as Record<string, typeof permissions>,
   );
 
   return (
@@ -121,11 +130,19 @@ export default function RoleManagementPanel() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Nome</label>
-              <Input value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} placeholder="Es: supervisore" />
+              <Input
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                placeholder="Es: supervisore"
+              />
             </div>
             <div>
               <label className="text-sm font-medium">Descrizione</label>
-              <Input value={newRoleDesc} onChange={(e) => setNewRoleDesc(e.target.value)} placeholder="Descrizione opzionale" />
+              <Input
+                value={newRoleDesc}
+                onChange={(e) => setNewRoleDesc(e.target.value)}
+                placeholder="Descrizione opzionale"
+              />
             </div>
           </div>
           <DialogFooter>

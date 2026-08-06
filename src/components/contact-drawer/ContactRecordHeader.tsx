@@ -26,7 +26,16 @@ interface Props {
   onClose: () => void;
 }
 
-export function ContactRecordHeader({ sourceType, companyName, contactName, currentIndex, totalCount, onPrev, onNext, onClose }: Props) {
+export function ContactRecordHeader({
+  sourceType,
+  companyName,
+  contactName,
+  currentIndex,
+  totalCount,
+  onPrev,
+  onNext,
+  onClose,
+}: Props) {
   const src = SOURCE_LABELS[sourceType] || { label: sourceType, color: "bg-muted text-muted-foreground border-border" };
   const hasList = totalCount > 1;
 
@@ -55,13 +64,27 @@ export function ContactRecordHeader({ sourceType, companyName, contactName, curr
       <div className="flex items-center gap-1 flex-shrink-0">
         {hasList && (
           <>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev} disabled={currentIndex <= 0} aria-label="Precedente">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onPrev}
+              disabled={currentIndex <= 0}
+              aria-label="Precedente"
+            >
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <span className="text-[10px] text-muted-foreground tabular-nums min-w-[40px] text-center">
               {currentIndex + 1}/{totalCount}
             </span>
-            <Button variant="ghost" size="icon" aria-label="Successivo" className="h-7 w-7" onClick={onNext} disabled={currentIndex >= totalCount - 1}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Successivo"
+              className="h-7 w-7"
+              onClick={onNext}
+              disabled={currentIndex >= totalCount - 1}
+            >
               <ChevronRight className="w-4 h-4" />
             </Button>
           </>

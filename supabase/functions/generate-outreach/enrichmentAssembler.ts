@@ -52,7 +52,10 @@ export async function assemblePartnerEnrichmentContext(
             contextParts.push(`[QUALITÀ PARTNER]\n${qualityBlock}`);
           }
         } catch (e) {
-          console.warn("[assemblePartnerEnrichmentContext] quality score failed:", e instanceof Error ? e.message : String(e));
+          console.warn(
+            "[assemblePartnerEnrichmentContext] quality score failed:",
+            e instanceof Error ? e.message : String(e),
+          );
         }
       }
     }
@@ -99,7 +102,10 @@ export async function getEnrichmentMetadata(
     });
     lastDeepSearchScore = dsScore.score;
   } catch (e) {
-    console.warn("[getEnrichmentMetadata] Oracle metadata assembly failed:", e instanceof Error ? e.message : String(e));
+    console.warn(
+      "[getEnrichmentMetadata] Oracle metadata assembly failed:",
+      e instanceof Error ? e.message : String(e),
+    );
   }
 
   return { enrichmentAgeDays, sherlockLevel, lastDeepSearchScore };

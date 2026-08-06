@@ -129,9 +129,7 @@ Deno.serve(async (req) => {
   try {
     const { data: candidates } = await supabase
       .from("funnemail_jobs_v")
-      .select(
-        "message_id,user_id,group_id,status,has_active_claim,ai_urgency,status_changed_at,last_escalation_level",
-      )
+      .select("message_id,user_id,group_id,status,has_active_claim,ai_urgency,status_changed_at,last_escalation_level")
       .in("status", ["nuovo", "in_lavorazione", "in_attesa", "da_smistare"])
       .eq("has_active_claim", false)
       .limit(500);
@@ -152,7 +150,9 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (typeof cfg?.escalation_l2_minutes === "number") l2 = cfg.escalation_l2_minutes;
         if (typeof cfg?.escalation_l3_minutes === "number") l3 = cfg.escalation_l3_minutes;
-      } catch { /* fail-safe defaults */ }
+      } catch {
+        /* fail-safe defaults */
+      }
       const v = { l2, l3 };
       cfgCache.set(userId, v);
       return v;
@@ -164,8 +164,11 @@ Deno.serve(async (req) => {
       const { l2, l3 } = await thresholds(c.user_id);
 
       const wantLevel: "L2" | "L3" | null =
-        ageMin >= l3 && c.last_escalation_level !== "L3" ? "L3" :
-        ageMin >= l2 && !c.last_escalation_level ? "L2" : null;
+        ageMin >= l3 && c.last_escalation_level !== "L3"
+          ? "L3"
+          : ageMin >= l2 && !c.last_escalation_level
+            ? "L2"
+            : null;
       if (!wantLevel) continue;
 
       const { error: insErr } = await supabase.from("funnemail_escalation_events").insert({

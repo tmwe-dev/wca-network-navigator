@@ -26,8 +26,15 @@ interface Props {
 }
 
 export function OperativeBriefing({
-  completed, todo, suspended, summary,
-  actions, stats, isLoading, onRefresh, onAction,
+  completed,
+  todo,
+  suspended,
+  summary,
+  actions,
+  stats,
+  isLoading,
+  onRefresh,
+  onAction,
 }: Props) {
   const [executingIdx, setExecutingIdx] = useState<number | null>(null);
   const [completedIdx, setCompletedIdx] = useState<Set<number>>(new Set());
@@ -40,14 +47,15 @@ export function OperativeBriefing({
       let agentId: string | null = null;
       if (action.agentName) {
         const agents = await findActiveAgentNames();
-        const match = agents?.find(a =>
-          a.name.toLowerCase() === action.agentName!.toLowerCase()
-        );
+        const match = agents?.find((a) => a.name.toLowerCase() === action.agentName!.toLowerCase());
         agentId = match?.id ?? null;
       }
 
       if (agentId) {
-        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+        const {
+          data: { session: __s },
+        } = await supabase.auth.getSession();
+        const user = __s?.user ?? null;
         if (!user) throw new Error("Non autenticato");
 
         const task = await insertBriefingAgentTask({
@@ -68,7 +76,7 @@ export function OperativeBriefing({
         onAction(action);
       }
 
-      setCompletedIdx(prev => new Set(prev).add(idx));
+      setCompletedIdx((prev) => new Set(prev).add(idx));
     } catch (e: unknown) {
       toast.error((e instanceof Error ? e.message : String(e)) || "Errore nell'esecuzione");
       onAction(action);
@@ -137,9 +145,15 @@ export function OperativeBriefing({
       {showTabs ? (
         <Tabs defaultValue="todo" className="w-full">
           <TabsList className="w-full grid grid-cols-3 h-8">
-            <TabsTrigger value="completed" className="text-[11px] gap-1">✅ Effettuato</TabsTrigger>
-            <TabsTrigger value="todo" className="text-[11px] gap-1">📋 Da fare</TabsTrigger>
-            <TabsTrigger value="suspended" className="text-[11px] gap-1">⏸ Sospesi</TabsTrigger>
+            <TabsTrigger value="completed" className="text-[11px] gap-1">
+              ✅ Effettuato
+            </TabsTrigger>
+            <TabsTrigger value="todo" className="text-[11px] gap-1">
+              📋 Da fare
+            </TabsTrigger>
+            <TabsTrigger value="suspended" className="text-[11px] gap-1">
+              ⏸ Sospesi
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="completed" className="mt-2">
             <div className="ai-prose max-w-none text-sm">
@@ -185,9 +199,7 @@ export function OperativeBriefing({
                 ) : (
                   <Zap className="h-3 w-3" />
                 )}
-                {action.agentName && (
-                  <span className="text-muted-foreground">{action.agentName}:</span>
-                )}
+                {action.agentName && <span className="text-muted-foreground">{action.agentName}:</span>}
                 {action.label}
               </Button>
             );

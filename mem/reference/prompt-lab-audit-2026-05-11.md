@@ -9,6 +9,7 @@ type: reference
 Voto complessivo: **62/100**
 
 ## Pagine & tab
+
 - `PromptLabPage.tsx`: 4 macro gruppi (Core AI, Communication, Strategy, Operations) × ~20 tab.
 - Sister pages:
   - `/v2/prompt-lab/atlas` (Agent Atlas a 4 colonne)
@@ -19,17 +20,19 @@ Voto complessivo: **62/100**
   - `/v2/prompt-lab/agent/:slug` (dettaglio agente)
 
 ## 7 agenti di improvement
-| Agente | Trigger | Output |
-|---|---|---|
-| `prompt-copilot-chat` | modes diagnose/edit/global | `prompt_change_proposals` |
-| `agent-prompt-refiner` | cron settimanale (NON schedulato) | `ai_pending_actions` |
-| `Architect` | bottone "Analizza con Architect" | `ArchitectDiagnosticV2` |
-| `prompt-test-runner` | manual/cron | `prompt_test_runs` |
-| `refine-classification-rule` | email classifications | nuove regole |
-| `prompt-registry-drift-check` | cron | drift report |
-| `Harmonizer` | bottone "Armonizza System" | proposta unificata |
+
+| Agente                        | Trigger                           | Output                    |
+| ----------------------------- | --------------------------------- | ------------------------- |
+| `prompt-copilot-chat`         | modes diagnose/edit/global        | `prompt_change_proposals` |
+| `agent-prompt-refiner`        | cron settimanale (NON schedulato) | `ai_pending_actions`      |
+| `Architect`                   | bottone "Analizza con Architect"  | `ArchitectDiagnosticV2`   |
+| `prompt-test-runner`          | manual/cron                       | `prompt_test_runs`        |
+| `refine-classification-rule`  | email classifications             | nuove regole              |
+| `prompt-registry-drift-check` | cron                              | drift report              |
+| `Harmonizer`                  | bottone "Armonizza System"        | proposta unificata        |
 
 ## Stato DB
+
 - `operative_prompts`: **136 active rows / 54 distinct names** (duplicazioni)
 - `kb_entries`: 249 in 28 categorie (120 "doctrine")
 - `agent_personas`: 8, tutte con `custom_tone_prompt` < 50 char (vuote)
@@ -39,9 +42,11 @@ Voto complessivo: **62/100**
 - `ai_pending_actions(prompt_refinement)`: 0
 
 ## 3 loop rotti
+
 1. **Refiner senza cron** → nessuna proposta automatica
 2. **Test runner inattivo** → 0 run in 30 giorni
 3. **Personas vuote** → identità agenti non iniettate
 
 ## Conseguenza
+
 Solo edit manuali via copilot migliorano i prompt. Il sistema non si auto-migliora.

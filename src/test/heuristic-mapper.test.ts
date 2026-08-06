@@ -32,10 +32,7 @@ describe("heuristicMapper.autoMapColumns", () => {
   });
 
   it("usa la transformation corretta per ogni target", () => {
-    const mappings = autoMapColumns(
-      ["Email", "Telefono", "Nazione", "Nome", "Cellulare"],
-      []
-    );
+    const mappings = autoMapColumns(["Email", "Telefono", "Nazione", "Nome", "Cellulare"], []);
     const byTarget = Object.fromEntries(mappings.map((m) => [m.targetColumn, m.transformation]));
     expect(byTarget.email).toBe("extract_email");
     expect(byTarget.phone).toBe("normalize_phone");

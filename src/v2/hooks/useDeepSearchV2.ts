@@ -18,7 +18,10 @@ export function useDeepSearchV2() {
   const [isSearching, setIsSearching] = useState(false);
 
   const search = useCallback(async (query: string) => {
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
     setIsSearching(true);
     try {
       const [partnerRows, contactRows, prospectRows] = await Promise.all([
@@ -27,9 +30,27 @@ export function useDeepSearchV2() {
         searchProspectsDeep(query, 10),
       ]);
       const combined: DeepSearchResult[] = [
-        ...partnerRows.map((r) => ({ type: "partner" as const, id: r.id, title: r.company_name, subtitle: r.country_name, score: 1 })),
-        ...contactRows.map((r) => ({ type: "contact" as const, id: r.id, title: r.name ?? r.company_name ?? "N/A", subtitle: r.company_name, score: 0.9 })),
-        ...prospectRows.map((r) => ({ type: "prospect" as const, id: r.id, title: r.company_name, subtitle: r.city, score: 0.8 })),
+        ...partnerRows.map((r) => ({
+          type: "partner" as const,
+          id: r.id,
+          title: r.company_name,
+          subtitle: r.country_name,
+          score: 1,
+        })),
+        ...contactRows.map((r) => ({
+          type: "contact" as const,
+          id: r.id,
+          title: r.name ?? r.company_name ?? "N/A",
+          subtitle: r.company_name,
+          score: 0.9,
+        })),
+        ...prospectRows.map((r) => ({
+          type: "prospect" as const,
+          id: r.id,
+          title: r.company_name,
+          subtitle: r.city,
+          score: 0.8,
+        })),
       ];
       setResults(combined);
     } finally {

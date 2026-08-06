@@ -56,10 +56,7 @@ Deno.serve(async (req) => {
       app_origin: appOrigin,
     });
     if (insErr) {
-      return new Response(
-        JSON.stringify({ error: insErr.message, code: "INTERNAL_ERROR" }),
-        { status: 500, headers },
-      );
+      return new Response(JSON.stringify({ error: insErr.message, code: "INTERNAL_ERROR" }), { status: 500, headers });
     }
 
     const base = tmweBaseUrl();
@@ -85,9 +82,6 @@ Deno.serve(async (req) => {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    return new Response(
-      JSON.stringify({ error: message, code: "INTERNAL_ERROR" }),
-      { status: 500, headers },
-    );
+    return new Response(JSON.stringify({ error: message, code: "INTERNAL_ERROR" }), { status: 500, headers });
   }
 });

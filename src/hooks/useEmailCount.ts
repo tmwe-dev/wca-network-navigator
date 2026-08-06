@@ -2,11 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { countEmailMessagesByMailbox } from "@/data/channelMessages";
 import { queryKeys } from "@/lib/queryKeys";
 
-export type MailboxFilter =
-  | { kind: "personal" }
-  | { kind: "shared"; id: string }
-  | null
-  | undefined;
+export type MailboxFilter = { kind: "personal" } | { kind: "shared"; id: string } | null | undefined;
 
 function mailboxKeyOf(mb: MailboxFilter): string | undefined {
   if (!mb) return undefined;

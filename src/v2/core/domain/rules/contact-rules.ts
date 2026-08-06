@@ -31,11 +31,11 @@ export function contactCompletenessScore(contact: Contact): number {
 
 export function validateContactForOutreach(contact: Contact): Result<Contact, AppError> {
   if (!contact.email) {
-    return err(domainError(
-      "BUSINESS_RULE_VIOLATED",
-      "Contact must have an email for outreach",
-      { contactId: String(contact.id) },
-    ));
+    return err(
+      domainError("BUSINESS_RULE_VIOLATED", "Contact must have an email for outreach", {
+        contactId: String(contact.id),
+      }),
+    );
   }
 
   return ok(contact);

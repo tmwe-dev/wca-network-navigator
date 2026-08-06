@@ -34,14 +34,23 @@ export function BulkActionBar({
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs font-semibold text-primary">{count} sel.</span>
 
-        <Button size="sm" variant="ghost" onClick={onAssignActivity}
-          className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:bg-primary/15 hover:text-foreground" disabled={deepSearching}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onAssignActivity}
+          className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:bg-primary/15 hover:text-foreground"
+          disabled={deepSearching}
+        >
           <ClipboardList className="w-3 h-3" /> Attività Diverse
         </Button>
 
         {onDeepSearch && !deepSearching && (
-          <Button size="sm" variant="ghost" onClick={onDeepSearch}
-            className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:bg-primary/15 hover:text-foreground">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onDeepSearch}
+            className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:bg-primary/15 hover:text-foreground"
+          >
             <Sparkles className="w-3 h-3" /> Deep Search
           </Button>
         )}
@@ -53,8 +62,12 @@ export function BulkActionBar({
               {deepSearchProgress ? `${deepSearchProgress.current}/${deepSearchProgress.total}` : "..."}
             </span>
             {onStopDeepSearch && (
-              <Button size="sm" variant="ghost" onClick={onStopDeepSearch}
-                className="h-6 px-2 text-[11px] gap-1 text-destructive hover:bg-destructive/15">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onStopDeepSearch}
+                className="h-6 px-2 text-[11px] gap-1 text-destructive hover:bg-destructive/15"
+              >
                 <Square className="w-2.5 h-2.5 fill-current" /> Stop
               </Button>
             )}
@@ -62,22 +75,35 @@ export function BulkActionBar({
         )}
 
         {onSendToWorkspace && (
-          <Button size="sm" variant="ghost" onClick={onSendToWorkspace}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onSendToWorkspace}
             className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:bg-primary/15 hover:text-foreground"
-            disabled={deepSearching || sendingToWorkspace}>
+            disabled={deepSearching || sendingToWorkspace}
+          >
             {sendingToWorkspace ? <Loader2 className="w-3 h-3 animate-spin" /> : <Briefcase className="w-3 h-3" />}
             Email Workspace
           </Button>
         )}
 
         {onEmail && (
-          <Button size="sm" variant="ghost" onClick={onEmail}
-            className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:bg-primary/15 hover:text-foreground" disabled={deepSearching}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onEmail}
+            className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:bg-primary/15 hover:text-foreground"
+            disabled={deepSearching}
+          >
             <Send className="w-3 h-3" /> Email
           </Button>
         )}
 
-        <button onClick={onClear} className="ml-auto hover:bg-primary/20 rounded-full p-0.5 transition-colors text-primary" disabled={deepSearching}>
+        <button
+          onClick={onClear}
+          className="ml-auto hover:bg-primary/20 rounded-full p-0.5 transition-colors text-primary"
+          disabled={deepSearching}
+        >
           <X className="w-3.5 h-3.5" />
         </button>
       </div>

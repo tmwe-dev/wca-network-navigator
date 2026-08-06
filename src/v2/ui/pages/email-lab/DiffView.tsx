@@ -18,7 +18,8 @@ function tokenize(s: string): string[] {
 }
 
 function diffTokens(a: string[], b: string[]): Op[] {
-  const m = a.length, n = b.length;
+  const m = a.length,
+    n = b.length;
   // LCS table — bounded perché tokens email <= ~2k
   const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
   for (let i = m - 1; i >= 0; i--) {
@@ -27,19 +28,35 @@ function diffTokens(a: string[], b: string[]): Op[] {
     }
   }
   const ops: Op[] = [];
-  let i = 0, j = 0;
+  let i = 0,
+    j = 0;
   while (i < m && j < n) {
-    if (a[i] === b[j]) { ops.push({ type: "eq", text: a[i] }); i++; j++; }
-    else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ type: "del", text: a[i] }); i++; }
-    else { ops.push({ type: "add", text: b[j] }); j++; }
+    if (a[i] === b[j]) {
+      ops.push({ type: "eq", text: a[i] });
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      ops.push({ type: "del", text: a[i] });
+      i++;
+    } else {
+      ops.push({ type: "add", text: b[j] });
+      j++;
+    }
   }
-  while (i < m) { ops.push({ type: "del", text: a[i++] }); }
-  while (j < n) { ops.push({ type: "add", text: b[j++] }); }
+  while (i < m) {
+    ops.push({ type: "del", text: a[i++] });
+  }
+  while (j < n) {
+    ops.push({ type: "add", text: b[j++] });
+  }
   return ops;
 }
 
 function stripHtml(s: string): string {
-  return s.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<[^>]+>/g, "");
+  return s
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "");
 }
 
 export function DiffView({ before, after, className }: Props): React.ReactElement {
@@ -56,9 +73,23 @@ export function DiffView({ before, after, className }: Props): React.ReactElemen
   return (
     <div className={`whitespace-pre-wrap text-sm leading-relaxed ${className ?? ""}`}>
       {ops.map((op, i) => {
-        if (op.type === "eq") return <span key={i} className="text-foreground">{op.text}</span>;
-        if (op.type === "add") return <span key={i} className="bg-emerald-500/20 text-success rounded-sm px-0.5">{op.text}</span>;
-        return <span key={i} className="bg-rose-500/20 text-destructive rounded-sm px-0.5 line-through">{op.text}</span>;
+        if (op.type === "eq")
+          return (
+            <span key={i} className="text-foreground">
+              {op.text}
+            </span>
+          );
+        if (op.type === "add")
+          return (
+            <span key={i} className="bg-emerald-500/20 text-success rounded-sm px-0.5">
+              {op.text}
+            </span>
+          );
+        return (
+          <span key={i} className="bg-rose-500/20 text-destructive rounded-sm px-0.5 line-through">
+            {op.text}
+          </span>
+        );
       })}
     </div>
   );

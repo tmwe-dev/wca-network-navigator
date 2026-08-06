@@ -3,8 +3,7 @@
 // Ciphertext format: base64( IV[12] || ciphertext ). Plaintext values may coexist during migration.
 
 const RAW_KEY =
-  Deno.env.get("LINKEDIN_ENCRYPTION_KEY") ||
-  (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").slice(0, 32);
+  Deno.env.get("LINKEDIN_ENCRYPTION_KEY") || (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").slice(0, 32);
 
 // Tag prefix to identify encrypted values (helps migration: legacy values lack this prefix).
 const ENC_PREFIX = "enc:v1:";
@@ -23,11 +22,7 @@ export async function encryptValue(plaintext: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await getKey("encrypt");
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    encoder.encode(plaintext),
-  );
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoder.encode(plaintext));
   const combined = new Uint8Array(iv.length + encrypted.byteLength);
   combined.set(iv);
   combined.set(new Uint8Array(encrypted), iv.length);

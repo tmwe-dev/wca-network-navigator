@@ -42,10 +42,7 @@ import {
 } from "@/data/reportAziende";
 import { fetchRaDashboardStats } from "@/data/raDashboard";
 import { fetchEvalBatchRuns } from "@/data/funnemailEval";
-import {
-  reassignActivitiesContact,
-  reassignEmailsContact,
-} from "@/data/contactMergeQueries";
+import { reassignActivitiesContact, reassignEmailsContact } from "@/data/contactMergeQueries";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -103,14 +100,10 @@ describe("Report Aziende — relazioni ra_* assenti", () => {
   });
 
   it("tutte le scritture ra_* falliscono con SchemaUnavailableError", async () => {
-    await expect(upsertRAProspect({ ragione_sociale: "ACME" } as never)).rejects.toBeInstanceOf(
-      SchemaUnavailableError,
-    );
+    await expect(upsertRAProspect({ ragione_sociale: "ACME" } as never)).rejects.toBeInstanceOf(SchemaUnavailableError);
     await expect(insertRAJob({} as never)).rejects.toBeInstanceOf(SchemaUnavailableError);
     await expect(updateRAJob("j1", {})).rejects.toBeInstanceOf(SchemaUnavailableError);
-    await expect(updateRALeadStatus("p1", "nuovo" as never)).rejects.toBeInstanceOf(
-      SchemaUnavailableError,
-    );
+    await expect(updateRALeadStatus("p1", "nuovo" as never)).rejects.toBeInstanceOf(SchemaUnavailableError);
     await expect(deleteRAProspects(["p1"])).rejects.toBeInstanceOf(SchemaUnavailableError);
     expect(mockFrom).not.toHaveBeenCalled();
   });

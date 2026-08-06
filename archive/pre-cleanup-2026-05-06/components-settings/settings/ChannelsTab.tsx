@@ -1,14 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Loader2, CheckCircle2, RefreshCw, Download,
-  MessageCircle, Linkedin, Bot, Zap, WifiOff,
-} from "lucide-react";
-import {
-  downloadLinkedInExtensionZip,
-  downloadWhatsAppExtensionZip,
-} from "@/lib/whatsappExtensionZip";
+import { Loader2, CheckCircle2, RefreshCw, Download, MessageCircle, Linkedin, Bot, Zap, WifiOff } from "lucide-react";
+import { downloadLinkedInExtensionZip, downloadWhatsAppExtensionZip } from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { ExtensionDownloadCatalog } from "@/components/settings/ExtensionDownloadCatalog";
@@ -27,8 +21,14 @@ interface ChannelsTabProps {
 }
 
 export function ChannelsTab({
-  waConnected, liConnected, liHasCreds, liExtAvailable,
-  waExt, liExt, connectingAll, onConnectAll,
+  waConnected,
+  liConnected,
+  liHasCreds,
+  liExtAvailable,
+  waExt,
+  liExt,
+  connectingAll,
+  onConnectAll,
 }: ChannelsTabProps) {
   return (
     <div className="space-y-4">
@@ -56,16 +56,28 @@ export function ChannelsTab({
               </div>
             </div>
             <Badge variant={waConnected ? "default" : "secondary"}>
-              {waConnected
-                ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Connesso</>
-                : <><WifiOff className="mr-1 h-3 w-3" /> Non rilevato</>}
+              {waConnected ? (
+                <>
+                  <CheckCircle2 className="mr-1 h-3 w-3" /> Connesso
+                </>
+              ) : (
+                <>
+                  <WifiOff className="mr-1 h-3 w-3" /> Non rilevato
+                </>
+              )}
             </Badge>
           </div>
           {waConnected && (
-            <Button variant="outline" size="sm" onClick={async () => {
-              const res = await waExt.verifySession();
-              toast[res.success ? "success" : "error"](res.success ? "Sessione WhatsApp verificata!" : "Sessione WhatsApp non attiva");
-            }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const res = await waExt.verifySession();
+                toast[res.success ? "success" : "error"](
+                  res.success ? "Sessione WhatsApp verificata!" : "Sessione WhatsApp non attiva",
+                );
+              }}
+            >
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Verifica Sessione
             </Button>
           )}
@@ -75,23 +87,33 @@ export function ChannelsTab({
                 ⚙️ Setup avanzato (estensione Chrome)
               </summary>
               <div className="mt-2 space-y-2 rounded-lg border border-border bg-muted/50 p-3">
-                <Button variant="outline" size="sm" onClick={async () => {
-                  try {
-                    await downloadWhatsAppExtensionZip();
-                    toast.success("Estensione WhatsApp scaricata!");
-                  } catch (e) {
-                    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-                    toast.error("File non disponibile");
-                  }
-                }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await downloadWhatsAppExtensionZip();
+                      toast.success("Estensione WhatsApp scaricata!");
+                    } catch (e) {
+                      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                      toast.error("File non disponibile");
+                    }
+                  }}
+                >
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica Estensione
                 </Button>
                 <ExtensionDownloadCatalog channel="whatsapp" />
                 <ol className="list-inside list-decimal space-y-0.5 text-[11px] text-muted-foreground">
                   <li>Decomprimi il file ZIP</li>
-                  <li>Apri <code className="rounded bg-muted px-1 font-mono">chrome://extensions</code></li>
-                  <li>Attiva <strong>Modalità sviluppatore</strong></li>
-                  <li>Clicca <strong>Carica estensione non pacchettizzata</strong></li>
+                  <li>
+                    Apri <code className="rounded bg-muted px-1 font-mono">chrome://extensions</code>
+                  </li>
+                  <li>
+                    Attiva <strong>Modalità sviluppatore</strong>
+                  </li>
+                  <li>
+                    Clicca <strong>Carica estensione non pacchettizzata</strong>
+                  </li>
                 </ol>
               </div>
             </details>
@@ -114,16 +136,28 @@ export function ChannelsTab({
               </div>
             </div>
             <Badge variant={liConnected ? "default" : "secondary"}>
-              {liConnected
-                ? <><CheckCircle2 className="mr-1 h-3 w-3" /> {liExtAvailable ? "Connesso" : "Configurato"}</>
-                : <><WifiOff className="mr-1 h-3 w-3" /> Non configurato</>}
+              {liConnected ? (
+                <>
+                  <CheckCircle2 className="mr-1 h-3 w-3" /> {liExtAvailable ? "Connesso" : "Configurato"}
+                </>
+              ) : (
+                <>
+                  <WifiOff className="mr-1 h-3 w-3" /> Non configurato
+                </>
+              )}
             </Badge>
           </div>
           {liExtAvailable && (
-            <Button variant="outline" size="sm" onClick={async () => {
-              const res = await liExt.verifySession();
-              toast[res.success ? "success" : "error"](res.success ? "Sessione LinkedIn verificata!" : "Sessione LinkedIn non attiva");
-            }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const res = await liExt.verifySession();
+                toast[res.success ? "success" : "error"](
+                  res.success ? "Sessione LinkedIn verificata!" : "Sessione LinkedIn non attiva",
+                );
+              }}
+            >
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Verifica Sessione
             </Button>
           )}
@@ -133,15 +167,19 @@ export function ChannelsTab({
                 ⚙️ Setup avanzato (estensione Chrome)
               </summary>
               <div className="mt-2 space-y-2 rounded-lg border border-border bg-muted/50 p-3">
-                <Button variant="outline" size="sm" onClick={async () => {
-                  try {
-                    await downloadLinkedInExtensionZip();
-                    toast.success("LinkedIn extension scaricata!");
-                  } catch (e) {
-                    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-                    toast.error("File non disponibile");
-                  }
-                }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await downloadLinkedInExtensionZip();
+                      toast.success("LinkedIn extension scaricata!");
+                    } catch (e) {
+                      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                      toast.error("File non disponibile");
+                    }
+                  }}
+                >
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica Estensione
                 </Button>
                 <ExtensionDownloadCatalog channel="linkedin" />

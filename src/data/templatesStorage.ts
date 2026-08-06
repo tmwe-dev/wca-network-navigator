@@ -10,11 +10,7 @@ export async function removeTemplateFile(path: string): Promise<void> {
 }
 
 /** Carica un file nel bucket templates. */
-export async function uploadTemplateFile(
-  path: string,
-  file: File,
-  options?: { upsert?: boolean },
-): Promise<void> {
+export async function uploadTemplateFile(path: string, file: File, options?: { upsert?: boolean }): Promise<void> {
   const { error } = await supabase.storage.from("templates").upload(path, file, options);
   if (error) throw error;
 }

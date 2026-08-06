@@ -10,8 +10,7 @@ function getSupabase() {
 export async function seedTestData() {
   const supabase = getSupabase();
   if (!supabase) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-  const testUser = {
-  };
+  const testUser = {};
 
   await supabase.from("partners").insert([
     {

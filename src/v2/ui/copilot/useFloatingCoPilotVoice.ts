@@ -100,13 +100,17 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
           if (params.intent_key) {
             const intent = await findIntentByKey(params.intent_key);
             if (intent) {
-              path = intent.path; filters = intent.default_filters; modal = intent.modal;
+              path = intent.path;
+              filters = intent.default_filters;
+              modal = intent.modal;
             }
           } else if (params.query) {
             const all = await listNavigationIntents({ onlyEnabled: true });
             const matched = matchIntentLocally(params.query, all);
             if (matched) {
-              path = matched.path; filters = matched.default_filters; modal = matched.modal;
+              path = matched.path;
+              filters = matched.default_filters;
+              modal = matched.modal;
             }
           } else if (params.path) {
             path = params.path;
@@ -114,18 +118,24 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
 
           if (!path) return "Destinazione non trovata. Posso elencarti le sezioni disponibili.";
 
-          window.dispatchEvent(new CustomEvent("ai-ui-action", {
-            detail: { action_type: "navigate", path },
-          }));
+          window.dispatchEvent(
+            new CustomEvent("ai-ui-action", {
+              detail: { action_type: "navigate", path },
+            }),
+          );
           if (Object.keys(filters).length > 0) {
-            window.dispatchEvent(new CustomEvent("ai-ui-action", {
-              detail: { action_type: "apply_filters", filters },
-            }));
+            window.dispatchEvent(
+              new CustomEvent("ai-ui-action", {
+                detail: { action_type: "apply_filters", filters },
+              }),
+            );
           }
           if (modal) {
-            window.dispatchEvent(new CustomEvent("ai-ui-action", {
-              detail: { action_type: "open_modal", modal, params: {} },
-            }));
+            window.dispatchEvent(
+              new CustomEvent("ai-ui-action", {
+                detail: { action_type: "open_modal", modal, params: {} },
+              }),
+            );
           }
           announce(`Navigato a ${path}`);
           return `OK, aperto ${path}.`;
@@ -138,9 +148,11 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
       apply_filter: (params: { scope?: string; filters?: Record<string, unknown> }) => {
         const scope = params.scope || "global";
         const filters = params.filters || {};
-        window.dispatchEvent(new CustomEvent("ai-ui-action", {
-          detail: { action_type: "apply_filters", scope, filters },
-        }));
+        window.dispatchEvent(
+          new CustomEvent("ai-ui-action", {
+            detail: { action_type: "apply_filters", scope, filters },
+          }),
+        );
         announce(`Filtri applicati (${scope})`);
         return "Filtri applicati.";
       },
@@ -148,24 +160,28 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
       // ── open_modal(name, params) ─────────────────────────────────
       open_modal: (params: { name?: string; params?: Record<string, unknown> }) => {
         if (!params.name) return "Nome modale mancante.";
-        window.dispatchEvent(new CustomEvent("ai-ui-action", {
-          detail: { action_type: "open_modal", modal: params.name, params: params.params || {} },
-        }));
+        window.dispatchEvent(
+          new CustomEvent("ai-ui-action", {
+            detail: { action_type: "open_modal", modal: params.name, params: params.params || {} },
+          }),
+        );
         announce(`Modale ${params.name} aperta`);
         return `Modale ${params.name} richiesta.`;
       },
 
       // ── highlight_element({ selector | text, hint }) ─────────────
       highlight_element: (params: { selector?: string; text?: string; hint?: string; duration_ms?: number }) => {
-        window.dispatchEvent(new CustomEvent("ai-ui-action", {
-          detail: {
-            action_type: "highlight",
-            selector: params.selector,
-            text: params.text,
-            hint: params.hint,
-            durationMs: params.duration_ms,
-          },
-        }));
+        window.dispatchEvent(
+          new CustomEvent("ai-ui-action", {
+            detail: {
+              action_type: "highlight",
+              selector: params.selector,
+              text: params.text,
+              hint: params.hint,
+              durationMs: params.duration_ms,
+            },
+          }),
+        );
         announce(`Evidenziato: ${params.text || params.selector || "elemento"}`);
         return "Elemento evidenziato.";
       },
@@ -185,10 +201,7 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
     setPhase("connecting");
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      const { data, error: invokeErr } = await supabase.functions.invoke(
-        "elevenlabs-conversation-token",
-        { body: {} },
-      );
+      const { data, error: invokeErr } = await supabase.functions.invoke("elevenlabs-conversation-token", { body: {} });
       if (invokeErr) throw invokeErr;
       const payload = data as { token?: string; bridge_token?: string } | null;
       const token = payload?.token;
@@ -196,7 +209,11 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
       if (!token) throw new Error("Token ElevenLabs non ricevuto");
 
       await conversation.startSession({ conversationToken: token, connectionType: "webrtc" });
-      try { conversationIdRef.current = conversation.getId() || null; } catch { /* noop */ }
+      try {
+        conversationIdRef.current = conversation.getId() || null;
+      } catch {
+        /* noop */
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       log.warn("start failed", { error: msg });
@@ -206,9 +223,13 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
   }, [conversation]);
 
   const stop = useCallback(async () => {
-    try { await conversation.endSession(); }
-    catch (e) { log.warn("stop failed", { error: e instanceof Error ? e.message : String(e) }); }
-    finally { setPhase("disconnected"); }
+    try {
+      await conversation.endSession();
+    } catch (e) {
+      log.warn("stop failed", { error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setPhase("disconnected");
+    }
   }, [conversation]);
 
   return { status: phase, isSpeaking: conversation.isSpeaking, error, lastAction, start, stop };

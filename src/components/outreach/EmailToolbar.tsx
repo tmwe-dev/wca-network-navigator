@@ -17,10 +17,16 @@ interface EmailToolbarProps {
 }
 
 export function EmailToolbar({
-  onCheckNew, isCheckingNew,
-  onStartSync, onStopSync, isSyncing, syncDownloaded,
-  onReset, isResetting,
-  autoSyncEnabled, onToggleAutoSync,
+  onCheckNew,
+  isCheckingNew,
+  onStartSync,
+  onStopSync,
+  isSyncing,
+  syncDownloaded,
+  onReset,
+  isResetting,
+  autoSyncEnabled,
+  onToggleAutoSync,
 }: EmailToolbarProps) {
   const navigate = useAppNavigate();
   // Un solo bottone unificato "Scarica nuove": esegue checkNew (rapido) o stop se sync continua è attiva.
@@ -29,7 +35,9 @@ export function EmailToolbar({
     <div className="flex items-center gap-3">
       {/* Sezione: SINCRONIZZAZIONE — un solo bottone "Scarica nuove" con stato/contatore inline */}
       <div className="flex flex-col gap-0.5">
-        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground px-1">Sincronizzazione</span>
+        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+          Sincronizzazione
+        </span>
         <div className="flex items-center gap-1">
           {isSyncing ? (
             <Button
@@ -68,12 +76,16 @@ export function EmailToolbar({
           )}
           <button
             onClick={onToggleAutoSync}
-            title={autoSyncEnabled ? "Auto-sync attivo (ogni 2 min) — clicca per disattivare" : "Auto-sync disattivato — clicca per attivare"}
+            title={
+              autoSyncEnabled
+                ? "Auto-sync attivo (ogni 2 min) — clicca per disattivare"
+                : "Auto-sync disattivato — clicca per attivare"
+            }
             className={cn(
               "h-7 px-2 flex items-center gap-1 rounded-md text-[10px] font-medium transition-colors border",
               autoSyncEnabled
                 ? "bg-primary/15 text-primary border-primary/30"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent",
             )}
           >
             {autoSyncEnabled ? <Zap className="h-3 w-3" /> : <ZapOff className="h-3 w-3" />}

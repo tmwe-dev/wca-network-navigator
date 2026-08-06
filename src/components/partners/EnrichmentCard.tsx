@@ -13,14 +13,17 @@ interface EnrichmentData {
     founded_year?: number;
     employee_count_estimate?: number;
   };
-  contact_profiles?: Record<string, {
-    name?: string;
-    linkedin_title?: string;
-    seniority?: string;
-    background?: string;
-    languages?: string[];
-    interests?: string[];
-  }>;
+  contact_profiles?: Record<
+    string,
+    {
+      name?: string;
+      linkedin_title?: string;
+      seniority?: string;
+      background?: string;
+      languages?: string[];
+      interests?: string[];
+    }
+  >;
   deep_search_at?: string;
   tokens_used?: { credits_consumed?: number; prompt?: number; completion?: number };
 }
@@ -48,13 +51,13 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
   const contactProfiles = enrichment?.contact_profiles;
   const deepSearchAt = enrichment?.deep_search_at;
   const tokensUsed = enrichment?.tokens_used;
-  const hasCompanyData = companyProfile && (
-    (companyProfile.awards?.length ?? 0) > 0 ||
-    (companyProfile.specialties?.length ?? 0) > 0 ||
-    companyProfile.recent_news ||
-    companyProfile.founded_year ||
-    companyProfile.employee_count_estimate
-  );
+  const hasCompanyData =
+    companyProfile &&
+    ((companyProfile.awards?.length ?? 0) > 0 ||
+      (companyProfile.specialties?.length ?? 0) > 0 ||
+      companyProfile.recent_news ||
+      companyProfile.founded_year ||
+      companyProfile.employee_count_estimate);
   const hasContactData = contactProfiles && Object.keys(contactProfiles).length > 0;
 
   if (!hasCompanyData && !hasContactData && !partner.enriched_at && !partner.ai_parsed_at && !deepSearchAt) return null;
@@ -110,7 +113,10 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
               {(companyProfile.specialties?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {companyProfile.specialties!.map((s: string, i: number) => (
-                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
+                    <span
+                      key={i}
+                      className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30"
+                    >
                       {s}
                     </span>
                   ))}
@@ -123,7 +129,10 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
                         <Award className="w-3 h-3 text-primary" />
-                        <span>{label}{typeof a === "object" && a?.year ? ` (${a.year})` : ""}</span>
+                        <span>
+                          {label}
+                          {typeof a === "object" && a?.year ? ` (${a.year})` : ""}
+                        </span>
                       </div>
                     );
                   })}
@@ -159,15 +168,17 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                       <span className="text-[10px] text-muted-foreground">{profile.linkedin_title}</span>
                     )}
                     {profile.seniority && (
-                      <span className={cn(
-                        "text-[9px] px-1.5 py-0.5 rounded-full border font-medium uppercase",
-                        seniorityColors[profile.seniority] || "bg-secondary text-secondary-foreground"
-                      )}>
+                      <span
+                        className={cn(
+                          "text-[9px] px-1.5 py-0.5 rounded-full border font-medium uppercase",
+                          seniorityColors[profile.seniority] || "bg-secondary text-secondary-foreground",
+                        )}
+                      >
                         {profile.seniority}
                       </span>
                     )}
                   </div>
-                    {profile.background && (
+                  {profile.background && (
                     <p className="text-[11px] text-foreground leading-relaxed">{profile.background}</p>
                   )}
                   <div className="flex flex-wrap gap-1">
@@ -177,7 +188,10 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
                       </span>
                     ))}
                     {profile.interests?.map((int: string, i: number) => (
-                      <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 dark:text-emerald-200 text-emerald-900">
+                      <span
+                        key={i}
+                        className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 dark:text-emerald-200 text-emerald-900"
+                      >
                         {int}
                       </span>
                     ))}
@@ -192,13 +206,17 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
       {/* Token consumption */}
       {tokensUsed && (tokensUsed.credits_consumed ?? 0) > 0 && (
         <div className="flex items-center gap-2 pt-1 border-t border-primary/10">
-          <Coins className={cn("w-3.5 h-3.5", 
-            (tokensUsed.credits_consumed ?? 0) > 50 ? "text-destructive" : 
-            (tokensUsed.credits_consumed ?? 0) > 20 ? "text-primary" : "text-emerald-500"
-          )} />
-          <span className="text-[10px] text-muted-foreground">
-            {tokensUsed.credits_consumed} crediti AI
-          </span>
+          <Coins
+            className={cn(
+              "w-3.5 h-3.5",
+              (tokensUsed.credits_consumed ?? 0) > 50
+                ? "text-destructive"
+                : (tokensUsed.credits_consumed ?? 0) > 20
+                  ? "text-primary"
+                  : "text-emerald-500",
+            )}
+          />
+          <span className="text-[10px] text-muted-foreground">{tokensUsed.credits_consumed} crediti AI</span>
           <span className="text-[9px] text-muted-foreground ml-auto">
             {tokensUsed.prompt?.toLocaleString()}↑ {tokensUsed.completion?.toLocaleString()}↓
           </span>

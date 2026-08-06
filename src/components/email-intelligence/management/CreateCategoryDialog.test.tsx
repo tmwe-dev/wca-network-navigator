@@ -39,7 +39,7 @@ describe("CreateCategoryDialog", () => {
     fireEvent.click(screen.getByText("Crea Categoria"));
     await waitFor(() => {
       expect(defaultProps.onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ nome_gruppo: "New Cat", colore: "#3B82F6", icon: "🔧" })
+        expect.objectContaining({ nome_gruppo: "New Cat", colore: "#3B82F6", icon: "🔧" }),
       );
     });
   });

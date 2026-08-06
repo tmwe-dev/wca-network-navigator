@@ -23,26 +23,48 @@ interface Props {
   isLoading?: boolean;
 }
 
-export function SearchResultsTable({ results, selected, onToggle, onSelectAll, onSelectNew, onDeselectAll, isDark, isLoading }: Props) {
+export function SearchResultsTable({
+  results,
+  selected,
+  onToggle,
+  onSelectAll,
+  onSelectNew,
+  onDeselectAll,
+  isDark,
+  isLoading,
+}: Props) {
   const th = t(isDark);
   const [showInDb, setShowInDb] = useState(true);
 
-  const visible = useMemo(() => showInDb ? results : results.filter(r => !r.inDb), [results, showInDb]);
-  const inDbCount = results.filter(r => r.inDb).length;
+  const visible = useMemo(() => (showInDb ? results : results.filter((r) => !r.inDb)), [results, showInDb]);
+  const inDbCount = results.filter((r) => r.inDb).length;
   const newCount = results.length - inDbCount;
 
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className={`flex items-center gap-2 px-3 py-2 border-b flex-wrap ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
-        <button onClick={onSelectAll} className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-white/5 hover:bg-white/10 text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}>
-          <CheckCheck className="w-3 h-3 inline mr-1" />Tutti
+      <div
+        className={`flex items-center gap-2 px-3 py-2 border-b flex-wrap ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}
+      >
+        <button
+          onClick={onSelectAll}
+          className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-white/5 hover:bg-white/10 text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}
+        >
+          <CheckCheck className="w-3 h-3 inline mr-1" />
+          Tutti
         </button>
-        <button onClick={onSelectNew} className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-primary/15 hover:bg-primary/25 text-primary" : "bg-primary/10 hover:bg-primary/15 text-primary"}`}>
+        <button
+          onClick={onSelectNew}
+          className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-primary/15 hover:bg-primary/25 text-primary" : "bg-primary/10 hover:bg-primary/15 text-primary"}`}
+        >
           Solo nuovi ({newCount})
         </button>
-        <button onClick={onDeselectAll} className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-white/5 hover:bg-white/10 text-slate-400" : "bg-slate-100 hover:bg-slate-200 text-slate-500"}`}>
-          <X className="w-3 h-3 inline mr-1" />Nessuno
+        <button
+          onClick={onDeselectAll}
+          className={`text-[10px] px-2 py-1 rounded-lg transition-all ${isDark ? "bg-white/5 hover:bg-white/10 text-slate-400" : "bg-slate-100 hover:bg-slate-200 text-slate-500"}`}
+        >
+          <X className="w-3 h-3 inline mr-1" />
+          Nessuno
         </button>
 
         <div className="ml-auto flex items-center gap-2">
@@ -50,14 +72,21 @@ export function SearchResultsTable({ results, selected, onToggle, onSelectAll, o
             onClick={() => setShowInDb(!showInDb)}
             className={`text-[10px] px-2 py-1 rounded-lg transition-all flex items-center gap-1 ${
               showInDb
-                ? isDark ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
-                : isDark ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-400"
+                ? isDark
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                  : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                : isDark
+                  ? "bg-white/5 text-slate-500"
+                  : "bg-slate-100 text-slate-400"
             }`}
           >
             <Database className="w-3 h-3" />
             {showInDb ? `Mostra in DB (${inDbCount})` : `Nascosti (${inDbCount})`}
           </button>
-          <Badge variant="outline" className={`text-[10px] ${isDark ? "border-primary/30 text-primary" : "border-primary/20 text-primary"}`}>
+          <Badge
+            variant="outline"
+            className={`text-[10px] ${isDark ? "border-primary/30 text-primary" : "border-primary/20 text-primary"}`}
+          >
             {selected.size} selezionati
           </Badge>
         </div>
@@ -72,13 +101,19 @@ export function SearchResultsTable({ results, selected, onToggle, onSelectAll, o
               onClick={() => onToggle(r.url)}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all ${
                 selected.has(r.url)
-                  ? isDark ? "bg-primary/10 border border-primary/20" : "bg-primary/5 border border-primary/20"
-                  : isDark ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"
+                  ? isDark
+                    ? "bg-primary/10 border border-primary/20"
+                    : "bg-primary/5 border border-primary/20"
+                  : isDark
+                    ? "hover:bg-white/[0.03]"
+                    : "hover:bg-slate-50"
               }`}
             >
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                selected.has(r.url) ? "bg-primary border-primary" : isDark ? "border-border" : "border-border"
-              }`}>
+              <div
+                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                  selected.has(r.url) ? "bg-primary border-primary" : isDark ? "border-border" : "border-border"
+                }`}
+              >
                 {selected.has(r.url) && <Check className="w-2.5 h-2.5 text-white" />}
               </div>
               <span className={`text-[11px] font-mono w-6 ${th.dim}`}>{i + 1}</span>
@@ -86,7 +121,10 @@ export function SearchResultsTable({ results, selected, onToggle, onSelectAll, o
               {r.city && <span className={`text-[10px] ${th.dim}`}>{r.city}</span>}
               {r.piva && <span className={`text-[10px] font-mono ${th.dim}`}>{r.piva}</span>}
               {r.inDb && (
-                <Badge variant="secondary" className={`text-[9px] shrink-0 ${isDark ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-emerald-50 text-emerald-600"}`}>
+                <Badge
+                  variant="secondary"
+                  className={`text-[9px] shrink-0 ${isDark ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-emerald-50 text-emerald-600"}`}
+                >
                   ✓ In DB
                 </Badge>
               )}

@@ -32,7 +32,9 @@ import { useAuth } from "@/providers/AuthProvider";
 // ── Lazy pages ───────────────────────────────────────────────────────
 const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 // ResetPasswordPage legacy disabilitato — auth passa esclusivamente da TMWE OAuth.
-const AuthCallbackPage = lazy(() => import("./ui/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage })));
+const AuthCallbackPage = lazy(() =>
+  import("./ui/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage })),
+);
 const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const KpiPage = lazy(() => import("./ui/pages/KpiPage").then((m) => ({ default: m.KpiPage })));
 const NetworkPage = lazy(() => import("./ui/pages/NetworkPage").then((m) => ({ default: m.NetworkPage })));
@@ -45,48 +47,88 @@ const DiagnosticsPage = lazy(() => import("./ui/pages/DiagnosticsPage").then((m)
 const ImportPage = lazy(() => import("./ui/pages/ImportPage").then((m) => ({ default: m.ImportPage })));
 const StaffPage = lazy(() => import("./ui/pages/StaffPage").then((m) => ({ default: m.StaffPage })));
 const AILabPage = lazy(() => import("./ui/pages/AILabPage").then((m) => ({ default: m.AILab })));
-const KnowledgeBasePage = lazy(() => import("./ui/pages/KnowledgeBasePage").then((m) => ({ default: m.KnowledgeBasePage })));
-const KBSupervisorPage = lazy(() => import("./ui/pages/KBSupervisorPage").then((m) => ({ default: m.KBSupervisorPage })));
+const KnowledgeBasePage = lazy(() =>
+  import("./ui/pages/KnowledgeBasePage").then((m) => ({ default: m.KnowledgeBasePage })),
+);
+const KBSupervisorPage = lazy(() =>
+  import("./ui/pages/KBSupervisorPage").then((m) => ({ default: m.KBSupervisorPage })),
+);
 const InreachPage = lazy(() => import("./ui/pages/InreachPage").then((m) => ({ default: m.InreachPage })));
 const AgendaPage = lazy(() => import("./ui/pages/AgendaPage").then((m) => ({ default: m.AgendaPage })));
 const ProspectPage = lazy(() => import("./ui/pages/ProspectPage").then((m) => ({ default: m.ProspectPage })));
-const EmailComposerPage = lazy(() => import("./ui/pages/EmailComposerPage").then((m) => ({ default: m.EmailComposerPage })));
+const EmailComposerPage = lazy(() =>
+  import("./ui/pages/EmailComposerPage").then((m) => ({ default: m.EmailComposerPage })),
+);
 const CockpitPage = lazy(() => import("./ui/pages/CockpitPage").then((m) => ({ default: m.CockpitPage })));
-const MissionBuilderPage = lazy(() => import("./ui/pages/MissionBuilderPage").then((m) => ({ default: m.MissionBuilderPage })));
+const MissionBuilderPage = lazy(() =>
+  import("./ui/pages/MissionBuilderPage").then((m) => ({ default: m.MissionBuilderPage })),
+);
 const RADashboardPage = lazy(() => import("./ui/pages/RADashboardPage").then((m) => ({ default: m.RADashboard })));
 const GlobePage = lazy(() => import("./ui/pages/GlobePage").then((m) => ({ default: m.GlobePage })));
 const DeepSearchPage = lazy(() => import("./ui/pages/DeepSearchPage").then((m) => ({ default: m.DeepSearchPage })));
 const SortingPage = lazy(() => import("./ui/pages/SortingPage").then((m) => ({ default: m.Sorting })));
 const TelemetryPage = lazy(() => import("./ui/pages/TelemetryPage").then((m) => ({ default: m.TelemetryPage })));
 const OperationsPage = lazy(() => import("./ui/pages/OperationsPage").then((m) => ({ default: m.OperationsPage })));
-const AcquisizionePartnerPage = lazy(() => import("./ui/pages/AcquisizionePartnerPage").then((m) => ({ default: m.AcquisizionePartner })));
+const AcquisizionePartnerPage = lazy(() =>
+  import("./ui/pages/AcquisizionePartnerPage").then((m) => ({ default: m.AcquisizionePartner })),
+);
 const AgentChatHubPage = lazy(() => import("./ui/pages/AgentChatHubPage").then((m) => ({ default: m.AgentChatHub })));
-const CommandHelpPage = lazy(() => import("./ui/pages/command/CommandHelpPage").then((m) => ({ default: m.CommandHelpPage })));
+const CommandHelpPage = lazy(() =>
+  import("./ui/pages/command/CommandHelpPage").then((m) => ({ default: m.CommandHelpPage })),
+);
 const ContactsPage = lazy(() => import("./ui/pages/ContactsPage").then((m) => ({ default: m.ContactsPage })));
-const EmailDownloadPage = lazy(() => import("./ui/pages/EmailDownloadPage").then((m) => ({ default: m.EmailDownloadPage })));
+const EmailDownloadPage = lazy(() =>
+  import("./ui/pages/EmailDownloadPage").then((m) => ({ default: m.EmailDownloadPage })),
+);
 const RAExplorerPage = lazy(() => import("./ui/pages/RAExplorerPage").then((m) => ({ default: m.RAExplorer })));
-const RAScrapingEnginePage = lazy(() => import("./ui/pages/RAScrapingEnginePage").then((m) => ({ default: m.RAScrapingEngine })));
-const RACompanyDetailPage = lazy(() => import("./ui/pages/RACompanyDetailPage").then((m) => ({ default: m.RACompanyDetailPage })));
-const CampaignJobsPage = lazy(() => import("./ui/pages/CampaignJobsPage").then((m) => ({ default: m.CampaignJobsPage })));
+const RAScrapingEnginePage = lazy(() =>
+  import("./ui/pages/RAScrapingEnginePage").then((m) => ({ default: m.RAScrapingEngine })),
+);
+const RACompanyDetailPage = lazy(() =>
+  import("./ui/pages/RACompanyDetailPage").then((m) => ({ default: m.RACompanyDetailPage })),
+);
+const CampaignJobsPage = lazy(() =>
+  import("./ui/pages/CampaignJobsPage").then((m) => ({ default: m.CampaignJobsPage })),
+);
 const AdminUsersPage = lazy(() => import("./ui/pages/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
 const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) => ({ default: m.Onboarding })));
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage"));
-const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })));
-const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
-const AlertRoutingPage = lazy(() => import("./ui/pages/AlertRoutingPage").then((m) => ({ default: m.AlertRoutingPage })));
-const FunnemailInboxPage = lazy(() => import("./ui/pages/FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })));
-const FunnemailSortingQueuePage = lazy(() => import("./ui/pages/funnemail-inbox/SortingQueuePage").then((m) => ({ default: m.SortingQueuePage })));
+const AIControlCenterPage = lazy(() =>
+  import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })),
+);
+const EmailIntelligencePage = lazy(() =>
+  import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })),
+);
+const AlertRoutingPage = lazy(() =>
+  import("./ui/pages/AlertRoutingPage").then((m) => ({ default: m.AlertRoutingPage })),
+);
+const FunnemailInboxPage = lazy(() =>
+  import("./ui/pages/FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })),
+);
+const FunnemailSortingQueuePage = lazy(() =>
+  import("./ui/pages/funnemail-inbox/SortingQueuePage").then((m) => ({ default: m.SortingQueuePage })),
+);
 const AIArenaPage = lazy(() => import("./ui/pages/AIArenaPage").then((m) => ({ default: m.AIArenaPage })));
-const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
+const SystemHealthPage = lazy(() =>
+  import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })),
+);
 const AnalyticsPage = lazy(() => import("./ui/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
-const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
+const DesignSystemPreviewPage = lazy(() =>
+  import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })),
+);
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
 const FinderApiPage = lazy(() => import("./ui/pages/FinderApiPage").then((m) => ({ default: m.FinderApiPage })));
-const FinderApiSchemaMapPage = lazy(() => import("./ui/pages/finder-api/FinderApiSchemaMapPage").then((m) => ({ default: m.FinderApiSchemaMapPage })));
+const FinderApiSchemaMapPage = lazy(() =>
+  import("./ui/pages/finder-api/FinderApiSchemaMapPage").then((m) => ({ default: m.FinderApiSchemaMapPage })),
+);
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
-const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
+const ObservabilityPage = lazy(() =>
+  import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })),
+);
 const E2EStatusPage = lazy(() => import("./ui/pages/E2EStatusPage").then((m) => ({ default: m.E2EStatusPage })));
-const MissionsAutopilotPage = lazy(() => import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })));
+const MissionsAutopilotPage = lazy(() =>
+  import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })),
+);
 const LandingPage = lazy(() => import("./ui/pages/LandingPage").then((m) => ({ default: m.LandingPage })));
 const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
 const PromptLabPage = lazy(() => import("./ui/pages/PromptLabPage").then((m) => ({ default: m.PromptLabPage })));
@@ -97,21 +139,29 @@ const PromptCatalogPage = lazy(() => import("./ui/pages/PromptCatalogPage"));
 const PromptReaderPage = lazy(() => import("./ui/pages/prompt-lab/PromptReaderPage"));
 const AiInteractionLogPage = lazy(() => import("./ui/pages/AiInteractionLogPage"));
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
-const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })));
-const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })));
-const AgentCapabilitiesPage = lazy(() => import("./ui/pages/AgentCapabilitiesPage").then((m) => ({ default: m.AgentCapabilitiesPage })));
+const GuidedOnboardingPage = lazy(() =>
+  import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })),
+);
+const AgentPersonaEditorPage = lazy(() =>
+  import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })),
+);
+const AgentCapabilitiesPage = lazy(() =>
+  import("./ui/pages/AgentCapabilitiesPage").then((m) => ({ default: m.AgentCapabilitiesPage })),
+);
 const AgentTasksPage = lazy(() => import("./ui/pages/AgentTasksPage").then((m) => ({ default: m.AgentTasksPage })));
 const CalendarPage = lazy(() => import("./ui/pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const NotificationsPage = lazy(() => import("./ui/pages/NotificationsPage"));
-const TokenCockpitPage = lazy(() => import("./ui/pages/TokenCockpitPage").then((m) => ({ default: m.TokenCockpitPage })));
+const TokenCockpitPage = lazy(() =>
+  import("./ui/pages/TokenCockpitPage").then((m) => ({ default: m.TokenCockpitPage })),
+);
 const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
 // ── New Section pages (UX Redesign Phase 1) ──────────────────────────
-const PipelineSection     = lazy(() => import("./ui/pages/sections/PipelineSection"));
+const PipelineSection = lazy(() => import("./ui/pages/sections/PipelineSection"));
 const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceSection"));
-const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
-const ConfigSection       = lazy(() => import("./ui/pages/sections/ConfigSection"));
-const AgendaSection       = lazy(() => import("./ui/pages/sections/AgendaSection"));
+const ExploreSection = lazy(() => import("./ui/pages/sections/ExploreSection"));
+const ConfigSection = lazy(() => import("./ui/pages/sections/ConfigSection"));
+const AgendaSection = lazy(() => import("./ui/pages/sections/AgendaSection"));
 
 // ── Cestinone (unified pre-send queue) ───────────────────────────────
 const CestinonePage = lazy(() => import("./ui/pages/CestinonePage").then((m) => ({ default: m.CestinonePage })));
@@ -217,12 +267,12 @@ export function V2Routes(): React.ReactElement {
 
           {/* ── UX Redesign Phase 1: 6-destination sections ── */}
           {/* Pipeline rimossa dal menu — redirect verso Agenda dove ora vive il Kanban */}
-          <Route path="pipeline"            element={<Navigate to="/v2/agenda/pipeline" replace />} />
-          <Route path="pipeline/kanban"     element={<Navigate to="/v2/agenda/pipeline" replace />} />
-          <Route path="pipeline/duplicati"  element={<Navigate to="/v2/agenda/duplicati" replace />} />
-          <Route path="pipeline/*"          element={guardedPage(PipelineSection, "Pipeline")} />
+          <Route path="pipeline" element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline/kanban" element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline/duplicati" element={<Navigate to="/v2/agenda/duplicati" replace />} />
+          <Route path="pipeline/*" element={guardedPage(PipelineSection, "Pipeline")} />
           <Route path="intelligence/*" element={guardedPage(IntelligenceSection, "Intelligence")} />
-          <Route path="explore/*"      element={guardedPage(ExploreSection,      "Explore")} />
+          <Route path="explore/*" element={guardedPage(ExploreSection, "Explore")} />
 
           {/* ── Cestinone: unica coda pre-invio ── */}
           <Route path="cestinone" element={guardedPage(CestinonePage, "Cestinone")} />
@@ -256,20 +306,20 @@ export function V2Routes(): React.ReactElement {
 
           {/* Outreach + figli */}
           <Route path="cockpit" element={guardedPage(OutreachPage, "Cockpit")} />
-          <Route path="inbox"   element={guardedPage(InreachPage, "Inbox")} />
-          <Route path="email"   element={guardedPage(EmailComposerPage, "Email")} />
+          <Route path="inbox" element={guardedPage(InreachPage, "Inbox")} />
+          <Route path="email" element={guardedPage(EmailComposerPage, "Email")} />
           {/* Legacy redirects → nuove voci top-level */}
           <Route path="outreach" element={<Navigate to="/v2/cockpit" replace />} />
           <Route path="outreach/composer" element={<PreserveStateRedirect to="/v2/email" />} />
           <Route path="outreach/agenda" element={<Navigate to="/v2/agenda" replace />} />
           <Route path="email-composer" element={<PreserveStateRedirect to="/v2/email" />} />
-          <Route path="communicate"            element={<Navigate to="/v2/cockpit" replace />} />
-          <Route path="communicate/outreach"   element={<Navigate to="/v2/cockpit" replace />} />
-          <Route path="communicate/inbox"      element={<Navigate to="/v2/inbox" replace />} />
-          <Route path="communicate/compose"    element={<PreserveStateRedirect to="/v2/email" />} />
-          <Route path="communicate/campaigns"  element={<Navigate to="/v2/explore/campaigns" replace />} />
-          <Route path="communicate/approve"    element={<Navigate to="/v2/cestinone" replace />} />
-          <Route path="communicate/*"          element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="communicate" element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="communicate/outreach" element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="communicate/inbox" element={<Navigate to="/v2/inbox" replace />} />
+          <Route path="communicate/compose" element={<PreserveStateRedirect to="/v2/email" />} />
+          <Route path="communicate/campaigns" element={<Navigate to="/v2/explore/campaigns" replace />} />
+          <Route path="communicate/approve" element={<Navigate to="/v2/cestinone" replace />} />
+          <Route path="communicate/*" element={<Navigate to="/v2/cockpit" replace />} />
           <Route path="agenda/*" element={guardedPage(AgendaSection, "Agenda")} />
           <Route path="pipeline/agenda" element={<Navigate to="/v2/agenda" replace />} />
 
@@ -354,7 +404,10 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-control" element={<Navigate to="/v2/intelligence/control" replace />} />
           <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
           <Route path="funnemail-inbox" element={guardedPage(FunnemailInboxPage, "FunnemailInbox")} />
-          <Route path="funnemail-inbox/sorting" element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")} />
+          <Route
+            path="funnemail-inbox/sorting"
+            element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")}
+          />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           <Route path="token-cockpit" element={guardedPage(TokenCockpitPage, "TokenCockpit")} />
           <Route path="notifications" element={guardedPage(NotificationsPage, "Notifications")} />

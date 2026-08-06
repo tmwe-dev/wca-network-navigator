@@ -1,7 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
-import { deleteBlacklistBySource, insertBlacklistBatch, findAllBlacklistEntries, updateBlacklistEntry, insertBlacklistSyncLog } from "@/data/blacklist";
-import { getBlacklistedPartnerIds, getBlacklistedCompanyNames, findBlacklistSyncLogs, getBlacklistStats, findBlacklistEntriesForPartner } from "@/data/blacklist";
+import {
+  deleteBlacklistBySource,
+  insertBlacklistBatch,
+  findAllBlacklistEntries,
+  updateBlacklistEntry,
+  insertBlacklistSyncLog,
+} from "@/data/blacklist";
+import {
+  getBlacklistedPartnerIds,
+  getBlacklistedCompanyNames,
+  findBlacklistSyncLogs,
+  getBlacklistStats,
+  findBlacklistEntriesForPartner,
+} from "@/data/blacklist";
 import { findPartnersForBlacklistMatch } from "@/data/partners";
 import { queryKeys } from "@/lib/queryKeys";
 import { toRecords } from "@/lib/records";
@@ -70,7 +82,8 @@ export function useImportBlacklist() {
       // Insert in batches of 50
       for (let i = 0; i < entries.length; i += 50) {
         const batch = entries.slice(i, i + 50) as BlacklistEntryInsert[];
-        await insertBlacklistBatch(batch as never); const error = null;
+        await insertBlacklistBatch(batch as never);
+        const error = null;
         if (error) throw error;
       }
 
@@ -81,14 +94,19 @@ export function useImportBlacklist() {
       let matchCount = 0;
       if (allEntries && partners) {
         for (const entry of allEntries) {
-          const entryName = String(entry.company_name || "").toLowerCase().trim();
-          const entryCountry = String(entry.country || "").toLowerCase().trim();
+          const entryName = String(entry.company_name || "")
+            .toLowerCase()
+            .trim();
+          const entryCountry = String(entry.country || "")
+            .toLowerCase()
+            .trim();
 
-          const match = partners.find(p => {
+          const match = partners.find((p) => {
             const pName = (p.company_name || "").toLowerCase().trim();
             const pCountry = (p.country_name || "").toLowerCase().trim();
             const nameMatch = pName === entryName || pName.includes(entryName) || entryName.includes(pName);
-            const countryMatch = pCountry === entryCountry || pCountry.includes(entryCountry) || entryCountry.includes(pCountry);
+            const countryMatch =
+              pCountry === entryCountry || pCountry.includes(entryCountry) || entryCountry.includes(pCountry);
             return nameMatch && countryMatch;
           });
 

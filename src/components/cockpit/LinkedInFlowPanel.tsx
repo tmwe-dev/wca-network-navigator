@@ -27,11 +27,9 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
   const [generateOutreach, setGenerateOutreach] = useState(true);
   const [deepSearchWeb, setDeepSearchWeb] = useState(true);
 
-  const withLinkedIn = selectedContacts.filter(c => c.linkedinUrl);
-  const _withoutLinkedIn = selectedContacts.filter(c => !c.linkedinUrl);
-  const progressPct = flow.progress.total > 0
-    ? Math.round((flow.progress.processed / flow.progress.total) * 100)
-    : 0;
+  const withLinkedIn = selectedContacts.filter((c) => c.linkedinUrl);
+  const _withoutLinkedIn = selectedContacts.filter((c) => !c.linkedinUrl);
+  const progressPct = flow.progress.total > 0 ? Math.round((flow.progress.processed / flow.progress.total) * 100) : 0;
 
   const estimatedMinutes = Math.ceil((withLinkedIn.length * delaySec) / 60);
 
@@ -82,9 +80,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
             {flow.currentContact && (
               <div className="flex items-center gap-2 text-xs">
                 <Zap className="w-3 h-3 text-primary animate-pulse" />
-                <span className="text-muted-foreground truncate">
-                  {flow.currentStep || flow.currentContact}
-                </span>
+                <span className="text-muted-foreground truncate">{flow.currentStep || flow.currentContact}</span>
               </div>
             )}
 
@@ -120,12 +116,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
             </div>
           </motion.div>
         ) : flow.phase === "completed" ? (
-          <motion.div
-            key="completed"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-3"
-          >
+          <motion.div key="completed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
             <div className="text-center py-3">
               <p className="text-sm font-medium text-foreground">✅ Flow completato</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -137,12 +128,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
             </Button>
           </motion.div>
         ) : flow.phase === "paused" ? (
-          <motion.div
-            key="paused"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-3"
-          >
+          <motion.div key="paused" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
             <Progress value={progressPct} className="h-2" />
             <p className="text-xs text-muted-foreground text-center">
               In pausa — {flow.progress.processed}/{flow.progress.total} completati
@@ -152,12 +138,7 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
             </Button>
           </motion.div>
         ) : (
-          <motion.div
-            key="config"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-4"
-          >
+          <motion.div key="config" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             {/* Stats */}
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div className="rounded-lg bg-muted/50 p-2.5 text-center">
@@ -218,7 +199,11 @@ export function LinkedInFlowPanel({ selectedContacts, onClose }: LinkedInFlowPan
                   <BrainCircuit className="w-3.5 h-3.5 text-muted-foreground" />
                   <Label className="text-xs">Deep Search Web (Partner Connect)</Label>
                 </div>
-                <Switch checked={deepSearchWeb} onCheckedChange={setDeepSearchWeb} disabled={!flow.partnerConnectAvailable} />
+                <Switch
+                  checked={deepSearchWeb}
+                  onCheckedChange={setDeepSearchWeb}
+                  disabled={!flow.partnerConnectAvailable}
+                />
               </div>
 
               <div className="flex items-center justify-between">

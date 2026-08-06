@@ -66,11 +66,7 @@ export async function dismissReminder(id: string): Promise<void> {
 }
 
 export async function listActiveReminders(groupId?: string | null): Promise<FunnemailReminderRow[]> {
-  let q = supabase
-    .from("funnemail_message_reminders")
-    .select("*")
-    .is("dismissed_at", null)
-    .is("deleted_at", null);
+  let q = supabase.from("funnemail_message_reminders").select("*").is("dismissed_at", null).is("deleted_at", null);
   if (groupId) q = q.eq("group_id", groupId);
   const { data, error } = await q.order("remind_at", { ascending: true });
   if (error) throw error;

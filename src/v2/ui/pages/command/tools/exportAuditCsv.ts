@@ -18,10 +18,8 @@ export const exportAuditCsvTool: Tool = {
     return {
       kind: "result",
       title: res?.error ? "Export fallito" : "Export audit pronto",
-      message: res?.error
-        ?? (res?.url
-          ? `CSV: ${res.url} (${res.rows ?? 0} righe)`
-          : res?.message ?? "Export completato."),
+      message:
+        res?.error ?? (res?.url ? `CSV: ${res.url} (${res.rows ?? 0} righe)` : (res?.message ?? "Export completato.")),
       meta: { count: res?.rows ?? 0, sourceLabel: "Edge · export-audit-csv" },
     };
   },

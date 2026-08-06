@@ -28,12 +28,14 @@ interface ReqBody {
   limit?: number; // max 50
 }
 
-const ExchangeSchema = z.object({
-  date: z.string().max(20).optional(),
-  channel: z.string().max(20).optional(),
-  direction: z.string().max(20).optional(),
-  gist: z.string().max(160).optional(),
-}).passthrough();
+const ExchangeSchema = z
+  .object({
+    date: z.string().max(20).optional(),
+    channel: z.string().max(20).optional(),
+    direction: z.string().max(20).optional(),
+    gist: z.string().max(160).optional(),
+  })
+  .passthrough();
 
 const SummarySchema = z.object({
   conversation_summary: z.string().max(1200),
@@ -54,15 +56,16 @@ Deno.serve(async (req) => {
     const body: ReqBody = await req.json();
     if (!body.user_id || (!body.partner_id && !body.email_address)) {
       endMetrics(metrics, false, 400);
-      return new Response(JSON.stringify({ error: "user_id + (partner_id|email_address) required" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "user_id + (partner_id|email_address) required" }), {
+        status: 400,
+        headers,
+      });
     }
     const limit = Math.max(5, Math.min(50, body.limit ?? 30));
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // Risolvi email_address chiave (per UNIQUE constraint user_id+email_address)
     let emailKey = body.email_address ?? null;
@@ -84,9 +87,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     // Conta messaggi totali (per detect "nuovo arrivato")
-    let countQ = supabase
-      .from("channel_messages")
-      .select("id", { count: "exact", head: true });
+    let countQ = supabase.from("channel_messages").select("id", { count: "exact", head: true });
     if (body.partner_id) countQ = countQ.eq("partner_id", body.partner_id);
     else countQ = countQ.or(`from_address.eq.${emailKey},to_address.eq.${emailKey}`);
     const { count: totalCount } = await countQ;
@@ -97,7 +98,10 @@ Deno.serve(async (req) => {
       const sameCount = (existing.interaction_count ?? 0) === total;
       if (sameCount && ageMs < DEBOUNCE_MS) {
         endMetrics(metrics, true, 200);
-        return new Response(JSON.stringify({ ok: true, skipped: "debounced", source: "cache" }), { status: 200, headers });
+        return new Response(JSON.stringify({ ok: true, skipped: "debounced", source: "cache" }), {
+          status: 200,
+          headers,
+        });
       }
     }
 
@@ -111,9 +115,13 @@ Deno.serve(async (req) => {
     else q = q.or(`from_address.eq.${emailKey},to_address.eq.${emailKey}`);
     const { data: msgs } = await q;
     const messages = (msgs ?? []) as Array<{
-      channel: string; direction: string; subject: string | null;
-      body_text: string | null; created_at: string;
-      from_address: string | null; to_address: string | null;
+      channel: string;
+      direction: string;
+      subject: string | null;
+      body_text: string | null;
+      created_at: string;
+      from_address: string | null;
+      to_address: string | null;
     }>;
 
     if (messages.length === 0) {
@@ -122,11 +130,15 @@ Deno.serve(async (req) => {
     }
 
     // Compatta i messaggi per il prompt (cronologico ascendente)
-    const compact = messages.slice().reverse().map((m, i) => {
-      const subjN = normalizeContent(m.subject ?? "", { source: "email-history", maxChars: 100 }).text;
-      const bodyN = normalizeContent(m.body_text ?? "", { source: "email-history", maxChars: 350 }).text;
-      return `[${i + 1}] ${m.created_at.slice(0, 10)} ${m.channel}/${m.direction} ${subjN ? `"${subjN}" ` : ""}${bodyN}`;
-    }).join("\n");
+    const compact = messages
+      .slice()
+      .reverse()
+      .map((m, i) => {
+        const subjN = normalizeContent(m.subject ?? "", { source: "email-history", maxChars: 100 }).text;
+        const bodyN = normalizeContent(m.body_text ?? "", { source: "email-history", maxChars: 350 }).text;
+        return `[${i + 1}] ${m.created_at.slice(0, 10)} ${m.channel}/${m.direction} ${subjN ? `"${subjN}" ` : ""}${bodyN}`;
+      })
+      .join("\n");
 
     // Prompt operativo editabile (Prompt Lab)
     let opBlock = "";
@@ -139,9 +151,12 @@ Deno.serve(async (req) => {
         limit: 2,
       });
       if (op.block) opBlock = op.block;
-    } catch { /* fail-safe */ }
+    } catch {
+      /* fail-safe */
+    }
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       endMetrics(metrics, false, 500);
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY missing" }), { status: 500, headers });
@@ -151,7 +166,9 @@ Deno.serve(async (req) => {
       "Sei il Conversation Summarizer del CRM. Produci un riassunto narrativo (max 800 char) della relazione con un contatto.",
       "Sii sobrio, fattuale, mai inventare. Lingua del summary = lingua dominante della corrispondenza.",
       opBlock || "",
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const userPrompt = `Contatto: ${emailKey}\nMessaggi cross-canale (${messages.length}, cronologico):\n\n${compact}\n\nUsa lo strumento build_summary.`;
 
@@ -159,12 +176,13 @@ Deno.serve(async (req) => {
     let parsed: z.infer<typeof SummarySchema> | null = null;
     try {
       const resp = await aiFetch({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          tools: [{
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        tools: [
+          {
             type: "function",
             function: {
               name: "build_summary",
@@ -174,7 +192,8 @@ Deno.serve(async (req) => {
                 properties: {
                   conversation_summary: { type: "string", maxLength: 1200 },
                   last_exchanges: {
-                    type: "array", maxItems: 5,
+                    type: "array",
+                    maxItems: 5,
                     items: {
                       type: "object",
                       properties: {
@@ -194,9 +213,10 @@ Deno.serve(async (req) => {
                 additionalProperties: false,
               },
             },
-          }],
-          tool_choice: { type: "function", function: { name: "build_summary" } },
-        });
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "build_summary" } },
+      });
       if (resp.ok) {
         const data = await resp.json();
         const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
@@ -205,7 +225,9 @@ Deno.serve(async (req) => {
           if (v.success) parsed = v.data;
         }
       }
-    } catch { /* fail-safe */ }
+    } catch {
+      /* fail-safe */
+    }
 
     if (!parsed) {
       endMetrics(metrics, false, 502);
@@ -243,9 +265,9 @@ Deno.serve(async (req) => {
   } catch (error: unknown) {
     logEdgeError("refresh-conversation-context", error);
     endMetrics(metrics, false, 500);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers },
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+      status: 500,
+      headers,
+    });
   }
 });

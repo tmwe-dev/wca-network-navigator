@@ -4,7 +4,6 @@
 import { toJsonValue } from "@/lib/typedJson";
 import { supabase } from "@/integrations/supabase/client";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("supervisorAuditLog");
 export interface AuditLogEntry {

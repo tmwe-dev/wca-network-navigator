@@ -4,7 +4,8 @@ export const VOICE_AUTONOMOUS_AGENTS: Record<string, AgentRegistryEntry> = {
   "voice-elevenlabs": {
     id: "voice-elevenlabs",
     displayName: "Voice Agent",
-    description: "Specialista voce ElevenLabs per sintesi e design vocale. Gestisce TTS e scenari di interazione vocale.",
+    description:
+      "Specialista voce ElevenLabs per sintesi e design vocale. Gestisce TTS e scenari di interazione vocale.",
     coreFile: "",
     avatarIcon: "Mic",
     avatarColor: "destructive",
@@ -34,7 +35,8 @@ export const VOICE_AUTONOMOUS_AGENTS: Record<string, AgentRegistryEntry> = {
   "agent-execute": {
     id: "agent-execute",
     displayName: "Agent Executor",
-    description: "Executor autonomo con approvazione workflow e gate controllo. Esegue decisioni approvate e azioni di sistema.",
+    description:
+      "Executor autonomo con approvazione workflow e gate controllo. Esegue decisioni approvate e azioni di sistema.",
     coreFile: "",
     avatarIcon: "Zap",
     avatarColor: "destructive",
@@ -64,7 +66,8 @@ export const VOICE_AUTONOMOUS_AGENTS: Record<string, AgentRegistryEntry> = {
   "mission-executor": {
     id: "mission-executor",
     displayName: "Mission Executor",
-    description: "Executor missioni con bulk update e autonomia controllata. Gestisce operazioni batch su grandi set di partner.",
+    description:
+      "Executor missioni con bulk update e autonomia controllata. Gestisce operazioni batch su grandi set di partner.",
     coreFile: "",
     avatarIcon: "Rocket",
     avatarColor: "destructive",

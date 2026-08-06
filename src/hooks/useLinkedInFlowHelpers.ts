@@ -9,7 +9,7 @@ import { countProcessedFlowItems, countFlowItemsByStatus } from "@/data/linkedin
 const log = createLogger("useLinkedInFlowHelpers");
 
 export function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function getProcessedCount(jobId: string): Promise<number> {

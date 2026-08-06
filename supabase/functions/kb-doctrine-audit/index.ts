@@ -31,7 +31,8 @@ const CANONICAL_FACTS_HINTS = ["fatti canonici", "canonical facts", "canonical-f
 
 // Numeri "canonici" da centralizzare: spedizioni/anno, partner, paesi, anni di attività.
 // Pattern intenzionalmente conservativo per evitare falsi positivi su prezzi/percentuali.
-const NUMBER_PATTERN = /\b(\d{1,3}(?:[.\s]\d{3})+|\d{4,6})\b\s*(spedizion|partner|aziende|paesi|operazion|uffici|sed[ie])\b/gi;
+const NUMBER_PATTERN =
+  /\b(\d{1,3}(?:[.\s]\d{3})+|\d{4,6})\b\s*(spedizion|partner|aziende|paesi|operazion|uffici|sed[ie])\b/gi;
 
 function normalize(content: string): string {
   return content
@@ -49,7 +50,9 @@ function hash(s: string): string {
 
 function cosine(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
-  let dot = 0, na = 0, nb = 0;
+  let dot = 0,
+    na = 0,
+    nb = 0;
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
     na += a[i] * a[i];
@@ -64,13 +67,10 @@ serve(async (req: Request) => {
   const cors = getCorsHeaders(req.headers.get("origin"));
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
     const body = await req.json().catch(() => ({}));
-    const triggeredBy: string = (body && typeof body.triggered_by === "string") ? body.triggered_by : "manual";
+    const triggeredBy: string = body && typeof body.triggered_by === "string" ? body.triggered_by : "manual";
     const semanticThreshold: number = typeof body?.semantic_threshold === "number" ? body.semantic_threshold : 0.92;
 
     const { data: rows, error } = await supabase
@@ -137,7 +137,12 @@ serve(async (req: Request) => {
 
     // 5) Distribuzione per family canonica (basata su mapping dedotto se family non settata)
     const familyDist: Record<KbFamily, number> = {
-      doctrine: 0, procedures: 0, personas: 0, playbooks: 0, glossary: 0, "data-schema": 0,
+      doctrine: 0,
+      procedures: 0,
+      personas: 0,
+      playbooks: 0,
+      glossary: 0,
+      "data-schema": 0,
     };
     for (const e of entries) {
       const fam = (e.family as KbFamily) ?? mapCategoryToFamily(e.category);
@@ -162,7 +167,9 @@ serve(async (req: Request) => {
       ...offenders.slice(0, 20).map((o) => `- [${o.id.slice(0, 8)}] ${o.title} → ${o.matches.join(", ")}`),
       ``,
       `## Exact duplicate groups (top 10)`,
-      ...exactDuplicateGroups.slice(0, 10).map((g) => `- ${g.length} copie: ${g.map((id) => id.slice(0, 8)).join(", ")}`),
+      ...exactDuplicateGroups
+        .slice(0, 10)
+        .map((g) => `- ${g.length} copie: ${g.map((id) => id.slice(0, 8)).join(", ")}`),
     ].join("\n");
 
     const proposedChanges =

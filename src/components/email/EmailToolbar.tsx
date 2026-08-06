@@ -26,9 +26,19 @@ interface EmailToolbarProps {
 }
 
 export function EmailToolbar({
-  emailLinks, newLinkLabel, newLinkUrl, selectedAttachments, previewOpen,
-  templatesByCategory, onInsertVariable, onAddLink, onRemoveLink,
-  onNewLinkLabelChange, onNewLinkUrlChange, onToggleAttachment, onTogglePreview,
+  emailLinks,
+  newLinkLabel,
+  newLinkUrl,
+  selectedAttachments,
+  previewOpen,
+  templatesByCategory,
+  onInsertVariable,
+  onAddLink,
+  onRemoveLink,
+  onNewLinkLabelChange,
+  onNewLinkUrlChange,
+  onToggleAttachment,
+  onTogglePreview,
 }: EmailToolbarProps): React.ReactElement {
   const hasTemplates = Object.keys(templatesByCategory).length > 0;
 
@@ -44,9 +54,12 @@ export function EmailToolbar({
         <PopoverContent className="w-auto p-2" align="end">
           <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Inserisci variabile</p>
           <div className="flex flex-col gap-1">
-            {VARIABLES.map(v => (
-              <button key={v} onClick={() => onInsertVariable(v)}
-                className="text-xs text-left px-2 py-1.5 rounded hover:bg-muted/50 font-mono text-primary transition-colors">
+            {VARIABLES.map((v) => (
+              <button
+                key={v}
+                onClick={() => onInsertVariable(v)}
+                className="text-xs text-left px-2 py-1.5 rounded hover:bg-muted/50 font-mono text-primary transition-colors"
+              >
                 {v}
               </button>
             ))}
@@ -60,7 +73,9 @@ export function EmailToolbar({
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0 relative" title="Link">
             <LinkIcon className="w-3.5 h-3.5 text-muted-foreground" />
             {emailLinks.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-primary text-primary-foreground text-[8px] rounded-full flex items-center justify-center">{emailLinks.length}</span>
+              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-primary text-primary-foreground text-[8px] rounded-full flex items-center justify-center">
+                {emailLinks.length}
+              </span>
             )}
           </Button>
         </PopoverTrigger>
@@ -75,9 +90,21 @@ export function EmailToolbar({
             </div>
           ))}
           <div className="flex gap-1 mt-1.5">
-            <Input placeholder="Etichetta" value={newLinkLabel} onChange={e => onNewLinkLabelChange(e.target.value)} className="flex-1 h-7 text-xs" />
-            <Input placeholder="https://..." value={newLinkUrl} onChange={e => onNewLinkUrlChange(e.target.value)} className="flex-1 h-7 text-xs" />
-            <Button size="sm" variant="outline" className="h-7 px-1.5" onClick={onAddLink}><Plus className="w-3 h-3" /></Button>
+            <Input
+              placeholder="Etichetta"
+              value={newLinkLabel}
+              onChange={(e) => onNewLinkLabelChange(e.target.value)}
+              className="flex-1 h-7 text-xs"
+            />
+            <Input
+              placeholder="https://..."
+              value={newLinkUrl}
+              onChange={(e) => onNewLinkUrlChange(e.target.value)}
+              className="flex-1 h-7 text-xs"
+            />
+            <Button size="sm" variant="outline" className="h-7 px-1.5" onClick={onAddLink}>
+              <Plus className="w-3 h-3" />
+            </Button>
           </div>
         </PopoverContent>
       </Popover>
@@ -89,7 +116,9 @@ export function EmailToolbar({
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0 relative" title="Allegati">
               <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
               {selectedAttachments.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-primary text-primary-foreground text-[8px] rounded-full flex items-center justify-center">{selectedAttachments.length}</span>
+                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-primary text-primary-foreground text-[8px] rounded-full flex items-center justify-center">
+                  {selectedAttachments.length}
+                </span>
               )}
             </Button>
           </PopoverTrigger>
@@ -98,10 +127,16 @@ export function EmailToolbar({
             {Object.entries(templatesByCategory).map(([cat, files]) => (
               <div key={cat} className="space-y-0.5">
                 {files.map((t) => (
-                  <label key={t.id} className="flex items-center gap-2 text-xs cursor-pointer p-1.5 rounded hover:bg-muted/30">
-                    <input type="checkbox" checked={selectedAttachments.includes(t.id)}
+                  <label
+                    key={t.id}
+                    className="flex items-center gap-2 text-xs cursor-pointer p-1.5 rounded hover:bg-muted/30"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedAttachments.includes(t.id)}
                       onChange={() => onToggleAttachment(t.id)}
-                      className="h-3.5 w-3.5 rounded" />
+                      className="h-3.5 w-3.5 rounded"
+                    />
                     <span className="truncate">{t.file_name}</span>
                   </label>
                 ))}
@@ -112,8 +147,13 @@ export function EmailToolbar({
       )}
 
       {/* Preview toggle */}
-      <Button variant={previewOpen ? "secondary" : "ghost"} size="sm" className="h-7 w-7 p-0" title="Anteprima"
-        onClick={onTogglePreview}>
+      <Button
+        variant={previewOpen ? "secondary" : "ghost"}
+        size="sm"
+        className="h-7 w-7 p-0"
+        title="Anteprima"
+        onClick={onTogglePreview}
+      >
         <Eye className="w-3.5 h-3.5 text-muted-foreground" />
       </Button>
     </div>

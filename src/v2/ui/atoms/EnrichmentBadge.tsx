@@ -38,9 +38,10 @@ function safeDate(d: string | null | undefined): string {
 }
 
 export function EnrichmentBadge({ partner, variant = "icon", className }: Props): React.ReactElement | null {
-  const enrichment = (partner.enrichment_data && typeof partner.enrichment_data === "object")
-    ? (partner.enrichment_data as Record<string, unknown>)
-    : null;
+  const enrichment =
+    partner.enrichment_data && typeof partner.enrichment_data === "object"
+      ? (partner.enrichment_data as Record<string, unknown>)
+      : null;
   const deepSearchAt = enrichment && typeof enrichment.deep_search_at === "string" ? enrichment.deep_search_at : null;
   const enrichedAt = partner.enriched_at ?? null;
 
@@ -52,10 +53,12 @@ export function EnrichmentBadge({ partner, variant = "icon", className }: Props)
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className={cn(
-              "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium",
-              className,
-            )}>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium",
+                className,
+              )}
+            >
               <Brain className="w-3 h-3" />
               Deep Search
               {enrichedAt && <Sparkles className="w-2.5 h-2.5 text-emerald-500" />}
@@ -89,10 +92,12 @@ export function EnrichmentBadge({ partner, variant = "icon", className }: Props)
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={cn(
-            "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-medium",
-            className,
-          )}>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-medium",
+              className,
+            )}
+          >
             <Sparkles className="w-3 h-3" /> Arricchito
           </span>
         </TooltipTrigger>

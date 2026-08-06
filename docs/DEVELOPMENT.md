@@ -1,10 +1,12 @@
 # Development Guide
 
 ## Prerequisites
+
 - Node.js 20+
 - npm 10+
 
 ## Setup
+
 1. Clone the repository
 2. `npm install`
 3. Copy `.env.example` to `.env` and configure variables
@@ -12,19 +14,19 @@
 
 ## Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | Production build |
-| `npm run lint` | ESLint strict (0 warnings) |
-| `npm run lint:fix` | ESLint with auto-fix |
-| `npm run format` | Prettier format |
-| `npm run typecheck` | TypeScript check |
-| `npm run test` | Vitest run |
-| `npm run test:coverage` | Vitest with coverage report |
-| `npm run test:ci` | Vitest with coverage + verbose (CI) |
-| `npm run validate` | lint + typecheck + test |
-| `npm run e2e` | Playwright E2E tests |
+| Command                 | Description                         |
+| ----------------------- | ----------------------------------- |
+| `npm run dev`           | Start Vite dev server               |
+| `npm run build`         | Production build                    |
+| `npm run lint`          | ESLint strict (0 warnings)          |
+| `npm run lint:fix`      | ESLint with auto-fix                |
+| `npm run format`        | Prettier format                     |
+| `npm run typecheck`     | TypeScript check                    |
+| `npm run test`          | Vitest run                          |
+| `npm run test:coverage` | Vitest with coverage report         |
+| `npm run test:ci`       | Vitest with coverage + verbose (CI) |
+| `npm run validate`      | lint + typecheck + test             |
+| `npm run e2e`           | Playwright E2E tests                |
 
 ## Architecture
 

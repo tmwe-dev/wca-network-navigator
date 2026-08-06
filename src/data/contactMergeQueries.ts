@@ -25,7 +25,10 @@ export async function updateImportedContact(id: string, patch: ImportedContactsU
  * `emails` NON esiste affatto (verificato su information_schema):
  * niente query, ritorna un errore esplicito che il chiamante logga come warning.
  */
-export async function reassignActivitiesContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {
+export async function reassignActivitiesContact(
+  fromContactId: string,
+  toContactId: string,
+): Promise<{ error: { message: string } | null }> {
   void fromContactId;
   void toContactId;
   return {
@@ -33,7 +36,10 @@ export async function reassignActivitiesContact(fromContactId: string, toContact
   };
 }
 
-export async function reassignEmailsContact(fromContactId: string, toContactId: string): Promise<{ error: { message: string } | null }> {
+export async function reassignEmailsContact(
+  fromContactId: string,
+  toContactId: string,
+): Promise<{ error: { message: string } | null }> {
   void fromContactId;
   void toContactId;
   return unavailableRead<{ error: { message: string } | null }>("emails", {

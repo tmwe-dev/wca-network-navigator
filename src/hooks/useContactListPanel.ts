@@ -56,9 +56,7 @@ function listReducer(state: ListState, action: ListAction): ListState {
     case "REMOVE_INLINE_FILTER":
       return {
         ...state,
-        inlineFilters: state.inlineFilters.filter(
-          (f) => !(f.field === action.field && f.value === action.value),
-        ),
+        inlineFilters: state.inlineFilters.filter((f) => !(f.field === action.field && f.value === action.value)),
       };
     case "CLEAR_INLINE_FILTERS":
       return { ...state, inlineFilters: [] };
@@ -128,7 +126,7 @@ export function useContactListPanel() {
     const allowedSortFields = new Set(["company", "name", "country", "city", "origin"]);
     if (gf.sortBy === "recent") return "recent";
     const field = allowedSortFields.has(gf.sortBy) ? gf.sortBy : state.sortField;
-    const dir = state.sortField === field ? state.sortDir ?? "asc" : "asc";
+    const dir = state.sortField === field ? (state.sortDir ?? "asc") : "asc";
     return `${field}_${dir}`;
   }, [gf.sortBy, state.sortField, state.sortDir]);
 
@@ -213,19 +211,25 @@ export function useContactListPanel() {
     dispatch({ type: "REMOVE_INLINE_FILTER", field, value });
   }, []);
 
-  const handleSortClick = useCallback((field: string) => {
-    const current = state.sortField === field ? state.sortDir : null;
-    let nextDir: SortDir;
-    if (current == null) nextDir = "asc";
-    else if (current === "asc") nextDir = "desc";
-    else nextDir = null;
-    dispatch({ type: "SET_SORT", field, dir: nextDir });
-    setSortBy(field);
-  }, [setSortBy, state.sortField, state.sortDir]);
+  const handleSortClick = useCallback(
+    (field: string) => {
+      const current = state.sortField === field ? state.sortDir : null;
+      let nextDir: SortDir;
+      if (current == null) nextDir = "asc";
+      else if (current === "asc") nextDir = "desc";
+      else nextDir = null;
+      dispatch({ type: "SET_SORT", field, dir: nextDir });
+      setSortBy(field);
+    },
+    [setSortBy, state.sortField, state.sortDir],
+  );
 
-  const handleTabClick = useCallback((key: string) => {
-    setCrmGroupTab(key === activeGroupTab ? "" : key);
-  }, [activeGroupTab, setCrmGroupTab]);
+  const handleTabClick = useCallback(
+    (key: string) => {
+      setCrmGroupTab(key === activeGroupTab ? "" : key);
+    },
+    [activeGroupTab, setCrmGroupTab],
+  );
 
   const handleDelete = useCallback(async () => {
     const ids = Array.from(selection.selectedIds);
@@ -249,7 +253,9 @@ export function useContactListPanel() {
         body: { contactIds: Array.from(selection.selectedIds) },
         context: "ContactListPanel.deduplicate_contacts",
       });
-      toast({ title: `✅ Consolidati ${data?.mergedGroups || 0} gruppi, rimossi ${data?.deletedRecords || 0} duplicati` });
+      toast({
+        title: `✅ Consolidati ${data?.mergedGroups || 0} gruppi, rimossi ${data?.deletedRecords || 0} duplicati`,
+      });
       selection.clear();
       qc.invalidateQueries({ queryKey: queryKeys.contacts.paginated() });
       qc.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });

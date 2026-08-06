@@ -109,9 +109,7 @@ export function EntityRow({
   className,
   compact = false,
 }: EntityRowProps): React.ReactElement {
-  const flagNode = (
-    <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />
-  );
+  const flagNode = <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />;
   const flagInteractive = onCountryClick && countryCode;
   const cityInteractive = onCityClick && city;
   const hasMultiline = !!previewSlot || !!extraRowsSlot;
@@ -121,23 +119,17 @@ export function EntityRow({
       className={cn(
         "relative grid gap-2 px-2 py-2 rounded-lg border bg-card/40 transition-all overflow-hidden",
         hasMultiline ? "items-start" : "items-center",
-        compact
-          ? "grid-cols-[36px_44px_minmax(0,1fr)_56px]"
-          : "grid-cols-[44px_56px_minmax(0,1fr)_200px_96px]",
+        compact ? "grid-cols-[36px_44px_minmax(0,1fr)_56px]" : "grid-cols-[44px_56px_minmax(0,1fr)_200px_96px]",
         TONE_BORDER[tone],
         selected && "ring-1 ring-primary/40 bg-primary/[0.04]",
-        opened && "ring-1 ring-primary/60 border-primary/60 bg-primary/[0.07] shadow-[0_0_0_1px_hsl(var(--primary)/0.25)]",
+        opened &&
+          "ring-1 ring-primary/60 border-primary/60 bg-primary/[0.07] shadow-[0_0_0_1px_hsl(var(--primary)/0.25)]",
         onClick && "cursor-pointer",
-        className
+        className,
       )}
     >
       {/* Striscia colore */}
-      <div
-        className={cn(
-          "absolute left-0 top-0 bottom-0 w-[3px] rounded-l",
-          TONE_STRIPE[tone]
-        )}
-      />
+      <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] rounded-l", TONE_STRIPE[tone])} />
 
       {/* Col 1: checkbox + chevron */}
       <div
@@ -183,11 +175,7 @@ export function EntityRow({
             {previewSlot}
           </div>
         )}
-        {extraRowsSlot && (
-          <div className="flex flex-col gap-0.5 min-w-0 mt-0.5">
-            {extraRowsSlot}
-          </div>
-        )}
+        {extraRowsSlot && <div className="flex flex-col gap-0.5 min-w-0 mt-0.5">{extraRowsSlot}</div>}
         {/* Riga canali — sempre allineata a sinistra, con wrap (richiesta utente). */}
         {!compact && channels && (
           <div className="flex items-center justify-start flex-wrap gap-1.5 min-w-0 mt-1">
@@ -203,11 +191,9 @@ export function EntityRow({
         )}
         {compact && (city || channels || score != null) && (
           <div className="flex items-center gap-2 min-w-0 mt-0.5 flex-wrap">
-            {recencySlot && (
-              <span className="flex items-center">{recencySlot}</span>
-            )}
-            {city && (
-              cityInteractive ? (
+            {recencySlot && <span className="flex items-center">{recencySlot}</span>}
+            {city &&
+              (cityInteractive ? (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -221,11 +207,8 @@ export function EntityRow({
                   {city}
                 </button>
               ) : (
-                <span className="text-[11px] text-foreground truncate font-medium max-w-[40%]">
-                  {city}
-                </span>
-              )
-            )}
+                <span className="text-[11px] text-foreground truncate font-medium max-w-[40%]">{city}</span>
+              ))}
             {channels && (
               <ChannelIcons
                 email={channels.email}
@@ -244,11 +227,7 @@ export function EntityRow({
       {/* Col 4 (solo wide): città + canali + score */}
       {!compact && (
         <div className="flex flex-col gap-0.5 min-w-0">
-          {recencySlot && (
-            <div className="flex items-center min-w-0">
-              {recencySlot}
-            </div>
-          )}
+          {recencySlot && <div className="flex items-center min-w-0">{recencySlot}</div>}
           <div className="text-[12px] text-foreground truncate font-medium">
             {city ? (
               cityInteractive ? (

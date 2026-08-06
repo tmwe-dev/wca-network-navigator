@@ -13,9 +13,7 @@ const REFRESH_DAYS = 30;
 export function BlacklistStaleBanner(): React.ReactElement | null {
   const { data: stats } = useBlacklistStats();
   const lastUpdated = stats?.lastUpdated ?? null;
-  const days = lastUpdated
-    ? Math.floor((Date.now() - new Date(lastUpdated).getTime()) / 86400000)
-    : null;
+  const days = lastUpdated ? Math.floor((Date.now() - new Date(lastUpdated).getTime()) / 86400000) : null;
 
   // Se non c'è ancora alcun import e non abbiamo voci, non mostrare nulla
   // (evita rumore su workspace vuoti / nuovi). Se invece esistono già voci ma
@@ -36,8 +34,8 @@ export function BlacklistStaleBanner(): React.ReactElement | null {
         <span className="truncate">
           {isMissing
             ? "Blacklist mai aggiornata."
-            : `Blacklist non aggiornata da ${days} giorni (limite ${REFRESH_DAYS}g).`}
-          {" "}Carica il file più recente esportato da WCA World.
+            : `Blacklist non aggiornata da ${days} giorni (limite ${REFRESH_DAYS}g).`}{" "}
+          Carica il file più recente esportato da WCA World.
         </span>
       </div>
       <Link

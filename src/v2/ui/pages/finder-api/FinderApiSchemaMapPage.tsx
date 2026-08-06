@@ -18,12 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, RefreshCw, Trash2, Save, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,8 +46,15 @@ const TMWE_OPS = [
 ] as const;
 
 const ROLES: SchemaRole[] = [
-  "id_interno", "tracking_code", "data", "stato",
-  "note", "servizio", "cliente", "contatto", "altro",
+  "id_interno",
+  "tracking_code",
+  "data",
+  "stato",
+  "note",
+  "servizio",
+  "cliente",
+  "contatto",
+  "altro",
 ];
 
 const ROLE_COLORS: Record<SchemaRole, string> = {
@@ -110,68 +113,68 @@ const FinderApiSchemaMapPage = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <PageTitleHeader
-        icon={Database}
-        title="Finder API"
-        subtitle="Schema 443 endpoint"
-      />
+      <PageTitleHeader icon={Database} title="Finder API" subtitle="Schema 443 endpoint" />
       <CommandPageBackButton currentPath="/v2/finder-api/schema" />
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-6">
-      <div>
-        <p className="text-sm text-muted-foreground">
-          Catalogo dei 443 endpoint TMWE Findair + mappa campi→ruolo per le op più usate.
-          Tutto è iniettato nel prompt dell'agente Finder API per evitare ricerche cieche.
-        </p>
-      </div>
-
-      <Tabs defaultValue="catalog">
-        <TabsList>
-          <TabsTrigger value="catalog">Catalogo (443 endpoint)</TabsTrigger>
-          <TabsTrigger value="schema">Schema Map (campi → ruoli)</TabsTrigger>
-        </TabsList>
-        <TabsContent value="catalog" className="mt-4">
-          <FinderApiCatalogTab />
-        </TabsContent>
-        <TabsContent value="schema" className="mt-4 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Discover campi da un'op</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Operazione</label>
-            <Select value={discoverOp} onValueChange={setDiscoverOp}>
-              <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {TMWE_OPS.map((op) => (
-                  <SelectItem key={op} value={op}>{op}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleDiscover} disabled={discovering}>
-            {discovering ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Chiama op e registra campi mancanti
-          </Button>
-        </CardContent>
-      </Card>
-
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" /> Caricamento mappa…
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Catalogo dei 443 endpoint TMWE Findair + mappa campi→ruolo per le op più usate. Tutto è iniettato nel prompt
+            dell'agente Finder API per evitare ricerche cieche.
+          </p>
         </div>
-      ) : (
-        Object.entries(grouped).map(([op, fields]) => (
-          <SchemaOpTable key={op} op={op} fields={fields} />
-        ))
-      )}
-      {!isLoading && Object.keys(grouped).length === 0 && (
-        <div className="text-sm text-muted-foreground">
-          Nessun campo mappato. Usa "Discover" per iniziare.
-        </div>
-      )}
-        </TabsContent>
-      </Tabs>
+
+        <Tabs defaultValue="catalog">
+          <TabsList>
+            <TabsTrigger value="catalog">Catalogo (443 endpoint)</TabsTrigger>
+            <TabsTrigger value="schema">Schema Map (campi → ruoli)</TabsTrigger>
+          </TabsList>
+          <TabsContent value="catalog" className="mt-4">
+            <FinderApiCatalogTab />
+          </TabsContent>
+          <TabsContent value="schema" className="mt-4 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Discover campi da un'op</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-end gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Operazione</label>
+                  <Select value={discoverOp} onValueChange={setDiscoverOp}>
+                    <SelectTrigger className="w-56">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TMWE_OPS.map((op) => (
+                        <SelectItem key={op} value={op}>
+                          {op}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleDiscover} disabled={discovering}>
+                  {discovering ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                  )}
+                  Chiama op e registra campi mancanti
+                </Button>
+              </CardContent>
+            </Card>
+
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" /> Caricamento mappa…
+              </div>
+            ) : (
+              Object.entries(grouped).map(([op, fields]) => <SchemaOpTable key={op} op={op} fields={fields} />)
+            )}
+            {!isLoading && Object.keys(grouped).length === 0 && (
+              <div className="text-sm text-muted-foreground">Nessun campo mappato. Usa "Discover" per iniziare.</div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
@@ -209,16 +212,16 @@ const FinderApiSchemaMapPage = () => {
     const [role, setRole] = useState<SchemaRole>(row.role);
     const [description, setDescription] = useState(row.description ?? "");
     const [example, setExample] = useState(row.example ?? "");
-    const dirty =
-      role !== row.role ||
-      description !== (row.description ?? "") ||
-      example !== (row.example ?? "");
+    const dirty = role !== row.role || description !== (row.description ?? "") || example !== (row.example ?? "");
 
     async function save() {
       try {
         await upsertFinderApiSchemaField({
-          op: row.op, field: row.field, role,
-          description, example,
+          op: row.op,
+          field: row.field,
+          role,
+          description,
+          example,
         });
         toast.success(`${row.field} salvato.`);
         qc.invalidateQueries({ queryKey: finderApiSchemaKeys.all });
@@ -248,7 +251,11 @@ const FinderApiSchemaMapPage = () => {
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </TableCell>
@@ -261,11 +268,7 @@ const FinderApiSchemaMapPage = () => {
           />
         </TableCell>
         <TableCell>
-          <Input
-            value={example}
-            onChange={(e) => setExample(e.target.value)}
-            className="h-8 font-mono text-xs"
-          />
+          <Input value={example} onChange={(e) => setExample(e.target.value)} className="h-8 font-mono text-xs" />
         </TableCell>
         <TableCell className="text-right">
           <div className="flex justify-end gap-1">

@@ -11,9 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Activity, WifiOff, Wifi, Pause, Play, Bot, Mail, Moon, Radio, Coins,
-} from "lucide-react";
+import { Activity, WifiOff, Wifi, Pause, Play, Bot, Mail, Moon, Radio, Coins } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
@@ -66,7 +64,8 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
           : "I cron job riprenderanno alla prossima schedulazione.",
       });
     },
-    onError: (e) => toast({ title: "Errore toggle cron", description: String((e as Error).message), variant: "destructive" }),
+    onError: (e) =>
+      toast({ title: "Errore toggle cron", description: String((e as Error).message), variant: "destructive" }),
   });
 
   // Determina colore globale
@@ -84,23 +83,18 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
     ? "Offline"
     : cronPaused
       ? "Cron in pausa"
-    : outreachQueue.paused
-      ? "Coda in pausa"
-      : globalSync.nightPause
-        ? "Pausa notturna"
-        : isBusy
-          ? `${outreachQueue.pendingCount} in coda`
-          : "Tutto OK";
+      : outreachQueue.paused
+        ? "Coda in pausa"
+        : globalSync.nightPause
+          ? "Pausa notturna"
+          : isBusy
+            ? `${outreachQueue.pendingCount} in coda`
+            : "Tutto OK";
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2 text-xs"
-          aria-label={`Stato sistema: ${summary}`}
-        >
+        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" aria-label={`Stato sistema: ${summary}`}>
           <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
           {outreachQueue.pendingCount > 0 && (
             <Badge variant="outline" className="h-4 px-1 text-[10px] tabular-nums">
@@ -141,9 +135,13 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
             onClick={() => outreachQueue.setPaused(!outreachQueue.paused)}
           >
             {outreachQueue.paused ? (
-              <><Play className="h-3 w-3 mr-1" /> Riprendi</>
+              <>
+                <Play className="h-3 w-3 mr-1" /> Riprendi
+              </>
             ) : (
-              <><Pause className="h-3 w-3 mr-1" /> Pausa</>
+              <>
+                <Pause className="h-3 w-3 mr-1" /> Pausa
+              </>
             )}
           </Button>
         </div>
@@ -153,14 +151,13 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
           <div className="flex items-center gap-2">
             <Moon className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Pausa notturna</span>
-            {globalSync.isNightTime && <Badge variant="outline" className="h-4 px-1 text-[10px]">notte</Badge>}
+            {globalSync.isNightTime && (
+              <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                notte
+              </Badge>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            onClick={globalSync.toggleNightPause}
-          >
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={globalSync.toggleNightPause}>
             {globalSync.nightPause ? "Disattiva" : "Attiva"}
           </Button>
         </div>
@@ -192,7 +189,15 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
             disabled={cronToggle.isPending}
             onClick={() => cronToggle.mutate(!cronPaused)}
           >
-            {cronPaused ? (<><Play className="h-3 w-3 mr-1" /> Riprendi</>) : (<><Pause className="h-3 w-3 mr-1" /> Pausa tutto</>)}
+            {cronPaused ? (
+              <>
+                <Play className="h-3 w-3 mr-1" /> Riprendi
+              </>
+            ) : (
+              <>
+                <Pause className="h-3 w-3 mr-1" /> Pausa tutto
+              </>
+            )}
           </Button>
         </div>
 
@@ -202,7 +207,9 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
             <Coins className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Token live & per funzione</span>
           </div>
-          <Link to="/v2/token-cockpit" className="text-[11px] underline text-primary">Apri cockpit</Link>
+          <Link to="/v2/token-cockpit" className="text-[11px] underline text-primary">
+            Apri cockpit
+          </Link>
         </div>
 
         {/* Detail bar (riusa componenti legacy per non perdere info) */}

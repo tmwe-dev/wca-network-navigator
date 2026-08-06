@@ -46,10 +46,7 @@ Deno.serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as ProxyBody;
     const opName = body.op;
     if (!opName || typeof opName !== "string") {
-      return new Response(
-        JSON.stringify({ error: "UNKNOWN_OP", code: "VALIDATION_ERROR" }),
-        { status: 400, headers },
-      );
+      return new Response(JSON.stringify({ error: "UNKNOWN_OP", code: "VALIDATION_ERROR" }), { status: 400, headers });
     }
 
     const svc = serviceClient();
@@ -64,14 +61,11 @@ Deno.serve(async (req) => {
 
     if (catRow) {
       if (!catRow.enabled) {
-        return new Response(
-          JSON.stringify({ error: "OP_DISABLED", code: "FORBIDDEN" }),
-          { status: 403, headers },
-        );
+        return new Response(JSON.stringify({ error: "OP_DISABLED", code: "FORBIDDEN" }), { status: 403, headers });
       }
       const method = String(catRow.method).toUpperCase();
       op = {
-        method: (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") ? "POST" : "GET",
+        method: method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE" ? "POST" : "GET",
         path: catRow.path as string,
         identity: (catRow.identity as "user" | "system") ?? "user",
         scope: Array.isArray(catRow.scopes) && catRow.scopes.length ? catRow.scopes[0] : "profile:read",
@@ -80,18 +74,15 @@ Deno.serve(async (req) => {
       // 2) Fallback whitelist hard-coded (backward-compat se sync non eseguito)
       op = TMWE_OPS[opName as TmweOpName];
     } else {
-      return new Response(
-        JSON.stringify({ error: "UNKNOWN_OP", code: "VALIDATION_ERROR" }),
-        { status: 400, headers },
-      );
+      return new Response(JSON.stringify({ error: "UNKNOWN_OP", code: "VALIDATION_ERROR" }), { status: 400, headers });
     }
 
     const identity = body.identity ?? op.identity;
     if (identity !== op.identity) {
-      return new Response(
-        JSON.stringify({ error: "IDENTITY_MISMATCH", code: "VALIDATION_ERROR" }),
-        { status: 400, headers },
-      );
+      return new Response(JSON.stringify({ error: "IDENTITY_MISMATCH", code: "VALIDATION_ERROR" }), {
+        status: 400,
+        headers,
+      });
     }
 
     const startedAt = Date.now();
@@ -112,10 +103,10 @@ Deno.serve(async (req) => {
           latency_ms: Date.now() - startedAt,
           error: "TMWE_NOT_CONNECTED",
         });
-        return new Response(
-          JSON.stringify({ error: "TMWE_NOT_CONNECTED", code: "NOT_FOUND" }),
-          { status: 412, headers },
-        );
+        return new Response(JSON.stringify({ error: "TMWE_NOT_CONNECTED", code: "NOT_FOUND" }), {
+          status: 412,
+          headers,
+        });
       }
       bearer = rec.access_token;
       tmweUserId = rec.tmwe_user_id;
@@ -125,7 +116,8 @@ Deno.serve(async (req) => {
 
     // best-effort: aggiorna timestamp ultima chiamata
     if (catRow) {
-      svc.from("tmwe_api_catalog")
+      svc
+        .from("tmwe_api_catalog")
         .update({ last_called_at: new Date().toISOString() })
         .eq("op", opName)
         .then(() => undefined);
@@ -161,9 +153,6 @@ Deno.serve(async (req) => {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    return new Response(
-      JSON.stringify({ error: message, code: "INTERNAL_ERROR" }),
-      { status: 500, headers },
-    );
+    return new Response(JSON.stringify({ error: message, code: "INTERNAL_ERROR" }), { status: 500, headers });
   }
 });

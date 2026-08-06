@@ -29,8 +29,15 @@ interface ResumeSetters {
 
 export function useAcquisitionResume(setters: ResumeSetters) {
   const {
-    setActiveJobId, setQueue, setSelectedIds, setCompletedCount,
-    setLiveStats, setPipelineStatus, setResumeLoading, pauseRef, cancelRef,
+    setActiveJobId,
+    setQueue,
+    setSelectedIds,
+    setCompletedCount,
+    setLiveStats,
+    setPipelineStatus,
+    setResumeLoading,
+    pauseRef,
+    cancelRef,
   } = setters;
 
   useEffect(() => {
@@ -66,16 +73,16 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           }
 
           // Enrich remaining from directory_cache
-          const stillMissing = queueItems.filter(q => q.company_name.startsWith("WCA "));
+          const stillMissing = queueItems.filter((q) => q.company_name.startsWith("WCA "));
           if (stillMissing.length > 0) {
             const cacheEntries = await findDirectoryCacheMembers(job.country_code);
             if (cacheEntries) {
               for (const entry of cacheEntries) {
                 const members = (entry.members as unknown[]) || [];
-              for (const raw of members) {
+                for (const raw of members) {
                   const m = raw as Record<string, unknown>;
                   if (!m.wca_id || !m.company_name) continue;
-                  const qi = stillMissing.find(q => q.wca_id === (m.wca_id as number));
+                  const qi = stillMissing.find((q) => q.wca_id === (m.wca_id as number));
                   if (qi) {
                     qi.company_name = String(m.company_name);
                     if (m.city) qi.city = String(m.city);
@@ -86,7 +93,7 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           }
 
           // If still missing names, re-scan directory
-          const stillMissing2 = queueItems.filter(q => q.company_name.startsWith("WCA "));
+          const stillMissing2 = queueItems.filter((q) => q.company_name.startsWith("WCA "));
           if (stillMissing2.length > 0) {
             try {
               // 🤖 Claude Engine V8: usa wcaScraper bridge invece di Edge Function
@@ -100,16 +107,16 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                   wca_id: m.wca_id,
                 }));
                 await upsertDirectoryCache({
-                    country_code: job.country_code,
-                    network_name: job.network_name || "",
-                    members: toJsonValue(membersJson),
-                    total_results: scanResult.members.length,
-                    scanned_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  });
+                  country_code: job.country_code,
+                  network_name: job.network_name || "",
+                  members: toJsonValue(membersJson),
+                  total_results: scanResult.members.length,
+                  scanned_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
                 for (const m of scanResult.members) {
                   if (!m.wca_id || !m.company_name) continue;
-                  const qi = stillMissing2.find(q => q.wca_id === m.wca_id);
+                  const qi = stillMissing2.find((q) => q.wca_id === m.wca_id);
                   if (qi) {
                     qi.company_name = m.company_name;
                     if (m.city) qi.city = m.city;
@@ -117,7 +124,9 @@ export function useAcquisitionResume(setters: ResumeSetters) {
                 }
               }
             } catch (scanErr) {
-              log.warn("re-scan directory failed", { message: scanErr instanceof Error ? scanErr.message : String(scanErr) });
+              log.warn("re-scan directory failed", {
+                message: scanErr instanceof Error ? scanErr.message : String(scanErr),
+              });
             }
           }
 
@@ -155,7 +164,9 @@ export function useAcquisitionResume(setters: ResumeSetters) {
           }
         }
       } catch (err) {
-        log.error("check active acquisition jobs failed", { message: err instanceof Error ? err.message : String(err) });
+        log.error("check active acquisition jobs failed", {
+          message: err instanceof Error ? err.message : String(err),
+        });
       } finally {
         setResumeLoading(false);
       }

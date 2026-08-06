@@ -50,6 +50,6 @@ describe("HoldingPatternIndicator", () => {
   it("buttons are disabled when no onChangeStatus", () => {
     renderWithProviders(React.createElement(HoldingPatternIndicator, { status: "new" }));
     const buttons = screen.getAllByRole("button");
-    buttons.forEach(btn => expect(btn).toBeDisabled());
+    buttons.forEach((btn) => expect(btn).toBeDisabled());
   });
 });

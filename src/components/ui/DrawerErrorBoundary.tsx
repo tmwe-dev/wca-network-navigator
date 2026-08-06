@@ -10,7 +10,8 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("DrawerErrorBoundary");
 
-const DYNAMIC_IMPORT_ERROR_RE = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|ChunkLoadError/i;
+const DYNAMIC_IMPORT_ERROR_RE =
+  /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|ChunkLoadError/i;
 const CHUNK_RELOAD_KEY = "__vite_chunk_reload_at__";
 const CHUNK_RELOAD_COOLDOWN_MS = 15000;
 

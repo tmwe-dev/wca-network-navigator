@@ -1,6 +1,11 @@
 import { useState } from "react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +34,11 @@ interface Props {
 }
 
 export default function EmailEditLearningDialog({
-  open, onClose, analysis, onSendAndSave, onSendWithoutSaving,
+  open,
+  onClose,
+  analysis,
+  onSendAndSave,
+  onSendWithoutSaving,
 }: Props) {
   const [saving, setSaving] = useState(false);
 
@@ -40,7 +49,10 @@ export default function EmailEditLearningDialog({
     }
     setSaving(true);
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       await createMemory({
@@ -70,7 +82,12 @@ export default function EmailEditLearningDialog({
   const LengthIcon = lengthIcon;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

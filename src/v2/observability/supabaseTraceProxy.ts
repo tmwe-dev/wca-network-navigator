@@ -49,7 +49,7 @@ function wrapBuilder(table: string, builder: unknown): unknown {
     }
   }
 
-  b.then = (((onFulfilled?: AnyFn, onRejected?: AnyFn) => {
+  b.then = ((onFulfilled?: AnyFn, onRejected?: AnyFn) => {
     const start = Date.now();
     return originalThen(
       (res: unknown) => {
@@ -65,7 +65,9 @@ function wrapBuilder(table: string, builder: unknown): unknown {
           status: r?.error ? "error" : "success",
           duration_ms: Date.now() - start,
           payload_summary: { table, op, count, status: r?.status },
-          error: r?.error ? { message: String(r.error.message ?? r.error), code: r.error.code as string | undefined } : undefined,
+          error: r?.error
+            ? { message: String(r.error.message ?? r.error), code: r.error.code as string | undefined }
+            : undefined,
         });
         return onFulfilled ? onFulfilled(res) : res;
       },
@@ -80,13 +82,16 @@ function wrapBuilder(table: string, builder: unknown): unknown {
           status: "error",
           duration_ms: Date.now() - start,
           payload_summary: { table },
-          error: { message: e?.message !== undefined ? String(e.message) : String(err), code: e?.code as string | undefined },
+          error: {
+            message: e?.message !== undefined ? String(e.message) : String(err),
+            code: e?.code as string | undefined,
+          },
         });
         if (onRejected) return onRejected(err);
         throw err;
       },
     );
-  }) as AnyFn);
+  }) as AnyFn;
 
   return builder;
 }
@@ -120,7 +125,9 @@ export function installSupabaseTraceProxy(): void {
               status: rr?.error ? "error" : "success",
               duration_ms: Date.now() - start,
               payload_summary: { rpc: String(fnName) },
-              error: rr?.error ? { message: String(rr.error.message ?? rr.error), code: rr.error.code as string | undefined } : undefined,
+              error: rr?.error
+                ? { message: String(rr.error.message ?? rr.error), code: rr.error.code as string | undefined }
+                : undefined,
             });
             return ok ? ok(res) : res;
           },

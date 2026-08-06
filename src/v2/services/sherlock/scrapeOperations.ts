@@ -66,10 +66,7 @@ export function makeStepResult(args: {
   };
 }
 
-export function buildFinalSummary(
-  consolidated: Record<string, unknown>,
-  results: SherlockStepResult[],
-): string {
+export function buildFinalSummary(consolidated: Record<string, unknown>, results: SherlockStepResult[]): string {
   const ok = results.filter((r) => r.status === "done" || r.status === "cached").length;
   const skipped = results.filter((r) => r.status === "skipped").length;
   const errors = results.filter((r) => r.status === "error").length;

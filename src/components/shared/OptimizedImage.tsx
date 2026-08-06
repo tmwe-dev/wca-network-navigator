@@ -10,15 +10,7 @@ interface OptimizedImageProps {
   onError?: React.ReactEventHandler<HTMLImageElement>;
 }
 
-export function OptimizedImage({
-  src,
-  alt,
-  width,
-  height,
-  className,
-  loading = "lazy",
-  onError,
-}: OptimizedImageProps) {
+export function OptimizedImage({ src, alt, width, height, className, loading = "lazy", onError }: OptimizedImageProps) {
   return (
     <img
       src={src}

@@ -6,17 +6,17 @@ stesso comportamento, indipendentemente dal punto di ingresso.
 
 ## Mappa delle sorgenti oggi attive
 
-| Sorgente | Dove vive | Ruolo stabilito |
-| --- | --- | --- |
-| `operative_prompts` (database) | letto da `src/data/operativePrompts.ts` e `supabase/functions/_shared/operativePromptsLoader.ts` | **Autorevole** per i prompt operativi |
-| `agent_personas` (database) | `src/data/agentPersonas.ts`, `_shared/agentPersonaLoader.ts` | **Autorevole** per persona e tono |
-| `kb_entries` (database) | `src/data/kbEntries.ts`, `_shared/kbSlice.ts`, `_shared/kbCategoryMapper.ts` | **Autorevole** per la knowledge base |
-| `ai_memory` (database) | `src/data/aiMemory.ts` | **Autorevole** per la memoria |
-| `src/v2/agent/prompts/core/*` | codice frontend | **Fallback** se il database non risponde |
-| `src/constants/agentPromptsParts/*` | codice frontend | **Fallback** legacy, in dismissione |
-| `supabase/functions/_shared/prompts/*` | codice edge | **Fallback** lato server |
-| `_shared/commercialDoctrine.ts` | codice edge | **Fallback** della dottrina commerciale |
-| Prompt Lab (`src/v2/ui/pages/prompt-lab/**`) | UI | **Editor** delle sorgenti autorevoli, non una sorgente |
+| Sorgente                                     | Dove vive                                                                                        | Ruolo stabilito                                        |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `operative_prompts` (database)               | letto da `src/data/operativePrompts.ts` e `supabase/functions/_shared/operativePromptsLoader.ts` | **Autorevole** per i prompt operativi                  |
+| `agent_personas` (database)                  | `src/data/agentPersonas.ts`, `_shared/agentPersonaLoader.ts`                                     | **Autorevole** per persona e tono                      |
+| `kb_entries` (database)                      | `src/data/kbEntries.ts`, `_shared/kbSlice.ts`, `_shared/kbCategoryMapper.ts`                     | **Autorevole** per la knowledge base                   |
+| `ai_memory` (database)                       | `src/data/aiMemory.ts`                                                                           | **Autorevole** per la memoria                          |
+| `src/v2/agent/prompts/core/*`                | codice frontend                                                                                  | **Fallback** se il database non risponde               |
+| `src/constants/agentPromptsParts/*`          | codice frontend                                                                                  | **Fallback** legacy, in dismissione                    |
+| `supabase/functions/_shared/prompts/*`       | codice edge                                                                                      | **Fallback** lato server                               |
+| `_shared/commercialDoctrine.ts`              | codice edge                                                                                      | **Fallback** della dottrina commerciale                |
+| Prompt Lab (`src/v2/ui/pages/prompt-lab/**`) | UI                                                                                               | **Editor** delle sorgenti autorevoli, non una sorgente |
 
 ## Gerarchia non ambigua
 

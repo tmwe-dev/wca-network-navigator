@@ -3,10 +3,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { findCampaignJobsForAnalytics } from "@/data/analyticsOverview";
-import {
-  BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-} from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Send, CheckCircle2, XCircle, Percent } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { queryKeys } from "@/lib/queryKeys";
@@ -19,7 +16,17 @@ const tooltipStyle = {
   color: "hsl(var(--foreground))",
 };
 
-function StatCard({ icon: Icon, label, value, color }: { icon: typeof Send; label: string; value: string | number; color: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: typeof Send;
+  label: string;
+  value: string | number;
+  color: string;
+}) {
   return (
     <div className="rounded-lg border border-border/60 bg-card/50 p-3 flex items-center gap-3">
       <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
@@ -42,9 +49,9 @@ export function CampaignAnalyticsTab() {
       const all = jobs || [];
       const stats = {
         total: all.length,
-        completed: all.filter(j => j.status === "completed").length,
-        failed: all.filter(j => j.status === "skipped").length,
-        pending: all.filter(j => j.status === "pending").length,
+        completed: all.filter((j) => j.status === "completed").length,
+        failed: all.filter((j) => j.status === "skipped").length,
+        pending: all.filter((j) => j.status === "pending").length,
         rate: 0,
       };
       stats.rate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
@@ -58,7 +65,9 @@ export function CampaignAnalyticsTab() {
         if (j.status === "completed") c.completed++;
         countryMap.set(key, c);
       }
-      const byCountry = Array.from(countryMap.values()).sort((a, b) => b.sent - a.sent).slice(0, 15);
+      const byCountry = Array.from(countryMap.values())
+        .sort((a, b) => b.sent - a.sent)
+        .slice(0, 15);
 
       // By day (last 30)
       const dayMap = new Map<string, number>();
@@ -79,7 +88,12 @@ export function CampaignAnalyticsTab() {
     staleTime: 60_000,
   });
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
+  if (isLoading)
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
 
   const d = data;
 
@@ -89,20 +103,38 @@ export function CampaignAnalyticsTab() {
         {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard icon={Send} label="Totale job" value={d?.stats.total ?? 0} color="bg-blue-500/20 text-blue-400" />
-          <StatCard icon={CheckCircle2} label="Completati" value={d?.stats.completed ?? 0} color="bg-green-500/20 text-green-400" />
+          <StatCard
+            icon={CheckCircle2}
+            label="Completati"
+            value={d?.stats.completed ?? 0}
+            color="bg-green-500/20 text-green-400"
+          />
           <StatCard icon={XCircle} label="Saltati" value={d?.stats.failed ?? 0} color="bg-red-500/20 text-red-400" />
-          <StatCard icon={Percent} label="Tasso completamento" value={`${d?.stats.rate ?? 0}%`} color="bg-purple-500/20 text-purple-400" />
+          <StatCard
+            icon={Percent}
+            label="Tasso completamento"
+            value={`${d?.stats.rate ?? 0}%`}
+            color="bg-purple-500/20 text-purple-400"
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Bar chart by country */}
           <div className="rounded-xl border border-border/60 bg-card/50 p-4 space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Job per paese (top 15)</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Job per paese (top 15)
+            </h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={d?.byCountry || []} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                 <XAxis type="number" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis type="category" dataKey="country" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" width={40} />
+                <YAxis
+                  type="category"
+                  dataKey="country"
+                  tick={{ fontSize: 10 }}
+                  stroke="hsl(var(--muted-foreground))"
+                  width={40}
+                />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Bar dataKey="sent" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Inviati" />
                 <Bar dataKey="completed" fill="#22c55e" radius={[0, 4, 4, 0]} name="Completati" />
@@ -112,7 +144,9 @@ export function CampaignAnalyticsTab() {
 
           {/* Line chart over time */}
           <div className="rounded-xl border border-border/60 bg-card/50 p-4 space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Job ultimi 30 giorni</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Job ultimi 30 giorni
+            </h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={d?.byDay || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />

@@ -3,6 +3,7 @@ name: LinkedIn Slow Auto-Sync
 description: Auto-sync LinkedIn LENTO 2-3 letture/giorno governato da app_settings; cursor per-contatto; no Chat Mode
 type: feature
 ---
+
 LinkedIn ha detection anti-bot più aggressiva di WhatsApp: NON usare cadenza a minuti come WA.
 
 - `useLinkedInAutoSync` pianifica N slot/giorno random nella finestra operativa, governati da `app_settings`:

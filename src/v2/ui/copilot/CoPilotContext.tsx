@@ -37,17 +37,25 @@ export function CoPilotProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    try { localStorage.setItem("copilot.enabled", isEnabled ? "true" : "false"); } catch { /* noop */ }
+    try {
+      localStorage.setItem("copilot.enabled", isEnabled ? "true" : "false");
+    } catch {
+      /* noop */
+    }
   }, [isEnabled]);
 
   const registerModal = useCallback((name: string, handler: CoPilotHandler) => {
     modalsRef.current.set(name, handler);
-    return () => { modalsRef.current.delete(name); };
+    return () => {
+      modalsRef.current.delete(name);
+    };
   }, []);
 
   const registerFilter = useCallback((scope: string, handler: CoPilotHandler) => {
     filtersRef.current.set(scope, handler);
-    return () => { filtersRef.current.delete(scope); };
+    return () => {
+      filtersRef.current.delete(scope);
+    };
   }, []);
 
   const invokeModal = useCallback((name: string, params: Record<string, unknown>) => {
@@ -56,7 +64,11 @@ export function CoPilotProvider({ children }: { children: ReactNode }) {
       log.warn("modal handler not registered", { name });
       return false;
     }
-    try { void h(params); } catch (e) { log.warn("modal handler error", { error: String(e) }); }
+    try {
+      void h(params);
+    } catch (e) {
+      log.warn("modal handler error", { error: String(e) });
+    }
     return true;
   }, []);
 
@@ -67,7 +79,11 @@ export function CoPilotProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: params } }));
       return false;
     }
-    try { void h(params); } catch (e) { log.warn("filter handler error", { error: String(e) }); }
+    try {
+      void h(params);
+    } catch (e) {
+      log.warn("filter handler error", { error: String(e) });
+    }
     return true;
   }, []);
 
@@ -83,7 +99,11 @@ export function CoPilotProvider({ children }: { children: ReactNode }) {
         return;
       }
       const h = modalsRef.current.get(detail.name);
-      try { void h?.(detail.params || {}); } catch (err) { log.warn("modal handler error", { error: String(err) }); }
+      try {
+        void h?.(detail.params || {});
+      } catch (err) {
+        log.warn("modal handler error", { error: String(err) });
+      }
     };
     window.addEventListener("copilot-open-modal", handler);
     return () => window.removeEventListener("copilot-open-modal", handler);

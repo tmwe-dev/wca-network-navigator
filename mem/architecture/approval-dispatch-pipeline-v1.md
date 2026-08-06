@@ -7,6 +7,7 @@ type: feature
 # Pipeline Approvazione → Invio Reale (v3.9.56+)
 
 ## Regola madre
+
 **Ogni invio email / WhatsApp / LinkedIn — anche i singoli dal cockpit — passa
 da `ai_pending_actions`.** Niente dispatch diretto ai bridge o a `send-email`
 dagli hook UI. L'invio reale parte solo dopo approvazione esplicita.
@@ -29,6 +30,7 @@ Cockpit / Bulk / AI proposal
 ```
 
 ## File chiave
+
 - `src/hooks/useEnqueueAction.ts` — SSOT enqueue (insert ai_pending_actions).
 - `src/hooks/useApproveAndDispatch.ts` — SSOT dispatch reale on-approve.
 - `src/components/ai-control/PendingActionsPanel.tsx` — pulsante "Approva"
@@ -39,16 +41,19 @@ Cockpit / Bulk / AI proposal
   come fallback per cron/scheduler.
 
 ## Hook cockpit migrati (no più dispatch diretto)
-- `src/hooks/useSendEmail.ts`     → enqueue `send_email`
-- `src/hooks/useSendWhatsApp.ts`  → enqueue `send_whatsapp`
-- `src/hooks/useSendLinkedIn.ts`  → enqueue `send_linkedin` / `linkedin_connect`
+
+- `src/hooks/useSendEmail.ts` → enqueue `send_email`
+- `src/hooks/useSendWhatsApp.ts` → enqueue `send_whatsapp`
+- `src/hooks/useSendLinkedIn.ts` → enqueue `send_linkedin` / `linkedin_connect`
 
 ## Editorial review
+
 Centralizzata in `useApproveAndDispatch` PRIMA del dispatch dei canali
 WA/LI. **Hard fail-closed**: se la review fallisce o blocca, nessun invio
 parte. Mai duplicata negli hook cockpit.
 
 ## Cosa NON tocchiamo
+
 - `useLinkedInExtensionBridge`, `useWhatsAppExtensionBridge` (bridge browser).
 - Estensioni Chrome / protocollo `from-webapp-li|wa`.
 - Edge `send-linkedin` / `send-whatsapp` (dormienti, coda morta v3.9.56).

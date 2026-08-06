@@ -353,10 +353,7 @@ class EventBus {
   private eventLog: WCADomainEvent[] = [];
 
   /** Subscribe a handler to a specific event type */
-  on<T extends WCAEventType>(
-    eventType: T,
-    handler: EventHandler<Extract<WCADomainEvent, { type: T }>>,
-  ): void {
+  on<T extends WCAEventType>(eventType: T, handler: EventHandler<Extract<WCADomainEvent, { type: T }>>): void {
     const existing = this.handlers.get(eventType) || [];
     existing.push(handler as EventHandler);
     this.handlers.set(eventType, existing);
@@ -429,10 +426,7 @@ type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
  * Persist a domain event to the `domain_events` table.
  * Fire-and-forget — never blocks the main flow.
  */
-export async function persistEvent(
-  supabase: SupabaseClient,
-  event: WCADomainEvent,
-): Promise<void> {
+export async function persistEvent(supabase: SupabaseClient, event: WCADomainEvent): Promise<void> {
   try {
     await supabase.from("domain_events").insert({
       event_id: event.eventId,
@@ -454,12 +448,6 @@ export async function persistEvent(
 /**
  * Publish + persist in one call (most common usage pattern).
  */
-export async function publishAndPersist(
-  supabase: SupabaseClient,
-  event: WCADomainEvent,
-): Promise<void> {
-  await Promise.all([
-    eventBus.publish(event),
-    persistEvent(supabase, event),
-  ]);
+export async function publishAndPersist(supabase: SupabaseClient, event: WCADomainEvent): Promise<void> {
+  await Promise.all([eventBus.publish(event), persistEvent(supabase, event)]);
 }

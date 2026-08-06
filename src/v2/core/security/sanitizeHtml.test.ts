@@ -43,9 +43,7 @@ describe("sanitizeHtml (DOMPurify)", () => {
   });
 
   it("removes iframe/object/embed", () => {
-    const out = sanitizeHtml(
-      '<iframe src="//evil.com"></iframe><object data="x"></object><embed src="x">',
-    );
+    const out = sanitizeHtml('<iframe src="//evil.com"></iframe><object data="x"></object><embed src="x">');
     expect(out).not.toMatch(/<iframe|<object|<embed/i);
   });
 

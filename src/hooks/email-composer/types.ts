@@ -3,7 +3,10 @@
  */
 import type { EditAnalysis } from "@/types/email-composer";
 
-export interface LinkItem { label: string; url: string }
+export interface LinkItem {
+  label: string;
+  url: string;
+}
 
 export interface EmailTemplate {
   id: string;

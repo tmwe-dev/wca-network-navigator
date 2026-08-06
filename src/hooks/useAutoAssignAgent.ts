@@ -40,28 +40,24 @@ export async function autoAssignAgent(params: {
 
   // 0. Check exclusive agent locked to this email address
   if (emailAddress) {
-    const exclusiveAgentId = await findExclusiveAgentForAddress(
-      emailAddress.toLowerCase().trim(),
-      userId,
-    );
+    const exclusiveAgentId = await findExclusiveAgentForAddress(emailAddress.toLowerCase().trim(), userId);
     if (exclusiveAgentId) {
-      matchedAgent = typedAgents.find(a => a.id === exclusiveAgentId) || null;
+      matchedAgent = typedAgents.find((a) => a.id === exclusiveAgentId) || null;
     }
   }
 
   // 1. Find agent by territory match
   if (!matchedAgent && countryCode) {
     const cc = countryCode.toUpperCase().trim();
-    matchedAgent = typedAgents.find(a =>
-      Array.isArray(a.territory_codes) && a.territory_codes.some(t => t.toUpperCase().trim() === cc)
-    ) || null;
+    matchedAgent =
+      typedAgents.find(
+        (a) => Array.isArray(a.territory_codes) && a.territory_codes.some((t) => t.toUpperCase().trim() === cc),
+      ) || null;
   }
 
   // 2. Fallback: first sales/outreach agent
   if (!matchedAgent) {
-    matchedAgent = typedAgents.find(a =>
-      ["sales", "outreach"].includes(a.role?.toLowerCase())
-    ) || null;
+    matchedAgent = typedAgents.find((a) => ["sales", "outreach"].includes(a.role?.toLowerCase())) || null;
   }
 
   // 3. Ultimate fallback: first agent
@@ -70,9 +66,7 @@ export async function autoAssignAgent(params: {
   }
 
   // Find manager
-  const manager = typedAgents.find(a =>
-    a.role?.toLowerCase().includes("manager") && a.id !== matchedAgent!.id
-  );
+  const manager = typedAgents.find((a) => a.role?.toLowerCase().includes("manager") && a.id !== matchedAgent!.id);
 
   const insertError = await insertClientAssignment({
     source_id: sourceId,
@@ -95,12 +89,15 @@ export async function autoAssignAgent(params: {
     if (existingRule && !existingRule.exclusive_agent_id) {
       await setAddressRuleExclusiveAgent(existingRule.id, matchedAgent.id);
     } else if (!existingRule) {
-      await insertAddressRule({
-        email_address: addr,
-        exclusive_agent_id: matchedAgent.id,
-        category: "auto",
-        display_name: null,
-      }, userId);
+      await insertAddressRule(
+        {
+          email_address: addr,
+          exclusive_agent_id: matchedAgent.id,
+          category: "auto",
+          display_name: null,
+        },
+        userId,
+      );
     }
   }
 }

@@ -16,15 +16,14 @@ export interface ExportFilters {
 
 export async function fetchContactsExportRows(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
   // Colonne verificate sullo schema live (`position`, non `title`).
-  let query = supabase.from("imported_contacts")
+  let query = supabase
+    .from("imported_contacts")
     .select(
-      "id, name, email, phone, mobile, company_name, position, country, lead_status, created_at, interaction_count"
+      "id, name, email, phone, mobile, company_name, position, country, lead_status, created_at, interaction_count",
     );
 
   if (filters?.dateRange) {
-    query = query
-      .gte("created_at", filters.dateRange.from)
-      .lte("created_at", filters.dateRange.to);
+    query = query.gte("created_at", filters.dateRange.from).lte("created_at", filters.dateRange.to);
   }
 
   if (filters?.status) {
@@ -44,15 +43,12 @@ export async function fetchContactsExportRows(filters?: ExportFilters): Promise<
 
 export async function fetchPartnersExportRows(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
   // Colonne verificate sullo schema live: company_name / country_name / lead_status.
-  let query = supabase.from("partners")
-    .select(
-      "id, company_name, country_name, website, email, phone, partner_type, lead_status, created_at"
-    );
+  let query = supabase
+    .from("partners")
+    .select("id, company_name, country_name, website, email, phone, partner_type, lead_status, created_at");
 
   if (filters?.dateRange) {
-    query = query
-      .gte("created_at", filters.dateRange.from)
-      .lte("created_at", filters.dateRange.to);
+    query = query.gte("created_at", filters.dateRange.from).lte("created_at", filters.dateRange.to);
   }
 
   if (filters?.status) {
@@ -71,15 +67,14 @@ export async function fetchPartnersExportRows(filters?: ExportFilters): Promise<
 }
 
 export async function fetchDealsExportRows(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = supabase.from("deals")
+  let query = supabase
+    .from("deals")
     .select(
-      "id, title, partner_id, contact_id, stage, amount, probability, expected_close_date, actual_close_date, created_at, updated_at"
+      "id, title, partner_id, contact_id, stage, amount, probability, expected_close_date, actual_close_date, created_at, updated_at",
     );
 
   if (filters?.dateRange) {
-    query = query
-      .gte("created_at", filters.dateRange.from)
-      .lte("created_at", filters.dateRange.to);
+    query = query.gte("created_at", filters.dateRange.from).lte("created_at", filters.dateRange.to);
   }
 
   if (filters?.status) {
@@ -91,4 +86,3 @@ export async function fetchDealsExportRows(filters?: ExportFilters): Promise<Rec
   if (error) throw error;
   return data ?? [];
 }
-

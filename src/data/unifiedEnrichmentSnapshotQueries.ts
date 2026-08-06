@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export async function getPartnerEnrichmentData(partnerId: string): Promise<Record<string, unknown> | null> {
   const { data } = await supabase.from("partners").select("enrichment_data").eq("id", partnerId).maybeSingle();
-  return ((data as { enrichment_data?: Record<string, unknown> } | null)?.enrichment_data ?? null);
+  return (data as { enrichment_data?: Record<string, unknown> } | null)?.enrichment_data ?? null;
 }
 
 export interface SherlockLatestRow {

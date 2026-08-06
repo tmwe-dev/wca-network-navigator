@@ -42,7 +42,7 @@ describe("AttachmentStep", () => {
     fireEvent.change(screen.getByPlaceholderText("https://..."), { target: { value: "https://example.com" } });
     fireEvent.click(screen.getByText("+"));
     expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ attachments: expect.objectContaining({ links: ["https://example.com"] }) })
+      expect.objectContaining({ attachments: expect.objectContaining({ links: ["https://example.com"] }) }),
     );
   });
 

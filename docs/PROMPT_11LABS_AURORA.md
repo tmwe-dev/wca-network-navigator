@@ -60,6 +60,7 @@ Usa i tool interni prima di chiedere all'operatore.
 ## # When to end the call
 
 ALWAYS call `end_call` tool when:
+
 - L'operatore dice "ok grazie", "basta così", "tutto qui"
 - L'operatore chiede esplicitamente di chiudere
 

@@ -7,9 +7,15 @@ describe("bulkOps — registry", () => {
     const scopes = listScopes();
     expect(scopes.length).toBe(9);
     const expected = [
-      "enrich.base", "deepsearch.sherlock", "download.partner", "enrich.inbound",
-      "update.origin", "update.leadStatus", "update.emailRules",
-      "update.backfill", "update.analyzeAi",
+      "enrich.base",
+      "deepsearch.sherlock",
+      "download.partner",
+      "enrich.inbound",
+      "update.origin",
+      "update.leadStatus",
+      "update.emailRules",
+      "update.backfill",
+      "update.analyzeAi",
     ];
     expected.forEach((s) => expect(scopes).toContain(s));
   });

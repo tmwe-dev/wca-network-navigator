@@ -42,10 +42,15 @@ function useDirectoryTotal() {
 }
 
 /** Portal: renders Network controls into the global header slot */
-function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch }: {
+function HeaderBarPortal({
+  networkView,
+  setNetworkView,
+  globalStats,
+  deepSearch,
+}: {
   networkView: "partners" | "bca";
   setNetworkView: (v: "partners" | "bca") => void;
-  globalStats: { totalPartners: number } & Record<string, unknown> | null;
+  globalStats: ({ totalPartners: number } & Record<string, unknown>) | null;
   deepSearch: DeepSearchState;
 }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -64,16 +69,20 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
       <div className="flex items-center rounded-lg border border-border/60 bg-card/60 p-0.5">
         <button
           onClick={() => setNetworkView("partners")}
-          className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all",
-            networkView === "partners" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+          className={cn(
+            "flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all",
+            networkView === "partners" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground",
           )}
         >
           <Users className="w-3 h-3" /> Partner
         </button>
         <button
           onClick={() => setNetworkView("bca")}
-          className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all",
-            networkView === "bca" ? "bg-accent/50 text-accent-foreground" : "text-muted-foreground hover:text-foreground"
+          className={cn(
+            "flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all",
+            networkView === "bca"
+              ? "bg-accent/50 text-accent-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           <CreditCard className="w-3 h-3" /> BCA
@@ -88,19 +97,23 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
       )}
 
       {(deepSearch.running || deepSearch.results?.length > 0) && !deepSearch.canvasOpen && (
-        <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Deep Search">
+        <button
+          onClick={() => deepSearch.setCanvasOpen(true)}
+          className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground"
+          title="Deep Search"
+        >
           <Eye className="w-3.5 h-3.5" />
         </button>
       )}
     </div>,
-    container
+    container,
   );
 }
 
 export function OperationsPage({ activeView }: { activeView?: "partners" | "bca" }) {
   const [internalView, setInternalView] = useState<"partners" | "bca">("partners");
   const networkView = activeView ?? internalView;
-  const setNetworkView = activeView ? (() => {}) as () => void : setInternalView;
+  const setNetworkView = activeView ? ((() => {}) as () => void) : setInternalView;
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
 
   // Sync with external theme changes (e.g. from V2 sidebar toggle)
@@ -130,19 +143,23 @@ export function OperationsPage({ activeView }: { activeView?: "partners" | "bca"
   const queryClient = useQueryClient();
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
-  const dirTotals = dirData ? {
-    scannedCountries: Object.keys(dirData).length,
-    totalDirectory: Object.values(dirData).reduce((sum, v) => sum + v.count, 0),
-  } : null;
-  const globalStats = countryStatsData ? {
-    totalPartners: countryStatsData.global.total,
-    withEmail: countryStatsData.global.withEmail,
-    withPhone: countryStatsData.global.withPhone,
-    withProfile: countryStatsData.global.withProfile,
-    withoutProfile: countryStatsData.global.withoutProfile,
-    scannedCountries: dirTotals?.scannedCountries || 0,
-    totalDirectory: dirTotals?.totalDirectory || 0,
-  } : null;
+  const dirTotals = dirData
+    ? {
+        scannedCountries: Object.keys(dirData).length,
+        totalDirectory: Object.values(dirData).reduce((sum, v) => sum + v.count, 0),
+      }
+    : null;
+  const globalStats = countryStatsData
+    ? {
+        totalPartners: countryStatsData.global.total,
+        withEmail: countryStatsData.global.withEmail,
+        withPhone: countryStatsData.global.withPhone,
+        withProfile: countryStatsData.global.withProfile,
+        withoutProfile: countryStatsData.global.withoutProfile,
+        scannedCountries: dirTotals?.scannedCountries || 0,
+        totalDirectory: dirTotals?.totalDirectory || 0,
+      }
+    : null;
 
   const toggleFavorite = useToggleFavorite();
 
@@ -165,10 +182,13 @@ export function OperationsPage({ activeView }: { activeView?: "partners" | "bca"
   }, []);
 
   // Use countries from global filters
-  const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
+  const activeCountryCodes = useMemo(
+    () => Array.from(filters.networkSelectedCountries),
+    [filters.networkSelectedCountries],
+  );
   const activeCountryNames = useMemo(() => {
-    const _WCA = (toRecord(window)).__WCA_COUNTRIES;
-    return activeCountryCodes.map(code => {
+    const _WCA = toRecord(window).__WCA_COUNTRIES;
+    return activeCountryCodes.map((code) => {
       const found = WCA_COUNTRIES.find((c) => c.code === code);
       return found?.name || code;
     });
@@ -177,33 +197,45 @@ export function OperationsPage({ activeView }: { activeView?: "partners" | "bca"
 
   const { data: selectedPartner } = usePartner(selectedPartnerId || "");
 
-  const handleDeepSearch = useCallback((partnerIds: string[]) => {
-    deepSearch.start(partnerIds);
-  }, [deepSearch]);
+  const handleDeepSearch = useCallback(
+    (partnerIds: string[]) => {
+      deepSearch.start(partnerIds);
+    },
+    [deepSearch],
+  );
 
   const handleStopDeepSearch = useCallback(() => {
     deepSearch.stop();
   }, [deepSearch]);
 
-  const handleGenerateAliases = useCallback(async (codes: string[], _type: "company" | "contact") => {
-    if (aliasGenerating) return;
-    setAliasGenerating(true);
-    const toastId = toast.loading("Generazione alias in corso...");
-    try {
-      const data = await invokeEdge<Record<string, unknown>>("generate-aliases", { body: { countryCodes: codes }, context: "Operations.generate_aliases" });
-      if (data?.success) {
-        toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`, { id: toastId });
-        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
-        queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
-      } else {
-        toast.error(String(data?.error || "Errore generazione alias"), { id: toastId });
+  const handleGenerateAliases = useCallback(
+    async (codes: string[], _type: "company" | "contact") => {
+      if (aliasGenerating) return;
+      setAliasGenerating(true);
+      const toastId = toast.loading("Generazione alias in corso...");
+      try {
+        const data = await invokeEdge<Record<string, unknown>>("generate-aliases", {
+          body: { countryCodes: codes },
+          context: "Operations.generate_aliases",
+        });
+        if (data?.success) {
+          toast.success(
+            `Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`,
+            { id: toastId },
+          );
+          queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
+        } else {
+          toast.error(String(data?.error || "Errore generazione alias"), { id: toastId });
+        }
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : "Errore", { id: toastId });
+      } finally {
+        setAliasGenerating(false);
       }
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Errore", { id: toastId });
-    } finally {
-      setAliasGenerating(false);
-    }
-  }, [aliasGenerating, queryClient]);
+    },
+    [aliasGenerating, queryClient],
+  );
 
   // WCA sync is now handled globally by useWcaSync in AppLayout
 
@@ -211,7 +243,10 @@ export function OperationsPage({ activeView }: { activeView?: "partners" | "bca"
 
   return (
     <ThemeCtx.Provider value={isDark}>
-      <div data-testid="page-operations" className="h-full min-h-0 relative flex flex-col overflow-hidden bg-background">
+      <div
+        data-testid="page-operations"
+        className="h-full min-h-0 relative flex flex-col overflow-hidden bg-background"
+      >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.06),transparent)]" />
 
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
@@ -227,73 +262,73 @@ export function OperationsPage({ activeView }: { activeView?: "partners" | "bca"
           {networkView === "bca" ? (
             <BusinessCardsView />
           ) : (
-          <div className={cn(
-            "flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden",
-            isMobile ? "flex flex-col" : "flex"
-          )}>
-            {/* COL 1: Partner List */}
-            <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
-              <div className={cn(
-                "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
-                "bg-card/50 backdrop-blur-sm border-border"
-              )}>
-                <PartnerListPanel
-                  countryCodes={activeCountryCodes}
-                  countryNames={activeCountryNames}
-                  isDark={isDark}
-                  onDeepSearch={handleDeepSearch}
-                  onGenerateAliases={handleGenerateAliases}
-                  deepSearchRunning={deepSearch.running}
-                  aliasGenerating={aliasGenerating}
-                  directoryOnly={directoryOnly}
-                  onDirectoryOnlyChange={(_v: boolean) => {}}
-                  onSelectPartner={setSelectedPartnerId}
-                  selectedPartnerId={selectedPartnerId}
-                />
+            <div className={cn("flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden", isMobile ? "flex flex-col" : "flex")}>
+              {/* COL 1: Partner List */}
+              <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
+                <div
+                  className={cn(
+                    "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
+                    "bg-card/50 backdrop-blur-sm border-border",
+                  )}
+                >
+                  <PartnerListPanel
+                    countryCodes={activeCountryCodes}
+                    countryNames={activeCountryNames}
+                    isDark={isDark}
+                    onDeepSearch={handleDeepSearch}
+                    onGenerateAliases={handleGenerateAliases}
+                    deepSearchRunning={deepSearch.running}
+                    aliasGenerating={aliasGenerating}
+                    directoryOnly={directoryOnly}
+                    onDirectoryOnlyChange={(_v: boolean) => {}}
+                    onSelectPartner={setSelectedPartnerId}
+                    selectedPartnerId={selectedPartnerId}
+                  />
 
-                {/* Deep Search Canvas overlay */}
-                <DeepSearchCanvas
-                  open={deepSearch.canvasOpen}
-                  onClose={() => deepSearch.setCanvasOpen(false)}
-                  onStop={handleStopDeepSearch}
-                  current={deepSearch.current}
-                  results={deepSearch.results}
-                  running={deepSearch.running}
-                  isDark={isDark}
-                />
+                  {/* Deep Search Canvas overlay */}
+                  <DeepSearchCanvas
+                    open={deepSearch.canvasOpen}
+                    onClose={() => deepSearch.setCanvasOpen(false)}
+                    onStop={handleStopDeepSearch}
+                    current={deepSearch.current}
+                    results={deepSearch.results}
+                    running={deepSearch.running}
+                    isDark={isDark}
+                  />
+                </div>
               </div>
+
+              {/* COL 3: Partner Detail */}
+              {hasDetailOpen && (
+                <div className="w-[380px] flex-shrink-0 min-h-0 flex flex-col rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden animate-in slide-in-from-right-8 duration-200">
+                  {selectedPartnerId && selectedPartner ? (
+                    <>
+                      <div className="flex items-center px-3 py-1.5 flex-shrink-0 border-b border-border">
+                        <span className="text-xs font-medium text-muted-foreground px-2 py-1">Dettaglio Partner</span>
+                      </div>
+                      <div className="flex-1 min-h-0 overflow-auto">
+                        <PartnerDetailCompact
+                          partner={selectedPartner}
+                          onBack={() => setSelectedPartnerId(null)}
+                          onToggleFavorite={() =>
+                            toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })
+                          }
+                          isDark={isDark}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                      <Users className="w-8 h-8 mb-2" />
+                      <p className="text-xs font-medium">Caricamento...</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-
-            {/* COL 3: Partner Detail */}
-            {hasDetailOpen && (
-              <div className="w-[380px] flex-shrink-0 min-h-0 flex flex-col rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden animate-in slide-in-from-right-8 duration-200">
-                {selectedPartnerId && selectedPartner ? (
-                  <>
-                    <div className="flex items-center px-3 py-1.5 flex-shrink-0 border-b border-border">
-                      <span className="text-xs font-medium text-muted-foreground px-2 py-1">Dettaglio Partner</span>
-                    </div>
-                    <div className="flex-1 min-h-0 overflow-auto">
-                      <PartnerDetailCompact
-                        partner={selectedPartner}
-                        onBack={() => setSelectedPartnerId(null)}
-                        onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
-                        isDark={isDark}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-                    <Users className="w-8 h-8 mb-2" />
-                    <p className="text-xs font-medium">Caricamento...</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
           )}
         </div>
       </div>
-
     </ThemeCtx.Provider>
   );
 }

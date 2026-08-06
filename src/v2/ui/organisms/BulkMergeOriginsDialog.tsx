@@ -43,10 +43,7 @@ export function BulkMergeOriginsDialog({
   }, [open]);
 
   const trimmed = input.trim();
-  const totalRows = React.useMemo(
-    () => sourceOrigins.reduce((acc, o) => acc + (o.count || 0), 0),
-    [sourceOrigins],
-  );
+  const totalRows = React.useMemo(() => sourceOrigins.reduce((acc, o) => acc + (o.count || 0), 0), [sourceOrigins]);
 
   const filtered = React.useMemo(() => {
     if (!trimmed) return availableOrigins.slice(0, 20);
@@ -57,17 +54,14 @@ export function BulkMergeOriginsDialog({
   const exactMatch = availableOrigins.find((o) => o.origin === trimmed);
   const isNew = trimmed.length > 0 && !exactMatch;
 
-  const canConfirm =
-    trimmed.length > 0 && trimmed.length <= 100 && !submitting && sourceOrigins.length > 0;
+  const canConfirm = trimmed.length > 0 && trimmed.length <= 100 && !submitting && sourceOrigins.length > 0;
 
   const handleConfirm = async () => {
     if (!canConfirm) return;
     setSubmitting(true);
     try {
       const res = await onConfirm(trimmed);
-      toast.success(
-        `Origine aggiornata su ${res.updated} contatt${res.updated === 1 ? "o" : "i"}`,
-      );
+      toast.success(`Origine aggiornata su ${res.updated} contatt${res.updated === 1 ? "o" : "i"}`);
       onSuccess?.();
       onOpenChange(false);
     } catch (e) {
@@ -84,8 +78,7 @@ export function BulkMergeOriginsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-primary" />
-            Fondi {sourceOrigins.length} origin{sourceOrigins.length === 1 ? "e" : "i"} ·{" "}
-            {totalRows} contatti
+            Fondi {sourceOrigins.length} origin{sourceOrigins.length === 1 ? "e" : "i"} · {totalRows} contatti
           </DialogTitle>
         </DialogHeader>
 
@@ -96,10 +89,7 @@ export function BulkMergeOriginsDialog({
             </div>
             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
               {sourceOrigins.map((b) => (
-                <span
-                  key={b.origin}
-                  className="text-[11px] px-2 py-0.5 rounded-md border border-border/40 bg-muted/40"
-                >
+                <span key={b.origin} className="text-[11px] px-2 py-0.5 rounded-md border border-border/40 bg-muted/40">
                   {b.origin} <span className="text-muted-foreground">· {b.count}</span>
                 </span>
               ))}
@@ -158,9 +148,7 @@ export function BulkMergeOriginsDialog({
                   className="w-full flex items-center justify-between px-3 py-1.5 text-[12px] hover:bg-primary/5 text-left"
                 >
                   <span className="truncate font-medium text-foreground">{o.origin}</span>
-                  <span className="text-[10px] font-mono text-muted-foreground ml-2">
-                    {o.count}
-                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground ml-2">{o.count}</span>
                 </button>
               ))}
             </div>

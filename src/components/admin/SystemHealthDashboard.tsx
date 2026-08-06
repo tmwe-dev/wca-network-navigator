@@ -3,7 +3,19 @@ import { useTranslation } from "react-i18next";
 import { useSystemHealth, type HealthCheck } from "@/hooks/useSystemHealth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Database, Shield, HardDrive, BrainCircuit, RefreshCw, FlaskConical, Sparkles, Mail, Clock, Timer } from "lucide-react";
+import {
+  Activity,
+  Database,
+  Shield,
+  HardDrive,
+  BrainCircuit,
+  RefreshCw,
+  FlaskConical,
+  Sparkles,
+  Mail,
+  Clock,
+  Timer,
+} from "lucide-react";
 import { AlertConfigPanel } from "./AlertConfigPanel";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
@@ -21,7 +33,9 @@ const SERVICE_ICONS: Record<string, React.ReactNode> = {
 function getHistory(): HealthCheck[] {
   try {
     return JSON.parse(localStorage.getItem("health-history") || "[]");
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function pushHistory(entry: HealthCheck) {
@@ -50,11 +64,7 @@ export function SystemHealthDashboard() {
           <h1 className="text-xl font-bold text-foreground">System Health</h1>
         </div>
         <div className="flex items-center gap-3">
-          {data && (
-            <Badge variant={data.status === "healthy" ? "default" : "destructive"}>
-              {data.status}
-            </Badge>
-          )}
+          {data && <Badge variant={data.status === "healthy" ? "default" : "destructive"}>{data.status}</Badge>}
           <button onClick={() => refetch()} className="p-1.5 rounded hover:bg-accent transition-colors">
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           </button>
@@ -62,29 +72,31 @@ export function SystemHealthDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {data && Object.entries(data.checks).map(([service, status]) => (
-          <Card key={service}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                {SERVICE_ICONS[service] || <Activity className="h-4 w-4" />}
-                {service.replace(/_/g, " ")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant={status === "ok" ? "default" : "destructive"} className="text-xs">
-                {status}
-              </Badge>
-              {status === "fail" && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Last OK: {(() => {
-                    const lastOk = [...history].reverse().find((h: HealthCheck) => h.checks[service] === "ok");
-                    return lastOk ? new Date(lastOk.timestamp).toLocaleTimeString() : "N/A";
-                  })()}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        {data &&
+          Object.entries(data.checks).map(([service, status]) => (
+            <Card key={service}>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  {SERVICE_ICONS[service] || <Activity className="h-4 w-4" />}
+                  {service.replace(/_/g, " ")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Badge variant={status === "ok" ? "default" : "destructive"} className="text-xs">
+                  {status}
+                </Badge>
+                {status === "fail" && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Last OK:{" "}
+                    {(() => {
+                      const lastOk = [...history].reverse().find((h: HealthCheck) => h.checks[service] === "ok");
+                      return lastOk ? new Date(lastOk.timestamp).toLocaleTimeString() : "N/A";
+                    })()}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
       </div>
 
       {dataUpdatedAt && (

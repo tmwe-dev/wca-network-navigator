@@ -23,6 +23,7 @@ Il trigger `handle_new_user` continua ad assegnare 100 crediti di benvenuto al s
 ## Riattivazione billing
 
 Quando si decide di commercializzare:
+
 1. Settare `AI_USAGE_LIMITS_ENABLED=true` (vedi cost-control-guardrails).
 2. Reintegrare Stripe + tier dei piani.
 3. La logica `consume-credits` + `deduct_credits` RPC è già pronta.

@@ -12,7 +12,6 @@
  */
 import { z } from "zod";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("jsonValidators");
 // ============================================================
@@ -73,9 +72,7 @@ function logValidationError(field: string, errors: z.ZodIssue[]): void {
  * Validazione non bloccante: ritorna data passthrough anche in caso di errore.
  * Usare in WRITE path quando vogliamo loggare ma non bloccare.
  */
-export function safeParsePartnerEnrichment(
-  raw: unknown,
-): SafeParseResult<PartnerEnrichmentData> {
+export function safeParsePartnerEnrichment(raw: unknown): SafeParseResult<PartnerEnrichmentData> {
   const result = PartnerEnrichmentDataSchema.safeParse(raw);
   if (result.success) return { ok: true, data: result.data };
   logValidationError("partners.enrichment_data", result.error.issues);
@@ -92,9 +89,7 @@ export function safeParseAssignedTools(raw: unknown): SafeParseResult<AssignedTo
   logValidationError("agents.assigned_tools", result.error.issues);
   // Sanitize: tieni solo i tool che matchano regex
   const filtered = Array.isArray(raw)
-    ? (raw as unknown[]).filter(
-        (t): t is string => typeof t === "string" && TOOL_NAME_REGEX.test(t),
-      )
+    ? (raw as unknown[]).filter((t): t is string => typeof t === "string" && TOOL_NAME_REGEX.test(t))
     : [];
   return {
     ok: false,

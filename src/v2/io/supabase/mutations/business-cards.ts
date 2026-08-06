@@ -11,9 +11,7 @@ import type { Database } from "@/integrations/supabase/types";
 type BusinessCardInsert = Database["public"]["Tables"]["business_cards"]["Insert"];
 type BusinessCardUpdate = Database["public"]["Tables"]["business_cards"]["Update"];
 
-export async function createBusinessCard(
-  input: BusinessCardInsert,
-): Promise<Result<BusinessCard, AppError>> {
+export async function createBusinessCard(input: BusinessCardInsert): Promise<Result<BusinessCard, AppError>> {
   try {
     const { data, error } = await supabase.from("business_cards").insert(input).select().single();
     if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "business_cards" }, "createBusinessCard"));
@@ -29,7 +27,10 @@ export async function updateBusinessCardMatch(
 ): Promise<Result<void, AppError>> {
   try {
     const { error } = await supabase.from("business_cards").update(updates).eq("id", cardId);
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "business_cards", cardId }, "updateBusinessCardMatch"));
+    if (error)
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "business_cards", cardId }, "updateBusinessCardMatch"),
+      );
     return ok(undefined);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "updateBusinessCardMatch"));

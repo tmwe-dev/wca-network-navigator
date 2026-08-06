@@ -23,10 +23,15 @@ function buildBuilder(table: string, count: number, error: { message: string } |
     call.selectOpts = opts;
     return b;
   };
-  b.is = (col: string, val: unknown) => { call.is = { column: col, value: val }; return b; };
-  b.eq = (col: string, val: unknown) => { call.eqs.push({ column: col, value: val }); return b; };
-  b.then = (resolve: (v: unknown) => unknown) =>
-    resolve({ data: null, count: error ? null : count, error });
+  b.is = (col: string, val: unknown) => {
+    call.is = { column: col, value: val };
+    return b;
+  };
+  b.eq = (col: string, val: unknown) => {
+    call.eqs.push({ column: col, value: val });
+    return b;
+  };
+  b.then = (resolve: (v: unknown) => unknown) => resolve({ data: null, count: error ? null : count, error });
   return b;
 }
 
@@ -43,7 +48,10 @@ import { fetchFunnemailUnreadCount } from "../channel-messages";
 
 describe("fetchFunnemailUnreadCount (B4.5 — badge nav funnemail-inbox)", () => {
   beforeEach(() => {
-    viewCount = 0; viewError = null; legacyCount = 0; legacyError = null;
+    viewCount = 0;
+    viewError = null;
+    legacyCount = 0;
+    legacyError = null;
     calls = [];
   });
 

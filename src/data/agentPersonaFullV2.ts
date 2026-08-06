@@ -23,11 +23,7 @@ function toJson(value: Record<string, unknown> | Json | undefined): Json | undef
 }
 
 export async function getAgentPersonaFull(agentId: string): Promise<AgentPersonaFullRow | null> {
-  const { data, error } = await supabase
-    .from("agent_personas")
-    .select("*")
-    .eq("agent_id", agentId)
-    .maybeSingle();
+  const { data, error } = await supabase.from("agent_personas").select("*").eq("agent_id", agentId).maybeSingle();
   if (error) throw error;
   return data ?? null;
 }
@@ -39,8 +35,6 @@ export async function upsertAgentPersonaFull(payload: AgentPersonaFullUpsertInpu
     ...(kb_filter !== undefined ? { kb_filter: toJson(kb_filter) } : {}),
     ...(example_messages !== undefined ? { example_messages: toJson(example_messages) } : {}),
   };
-  const { error } = await supabase
-    .from("agent_personas")
-    .upsert(row, { onConflict: "agent_id" });
+  const { error } = await supabase.from("agent_personas").upsert(row, { onConflict: "agent_id" });
   if (error) throw error;
 }

@@ -2,7 +2,11 @@ import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import type { SimulatorResponse } from "@/data/agentSimulator";
 import type { KbEntry } from "@/data/kbEntries";
 
-export function buildAgentMarkdown(agent: AgentRegistryEntry, sim: SimulatorResponse | undefined, kb: KbEntry[]): string {
+export function buildAgentMarkdown(
+  agent: AgentRegistryEntry,
+  sim: SimulatorResponse | undefined,
+  kb: KbEntry[],
+): string {
   const lines: string[] = [];
   lines.push(`# ${agent.displayName}`);
   lines.push("");

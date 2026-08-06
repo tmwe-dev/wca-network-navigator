@@ -45,14 +45,10 @@ export function useFunnemailClaims(groupId?: string | null): UseFunnemailClaimsR
   React.useEffect(() => {
     const channel = supabase
       .channel(`funnemail-claims-${groupId ?? "all"}-${Math.random().toString(36).slice(2, 10)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "funnemail_message_claims" },
-        () => {
-          qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.claims.active() });
-          qc.invalidateQueries({ queryKey });
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "funnemail_message_claims" }, () => {
+        qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.claims.active() });
+        qc.invalidateQueries({ queryKey });
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

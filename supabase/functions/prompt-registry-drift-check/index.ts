@@ -31,11 +31,9 @@ Deno.serve(async (req) => {
   const cors = getCorsHeaders(req.headers.get("origin"));
   const headers = getSecurityHeaders(cors);
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } },
-  );
+  const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+    auth: { persistSession: false },
+  });
 
   const items: DriftItem[] = [];
 
@@ -65,8 +63,7 @@ Deno.serve(async (req) => {
         active = rows.length;
         if (active === 0) drift.push("no_active_prompt_for_scope_or_context");
         if (tags.length) {
-          const matches = rows.filter((r: { tags: string[] }) =>
-            tags.some((t) => (r.tags ?? []).includes(t)));
+          const matches = rows.filter((r: { tags: string[] }) => tags.some((t) => (r.tags ?? []).includes(t)));
           if (matches.length === 0) drift.push(`no_prompt_with_expected_tags:${tags.join(",")}`);
         }
       }
@@ -89,8 +86,8 @@ Deno.serve(async (req) => {
     edges_with_drift: items.filter((i) => i.drift.length > 0).length,
   };
 
-  return new Response(
-    JSON.stringify({ ok: true, summary, items, generated_at: new Date().toISOString() }),
-    { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
-  );
+  return new Response(JSON.stringify({ ok: true, summary, items, generated_at: new Date().toISOString() }), {
+    status: 200,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
 });

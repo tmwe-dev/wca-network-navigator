@@ -137,17 +137,6 @@ export const CAPABILITY_KEYWORDS = {
     "storage facility",
     "proprio deposito",
   ],
-  bonded: [
-    "bonded warehouse",
-    "deposito doganale",
-    "magazzino in regime doganale",
-    "bonded facility",
-  ],
-  customs: [
-    "customs clearance",
-    "sdoganamento",
-    "operazioni doganali",
-    "dogana interna",
-    "in-house customs",
-  ],
+  bonded: ["bonded warehouse", "deposito doganale", "magazzino in regime doganale", "bonded facility"],
+  customs: ["customs clearance", "sdoganamento", "operazioni doganali", "dogana interna", "in-house customs"],
 };

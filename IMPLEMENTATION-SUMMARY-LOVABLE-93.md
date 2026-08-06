@@ -17,6 +17,7 @@
 **File**: `src/data/appSettings.ts`
 
 Added two new functions:
+
 ```typescript
 getAiAutomationsPaused(userId: string): Promise<boolean>
 setAiAutomationsPaused(userId: string, paused: boolean, reason?: string): Promise<void>
@@ -25,9 +26,11 @@ setAiAutomationsPaused(userId: string, paused: boolean, reason?: string): Promis
 ### 3. Edge Functions - Pause Checks
 
 #### check-inbox
+
 **File**: `supabase/functions/check-inbox/index.ts` (line 64-78)
 
 Early return if paused:
+
 ```typescript
 // LOVABLE-93: global pause check
 const { data: pauseSettings } = await supabase
@@ -47,9 +50,11 @@ if (pauseSettings?.value === "true") {
 ```
 
 #### cadence-engine
+
 **File**: `supabase/functions/cadence-engine/index.ts` (line 66-77)
 
 Per-action skip in processing loop:
+
 ```typescript
 // LOVABLE-93: global pause check
 const { data: pauseSettings } = await supabase
@@ -66,9 +71,11 @@ if (pauseSettings?.value === "true") {
 ```
 
 #### pending-action-executor
+
 **File**: `supabase/functions/pending-action-executor/index.ts` (line 90-100)
 
 Early return before action execution:
+
 ```typescript
 // LOVABLE-93: global pause check
 const { data: pauseSettings } = await supabase
@@ -88,9 +95,11 @@ if (pauseSettings?.value === "true") {
 ### 4. UI Components
 
 #### GlobalAIAutomationPause
+
 **File**: `src/components/ai-control/GlobalAIAutomationPause.tsx`
 
 Features:
+
 - Real-time pause status display with red/green indicators
 - Toggle switch with confirmation dialog
 - Optional pause reason input
@@ -98,9 +107,11 @@ Features:
 - Immediate updates across all three automation functions
 
 #### CostDashboardWidget
+
 **File**: `src/components/ai-control/CostDashboardWidget.tsx`
 
 Features:
+
 - 3 stat cards: Balance, Cost this Period, Avg Cost per Operation
 - Time range selector (Day, Week, Month)
 - 3 tabs:
@@ -126,6 +137,7 @@ Features:
 **File**: `docs/LOVABLE-93-GLOBAL-PAUSE-COST-TRACKING.md`
 
 Complete documentation including:
+
 - Feature overview
 - Implementation details
 - Database schema changes
@@ -156,11 +168,13 @@ Complete documentation including:
 ## Deployment Steps
 
 1. Apply the migration:
+
    ```bash
    supabase migration up
    ```
 
 2. Deploy code changes:
+
    ```bash
    git add .
    git commit -m "LOVABLE-93: Add global pause control and cost dashboard"

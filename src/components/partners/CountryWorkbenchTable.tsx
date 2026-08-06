@@ -20,7 +20,11 @@ interface CountryWorkbenchTableProps {
 }
 
 export function CountryWorkbenchTable({
-  filteredPartners, selectedId, selectedIds, onSelectPartner, onToggleSelection,
+  filteredPartners,
+  selectedId,
+  selectedIds,
+  onSelectPartner,
+  onToggleSelection,
 }: CountryWorkbenchTableProps) {
   return (
     <ScrollArea className="flex-1">
@@ -41,25 +45,40 @@ export function CountryWorkbenchTable({
           const flag = getCountryFlag(partner.country_code);
 
           return (
-            <div key={partner.id} onClick={() => onSelectPartner(partner.id)}
+            <div
+              key={partner.id}
+              onClick={() => onSelectPartner(partner.id)}
               className={cn(
                 "mx-2 mb-1 px-3 py-3 cursor-pointer transition-all rounded-xl flex items-start gap-2",
                 "hover:bg-accent/40",
                 selectedId === partner.id && "bg-accent/60 shadow-sm",
                 isSelected && "bg-primary/[0.06] ring-1 ring-primary/20",
-              )}>
+              )}
+            >
               {/* Left: number + checkbox */}
               <div className="flex flex-col items-center shrink-0 gap-0.5">
                 <span className="text-[10px] text-muted-foreground font-mono">{index + 1}</span>
-                <div onClick={(e) => { e.stopPropagation(); onToggleSelection(partner.id); }}>
-                  <Checkbox checked={isSelected} className="data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSelection(partner.id);
+                  }}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                  />
                 </div>
               </div>
 
               {/* Logo */}
               <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted/30 border border-border/40 flex items-center justify-center shrink-0 self-center">
                 {getRealLogoUrl(partner.logo_url) ? (
-                  <OptimizedImage src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-full h-full object-contain p-0.5" />
+                  <OptimizedImage
+                    src={getRealLogoUrl(partner.logo_url)!}
+                    alt=""
+                    className="w-full h-full object-contain p-0.5"
+                  />
                 ) : (
                   <span className="text-2xl opacity-50">{flag}</span>
                 )}
@@ -67,16 +86,18 @@ export function CountryWorkbenchTable({
 
               {/* Content */}
               <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-[13px] font-semibold truncate leading-tight text-foreground">{partner.company_name}</p>
+                <p className="text-[13px] font-semibold truncate leading-tight text-foreground">
+                  {partner.company_name}
+                </p>
 
                 {primaryContact ? (
                   <div className="flex items-center gap-1.5 text-[11px]">
                     <User className="w-3 h-3 text-muted-foreground shrink-0" />
-                    <span className="font-medium text-foreground truncate">{primaryContact.contact_alias || primaryContact.name}</span>
+                    <span className="font-medium text-foreground truncate">
+                      {primaryContact.contact_alias || primaryContact.name}
+                    </span>
                     {extraContacts > 0 && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-foreground">
-                        +{extraContacts}
-                      </span>
+                      <span className="flex items-center gap-0.5 text-[10px] text-foreground">+{extraContacts}</span>
                     )}
                   </div>
                 ) : (

@@ -121,7 +121,8 @@ export async function evaluateTransitions(
   if (currentState === "new" && (outboundCount || 0) > 0) {
     results.push({
       shouldTransition: true,
-      from: "new", to: "first_touch_sent",
+      from: "new",
+      to: "first_touch_sent",
       trigger: "Primo messaggio inviato",
       autoApply: true,
     });
@@ -131,7 +132,8 @@ export async function evaluateTransitions(
   if (currentState === "first_touch_sent" && hasRecentInbound) {
     results.push({
       shouldTransition: true,
-      from: "first_touch_sent", to: "engaged",
+      from: "first_touch_sent",
+      to: "engaged",
       trigger: "Risposta ricevuta",
       autoApply: true,
     });
@@ -141,7 +143,8 @@ export async function evaluateTransitions(
   if (currentState === "first_touch_sent" && daysSinceLastInteraction >= 3 && !hasRecentInbound) {
     results.push({
       shouldTransition: true,
-      from: "first_touch_sent", to: "holding",
+      from: "first_touch_sent",
+      to: "holding",
       trigger: `${daysSinceLastInteraction}gg senza risposta`,
       autoApply: true,
     });
@@ -151,7 +154,8 @@ export async function evaluateTransitions(
   if (currentState === "holding" && hasRecentInbound) {
     results.push({
       shouldTransition: true,
-      from: "holding", to: "engaged",
+      from: "holding",
+      to: "engaged",
       trigger: "Risposta ricevuta dopo holding",
       autoApply: true,
     });
@@ -161,7 +165,8 @@ export async function evaluateTransitions(
   if (currentState === "holding" && daysSinceLastInteraction >= 90 && (outboundCount || 0) >= 3) {
     results.push({
       shouldTransition: true,
-      from: "holding", to: "archived",
+      from: "holding",
+      to: "archived",
       trigger: `${daysSinceLastInteraction}gg, ${outboundCount} tentativi — richiede approvazione Director`,
       autoApply: false,
     });

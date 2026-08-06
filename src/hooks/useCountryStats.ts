@@ -29,8 +29,15 @@ export function useCountryStats() {
       const _error = null;
 
       const byCountry: Record<string, CountryStats> = {};
-      let gTotal = 0, gEmail = 0, gPhone = 0, gBoth = 0, gProfile = 0, gNoProfile = 0;
-      let gDeep = 0, gAliasCo = 0, gAliasCt = 0;
+      let gTotal = 0,
+        gEmail = 0,
+        gPhone = 0,
+        gBoth = 0,
+        gProfile = 0,
+        gNoProfile = 0;
+      let gDeep = 0,
+        gAliasCo = 0,
+        gAliasCt = 0;
 
       (data || []).forEach((r) => {
         const s: CountryStats = {

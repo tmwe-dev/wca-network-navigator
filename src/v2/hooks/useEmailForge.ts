@@ -13,7 +13,12 @@ export type JournalistVerdict = "pass" | "pass_with_edits" | "warn" | "block";
 export interface JournalistReviewSummary {
   journalist: { role: string; label: string; reasoning: string; auto: boolean };
   verdict: JournalistVerdict;
-  warnings: Array<{ type: string; description: string; severity: "info" | "warning" | "blocking"; upstream_fix?: string }>;
+  warnings: Array<{
+    type: string;
+    description: string;
+    severity: "info" | "warning" | "blocking";
+    upstream_fix?: string;
+  }>;
   edits: Array<{ type: string; original_fragment: string; edited_fragment: string; reason: string }>;
   quality_score: number;
   reasoning: string;
@@ -114,10 +119,12 @@ export function useEmailForge() {
       return data;
     } catch (err) {
       const message = isApiError(err)
-        ? (err.details?.body as { message?: string; error?: string } | undefined)?.message
-            ?? (err.details?.body as { error?: string } | undefined)?.error
-            ?? err.message
-        : err instanceof Error ? err.message : String(err);
+        ? ((err.details?.body as { message?: string; error?: string } | undefined)?.message ??
+          (err.details?.body as { error?: string } | undefined)?.error ??
+          err.message)
+        : err instanceof Error
+          ? err.message
+          : String(err);
       setError(message);
       toast.error("Errore generazione", { description: message });
       return null;

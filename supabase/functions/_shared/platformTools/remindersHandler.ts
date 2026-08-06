@@ -10,9 +10,7 @@ interface ResolvedPartner {
   name: string;
 }
 
-async function resolvePartnerId(
-  args: Record<string, unknown>
-): Promise<ResolvedPartner | null> {
+async function resolvePartnerId(args: Record<string, unknown>): Promise<ResolvedPartner | null> {
   if (args.partner_id) {
     const { data } = await supabase
       .from("partners")
@@ -33,9 +31,7 @@ async function resolvePartnerId(
   return null;
 }
 
-export async function handleListReminders(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleListReminders(args: Record<string, unknown>): Promise<unknown> {
   let query = supabase
     .from("reminders")
     .select("id, title, description, due_date, priority, status, partner_id")
@@ -48,10 +44,7 @@ export async function handleListReminders(
   return { count: data?.length || 0, reminders: data || [] };
 }
 
-export async function handleCreateReminder(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleCreateReminder(args: Record<string, unknown>, userId: string): Promise<unknown> {
   const partner = await resolvePartnerId(args);
   if (!partner) return { error: "Partner non trovato" };
   const { error } = await supabase.from("reminders").insert({

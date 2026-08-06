@@ -17,15 +17,22 @@ const log = createLogger("useSendEmail");
  */
 function assertSingleRecipient(to: unknown): asserts to is string {
   if (Array.isArray(to)) {
-    throw new Error("BULK_SEND_FORBIDDEN: useSendEmail accetta un solo destinatario. Usa il flusso bulk (Outreach → In Uscita).");
+    throw new Error(
+      "BULK_SEND_FORBIDDEN: useSendEmail accetta un solo destinatario. Usa il flusso bulk (Outreach → In Uscita).",
+    );
   }
   if (typeof to !== "string" || !to.trim()) {
     throw new Error("Destinatario email mancante o non valido");
   }
   // Rifiuta liste mascherate da stringa: "a@x.com, b@y.com" o "a@x.com; b@y.com"
-  const recipients = to.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  const recipients = to
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (recipients.length > 1) {
-    throw new Error("BULK_SEND_FORBIDDEN: rilevati più destinatari nella stringa. Usa il flusso bulk (Outreach → In Uscita).");
+    throw new Error(
+      "BULK_SEND_FORBIDDEN: rilevati più destinatari nella stringa. Usa il flusso bulk (Outreach → In Uscita).",
+    );
   }
 }
 
@@ -54,8 +61,8 @@ export function useSendEmail(draft: DraftState) {
     setSending(true);
     try {
       const sanitizedHtml = DOMPurify.sanitize(draft.body, {
-        ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'style'],
+        ALLOWED_TAGS: ["br", "p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "h1", "h2", "h3", "span", "div"],
+        ALLOWED_ATTR: ["href", "target", "rel", "style"],
       });
       await enqueue({
         action_type: "send_email",
@@ -69,7 +76,7 @@ export function useSendEmail(draft: DraftState) {
           body: sanitizedHtml,
           draft_subject: draft.subject,
           draft_body: sanitizedHtml,
-          attachments: (draft.attachments ?? []).map(a => ({ filename: a.name, path: a.path })),
+          attachments: (draft.attachments ?? []).map((a) => ({ filename: a.name, path: a.path })),
           contact_id: draft.contactId ?? null,
         },
         suggested_content: sanitizedHtml,

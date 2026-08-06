@@ -10,7 +10,18 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Search, ScanSearch, Telescope, Square, X, CheckCircle2, AlertCircle, SkipForward, Database } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  ScanSearch,
+  Telescope,
+  Square,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  SkipForward,
+  Database,
+} from "lucide-react";
 import { useSherlock } from "@/v2/hooks/useSherlock";
 import { extractLinkedinCompanySlug } from "@/v2/services/sherlock/sherlockEngine";
 import type { SherlockLevel, SherlockStepResult } from "@/v2/services/sherlock/sherlockTypes";
@@ -43,7 +54,13 @@ const LEVEL_META: Record<SherlockLevel, { label: string; Icon: typeof Search; et
   3: { label: "Sherlock", Icon: Telescope, eta: "~5min" },
 };
 
-export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLevel, onComplete }: Props): React.ReactElement {
+export function SherlockLauncherDialog({
+  open,
+  onOpenChange,
+  target,
+  autoStartLevel,
+  onComplete,
+}: Props): React.ReactElement {
   const vars = React.useMemo<Record<string, string>>(() => {
     if (!target) return {} as Record<string, string>;
     return {
@@ -73,10 +90,13 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
     if (!open) {
       autoStartedRef.current = false;
       ranOnceRef.current = false;
-      if (autoCloseRef.current) { clearTimeout(autoCloseRef.current); autoCloseRef.current = null; }
+      if (autoCloseRef.current) {
+        clearTimeout(autoCloseRef.current);
+        autoCloseRef.current = null;
+      }
       sherlock.stop();
     }
-  }, [open, autoStartLevel, vars.companyName]);  
+  }, [open, autoStartLevel, vars.companyName]);
 
   // Marca che almeno una run è stata avviata (per distinguere "mai partita" da "appena finita")
   React.useEffect(() => {
@@ -85,12 +105,19 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
 
   const completeFiredRef = React.useRef(false);
   React.useEffect(() => {
-    if (!open) { completeFiredRef.current = false; return; }
+    if (!open) {
+      completeFiredRef.current = false;
+      return;
+    }
     if (sherlock.running) return;
     if (!ranOnceRef.current) return;
     if (completeFiredRef.current) return;
     completeFiredRef.current = true;
-    try { onComplete?.(sherlock.summary ?? null); } catch { /* silent */ }
+    try {
+      onComplete?.(sherlock.summary ?? null);
+    } catch {
+      /* silent */
+    }
   }, [open, sherlock.running, sherlock.summary, onComplete]);
 
   // Auto-close quando la Deep Search finisce: lasciamo 1.8s per leggere la sintesi, poi chiudiamo.
@@ -103,7 +130,10 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
       onOpenChange(false);
     }, 1800);
     return () => {
-      if (autoCloseRef.current) { clearTimeout(autoCloseRef.current); autoCloseRef.current = null; }
+      if (autoCloseRef.current) {
+        clearTimeout(autoCloseRef.current);
+        autoCloseRef.current = null;
+      }
     };
   }, [open, sherlock.running, onOpenChange]);
 

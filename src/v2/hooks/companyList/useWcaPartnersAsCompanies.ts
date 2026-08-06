@@ -31,8 +31,7 @@ function mapContacts(p: PartnerWithRelations): ContactEntity[] {
   const partnerInHolding = p.lead_status === "holding";
   return list.map((c) => {
     const row = toRecord(c);
-    const contactInHolding =
-      row.in_holding_pattern === true || partnerInHolding;
+    const contactInHolding = row.in_holding_pattern === true || partnerInHolding;
     return {
       id: c.id,
       name: c.contact_alias || c.name || "—",
@@ -57,15 +56,18 @@ function mapPartner(p: PartnerWithRelations): CompanyEntity {
   const wcaYears = yearsSince(p.member_since ?? null);
   const top = contacts[0];
   const ratingRaw = (p as unknown as { rating?: number | null }).rating ?? null;
-  const score =
-    ratingRaw != null ? Math.max(0, Math.min(100, Math.round(ratingRaw * 20))) : null;
+  const score = ratingRaw != null ? Math.max(0, Math.min(100, Math.round(ratingRaw * 20))) : null;
   const pAny = toRecord(p);
   const website = (pAny.website as string | null | undefined) ?? null;
   const services = Array.isArray(pAny.partner_services)
-    ? (pAny.partner_services as Array<{ service_category?: string }>).map((s) => s.service_category || "").filter(Boolean)
+    ? (pAny.partner_services as Array<{ service_category?: string }>)
+        .map((s) => s.service_category || "")
+        .filter(Boolean)
     : [];
   const certifications = Array.isArray(pAny.partner_certifications)
-    ? (pAny.partner_certifications as Array<{ certification?: string }>).map((c) => c.certification || "").filter(Boolean)
+    ? (pAny.partner_certifications as Array<{ certification?: string }>)
+        .map((c) => c.certification || "")
+        .filter(Boolean)
     : [];
   const networks = Array.isArray(pAny.partner_networks)
     ? (pAny.partner_networks as Array<{ network_name?: string }>).map((n) => n.network_name || "").filter(Boolean)
@@ -87,9 +89,7 @@ function mapPartner(p: PartnerWithRelations): CompanyEntity {
     contactsCount: contacts.length,
     contacts,
     score,
-    primaryContact: top
-      ? { name: top.name, role: top.role ?? null }
-      : null,
+    primaryContact: top ? { name: top.name, role: top.role ?? null } : null,
     channels: aggChannels,
     meta: {
       wcaYears,
@@ -125,7 +125,7 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
   const { filters } = useGlobalFilters();
   const countries = useMemo<string[]>(
     () => Array.from(filters.networkSelectedCountries ?? new Set<string>()) as string[],
-    [filters.networkSelectedCountries]
+    [filters.networkSelectedCountries],
   );
   const search = filters.networkSearch || "";
   const qualityRaw = filters.networkQuality || "all";
@@ -133,14 +133,14 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
     () =>
       qualityRaw === "all" || !qualityRaw
         ? []
-        : qualityRaw.split(",").map((s) => s.trim()).filter(Boolean),
-    [qualityRaw]
+        : qualityRaw
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+    [qualityRaw],
   );
 
-  const filterKey = useMemo(
-    () => ({ countries, search }),
-    [countries, search]
-  );
+  const filterKey = useMemo(() => ({ countries, search }), [countries, search]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.partners.filtered({
@@ -163,28 +163,34 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
     staleTime: 60_000,
   });
 
-  const companies = useMemo(
-    () => {
-      const all = (data ?? []).map(mapPartner);
-      if (qualityTokens.length === 0) return all;
-      // Multi-select AND: tutti i token devono matchare.
-      const test = (c: CompanyEntity, token: string): boolean => {
-        switch (token) {
-          case "with_email":    return c.channels?.email === true;
-          case "no_email":      return !c.channels?.email;
-          case "with_phone":    return c.channels?.phone === true;
-          case "no_phone":      return !c.channels?.phone;
-          case "with_profile":  return c.channels?.website === true || c.hasLinkedin === true;
-          case "no_profile":    return !(c.channels?.website || c.hasLinkedin);
-          case "with_contacts": return (c.contactsCount ?? 0) > 0;
-          case "no_contacts":   return (c.contactsCount ?? 0) === 0;
-          default:              return true;
-        }
-      };
-      return all.filter((c) => qualityTokens.every((t) => test(c, t)));
-    },
-    [data, qualityTokens]
-  );
+  const companies = useMemo(() => {
+    const all = (data ?? []).map(mapPartner);
+    if (qualityTokens.length === 0) return all;
+    // Multi-select AND: tutti i token devono matchare.
+    const test = (c: CompanyEntity, token: string): boolean => {
+      switch (token) {
+        case "with_email":
+          return c.channels?.email === true;
+        case "no_email":
+          return !c.channels?.email;
+        case "with_phone":
+          return c.channels?.phone === true;
+        case "no_phone":
+          return !c.channels?.phone;
+        case "with_profile":
+          return c.channels?.website === true || c.hasLinkedin === true;
+        case "no_profile":
+          return !(c.channels?.website || c.hasLinkedin);
+        case "with_contacts":
+          return (c.contactsCount ?? 0) > 0;
+        case "no_contacts":
+          return (c.contactsCount ?? 0) === 0;
+        default:
+          return true;
+      }
+    };
+    return all.filter((c) => qualityTokens.every((t) => test(c, t)));
+  }, [data, qualityTokens]);
 
   return { companies, isLoading, error };
 }

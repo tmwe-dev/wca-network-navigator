@@ -18,7 +18,6 @@ export function assertCalledFromRunner(scope: string): void {
       // soft warning to console — runner manca dallo stack
       // usiamo console.warn perché è dev-only e parte di un guardrail
 
-       
       log.warn(`[bulkOps] entry "${scope}" invocata fuori dal runner. Usa runBulkOp().`);
     }
   }

@@ -5,9 +5,7 @@
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import {
-  MessageCircle, Loader2, Search, Radio, PanelLeftClose, PanelLeftOpen,
-} from "lucide-react";
+import { MessageCircle, Loader2, Search, Radio, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +23,13 @@ interface WhatsAppChatListProps {
 }
 
 export function WhatsAppChatList({
-  threads, isLoading, activeTab: _activeTab, openTabs,
-  focusedChat, syncEnabled, onOpenChat,
+  threads,
+  isLoading,
+  activeTab: _activeTab,
+  openTabs,
+  focusedChat,
+  syncEnabled,
+  onOpenChat,
 }: WhatsAppChatListProps) {
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -34,22 +37,28 @@ export function WhatsAppChatList({
   const filteredThreads = useMemo(() => {
     if (!search.trim()) return threads;
     const q = search.toLowerCase();
-    return threads.filter(t =>
-      t.contact.toLowerCase().includes(q) ||
-      t.lastMessage.body_text?.toLowerCase().includes(q)
+    return threads.filter(
+      (t) => t.contact.toLowerCase().includes(q) || t.lastMessage.body_text?.toLowerCase().includes(q),
     );
   }, [threads, search]);
 
   if (!sidebarOpen) {
     return (
       <div className="flex flex-col items-center pt-2 gap-2 w-[48px] min-w-[48px] border-r border-border bg-background shrink-0">
-        <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti" aria-label="Visualizza">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setSidebarOpen(true)}
+          className="h-8 w-8"
+          title="Apri contatti"
+          aria-label="Visualizza"
+        >
           <PanelLeftOpen className="w-4 h-4" />
         </Button>
         <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center">
           <MessageCircle className="w-4 h-4 text-green-600" />
         </div>
-        {threads.some(t => t.unreadCount > 0) && (
+        {threads.some((t) => t.unreadCount > 0) && (
           <span className="bg-destructive text-destructive-foreground text-[9px] rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5">
             {threads.reduce((s, t) => s + t.unreadCount, 0)}
           </span>
@@ -62,7 +71,14 @@ export function WhatsAppChatList({
     <div className="flex flex-col h-full w-full border-r border-border bg-background">
       <div className="flex-shrink-0 p-2 border-b border-border">
         <div className="flex items-center gap-1.5 mb-1.5">
-          <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setSidebarOpen(false)}
+            className="h-7 w-7"
+            title="Chiudi lista"
+            aria-label="Chiudi"
+          >
             <PanelLeftClose className="w-3.5 h-3.5" />
           </Button>
           <span className="text-xs font-medium text-muted-foreground">
@@ -74,7 +90,12 @@ export function WhatsAppChatList({
         </div>
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca..." className="h-7 pl-7 text-xs" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca..."
+            className="h-7 pl-7 text-xs"
+          />
         </div>
       </div>
 
@@ -90,7 +111,7 @@ export function WhatsAppChatList({
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {filteredThreads.map(thread => {
+            {filteredThreads.map((thread) => {
               const isOpen = openTabs.includes(thread.contact);
               const isFocused = thread.contact === focusedChat;
               return (
@@ -104,10 +125,12 @@ export function WhatsAppChatList({
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0",
-                      isFocused && syncEnabled ? "bg-green-500/30" : "bg-green-500/15"
-                    )}>
+                    <div
+                      className={cn(
+                        "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0",
+                        isFocused && syncEnabled ? "bg-green-500/30" : "bg-green-500/15",
+                      )}
+                    >
                       {isFocused && syncEnabled ? (
                         <Radio className="w-4 h-4 text-green-600 animate-pulse" />
                       ) : (

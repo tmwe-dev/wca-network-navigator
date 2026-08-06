@@ -45,11 +45,25 @@ export interface AddContactState {
 }
 
 export const emptyForm: ContactFormData = {
-  companyName: "", companyAlias: "", country: "", city: "", address: "",
-  zipCode: "", companyPhone: "", companyEmail: "", website: "",
-  contactName: "", contactAlias: "", position: "", contactEmail: "",
-  contactPhone: "", contactMobile: "", origin: "", note: "",
-  logoUrl: "", linkedinUrl: "",
+  companyName: "",
+  companyAlias: "",
+  country: "",
+  city: "",
+  address: "",
+  zipCode: "",
+  companyPhone: "",
+  companyEmail: "",
+  website: "",
+  contactName: "",
+  contactAlias: "",
+  position: "",
+  contactEmail: "",
+  contactPhone: "",
+  contactMobile: "",
+  origin: "",
+  note: "",
+  logoUrl: "",
+  linkedinUrl: "",
 };
 
 export const initialState: AddContactState = {

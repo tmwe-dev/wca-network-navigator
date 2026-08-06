@@ -13,14 +13,18 @@ import { applyLeadStatusChange, TERMINAL_STATUSES } from "./leadStatusGuard.ts";
 type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
 export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = false) {
-
   async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
     if (args.partner_id) {
       const { data } = await supabase.from("partners").select("id, company_name").eq("id", args.partner_id).single();
       return data ? { id: data.id, name: data.company_name } : null;
     }
     if (args.company_name) {
-      const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${escapeLike(args.company_name)}%`).limit(1).single();
+      const { data } = await supabase
+        .from("partners")
+        .select("id, company_name")
+        .ilike("company_name", `%${escapeLike(args.company_name)}%`)
+        .limit(1)
+        .single();
       return data ? { id: data.id, name: data.company_name } : null;
     }
     return null;
@@ -54,18 +58,34 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     // Altri campi (no lead_status, già gestito sopra)
     const updates: Record<string, unknown> = {};
     const changes: string[] = [];
-    if (args.is_favorite !== undefined) { updates.is_favorite = args.is_favorite; changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`); }
+    if (args.is_favorite !== undefined) {
+      updates.is_favorite = args.is_favorite;
+      changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`);
+    }
     if (args.lead_status) changes.push(`lead status: ${args.lead_status}`); // già applicato
-    if (args.rating !== undefined) { updates.rating = Math.min(5, Math.max(0, Number(args.rating))); changes.push(`rating: ${updates.rating}`); }
-    if (args.company_alias) { updates.company_alias = args.company_alias; changes.push(`alias: ${args.company_alias}`); }
-    if (Object.keys(updates).length === 0 && !args.lead_status) return { error: "Nessun campo da aggiornare specificato" };
+    if (args.rating !== undefined) {
+      updates.rating = Math.min(5, Math.max(0, Number(args.rating)));
+      changes.push(`rating: ${updates.rating}`);
+    }
+    if (args.company_alias) {
+      updates.company_alias = args.company_alias;
+      changes.push(`alias: ${args.company_alias}`);
+    }
+    if (Object.keys(updates).length === 0 && !args.lead_status)
+      return { error: "Nessun campo da aggiornare specificato" };
 
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date().toISOString();
       const { error } = await supabase.from("partners").update(updates).eq("user_id", userId).eq("id", partner.id);
       if (error) return { error: error.message };
     }
-    return { success: true, partner_id: partner.id, company_name: partner.name, changes, message: `Partner "${partner.name}" aggiornato: ${changes.join(", ")}` };
+    return {
+      success: true,
+      partner_id: partner.id,
+      company_name: partner.name,
+      changes,
+      message: `Partner "${partner.name}" aggiornato: ${changes.join(", ")}`,
+    };
   }
 
   async function executeAddPartnerNote(args: Record<string, unknown>) {
@@ -78,20 +98,34 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
       notes: args.notes ? String(args.notes) : null,
     });
     if (error) return { error: error.message };
-    return { success: true, partner_id: partner.id, company_name: partner.name, message: `Nota aggiunta a "${partner.name}": ${args.subject}` };
+    return {
+      success: true,
+      partner_id: partner.id,
+      company_name: partner.name,
+      message: `Nota aggiunta a "${partner.name}": ${args.subject}`,
+    };
   }
 
   async function executeCreateReminder(args: Record<string, unknown>, userId: string) {
     const partner = await resolvePartnerId(args);
     if (!partner) return { error: "Partner non trovato. Specifica partner_id o company_name." };
     const { error } = await supabase.from("reminders").insert({
-      partner_id: partner.id, title: String(args.title),
+      partner_id: partner.id,
+      title: String(args.title),
       description: args.description ? String(args.description) : null,
-      due_date: String(args.due_date), priority: String(args.priority || "medium"),
+      due_date: String(args.due_date),
+      priority: String(args.priority || "medium"),
       user_id: userId,
     });
     if (error) return { error: error.message };
-    return { success: true, partner_id: partner.id, company_name: partner.name, due_date: args.due_date, priority: args.priority || "medium", message: `Reminder creato per "${partner.name}": "${args.title}" (scadenza: ${args.due_date})` };
+    return {
+      success: true,
+      partner_id: partner.id,
+      company_name: partner.name,
+      due_date: args.due_date,
+      priority: args.priority || "medium",
+      message: `Reminder creato per "${partner.name}": "${args.title}" (scadenza: ${args.due_date})`,
+    };
   }
 
   async function executeUpdateLeadStatus(args: Record<string, unknown>) {
@@ -110,13 +144,24 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
       if (args.country) query = query.ilike("country", `%${escapeLike(String(args.country))}%`);
       const { data: matches, count } = await query.limit(200);
       if (!matches || matches.length === 0) return { error: "Nessun contatto trovato con i filtri specificati" };
-      if (matches.length > 5) return { needs_confirmation: true, count: count || matches.length, status, message: `Trovati ${count || matches.length} contatti. Confermi l'aggiornamento a "${status}"?` };
+      if (matches.length > 5)
+        return {
+          needs_confirmation: true,
+          count: count || matches.length,
+          status,
+          message: `Trovati ${count || matches.length} contatti. Confermi l'aggiornamento a "${status}"?`,
+        };
       targetIds = matches.map((c: Record<string, unknown>) => c.id as string);
     }
 
     // Applica via guard a uno a uno (per ottenere validazione + audit per ciascuno)
-    let updated = 0; const blocked: string[] = [];
-    const { data: { user } } = await (supabase as { auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> } }).auth.getUser();
+    let updated = 0;
+    const blocked: string[] = [];
+    const {
+      data: { user },
+    } = await (
+      supabase as { auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> } }
+    ).auth.getUser();
     const userId = user?.id;
     for (const id of targetIds) {
       const res = await applyLeadStatusChange(supabase, {
@@ -163,9 +208,15 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
       const { data: rows } = await idQuery.limit(500);
       const ids = (rows ?? []).map((r: Record<string, unknown>) => r.id as string);
       if (ids.length === 0) return { error: "Nessun partner trovato" };
-      if (ids.length > 5) return { needs_confirmation: true, count: ids.length, message: `Trovati ${ids.length} partner. Confermi cambio stato a "${status}"?` };
+      if (ids.length > 5)
+        return {
+          needs_confirmation: true,
+          count: ids.length,
+          message: `Trovati ${ids.length} partner. Confermi cambio stato a "${status}"?`,
+        };
 
-      let updated = 0; const blocked: string[] = [];
+      let updated = 0;
+      const blocked: string[] = [];
       for (const id of ids) {
         const res = await applyLeadStatusChange(supabase, {
           table: "partners",
@@ -190,7 +241,9 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
       }
 
       return {
-        success: updated > 0, updated_count: updated, blocked_count: blocked.length,
+        success: updated > 0,
+        updated_count: updated,
+        blocked_count: blocked.length,
         message: `${updated} partner aggiornati a "${status}"${blocked.length ? `, ${blocked.length} bloccati` : ""}`,
         ...(blocked.length ? { blocked_details: blocked.slice(0, 10) } : {}),
       };
@@ -199,22 +252,38 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     // Bulk senza lead_status → comportamento legacy
     const updates: Record<string, unknown> = {};
     const changes: string[] = [];
-    if (args.is_favorite !== undefined) { updates.is_favorite = args.is_favorite; changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`); }
+    if (args.is_favorite !== undefined) {
+      updates.is_favorite = args.is_favorite;
+      changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`);
+    }
     if (Object.keys(updates).length === 0) return { error: "Nessun aggiornamento specificato" };
     updates.updated_at = new Date().toISOString();
     let countQuery = supabase.from("partners").select("id", { count: "exact", head: true }).eq("user_id", userId);
-    if (args.partner_ids && Array.isArray(args.partner_ids)) countQuery = countQuery.in("id", args.partner_ids as string[]);
+    if (args.partner_ids && Array.isArray(args.partner_ids))
+      countQuery = countQuery.in("id", args.partner_ids as string[]);
     else if (args.country_code) countQuery = countQuery.eq("country_code", String(args.country_code).toUpperCase());
     else return { error: "Specifica country_code o partner_ids" };
     const { count } = await countQuery;
     if (!count || count === 0) return { error: "Nessun partner trovato" };
-    if (count > 5) return { needs_confirmation: true, count, changes, message: `Trovati ${count} partner. Confermi l'aggiornamento: ${changes.join(", ")}?` };
+    if (count > 5)
+      return {
+        needs_confirmation: true,
+        count,
+        changes,
+        message: `Trovati ${count} partner. Confermi l'aggiornamento: ${changes.join(", ")}?`,
+      };
     let updateQuery = supabase.from("partners").update(updates).eq("user_id", userId);
-    if (args.partner_ids && Array.isArray(args.partner_ids)) updateQuery = updateQuery.in("id", args.partner_ids as string[]);
+    if (args.partner_ids && Array.isArray(args.partner_ids))
+      updateQuery = updateQuery.in("id", args.partner_ids as string[]);
     else if (args.country_code) updateQuery = updateQuery.eq("country_code", String(args.country_code).toUpperCase());
     const { error } = await updateQuery;
     if (error) return { error: error.message };
-    return { success: true, updated_count: count, changes, message: `${count} partner aggiornati: ${changes.join(", ")}` };
+    return {
+      success: true,
+      updated_count: count,
+      changes,
+      message: `${count} partner aggiornati: ${changes.join(", ")}`,
+    };
   }
 
   async function executeLinkBusinessCard(args: Record<string, unknown>) {
@@ -228,30 +297,48 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
 
   async function executeCreateActivity(args: Record<string, unknown>, userId: string) {
     let partnerId = args.partner_id as string | null;
-    let companyName = args.company_name as string || "";
+    let companyName = (args.company_name as string) || "";
     if (!partnerId && companyName) {
       const resolved = await resolvePartnerId(args);
-      if (resolved) { partnerId = resolved.id; companyName = resolved.name; }
+      if (resolved) {
+        partnerId = resolved.id;
+        companyName = resolved.name;
+      }
     }
     const sourceType = String(args.source_type || "partner");
     const sourceId = partnerId || crypto.randomUUID();
-    const { data, error } = await supabase.from("activities").insert({
-      title: String(args.title), description: args.description ? String(args.description) : null,
-      activity_type: String(args.activity_type), source_type: sourceType, source_id: sourceId,
-      partner_id: partnerId, due_date: args.due_date ? String(args.due_date) : null,
-      priority: String(args.priority || "medium"),
-      email_subject: args.email_subject ? String(args.email_subject) : null,
-      email_body: args.email_body ? String(args.email_body) : null,
-      source_meta: { company_name: companyName } as Record<string, unknown>,
-      user_id: userId,
-    }).select("id").single();
+    const { data, error } = await supabase
+      .from("activities")
+      .insert({
+        title: String(args.title),
+        description: args.description ? String(args.description) : null,
+        activity_type: String(args.activity_type),
+        source_type: sourceType,
+        source_id: sourceId,
+        partner_id: partnerId,
+        due_date: args.due_date ? String(args.due_date) : null,
+        priority: String(args.priority || "medium"),
+        email_subject: args.email_subject ? String(args.email_subject) : null,
+        email_body: args.email_body ? String(args.email_body) : null,
+        source_meta: { company_name: companyName } as Record<string, unknown>,
+        user_id: userId,
+      })
+      .select("id")
+      .single();
     if (error) return { error: error.message };
-    return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata${companyName ? ` per ${companyName}` : ""}.` };
+    return {
+      success: true,
+      activity_id: data.id,
+      message: `Attività "${args.title}" creata${companyName ? ` per ${companyName}` : ""}.`,
+    };
   }
 
   async function executeUpdateActivity(args: Record<string, unknown>) {
     const updates: Record<string, unknown> = {};
-    if (args.status) { updates.status = args.status; if (args.status === "completed") updates.completed_at = new Date().toISOString(); }
+    if (args.status) {
+      updates.status = args.status;
+      if (args.status === "completed") updates.completed_at = new Date().toISOString();
+    }
     if (args.priority) updates.priority = args.priority;
     if (args.due_date) updates.due_date = args.due_date;
     if (Object.keys(updates).length === 0) return { error: "Nessun campo da aggiornare" };
@@ -287,11 +374,19 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
       }
       if (!partnerId) return { error: "Partner non trovato" };
       if (!args.name) return { error: "Il nome del contatto è obbligatorio" };
-      const { data, error } = await supabase.from("partner_contacts").insert({
-        partner_id: partnerId, name: String(args.name), title: args.title ? String(args.title) : null,
-        email: args.email ? String(args.email) : null, direct_phone: args.direct_phone ? String(args.direct_phone) : null,
-        mobile: args.mobile ? String(args.mobile) : null, is_primary: !!args.is_primary,
-      }).select("id").single();
+      const { data, error } = await supabase
+        .from("partner_contacts")
+        .insert({
+          partner_id: partnerId,
+          name: String(args.name),
+          title: args.title ? String(args.title) : null,
+          email: args.email ? String(args.email) : null,
+          direct_phone: args.direct_phone ? String(args.direct_phone) : null,
+          mobile: args.mobile ? String(args.mobile) : null,
+          is_primary: !!args.is_primary,
+        })
+        .select("id")
+        .single();
       if (error) return { error: error.message };
       return { success: true, contact_id: data.id, message: `Contatto "${args.name}" aggiunto.` };
     }
@@ -318,10 +413,20 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     const table = String(args.table);
     const ids = args.ids as string[];
     if (!ids || ids.length === 0) return { error: "Nessun ID specificato" };
-    if (ids.length > 5) return { needs_confirmation: true, count: ids.length, table, message: `Stai per eliminare ${ids.length} record da "${table}". Confermi?` };
+    if (ids.length > 5)
+      return {
+        needs_confirmation: true,
+        count: ids.length,
+        table,
+        message: `Stai per eliminare ${ids.length} record da "${table}". Confermi?`,
+      };
     const validTables = ["partners", "prospects", "activities", "reminders"];
     if (!validTables.includes(table)) return { error: `Tabella non valida: ${table}` };
-    const { error } = await supabase.from(table as "partners" | "prospects" | "activities" | "reminders").delete().eq("user_id", userId).in("id", ids);
+    const { error } = await supabase
+      .from(table as "partners" | "prospects" | "activities" | "reminders")
+      .delete()
+      .eq("user_id", userId)
+      .in("id", ids);
     if (error) return { error: error.message };
     return { success: true, deleted: ids.length, table, message: `${ids.length} record eliminati da "${table}".` };
   }
@@ -329,11 +434,20 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
   // Proxy tools that call other edge functions
   async function executeGenerateOutreach(args: Record<string, unknown>, authHeader: string) {
     const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-outreach`, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader }, body: JSON.stringify(args),
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
+      body: JSON.stringify(args),
     });
     const data = await response.json();
     if (!response.ok || data.error) return { error: data.error || "Errore generazione outreach" };
-    return { success: true, channel: data.channel, subject: data.subject, body: data.body, language: data.language, message: `Messaggio ${args.channel} generato per ${args.contact_name} (${args.company_name}).` };
+    return {
+      success: true,
+      channel: data.channel,
+      subject: data.subject,
+      body: data.body,
+      language: data.language,
+      message: `Messaggio ${args.channel} generato per ${args.contact_name} (${args.company_name}).`,
+    };
   }
 
   async function executeSendEmail(args: Record<string, unknown>, authHeader: string, userId?: string) {
@@ -349,8 +463,7 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
         .eq("key", "agent_require_approval")
         .maybeSingle();
 
-      const requiresApproval =
-        approvalSetting?.value === "true" || approvalSetting?.value === true;
+      const requiresApproval = approvalSetting?.value === "true" || approvalSetting?.value === true;
 
       if (requiresApproval) {
         const { error: queueError } = await supabase.from("ai_pending_actions").insert({
@@ -381,7 +494,8 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     }
 
     const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
       body: JSON.stringify({
         to: args.to_email,
         toName: args.to_name,
@@ -394,17 +508,28 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     const data = await response.json();
     if (!response.ok || data.error) return { error: data.error || "Errore invio email" };
     if (args.partner_id) {
-      await supabase.from("interactions").insert({ partner_id: args.partner_id, interaction_type: "email", subject: String(args.subject), notes: `Inviata a ${args.to_email}` });
+      await supabase
+        .from("interactions")
+        .insert({
+          partner_id: args.partner_id,
+          interaction_type: "email",
+          subject: String(args.subject),
+          notes: `Inviata a ${args.to_email}`,
+        });
     }
     return { success: true, message: `Email inviata a ${args.to_email} con oggetto "${args.subject}".` };
   }
 
   async function executeDeepSearchPartner(args: Record<string, unknown>, authHeader: string) {
     let partnerId = args.partner_id as string;
-    if (!partnerId && args.company_name) { const resolved = await resolvePartnerId(args); if (resolved) partnerId = resolved.id; }
+    if (!partnerId && args.company_name) {
+      const resolved = await resolvePartnerId(args);
+      if (resolved) partnerId = resolved.id;
+    }
     if (!partnerId) return { error: "Partner non trovato" };
     const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-partner`, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
       body: JSON.stringify({ partner_id: partnerId, force: !!args.force }),
     });
     const data = await response.json();
@@ -415,12 +540,18 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
   async function executeDeepSearchContact(args: Record<string, unknown>, authHeader: string) {
     let contactId = args.contact_id as string;
     if (!contactId && args.contact_name) {
-      const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${escapeLike(args.contact_name)}%`).limit(1).single();
+      const { data } = await supabase
+        .from("imported_contacts")
+        .select("id")
+        .ilike("name", `%${escapeLike(args.contact_name)}%`)
+        .limit(1)
+        .single();
       if (data) contactId = data.id;
     }
     if (!contactId) return { error: "Contatto non trovato" };
     const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-contact`, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
       body: JSON.stringify({ contact_id: contactId }),
     });
     const data = await response.json();
@@ -430,10 +561,14 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
 
   async function executeEnrichPartnerWebsite(args: Record<string, unknown>, authHeader: string) {
     let partnerId = args.partner_id as string;
-    if (!partnerId && args.company_name) { const resolved = await resolvePartnerId(args); if (resolved) partnerId = resolved.id; }
+    if (!partnerId && args.company_name) {
+      const resolved = await resolvePartnerId(args);
+      if (resolved) partnerId = resolved.id;
+    }
     if (!partnerId) return { error: "Partner non trovato" };
     const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/enrich-partner-website`, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
       body: JSON.stringify({ partner_id: partnerId }),
     });
     const data = await response.json();
@@ -442,7 +577,9 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
   }
 
   async function executeScanDirectory(_args: Record<string, unknown>, _authHeader: string) {
-    return { error: "Funzione scrape-wca-directory rimossa. Il download directory è ora gestito dal sistema esterno wca-app." };
+    return {
+      error: "Funzione scrape-wca-directory rimossa. Il download directory è ora gestito dal sistema esterno wca-app.",
+    };
   }
 
   async function executeGenerateAliases(args: Record<string, unknown>, authHeader: string) {
@@ -451,7 +588,9 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     if (args.country_code) body.country_code = String(args.country_code).toUpperCase();
     body.limit = Number(args.limit) || 20;
     const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-aliases`, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader }, body: JSON.stringify(body),
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
+      body: JSON.stringify(body),
     });
     const data = await response.json();
     if (!response.ok || data.error) return { error: data.error || "Errore generazione alias" };

@@ -7,13 +7,7 @@
  * functions and the SPA (via mirrored copy if needed).
  */
 
-export type KbFamily =
-  | "doctrine"
-  | "procedures"
-  | "personas"
-  | "playbooks"
-  | "glossary"
-  | "data-schema";
+export type KbFamily = "doctrine" | "procedures" | "personas" | "playbooks" | "glossary" | "data-schema";
 
 export const KB_FAMILIES: readonly KbFamily[] = [
   "doctrine",

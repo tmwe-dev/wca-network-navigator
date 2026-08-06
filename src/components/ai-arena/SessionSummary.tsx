@@ -85,7 +85,10 @@ export function SessionSummary({ open, stats, onClose }: SessionSummaryProps): R
             {stats.languages.length > 0 && (
               <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground">
                 <Globe className="h-4 w-4" />
-                <span>Email in {stats.languages.length} lingu{stats.languages.length === 1 ? "a" : "e"} divers{stats.languages.length === 1 ? "a" : "e"}</span>
+                <span>
+                  Email in {stats.languages.length} lingu{stats.languages.length === 1 ? "a" : "e"} divers
+                  {stats.languages.length === 1 ? "a" : "e"}
+                </span>
               </div>
             )}
 

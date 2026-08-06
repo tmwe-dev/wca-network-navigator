@@ -4,11 +4,51 @@ import { Mail, Linkedin, MessageCircle, Smartphone, BookOpen, Search, AlertTrian
 import { cn } from "@/lib/utils";
 import type { DraftChannel } from "@/types/cockpit";
 
-const channels: { id: DraftChannel; label: string; icon: React.ElementType; hoverBg: string; hoverBorder: string; hoverText: string; requiredField: string }[] = [
-  { id: "email", label: "Email", icon: Mail, hoverBg: "bg-primary/10", hoverBorder: "border-primary", hoverText: "text-primary", requiredField: "email" },
-  { id: "linkedin", label: "LinkedIn", icon: Linkedin, hoverBg: "bg-[hsl(210,80%,55%)]/10", hoverBorder: "border-[hsl(210,80%,55%)]", hoverText: "text-[hsl(210,80%,55%)]", requiredField: "linkedinUrl" },
-  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, hoverBg: "bg-[hsl(142,71%,45%)]/10", hoverBorder: "border-[hsl(142,71%,45%)]", hoverText: "text-[hsl(142,71%,45%)]", requiredField: "phone" },
-  { id: "sms", label: "SMS / Chat", icon: Smartphone, hoverBg: "bg-accent/20", hoverBorder: "border-accent-foreground/50", hoverText: "text-accent-foreground", requiredField: "phone" },
+const channels: {
+  id: DraftChannel;
+  label: string;
+  icon: React.ElementType;
+  hoverBg: string;
+  hoverBorder: string;
+  hoverText: string;
+  requiredField: string;
+}[] = [
+  {
+    id: "email",
+    label: "Email",
+    icon: Mail,
+    hoverBg: "bg-primary/10",
+    hoverBorder: "border-primary",
+    hoverText: "text-primary",
+    requiredField: "email",
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    icon: Linkedin,
+    hoverBg: "bg-[hsl(210,80%,55%)]/10",
+    hoverBorder: "border-[hsl(210,80%,55%)]",
+    hoverText: "text-[hsl(210,80%,55%)]",
+    requiredField: "linkedinUrl",
+  },
+  {
+    id: "whatsapp",
+    label: "WhatsApp",
+    icon: MessageCircle,
+    hoverBg: "bg-[hsl(142,71%,45%)]/10",
+    hoverBorder: "border-[hsl(142,71%,45%)]",
+    hoverText: "text-[hsl(142,71%,45%)]",
+    requiredField: "phone",
+  },
+  {
+    id: "sms",
+    label: "SMS / Chat",
+    icon: Smartphone,
+    hoverBg: "bg-accent/20",
+    hoverBorder: "border-accent-foreground/50",
+    hoverText: "text-accent-foreground",
+    requiredField: "phone",
+  },
 ];
 
 export interface ContactAvailability {
@@ -28,7 +68,16 @@ interface ChannelDropZonesProps {
   contactAvailability?: ContactAvailability;
 }
 
-export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDrop, onReadProfile, onDeepSearch, hasActiveContact, contactAvailability }: ChannelDropZonesProps) {
+export function ChannelDropZones({
+  isDragging,
+  draggedContactId,
+  dragCount,
+  onDrop,
+  onReadProfile,
+  onDeepSearch,
+  hasActiveContact,
+  contactAvailability,
+}: ChannelDropZonesProps) {
   const [hoveredChannel, setHoveredChannel] = useState<DraftChannel>(null);
 
   // Compact mode: show horizontal row of buttons when not dragging
@@ -64,17 +113,21 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
           {channels.map((ch) => {
             const Icon = ch.icon;
             const isHovered = hoveredChannel === ch.id;
-            const isMissing = contactAvailability && hasActiveContact
-              ? (ch.requiredField === "email" && !contactAvailability.hasEmail) ||
-                (ch.requiredField === "phone" && !contactAvailability.hasPhone) ||
-                (ch.requiredField === "linkedinUrl" && !contactAvailability.hasLinkedinUrl)
-              : false;
+            const isMissing =
+              contactAvailability && hasActiveContact
+                ? (ch.requiredField === "email" && !contactAvailability.hasEmail) ||
+                  (ch.requiredField === "phone" && !contactAvailability.hasPhone) ||
+                  (ch.requiredField === "linkedinUrl" && !contactAvailability.hasLinkedinUrl)
+                : false;
             return (
               <div
                 key={ch.id}
                 data-drop-zone="true"
                 data-channel-id={ch.id}
-                onDragOver={(e) => { e.preventDefault(); setHoveredChannel(ch.id); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setHoveredChannel(ch.id);
+                }}
                 onDragLeave={() => setHoveredChannel(null)}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -88,10 +141,12 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
                   isMissing && !isHovered && "opacity-50",
                 )}
               >
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                  isHovered ? cn(ch.hoverBg, ch.hoverText) : "bg-muted/40"
-                )}>
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                    isHovered ? cn(ch.hoverBg, ch.hoverText) : "bg-muted/40",
+                  )}
+                >
                   <Icon className="w-5 h-5" />
                 </div>
                 <span className={cn("text-sm font-semibold", isHovered && "text-foreground")}>{ch.label}</span>
@@ -136,7 +191,10 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               scale: isHovered ? 1.05 : 1,
             }}
             transition={{ delay: i * 0.04, duration: 0.2, type: "spring", stiffness: 300, damping: 20 }}
-            onDragOver={(e) => { e.preventDefault(); setHoveredChannel(ch.id); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setHoveredChannel(ch.id);
+            }}
             onDragLeave={() => setHoveredChannel(null)}
             onDrop={(e) => {
               e.preventDefault();
@@ -157,17 +215,21 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
               />
             )}
 
-            <div className={cn(
-              "relative w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-              isHovered ? cn(ch.hoverBg, ch.hoverText, "animate-pulse") : "bg-muted/40 text-muted-foreground"
-            )}>
+            <div
+              className={cn(
+                "relative w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                isHovered ? cn(ch.hoverBg, ch.hoverText, "animate-pulse") : "bg-muted/40 text-muted-foreground",
+              )}
+            >
               <Icon className={cn("transition-all", isHovered ? "w-7 h-7" : "w-5 h-5")} />
             </div>
 
-            <span className={cn(
-              "font-semibold transition-all",
-              isHovered ? "text-lg text-foreground" : "text-sm text-muted-foreground"
-            )}>
+            <span
+              className={cn(
+                "font-semibold transition-all",
+                isHovered ? "text-lg text-foreground" : "text-sm text-muted-foreground",
+              )}
+            >
               {ch.label}
             </span>
 

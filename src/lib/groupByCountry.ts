@@ -19,7 +19,7 @@ export interface CountryGroup<T> {
 export function groupByCountry<T>(
   items: T[],
   getCode: (item: T) => string,
-  getName: (item: T) => string
+  getName: (item: T) => string,
 ): CountryGroup<T>[] {
   const map: Record<string, CountryGroup<T>> = {};
 

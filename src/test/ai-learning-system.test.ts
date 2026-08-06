@@ -83,20 +83,36 @@ describe("Memory System — Level Promotion (L1→L2→L3)", () => {
   }
 
   it("L1 promotes to L2 with enough access and importance", () => {
-    expect(shouldPromote({ level: 1, access_count: 3, importance: 5, confidence: 0.5, pending_promotion: false })).toBe(true);
-    expect(shouldPromote({ level: 1, access_count: 2, importance: 5, confidence: 0.5, pending_promotion: false })).toBe(false);
-    expect(shouldPromote({ level: 1, access_count: 3, importance: 4, confidence: 0.5, pending_promotion: false })).toBe(false);
+    expect(shouldPromote({ level: 1, access_count: 3, importance: 5, confidence: 0.5, pending_promotion: false })).toBe(
+      true,
+    );
+    expect(shouldPromote({ level: 1, access_count: 2, importance: 5, confidence: 0.5, pending_promotion: false })).toBe(
+      false,
+    );
+    expect(shouldPromote({ level: 1, access_count: 3, importance: 4, confidence: 0.5, pending_promotion: false })).toBe(
+      false,
+    );
   });
 
   it("L2 promotes to L3 with high access, importance, and confidence", () => {
-    expect(shouldPromote({ level: 2, access_count: 8, importance: 7, confidence: 0.8, pending_promotion: false })).toBe(true);
-    expect(shouldPromote({ level: 2, access_count: 7, importance: 7, confidence: 0.8, pending_promotion: false })).toBe(false);
-    expect(shouldPromote({ level: 2, access_count: 8, importance: 6, confidence: 0.8, pending_promotion: false })).toBe(false);
-    expect(shouldPromote({ level: 2, access_count: 8, importance: 7, confidence: 0.7, pending_promotion: false })).toBe(false);
+    expect(shouldPromote({ level: 2, access_count: 8, importance: 7, confidence: 0.8, pending_promotion: false })).toBe(
+      true,
+    );
+    expect(shouldPromote({ level: 2, access_count: 7, importance: 7, confidence: 0.8, pending_promotion: false })).toBe(
+      false,
+    );
+    expect(shouldPromote({ level: 2, access_count: 8, importance: 6, confidence: 0.8, pending_promotion: false })).toBe(
+      false,
+    );
+    expect(shouldPromote({ level: 2, access_count: 8, importance: 7, confidence: 0.7, pending_promotion: false })).toBe(
+      false,
+    );
   });
 
   it("L3 never promotes further", () => {
-    expect(shouldPromote({ level: 3, access_count: 100, importance: 10, confidence: 1, pending_promotion: false })).toBe(false);
+    expect(
+      shouldPromote({ level: 3, access_count: 100, importance: 10, confidence: 1, pending_promotion: false }),
+    ).toBe(false);
   });
 });
 
@@ -144,12 +160,14 @@ describe("KB System — Rule Validation", () => {
   }
 
   it("valid entry has no errors", () => {
-    expect(validateKbEntry({
-      title: "Test Rule",
-      content: "This is a valid KB entry content",
-      category: "voice_rules",
-      priority: 50,
-    })).toEqual([]);
+    expect(
+      validateKbEntry({
+        title: "Test Rule",
+        content: "This is a valid KB entry content",
+        category: "voice_rules",
+        priority: 50,
+      }),
+    ).toEqual([]);
   });
 
   it("rejects empty title", () => {
@@ -203,9 +221,7 @@ describe("RAG System — Search Behavior", () => {
   });
 
   it("returns empty on no matches above threshold", () => {
-    const matches: KbMatch[] = [
-      { id: "1", title: "A", similarity: 0.1, content: "" },
-    ];
+    const matches: KbMatch[] = [{ id: "1", title: "A", similarity: 0.1, content: "" }];
     expect(filterByThreshold(matches, 0.3)).toHaveLength(0);
   });
 });

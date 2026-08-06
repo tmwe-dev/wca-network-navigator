@@ -30,9 +30,7 @@ interface UnreadRow {
   imap_uid: number;
 }
 
-function parseSeenFromFetchResponse(
-  lines: (string | Uint8Array)[],
-): Set<number> {
+function parseSeenFromFetchResponse(lines: (string | Uint8Array)[]): Set<number> {
   const seenUids = new Set<number>();
   for (const line of lines) {
     if (typeof line !== "string") continue;
@@ -53,8 +51,7 @@ export async function resyncUnreadFlags(
   imapExec: ImapExec,
   userId: string,
 ): Promise<{ checked: number; markedRead: number }> {
-  const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000)
-    .toISOString();
+  const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   const { data, error } = await supabase
     .from("channel_messages")
@@ -106,11 +103,7 @@ export async function resyncUnreadFlags(
   for (let i = 0; i < seenIds.length; i += CHUNK_SIZE) {
     const chunk = seenIds.slice(i, i + CHUNK_SIZE);
     try {
-      await supabase
-        .from("channel_messages")
-        .update({ read_at: nowIso })
-        .in("id", chunk)
-        .is("read_at", null);
+      await supabase.from("channel_messages").update({ read_at: nowIso }).in("id", chunk).is("read_at", null);
     } catch {
       continue;
     }

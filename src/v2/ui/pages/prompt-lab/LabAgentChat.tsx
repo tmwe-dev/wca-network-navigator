@@ -24,9 +24,7 @@ interface SuggestRuleData {
   priority?: "low" | "medium" | "high" | "critical";
 }
 
-type MessageSegment =
-  | { type: "text"; text: string }
-  | { type: "suggest_rule"; data: SuggestRuleData };
+type MessageSegment = { type: "text"; text: string } | { type: "suggest_rule"; data: SuggestRuleData };
 
 function parseAssistantMessage(raw: string): MessageSegment[] {
   const segments: MessageSegment[] = [];
@@ -78,7 +76,15 @@ interface LabAgentChatProps {
   onModeChange?: (mode: "standard" | "architect") => void;
 }
 
-export function LabAgentChat({ messages, loading, onSend, onClear, placeholder, mode, onModeChange }: LabAgentChatProps) {
+export function LabAgentChat({
+  messages,
+  loading,
+  onSend,
+  onClear,
+  placeholder,
+  mode,
+  onModeChange,
+}: LabAgentChatProps) {
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const [input, setInput] = React.useState("");
@@ -140,9 +146,7 @@ export function LabAgentChat({ messages, loading, onSend, onClear, placeholder, 
           <div
             key={m.id}
             className={`text-xs rounded-md px-2 py-1.5 ${
-              m.role === "user"
-                ? "bg-primary/10 ml-12"
-                : "bg-background border mr-12"
+              m.role === "user" ? "bg-primary/10 ml-12" : "bg-background border mr-12"
             }`}
           >
             <div className="font-medium text-[10px] text-muted-foreground mb-0.5">
@@ -152,7 +156,9 @@ export function LabAgentChat({ messages, loading, onSend, onClear, placeholder, 
               <div>
                 {parseAssistantMessage(m.content).map((seg, i) =>
                   seg.type === "text" ? (
-                    <div key={i} className="whitespace-pre-wrap">{seg.text}</div>
+                    <div key={i} className="whitespace-pre-wrap">
+                      {seg.text}
+                    </div>
                   ) : (
                     <SuggestRuleButton
                       key={i}
@@ -173,9 +179,7 @@ export function LabAgentChat({ messages, loading, onSend, onClear, placeholder, 
             )}
           </div>
         ))}
-        {loading && (
-          <div className="text-xs text-muted-foreground italic">Lab Agent sta pensando...</div>
-        )}
+        {loading && <div className="text-xs text-muted-foreground italic">Lab Agent sta pensando...</div>}
       </div>
 
       <div className="flex items-end gap-2 p-2 border-t bg-background">

@@ -11,8 +11,7 @@ describe("Edge Function Decomposition — ai-assistant", () => {
     "toolHandlersReadCrm.ts",
     "toolHandlersReadJobs.ts",
   ];
-  const readAll = () =>
-    readModules.map((f) => fs.readFileSync(path.join(sharedDir, f), "utf-8")).join("\n");
+  const readAll = () => readModules.map((f) => fs.readFileSync(path.join(sharedDir, f), "utf-8")).join("\n");
 
   it("toolHandlersRead.ts esiste e esporta createReadHandlers", () => {
     const content = readAll();

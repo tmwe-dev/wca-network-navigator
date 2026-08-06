@@ -14,7 +14,6 @@ import { CheckCircle2, AlertCircle, FileText, Clock, ChevronDown, Loader2 } from
 import { formatDistanceToNow } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("RunHistoryPanel");
 export function RunHistoryPanel() {
@@ -96,10 +95,7 @@ export function RunHistoryPanel() {
             className="border rounded-lg"
           >
             <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                className="w-full justify-between h-auto p-3 hover:bg-muted/50"
-              >
+              <Button variant="ghost" className="w-full justify-between h-auto p-3 hover:bg-muted/50">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <div className="flex-1 min-w-0 text-left">
@@ -115,7 +111,9 @@ export function RunHistoryPanel() {
                     {run.proposals.length} proposte
                   </Badge>
                 </div>
-                <ChevronDown className={`h-4 w-4 ml-2 transition-transform flex-shrink-0 ${expandedRunId === run.id ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`h-4 w-4 ml-2 transition-transform flex-shrink-0 ${expandedRunId === run.id ? "rotate-180" : ""}`}
+                />
               </Button>
             </CollapsibleTrigger>
 
@@ -162,10 +160,13 @@ export function RunHistoryPanel() {
                       <div
                         key={`${run.id}-${proposal.block_id}-${idx}`}
                         className={`rounded border p-2 text-sm ${
-                          isSaved ? "bg-success/10 border-success/30" :
-                          isError ? "bg-destructive/10 border-destructive/30" :
-                          isSkipped ? "bg-muted/50 border-border opacity-60" :
-                          "bg-background border-border"
+                          isSaved
+                            ? "bg-success/10 border-success/30"
+                            : isError
+                              ? "bg-destructive/10 border-destructive/30"
+                              : isSkipped
+                                ? "bg-muted/50 border-border opacity-60"
+                                : "bg-background border-border"
                         }`}
                       >
                         <div className="flex items-start gap-2 mb-1.5">
@@ -199,9 +200,7 @@ export function RunHistoryPanel() {
                           </div>
                         </div>
 
-                        {isError && (
-                          <p className="text-xs text-destructive mt-1">{proposal.error}</p>
-                        )}
+                        {isError && <p className="text-xs text-destructive mt-1">{proposal.error}</p>}
 
                         {(isReady || isSaved) && proposal.after && (
                           <div className="grid grid-cols-2 gap-2 mt-2">

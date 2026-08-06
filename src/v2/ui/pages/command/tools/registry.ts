@@ -257,11 +257,7 @@ const WRITE_TOOL_IDS = new Set<string>([
 ]);
 
 /** Tool che inviano comunicazioni esterne. Sempre con conferma, audit più rigido. */
-const SEND_TOOL_IDS = new Set<string>([
-  "send-email-direct",
-  "send-whatsapp",
-  "send-linkedin",
-]);
+const SEND_TOOL_IDS = new Set<string>(["send-email-direct", "send-whatsapp", "send-linkedin"]);
 
 /** Tool destructive: bloccati da Super Mario hard guards. (Vuoto: non esponiamo DELETE.) */
 const DESTRUCTIVE_TOOL_IDS = new Set<string>([]);

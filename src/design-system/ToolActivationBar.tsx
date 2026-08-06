@@ -78,7 +78,9 @@ const ToolActivationBar = ({
                     {step}
                   </motion.span>
                   {i < chainSteps.length - 1 && (
-                    <span className={`text-[8px] ${isActive ? "text-muted-foreground" : "text-muted-foreground"}`}>→</span>
+                    <span className={`text-[8px] ${isActive ? "text-muted-foreground" : "text-muted-foreground"}`}>
+                      →
+                    </span>
                   )}
                 </div>
               );
@@ -111,8 +113,17 @@ const ToolActivationBar = ({
                       transition={{ duration: 0.8 }}
                     />
                   )}
-                  <Icon className="w-2.5 h-2.5" style={{ color: `hsl(${tool.color} / ${revealed ? 0.55 : 0.2})` }} strokeWidth={1.5} />
-                  <span className="text-[8px] font-light" style={{ color: `hsl(${tool.color} / ${revealed ? 0.6 : 0.2})` }}>{tool.label}</span>
+                  <Icon
+                    className="w-2.5 h-2.5"
+                    style={{ color: `hsl(${tool.color} / ${revealed ? 0.55 : 0.2})` }}
+                    strokeWidth={1.5}
+                  />
+                  <span
+                    className="text-[8px] font-light"
+                    style={{ color: `hsl(${tool.color} / ${revealed ? 0.6 : 0.2})` }}
+                  >
+                    {tool.label}
+                  </span>
                 </motion.div>
               );
             })}
@@ -129,7 +140,11 @@ const ToolActivationBar = ({
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 + i * 0.08 }}
                   className="text-[8px] px-2 py-1 rounded-lg font-mono"
-                  style={{ color: `hsl(${src.color})`, background: `hsl(${src.color} / 0.34)`, border: `1px solid hsl(${src.color} / 0.34)` }}
+                  style={{
+                    color: `hsl(${src.color})`,
+                    background: `hsl(${src.color} / 0.34)`,
+                    border: `1px solid hsl(${src.color} / 0.34)`,
+                  }}
                 >
                   {src.name}
                 </motion.span>

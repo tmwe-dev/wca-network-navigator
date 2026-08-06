@@ -33,7 +33,9 @@ const nodeBorder = {
 const FlowCanvas = ({ nodes, title, badge, sourceLabel }: FlowCanvasProps) => (
   <div className="space-y-4">
     <div className="flex items-center gap-2">
-      <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider ${badge === "LIVE" ? "bg-success/20 text-success" : "bg-warning/20 text-warning"}`}>
+      <span
+        className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider ${badge === "LIVE" ? "bg-success/20 text-success" : "bg-warning/20 text-warning"}`}
+      >
         {badge ?? "DEMO"}
       </span>
       {title && <span className="text-[10px] text-muted-foreground font-mono">{title}</span>}

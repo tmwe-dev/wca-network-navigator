@@ -70,21 +70,17 @@ serve(async (req) => {
     }
 
     // Get action details
-    const { data: action } = await supabase
-      .from("mission_actions")
-      .select("*")
-      .eq("id", actionId)
-      .single();
+    const { data: action } = await supabase.from("mission_actions").select("*").eq("id", actionId).single();
 
     // Null check on action
     if (!action) {
-      await supabase.rpc("release_mission_slot", {
-        p_action_id: actionId,
-        p_success: false,
-        p_error: "Action not found after acquisition",
-      }).catch(e =>
-        console.error("[mission-executor] Failed to release slot after action not found:", e)
-      );
+      await supabase
+        .rpc("release_mission_slot", {
+          p_action_id: actionId,
+          p_success: false,
+          p_error: "Action not found after acquisition",
+        })
+        .catch((e) => console.error("[mission-executor] Failed to release slot after action not found:", e));
       return json({ error: "Action not found" }, 500);
     }
 
@@ -136,13 +132,13 @@ serve(async (req) => {
     } finally {
       // Always release slot, even on crash
       if (slotAcquired) {
-        await supabase.rpc("release_mission_slot", {
-          p_action_id: actionId,
-          p_success: success,
-          p_error: error,
-        }).catch(e =>
-          console.error("[mission-executor] Failed to release slot:", e)
-        );
+        await supabase
+          .rpc("release_mission_slot", {
+            p_action_id: actionId,
+            p_success: success,
+            p_error: error,
+          })
+          .catch((e) => console.error("[mission-executor] Failed to release slot:", e));
       }
     }
 
@@ -153,7 +149,7 @@ serve(async (req) => {
 
     // Auto-complete mission
     const progress = snapshot as Record<string, number> | null;
-    if (progress && (progress.completed + progress.failed) >= progress.total) {
+    if (progress && progress.completed + progress.failed >= progress.total) {
       await supabase
         .from("outreach_missions")
         .update({ status: "completed", completed_at: new Date().toISOString() })
@@ -164,11 +160,14 @@ serve(async (req) => {
     const partnerId = (action.metadata as Record<string, unknown>)?.partner_id as string | undefined;
     const targetEmail = (action.metadata as Record<string, unknown>)?.email as string | undefined;
     logSupervisorAudit(supabase, {
-      user_id, actor_type: "system",
+      user_id,
+      actor_type: "system",
       action_category: success ? "mission_completed" : "mission_failed",
       action_detail: `Mission action ${mission.channel}: ${success ? "completata" : "fallita"}`,
-      target_type: "mission", target_id: mission_id,
-      partner_id: partnerId, email_address: targetEmail,
+      target_type: "mission",
+      target_id: mission_id,
+      partner_id: partnerId,
+      email_address: targetEmail,
       decision_origin: "system_trigger",
       metadata: { channel: mission.channel, error, action_id: actionId },
     });

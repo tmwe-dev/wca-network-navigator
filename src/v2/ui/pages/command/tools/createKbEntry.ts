@@ -44,7 +44,7 @@ export const createKbEntryTool: Tool = {
       title: String(p.title ?? "Nuova entry"),
       content: String(p.content ?? ""),
       category: String(p.category ?? "general"),
-      tags: Array.isArray(p.tags) ? p.tags as string[] : [],
+      tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
     });
 
     if (!isOk(result)) throw new Error(result.error.message);

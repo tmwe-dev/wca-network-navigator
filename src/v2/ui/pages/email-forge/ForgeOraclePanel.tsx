@@ -79,9 +79,7 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
         <section className="space-y-1.5">
           <Label className="text-xs uppercase tracking-wide text-foreground">Destinatario</Label>
           <ForgeRecipientPicker value={lab.recipient} onChange={handleRecipient} />
-          {lab.recipient?.partnerId && (
-            <EnrichmentStatusInline partnerId={lab.recipient.partnerId} />
-          )}
+          {lab.recipient?.partnerId && <EnrichmentStatusInline partnerId={lab.recipient.partnerId} />}
           {preContext && (
             <div className="pt-1">
               <ContextSummary preContext={preContext} mode="compact" />
@@ -119,7 +117,9 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
               className="text-xs text-foreground hover:text-foreground flex items-center gap-1"
             >
               {showAllTypes ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-              {showAllTypes ? "Mostra solo principali" : `Altri tipi (${DEFAULT_EMAIL_TYPES.length - PRIMARY_TYPES_COUNT})`}
+              {showAllTypes
+                ? "Mostra solo principali"
+                : `Altri tipi (${DEFAULT_EMAIL_TYPES.length - PRIMARY_TYPES_COUNT})`}
             </button>
           )}
         </section>
@@ -146,10 +146,14 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
             <div className="space-y-1.5">
               <Label className="text-xs text-foreground">Tono</Label>
               <Select value={lab.tone} onValueChange={(v) => forgeLabStore.set({ tone: v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {TONE_OPTIONS.map((t) => (
-                    <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                    <SelectItem key={t.value} value={t.value} className="text-xs">
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -161,17 +165,27 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
                 value={lab.quality}
                 onValueChange={(v) => forgeLabStore.set({ quality: v as ForgeConfig["quality"] })}
               >
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fast" className="text-xs">⚡ Fast — veloce ed economico</SelectItem>
-                  <SelectItem value="standard" className="text-xs">👍 Standard — bilanciato</SelectItem>
-                  <SelectItem value="premium" className="text-xs">🏆 Premium — massima qualità</SelectItem>
+                  <SelectItem value="fast" className="text-xs">
+                    ⚡ Fast — veloce ed economico
+                  </SelectItem>
+                  <SelectItem value="standard" className="text-xs">
+                    👍 Standard — bilanciato
+                  </SelectItem>
+                  <SelectItem value="premium" className="text-xs">
+                    🏆 Premium — massima qualità
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex items-center justify-between py-1">
-              <Label htmlFor="kb" className="text-xs text-foreground">Usa Knowledge Base</Label>
+              <Label htmlFor="kb" className="text-xs text-foreground">
+                Usa Knowledge Base
+              </Label>
               <Switch id="kb" checked={lab.useKB} onCheckedChange={(v) => forgeLabStore.set({ useKB: v })} />
             </div>
 
@@ -197,15 +211,17 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
           size="lg"
         >
           {isLoading ? (
-            <><Loader2 className="w-5 h-5 animate-spin" /> Generazione…</>
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" /> Generazione…
+            </>
           ) : (
-            <><Sparkles className="w-5 h-5" /> Genera Email</>
+            <>
+              <Sparkles className="w-5 h-5" /> Genera Email
+            </>
           )}
         </Button>
         {!lab.recipient && (
-          <p className="text-xs text-foreground mt-2 text-center">
-            Seleziona un destinatario per generare
-          </p>
+          <p className="text-xs text-foreground mt-2 text-center">Seleziona un destinatario per generare</p>
         )}
       </div>
     </div>

@@ -3,10 +3,7 @@
  */
 import { useCallback } from "react";
 import type { QueryContext } from "../lib/queryContext";
-import {
-  buildContextFromPlan,
-  isContextFresh,
-} from "../lib/queryContext";
+import { buildContextFromPlan, isContextFresh } from "../lib/queryContext";
 import { getLastSuccessfulQueryPlan, clearLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 
 interface QueryContextDeps {

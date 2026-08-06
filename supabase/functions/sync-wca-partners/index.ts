@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -16,10 +15,10 @@ Deno.serve(async (req) => {
     const extUrl = "https://dlldkrzoxvjxpgkkttxu.supabase.co";
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
     if (!extKey) {
-      return new Response(
-        JSON.stringify({ error: "WCA_EXTERNAL_SUPABASE_KEY not configured" }),
-        { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "WCA_EXTERNAL_SUPABASE_KEY not configured" }), {
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const localUrl = Deno.env.get("SUPABASE_URL")!;
@@ -28,18 +27,20 @@ Deno.serve(async (req) => {
     // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Authentication required" }),
-        { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
     const anonSb = createClient(localUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
-    const { data: { user } } = await anonSb.auth.getUser(authHeader.replace("Bearer ", ""));
+    const {
+      data: { user },
+    } = await anonSb.auth.getUser(authHeader.replace("Bearer ", ""));
     if (!user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const extSb = createClient(extUrl, extKey);
@@ -55,9 +56,7 @@ Deno.serve(async (req) => {
 
         try {
           // Count total
-          let countQuery = extSb
-            .from("wca_profiles")
-            .select("*", { count: "exact", head: true });
+          let countQuery = extSb.from("wca_profiles").select("*", { count: "exact", head: true });
           if (countryCode) countQuery = countQuery.eq("country_code", countryCode);
           const { count: totalCount, error: countErr } = await countQuery;
 
@@ -130,9 +129,7 @@ Deno.serve(async (req) => {
             }));
 
             // Upsert partners
-            const { error: upsertErr } = await localSb
-              .from("partners")
-              .upsert(partnerRows, { onConflict: "wca_id" });
+            const { error: upsertErr } = await localSb.from("partners").upsert(partnerRows, { onConflict: "wca_id" });
 
             if (upsertErr) {
               send({ type: "error", message: `Upsert page ${page}: ${upsertErr.message}` });
@@ -143,10 +140,7 @@ Deno.serve(async (req) => {
 
             // Get local partner IDs
             const wcaIds = extPartners.map((p: Record<string, unknown>) => p.wca_id).filter(Boolean);
-            const { data: localPartners } = await localSb
-              .from("partners")
-              .select("id, wca_id")
-              .in("wca_id", wcaIds);
+            const { data: localPartners } = await localSb.from("partners").select("id, wca_id").in("wca_id", wcaIds);
 
             const wcaToLocalId = new Map<number, string>();
             if (localPartners) {
@@ -188,9 +182,9 @@ Deno.serve(async (req) => {
                 for (const n of extNetworks) {
                   allNetworks.push({
                     partner_id: localId,
-                    network_name: typeof n === "string" ? n : (n.network_name || n.name || "Unknown"),
-                    network_id: typeof n === "object" ? (n.network_id || null) : null,
-                    expires: typeof n === "object" ? (n.expires || null) : null,
+                    network_name: typeof n === "string" ? n : n.network_name || n.name || "Unknown",
+                    network_id: typeof n === "object" ? n.network_id || null : null,
+                    expires: typeof n === "object" ? n.expires || null : null,
                   });
                 }
               }
@@ -198,10 +192,7 @@ Deno.serve(async (req) => {
 
             // Batch delete + insert contacts
             if (partnerIdsWithContacts.length > 0) {
-              await localSb
-                .from("partner_contacts")
-                .delete()
-                .in("partner_id", partnerIdsWithContacts);
+              await localSb.from("partner_contacts").delete().in("partner_id", partnerIdsWithContacts);
 
               // Insert in chunks of 500
               for (let i = 0; i < allContacts.length; i += 500) {
@@ -213,10 +204,7 @@ Deno.serve(async (req) => {
 
             // Batch delete + insert networks
             if (partnerIdsWithNetworks.length > 0) {
-              await localSb
-                .from("partner_networks")
-                .delete()
-                .in("partner_id", partnerIdsWithNetworks);
+              await localSb.from("partner_networks").delete().in("partner_id", partnerIdsWithNetworks);
 
               for (let i = 0; i < allNetworks.length; i += 500) {
                 const chunk = allNetworks.slice(i, i + 500);
@@ -250,14 +238,14 @@ Deno.serve(async (req) => {
         ...dynCors,
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
       },
     });
   } catch (error) {
     console.error("Sync error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

@@ -10,17 +10,17 @@
 
 ### Architettura a 2 livelli
 
-| Livello | Sistema | Stato |
-|---------|---------|-------|
-| **wca-app** (Vercel) | Login SSO, Discover, Scrape, Save | FUNZIONANTE |
+| Livello                             | Sistema                             | Stato                  |
+| ----------------------------------- | ----------------------------------- | ---------------------- |
+| **wca-app** (Vercel)                | Login SSO, Discover, Scrape, Save   | FUNZIONANTE            |
 | **wca-network-navigator** (Lovable) | UI React, Supabase, 220+ componenti | PARZIALMENTE INTEGRATO |
 
 ### Due sistemi di download COESISTONO (problema principale)
 
-| Sistema | File | Stato |
-|---------|------|-------|
-| **V8 Claude Engine** | `useDownloadEngine.ts`, `wca-app-bridge.ts`, `localDirectory.ts` | ATTIVO ma login appena fixato |
-| **Legacy Lovable** | `useExtensionBridge.ts`, `wcaCredentials.ts`, `wcaScraper.ts` (Edge Functions) | DEPRECATO ma ancora referenziato in 12+ file |
+| Sistema              | File                                                                           | Stato                                        |
+| -------------------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
+| **V8 Claude Engine** | `useDownloadEngine.ts`, `wca-app-bridge.ts`, `localDirectory.ts`               | ATTIVO ma login appena fixato                |
+| **Legacy Lovable**   | `useExtensionBridge.ts`, `wcaCredentials.ts`, `wcaScraper.ts` (Edge Functions) | DEPRECATO ma ancora referenziato in 12+ file |
 
 ---
 
@@ -80,10 +80,12 @@
 ## PIANO DI ESECUZIONE — 8 FASI
 
 ### FASE 1: Commit e verifica login (5 min)
+
 **File**: `useDownloadEngine.ts`
 **Azione**: Il fix a `getWcaCookie()` è già applicato. Serve commit + push + test end-to-end.
 
 Comandi per Mac:
+
 ```bash
 cd ~/Downloads/wca-network-navigator
 git add src/hooks/useDownloadEngine.ts
@@ -96,14 +98,17 @@ git pull --rebase origin main && git push origin main
 ---
 
 ### FASE 2: Migrare wcaScraper.ts a wca-app bridge (30 min)
+
 **File**: `src/lib/api/wcaScraper.ts` (161 righe)
 
 **Stato attuale**: 3 funzioni usano `supabase.functions.invoke()`:
+
 - `scrapeWcaPartnerById(wcaId)` → Edge Function `scrape-wca-partners`
 - `previewWcaProfile(wcaId)` → Edge Function `scrape-wca-partners` (preview mode)
 - `scrapeWcaDirectory(country, page, cookie)` → Edge Function `scrape-wca-directory`
 
 **Azione**: Riscrivere per usare wca-app bridge:
+
 ```typescript
 import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 
@@ -113,6 +118,7 @@ import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 ```
 
 **Dipendenze da aggiornare** (usano le vecchie funzioni):
+
 - `WcaBrowser.tsx` — usa `scrapeWcaPartnerById` per test singolo profilo
 - `ActionPanel.tsx` — usa `scrapeWcaDirectory` per scan directory
 - `AdvancedTools.tsx` — usa `scrapeWcaPartnerById` per test network
@@ -125,11 +131,13 @@ import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 ---
 
 ### FASE 3: Aggiornare ActiveJobBar.tsx (15 min)
+
 **File**: `src/components/download/ActiveJobBar.tsx` (260 righe)
 
 **Problema**: Importa `useExtensionBridge` e mostra warning se estensione non disponibile. Con il nuovo sistema, l'estensione WCA NON serve più.
 
 **Azione**:
+
 1. Rimuovere import `useExtensionBridge`
 2. Rimuovere la variabile `extensionAvailable`
 3. Rimuovere il warning "Estensione non disponibile"
@@ -141,9 +149,11 @@ import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 ### FASE 4: Aggiornare ConnectionsSettings.tsx e Onboarding.tsx (20 min)
 
 #### ConnectionsSettings.tsx
+
 **File**: `src/components/settings/ConnectionsSettings.tsx`
 
 **Azione**:
+
 1. Sezione WCA: Rimuovere campi username/password manuali
 2. Sostituire con: stato connessione wca-app + bottone "Verifica connessione"
 3. Mostrare: "Login automatico via wca-app.vercel.app (credenziali server-side)"
@@ -152,9 +162,11 @@ import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 6. MANTENERE: sezione LinkedIn e RA (usano ancora estensioni)
 
 #### Onboarding.tsx
+
 **File**: `src/pages/Onboarding.tsx`
 
 **Azione**:
+
 1. Rimuovere step credenziali WCA dall'onboarding
 2. O trasformarlo in: "Connessione WCA" → verifica automatica → verde se OK
 3. L'utente non deve inserire username/password WCA
@@ -162,9 +174,11 @@ import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 ---
 
 ### FASE 5: Aggiornare Diagnostics.tsx (10 min)
+
 **File**: `src/pages/Diagnostics.tsx`
 
 **Azione**:
+
 1. Rimuovere `get-wca-credentials` dalla lista edge functions
 2. Aggiungere test endpoint wca-app:
    - Health check: `GET wca-app.vercel.app/api/login` (OPTIONS)
@@ -175,19 +189,23 @@ import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 ---
 
 ### FASE 6: Aggiornare Operations.tsx e flusso download (20 min)
+
 **File**: `src/pages/Operations.tsx`
 
 **Stato attuale**: La pagina Operations ha due tab:
+
 - "Download WCA" — usa `useDownloadJobs` + `useDownloadEngine`
 - "Rubrica Partner" — usa `PartnerHub`
 
 **Verifiche**:
+
 1. Il flusso ActionPanel → createJob → startJob → useDownloadEngine è coerente?
 2. `ActionPanel.tsx` riga 394 `executeDownload()` chiama `createJob` che crea il job in Supabase
 3. Poi `onJobCreated(jobId)` chiama `rawStartJob(jobId)` → `useDownloadEngine.startJob()`
 4. `startJob` ora usa `getWcaCookie()` → wca-app login diretto ✓
 
 **Azione**:
+
 1. Verificare che `ActionPanel.tsx` scan directory usi il bridge (vedi Fase 2)
 2. Assicurarsi che `ResyncConfigure.tsx` (riga 248) verifichi sessione tramite wca-app
 3. `WcaBrowser.tsx` deve usare il bridge per test singolo profilo (vedi Fase 2)
@@ -199,16 +217,17 @@ import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 
 **File da aggiornare/annotare**:
 
-| File | Azione |
-|------|--------|
-| `wcaCredentials.ts` | Aggiungere `console.warn("DEPRECATED")` in fetchWcaCredentials |
-| `api/wcaAppBridge.ts` | Già deprecato con re-export — OK |
-| `useWcaAppFallback.ts` | Già redirect — OK |
-| `download/profileSaver.ts` | Mantenere — usato da legacy code che potrebbe servire |
-| `download/extractProfile.ts` | Mantenere — tipi usati altrove |
-| `wcaCheckpoint.ts` | Mantenere — potrebbe servire per rate limiting futuro |
+| File                         | Azione                                                         |
+| ---------------------------- | -------------------------------------------------------------- |
+| `wcaCredentials.ts`          | Aggiungere `console.warn("DEPRECATED")` in fetchWcaCredentials |
+| `api/wcaAppBridge.ts`        | Già deprecato con re-export — OK                               |
+| `useWcaAppFallback.ts`       | Già redirect — OK                                              |
+| `download/profileSaver.ts`   | Mantenere — usato da legacy code che potrebbe servire          |
+| `download/extractProfile.ts` | Mantenere — tipi usati altrove                                 |
+| `wcaCheckpoint.ts`           | Mantenere — potrebbe servire per rate limiting futuro          |
 
 **File Chrome Extension** (`public/chrome-extension/`):
+
 - Mantenere ma NON più necessaria per download WCA
 - Serve ancora per: cookie sync manuale (fallback)
 - Aggiornare `download-wca-extension.html` con nota: "Opzionale — il sistema usa login automatico"
@@ -220,6 +239,7 @@ import { wcaScrape, wcaDiscover } from "@/lib/wca-app-bridge";
 **DIARIO_DI_BORDO.md**: Aggiungere Sessione #5 con riepilogo di tutte le modifiche.
 
 **ClaudeBadge.tsx**: Aggiornare lista moduli attivi:
+
 - ✅ WCA Download Bridge (V8)
 - ✅ Directory Locale (localStorage)
 - ✅ Login Automatico (server-side)
@@ -270,17 +290,17 @@ Onboarding.tsx (SETUP)
 
 ## STIMA TEMPI
 
-| Fase | Tempo | Priorità |
-|------|-------|----------|
-| 1. Commit + verifica login | 5 min | P1 |
-| 2. Migrare wcaScraper | 30 min | P1 |
-| 3. Aggiornare ActiveJobBar | 15 min | P2 |
-| 4. Settings + Onboarding | 20 min | P2 |
-| 5. Diagnostics | 10 min | P3 |
-| 6. Verifica flusso Operations | 20 min | P1 |
-| 7. Pulizia deprecati | 15 min | P3 |
-| 8. Diario + Badge | 5 min | P3 |
-| **TOTALE** | **~2 ore** | |
+| Fase                          | Tempo      | Priorità |
+| ----------------------------- | ---------- | -------- |
+| 1. Commit + verifica login    | 5 min      | P1       |
+| 2. Migrare wcaScraper         | 30 min     | P1       |
+| 3. Aggiornare ActiveJobBar    | 15 min     | P2       |
+| 4. Settings + Onboarding      | 20 min     | P2       |
+| 5. Diagnostics                | 10 min     | P3       |
+| 6. Verifica flusso Operations | 20 min     | P1       |
+| 7. Pulizia deprecati          | 15 min     | P3       |
+| 8. Diario + Badge             | 5 min      | P3       |
+| **TOTALE**                    | **~2 ore** |          |
 
 ---
 

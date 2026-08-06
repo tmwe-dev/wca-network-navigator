@@ -8,8 +8,9 @@ export const analyzeEmailEditTool: Tool = {
   id: "analyze-email-edit",
   label: "Analizza modifica email",
   description: "Compara bozza AI vs versione finale operatore: stile, tono, contenuto modificato.",
-  match: (p) => /\b(analizza|confronta|diff)\b[^.]{0,30}\b(email|bozza|edit|modifica)\b/i.test(p)
-    && /\b(ai|operatore|finale|originale)\b/i.test(p),
+  match: (p) =>
+    /\b(analizza|confronta|diff)\b[^.]{0,30}\b(email|bozza|edit|modifica)\b/i.test(p) &&
+    /\b(ai|operatore|finale|originale)\b/i.test(p),
 
   execute: async (prompt): Promise<ToolResult> => {
     const res = await invokeEdge<{
@@ -30,7 +31,10 @@ export const analyzeEmailEditTool: Tool = {
     if (res?.changes?.length) {
       sections.push({
         heading: `Modifiche (${res.changes.length})`,
-        body: res.changes.slice(0, 20).map((c) => `[${c.kind ?? "?"}]\n- ${c.before ?? ""}\n+ ${c.after ?? ""}`).join("\n\n"),
+        body: res.changes
+          .slice(0, 20)
+          .map((c) => `[${c.kind ?? "?"}]\n- ${c.before ?? ""}\n+ ${c.after ?? ""}`)
+          .join("\n\n"),
       });
     }
     if (sections.length === 0) sections.push({ heading: "Risultato", body: "Nessuna modifica rilevante rilevata." });

@@ -65,14 +65,18 @@ const ExecutionFlow = ({ visible, steps, progress }: ExecutionFlowProps) => (
                   <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/20" />
                 )}
               </div>
-              <span className={`text-[11px] font-light flex-1 ${
-                step.status === "done" ? "text-foreground" :
-                step.status === "running" ? "text-foreground" :
-                "text-muted-foreground"
-              }`}>{step.label}</span>
-              {step.detail && (
-                <span className="text-[9px] text-muted-foreground font-mono">{step.detail}</span>
-              )}
+              <span
+                className={`text-[11px] font-light flex-1 ${
+                  step.status === "done"
+                    ? "text-foreground"
+                    : step.status === "running"
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {step.label}
+              </span>
+              {step.detail && <span className="text-[9px] text-muted-foreground font-mono">{step.detail}</span>}
             </motion.div>
           ))}
         </div>

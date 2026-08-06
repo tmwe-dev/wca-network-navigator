@@ -49,14 +49,8 @@ export async function listEmailProcessingJobs(
   return (data ?? []) as EmailProcessingJobRow[];
 }
 
-export async function getEmailProcessingJob(
-  messageId: string,
-): Promise<EmailProcessingJobRow | null> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("*")
-    .eq("message_id", messageId)
-    .maybeSingle();
+export async function getEmailProcessingJob(messageId: string): Promise<EmailProcessingJobRow | null> {
+  const { data, error } = await supabase.from(TABLE).select("*").eq("message_id", messageId).maybeSingle();
   if (error) throw error;
   return (data ?? null) as EmailProcessingJobRow | null;
 }

@@ -13,7 +13,12 @@ interface Props {
 
 export function ContactRecordActions({ record }: Props): ReactElement {
   const [liDmOpen, setLiDmOpen] = useState(false);
-  const { handleSendEmail, handleSendWhatsApp, waSending: _waSending, waAvailable: _waAvailable } = useDirectContactActions();
+  const {
+    handleSendEmail,
+    handleSendWhatsApp,
+    waSending: _waSending,
+    waAvailable: _waAvailable,
+  } = useDirectContactActions();
 
   const handleEmail = () => {
     if (record.email) {
@@ -93,7 +98,9 @@ export function ContactRecordActions({ record }: Props): ReactElement {
           <MessageCircle className="w-4 h-4 text-emerald-500" />
           <div className="text-left min-w-0">
             <div className="font-medium">WhatsApp</div>
-            <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">{record.mobile || record.phone || "—"}</div>
+            <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+              {record.mobile || record.phone || "—"}
+            </div>
           </div>
         </Button>
 
@@ -107,7 +114,9 @@ export function ContactRecordActions({ record }: Props): ReactElement {
           <Linkedin className="w-4 h-4 text-[hsl(210,80%,55%)]" />
           <div className="text-left min-w-0">
             <div className="font-medium">LinkedIn DM</div>
-            <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">{record.linkedinUrl ? "Apri" : "—"}</div>
+            <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+              {record.linkedinUrl ? "Apri" : "—"}
+            </div>
           </div>
         </Button>
 
@@ -121,7 +130,9 @@ export function ContactRecordActions({ record }: Props): ReactElement {
           <Phone className="w-4 h-4 text-chart-3" />
           <div className="text-left min-w-0">
             <div className="font-medium">Chiamata</div>
-            <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">{record.phone || record.mobile || "—"}</div>
+            <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+              {record.phone || record.mobile || "—"}
+            </div>
           </div>
         </Button>
       </div>

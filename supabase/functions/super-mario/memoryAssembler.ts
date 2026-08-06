@@ -62,15 +62,16 @@ export async function assembleMemory(opts: {
 
   // 2. RECENT_TURNS — verbatim
   const recent = turns.slice(-RECENT_TURNS_KEEP);
-  const recentText = recent.length === 0
-    ? "(nessun turno precedente)"
-    : recent
-        .map((t) => {
-          const label = t.role === "user" ? "Utente" : t.role === "assistant" ? "Tu" : `[${t.role}]`;
-          const body = t.content.length > 800 ? t.content.slice(0, 800) + "…" : t.content;
-          return `${label}: ${body}`;
-        })
-        .join("\n");
+  const recentText =
+    recent.length === 0
+      ? "(nessun turno precedente)"
+      : recent
+          .map((t) => {
+            const label = t.role === "user" ? "Utente" : t.role === "assistant" ? "Tu" : `[${t.role}]`;
+            const body = t.content.length > 800 ? t.content.slice(0, 800) + "…" : t.content;
+            return `${label}: ${body}`;
+          })
+          .join("\n");
 
   // 3. LAST_TOOL_RESULT — l'ultimo turno con tool_result strutturato
   const lastWithResult = [...turns].reverse().find((t) => t.tool_result != null);

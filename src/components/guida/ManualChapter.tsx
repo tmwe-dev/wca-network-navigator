@@ -33,14 +33,23 @@ interface ManualChapterProps {
 }
 
 const KIND_META: Record<NonNullable<ManualBlock["kind"]>, { icon: LucideIcon; label: string }> = {
-  where:  { icon: MapPin,             label: "Dove si trova" },
-  do:     { icon: MousePointerClick,  label: "Cosa puoi fare" },
-  update: { icon: RefreshCw,          label: "Come si aggiorna" },
+  where: { icon: MapPin, label: "Dove si trova" },
+  do: { icon: MousePointerClick, label: "Cosa puoi fare" },
+  update: { icon: RefreshCw, label: "Come si aggiorna" },
 };
 
 const ManualChapter = ({
-  number, area, icon: Icon, title, subtitle, path,
-  screenshot, screenshotAlt, intro, blocks, tip,
+  number,
+  area,
+  icon: Icon,
+  title,
+  subtitle,
+  path,
+  screenshot,
+  screenshotAlt,
+  intro,
+  blocks,
+  tip,
 }: ManualChapterProps) => (
   <SectionWrapper className="bg-[#0a0a0f]">
     <div className="space-y-8">
@@ -79,7 +88,9 @@ const ManualChapter = ({
               </div>
               <ul className="space-y-2">
                 {b.items.map((it, j) => (
-                  <li key={j} className="text-sm text-white/55 leading-relaxed">{it}</li>
+                  <li key={j} className="text-sm text-white/55 leading-relaxed">
+                    {it}
+                  </li>
                 ))}
               </ul>
             </div>

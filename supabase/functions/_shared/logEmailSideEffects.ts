@@ -76,10 +76,7 @@ export async function logEmailSideEffects({
     metadata: { to, subject },
   });
   // Always update last_interaction_at regardless of status transition
-  await supabase
-    .from("partners")
-    .update({ last_interaction_at: now })
-    .eq("id", partner_id);
+  await supabase.from("partners").update({ last_interaction_at: now }).eq("id", partner_id);
 
   // 4. Atomically increment interaction count (avoids race condition)
   await supabase.rpc("increment_partner_interaction", { p_partner_id: partner_id });

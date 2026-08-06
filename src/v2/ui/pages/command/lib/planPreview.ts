@@ -7,10 +7,7 @@ import { TOOLS } from "../tools/registry";
 
 export function buildPlanPreview(summary: string, steps: PlanStep[]): string {
   const lines = steps
-    .map(
-      (s) =>
-        `${s.stepNumber}. **${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}** — ${s.reasoning}`,
-    )
+    .map((s) => `${s.stepNumber}. **${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}** — ${s.reasoning}`)
     .join("\n");
   return `**Piano in ${steps.length} step:** ${summary}\n\n${lines}`;
 }

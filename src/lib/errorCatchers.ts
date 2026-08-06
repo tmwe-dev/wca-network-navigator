@@ -5,13 +5,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { insertAppErrorLog } from "@/data/appErrorLogs";
 
-async function logGlobalError(entry: {
-  error_type: string;
-  error_message: string;
-  error_stack?: string | null;
-}) {
+async function logGlobalError(entry: { error_type: string; error_message: string; error_stack?: string | null }) {
   try {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (!user) return;
     await insertAppErrorLog({
       user_id: user.id,

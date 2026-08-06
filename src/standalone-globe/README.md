@@ -5,6 +5,7 @@ A self-contained 3D interactive globe component built with React Three Fiber and
 ## Overview
 
 This package contains a complete 3D globe visualization with:
+
 - **Textured Earth** with NASA day/night textures and atmosphere shaders
 - **Aurora Borealis** effects at both poles
 - **Country markers** showing data points (with/without partners)
@@ -28,6 +29,7 @@ bun add three @react-three/fiber @react-three/drei
 ```
 
 Required versions:
+
 - `three`: ^0.160.0
 - `@react-three/fiber`: ^8.18.0
 - `@react-three/drei`: ^9.122.0
@@ -44,13 +46,13 @@ Required versions:
 ## Usage
 
 ```tsx
-import { StandaloneGlobe } from './standalone-globe';
+import { StandaloneGlobe } from "./standalone-globe";
 
 function App() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
   return (
-    <div style={{ width: '100%', height: '100vh' }}>
+    <div style={{ width: "100%", height: "100vh" }}>
       <StandaloneGlobe
         selectedCountry={selectedCountry}
         onCountrySelect={setSelectedCountry}
@@ -65,23 +67,23 @@ function App() {
 
 ## Props
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `selectedCountry` | `string \| null` | Yes | ISO country code of selected country |
-| `onCountrySelect` | `(code: string \| null) => void` | Yes | Callback when a country is clicked |
-| `countries` | `CountryWithPartners[]` | No | Country data array (uses default WCA countries) |
-| `countryPartners` | `GlobePartner[]` | No | Partners in selected country |
+| Prop              | Type                             | Required | Description                                     |
+| ----------------- | -------------------------------- | -------- | ----------------------------------------------- |
+| `selectedCountry` | `string \| null`                 | Yes      | ISO country code of selected country            |
+| `onCountrySelect` | `(code: string \| null) => void` | Yes      | Callback when a country is clicked              |
+| `countries`       | `CountryWithPartners[]`          | No       | Country data array (uses default WCA countries) |
+| `countryPartners` | `GlobePartner[]`                 | No       | Partners in selected country                    |
 
 ## Data Types
 
 ```typescript
 interface CountryWithPartners {
-  code: string;       // ISO 3166-1 alpha-2 code
-  name: string;       // Country name
-  count: number;      // Number of partners
-  lat: number;        // Latitude
-  lng: number;        // Longitude
-  region: 'europe' | 'asia' | 'americas' | 'africa' | 'oceania' | 'middle_east';
+  code: string; // ISO 3166-1 alpha-2 code
+  name: string; // Country name
+  count: number; // Number of partners
+  lat: number; // Latitude
+  lng: number; // Longitude
+  region: "europe" | "asia" | "americas" | "africa" | "oceania" | "middle_east";
 }
 
 interface GlobePartner {

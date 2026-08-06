@@ -51,9 +51,7 @@ describe("migration audit (offline)", () => {
   });
 
   it("nessun nuovo gruppo di timestamp duplicati", () => {
-    expect(audit.duplicateTimestamps.length).toBeLessThanOrEqual(
-      RATCHET.duplicateTimestampGroups,
-    );
+    expect(audit.duplicateTimestamps.length).toBeLessThanOrEqual(RATCHET.duplicateTimestampGroups);
   });
 
   it("nessun nuovo conflitto di ordinamento", () => {
@@ -61,9 +59,7 @@ describe("migration audit (offline)", () => {
   });
 
   it("nessun nuovo oggetto alterato prima della creazione", () => {
-    expect(audit.referencedBeforeCreation.length).toBeLessThanOrEqual(
-      RATCHET.referencedBeforeCreation,
-    );
+    expect(audit.referencedBeforeCreation.length).toBeLessThanOrEqual(RATCHET.referencedBeforeCreation);
   });
 
   it("nessuna nuova funzione SECURITY DEFINER senza search_path", () => {
@@ -81,11 +77,7 @@ describe("migration audit (offline)", () => {
   });
 
   it("drift schema/tipi non peggiora", () => {
-    expect(audit.schemaDrift.missingInTypes.length).toBeLessThanOrEqual(
-      RATCHET.missingInTypes,
-    );
-    expect(audit.schemaDrift.missingInMigrations.length).toBeLessThanOrEqual(
-      RATCHET.missingInMigrations,
-    );
+    expect(audit.schemaDrift.missingInTypes.length).toBeLessThanOrEqual(RATCHET.missingInTypes);
+    expect(audit.schemaDrift.missingInMigrations.length).toBeLessThanOrEqual(RATCHET.missingInMigrations);
   });
 });

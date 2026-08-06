@@ -85,9 +85,7 @@ describe("sanitizeHtml", () => {
 
 describe("escapeHtml", () => {
   it("escapes <, >, &, quotes", () => {
-    expect(escapeHtml(`<a href="x">&y</a>`)).toBe(
-      `&lt;a href=&quot;x&quot;&gt;&amp;y&lt;/a&gt;`
-    );
+    expect(escapeHtml(`<a href="x">&y</a>`)).toBe(`&lt;a href=&quot;x&quot;&gt;&amp;y&lt;/a&gt;`);
   });
 
   it("handles empty input", () => {

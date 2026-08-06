@@ -125,14 +125,21 @@ export async function bgSyncStart(mailboxId?: string | null, opts: { unreadOnly?
 
   try {
     let consecutiveErrors = 0;
-      const MAX_RETRIES = TRANSIENT_RETRY_LIMIT;
+    const MAX_RETRIES = TRANSIENT_RETRY_LIMIT;
 
     while (!abortSync) {
       batchNum += 1;
-      let result: { total: number; has_more?: boolean; remaining?: number; messages?: Array<Record<string, unknown>>; transient?: boolean; resourceLimit?: boolean };
+      let result: {
+        total: number;
+        has_more?: boolean;
+        remaining?: number;
+        messages?: Array<Record<string, unknown>>;
+        transient?: boolean;
+        resourceLimit?: boolean;
+      };
 
       try {
-        result = await callCheckInbox(mailboxId ?? null, { unreadOnly }) as typeof result;
+        result = (await callCheckInbox(mailboxId ?? null, { unreadOnly })) as typeof result;
         consecutiveErrors = 0;
       } catch (batchErr: unknown) {
         consecutiveErrors += 1;
@@ -181,11 +188,12 @@ export async function bgSyncStart(mailboxId?: string | null, opts: { unreadOnly?
         continue;
       }
 
-      const hasMore = typeof result.has_more === "boolean"
-        ? result.has_more
-        : typeof result.remaining === "number"
-          ? result.remaining > 0
-          : result.total > 0;
+      const hasMore =
+        typeof result.has_more === "boolean"
+          ? result.has_more
+          : typeof result.remaining === "number"
+            ? result.remaining > 0
+            : result.total > 0;
 
       const serverRemaining = typeof result.remaining === "number" ? result.remaining : 0;
       const messages = Array.isArray(result.messages) ? result.messages : [];

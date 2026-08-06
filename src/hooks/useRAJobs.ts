@@ -26,8 +26,7 @@ export function useCreateRAJob() {
 export function useUpdateRAJob() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...updates }: Partial<RAScrapingJob> & { id: string }) =>
-      updateRAJob(id, updates),
+    mutationFn: ({ id, ...updates }: Partial<RAScrapingJob> & { id: string }) => updateRAJob(id, updates),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: RA_JOBS_KEY });
     },

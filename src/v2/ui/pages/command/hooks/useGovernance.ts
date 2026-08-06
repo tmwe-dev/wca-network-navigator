@@ -34,9 +34,12 @@ const actionPermissions: Record<string, string> = {
 };
 
 export function useGovernance(actionId?: string): GovernanceData {
-  return useMemo(() => ({
-    role: "COMMERCIALE",
-    permission: actionPermissions[actionId ?? ""] ?? "READ:GENERIC",
-    policy: "POLICY v1.0 · SOFT-SYNC",
-  }), [actionId]);
+  return useMemo(
+    () => ({
+      role: "COMMERCIALE",
+      permission: actionPermissions[actionId ?? ""] ?? "READ:GENERIC",
+      policy: "POLICY v1.0 · SOFT-SYNC",
+    }),
+    [actionId],
+  );
 }

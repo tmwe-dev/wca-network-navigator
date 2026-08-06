@@ -37,9 +37,7 @@ export function WizardStepBar({ currentStep, onStepClick }: WizardStepBarProps) 
                 {!done && !active && `${s.id}`}
               </span>
             </button>
-            {i < STEPS.length - 1 && (
-              <div className={`w-6 h-px mx-0.5 ${done ? "bg-emerald-500/40" : "bg-border"}`} />
-            )}
+            {i < STEPS.length - 1 && <div className={`w-6 h-px mx-0.5 ${done ? "bg-emerald-500/40" : "bg-border"}`} />}
           </div>
         );
       })}

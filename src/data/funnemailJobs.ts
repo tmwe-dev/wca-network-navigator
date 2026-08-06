@@ -67,9 +67,7 @@ export interface ListFunnemailJobsFilters {
 }
 
 /** Lista job aggregati. Visibilità: la view rispetta le RLS sottostanti. */
-export async function listFunnemailJobs(
-  filters: ListFunnemailJobsFilters = {},
-): Promise<FunnemailJobRow[]> {
+export async function listFunnemailJobs(filters: ListFunnemailJobsFilters = {}): Promise<FunnemailJobRow[]> {
   let q = supabase.from(VIEW).select("*");
   if (filters.status) q = q.eq("status", filters.status);
   if (filters.ownerId) q = q.eq("claim_owner", filters.ownerId);
@@ -83,20 +81,13 @@ export async function listFunnemailJobs(
 
 /** Singolo job aggregato per message_id. */
 export async function getFunnemailJob(messageId: string): Promise<FunnemailJobRow | null> {
-  const { data, error } = await supabase
-    .from(VIEW)
-    .select("*")
-    .eq("message_id", messageId)
-    .maybeSingle();
+  const { data, error } = await supabase.from(VIEW).select("*").eq("message_id", messageId).maybeSingle();
   if (error) throw error;
   return data ? normalizeJobRows([data])[0] : null;
 }
 
 /** Aggiorna il sub_status fine-grained sul job. */
-export async function setFunnemailSubStatus(
-  messageId: string,
-  subStatus: string | null,
-): Promise<void> {
+export async function setFunnemailSubStatus(messageId: string, subStatus: string | null): Promise<void> {
   const { error } = await supabase
     .from("funnemail_message_status")
     .update({ sub_status: subStatus })

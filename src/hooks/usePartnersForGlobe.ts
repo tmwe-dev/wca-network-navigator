@@ -26,12 +26,12 @@ export interface CountryWithPartners {
   count: number;
   lat: number;
   lng: number;
-  region: WCACountry['region'];
+  region: WCACountry["region"];
 }
 
 // Pre-computed countries map for O(1) lookups (computed once at module load)
 const PRECOMPUTED_COUNTRIES_MAP: Record<string, CountryWithPartners> = {};
-const PRECOMPUTED_COUNTRIES: CountryWithPartners[] = WCA_COUNTRIES.map(country => {
+const PRECOMPUTED_COUNTRIES: CountryWithPartners[] = WCA_COUNTRIES.map((country) => {
   const cwp: CountryWithPartners = {
     code: country.code,
     name: country.name,
@@ -67,15 +67,18 @@ export function usePartnersForGlobe() {
       });
 
       // Update counts in pre-computed countries (single pass)
-      const countriesWithPartners = PRECOMPUTED_COUNTRIES.map(c => ({
+      const countriesWithPartners = PRECOMPUTED_COUNTRIES.map((c) => ({
         ...c,
         count: countryCounts[c.code] || 0,
       }));
 
-      const countriesMap = countriesWithPartners.reduce((acc, c) => {
-        acc[c.code] = c;
-        return acc;
-      }, {} as Record<string, CountryWithPartners>);
+      const countriesMap = countriesWithPartners.reduce(
+        (acc, c) => {
+          acc[c.code] = c;
+          return acc;
+        },
+        {} as Record<string, CountryWithPartners>,
+      );
 
       return {
         partners: globePartners,
@@ -99,11 +102,13 @@ export function usePartnersByCountryForGlobe(countryCode: string | null) {
       const allData = await getActivePartnersByCountryForGlobe(countryCode);
       const country = PRECOMPUTED_COUNTRIES_MAP[countryCode];
 
-      return allData.map((p): GlobePartner => ({
-        ...p,
-        lat: country?.lat || 0,
-        lng: country?.lng || 0,
-      }));
+      return allData.map(
+        (p): GlobePartner => ({
+          ...p,
+          lat: country?.lat || 0,
+          lng: country?.lng || 0,
+        }),
+      );
     },
     enabled: !!countryCode,
     staleTime: 5_000,

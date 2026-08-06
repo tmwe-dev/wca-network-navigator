@@ -23,7 +23,6 @@ function res(value: any) {
   return node;
 }
 
-
 describe("DAL — clientAssignments", () => {
   beforeEach(() => {
     vi.clearAllMocks();

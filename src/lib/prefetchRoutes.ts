@@ -7,39 +7,21 @@ type Loader = () => Promise<unknown>;
 
 const routePrefetchMap: Record<string, readonly Loader[]> = {
   // Dashboard: V2 standalone
-  "/v2": [
-    () => import("@/v2/ui/pages/DashboardPage"),
-  ],
+  "/v2": [() => import("@/v2/ui/pages/DashboardPage")],
   // Network: V2 + V1 Operations (now imported directly)
-  "/v2/network": [
-    () => import("@/v2/ui/pages/NetworkPage"),
-    () => import("@/components/operations/OperationsView"),
-  ],
+  "/v2/network": [() => import("@/v2/ui/pages/NetworkPage"), () => import("@/components/operations/OperationsView")],
   // CRM: V2 standalone (migrated from V1)
-  "/v2/crm": [
-    () => import("@/v2/ui/pages/CRMPage"),
-  ],
+  "/v2/crm": [() => import("@/v2/ui/pages/CRMPage")],
   // Contacts hub (canonical /v2/crm/contacts, migrated from V1)
-  "/v2/crm/contacts": [
-    () => import("@/v2/ui/pages/ContactsPage"),
-  ],
+  "/v2/crm/contacts": [() => import("@/v2/ui/pages/ContactsPage")],
   // Outreach: V2 standalone (migrated from V1)
-  "/v2/outreach": [
-    () => import("@/v2/ui/pages/OutreachPage"),
-  ],
+  "/v2/outreach": [() => import("@/v2/ui/pages/OutreachPage")],
   // Agents
-  "/v2/agents": [
-    () => import("@/v2/ui/pages/AgentsPage"),
-    () => import("@/components/agents/AgentChatHubView"),
-  ],
+  "/v2/agents": [() => import("@/v2/ui/pages/AgentsPage"), () => import("@/components/agents/AgentChatHubView")],
   // Settings: V2 standalone (migrated from V1)
-  "/v2/settings": [
-    () => import("@/v2/ui/pages/SettingsPage"),
-  ],
+  "/v2/settings": [() => import("@/v2/ui/pages/SettingsPage")],
   // Email Intelligence (no V1 wrapper)
-  "/v2/email-intelligence": [
-    () => import("@/v2/ui/pages/EmailIntelligencePage"),
-  ],
+  "/v2/email-intelligence": [() => import("@/v2/ui/pages/EmailIntelligencePage")],
 };
 
 const prefetched = new Set<string>();

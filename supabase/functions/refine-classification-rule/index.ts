@@ -121,10 +121,14 @@ serve(async (req) => {
     const samples = (messages ?? []).map((m: Record<string, unknown>) => ({
       id: String(m.id),
       subject: String(m.subject ?? "").slice(0, 180),
-      excerpt: String(m.body_text ?? "").replace(/\s+/g, " ").trim().slice(0, 400),
+      excerpt: String(m.body_text ?? "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 400),
     }));
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI_NOT_CONFIGURED" }), {
         status: 500,
@@ -153,15 +157,18 @@ serve(async (req) => {
       ...samples.map((s, i) => `[${i + 1}] Oggetto: ${s.subject}\n    Estratto: ${s.excerpt}`),
       "",
       "Produci la modifica più utile per evitare lo stesso errore in futuro.",
-    ].filter(Boolean).join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const aiResp = await aiFetch({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [{
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [
+        {
           type: "function",
           function: {
             name: "propose_rule_refinement",
@@ -169,7 +176,11 @@ serve(async (req) => {
             parameters: {
               type: "object",
               properties: {
-                proposed_target: { type: "string", enum: ["group", "prompt"], description: "group = aggiungi hint al gruppo corretto; prompt = aggiungi regola al prompt operativo" },
+                proposed_target: {
+                  type: "string",
+                  enum: ["group", "prompt"],
+                  description: "group = aggiungi hint al gruppo corretto; prompt = aggiungi regola al prompt operativo",
+                },
                 proposed_change_text: { type: "string", description: "Testo della modifica, 2-3 frasi max" },
                 reasoning: { type: "string", description: "Perché l'AI ha sbagliato" },
                 confidence: { type: "number" },
@@ -178,9 +189,10 @@ serve(async (req) => {
               additionalProperties: false,
             },
           },
-        }],
-        tool_choice: { type: "function", function: { name: "propose_rule_refinement" } },
-      });
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "propose_rule_refinement" } },
+    });
 
     if (!aiResp.ok) {
       const txt = await aiResp.text();
@@ -256,15 +268,14 @@ serve(async (req) => {
       });
     }
 
-    return new Response(
-      JSON.stringify({ ok: true, insight_id: insight?.id, confidence: r.data.confidence }),
-      { headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ ok: true, insight_id: insight?.id, confidence: r.data.confidence }), {
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (e) {
     console.error("[refine-classification-rule] fatal", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

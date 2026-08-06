@@ -1,16 +1,7 @@
 /**
  * PipelineValueChart — Stacked bar chart of deal values by stage
  */
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -46,12 +37,8 @@ export function PipelineValueChart({ data, loading = false }: PipelineValueChart
   return (
     <Card className="p-4">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-foreground">
-          Valore Pipeline per Stadio
-        </h3>
-        <p className="text-xs text-muted-foreground">
-          Totale: {formatCurrency(totalValue)}
-        </p>
+        <h3 className="text-sm font-semibold text-foreground">Valore Pipeline per Stadio</h3>
+        <p className="text-xs text-muted-foreground">Totale: {formatCurrency(totalValue)}</p>
       </div>
 
       {data.length === 0 ? (
@@ -62,11 +49,7 @@ export function PipelineValueChart({ data, loading = false }: PipelineValueChart
         <>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
-                opacity={0.5}
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
               <XAxis
                 dataKey="stage"
                 stroke="hsl(var(--muted-foreground))"
@@ -92,10 +75,7 @@ export function PipelineValueChart({ data, loading = false }: PipelineValueChart
               />
               <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                 {data.map((item) => (
-                  <Cell
-                    key={item.stage}
-                    fill={STAGE_COLORS[item.stage] || "#64748b"}
-                  />
+                  <Cell key={item.stage} fill={STAGE_COLORS[item.stage] || "#64748b"} />
                 ))}
               </Bar>
             </BarChart>
@@ -111,14 +91,10 @@ export function PipelineValueChart({ data, loading = false }: PipelineValueChart
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: STAGE_COLORS[item.stage] || "#64748b" }}
                     />
-                    <span className="text-sm text-muted-foreground capitalize">
-                      {item.stage}
-                    </span>
+                    <span className="text-sm text-muted-foreground capitalize">{item.stage}</span>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatCurrency(item.value)}
-                    </p>
+                    <p className="text-sm font-semibold text-foreground">{formatCurrency(item.value)}</p>
                     <p className="text-xs text-muted-foreground">
                       {item.count} {item.count === 1 ? "affare" : "affari"}
                     </p>

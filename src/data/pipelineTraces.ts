@@ -40,7 +40,11 @@ export interface ListTracesFilters {
 }
 
 export async function listPipelineTraces(filters: ListTracesFilters = {}): Promise<PipelineTraceRow[]> {
-  let q = supabase.from("pipeline_traces").select("*").order("created_at", { ascending: false }).limit(filters.limit ?? 200);
+  let q = supabase
+    .from("pipeline_traces")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(filters.limit ?? 200);
   if (filters.entityType && filters.entityType !== "all") q = q.eq("entity_type", filters.entityType);
   if (filters.stepName && filters.stepName !== "all") q = q.eq("step_name", filters.stepName);
   if (filters.status && filters.status !== "all") q = q.eq("status", filters.status);
@@ -48,7 +52,10 @@ export async function listPipelineTraces(filters: ListTracesFilters = {}): Promi
   if (filters.entityId) q = q.eq("entity_id", filters.entityId);
   if (filters.from) q = q.gte("created_at", filters.from);
   if (filters.to) q = q.lte("created_at", filters.to);
-  if (filters.search) q = q.or(`entity_label.ilike.%${filters.search}%,step_name.ilike.%${filters.search}%,error_message.ilike.%${filters.search}%`);
+  if (filters.search)
+    q = q.or(
+      `entity_label.ilike.%${filters.search}%,step_name.ilike.%${filters.search}%,error_message.ilike.%${filters.search}%`,
+    );
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as PipelineTraceRow[];
@@ -66,7 +73,8 @@ export async function getTraceTimeline(traceId: string): Promise<PipelineTraceRo
 }
 
 export async function getTraceStepsOrdered(traceId: string): Promise<PipelineTraceRow[]> {
-  const { data } = await supabase.from("pipeline_traces")
+  const { data } = await supabase
+    .from("pipeline_traces")
     .select("*")
     .eq("trace_id", traceId)
     .order("step_order", { ascending: true });

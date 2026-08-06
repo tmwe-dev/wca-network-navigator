@@ -8,7 +8,8 @@ export const applyEmailRulesTool: Tool = {
   id: "apply-email-rules",
   label: "Applica regole email",
   description: "Riapplica le regole di categorizzazione/routing alle email in inbox.",
-  match: (p) => /\b(applica|esegui|riapplica|run)\b[^.]{0,30}\b(regole|rules)\b[^.]{0,20}\b(email|inbox|mail)\b/i.test(p),
+  match: (p) =>
+    /\b(applica|esegui|riapplica|run)\b[^.]{0,30}\b(regole|rules)\b[^.]{0,20}\b(email|inbox|mail)\b/i.test(p),
 
   execute: async (_prompt, context?: ToolContext): Promise<ToolResult> => {
     if (!context?.confirmed) {

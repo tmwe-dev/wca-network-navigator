@@ -64,11 +64,7 @@ export {
   findContactsByGroup,
 } from "./filters";
 
-export {
-  findContactInteractions,
-  createContactInteraction,
-  findBusinessCardForContact,
-} from "./interactions";
+export { findContactInteractions, createContactInteraction, findBusinessCardForContact } from "./interactions";
 
 export { contactKeys } from "./queryKeys";
 

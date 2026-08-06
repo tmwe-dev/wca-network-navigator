@@ -23,9 +23,7 @@ export function AgentAvatarCard({ agent }: { agent: AgentRegistryEntry }) {
       </div>
       <div>
         <h2 className="text-sm font-semibold">{agent.displayName}</h2>
-        <p className="text-muted-foreground mt-1 text-[11px] leading-snug">
-          {agent.description}
-        </p>
+        <p className="text-muted-foreground mt-1 text-[11px] leading-snug">{agent.description}</p>
       </div>
       <div className="w-full space-y-1.5 border-t pt-3 text-left text-[11px]">
         <div className="flex items-start justify-between gap-2">

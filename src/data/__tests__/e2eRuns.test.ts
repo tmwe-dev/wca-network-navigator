@@ -29,7 +29,13 @@ describe("DAL — e2eRuns", () => {
       mockLimit.mockResolvedValue({ data: runs, error: null });
       const result = await listRecentE2ERuns();
       expect(result).toEqual([
-        { id: "r1", passed: 10, spec_results: [{ file: "a.spec.ts", title: undefined, status: "passed", duration_ms: undefined, error: undefined }] },
+        {
+          id: "r1",
+          passed: 10,
+          spec_results: [
+            { file: "a.spec.ts", title: undefined, status: "passed", duration_ms: undefined, error: undefined },
+          ],
+        },
       ]);
     });
 

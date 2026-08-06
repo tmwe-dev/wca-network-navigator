@@ -3,6 +3,7 @@ name: Editorial Review Layer Mandatory
 description: journalistReview obbligatorio e INTOCCABILE su ogni email/WA/LI prodotti o inviati. Niente kill-switch utente.
 type: constraint
 ---
+
 # 🔒 Editorial Layer — INTOCCABILE
 
 `_shared/journalistReviewLayer.ts` è l'unico revisore editoriale del sistema.
@@ -18,18 +19,22 @@ solo `mode` (review_and_correct | review_only | silent_audit) e `strictness`
 ## 9 punti coperti (verificati 2026-05-02)
 
 ### Produzione
+
 1. `supabase/functions/generate-email/index.ts` — bozza generata
 2. `supabase/functions/improve-email/index.ts` — bozza migliorata
 
 ### Invio diretto (gate finale, fail-open su errore LLM)
+
 3. `supabase/functions/send-email/index.ts`
 4. `supabase/functions/send-whatsapp/index.ts`
 5. `supabase/functions/send-linkedin/index.ts`
 
 ### Coda batch SMTP
+
 6. `supabase/functions/process-email-queue/index.ts`
 
 ### Agent tools (server-side)
+
 7. `agent-execute/toolHandlers/emailTools.ts · handleSendEmail`
 8. `agent-execute/toolHandlers/emailTools.ts · handleSendWhatsApp`
 9. `agent-execute/toolHandlers/emailTools.ts · handleSendLinkedIn` ← aggiunto 2026-05-02
@@ -51,6 +56,7 @@ quando disponibile) per dare contesto commerciale al giornalista. Patch
 ## Test di regressione
 
 `src/test/journalist-pipeline-coverage.test.ts` (11 test) verifica:
+
 - ogni produttore/invio chiama `journalistReview()`;
 - `loadOptimusSettings` ritorna `enabled:true` e non legge più la chiave;
 - nessun chiamante usa `optimus.enabled &&` come gate;

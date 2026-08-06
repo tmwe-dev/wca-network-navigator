@@ -15,13 +15,13 @@ export const NETWORK_LOGOS: Record<string, string> = {
   "wca advanced professionals": "/logos/wca-advanced-professionals.png",
   "wca first": "/logos/wca-first.png",
   "global affinity alliance": "/logos/gaa-global-affinity.png",
-  "gaa": "/logos/gaa-global-affinity.png",
+  gaa: "/logos/gaa-global-affinity.png",
   "lognet global": "/logos/lognet-global.png",
-  "lognet": "/logos/lognet-global.png",
+  lognet: "/logos/lognet-global.png",
   "infinite connection": "/logos/ifc-infinite-connection.png",
-  "ifc": "/logos/ifc-infinite-connection.png",
+  ifc: "/logos/ifc-infinite-connection.png",
   "elite global logistics network": "/logos/elite-global-logistics.png",
-  "egln": "/logos/elite-global-logistics.png",
+  egln: "/logos/elite-global-logistics.png",
 };
 
 export function getNetworkLogo(name: string): string | null {

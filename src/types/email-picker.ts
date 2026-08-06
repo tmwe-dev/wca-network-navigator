@@ -6,11 +6,7 @@
  * `@/components/global/email-picker/*`. Includes runtime re-exports
  * (pickerReducer, INITIAL_PICKER_STATE, TABS_CONFIG) — behaviour unchanged.
  */
-export {
-  pickerReducer,
-  INITIAL_PICKER_STATE,
-  TABS_CONFIG,
-} from "@/components/global/email-picker/types";
+export { pickerReducer, INITIAL_PICKER_STATE, TABS_CONFIG } from "@/components/global/email-picker/types";
 export type {
   PickerTab,
   CountrySort,

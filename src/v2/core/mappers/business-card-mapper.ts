@@ -9,9 +9,16 @@ import { type BusinessCard, businessCardId, userId, partnerId, contactId } from 
 export function mapBusinessCardRow(row: unknown): Result<BusinessCard, AppError> {
   const parsed = BusinessCardRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `BusinessCard row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "business-card-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `BusinessCard row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "business-card-mapper",
+      ),
+    );
   }
   const r = parsed.data;
   return ok({

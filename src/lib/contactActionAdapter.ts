@@ -85,10 +85,7 @@ export function adaptBusinessCard(card: BusinessCardRecord): CockpitContact {
     language: "",
     lastContact: "",
     priority: 5,
-    channels: [
-      card.email ? "email" : "",
-      card.phone || card.mobile ? "whatsapp" : "",
-    ].filter(Boolean),
+    channels: [card.email ? "email" : "", card.phone || card.mobile ? "whatsapp" : ""].filter(Boolean),
     email: card.email || "",
     phone: card.mobile || card.phone || "",
     origin: "bca" as ContactOrigin,

@@ -73,13 +73,26 @@ export const browserFillFormTool: Tool = {
       const emailMatch = prompt.match(/(?:email)\s+["']?([^"',\s]+)["']?/i);
       const noteMatch = prompt.match(/(?:nota|note)\s+["']?([^"']+)["']?/i);
 
-      if (nameMatch) fields.push({ selector: '[name="name"], #name, [data-field="name"]', label: "Nome", value: nameMatch[1].trim() });
-      if (emailMatch) fields.push({ selector: '[name="email"], #email, [data-field="email"]', label: "Email", value: emailMatch[1].trim() });
-      if (noteMatch) fields.push({ selector: '[name="note"], #note, textarea', label: "Nota", value: noteMatch[1].trim() });
+      if (nameMatch)
+        fields.push({
+          selector: '[name="name"], #name, [data-field="name"]',
+          label: "Nome",
+          value: nameMatch[1].trim(),
+        });
+      if (emailMatch)
+        fields.push({
+          selector: '[name="email"], #email, [data-field="email"]',
+          label: "Email",
+          value: emailMatch[1].trim(),
+        });
+      if (noteMatch)
+        fields.push({ selector: '[name="note"], #note, textarea', label: "Nota", value: noteMatch[1].trim() });
     }
 
     // Get session token for auth
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     const sessionToken = session?.access_token;
 
     // Build the full URL

@@ -19,9 +19,7 @@ interface ApprovalHandlerDeps {
 }
 
 export function useApprovalHandler(deps: ApprovalHandlerDeps) {
-  const {
-    addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
-  } = deps;
+  const { addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult } = deps;
 
   /** User approves a single-tool pending approval (live-approval canvas) */
   const handleApprove = useCallback(

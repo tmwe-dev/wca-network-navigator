@@ -47,7 +47,11 @@ export default function FunnemailTab(): React.ReactElement {
   const qc = useQueryClient();
   const [editing, setEditing] = React.useState<FunnemailGroupRow | null>(null);
 
-  const { data: groups = [], isLoading, error: groupsError } = useQuery({
+  const {
+    data: groups = [],
+    isLoading,
+    error: groupsError,
+  } = useQuery({
     queryKey: QKEY_GROUPS,
     queryFn: listFunnemailGroups,
     staleTime: 30_000,
@@ -107,48 +111,56 @@ export default function FunnemailTab(): React.ReactElement {
               </thead>
               <tbody>
                 {isLoading && (
-                  <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">Caricamento…</td></tr>
+                  <tr>
+                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                      Caricamento…
+                    </td>
+                  </tr>
                 )}
                 {!isLoading && groupsError && (
-                  <tr><td colSpan={4} className="px-3 py-8 text-center text-red-500">
-                    Errore caricamento gruppi: {groupsError instanceof Error ? groupsError.message : "unknown"}
-                  </td></tr>
+                  <tr>
+                    <td colSpan={4} className="px-3 py-8 text-center text-red-500">
+                      Errore caricamento gruppi: {groupsError instanceof Error ? groupsError.message : "unknown"}
+                    </td>
+                  </tr>
                 )}
                 {!isLoading && !groupsError && groups.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">Nessun gruppo trovato</td></tr>
+                  <tr>
+                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                      Nessun gruppo trovato
+                    </td>
+                  </tr>
                 )}
-                {!isLoading && groups.map((g) => {
-                  const acts = g.funnemail_policy?.actions ?? [];
-                  return (
-                    <tr key={g.id} className="border-b border-border/20 hover:bg-muted/20">
-                      <td className="px-3 py-2">
-                        <Switch
-                          checked={g.funnemail_enabled}
-                          onCheckedChange={() => toggleEnabled.mutate(g)}
-                        />
-                      </td>
-                      <td className="px-3 py-2 font-medium">{g.nome_gruppo}</td>
-                      <td className="px-3 py-2">
-                        {acts.length === 0 ? (
-                          <span className="text-muted-foreground">— nessuna —</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {acts.map((a) => (
-                              <Badge key={a} variant="outline" className="text-[10px] px-1.5 py-0">
-                                {ALL_ACTIONS.find((x) => x.key === a)?.label ?? a}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(g)} className="h-7 px-2">
-                          <Settings2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {!isLoading &&
+                  groups.map((g) => {
+                    const acts = g.funnemail_policy?.actions ?? [];
+                    return (
+                      <tr key={g.id} className="border-b border-border/20 hover:bg-muted/20">
+                        <td className="px-3 py-2">
+                          <Switch checked={g.funnemail_enabled} onCheckedChange={() => toggleEnabled.mutate(g)} />
+                        </td>
+                        <td className="px-3 py-2 font-medium">{g.nome_gruppo}</td>
+                        <td className="px-3 py-2">
+                          {acts.length === 0 ? (
+                            <span className="text-muted-foreground">— nessuna —</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {acts.map((a) => (
+                                <Badge key={a} variant="outline" className="text-[10px] px-1.5 py-0">
+                                  {ALL_ACTIONS.find((x) => x.key === a)?.label ?? a}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Button size="sm" variant="ghost" onClick={() => setEditing(g)} className="h-7 px-2">
+                            <Settings2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </ScrollArea>
@@ -162,9 +174,7 @@ export default function FunnemailTab(): React.ReactElement {
           <ScrollArea className="flex-1">
             <ul className="divide-y divide-border/20">
               {actions.length === 0 && (
-                <li className="px-3 py-8 text-center text-xs text-muted-foreground">
-                  Nessuna azione registrata
-                </li>
+                <li className="px-3 py-8 text-center text-xs text-muted-foreground">Nessuna azione registrata</li>
               )}
               {actions.map((a) => (
                 <li key={a.id} className="px-3 py-2 text-xs">
@@ -213,11 +223,11 @@ function PolicyEditorDialog({
   onSaved: () => void;
 }): React.ReactElement {
   const [enabled, setEnabled] = React.useState(group.funnemail_enabled);
-  const [acts, setActs] = React.useState<Set<string>>(
-    new Set(group.funnemail_policy?.actions ?? []),
-  );
+  const [acts, setActs] = React.useState<Set<string>>(new Set(group.funnemail_policy?.actions ?? []));
   const [minConf, setMinConf] = React.useState<number>(group.funnemail_policy?.min_confidence ?? 0.6);
-  const [dsTrigger, setDsTrigger] = React.useState<string>(group.funnemail_policy?.deep_search?.trigger ?? "if_unknown_or_stale");
+  const [dsTrigger, setDsTrigger] = React.useState<string>(
+    group.funnemail_policy?.deep_search?.trigger ?? "if_unknown_or_stale",
+  );
   const [dsStaleDays, setDsStaleDays] = React.useState<number>(group.funnemail_policy?.deep_search?.stale_days ?? 30);
   const [dsLevel, setDsLevel] = React.useState<string>(group.funnemail_policy?.deep_search?.level ?? "scout");
   const [drTone, setDrTone] = React.useState<string>(group.funnemail_policy?.draft_reply?.tone ?? "neutral_b2b");
@@ -228,7 +238,11 @@ function PolicyEditorDialog({
         enabled: true,
         actions: Array.from(acts) as FunnemailPolicy["actions"],
         min_confidence: minConf,
-        deep_search: { trigger: dsTrigger as "always" | "if_unknown_or_stale" | "never", stale_days: dsStaleDays, level: dsLevel as "scout" | "detective" | "sherlock" },
+        deep_search: {
+          trigger: dsTrigger as "always" | "if_unknown_or_stale" | "never",
+          stale_days: dsStaleDays,
+          level: dsLevel as "scout" | "detective" | "sherlock",
+        },
         draft_reply: { tone: drTone, agent_id: group.funnemail_policy?.draft_reply?.agent_id ?? null },
         crm_update: group.funnemail_policy?.crm_update ?? {},
         imap_action: group.funnemail_policy?.imap_action ?? {},
@@ -245,7 +259,8 @@ function PolicyEditorDialog({
   function toggleAction(k: string) {
     setActs((prev) => {
       const n = new Set(prev);
-      if (n.has(k)) n.delete(k); else n.add(k);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
       return n;
     });
   }
@@ -309,7 +324,9 @@ function PolicyEditorDialog({
                 <div>
                   <Label className="text-[10px]">Trigger</Label>
                   <Select value={dsTrigger} onValueChange={setDsTrigger}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="if_unknown_or_stale">Se sconosciuto o vecchio</SelectItem>
                       <SelectItem value="always">Sempre</SelectItem>
@@ -319,12 +336,19 @@ function PolicyEditorDialog({
                 </div>
                 <div>
                   <Label className="text-[10px]">Stale (giorni)</Label>
-                  <Input type="number" value={dsStaleDays} onChange={(e) => setDsStaleDays(Number(e.target.value))} className="h-8" />
+                  <Input
+                    type="number"
+                    value={dsStaleDays}
+                    onChange={(e) => setDsStaleDays(Number(e.target.value))}
+                    className="h-8"
+                  />
                 </div>
                 <div>
                   <Label className="text-[10px]">Livello</Label>
                   <Select value={dsLevel} onValueChange={setDsLevel}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="scout">Scout</SelectItem>
                       <SelectItem value="detective">Detective</SelectItem>
@@ -338,7 +362,9 @@ function PolicyEditorDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Annulla</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Annulla
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Salvo…" : "Salva policy"}
           </Button>

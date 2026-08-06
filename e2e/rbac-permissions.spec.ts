@@ -20,13 +20,13 @@ test.describe("RBAC Permissions System", () => {
     await page.waitForTimeout(1000);
 
     // Check if role management panel is visible
-    const rolePanel = page.getByText(/Gestione Ruoli|Role Management/i)
+    const rolePanel = page
+      .getByText(/Gestione Ruoli|Role Management/i)
       .or(page.locator('[data-testid="role-management-panel"]'));
 
     // If panel is visible, check for table
     if (await rolePanel.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const rolesTable = page.locator("table")
-        .or(page.getByRole("table"));
+      const rolesTable = page.locator("table").or(page.getByRole("table"));
       await expect(rolesTable.first()).toBeVisible({ timeout: 10000 });
     }
   });
@@ -40,16 +40,23 @@ test.describe("RBAC Permissions System", () => {
 
     if (editButtonCount > 0) {
       // Click the first edit button to open permissions dialog
-      await editButtons.first().click({ timeout: 5000 }).catch(() => {
-        // If no edit button, that's ok - some roles may not be editable
-      });
+      await editButtons
+        .first()
+        .click({ timeout: 5000 })
+        .catch(() => {
+          // If no edit button, that's ok - some roles may not be editable
+        });
 
       // Check for permission grid/checkboxes
       await page.waitForTimeout(500);
-      const permissionGrid = page.locator('[role="checkbox"]')
-        .or(page.locator("input[type='checkbox']"));
+      const permissionGrid = page.locator('[role="checkbox"]').or(page.locator("input[type='checkbox']"));
 
-      if (await permissionGrid.first().isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (
+        await permissionGrid
+          .first()
+          .isVisible({ timeout: 5000 })
+          .catch(() => false)
+      ) {
         await expect(permissionGrid.first()).toBeVisible({ timeout: 5000 });
       }
     }
@@ -59,8 +66,7 @@ test.describe("RBAC Permissions System", () => {
     await page.waitForTimeout(1000);
 
     // Look for team management section
-    const teamPanel = page.getByText(/Team|team/i)
-      .or(page.locator('[data-testid="team-management-panel"]'));
+    const teamPanel = page.getByText(/Team|team/i).or(page.locator('[data-testid="team-management-panel"]'));
 
     // Team panel visibility is optional, but should not error if present
     const isTeamPanelVisible = await teamPanel.isVisible({ timeout: 5000 }).catch(() => false);
@@ -74,7 +80,8 @@ test.describe("RBAC Permissions System", () => {
     await page.waitForTimeout(1000);
 
     // Look for permission gate messages (typically shown when user lacks permission)
-    const permissionMessages = page.getByText(/Non hai il permesso|permission denied|restricted/i)
+    const permissionMessages = page
+      .getByText(/Non hai il permesso|permission denied|restricted/i)
       .or(page.locator('[role="alert"]').filter({ hasText: /permesso|permission/i }));
 
     // Fallback may or may not be visible depending on user role
@@ -90,7 +97,9 @@ test.describe("RBAC Permissions System", () => {
 
   test("settings page produces no critical console errors", async ({ page }) => {
     const errors: string[] = [];
-    page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
 
     await page.goto("/v2/settings");
     await page.waitForLoadState("networkidle");
@@ -103,7 +112,7 @@ test.describe("RBAC Permissions System", () => {
         !e.includes("404") &&
         !e.includes("ERR_") &&
         !e.includes("ResizeObserver") &&
-        !e.includes("undefined is not a function") // Some UI libraries may throw non-critical errors
+        !e.includes("undefined is not a function"), // Some UI libraries may throw non-critical errors
     );
 
     expect(criticalErrors.length).toBeLessThan(5);
@@ -121,10 +130,7 @@ test.describe("RBAC Permissions System", () => {
       const headerTexts = await headers.allTextContents();
       const hasExpectedColumns = headerTexts.some(
         (text) =>
-          text.includes("Nome") ||
-          text.includes("Descrizione") ||
-          text.includes("Azioni") ||
-          text.includes("Sistema")
+          text.includes("Nome") || text.includes("Descrizione") || text.includes("Azioni") || text.includes("Sistema"),
       );
 
       expect(headerCount).toBeGreaterThan(0);
@@ -135,8 +141,7 @@ test.describe("RBAC Permissions System", () => {
     await page.waitForTimeout(1000);
 
     // Look for "Nuovo Ruolo" or "Create Role" button
-    const createButton = page.getByRole("button")
-      .filter({ hasText: /Nuovo Ruolo|Create Role/i });
+    const createButton = page.getByRole("button").filter({ hasText: /Nuovo Ruolo|Create Role/i });
 
     if (await createButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       // Button should be visible but we don't need to click it
@@ -149,7 +154,10 @@ test.describe("RBAC Permissions System", () => {
 
     // Check for basic page structure
     const mainContent = page.locator("main, [role='main'], .space-y-6, .container");
-    const isMainContentVisible = await mainContent.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const isMainContentVisible = await mainContent
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
 
     expect(isMainContentVisible || !isMainContentVisible).toBeTruthy(); // Page structure may vary
   });

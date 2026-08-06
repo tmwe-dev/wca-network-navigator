@@ -13,8 +13,12 @@
  */
 import { useState } from "react";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -124,8 +128,7 @@ export function ExportSendersDialog({ open, onOpenChange, senderEmails }: Export
             <Label htmlFor="opt-messages" className="flex-1 cursor-pointer space-y-1">
               <div className="font-medium text-sm">Tutte le email</div>
               <div className="text-xs text-muted-foreground">
-                CSV con metadata complete: data, direzione, oggetto, anteprima corpo
-                (max 2000 messaggi).
+                CSV con metadata complete: data, direzione, oggetto, anteprima corpo (max 2000 messaggi).
               </div>
             </Label>
           </div>

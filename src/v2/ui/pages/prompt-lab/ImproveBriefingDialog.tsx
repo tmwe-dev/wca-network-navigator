@@ -24,13 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2 } from "lucide-react";
 import type { BriefingPayload } from "./hooks/useLabAgent";
 import type { Block } from "./types";
@@ -125,16 +119,16 @@ export function ImproveBriefingDialog({
             Briefing pre-miglioramento
           </DialogTitle>
           <DialogDescription>
-            Compila la checklist: l'AI userà queste info come <strong>guard-rail prioritari</strong> per generare
-            solo contenuti coerenti con lo scopo dichiarato.
+            Compila la checklist: l'AI userà queste info come <strong>guard-rail prioritari</strong> per generare solo
+            contenuti coerenti con lo scopo dichiarato.
             {block && (
               <span className="block mt-1 text-xs">
                 Blocco: <code className="text-foreground">{block.label}</code> · Tab:{" "}
                 <code className="text-foreground">{tabLabel}</code>
                 {detectedKind && (
                   <>
-                    {" "}· Tipo rilevato:{" "}
-                    <code className="text-foreground">{detectedKind}</code>
+                    {" "}
+                    · Tipo rilevato: <code className="text-foreground">{detectedKind}</code>
                   </>
                 )}
               </span>
@@ -252,7 +246,9 @@ export function ImproveBriefingDialog({
           {/* MUST HAVE / MUST NOT */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="must" className="text-xs font-semibold">7. Devi includere</Label>
+              <Label htmlFor="must" className="text-xs font-semibold">
+                7. Devi includere
+              </Label>
               <Textarea
                 id="must"
                 value={data.mustHave}
@@ -263,7 +259,9 @@ export function ImproveBriefingDialog({
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="mustnot" className="text-xs font-semibold">8. Non devi mai</Label>
+              <Label htmlFor="mustnot" className="text-xs font-semibold">
+                8. Non devi mai
+              </Label>
               <Textarea
                 id="mustnot"
                 value={data.mustNotHave}
@@ -277,7 +275,9 @@ export function ImproveBriefingDialog({
 
           {/* EXTRA CONSTRAINTS */}
           <div className="space-y-1">
-            <Label htmlFor="extra" className="text-xs font-semibold">9. Vincoli aggiuntivi (opzionale)</Label>
+            <Label htmlFor="extra" className="text-xs font-semibold">
+              9. Vincoli aggiuntivi (opzionale)
+            </Label>
             <Input
               id="extra"
               value={data.extraConstraints}
@@ -292,11 +292,7 @@ export function ImproveBriefingDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>
             Annulla
           </Button>
-          <Button
-            onClick={() => onConfirm(data)}
-            disabled={!canConfirm || loading}
-            className="gap-2"
-          >
+          <Button onClick={() => onConfirm(data)} disabled={!canConfirm || loading} className="gap-2">
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             Genera con questo briefing
           </Button>

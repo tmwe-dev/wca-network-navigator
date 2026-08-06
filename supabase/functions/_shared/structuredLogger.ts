@@ -69,7 +69,11 @@ function safeStringify(value: unknown): string {
 
 function errorToContext(err: unknown): Record<string, unknown> {
   if (err instanceof Error) {
-    return { error_name: err.name, error_message: err.message, error_stack: err.stack?.split("\n").slice(0, 8).join("\n") };
+    return {
+      error_name: err.name,
+      error_message: err.message,
+      error_stack: err.stack?.split("\n").slice(0, 8).join("\n"),
+    };
   }
   if (typeof err === "string") return { error_message: err };
   if (err && typeof err === "object") return { error_payload: err as Record<string, unknown> };
@@ -85,7 +89,10 @@ export interface StructuredLogger {
   /** Critical: same as error but severity=critical (paged / alerted). */
   critical(message: string, err: unknown, context?: Record<string, unknown>): void;
   /** Records a perf/metric data point (duration, counts, model name, etc.). */
-  metric(name: string, fields: { duration_ms?: number; status_code?: number; tags?: string[]; [k: string]: unknown }): void;
+  metric(
+    name: string,
+    fields: { duration_ms?: number; status_code?: number; tags?: string[]; [k: string]: unknown },
+  ): void;
   /** Flush queued metric rows to DB. Call once before responding (best-effort, non-throwing). */
   flush(): Promise<void>;
   /** Time an async block and emit a `perf` metric automatically. */
@@ -109,8 +116,17 @@ export function createLogger(functionName: string, baseContext: LogContext = {})
       ctx: merged,
     };
     // Single-line JSON log — searchable in Supabase function logs.
-    const out = severity === "error" || severity === "critical" ? console.error : severity === "warn" ? console.warn : console.log;
-    try { out(safeStringify(line)); } catch { /* never throw from logger */ }
+    const out =
+      severity === "error" || severity === "critical"
+        ? console.error
+        : severity === "warn"
+          ? console.warn
+          : console.log;
+    try {
+      out(safeStringify(line));
+    } catch {
+      /* never throw from logger */
+    }
 
     // Queue persistent rows for error/perf/critical metrics (info/debug stay log-only).
     if (eventType === "error" || eventType === "perf" || eventType === "metric" || severity === "critical") {
@@ -132,9 +148,15 @@ export function createLogger(functionName: string, baseContext: LogContext = {})
   }
 
   const api: StructuredLogger = {
-    debug(message, context = {}) { emit("debug", "info", message, context); },
-    info(message, context = {}) { emit("info", "info", message, context); },
-    warn(message, context = {}) { emit("warn", "warn", message, context); },
+    debug(message, context = {}) {
+      emit("debug", "info", message, context);
+    },
+    info(message, context = {}) {
+      emit("info", "info", message, context);
+    },
+    warn(message, context = {}) {
+      emit("warn", "warn", message, context);
+    },
     error(message, err, context = {}) {
       emit("error", "error", message, { ...context, ...errorToContext(err) });
     },
@@ -160,13 +182,29 @@ export function createLogger(functionName: string, baseContext: LogContext = {})
     async flush() {
       if (queue.length === 0) return;
       const admin = getAdmin();
-      if (!admin) { queue.length = 0; return; }
+      if (!admin) {
+        queue.length = 0;
+        return;
+      }
       const batch = queue.splice(0, queue.length);
       try {
         await admin.from("edge_metrics").insert(batch as never);
       } catch (e) {
         // Logger must never throw — surface to console only.
-        try { console.error(safeStringify({ ts: new Date().toISOString(), fn: functionName, severity: "warn", event: "warn", msg: "edge_metrics_flush_failed", ctx: errorToContext(e) })); } catch { /* noop */ }
+        try {
+          console.error(
+            safeStringify({
+              ts: new Date().toISOString(),
+              fn: functionName,
+              severity: "warn",
+              event: "warn",
+              msg: "edge_metrics_flush_failed",
+              ctx: errorToContext(e),
+            }),
+          );
+        } catch {
+          /* noop */
+        }
       }
     },
     child(extra) {

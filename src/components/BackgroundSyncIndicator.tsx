@@ -21,7 +21,8 @@ export function BackgroundSyncIndicator() {
   }, []);
 
   // Don't show on outreach page (it has its own panel) or if idle/dismissed
-  const isOnOutreach = location.pathname.startsWith(`/${ROUTE_OUTREACH}`) || location.pathname.startsWith(`/v2/${ROUTE_OUTREACH}`);
+  const isOnOutreach =
+    location.pathname.startsWith(`/${ROUTE_OUTREACH}`) || location.pathname.startsWith(`/v2/${ROUTE_OUTREACH}`);
   if (!progress || progress.status === "idle" || isOnOutreach || dismissed) return null;
 
   const isDone = progress.status === "done";
@@ -33,7 +34,7 @@ export function BackgroundSyncIndicator() {
       {isRunning && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
       {isDone && <CheckCircle2 className="w-4 h-4 text-primary" />}
       {isError && <AlertCircle className="w-4 h-4 text-destructive" />}
-      
+
       <span className="text-foreground">
         {isRunning && `📬 Download email: ${progress.downloaded} scaricate...`}
         {isDone && `✅ ${progress.downloaded} email scaricate`}
@@ -50,10 +51,7 @@ export function BackgroundSyncIndicator() {
         </button>
       )}
       {(isDone || isError) && (
-        <button
-          onClick={() => setDismissed(true)}
-          className="text-muted-foreground hover:text-foreground ml-1"
-        >
+        <button onClick={() => setDismissed(true)} className="text-muted-foreground hover:text-foreground ml-1">
           <X className="w-3.5 h-3.5" />
         </button>
       )}

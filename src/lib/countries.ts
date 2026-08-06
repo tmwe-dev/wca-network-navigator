@@ -1,12 +1,12 @@
 // Country flag emoji from country code
 export function getCountryFlag(countryCode: string): string {
   if (!countryCode || countryCode.length !== 2) return "🌍";
-  
+
   const codePoints = countryCode
     .toUpperCase()
     .split("")
     .map((char) => 127397 + char.charCodeAt(0));
-  
+
   return String.fromCodePoint(...codePoints);
 }
 
@@ -87,12 +87,24 @@ export function getServiceIconColor(category: string): string {
 import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 
 const MARKET_ALIASES: Record<string, string> = {
-  uae: "AE", "united arab emirates": "AE", emirates: "AE",
-  usa: "US", "united states": "US", "united states of america": "US", america: "US",
-  uk: "GB", "united kingdom": "GB", england: "GB", britain: "GB",
-  "saudi arabia": "SA", saudi: "SA", ksa: "SA",
-  china: "CN", prc: "CN",
-  "south korea": "KR", korea: "KR",
+  uae: "AE",
+  "united arab emirates": "AE",
+  emirates: "AE",
+  usa: "US",
+  "united states": "US",
+  "united states of america": "US",
+  america: "US",
+  uk: "GB",
+  "united kingdom": "GB",
+  england: "GB",
+  britain: "GB",
+  "saudi arabia": "SA",
+  saudi: "SA",
+  ksa: "SA",
+  china: "CN",
+  prc: "CN",
+  "south korea": "KR",
+  korea: "KR",
   "north korea": "KP",
   russia: "RU",
   taiwan: "TW",
@@ -143,7 +155,8 @@ const MARKET_ALIASES: Record<string, string> = {
   venezuela: "VE",
   ecuador: "EC",
   panama: "PA",
-  netherlands: "NL", holland: "NL",
+  netherlands: "NL",
+  holland: "NL",
   belgium: "BE",
   switzerland: "CH",
   austria: "AT",
@@ -155,13 +168,15 @@ const MARKET_ALIASES: Record<string, string> = {
   portugal: "PT",
   greece: "GR",
   romania: "RO",
-  "czech republic": "CZ", czechia: "CZ",
+  "czech republic": "CZ",
+  czechia: "CZ",
   hungary: "HU",
   ireland: "IE",
   scotland: "GB",
   wales: "GB",
   "new zealand": "NZ",
-  myanmar: "MM", burma: "MM",
+  myanmar: "MM",
+  burma: "MM",
   cambodia: "KH",
   laos: "LA",
 };
@@ -185,7 +200,7 @@ export function resolveCountryCode(marketName: string): string | null {
 
   // Partial match
   const partial = WCA_COUNTRIES.find(
-    (c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase())
+    (c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase()),
   );
   if (partial) return partial.code;
 

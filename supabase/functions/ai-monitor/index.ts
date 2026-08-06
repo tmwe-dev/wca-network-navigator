@@ -104,25 +104,28 @@ Deno.serve(async (req) => {
     const monthSpent = ((monthTotalRes.data as Record<string, unknown> | null)?.cost_usd as number) ?? 0;
     const budgetPercentage = monthlyBudget > 0 ? (monthSpent / monthlyBudget) * 100 : 0;
 
-    return jsonResponse({
-      todayTotal: todayTotalRes.data ?? null,
-      monthTotal: monthTotalRes.data ?? null,
-      weekTotal: weekTotalRes.data ?? null,
-      todayByGroup: todayByGroupRes.data ?? [],
-      dailyHistory: dailyHistoryRes.data ?? [],
-      topFunctions: topFunctionsRes.data ?? [],
-      sizeDistribution: sizeDistRes.data ?? [],
-      cronVsUser: cronVsUserRes.data ?? [],
-      budget: {
-        monthlyBudgetUsd: monthlyBudget,
-        alertThresholdPercent: (budgetRes.data?.alert_threshold_percent as number) ?? 80,
-        subscriptionStart: budgetRes.data?.subscription_start ?? null,
-        subscriptionEnd: budgetRes.data?.subscription_end ?? null,
-        monthSpentUsd: monthSpent,
-        budgetPercentage,
+    return jsonResponse(
+      {
+        todayTotal: todayTotalRes.data ?? null,
+        monthTotal: monthTotalRes.data ?? null,
+        weekTotal: weekTotalRes.data ?? null,
+        todayByGroup: todayByGroupRes.data ?? [],
+        dailyHistory: dailyHistoryRes.data ?? [],
+        topFunctions: topFunctionsRes.data ?? [],
+        sizeDistribution: sizeDistRes.data ?? [],
+        cronVsUser: cronVsUserRes.data ?? [],
+        budget: {
+          monthlyBudgetUsd: monthlyBudget,
+          alertThresholdPercent: (budgetRes.data?.alert_threshold_percent as number) ?? 80,
+          subscriptionStart: budgetRes.data?.subscription_start ?? null,
+          subscriptionEnd: budgetRes.data?.subscription_end ?? null,
+          monthSpentUsd: monthSpent,
+          budgetPercentage,
+        },
+        _errors: Object.keys(errors).length ? errors : undefined,
       },
-      _errors: Object.keys(errors).length ? errors : undefined,
-    }, corsHeaders);
+      corsHeaders,
+    );
   } catch (err) {
     console.error("[ai-monitor] fatal", err);
     const msg = err instanceof Error ? err.message : String(err);

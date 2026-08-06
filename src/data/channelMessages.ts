@@ -28,9 +28,7 @@ export async function insertChannelMessage(msg: ChannelMessageInsert) {
  * la riga è stata effettivamente inserita (HTTP 201), false se duplicato.
  * Usato dai sync canali (WhatsApp, LinkedIn) per delta-merge atomici.
  */
-export async function upsertChannelMessageDedup(
-  msg: ChannelMessageInsert,
-): Promise<{ inserted: boolean }> {
+export async function upsertChannelMessageDedup(msg: ChannelMessageInsert): Promise<{ inserted: boolean }> {
   const { error, status } = await supabase
     .from("channel_messages")
     .upsert([msg], { onConflict: "message_id_external", ignoreDuplicates: true });
@@ -43,10 +41,7 @@ export async function upsertChannelMessageDedup(
  * (lowercased) restituisce il timestamp ms del messaggio più recente in DB.
  * Aggregazione client-side su pagine da 1000, capped a 20k righe.
  */
-export async function getChannelContactCursors(
-  userId: string,
-  channel: string,
-): Promise<Map<string, number>> {
+export async function getChannelContactCursors(userId: string, channel: string): Promise<Map<string, number>> {
   const cursors = new Map<string, number>();
   const PAGE = 1000;
   let from = 0;
@@ -66,9 +61,7 @@ export async function getChannelContactCursors(
       direction: string;
       created_at: string;
     }>) {
-      const contact = (row.direction === "outbound" ? row.to_address : row.from_address)
-        ?.toLowerCase()
-        .trim();
+      const contact = (row.direction === "outbound" ? row.to_address : row.from_address)?.toLowerCase().trim();
       if (!contact) continue;
       const t = new Date(row.created_at).getTime();
       const prev = cursors.get(contact);
@@ -85,11 +78,7 @@ export async function getChannelContactCursors(
  * Cursore singolo per un contatto su un canale: ritorna il timestamp ms
  * del messaggio più recente in DB, o 0 se nessuno.
  */
-export async function getChannelContactCursor(
-  userId: string,
-  channel: string,
-  contactLower: string,
-): Promise<number> {
+export async function getChannelContactCursor(userId: string, channel: string, contactLower: string): Promise<number> {
   const { data, error } = await supabase
     .from("channel_messages")
     .select("created_at")
@@ -186,8 +175,7 @@ export async function findInboundPreview(opts: {
 
   const { data, error } = await q.maybeSingle();
   if (error || !data) return null;
-  const text = (data.body_text && data.body_text.trim())
-    || (data.body_html ? htmlToPlain(data.body_html) : "");
+  const text = (data.body_text && data.body_text.trim()) || (data.body_html ? htmlToPlain(data.body_html) : "");
   return {
     subject: data.subject ?? null,
     fromAddress: data.from_address ?? null,
@@ -239,14 +227,14 @@ export async function getUnifiedInboxMessages(
   channel?: string,
   direction?: "inbound" | "outbound",
   limit = 100,
-  offset = 0
+  offset = 0,
 ): Promise<UnifiedInboxRow[]> {
   // P3.7: v_inbox_unified non esiste. Query diretta a channel_messages.
   // Campi denormalizzati (partner_*, classification_*, rule_*) a null.
   let q = supabase
     .from("channel_messages")
     .select(
-      "id, user_id, direction, from_address, to_address, subject, body_text, email_date, created_at, channel, thread_id, partner_id, source_type, source_id, read_at"
+      "id, user_id, direction, from_address, to_address, subject, body_text, email_date, created_at, channel, thread_id, partner_id, source_type, source_id, read_at",
     )
     .order("email_date", { ascending: false });
   if (channel) q = q.eq("channel", channel);
@@ -270,32 +258,34 @@ export async function getUnifiedInboxMessages(
     source_id: string | null;
     read_at: string | null;
   };
-  return ((data ?? []) as Row[]).map((r): UnifiedInboxRow => ({
-    message_id: r.id,
-    user_id: r.user_id ?? "",
-    direction: r.direction ?? "",
-    from_address: r.from_address,
-    to_address: r.to_address,
-    subject: r.subject,
-    body_text: r.body_text,
-    message_date: r.email_date ?? r.created_at,
-    channel: r.channel ?? "",
-    thread_id: r.thread_id,
-    sender_category: null,
-    partner_id: r.partner_id,
-    source_type: r.source_type,
-    source_id: r.source_id,
-    is_read: r.read_at != null,
-    partner_name: null,
-    partner_lead_status: null,
-    partner_country: null,
-    classification_category: null,
-    classification_confidence: null,
-    classification_urgency: null,
-    classification_sentiment: null,
-    rule_auto_action: null,
-    rule_category: null,
-  }));
+  return ((data ?? []) as Row[]).map(
+    (r): UnifiedInboxRow => ({
+      message_id: r.id,
+      user_id: r.user_id ?? "",
+      direction: r.direction ?? "",
+      from_address: r.from_address,
+      to_address: r.to_address,
+      subject: r.subject,
+      body_text: r.body_text,
+      message_date: r.email_date ?? r.created_at,
+      channel: r.channel ?? "",
+      thread_id: r.thread_id,
+      sender_category: null,
+      partner_id: r.partner_id,
+      source_type: r.source_type,
+      source_id: r.source_id,
+      is_read: r.read_at != null,
+      partner_name: null,
+      partner_lead_status: null,
+      partner_country: null,
+      classification_category: null,
+      classification_confidence: null,
+      classification_urgency: null,
+      classification_sentiment: null,
+      rule_auto_action: null,
+      rule_category: null,
+    }),
+  );
 }
 
 /**
@@ -320,11 +310,7 @@ export async function getUnifiedInboxStats(channel?: string): Promise<{ unread: 
  * che logga e ritorna null in caso di errore.
  */
 export async function insertChannelMessageReturningId(msg: ChannelMessageInsert) {
-  return await supabase
-    .from("channel_messages")
-    .insert(msg)
-    .select("id")
-    .single();
+  return await supabase.from("channel_messages").insert(msg).select("id").single();
 }
 
 /** Conteggio inbound non letti, filtrabile per canale e mailbox. */
@@ -504,9 +490,12 @@ export async function getChannelMessageBodyById(
  * Pagina di from_address inbound per email, filtrabile per mailbox.
  * Estratto da `useMailboxSenderAllowlist` per il loop di paginazione client-side.
  */
-export async function findInboundEmailFromAddressesPage(
-  params: { mailboxFilter: "personal" | "shared" | null; mailboxId: string | null; offset: number; pageSize: number },
-): Promise<Array<{ from_address: string | null }>> {
+export async function findInboundEmailFromAddressesPage(params: {
+  mailboxFilter: "personal" | "shared" | null;
+  mailboxId: string | null;
+  offset: number;
+  pageSize: number;
+}): Promise<Array<{ from_address: string | null }>> {
   let q = supabase
     .from("channel_messages")
     .select("from_address")
@@ -568,19 +557,13 @@ export async function softDeleteChannelMessageById(id: string): Promise<void> {
 
 /** Archivia un singolo messaggio (imposta `folder = 'ARCHIVE'`). */
 export async function archiveChannelMessageById(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("channel_messages")
-    .update({ folder: "ARCHIVE" })
-    .eq("id", id);
+  const { error } = await supabase.from("channel_messages").update({ folder: "ARCHIVE" }).eq("id", id);
   if (error) throw error;
 }
 
 /** Sposta un singolo messaggio in una cartella arbitraria. */
 export async function moveChannelMessageToFolder(id: string, folder: string): Promise<void> {
-  const { error } = await supabase
-    .from("channel_messages")
-    .update({ folder })
-    .eq("id", id);
+  const { error } = await supabase.from("channel_messages").update({ folder }).eq("id", id);
   if (error) throw error;
 }
 
@@ -589,10 +572,7 @@ export async function moveChannelMessageToFolder(id: string, folder: string): Pr
  * con il timestamp `read_at` (non esiste alcuna colonna booleana `is_read`).
  */
 export async function markChannelMessageIsReadFlag(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("channel_messages")
-    .update({ read_at: new Date().toISOString() })
-    .eq("id", id);
+  const { error } = await supabase.from("channel_messages").update({ read_at: new Date().toISOString() }).eq("id", id);
   if (error) throw error;
 }
 
@@ -633,11 +613,7 @@ export interface SenderEmailRow {
  * visore sequenziale del mittente. Stesso `.or(ilike)` e ordinamento
  * dell'implementazione originale.
  */
-export async function findSenderEmailsPage(
-  emailAddress: string,
-  from: number,
-  to: number,
-): Promise<SenderEmailRow[]> {
+export async function findSenderEmailsPage(emailAddress: string, from: number, to: number): Promise<SenderEmailRow[]> {
   const { data, error } = await supabase
     .from("channel_messages")
     .select("id, subject, email_date, direction, from_address, to_address")
@@ -684,11 +660,7 @@ const MESSAGE_LIST_SELECT_COLS = [
   "references_header",
 ].join(", ");
 
-export type MailboxQueryFilter =
-  | { kind: "personal" }
-  | { kind: "shared"; id: string }
-  | null
-  | undefined;
+export type MailboxQueryFilter = { kind: "personal" } | { kind: "shared"; id: string } | null | undefined;
 
 /** Pagina di channel_messages per la Inbox (filtri canale/operatore/mailbox/full-text). */
 
@@ -800,13 +772,19 @@ export async function findChannelMessagesPage(opts: {
     q = q.eq("mailbox_id", mailboxFilter.id);
   }
   if (searchQuery && searchQuery.trim()) {
-    const terms = searchQuery.trim().split(/\s+/).map((t) => `${t}:*`).join(" & ");
+    const terms = searchQuery
+      .trim()
+      .split(/\s+/)
+      .map((t) => `${t}:*`)
+      .join(" & ");
     q = q.textSearch("search_vector", terms);
   }
 
   const { data, error } = await q;
   if (error) throw error;
-  return toRecords(data).map(mapChannelMessageRow).filter((r): r is ChannelMessageRow => r !== null);
+  return toRecords(data)
+    .map(mapChannelMessageRow)
+    .filter((r): r is ChannelMessageRow => r !== null);
 }
 
 export interface DownloadedEmailFeedRow {
@@ -832,17 +810,13 @@ export async function findDownloadedEmailsFeedRows(limit: number): Promise<Downl
 
 /** Conteggio totale email, filtrabile per mailbox (personal/shared). */
 export async function countEmailMessagesByMailbox(mailboxFilter?: MailboxQueryFilter): Promise<number> {
-  let q = supabase
-    .from("channel_messages")
-    .select("id", { count: "planned", head: true })
-    .eq("channel", "email");
+  let q = supabase.from("channel_messages").select("id", { count: "planned", head: true }).eq("channel", "email");
   if (mailboxFilter?.kind === "personal") q = q.is("mailbox_id", null);
   else if (mailboxFilter?.kind === "shared") q = q.eq("mailbox_id", mailboxFilter.id);
   const { count, error } = await q;
   if (error) throw error;
   return count ?? 0;
 }
-
 
 export interface RecentInboundMessageRow {
   id: string;
@@ -862,10 +836,7 @@ export async function findRecentInboundMessages(
 ): Promise<{ rows: RecentInboundMessageRow[]; count: number | null }> {
   const { data, error, count } = await supabase
     .from("channel_messages")
-    .select(
-      "id,channel,from_name,from_address,subject,email_date,created_at,read_at,category",
-      { count: "exact" },
-    )
+    .select("id,channel,from_name,from_address,subject,email_date,created_at,read_at,category", { count: "exact" })
     .eq("direction", "inbound")
     .is("deleted_at", null)
     .order("email_date", { ascending: false, nullsFirst: false })

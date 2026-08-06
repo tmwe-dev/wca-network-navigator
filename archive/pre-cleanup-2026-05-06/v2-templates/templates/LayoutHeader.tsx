@@ -52,8 +52,13 @@ interface Props {
 }
 
 export function LayoutHeader({
-  onOpenCommandPalette, onAiClick, onAddContact, onAgentDash, onTestExt,
-  outreachQueue, globalSync,
+  onOpenCommandPalette,
+  onAiClick,
+  onAddContact,
+  onAgentDash,
+  onTestExt,
+  outreachQueue,
+  globalSync,
   isDark = false,
   onToggleTheme = () => {
     document.documentElement.classList.toggle("dark");
@@ -85,11 +90,7 @@ export function LayoutHeader({
           </Button>
         </NavMenuPopover>
 
-        <StatusPill
-          onAiClick={onAiClick}
-          outreachQueue={outreachQueue}
-          globalSync={globalSync}
-        />
+        <StatusPill onAiClick={onAiClick} outreachQueue={outreachQueue} globalSync={globalSync} />
 
         {/* Header contestuale per la sezione Esplora (auto-nascosto altrove) */}
         <ExploreContextHeader />

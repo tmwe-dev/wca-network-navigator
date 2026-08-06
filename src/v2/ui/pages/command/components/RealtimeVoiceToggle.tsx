@@ -28,16 +28,10 @@ export function RealtimeVoiceToggle({ compact }: Props) {
         type="button"
         onClick={() => (active ? void rt.stop() : void rt.start())}
         disabled={busy}
-        title={
-          active
-            ? "Termina conversazione vocale realtime"
-            : "Avvia conversazione vocale realtime (ElevenLabs)"
-        }
+        title={active ? "Termina conversazione vocale realtime" : "Avvia conversazione vocale realtime (ElevenLabs)"}
         aria-label="Voce realtime ElevenLabs"
         className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 ${
-          active
-            ? "bg-primary/20 text-primary animate-pulse"
-            : "text-muted-foreground hover:text-foreground"
+          active ? "bg-primary/20 text-primary animate-pulse" : "text-muted-foreground hover:text-foreground"
         } ${busy ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         {busy ? (
@@ -56,11 +50,7 @@ export function RealtimeVoiceToggle({ compact }: Props) {
       type="button"
       onClick={() => (active ? void rt.stop() : void rt.start())}
       disabled={busy}
-      title={
-        active
-          ? "Termina conversazione vocale realtime"
-          : "Avvia conversazione vocale realtime (ElevenLabs)"
-      }
+      title={active ? "Termina conversazione vocale realtime" : "Avvia conversazione vocale realtime (ElevenLabs)"}
       aria-label="Voce realtime ElevenLabs"
       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-300 text-[9px] font-semibold tracking-wider uppercase ${
         active

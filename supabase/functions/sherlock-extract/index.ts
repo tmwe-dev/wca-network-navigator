@@ -46,14 +46,13 @@ function buildSchema(targetFields: string[]) {
     },
     suggested_next_url: {
       type: ["string", "null"],
-      description: "URL trovato nel testo che vale la pena scrapare come prossimo step (es. LinkedIn CEO). null se nessuno.",
+      description:
+        "URL trovato nel testo che vale la pena scrapare come prossimo step (es. LinkedIn CEO). null se nessuno.",
     },
     fields: {
       type: "object",
       description: "Mappa target_field → valore estratto (string o null se non trovato)",
-      properties: Object.fromEntries(
-        targetFields.map((f) => [f, { type: ["string", "null"] }]),
-      ),
+      properties: Object.fromEntries(targetFields.map((f) => [f, { type: ["string", "null"] }])),
       additionalProperties: true,
     },
     other_findings: {
@@ -82,7 +81,9 @@ function buildSchema(targetFields: string[]) {
 async function sha256(s: string): Promise<string> {
   const buf = new TextEncoder().encode(s);
   const digest = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /** Genera cache key deterministica per stessi input → stessa key. */
@@ -102,13 +103,14 @@ serve(async (req) => {
   try {
     const body = (await req.json()) as ReqBody;
     if (!body.markdown || !body.extract_prompt) {
-      return new Response(
-        JSON.stringify({ error: "markdown e extract_prompt sono obbligatori" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "markdown e extract_prompt sono obbligatori" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY mancante" }), {
         status: 500,
@@ -119,9 +121,10 @@ serve(async (req) => {
     // ── Cache lookup (B) ──
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const supabaseAdmin = (SUPABASE_URL && SERVICE_KEY)
-      ? createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
-      : null;
+    const supabaseAdmin =
+      SUPABASE_URL && SERVICE_KEY
+        ? createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+        : null;
 
     let cacheKey: string | null = null;
     if (supabaseAdmin && !body.bypass_cache) {
@@ -133,10 +136,9 @@ serve(async (req) => {
           .eq("cache_key", cacheKey)
           .maybeSingle();
         if (cached && new Date(cached.expires_at).getTime() > Date.now()) {
-          return new Response(
-            JSON.stringify({ ...(cached.result as Record<string, unknown>), fromCache: true }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ ...(cached.result as Record<string, unknown>), fromCache: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
       } catch (e) {
         console.warn("[sherlock-extract] cache lookup failed:", (e as Error).message);
@@ -158,23 +160,23 @@ serve(async (req) => {
     ].join("\n\n");
 
     const aiRes = await aiFetch({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userParts },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "report_findings",
-              description: "Riporta i findings strutturati estratti dalla pagina",
-              parameters: schema,
-            },
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userParts },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "report_findings",
+            description: "Riporta i findings strutturati estratti dalla pagina",
+            parameters: schema,
           },
-        ],
-        tool_choice: { type: "function", function: { name: "report_findings" } },
-      });
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "report_findings" } },
+    });
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
@@ -186,10 +188,10 @@ serve(async (req) => {
         });
       }
       if (aiRes.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crediti AI esauriti. Aggiungi fondi al workspace Lovable." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: "Crediti AI esauriti. Aggiungi fondi al workspace Lovable." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       return new Response(JSON.stringify({ error: "Errore AI gateway", detail: errText }), {
         status: 502,
@@ -202,32 +204,35 @@ serve(async (req) => {
     const argsStr = toolCall?.function?.arguments;
     if (!argsStr) {
       console.error("No tool call in AI response", JSON.stringify(aiJson).slice(0, 500));
-      return new Response(
-        JSON.stringify({ error: "AI non ha restituito findings strutturati", raw: aiJson }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "AI non ha restituito findings strutturati", raw: aiJson }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(argsStr);
     } catch (e) {
-      return new Response(
-        JSON.stringify({ error: "Parse JSON tool call fallito", detail: String(e) }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Parse JSON tool call fallito", detail: String(e) }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // ── Cache write (best-effort) ──
     if (supabaseAdmin && cacheKey) {
       try {
-        await supabaseAdmin.from("ai_extract_cache").upsert({
-          cache_key: cacheKey,
-          result: parsed,
-          model: "google/gemini-3-flash-preview",
-          created_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
-        }, { onConflict: "cache_key" });
+        await supabaseAdmin.from("ai_extract_cache").upsert(
+          {
+            cache_key: cacheKey,
+            result: parsed,
+            model: "google/gemini-3-flash-preview",
+            created_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+          },
+          { onConflict: "cache_key" },
+        );
       } catch (e) {
         console.warn("[sherlock-extract] cache write failed:", (e as Error).message);
       }
@@ -238,9 +243,9 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("sherlock-extract error", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

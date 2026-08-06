@@ -16,25 +16,33 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && !started.current) {
-        started.current = true;
-        const duration = 2000;
-        const start = performance.now();
-        const animate = (now: number) => {
-          const p = Math.min((now - start) / duration, 1);
-          const eased = 1 - Math.pow(1 - p, 3);
-          setCount(Math.floor(eased * target));
-          if (p < 1) requestAnimationFrame(animate);
-        };
-        requestAnimationFrame(animate);
-      }
-    }, { threshold: 0.5 });
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && !started.current) {
+          started.current = true;
+          const duration = 2000;
+          const start = performance.now();
+          const animate = (now: number) => {
+            const p = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - p, 3);
+            setCount(Math.floor(eased * target));
+            if (p < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 },
+    );
     obs.observe(el);
     return () => obs.disconnect();
   }, [target]);
 
-  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
+  return (
+    <span ref={ref}>
+      {count.toLocaleString()}
+      {suffix}
+    </span>
+  );
 }
 
 const PerformanceSection = () => {
@@ -44,13 +52,13 @@ const PerformanceSection = () => {
       const [partnersCount, countryCodes, emails, agents, tasks] = await Promise.all([
         countActivePartners(),
         getDistinctCountries(),
-        countChannelMessages("email").then(c => ({ count: c })),
-        countActiveAgents().then(c => ({ count: c })),
-        countCompletedAgentTasks().then(c => ({ count: c })),
+        countChannelMessages("email").then((c) => ({ count: c })),
+        countActiveAgents().then((c) => ({ count: c })),
+        countCompletedAgentTasks().then((c) => ({ count: c })),
       ]);
-      
+
       const uniqueCountries = countryCodes.length;
-      
+
       return {
         partners: partnersCount,
         emails: emails.count || 0,
@@ -102,8 +110,8 @@ const PerformanceSection = () => {
             <span className="text-primary text-sm font-bold tracking-widest uppercase">Impatto</span>
             <h2 className="text-4xl font-bold text-white">ROI misurabile</h2>
             <p className="text-lg text-white/50 leading-relaxed">
-              Quello che prima richiedeva un team di 10 persone e mesi di lavoro, 
-              oggi viene gestito autonomamente dal sistema con risultati superiori.
+              Quello che prima richiedeva un team di 10 persone e mesi di lavoro, oggi viene gestito autonomamente dal
+              sistema con risultati superiori.
             </p>
           </div>
           <div className="space-y-6">
@@ -119,7 +127,10 @@ const PerformanceSection = () => {
                   <span className="text-white font-bold">{m.metric}</span>
                 </div>
                 <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-primary to-violet-500 rounded-full transition-all duration-1000" style={{ width: `${m.bar}%` }} />
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-violet-500 rounded-full transition-all duration-1000"
+                    style={{ width: `${m.bar}%` }}
+                  />
                 </div>
               </div>
             ))}

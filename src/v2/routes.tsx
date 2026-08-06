@@ -32,8 +32,12 @@ import { useAuth } from "@/providers/AuthProvider";
 // ── Lazy pages ───────────────────────────────────────────────────────
 const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 // ResetPasswordPage legacy disabilitato — auth passa esclusivamente da TMWE OAuth.
-const AuthCallbackPage = lazy(() => import("./ui/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage })));
-const TmweLoginPopupPage = lazy(() => import("./ui/pages/TmweLoginPopupPage").then((m) => ({ default: m.TmweLoginPopupPage })));
+const AuthCallbackPage = lazy(() =>
+  import("./ui/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage })),
+);
+const TmweLoginPopupPage = lazy(() =>
+  import("./ui/pages/TmweLoginPopupPage").then((m) => ({ default: m.TmweLoginPopupPage })),
+);
 const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const KpiPage = lazy(() => import("./ui/pages/KpiPage").then((m) => ({ default: m.KpiPage })));
 const NetworkPage = lazy(() => import("./ui/pages/NetworkPage").then((m) => ({ default: m.NetworkPage })));
@@ -41,48 +45,92 @@ const OutreachPage = lazy(() => import("./ui/pages/OutreachPage").then((m) => ({
 const SettingsPage = lazy(() => import("./ui/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const StaffPage = lazy(() => import("./ui/pages/StaffPage").then((m) => ({ default: m.StaffPage })));
 const LabPage = lazy(() => import("./ui/pages/LabPage").then((m) => ({ default: m.LabPage })));
-const KBSupervisorPage = lazy(() => import("./ui/pages/KBSupervisorPage").then((m) => ({ default: m.KBSupervisorPage })));
+const KBSupervisorPage = lazy(() =>
+  import("./ui/pages/KBSupervisorPage").then((m) => ({ default: m.KBSupervisorPage })),
+);
 const InreachPage = lazy(() => import("./ui/pages/InreachPage").then((m) => ({ default: m.InreachPage })));
 const ProspectPage = lazy(() => import("./ui/pages/ProspectPage").then((m) => ({ default: m.ProspectPage })));
-const EmailComposerPage = lazy(() => import("./ui/pages/EmailComposerPage").then((m) => ({ default: m.EmailComposerPage })));
-const MissionBuilderPage = lazy(() => import("./ui/pages/MissionBuilderPage").then((m) => ({ default: m.MissionBuilderPage })));
+const EmailComposerPage = lazy(() =>
+  import("./ui/pages/EmailComposerPage").then((m) => ({ default: m.EmailComposerPage })),
+);
+const MissionBuilderPage = lazy(() =>
+  import("./ui/pages/MissionBuilderPage").then((m) => ({ default: m.MissionBuilderPage })),
+);
 const RADashboardPage = lazy(() => import("./ui/pages/RADashboardPage").then((m) => ({ default: m.RADashboard })));
 const SortingPage = lazy(() => import("./ui/pages/SortingPage").then((m) => ({ default: m.Sorting })));
 const OperationsPage = lazy(() => import("./ui/pages/OperationsPage").then((m) => ({ default: m.OperationsPage })));
-const AcquisizionePartnerPage = lazy(() => import("./ui/pages/AcquisizionePartnerPage").then((m) => ({ default: m.AcquisizionePartner })));
-const CommandHelpPage = lazy(() => import("./ui/pages/command/CommandHelpPage").then((m) => ({ default: m.CommandHelpPage })));
-const EmailDownloadPage = lazy(() => import("./ui/pages/EmailDownloadPage").then((m) => ({ default: m.EmailDownloadPage })));
+const AcquisizionePartnerPage = lazy(() =>
+  import("./ui/pages/AcquisizionePartnerPage").then((m) => ({ default: m.AcquisizionePartner })),
+);
+const CommandHelpPage = lazy(() =>
+  import("./ui/pages/command/CommandHelpPage").then((m) => ({ default: m.CommandHelpPage })),
+);
+const EmailDownloadPage = lazy(() =>
+  import("./ui/pages/EmailDownloadPage").then((m) => ({ default: m.EmailDownloadPage })),
+);
 const RAExplorerPage = lazy(() => import("./ui/pages/RAExplorerPage").then((m) => ({ default: m.RAExplorer })));
-const RAScrapingEnginePage = lazy(() => import("./ui/pages/RAScrapingEnginePage").then((m) => ({ default: m.RAScrapingEngine })));
-const RACompanyDetailPage = lazy(() => import("./ui/pages/RACompanyDetailPage").then((m) => ({ default: m.RACompanyDetailPage })));
-const CampaignJobsPage = lazy(() => import("./ui/pages/CampaignJobsPage").then((m) => ({ default: m.CampaignJobsPage })));
+const RAScrapingEnginePage = lazy(() =>
+  import("./ui/pages/RAScrapingEnginePage").then((m) => ({ default: m.RAScrapingEngine })),
+);
+const RACompanyDetailPage = lazy(() =>
+  import("./ui/pages/RACompanyDetailPage").then((m) => ({ default: m.RACompanyDetailPage })),
+);
+const CampaignJobsPage = lazy(() =>
+  import("./ui/pages/CampaignJobsPage").then((m) => ({ default: m.CampaignJobsPage })),
+);
 const AdminUsersPage = lazy(() => import("./ui/pages/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
-const AiRoutingConfigPage = lazy(() => import("./ui/pages/AiRoutingConfigPage").then((m) => ({ default: m.AiRoutingConfigPage })));
+const AiRoutingConfigPage = lazy(() =>
+  import("./ui/pages/AiRoutingConfigPage").then((m) => ({ default: m.AiRoutingConfigPage })),
+);
 const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) => ({ default: m.Onboarding })));
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage"));
-const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
+const EmailIntelligencePage = lazy(() =>
+  import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })),
+);
 const EmailIntelligenceOperationsPage = lazy(() => import("./ui/pages/EmailIntelligenceOperationsPage"));
-const FunnemailInboxPage = lazy(() => import("./ui/pages/FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })));
-const FunnemailSortingQueuePage = lazy(() => import("./ui/pages/funnemail-inbox/SortingQueuePage").then((m) => ({ default: m.SortingQueuePage })));
+const FunnemailInboxPage = lazy(() =>
+  import("./ui/pages/FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })),
+);
+const FunnemailSortingQueuePage = lazy(() =>
+  import("./ui/pages/funnemail-inbox/SortingQueuePage").then((m) => ({ default: m.SortingQueuePage })),
+);
 const AIArenaPage = lazy(() => import("./ui/pages/AIArenaPage").then((m) => ({ default: m.AIArenaPage })));
 const AnalyticsPage = lazy(() => import("./ui/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
 const FinderApiPage = lazy(() => import("./ui/pages/FinderApiPage").then((m) => ({ default: m.FinderApiPage })));
-const FinderApiSchemaMapPage = lazy(() => import("./ui/pages/finder-api/FinderApiSchemaMapPage").then((m) => ({ default: m.FinderApiSchemaMapPage })));
+const FinderApiSchemaMapPage = lazy(() =>
+  import("./ui/pages/finder-api/FinderApiSchemaMapPage").then((m) => ({ default: m.FinderApiSchemaMapPage })),
+);
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
-const MissionsAutopilotPage = lazy(() => import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })));
+const MissionsAutopilotPage = lazy(() =>
+  import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })),
+);
 const LandingPage = lazy(() => import("./ui/pages/LandingPage").then((m) => ({ default: m.LandingPage })));
 const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
 const BrainPage = lazy(() => import("./ui/pages/BrainPage").then((m) => ({ default: m.BrainPage })));
-const RubricaWhatsAppPage = lazy(() => import("./ui/pages/RubricaWhatsAppPage").then((m) => ({ default: m.RubricaWhatsAppPage })));
-const RubricaLinkedInPage = lazy(() => import("./ui/pages/RubricaLinkedInPage").then((m) => ({ default: m.RubricaLinkedInPage })));
+const RubricaWhatsAppPage = lazy(() =>
+  import("./ui/pages/RubricaWhatsAppPage").then((m) => ({ default: m.RubricaWhatsAppPage })),
+);
+const RubricaLinkedInPage = lazy(() =>
+  import("./ui/pages/RubricaLinkedInPage").then((m) => ({ default: m.RubricaLinkedInPage })),
+);
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
-const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })));
-const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })));
-const AgentCapabilitiesPage = lazy(() => import("./ui/pages/AgentCapabilitiesPage").then((m) => ({ default: m.AgentCapabilitiesPage })));
+const GuidedOnboardingPage = lazy(() =>
+  import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })),
+);
+const AgentPersonaEditorPage = lazy(() =>
+  import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })),
+);
+const AgentCapabilitiesPage = lazy(() =>
+  import("./ui/pages/AgentCapabilitiesPage").then((m) => ({ default: m.AgentCapabilitiesPage })),
+);
 const AgentTasksPage = lazy(() => import("./ui/pages/AgentTasksPage").then((m) => ({ default: m.AgentTasksPage })));
-const AgentRolesOverviewPage = lazy(() => import("./ui/pages/AgentRolesOverviewPage").then((m) => ({ default: m.AgentRolesOverviewPage })));
-const EmailStrategiesPage = lazy(() => import("./ui/pages/EmailStrategiesPage").then((m) => ({ default: m.EmailStrategiesPage })));
+const AgentRolesOverviewPage = lazy(() =>
+  import("./ui/pages/AgentRolesOverviewPage").then((m) => ({ default: m.AgentRolesOverviewPage })),
+);
+const EmailStrategiesPage = lazy(() =>
+  import("./ui/pages/EmailStrategiesPage").then((m) => ({ default: m.EmailStrategiesPage })),
+);
 const CalendarPage = lazy(() => import("./ui/pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const NotificationsPage = lazy(() => import("./ui/pages/NotificationsPage"));
 const TmweClientsPage = lazy(() => import("./ui/pages/TmweClientsPage").then((m) => ({ default: m.TmweClientsPage })));
@@ -90,8 +138,8 @@ const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
 // ── New Section pages (UX Redesign Phase 1) ──────────────────────────
 const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceSection"));
-const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
-const AgendaSection       = lazy(() => import("./ui/pages/sections/AgendaSection"));
+const ExploreSection = lazy(() => import("./ui/pages/sections/ExploreSection"));
+const AgendaSection = lazy(() => import("./ui/pages/sections/AgendaSection"));
 
 // ── Cestinone (unified pre-send queue) ───────────────────────────────
 const CestinonePage = lazy(() => import("./ui/pages/CestinonePage").then((m) => ({ default: m.CestinonePage })));
@@ -204,16 +252,16 @@ export function V2Routes(): React.ReactElement {
           {/* ── UX Redesign Phase 1: 6-destination sections ── */}
           {/* Pipeline rimossa dal menu — redirect verso Agenda dove ora vive il Kanban */}
           {/* Pipeline → Agenda (canonical Fase 4): tutte le sotto-rotte legacy reindirizzano */}
-          <Route path="pipeline"             element={<Navigate to="/v2/agenda/pipeline" replace />} />
-          <Route path="pipeline/kanban"      element={<Navigate to="/v2/agenda/pipeline" replace />} />
-          <Route path="pipeline/duplicati"   element={<Navigate to="/v2/agenda/duplicati" replace />} />
-          <Route path="pipeline/contacts"    element={<Navigate to="/v2/explore/contacts" replace />} />
-          <Route path="pipeline/biglietti"   element={<Navigate to="/v2/explore/biglietti" replace />} />
-          <Route path="pipeline/campaigns"   element={<Navigate to="/v2/explore/campaigns" replace />} />
-          <Route path="pipeline/agenda"      element={<Navigate to="/v2/agenda" replace />} />
-          <Route path="pipeline/*"           element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline" element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline/kanban" element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline/duplicati" element={<Navigate to="/v2/agenda/duplicati" replace />} />
+          <Route path="pipeline/contacts" element={<Navigate to="/v2/explore/contacts" replace />} />
+          <Route path="pipeline/biglietti" element={<Navigate to="/v2/explore/biglietti" replace />} />
+          <Route path="pipeline/campaigns" element={<Navigate to="/v2/explore/campaigns" replace />} />
+          <Route path="pipeline/agenda" element={<Navigate to="/v2/agenda" replace />} />
+          <Route path="pipeline/*" element={<Navigate to="/v2/agenda/pipeline" replace />} />
           <Route path="intelligence/*" element={guardedPage(IntelligenceSection, "Intelligence")} />
-          <Route path="explore/*"      element={guardedPage(ExploreSection,      "Explore")} />
+          <Route path="explore/*" element={guardedPage(ExploreSection, "Explore")} />
 
           {/* ── Cestinone: unica coda pre-invio ── */}
           <Route path="cestinone" element={guardedPage(CestinonePage, "Cestinone")} />
@@ -249,11 +297,11 @@ export function V2Routes(): React.ReactElement {
 
           {/* Outreach + figli */}
           <Route path="cockpit" element={guardedPage(OutreachPage, "Cockpit")} />
-          <Route path="inbox"   element={guardedPage(InreachPage, "Inbox")} />
-          <Route path="email"   element={guardedPage(EmailComposerPage, "Email")} />
+          <Route path="inbox" element={guardedPage(InreachPage, "Inbox")} />
+          <Route path="email" element={guardedPage(EmailComposerPage, "Email")} />
           {/* ── Comunicazioni unificate (Fase 3 Lean Mode) ── */}
-          <Route path="comms"        element={guardedPage(CommsPage, "Comms")} />
-          <Route path="comms/:tab"   element={guardedPage(CommsPage, "Comms")} />
+          <Route path="comms" element={guardedPage(CommsPage, "Comms")} />
+          <Route path="comms/:tab" element={guardedPage(CommsPage, "Comms")} />
           {/* Canonical Email Forge under /v2/email/forge (Fase 3) */}
           <Route path="email/forge" element={guardedPage(EmailForgePage, "EmailForge")} />
           {/* Legacy redirects → nuove voci top-level */}
@@ -261,13 +309,13 @@ export function V2Routes(): React.ReactElement {
           <Route path="outreach/composer" element={<PreserveStateRedirect to="/v2/email" />} />
           <Route path="outreach/agenda" element={<Navigate to="/v2/agenda" replace />} />
           <Route path="email-composer" element={<PreserveStateRedirect to="/v2/email" />} />
-          <Route path="communicate"            element={<Navigate to="/v2/cockpit" replace />} />
-          <Route path="communicate/outreach"   element={<Navigate to="/v2/cockpit" replace />} />
-          <Route path="communicate/inbox"      element={<Navigate to="/v2/inbox" replace />} />
-          <Route path="communicate/compose"    element={<PreserveStateRedirect to="/v2/email" />} />
-          <Route path="communicate/campaigns"  element={<Navigate to="/v2/explore/campaigns" replace />} />
-          <Route path="communicate/approve"    element={<Navigate to="/v2/cestinone" replace />} />
-          <Route path="communicate/*"          element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="communicate" element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="communicate/outreach" element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="communicate/inbox" element={<Navigate to="/v2/inbox" replace />} />
+          <Route path="communicate/compose" element={<PreserveStateRedirect to="/v2/email" />} />
+          <Route path="communicate/campaigns" element={<Navigate to="/v2/explore/campaigns" replace />} />
+          <Route path="communicate/approve" element={<Navigate to="/v2/cestinone" replace />} />
+          <Route path="communicate/*" element={<Navigate to="/v2/cockpit" replace />} />
           <Route path="agenda/*" element={guardedPage(AgendaSection, "Agenda")} />
           <Route path="pipeline/agenda" element={<Navigate to="/v2/agenda" replace />} />
 
@@ -303,30 +351,48 @@ export function V2Routes(): React.ReactElement {
           <Route path="lab" element={guardedPage(LabPage, "Lab")} />
 
           {/* Legacy redirects → /v2/lab?group=...&tab=... */}
-          <Route path="ai-staff/lab"            element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
-          <Route path="ai-test-hub"             element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
-          <Route path="ai-lab"                  element={<Navigate to="/v2/lab?group=tests&tab=ai-lab" replace />} />
-          <Route path="email-lab"               element={<Navigate to="/v2/lab?group=tests&tab=email-lab" replace />} />
-          <Route path="ai-staff/email-forge"    element={<Navigate to="/v2/email/forge" replace />} />
-          <Route path="ai-staff/prompt-lab"     element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
-          <Route path="prompt-lab"              element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
-          <Route path="settings/prompt-lab"     element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
-          <Route path="prompt-lab/atlas"        element={<Navigate to="/v2/lab?group=tests&tab=prompt-atlas" replace />} />
-          <Route path="prompt-lab/suggestions"  element={<Navigate to="/v2/lab?group=tests&tab=prompt-suggest" replace />} />
-          <Route path="prompt-lab/proposals"    element={<Navigate to="/v2/lab?group=tests&tab=prompt-proposals" replace />} />
-          <Route path="prompt-lab/catalog"      element={<Navigate to="/v2/lab?group=tests&tab=prompt-catalog" replace />} />
-          <Route path="prompt-lab/tests"        element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
-          <Route path="prompt-reader"           element={<Navigate to="/v2/lab?group=tests&tab=prompt-reader" replace />} />
-          <Route path="settings/prompt-reader"  element={<Navigate to="/v2/lab?group=tests&tab=prompt-reader" replace />} />
-          <Route path="ai-interactions-log"     element={<Navigate to="/v2/lab?group=observability&tab=ai-log" replace />} />
-          <Route path="pipeline-traces"         element={<Navigate to="/v2/lab?group=observability&tab=pipeline-traces" replace />} />
-          <Route path="token-cockpit"           element={<Navigate to="/v2/lab?group=observability&tab=token-cockpit" replace />} />
-          <Route path="staff"                   element={<Navigate to="/v2/ai-staff" replace />} />
+          <Route path="ai-staff/lab" element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
+          <Route path="ai-test-hub" element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
+          <Route path="ai-lab" element={<Navigate to="/v2/lab?group=tests&tab=ai-lab" replace />} />
+          <Route path="email-lab" element={<Navigate to="/v2/lab?group=tests&tab=email-lab" replace />} />
+          <Route path="ai-staff/email-forge" element={<Navigate to="/v2/email/forge" replace />} />
+          <Route path="ai-staff/prompt-lab" element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
+          <Route path="prompt-lab" element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
+          <Route path="settings/prompt-lab" element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
+          <Route path="prompt-lab/atlas" element={<Navigate to="/v2/lab?group=tests&tab=prompt-atlas" replace />} />
+          <Route
+            path="prompt-lab/suggestions"
+            element={<Navigate to="/v2/lab?group=tests&tab=prompt-suggest" replace />}
+          />
+          <Route
+            path="prompt-lab/proposals"
+            element={<Navigate to="/v2/lab?group=tests&tab=prompt-proposals" replace />}
+          />
+          <Route path="prompt-lab/catalog" element={<Navigate to="/v2/lab?group=tests&tab=prompt-catalog" replace />} />
+          <Route path="prompt-lab/tests" element={<Navigate to="/v2/lab?group=tests&tab=scenari" replace />} />
+          <Route path="prompt-reader" element={<Navigate to="/v2/lab?group=tests&tab=prompt-reader" replace />} />
+          <Route
+            path="settings/prompt-reader"
+            element={<Navigate to="/v2/lab?group=tests&tab=prompt-reader" replace />}
+          />
+          <Route
+            path="ai-interactions-log"
+            element={<Navigate to="/v2/lab?group=observability&tab=ai-log" replace />}
+          />
+          <Route
+            path="pipeline-traces"
+            element={<Navigate to="/v2/lab?group=observability&tab=pipeline-traces" replace />}
+          />
+          <Route
+            path="token-cockpit"
+            element={<Navigate to="/v2/lab?group=observability&tab=token-cockpit" replace />}
+          />
+          <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
           {/* La Knowledge Base vive nel tab "AI & Prompt → Knowledge Base" di Config.
               In precedenza queste rotte puntavano a /v2/settings/kb (404). */}
-          <Route path="settings/kb"             element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
-          <Route path="knowledge-base"          element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
-          <Route path="kb-supervisor"           element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
+          <Route path="settings/kb" element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
+          <Route path="knowledge-base" element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
+          <Route path="kb-supervisor" element={<Navigate to="/v2/settings?tab=ai-prompt" replace />} />
 
           {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
@@ -354,13 +420,25 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings/ai-routing" element={guardedPage(AiRoutingConfigPage, "AiRoutingConfig")} />
           <Route path="settings/email-download" element={guardedPage(EmailDownloadPage, "EmailDownload")} />
           {/* Legacy settings/* lab paths → /v2/lab */}
-          <Route path="settings/diagnostics"   element={<Navigate to="/v2/lab?group=observability&tab=diagnostica" replace />} />
-          <Route path="settings/telemetry"     element={<Navigate to="/v2/lab?group=observability&tab=telemetria" replace />} />
-          <Route path="settings/observability" element={<Navigate to="/v2/lab?group=observability&tab=observability" replace />} />
-          <Route path="settings/health"        element={<Navigate to="/v2/lab?group=observability&tab=health" replace />} />
-          <Route path="settings/e2e-status"    element={<Navigate to="/v2/lab?group=tests&tab=e2e" replace />} />
-          <Route path="settings/alert-routing" element={<Navigate to="/v2/lab?group=observability&tab=alert-routing" replace />} />
-          <Route path="settings/brand-voice"   element={<Navigate to="/v2/lab?group=tests&tab=brand-voice" replace />} />
+          <Route
+            path="settings/diagnostics"
+            element={<Navigate to="/v2/lab?group=observability&tab=diagnostica" replace />}
+          />
+          <Route
+            path="settings/telemetry"
+            element={<Navigate to="/v2/lab?group=observability&tab=telemetria" replace />}
+          />
+          <Route
+            path="settings/observability"
+            element={<Navigate to="/v2/lab?group=observability&tab=observability" replace />}
+          />
+          <Route path="settings/health" element={<Navigate to="/v2/lab?group=observability&tab=health" replace />} />
+          <Route path="settings/e2e-status" element={<Navigate to="/v2/lab?group=tests&tab=e2e" replace />} />
+          <Route
+            path="settings/alert-routing"
+            element={<Navigate to="/v2/lab?group=observability&tab=alert-routing" replace />}
+          />
+          <Route path="settings/brand-voice" element={<Navigate to="/v2/lab?group=tests&tab=brand-voice" replace />} />
           <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
           <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
           <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />
@@ -373,9 +451,15 @@ export function V2Routes(): React.ReactElement {
           <Route path="guida" element={guardedPage(GuidaPage, "Guida")} />
           <Route path="ai-control" element={<Navigate to="/v2/intelligence/control" replace />} />
           <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
-          <Route path="email-intelligence/operations" element={guardedPage(EmailIntelligenceOperationsPage, "EmailIntelligenceOperations")} />
+          <Route
+            path="email-intelligence/operations"
+            element={guardedPage(EmailIntelligenceOperationsPage, "EmailIntelligenceOperations")}
+          />
           <Route path="funnemail-inbox" element={guardedPage(FunnemailInboxPage, "FunnemailInbox")} />
-          <Route path="funnemail-inbox/sorting" element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")} />
+          <Route
+            path="funnemail-inbox/sorting"
+            element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")}
+          />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           {/* token-cockpit standalone removed: moved to Lab Hub (see redirect above) */}
           <Route path="tmwe/clients" element={guardedPage(TmweClientsPage, "TmweClients")} />

@@ -51,9 +51,30 @@ export const COCKPIT_STATUS = [
 ];
 
 export const FLAG: Record<string, string> = {
-  IT: "🇮🇹", GB: "🇬🇧", FR: "🇫🇷", DE: "🇩🇪", ES: "🇪🇸", JP: "🇯🇵", RU: "🇷🇺", US: "🇺🇸",
-  CN: "🇨🇳", BR: "🇧🇷", NL: "🇳🇱", BE: "🇧🇪", CH: "🇨🇭", AT: "🇦🇹", PT: "🇵🇹", PL: "🇵🇱",
-  TR: "🇹🇷", IN: "🇮🇳", AE: "🇦🇪", SA: "🇸🇦", KR: "🇰🇷", AU: "🇦🇺", CA: "🇨🇦", MX: "🇲🇽",
+  IT: "🇮🇹",
+  GB: "🇬🇧",
+  FR: "🇫🇷",
+  DE: "🇩🇪",
+  ES: "🇪🇸",
+  JP: "🇯🇵",
+  RU: "🇷🇺",
+  US: "🇺🇸",
+  CN: "🇨🇳",
+  BR: "🇧🇷",
+  NL: "🇳🇱",
+  BE: "🇧🇪",
+  CH: "🇨🇭",
+  AT: "🇦🇹",
+  PT: "🇵🇹",
+  PL: "🇵🇱",
+  TR: "🇹🇷",
+  IN: "🇮🇳",
+  AE: "🇦🇪",
+  SA: "🇸🇦",
+  KR: "🇰🇷",
+  AU: "🇦🇺",
+  CA: "🇨🇦",
+  MX: "🇲🇽",
 };
 
 export const ATTIVITA_STATUS = [
@@ -119,9 +140,9 @@ export const NETWORK_SORT = [
 // `withValue`/`withoutValue` sono i valori che vengono salvati in
 // `g.filters.networkQuality` (tristate: "all" | <withValue> | <withoutValue>).
 export const NETWORK_QUALITY_TOGGLES = [
-  { key: "email",    icon: "📧", label: "Email",    withValue: "with_email",    withoutValue: "no_email" },
-  { key: "phone",    icon: "📱", label: "Telefono", withValue: "with_phone",    withoutValue: "no_phone" },
-  { key: "profile",  icon: "🔗", label: "Profilo",  withValue: "with_profile",  withoutValue: "no_profile" },
+  { key: "email", icon: "📧", label: "Email", withValue: "with_email", withoutValue: "no_email" },
+  { key: "phone", icon: "📱", label: "Telefono", withValue: "with_phone", withoutValue: "no_phone" },
+  { key: "profile", icon: "🔗", label: "Profilo", withValue: "with_profile", withoutValue: "no_profile" },
   { key: "contacts", icon: "👤", label: "Contatti", withValue: "with_contacts", withoutValue: "no_contacts" },
 ] as const;
 

@@ -1,11 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import {
-  toWhatsAppNumber,
-  extractSeniority,
-  getLastName,
-  extractDomainKeyword,
-  delay,
-} from "./useDeepSearchHelpers";
+import { toWhatsAppNumber, extractSeniority, getLastName, extractDomainKeyword, delay } from "./useDeepSearchHelpers";
 
 describe("toWhatsAppNumber", () => {
   it("strips non-digit chars except leading +", () => {

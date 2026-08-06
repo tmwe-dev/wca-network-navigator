@@ -29,10 +29,7 @@ export function agentReadinessScore(agent: Agent): number {
 }
 
 /** Find best agent for a territory from a list */
-export function findAgentForTerritory(
-  agents: readonly Agent[],
-  countryCode: string,
-): Agent | null {
+export function findAgentForTerritory(agents: readonly Agent[], countryCode: string): Agent | null {
   const activeAgents = agents.filter((a) => a.isActive);
   const territorial = activeAgents.find((a) => coversTerritory(a, countryCode));
   return territorial ?? null;

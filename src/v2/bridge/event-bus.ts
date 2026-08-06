@@ -12,9 +12,7 @@ const logger = createLogger("EventBus");
 
 // ── Types ────────────────────────────────────────────────────────────
 
-export type EventHandler<T extends DomainEvent<string, unknown>> = (
-  event: T,
-) => void | Promise<void>;
+export type EventHandler<T extends DomainEvent<string, unknown>> = (event: T) => void | Promise<void>;
 
 interface Subscription {
   readonly eventType: string;
@@ -65,9 +63,7 @@ export function unsubscribe(subscriptionId: string): boolean {
   return true;
 }
 
-export async function publish<T extends DomainEvent<string, unknown>>(
-  event: T,
-): Promise<void> {
+export async function publish<T extends DomainEvent<string, unknown>>(event: T): Promise<void> {
   logger.info("event published", {
     eventType: event.type,
     correlationId: event.correlationId,
@@ -90,8 +86,7 @@ export async function publish<T extends DomainEvent<string, unknown>>(
       await sub.handler(event);
       retryCountMap.delete(retryKey);
     } catch (caught: unknown) {
-      const errorMessage =
-        caught instanceof Error ? caught.message : String(caught);
+      const errorMessage = caught instanceof Error ? caught.message : String(caught);
       const newAttempts = attempts + 1;
       retryCountMap.set(retryKey, newAttempts);
 

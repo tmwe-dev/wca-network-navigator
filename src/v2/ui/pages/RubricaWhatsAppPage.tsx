@@ -48,10 +48,18 @@ export function RubricaWhatsAppPage(): React.ReactElement {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">Caricamento…</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                    Caricamento…
+                  </td>
+                </tr>
               )}
               {!isLoading && data.length === 0 && (
-                <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">Nessun contatto.</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                    Nessun contatto.
+                  </td>
+                </tr>
               )}
               {data.map((r) => (
                 <tr key={r.id} className="border-t border-border hover:bg-muted/30">

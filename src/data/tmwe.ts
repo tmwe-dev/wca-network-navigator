@@ -32,7 +32,8 @@ export interface TmweConnection {
 }
 
 export async function getTmweConnection(): Promise<TmweConnection | null> {
-  const { data, error } = await supabase.from("tmwe_user_connections_v")
+  const { data, error } = await supabase
+    .from("tmwe_user_connections_v")
     .select(
       "user_id, tmwe_user_id, tmwe_email, tmwe_company, tmwe_vat_number, scopes, connected_at, last_used_at, expires_at, token_valid",
     )
@@ -48,10 +49,7 @@ interface ProxyResponse<T = unknown> {
   tmwe_user_id: number | null;
 }
 
-async function callProxy<T = unknown>(
-  op: string,
-  params?: Record<string, unknown>,
-): Promise<ProxyResponse<T>> {
+async function callProxy<T = unknown>(op: string, params?: Record<string, unknown>): Promise<ProxyResponse<T>> {
   const { data, error } = await supabase.functions.invoke("tmwe-proxy", {
     body: { op, params },
   });
@@ -184,23 +182,30 @@ export async function unlinkPartnerFromTmwe(partnerId: string): Promise<void> {
 }
 
 export async function getTmwePartnerLink(partnerId: string): Promise<TmwePartnerLink | null> {
-  const { data, error } = await supabase.from("tmwe_partner_links")
+  const { data, error } = await supabase
+    .from("tmwe_partner_links")
     .select("id, partner_id, tmwe_client_id, tmwe_vat, match_confidence, linked_by_user_id, linked_at")
-    .eq("partner_id", partnerId).maybeSingle();
+    .eq("partner_id", partnerId)
+    .maybeSingle();
   if (error) throw error;
   return (data as TmwePartnerLink | null) ?? null;
 }
 
 export async function getTmweSnapshot(clientId: string): Promise<TmweCustomerSnapshot | null> {
-  const { data, error } = await supabase.from("tmwe_customer_snapshot")
-    .select("tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at")
-    .eq("tmwe_client_id", clientId).maybeSingle();
+  const { data, error } = await supabase
+    .from("tmwe_customer_snapshot")
+    .select(
+      "tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at",
+    )
+    .eq("tmwe_client_id", clientId)
+    .maybeSingle();
   if (error) throw error;
   return (data as TmweCustomerSnapshot | null) ?? null;
 }
 
 export async function getRevenueLast12Months(clientId: string): Promise<TmweRevenueRow[]> {
-  const { data, error } = await supabase.from("tmwe_revenue_monthly")
+  const { data, error } = await supabase
+    .from("tmwe_revenue_monthly")
     .select("tmwe_client_id, year, month, revenue_amount, currency, invoices_count, services_breakdown")
     .eq("tmwe_client_id", clientId)
     .order("year", { ascending: false })
@@ -211,8 +216,11 @@ export async function getRevenueLast12Months(clientId: string): Promise<TmweReve
 }
 
 export async function listTmweCustomers(): Promise<Array<TmweCustomerSnapshot & { partner_id: string | null }>> {
-  const { data, error } = await supabase.from("tmwe_customer_snapshot")
-    .select("tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at")
+  const { data, error } = await supabase
+    .from("tmwe_customer_snapshot")
+    .select(
+      "tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at",
+    )
     .order("last_synced_at", { ascending: false })
     .limit(500);
   if (error) throw error;
@@ -221,9 +229,13 @@ export async function listTmweCustomers(): Promise<Array<TmweCustomerSnapshot & 
 
   // La FK tmwe_customer_snapshot -> tmwe_partner_links non è dichiarata nei
   // tipi generati: risoluzione esplicita con una seconda query tipizzata.
-  const { data: links, error: linksError } = await supabase.from("tmwe_partner_links")
+  const { data: links, error: linksError } = await supabase
+    .from("tmwe_partner_links")
     .select("tmwe_client_id, partner_id")
-    .in("tmwe_client_id", rows.map((r) => r.tmwe_client_id));
+    .in(
+      "tmwe_client_id",
+      rows.map((r) => r.tmwe_client_id),
+    );
   if (linksError) throw linksError;
   const byClient = new Map((links ?? []).map((l) => [l.tmwe_client_id, l.partner_id]));
 

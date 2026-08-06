@@ -1,10 +1,7 @@
 /**
  * Bootstrap steps — home page fetch and Google search.
  */
-import {
-  updatePartnerWebsiteIfMissing,
-  updatePartnerLinkedinIfMissing,
-} from "@/data/sherlockPlaybooks";
+import { updatePartnerWebsiteIfMissing, updatePartnerLinkedinIfMissing } from "@/data/sherlockPlaybooks";
 import { assessPageQuality, reasonLabel } from "./pageQuality";
 import { scrapeUrl, makeStepResult } from "./scrapeOperations";
 import { extractInternalLinks, extractGoogleResults, normalizeUrl, detectLinkedinCompanyUrl } from "./urlUtils";
@@ -54,10 +51,21 @@ export async function bootstrapHome(args: {
   results.push(step);
   if (args.onProgress) args.onProgress(step);
 
-  const out = await scrapeUrl({ url: args.website, channel: "generic", level: args.level, signal: args.signal, throttle: args.throttle });
+  const out = await scrapeUrl({
+    url: args.website,
+    channel: "generic",
+    level: args.level,
+    signal: args.signal,
+    throttle: args.throttle,
+  });
 
   if (!out.ok) {
-    const failed = { ...step, status: "error" as const, error: out.error ?? "Scrape fallito", duration_ms: Date.now() - startedAt };
+    const failed = {
+      ...step,
+      status: "error" as const,
+      error: out.error ?? "Scrape fallito",
+      duration_ms: Date.now() - startedAt,
+    };
     results[0] = failed;
     if (args.onProgress) args.onProgress(failed);
     return { website: args.website, candidateLinks: [], consolidated: {}, lastSummary: "", results, stepOrder };
@@ -165,14 +173,22 @@ export async function bootstrapGoogleSearch(args: {
   }
 
   stepOrder++;
-  const q = encodeURIComponent(`"${args.companyName}"${args.city ? ` ${args.city}` : ""}${args.country ? ` ${args.country}` : ""}`);
+  const q = encodeURIComponent(
+    `"${args.companyName}"${args.city ? ` ${args.city}` : ""}${args.country ? ` ${args.country}` : ""}`,
+  );
   const gUrl = `https://www.google.com/search?q=${q}`;
   const startedAt = Date.now();
   const step = makeStepResult({ order: stepOrder, label: `Google — "${args.companyName}"`, url: gUrl, startedAt });
   results.push(step);
   if (args.onProgress) args.onProgress(step);
 
-  const out = await scrapeUrl({ url: gUrl, channel: "generic", level: args.level, signal: args.signal, throttle: args.throttle });
+  const out = await scrapeUrl({
+    url: gUrl,
+    channel: "generic",
+    level: args.level,
+    signal: args.signal,
+    throttle: args.throttle,
+  });
 
   if (!out.ok) {
     const failed = { ...step, status: "error" as const, error: out.error, duration_ms: Date.now() - startedAt };

@@ -56,18 +56,13 @@ interface PartnerSummary {
   created_at: string | null;
 }
 
-export async function handleSearchPartners(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleSearchPartners(args: Record<string, unknown>): Promise<unknown> {
   const isCount = !!args.count_only;
-  const selectCols = isCount
-    ? "id"
-    : "*";
+  const selectCols = isCount ? "id" : "*";
   let query = isCount
     ? supabase.from("partners").select(selectCols, { count: "exact", head: true })
     : supabase.from("partners").select(selectCols);
-  if (args.country_code)
-    query = query.eq("country_code", String(args.country_code).toUpperCase());
+  if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
   if (Array.isArray(args.country_codes) && (args.country_codes as string[]).length) {
     query = query.in(
       "country_code",
@@ -75,8 +70,7 @@ export async function handleSearchPartners(
     );
   }
   if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
-  if (args.search_name)
-    query = query.ilike("company_name", `%${escapeLike(String(args.search_name))}%`);
+  if (args.search_name) query = query.ilike("company_name", `%${escapeLike(String(args.search_name))}%`);
   if (args.has_email === true) query = query.not("email", "is", null);
   if (args.has_profile === true) query = query.not("profile_description", "is", null);
   if (args.has_profile === false) query = query.is("profile_description", null);
@@ -129,26 +123,24 @@ export async function handleSearchPartners(
   return {
     count: rows.length,
     partners: rows.map((p) => ({
-        id: p.id,
-        company_name: p.company_name,
-        city: p.city,
-        country_code: p.country_code,
-        country_name: p.country_name,
-        email: p.email,
-        rating: p.rating,
-        has_profile: !!p.profile_description,
-        lead_status: p.lead_status,
-        company_alias: p.company_alias,
-        interaction_count: p.interaction_count,
-        last_interaction_at: p.last_interaction_at,
-        membership_expires: p.membership_expires,
+      id: p.id,
+      company_name: p.company_name,
+      city: p.city,
+      country_code: p.country_code,
+      country_name: p.country_name,
+      email: p.email,
+      rating: p.rating,
+      has_profile: !!p.profile_description,
+      lead_status: p.lead_status,
+      company_alias: p.company_alias,
+      interaction_count: p.interaction_count,
+      last_interaction_at: p.last_interaction_at,
+      membership_expires: p.membership_expires,
     })),
   };
 }
 
-export async function handleGetPartnerDetail(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGetPartnerDetail(args: Record<string, unknown>): Promise<unknown> {
   let partner: PartnerSummary | null = null;
   if (args.partner_id) {
     const { data } = await supabase
@@ -187,14 +179,8 @@ export async function handleGetPartnerDetail(
       .from("partner_contacts")
       .select("id, name, email, title, direct_phone, mobile, is_primary, contact_alias")
       .eq("partner_id", partner.id),
-    supabase
-      .from("partner_networks")
-      .select("network_name, network_id, expires")
-      .eq("partner_id", partner.id),
-    supabase
-      .from("partner_services")
-      .select("service_category")
-      .eq("partner_id", partner.id),
+    supabase.from("partner_networks").select("network_name, network_id, expires").eq("partner_id", partner.id),
+    supabase.from("partner_services").select("service_category").eq("partner_id", partner.id),
     supabase
       .from("business_cards")
       .select("id, contact_name, email, phone, position, event_name, met_at, match_confidence, match_status")
@@ -208,10 +194,7 @@ export async function handleGetPartnerDetail(
       .eq("transferred_to_partner_id", partner.id)
       .is("deleted_at", null)
       .limit(50),
-    supabase
-      .from("partner_social_links")
-      .select("platform, url, contact_id")
-      .eq("partner_id", partner.id),
+    supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id),
     supabase
       .from("activities")
       .select("id, activity_type, title, status, due_date, completed_at, created_at")
@@ -247,7 +230,10 @@ export async function handleGetPartnerDetail(
       .order("start_at", { ascending: true })
       .limit(10),
     partnerEmail
-      ? supabase.from("blacklist").select("email, domain, reason").or(`email.eq.${partnerEmail},domain.eq.${partnerEmail.split("@")[1] || ""}`)
+      ? supabase
+          .from("blacklist")
+          .select("email, domain, reason")
+          .or(`email.eq.${partnerEmail},domain.eq.${partnerEmail.split("@")[1] || ""}`)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -267,7 +253,9 @@ export async function handleGetPartnerDetail(
   const unified: UnifiedContact[] = [];
 
   for (const c of (pcRes.data || []) as Record<string, unknown>[]) {
-    const email = String(c.email || "").toLowerCase().trim();
+    const email = String(c.email || "")
+      .toLowerCase()
+      .trim();
     const key = email || `pc:${c.id}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -282,7 +270,9 @@ export async function handleGetPartnerDetail(
     });
   }
   for (const c of (bcaRes.data || []) as Record<string, unknown>[]) {
-    const email = String(c.email || "").toLowerCase().trim();
+    const email = String(c.email || "")
+      .toLowerCase()
+      .trim();
     const key = email || `bca:${c.id}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -296,7 +286,9 @@ export async function handleGetPartnerDetail(
     });
   }
   for (const c of (impRes.data || []) as Record<string, unknown>[]) {
-    const email = String(c.email || "").toLowerCase().trim();
+    const email = String(c.email || "")
+      .toLowerCase()
+      .trim();
     const key = email || `ic:${c.id}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -368,14 +360,11 @@ export async function handleGetPartnerDetail(
   };
 }
 
-export async function handleGetCountryOverview(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGetCountryOverview(args: Record<string, unknown>): Promise<unknown> {
   const { data, error } = await supabase.rpc("get_country_stats");
   if (error) return { error: error.message };
   let stats = (data || []) as CountryStatRow[];
-  if (args.country_code)
-    stats = stats.filter((s) => s.country_code === String(args.country_code).toUpperCase());
+  if (args.country_code) stats = stats.filter((s) => s.country_code === String(args.country_code).toUpperCase());
   stats.sort((a, b) => (b.total_partners || 0) - (a.total_partners || 0));
   return {
     total_countries: stats.length,

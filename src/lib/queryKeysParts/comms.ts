@@ -62,7 +62,14 @@ export const commsKeys = {
     root: ["channel-messages"] as const,
     all: ["channel-messages"] as const,
     list: (channel?: string, search?: string, page?: number, operatorId?: string, mailboxKey?: string) =>
-      ["channel-messages", channel ?? "all", search ?? "", page ?? 0, operatorId ?? "self", mailboxKey ?? "any"] as const,
+      [
+        "channel-messages",
+        channel ?? "all",
+        search ?? "",
+        page ?? 0,
+        operatorId ?? "self",
+        mailboxKey ?? "any",
+      ] as const,
     unread: (channel?: string, operatorId?: string, mailboxKey?: string) =>
       ["channel-messages-unread", channel ?? "all", operatorId ?? "self", mailboxKey ?? "any"] as const,
     unreadCounts: ["unread-counts"] as const,
@@ -81,8 +88,7 @@ export const commsKeys = {
     counts: ["funnemail-inbox", "counts"] as const,
     grouped: (userId: string, operatorUserId?: string | null, mailboxKey?: string | null) =>
       ["funnemail-inbox", "grouped", userId, operatorUserId ?? "self", mailboxKey ?? "any"] as const,
-    mailsByFolder: (slug: string, limit: number) =>
-      ["funnemail-inbox", "mails", slug, limit] as const,
+    mailsByFolder: (slug: string, limit: number) => ["funnemail-inbox", "mails", slug, limit] as const,
     decision: (messageId?: string | null) => ["funnemail-inbox", "decision", messageId ?? "none"] as const,
     mail: (messageId?: string | null) => ["funnemail-inbox", "mail", messageId ?? "none"] as const,
     claims: {
@@ -104,8 +110,7 @@ export const commsKeys = {
     jobs: {
       list: (filters?: { status?: string | null; ownerId?: string | null; limit?: number }) =>
         ["funnemail-inbox", "jobs", "list", filters ?? {}] as const,
-      byMessage: (messageId?: string | null) =>
-        ["funnemail-inbox", "jobs", "by-message", messageId ?? "none"] as const,
+      byMessage: (messageId?: string | null) => ["funnemail-inbox", "jobs", "by-message", messageId ?? "none"] as const,
     },
   },
   alertRouting: {

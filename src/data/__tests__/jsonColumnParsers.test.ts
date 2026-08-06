@@ -41,13 +41,8 @@ describe("parser runtime colonne Json", () => {
   });
 
   it("parseTimingSteps normalizza i campi mancanti", () => {
-    const out = parseTimingSteps([
-      { step: 1, channel: "email" },
-      { channel: "email" },
-    ]);
-    expect(out).toEqual([
-      { step: 1, channel: "email", delay_days: 0, trigger: "", tone: "", template_hint: "" },
-    ]);
+    const out = parseTimingSteps([{ step: 1, channel: "email" }, { channel: "email" }]);
+    expect(out).toEqual([{ step: 1, channel: "email", delay_days: 0, trigger: "", tone: "", template_hint: "" }]);
   });
 
   it("parseSherlockSteps richiede order/label/url_template", () => {

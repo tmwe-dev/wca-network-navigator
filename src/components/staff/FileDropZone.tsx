@@ -13,29 +13,35 @@ export function FileDropZone({ children, onFileUploaded, className }: Props) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const handleDrop = useCallback(async (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragging(false);
+  const handleDrop = useCallback(
+    async (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragging(false);
 
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length === 0) return;
 
-    setUploading(true);
-    for (const file of files) {
-      const path = `staff/${Date.now()}_${file.name}`;
-      const { error } = await uploadChatAttachment(path, file);
-      if (!error) {
-        onFileUploaded(getChatAttachmentPublicUrl(path), file.name);
+      setUploading(true);
+      for (const file of files) {
+        const path = `staff/${Date.now()}_${file.name}`;
+        const { error } = await uploadChatAttachment(path, file);
+        if (!error) {
+          onFileUploaded(getChatAttachmentPublicUrl(path), file.name);
+        }
       }
-    }
-    setUploading(false);
-  }, [onFileUploaded]);
+      setUploading(false);
+    },
+    [onFileUploaded],
+  );
 
   return (
     <div
       className={cn("relative", className)}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
     >

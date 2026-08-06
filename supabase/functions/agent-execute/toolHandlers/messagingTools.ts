@@ -3,22 +3,45 @@ import { resolvePartnerId } from "../shared.ts";
 
 /** Loose row shapes used inside this module — narrower than `any`, safe with PostgREST results. */
 type EmailRow = {
-  id?: string; direction?: string; from_address?: string | null; to_address?: string | null;
-  subject?: string | null; body_text?: string | null; email_date?: string | null;
-  channel?: string | null; thread_id?: string | null; in_reply_to?: string | null;
+  id?: string;
+  direction?: string;
+  from_address?: string | null;
+  to_address?: string | null;
+  subject?: string | null;
+  body_text?: string | null;
+  email_date?: string | null;
+  channel?: string | null;
+  thread_id?: string | null;
+  in_reply_to?: string | null;
 };
 type ActivityRow = {
-  id?: string; title?: string | null; activity_type?: string | null; status?: string | null;
-  created_at?: string | null; description?: string | null;
+  id?: string;
+  title?: string | null;
+  activity_type?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  description?: string | null;
 };
 type InteractionRow = {
-  id?: string; interaction_type?: string | null; subject?: string | null; title?: string | null;
-  description?: string | null; notes?: string | null; outcome?: string | null; created_at?: string | null;
+  id?: string;
+  interaction_type?: string | null;
+  subject?: string | null;
+  title?: string | null;
+  description?: string | null;
+  notes?: string | null;
+  outcome?: string | null;
+  created_at?: string | null;
 };
 type SentRow = { id?: string; subject?: string | null; recipient_email?: string | null; sent_at?: string | null };
 type HoldingPartnerRow = {
-  id?: string; company_name?: string | null; country_code?: string | null; city?: string | null;
-  email?: string | null; lead_status?: string | null; last_interaction_at?: string | null; interaction_count?: number | null;
+  id?: string;
+  company_name?: string | null;
+  country_code?: string | null;
+  city?: string | null;
+  email?: string | null;
+  lead_status?: string | null;
+  last_interaction_at?: string | null;
+  interaction_count?: number | null;
 };
 type HoldingContactRow = HoldingPartnerRow & { name?: string | null; country?: string | null };
 
@@ -54,12 +77,12 @@ interface HoldingItem {
 export async function handleGetInbox(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let query = supabase
     .from("channel_messages")
     .select(
-      "id, channel, direction, from_address, to_address, subject, body_text, email_date, read_at, partner_id, category, created_at"
+      "id, channel, direction, from_address, to_address, subject, body_text, email_date, read_at, partner_id, category, created_at",
     )
     .eq("user_id", userId)
     .eq("direction", "inbound")
@@ -107,7 +130,7 @@ export async function handleGetInbox(
 export async function handleGetConversationHistory(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let pid = args.partner_id as string;
 
@@ -121,15 +144,13 @@ export async function handleGetConversationHistory(
   if (pid) {
     const { data: emails } = await supabase
       .from("channel_messages")
-      .select(
-        "id, direction, from_address, to_address, subject, body_text, email_date, channel"
-      )
+      .select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
       .eq("user_id", userId)
       .or(`partner_id.eq.${pid},from_address.ilike.%${pid}%`)
       .order("email_date", { ascending: false })
       .limit(30);
 
-    (emails as EmailRow[] | null || []).forEach((e) =>
+    ((emails as EmailRow[] | null) || []).forEach((e) =>
       timeline.push({
         type: "email",
         direction: e.direction,
@@ -138,7 +159,7 @@ export async function handleGetConversationHistory(
         date: e.email_date,
         channel: e.channel,
         preview: e.body_text?.substring(0, 200),
-      })
+      }),
     );
 
     const { data: acts } = await supabase
@@ -148,7 +169,7 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (acts as ActivityRow[] | null || []).forEach((a) =>
+    ((acts as ActivityRow[] | null) || []).forEach((a) =>
       timeline.push({
         type: "activity",
         subtype: a.activity_type,
@@ -156,7 +177,7 @@ export async function handleGetConversationHistory(
         status: a.status,
         date: a.created_at,
         description: a.description?.substring(0, 200),
-      })
+      }),
     );
 
     const { data: ints } = await supabase
@@ -166,14 +187,14 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (ints as InteractionRow[] | null || []).forEach((i) =>
+    ((ints as InteractionRow[] | null) || []).forEach((i) =>
       timeline.push({
         type: "interaction",
         subtype: i.interaction_type,
         title: i.subject,
         notes: i.notes?.substring(0, 200),
         date: i.created_at,
-      })
+      }),
     );
 
     const { data: sent } = await supabase
@@ -184,13 +205,13 @@ export async function handleGetConversationHistory(
       .order("sent_at", { ascending: false })
       .limit(20);
 
-    (sent as SentRow[] | null || []).forEach((s) =>
+    ((sent as SentRow[] | null) || []).forEach((s) =>
       timeline.push({
         type: "email_sent",
         subject: s.subject,
         to: s.recipient_email,
         date: s.sent_at,
-      })
+      }),
     );
   } else if (args.contact_id) {
     const { data: cInts } = await supabase
@@ -200,7 +221,7 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (cInts as InteractionRow[] | null || []).forEach((i) =>
+    ((cInts as InteractionRow[] | null) || []).forEach((i) =>
       timeline.push({
         type: "interaction",
         subtype: i.interaction_type,
@@ -208,15 +229,11 @@ export async function handleGetConversationHistory(
         description: i.description?.substring(0, 200),
         outcome: i.outcome,
         date: i.created_at,
-      })
+      }),
     );
   }
 
-  timeline.sort(
-    (a, b) =>
-      new Date(b.date as string).getTime() -
-      new Date(a.date as string).getTime()
-  );
+  timeline.sort((a, b) => new Date(b.date as string).getTime() - new Date(a.date as string).getTime());
 
   return {
     count: timeline.length,
@@ -227,24 +244,16 @@ export async function handleGetConversationHistory(
 export async function handleGetHoldingPattern(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const items: HoldingItem[] = [];
-  const activeStatuses = [
-    "first_touch_sent",
-    "holding",
-    "engaged",
-    "qualified",
-    "negotiation",
-  ];
+  const activeStatuses = ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"];
   const now = new Date();
 
   if (!args.source_type || args.source_type === "wca" || args.source_type === "all") {
     let pq = supabase
       .from("partners")
-      .select(
-        "id, company_name, country_code, city, email, lead_status, last_interaction_at, interaction_count"
-      )
+      .select("id, company_name, country_code, city, email, lead_status, last_interaction_at, interaction_count")
       .in("lead_status", activeStatuses)
       .order("last_interaction_at", { ascending: true, nullsFirst: true });
 
@@ -254,18 +263,13 @@ export async function handleGetHoldingPattern(
 
     const { data: partners } = await pq.limit(Number(args.limit) || 50);
 
-    (partners as HoldingPartnerRow[] | null || []).forEach((p) => {
+    ((partners as HoldingPartnerRow[] | null) || []).forEach((p) => {
       const days = p.last_interaction_at
-        ? Math.floor(
-            (now.getTime() - new Date(p.last_interaction_at).getTime()) /
-              86400000
-          )
+        ? Math.floor((now.getTime() - new Date(p.last_interaction_at).getTime()) / 86400000)
         : 999;
 
-      if (args.min_days_waiting && days < Number(args.min_days_waiting))
-        return;
-      if (args.max_days_waiting && days > Number(args.max_days_waiting))
-        return;
+      if (args.min_days_waiting && days < Number(args.min_days_waiting)) return;
+      if (args.max_days_waiting && days > Number(args.max_days_waiting)) return;
 
       items.push({
         id: p.id ?? "",
@@ -281,33 +285,22 @@ export async function handleGetHoldingPattern(
     });
   }
 
-  if (
-    !args.source_type ||
-    args.source_type === "crm" ||
-    args.source_type === "all"
-  ) {
+  if (!args.source_type || args.source_type === "crm" || args.source_type === "all") {
     const cq = supabase
       .from("imported_contacts")
-      .select(
-        "id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count"
-      )
+      .select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
       .in("lead_status", activeStatuses)
       .order("last_interaction_at", { ascending: true, nullsFirst: true });
 
     const { data: contacts } = await cq.limit(Number(args.limit) || 50);
 
-    (contacts as HoldingContactRow[] | null || []).forEach((c) => {
+    ((contacts as HoldingContactRow[] | null) || []).forEach((c) => {
       const days = c.last_interaction_at
-        ? Math.floor(
-            (now.getTime() - new Date(c.last_interaction_at).getTime()) /
-              86400000
-          )
+        ? Math.floor((now.getTime() - new Date(c.last_interaction_at).getTime()) / 86400000)
         : 999;
 
-      if (args.min_days_waiting && days < Number(args.min_days_waiting))
-        return;
-      if (args.max_days_waiting && days > Number(args.max_days_waiting))
-        return;
+      if (args.min_days_waiting && days < Number(args.min_days_waiting)) return;
+      if (args.max_days_waiting && days > Number(args.max_days_waiting)) return;
 
       items.push({
         id: c.id ?? "",
@@ -334,7 +327,7 @@ export async function handleGetHoldingPattern(
 export async function handleUpdateMessageStatus(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const { error } = await supabase
     .from("channel_messages")
@@ -342,24 +335,20 @@ export async function handleUpdateMessageStatus(
     .eq("id", args.message_id)
     .eq("user_id", userId);
 
-  return error
-    ? { error: error.message }
-    : { success: true, message: "Messaggio marcato come letto." };
+  return error ? { error: error.message } : { success: true, message: "Messaggio marcato come letto." };
 }
 
 export async function handleGetEmailThread(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let messages: ChannelMessageRow[] = [];
 
   if (args.thread_id) {
     const { data } = await supabase
       .from("channel_messages")
-      .select(
-        "id, direction, from_address, to_address, subject, body_text, email_date, channel"
-      )
+      .select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
       .eq("user_id", userId)
       .eq("thread_id", args.thread_id)
       .order("email_date", { ascending: true });
@@ -371,7 +360,7 @@ export async function handleGetEmailThread(
     const { data } = await supabase
       .from("channel_messages")
       .select(
-        "id, direction, from_address, to_address, subject, body_text, email_date, channel, thread_id, in_reply_to"
+        "id, direction, from_address, to_address, subject, body_text, email_date, channel, thread_id, in_reply_to",
       )
       .eq("user_id", userId)
       .eq("partner_id", args.partner_id)
@@ -385,14 +374,10 @@ export async function handleGetEmailThread(
   if (messages.length === 0 && args.email_address) {
     const { data } = await supabase
       .from("channel_messages")
-      .select(
-        "id, direction, from_address, to_address, subject, body_text, email_date, channel"
-      )
+      .select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
       .eq("user_id", userId)
       .eq("channel", "email")
-      .or(
-        `from_address.ilike.%${args.email_address}%,to_address.ilike.%${args.email_address}%`
-      )
+      .or(`from_address.ilike.%${args.email_address}%,to_address.ilike.%${args.email_address}%`)
       .order("email_date", { ascending: true })
       .limit(Number(args.limit) || 50);
 

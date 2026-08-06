@@ -32,7 +32,11 @@ export { calculatePartnerQuality } from "./qualityOrchestrator.ts";
 // SAVE AND BATCH OPERATIONS
 // ════════════════════════════════════════════════════════════════════
 
-export { savePartnerQuality, calculateAndSavePartnerQuality, batchRecalculatePartnerQuality } from "./qualitySaveAndBatch.ts";
+export {
+  savePartnerQuality,
+  calculateAndSavePartnerQuality,
+  batchRecalculatePartnerQuality,
+} from "./qualitySaveAndBatch.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // LEGACY COMPATIBILITY

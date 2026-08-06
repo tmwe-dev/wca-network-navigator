@@ -13,11 +13,11 @@ export async function updateDownloadJobStatus(
   updates: DownloadJobUpdate,
 ): Promise<Result<void, AppError>> {
   try {
-    const { error } = await supabase
-      .from("download_jobs")
-      .update(updates)
-      .eq("id", jobId);
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "download_jobs", jobId }, "updateDownloadJobStatus"));
+    const { error } = await supabase.from("download_jobs").update(updates).eq("id", jobId);
+    if (error)
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "download_jobs", jobId }, "updateDownloadJobStatus"),
+      );
     return ok(undefined);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "updateDownloadJobStatus"));

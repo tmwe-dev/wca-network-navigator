@@ -93,9 +93,7 @@ export function KBIngestPanel() {
 
     for (const item of files) {
       if (item.status === "done") continue;
-      setFiles((prev) =>
-        prev.map((f) => (f.id === item.id ? { ...f, status: "processing", error: undefined } : f)),
-      );
+      setFiles((prev) => prev.map((f) => (f.id === item.id ? { ...f, status: "processing", error: undefined } : f)));
       try {
         const b64 = await fileToBase64(item.file);
         const result = await invokeEdge<IngestResponse>("kb-ingest-document", {
@@ -113,15 +111,11 @@ export function KBIngestPanel() {
         totalChunks += result.chunks_created;
         okCount += 1;
         setFiles((prev) =>
-          prev.map((f) =>
-            f.id === item.id ? { ...f, status: "done", chunks: result.chunks_created } : f,
-          ),
+          prev.map((f) => (f.id === item.id ? { ...f, status: "done", chunks: result.chunks_created } : f)),
         );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        setFiles((prev) =>
-          prev.map((f) => (f.id === item.id ? { ...f, status: "error", error: msg } : f)),
-        );
+        setFiles((prev) => prev.map((f) => (f.id === item.id ? { ...f, status: "error", error: msg } : f)));
       }
     }
 
@@ -146,8 +140,8 @@ export function KBIngestPanel() {
           Importa Knowledge Base
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Carica documenti (PDF, DOCX, TXT, MD) — verranno estratti, suddivisi in chunk,
-          embeddati con <code className="text-xs">text-embedding-3-small</code> e inseriti in
+          Carica documenti (PDF, DOCX, TXT, MD) — verranno estratti, suddivisi in chunk, embeddati con{" "}
+          <code className="text-xs">text-embedding-3-small</code> e inseriti in
           <code className="text-xs"> kb_entries</code>. Subito disponibili agli agenti via RAG.
         </p>
       </CardHeader>
@@ -180,7 +174,9 @@ export function KBIngestPanel() {
         {/* Form */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <Label htmlFor="kb-cat" className="text-xs">Categoria</Label>
+            <Label htmlFor="kb-cat" className="text-xs">
+              Categoria
+            </Label>
             <Input
               id="kb-cat"
               value={category}
@@ -189,7 +185,9 @@ export function KBIngestPanel() {
             />
           </div>
           <div>
-            <Label htmlFor="kb-prio" className="text-xs">Priorità (1-10)</Label>
+            <Label htmlFor="kb-prio" className="text-xs">
+              Priorità (1-10)
+            </Label>
             <Input
               id="kb-prio"
               type="number"
@@ -200,7 +198,9 @@ export function KBIngestPanel() {
             />
           </div>
           <div>
-            <Label htmlFor="kb-tags" className="text-xs">Tag (separati da virgola)</Label>
+            <Label htmlFor="kb-tags" className="text-xs">
+              Tag (separati da virgola)
+            </Label>
             <Input
               id="kb-tags"
               value={tagsRaw}
@@ -214,7 +214,9 @@ export function KBIngestPanel() {
         {files.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{files.length} file in coda · {doneCount} processati</span>
+              <span>
+                {files.length} file in coda · {doneCount} processati
+              </span>
               {running && <Loader2 className="h-3 w-3 animate-spin" />}
             </div>
             <Progress value={progress} className="h-1" />
@@ -226,9 +228,7 @@ export function KBIngestPanel() {
                 >
                   <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="flex-1 truncate">{f.file.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {(f.file.size / 1024).toFixed(0)}KB
-                  </span>
+                  <span className="text-xs text-muted-foreground">{(f.file.size / 1024).toFixed(0)}KB</span>
                   {f.status === "done" && (
                     <Badge variant="secondary" className="gap-1">
                       <CheckCircle2 className="h-3 w-3" /> {f.chunks} chunk
@@ -241,12 +241,7 @@ export function KBIngestPanel() {
                     </Badge>
                   )}
                   {!running && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => removeFile(f.id)}
-                    >
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(f.id)}>
                       <X className="h-3 w-3" />
                     </Button>
                   )}
@@ -257,11 +252,7 @@ export function KBIngestPanel() {
         )}
 
         <div className="flex gap-2 justify-end">
-          <Button
-            variant="outline"
-            disabled={running || files.length === 0}
-            onClick={() => setFiles([])}
-          >
+          <Button variant="outline" disabled={running || files.length === 0} onClick={() => setFiles([])}>
             Svuota coda
           </Button>
           <Button disabled={running || files.length === 0} onClick={processAll}>

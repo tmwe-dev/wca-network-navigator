@@ -12,17 +12,15 @@
  * Le azioni `mark_important`, `forward_to`, `auto_reply`, `skip_inbox` non sono
  * ancora implementate e restano in coming-soon.
  */
-import { useState, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Loader2, Inbox } from 'lucide-react';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Inbox } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
-export type ImapAction = 'none' | 'mark_read' | 'archive' | 'move_to_folder' | 'spam' | 'delete' | 'hide';
+export type ImapAction = "none" | "mark_read" | "archive" | "move_to_folder" | "spam" | "delete" | "hide";
 
 export interface RulesConfigValue {
   auto_action: ImapAction;
@@ -40,19 +38,23 @@ interface RulesConfigurationProps {
 }
 
 const ACTION_OPTIONS: Array<{ value: ImapAction; label: string; description: string }> = [
-  { value: 'none', label: 'Nessuna azione automatica', description: 'Le email arrivano in inbox normalmente' },
-  { value: 'mark_read', label: 'Segna come letto', description: 'Imposta il flag \\Seen senza spostare' },
-  { value: 'archive', label: 'Archivia', description: 'Sposta nella cartella Archive (o quella indicata)' },
-  { value: 'spam', label: 'Sposta in Spam/Junk', description: 'Sposta nella cartella Junk (o quella indicata)' },
-  { value: 'move_to_folder', label: 'Sposta in cartella…', description: 'Sposta in una cartella IMAP a tua scelta' },
-  { value: 'delete', label: 'Elimina (cestino)', description: 'Sposta in Trash + EXPUNGE. Reversibile finché il server non lo cancella.' },
-  { value: 'hide', label: 'Nascondi (solo nel nostro DB)', description: 'Non tocca IMAP, nasconde dal nostro inbox' },
+  { value: "none", label: "Nessuna azione automatica", description: "Le email arrivano in inbox normalmente" },
+  { value: "mark_read", label: "Segna come letto", description: "Imposta il flag \\Seen senza spostare" },
+  { value: "archive", label: "Archivia", description: "Sposta nella cartella Archive (o quella indicata)" },
+  { value: "spam", label: "Sposta in Spam/Junk", description: "Sposta nella cartella Junk (o quella indicata)" },
+  { value: "move_to_folder", label: "Sposta in cartella…", description: "Sposta in una cartella IMAP a tua scelta" },
+  {
+    value: "delete",
+    label: "Elimina (cestino)",
+    description: "Sposta in Trash + EXPUNGE. Reversibile finché il server non lo cancella.",
+  },
+  { value: "hide", label: "Nascondi (solo nel nostro DB)", description: "Non tocca IMAP, nasconde dal nostro inbox" },
 ];
 
 const COMING_SOON: Array<{ id: string; label: string }> = [
-  { id: 'mark_important', label: 'Segna come importante' },
-  { id: 'forward_to', label: 'Inoltra a…' },
-  { id: 'auto_reply', label: 'Risposta automatica' },
+  { id: "mark_important", label: "Segna come importante" },
+  { id: "forward_to", label: "Inoltra a…" },
+  { id: "auto_reply", label: "Risposta automatica" },
 ];
 
 export function RulesConfiguration({ value, onChange, isSaving = false }: RulesConfigurationProps) {
@@ -71,7 +73,7 @@ export function RulesConfiguration({ value, onChange, isSaving = false }: RulesC
       auto_action_params: {
         ...d.auto_action_params,
         // Reset target_folder se non più rilevante
-        target_folder: ['archive', 'spam', 'move_to_folder'].includes(action)
+        target_folder: ["archive", "spam", "move_to_folder"].includes(action)
           ? d.auto_action_params.target_folder
           : undefined,
       },
@@ -92,8 +94,8 @@ export function RulesConfiguration({ value, onChange, isSaving = false }: RulesC
     }));
   };
 
-  const needsTargetFolder = ['archive', 'spam', 'move_to_folder'].includes(draft.auto_action);
-  const allowsAlsoMarkRead = ['archive', 'spam', 'move_to_folder'].includes(draft.auto_action);
+  const needsTargetFolder = ["archive", "spam", "move_to_folder"].includes(draft.auto_action);
+  const allowsAlsoMarkRead = ["archive", "spam", "move_to_folder"].includes(draft.auto_action);
 
   return (
     <div className="flex flex-col gap-3">
@@ -126,11 +128,13 @@ export function RulesConfiguration({ value, onChange, isSaving = false }: RulesC
           <Input
             id="target-folder"
             placeholder={
-              draft.auto_action === 'archive' ? 'Archive (default)'
-              : draft.auto_action === 'spam' ? 'Junk (default)'
-              : 'es. INBOX/LinkedIn'
+              draft.auto_action === "archive"
+                ? "Archive (default)"
+                : draft.auto_action === "spam"
+                  ? "Junk (default)"
+                  : "es. INBOX/LinkedIn"
             }
-            value={draft.auto_action_params.target_folder ?? ''}
+            value={draft.auto_action_params.target_folder ?? ""}
             onChange={(e) => setTargetFolder(e.target.value)}
             disabled={isSaving}
             className="h-8 text-sm"
@@ -168,7 +172,9 @@ export function RulesConfiguration({ value, onChange, isSaving = false }: RulesC
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer hover:text-foreground">Azioni in arrivo (non ancora attive)</summary>
         <ul className="list-disc pl-5 mt-1 space-y-0.5">
-          {COMING_SOON.map((c) => <li key={c.id}>{c.label}</li>)}
+          {COMING_SOON.map((c) => (
+            <li key={c.id}>{c.label}</li>
+          ))}
         </ul>
       </details>
     </div>

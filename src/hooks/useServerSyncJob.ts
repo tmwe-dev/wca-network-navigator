@@ -56,15 +56,11 @@ export function useServerSyncJob() {
   useEffect(() => {
     const channel = supabase
       .channel("email-sync-jobs-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "email_sync_jobs" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
-          queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJobCompleted });
-          queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "email_sync_jobs" }, () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJob });
+        queryClient.invalidateQueries({ queryKey: queryKeys.email.syncJobCompleted });
+        queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
+      })
       .subscribe();
 
     return () => {

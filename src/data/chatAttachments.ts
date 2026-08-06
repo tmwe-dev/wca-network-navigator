@@ -3,7 +3,11 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export async function uploadChatAttachment(path: string, file: File, options?: { contentType?: string }): Promise<{ error: Error | null }> {
+export async function uploadChatAttachment(
+  path: string,
+  file: File,
+  options?: { contentType?: string },
+): Promise<{ error: Error | null }> {
   const { error } = await supabase.storage.from("chat-attachments").upload(path, file, options);
   return { error };
 }

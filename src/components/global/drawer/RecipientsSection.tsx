@@ -45,21 +45,34 @@ export function RecipientsSection({ search, setSearch }: Props) {
         </div>
         <span className="text-sm font-bold text-foreground">Destinatari</span>
         {m.recipients.length > 0 && (
-          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">{m.recipients.length}</span>
+          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">
+            {m.recipients.length}
+          </span>
         )}
       </div>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca azienda..." className="h-9 text-xs pl-9 border-border/40 bg-muted/10" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cerca azienda..."
+          className="h-9 text-xs pl-9 border-border/40 bg-muted/10"
+        />
       </div>
       {search.length >= 2 && searchResults.length > 0 && (
         <div className="max-h-[160px] overflow-y-auto space-y-0.5 rounded-lg border border-border/20 p-1">
           {searchResults.map((p) => (
-            <button key={p.id} onClick={() => handleAdd(toRecord(p))} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-primary/5 transition-colors text-left">
+            <button
+              key={p.id}
+              onClick={() => handleAdd(toRecord(p))}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-primary/5 transition-colors text-left"
+            >
               <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{p.company_name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{p.city}, {p.country_name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {p.city}, {p.country_name}
+                </p>
               </div>
               {p.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
               <Plus className="w-3 h-3 text-muted-foreground shrink-0" />
@@ -70,20 +83,33 @@ export function RecipientsSection({ search, setSearch }: Props) {
       {m.recipients.length > 0 && (
         <div className="space-y-1 max-h-[200px] overflow-y-auto">
           {m.recipients.map((r, i) => (
-            <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-muted/15 border border-border/15 group">
+            <div
+              key={i}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-muted/15 border border-border/15 group"
+            >
               <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{r.companyName}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{r.city}, {r.countryName}</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {r.city}, {r.countryName}
+                </p>
               </div>
               {r.email && <Mail className="w-3 h-3 text-emerald-500 shrink-0" />}
               {r.isEnriched && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
-              <button onClick={() => m.removeRecipient(i)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded">
+              <button
+                onClick={() => m.removeRecipient(i)}
+                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 rounded"
+              >
                 <X className="w-3 h-3 text-destructive" />
               </button>
             </div>
           ))}
-          <button onClick={m.clearRecipients} className="w-full text-center text-[10px] text-destructive hover:underline py-1">Rimuovi tutti</button>
+          <button
+            onClick={m.clearRecipients}
+            className="w-full text-center text-[10px] text-destructive hover:underline py-1"
+          >
+            Rimuovi tutti
+          </button>
         </div>
       )}
     </div>

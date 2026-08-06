@@ -47,7 +47,11 @@ export async function insertEmailPromptBlock(input: { title: string; instruction
 export async function insertPlaybookBlock(input: { name: string; description: string }): Promise<void> {
   const row: PlaybookInsert = {
     user_id: await currentUserId(),
-    code: input.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 60) || "playbook",
+    code:
+      input.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .slice(0, 60) || "playbook",
     name: input.name,
     description: input.description,
     prompt_template: "",

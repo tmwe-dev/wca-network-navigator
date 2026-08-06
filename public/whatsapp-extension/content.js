@@ -24,8 +24,14 @@
   var alive = false;
 
   var ALLOWED_ACTIONS = [
-    "ping", "setConfig", "verifySession", "sendWhatsApp",
-    "readUnread", "learnDom", "diagnosticDom", "readThread",
+    "ping",
+    "setConfig",
+    "verifySession",
+    "sendWhatsApp",
+    "readUnread",
+    "learnDom",
+    "diagnosticDom",
+    "readThread",
     "backfillChat",
     "ensureWorkerTab",
   ];
@@ -48,12 +54,19 @@
       if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
       void chrome.runtime.getManifest();
       return true;
-    } catch (err) { console.debug("[WA Content] extension dead:", err?.message); return false; }
+    } catch (err) {
+      console.debug("[WA Content] extension dead:", err?.message);
+      return false;
+    }
   }
 
   function post(payload) {
-    try { window.postMessage(payload, window.location.origin); }
-    catch (err) { console.debug("[WA Content] origin post failed, using *:", err?.message); window.postMessage(payload, "*"); }
+    try {
+      window.postMessage(payload, window.location.origin);
+    } catch (err) {
+      console.debug("[WA Content] origin post failed, using *:", err?.message);
+      window.postMessage(payload, "*");
+    }
   }
 
   function failResponse(data, error, errorCode) {
@@ -96,7 +109,17 @@
 
     try {
       var msg = { source: "wa-content-bridge", action: data.action };
-      var fields = ["phone", "text", "contact", "maxMessages", "maxScrolls", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
+      var fields = [
+        "phone",
+        "text",
+        "contact",
+        "maxMessages",
+        "maxScrolls",
+        "lastKnownText",
+        "supabaseUrl",
+        "anonKey",
+        "authToken",
+      ];
       for (var i = 0; i < fields.length; i++) {
         if (data[fields[i]] !== undefined) msg[fields[i]] = data[fields[i]];
       }
@@ -153,10 +176,14 @@
             requestId: aibRequestId,
             data: d.result || null,
           });
-        } catch (err) { console.debug("[WA Content] AI bridge cleanup:", err?.message); }
+        } catch (err) {
+          console.debug("[WA Content] AI bridge cleanup:", err?.message);
+        }
       }
       window.addEventListener("message", onAibWebappResponse);
-      setTimeout(function () { window.removeEventListener("message", onAibWebappResponse); }, 35000);
+      setTimeout(function () {
+        window.removeEventListener("message", onAibWebappResponse);
+      }, 35000);
 
       post({
         direction: "from-extension-ai-bridge-request",
@@ -184,10 +211,14 @@
             requestId: optRequestId,
             data: d.result || null,
           });
-        } catch (err) { console.debug("[WA Content] Optimus cleanup:", err?.message); }
+        } catch (err) {
+          console.debug("[WA Content] Optimus cleanup:", err?.message);
+        }
       }
       window.addEventListener("message", onOptimusWebappResponse);
-      setTimeout(function () { window.removeEventListener("message", onOptimusWebappResponse); }, 45000);
+      setTimeout(function () {
+        window.removeEventListener("message", onOptimusWebappResponse);
+      }, 45000);
 
       post({
         direction: "from-extension-optimus-request",

@@ -14,31 +14,45 @@ export interface BounceInfo {
 
 const BOUNCE_SENDERS = ["mailer-daemon@", "postmaster@", "mail-delivery-subsystem@", "noreply-dmarc@"];
 const BOUNCE_SUBJECTS = [
-  "delivery status notification", "undeliverable", "mail delivery failed",
-  "returned mail", "undelivered mail", "delivery failure", "failure notice",
+  "delivery status notification",
+  "undeliverable",
+  "mail delivery failed",
+  "returned mail",
+  "undelivered mail",
+  "delivery failure",
+  "failure notice",
 ];
 const HARD_BOUNCE_PATTERNS = [
-  /550\s/i, /551\s/i, /552\s/i, /553\s/i, /554\s/i,
-  /user unknown/i, /mailbox not found/i, /address rejected/i,
-  /permanent failure/i, /does not exist/i, /no such user/i,
+  /550\s/i,
+  /551\s/i,
+  /552\s/i,
+  /553\s/i,
+  /554\s/i,
+  /user unknown/i,
+  /mailbox not found/i,
+  /address rejected/i,
+  /permanent failure/i,
+  /does not exist/i,
+  /no such user/i,
 ];
 
 export function detectBounce(msg: { fromAddr: string; subject: string; bodyText: string }): BounceInfo | null {
   const senderLower = (msg.fromAddr || "").toLowerCase();
   const subjectLower = (msg.subject || "").toLowerCase();
-  const bodyText = (msg.bodyText || "");
+  const bodyText = msg.bodyText || "";
 
   const isBounce =
-    BOUNCE_SENDERS.some(s => senderLower.includes(s)) ||
-    BOUNCE_SUBJECTS.some(s => subjectLower.includes(s));
+    BOUNCE_SENDERS.some((s) => senderLower.includes(s)) || BOUNCE_SUBJECTS.some((s) => subjectLower.includes(s));
 
   if (!isBounce) return null;
 
-  const isHard = HARD_BOUNCE_PATTERNS.some(p => p.test(bodyText)) ||
-    /permanent/i.test(bodyText) || /does not exist/i.test(bodyText);
+  const isHard =
+    HARD_BOUNCE_PATTERNS.some((p) => p.test(bodyText)) ||
+    /permanent/i.test(bodyText) ||
+    /does not exist/i.test(bodyText);
 
   const emailMatch = bodyText.match(
-    /(?:original recipient|final-recipient|to:\s*)<?([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})>?/i
+    /(?:original recipient|final-recipient|to:\s*)<?([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})>?/i,
   );
   const bouncedEmail = emailMatch?.[1]?.toLowerCase() || null;
 
@@ -53,19 +67,25 @@ export async function handleBounce(
 ): Promise<void> {
   try {
     // 1. Tag the message as bounce
-    await supabase.from("channel_messages").update({
-      category: "bounce",
-    }).eq("id", savedMessageId);
+    await supabase
+      .from("channel_messages")
+      .update({
+        category: "bounce",
+      })
+      .eq("id", savedMessageId);
 
     // 2. Hard bounce: mark address as invalid
     if (bounce.type === "hard" && bounce.bouncedEmail) {
-      await supabase.from("email_address_rules").upsert({
-        user_id: userId,
-        email_address: bounce.bouncedEmail,
-        auto_action: "archive",
-        notes: `Hard bounce rilevato il ${new Date().toISOString().split("T")[0]}. Email non valida.`,
-        is_active: true,
-      }, { onConflict: "user_id,email_address" });
+      await supabase.from("email_address_rules").upsert(
+        {
+          user_id: userId,
+          email_address: bounce.bouncedEmail,
+          auto_action: "archive",
+          notes: `Hard bounce rilevato il ${new Date().toISOString().split("T")[0]}. Email non valida.`,
+          is_active: true,
+        },
+        { onConflict: "user_id,email_address" },
+      );
 
       // Marca SOLO l'email come bounced (fatto tecnico).
       // Il lead_status (decisione commerciale) resta INVARIATO: il contatto
@@ -78,10 +98,7 @@ export async function handleBounce(
         .select("id");
 
       // Stessa logica per partners (potrebbe avere email aziendale bouncata).
-      await supabase
-        .from("partners")
-        .update({ email_status: "bounced" })
-        .ilike("email", bounce.bouncedEmail);
+      await supabase.from("partners").update({ email_status: "bounced" }).ilike("email", bounce.bouncedEmail);
 
       // Log dell'evento bounce come activity (audit trail leggibile).
       if (bouncedContacts && bouncedContacts.length > 0) {
@@ -109,7 +126,6 @@ export async function handleBounce(
       target_label: bounce.bouncedEmail,
       decision_origin: "system_trigger",
     });
-
   } catch (err) {
     console.error("[check-inbox] Bounce handling error:", err);
   }

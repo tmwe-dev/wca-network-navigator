@@ -9,9 +9,7 @@
 
 import { supabase, escapeLike } from "./supabaseClient.ts";
 
-export async function handleSearchBusinessCards(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleSearchBusinessCards(args: Record<string, unknown>): Promise<unknown> {
   let query = supabase
     .from("business_cards")
     .select(
@@ -20,13 +18,10 @@ export async function handleSearchBusinessCards(
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(Math.min(Number(args.limit) || 20, 100));
-  if (args.company_name)
-    query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
-  if (args.contact_name)
-    query = query.ilike("contact_name", `%${escapeLike(String(args.contact_name))}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
+  if (args.contact_name) query = query.ilike("contact_name", `%${escapeLike(String(args.contact_name))}%`);
   if (args.email) query = query.ilike("email", `%${escapeLike(String(args.email))}%`);
-  if (args.event_name)
-    query = query.ilike("event_name", `%${escapeLike(String(args.event_name))}%`);
+  if (args.event_name) query = query.ilike("event_name", `%${escapeLike(String(args.event_name))}%`);
   if (args.match_status) query = query.eq("match_status", args.match_status);
   if (args.has_partner_match === true) query = query.not("matched_partner_id", "is", null);
   if (args.has_partner_match === false) query = query.is("matched_partner_id", null);
@@ -39,9 +34,7 @@ export async function handleSearchBusinessCards(
   return error ? { error: error.message } : { count: data?.length || 0, cards: data || [] };
 }
 
-export async function handleGetBusinessCardDetail(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGetBusinessCardDetail(args: Record<string, unknown>): Promise<unknown> {
   let card: Record<string, unknown> | null = null;
   if (args.card_id) {
     const { data } = await supabase
@@ -73,7 +66,9 @@ export async function handleGetBusinessCardDetail(
   }
   if (!card) return { error: "Business card non trovato" };
 
-  const cardEmail = String(card.email || "").toLowerCase().trim();
+  const cardEmail = String(card.email || "")
+    .toLowerCase()
+    .trim();
   const matchedPartnerId = (card.matched_partner_id as string) || null;
   const matchedContactId = (card.matched_contact_id as string) || null;
 
@@ -81,7 +76,9 @@ export async function handleGetBusinessCardDetail(
     matchedPartnerId
       ? supabase
           .from("partners")
-          .select("id, company_name, country_code, city, rating, lead_status, member_since, membership_expires, email, phone, website")
+          .select(
+            "id, company_name, country_code, city, rating, lead_status, member_since, membership_expires, email, phone, website",
+          )
           .eq("id", matchedPartnerId)
           .maybeSingle()
       : Promise.resolve({ data: null }),

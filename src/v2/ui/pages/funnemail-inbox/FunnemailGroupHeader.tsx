@@ -3,15 +3,37 @@
  * con menu Azioni di gruppo (segna lette / assegna gruppo / archivia / elimina).
  */
 import { useState } from "react";
-import { ChevronDown, ChevronRight, MoreHorizontal, MailOpen, Tag, Archive, Trash2, Loader2, CheckSquare } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  MoreHorizontal,
+  MailOpen,
+  Tag,
+  Archive,
+  Trash2,
+  Loader2,
+  CheckSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
@@ -40,8 +62,15 @@ interface SenderGroupRow {
 }
 
 export function FunnemailGroupHeader({
-  label, count, expanded, onToggle, busy,
-  onMarkAllRead, onAssignGroup, onArchiveAll, onDeleteAll,
+  label,
+  count,
+  expanded,
+  onToggle,
+  busy,
+  onMarkAllRead,
+  onAssignGroup,
+  onArchiveAll,
+  onDeleteAll,
   onSelectAll,
 }: Props) {
   const { user } = useAuth();
@@ -66,20 +95,19 @@ export function FunnemailGroupHeader({
     if (count > CONFIRM_THRESHOLD) {
       setConfirm(action);
     } else {
-      if (action === "archive") onArchiveAll(); else onDeleteAll();
+      if (action === "archive") onArchiveAll();
+      else onDeleteAll();
     }
   };
 
   return (
     <>
-      <div className={cn(
-        "sticky top-0 z-10 flex items-center gap-1 border-b border-border bg-muted/70 px-2 py-1.5 backdrop-blur",
-      )}>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex flex-1 items-center gap-1.5 text-left"
-        >
+      <div
+        className={cn(
+          "sticky top-0 z-10 flex items-center gap-1 border-b border-border bg-muted/70 px-2 py-1.5 backdrop-blur",
+        )}
+      >
+        <button type="button" onClick={onToggle} className="flex flex-1 items-center gap-1.5 text-left">
           {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
           <span className="truncate text-xs font-semibold">{label}</span>
           <span className="rounded-full bg-background px-1.5 py-0 text-[10px] font-bold text-muted-foreground">
@@ -106,21 +134,18 @@ export function FunnemailGroupHeader({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={onMarkAllRead}>
-              <MailOpen className="h-3.5 w-3.5 mr-2" />Segna tutte come lette
+              <MailOpen className="h-3.5 w-3.5 mr-2" />
+              Segna tutte come lette
             </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <Tag className="h-3.5 w-3.5 mr-2" />Assegna gruppo a tutte…
+                <Tag className="h-3.5 w-3.5 mr-2" />
+                Assegna gruppo a tutte…
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="max-h-64 overflow-auto">
-                {groupsList.length === 0 && (
-                  <DropdownMenuItem disabled>Nessun gruppo definito</DropdownMenuItem>
-                )}
+                {groupsList.length === 0 && <DropdownMenuItem disabled>Nessun gruppo definito</DropdownMenuItem>}
                 {groupsList.map((g) => (
-                  <DropdownMenuItem
-                    key={g.nome_gruppo}
-                    onClick={() => onAssignGroup(g.nome_gruppo)}
-                  >
+                  <DropdownMenuItem key={g.nome_gruppo} onClick={() => onAssignGroup(g.nome_gruppo)}>
                     {g.icon && <span className="mr-2">{g.icon}</span>}
                     <span>{g.nome_gruppo}</span>
                   </DropdownMenuItem>
@@ -129,13 +154,15 @@ export function FunnemailGroupHeader({
             </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => requireConfirm("archive")}>
-              <Archive className="h-3.5 w-3.5 mr-2" />Archivia tutte
+              <Archive className="h-3.5 w-3.5 mr-2" />
+              Archivia tutte
             </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => requireConfirm("delete")}
             >
-              <Trash2 className="h-3.5 w-3.5 mr-2" />Elimina tutte (cestino)
+              <Trash2 className="h-3.5 w-3.5 mr-2" />
+              Elimina tutte (cestino)
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

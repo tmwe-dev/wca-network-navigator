@@ -71,10 +71,7 @@ serve(async (req) => {
         appliedSummary = "Hint già presente — nessuna modifica";
       } else {
         const next = existing ? `${existing}\n• ${trimmed}` : `• ${trimmed}`;
-        await supabase
-          .from("email_sender_groups")
-          .update({ classification_hint: next })
-          .eq("id", group.id);
+        await supabase.from("email_sender_groups").update({ classification_hint: next }).eq("id", group.id);
         appliedSummary = `Hint aggiunto al gruppo ${insight.proposed_target_name ?? ""}`;
       }
     } else if (insight.proposed_target === "prompt" && insight.proposed_target_id) {
@@ -97,10 +94,7 @@ serve(async (req) => {
         const next = existing
           ? `${existing}\n\n## Anti-pattern noti\n- ${trimmed}`
           : `## Anti-pattern noti\n- ${trimmed}`;
-        await supabase
-          .from("operative_prompts")
-          .update({ criteria: next })
-          .eq("id", prompt.id);
+        await supabase.from("operative_prompts").update({ criteria: next }).eq("id", prompt.id);
         appliedSummary = `Regola aggiunta al prompt ${insight.proposed_target_name ?? ""} (nuova versione creata)`;
       }
     } else {
@@ -126,9 +120,9 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("[apply-classification-insight] fatal", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

@@ -19,14 +19,14 @@ export function ScorePill({ value, label, className }: ScorePillProps): React.Re
     v >= 70
       ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
       : v >= 40
-      ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
-      : "bg-destructive/10 text-destructive border-destructive/30";
+        ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
+        : "bg-destructive/10 text-destructive border-destructive/30";
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1 px-1.5 py-0 text-[9px] font-semibold rounded border leading-tight",
         tone,
-        className
+        className,
       )}
       title={`Score: ${v}/100`}
     >

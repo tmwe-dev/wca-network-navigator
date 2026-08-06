@@ -26,13 +26,11 @@ export function ErrorLogPanel() {
     queryFn: () => findAppErrorLogs(filterType, 50),
   });
 
-  const count24h = errors?.filter(e =>
-    e.created_at && new Date(e.created_at).getTime() > Date.now() - 86400000
-  ).length ?? 0;
+  const count24h =
+    errors?.filter((e) => e.created_at && new Date(e.created_at).getTime() > Date.now() - 86400000).length ?? 0;
 
-  const count7d = errors?.filter(e =>
-    e.created_at && new Date(e.created_at).getTime() > Date.now() - 7 * 86400000
-  ).length ?? 0;
+  const count7d =
+    errors?.filter((e) => e.created_at && new Date(e.created_at).getTime() > Date.now() - 7 * 86400000).length ?? 0;
 
   const handleCleanup = async () => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
@@ -48,8 +46,12 @@ export function ErrorLogPanel() {
           <h3 className="text-sm font-semibold text-foreground">Error Log</h3>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[10px]">24h: {count24h}</Badge>
-          <Badge variant="outline" className="text-[10px]">7d: {count7d}</Badge>
+          <Badge variant="outline" className="text-[10px]">
+            24h: {count24h}
+          </Badge>
+          <Badge variant="outline" className="text-[10px]">
+            7d: {count7d}
+          </Badge>
         </div>
       </div>
 
@@ -59,7 +61,7 @@ export function ErrorLogPanel() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {ERROR_TYPES.map(t => (
+            {ERROR_TYPES.map((t) => (
               <SelectItem key={t} value={t} className="text-xs">
                 {t === "all" ? "Tutti i tipi" : t.replace(/_/g, " ")}
               </SelectItem>
@@ -76,14 +78,22 @@ export function ErrorLogPanel() {
       ) : (
         <div className="space-y-1.5 max-h-80 overflow-y-auto">
           {errors.map((err) => (
-            <div key={err.id} className="flex items-start gap-2 rounded-md border border-border/50 bg-muted/30 p-2 text-xs">
-              <Badge className={`shrink-0 text-[9px] ${typeColors[err.error_type] ?? "bg-muted text-muted-foreground"}`}>
+            <div
+              key={err.id}
+              className="flex items-start gap-2 rounded-md border border-border/50 bg-muted/30 p-2 text-xs"
+            >
+              <Badge
+                className={`shrink-0 text-[9px] ${typeColors[err.error_type] ?? "bg-muted text-muted-foreground"}`}
+              >
                 {err.error_type}
               </Badge>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-foreground">{err.error_message || "—"}</p>
                 <p className="text-muted-foreground mt-0.5">
-                  {err.page_url} · {err.created_at ? formatDistanceToNow(new Date(err.created_at), { addSuffix: true, locale: it }) : "—"}
+                  {err.page_url} ·{" "}
+                  {err.created_at
+                    ? formatDistanceToNow(new Date(err.created_at), { addSuffix: true, locale: it })
+                    : "—"}
                 </p>
               </div>
             </div>

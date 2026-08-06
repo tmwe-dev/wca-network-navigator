@@ -23,6 +23,7 @@ nessun cron li promuove, l'estensione li ignora.
 ## Perché lasciamo il debito
 
 Bonificare richiederebbe:
+
 1. Migrazione DELETE con archiviazione (vincolo `mem://constraints/no-physical-delete` → soft-delete).
 2. Rimozione dei tipi generati Supabase (rigenerazione lato Lovable).
 3. Audit di tutti i punti che ancora referenziano la coda per WhatsApp.
@@ -57,6 +58,7 @@ ORDER BY n DESC;
 ## Quando bonificare
 
 Quando avverrà uno di questi trigger:
+
 - La tabella supera 10k record orfani.
 - Rifattorizzazione completa di `extension_dispatch_queue` per WhatsApp.
 - Migrazione delle estensioni a un altro protocollo.

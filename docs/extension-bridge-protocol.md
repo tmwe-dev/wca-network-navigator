@@ -17,13 +17,13 @@ Questo protocollo è bidirezionale: la web app invia richieste, l'estensione ris
 }
 ```
 
-| Campo       | Tipo     | Descrizione                                    |
-|-------------|----------|------------------------------------------------|
-| `source`    | string   | Sempre `"wca-app"`                             |
-| `target`    | string   | Nome dell'estensione destinataria              |
-| `action`    | string   | Azione da eseguire                             |
-| `payload`   | object   | Parametri (varia per action)                   |
-| `requestId` | string   | UUID per correlare richiesta/risposta          |
+| Campo       | Tipo   | Descrizione                           |
+| ----------- | ------ | ------------------------------------- |
+| `source`    | string | Sempre `"wca-app"`                    |
+| `target`    | string | Nome dell'estensione destinataria     |
+| `action`    | string | Azione da eseguire                    |
+| `payload`   | object | Parametri (varia per action)          |
+| `requestId` | string | UUID per correlare richiesta/risposta |
 
 ## Formato Risposta (Estensione → App)
 
@@ -37,6 +37,7 @@ Questo protocollo è bidirezionale: la web app invia richieste, l'estensione ris
 ```
 
 In caso di errore:
+
 ```json
 {
   "source": "linkedin-scraper",
@@ -49,16 +50,19 @@ In caso di errore:
 ## Azioni Obbligatorie
 
 ### `ping`
+
 Handshake — l'estensione conferma di essere attiva.
 
 **Payload:** `{}`
 **Risposta:** `{ ok: true, data: { version: "1.0" } }`
 
 ### `extractProfile` (solo linkedin-scraper)
+
 Estrae dati dal profilo LinkedIn nella tab attiva.
 
 **Payload:** `{}`
 **Risposta:**
+
 ```json
 {
   "ok": true,
@@ -97,19 +101,25 @@ window.addEventListener("message", async (event) => {
         throw new Error(`Action sconosciuta: ${msg.action}`);
     }
 
-    window.postMessage({
-      source: "MY_EXTENSION_NAME",
-      requestId: msg.requestId,
-      ok: true,
-      data: result,
-    }, "*");
+    window.postMessage(
+      {
+        source: "MY_EXTENSION_NAME",
+        requestId: msg.requestId,
+        ok: true,
+        data: result,
+      },
+      "*",
+    );
   } catch (err) {
-    window.postMessage({
-      source: "MY_EXTENSION_NAME",
-      requestId: msg.requestId,
-      ok: false,
-      error: err.message,
-    }, "*");
+    window.postMessage(
+      {
+        source: "MY_EXTENSION_NAME",
+        requestId: msg.requestId,
+        ok: false,
+        error: err.message,
+      },
+      "*",
+    );
   }
 });
 ```
@@ -133,25 +143,25 @@ Versione minima estensione WhatsApp richiesta: **5.10.x**.
 
 ### LinkedIn — azioni ammesse
 
-| Action | Direction (req → resp) | Timeout | Uso |
-|---|---|---|---|
-| `ping` / `setConfig` | `from-webapp-li` → `from-extension-li` | 4s / immediato | health + config |
-| `sendMessage` | `from-webapp-li` → `from-extension-li` | **120s** | unico path di invio (HybridOps.sendMessage) |
-| `readLinkedInInbox` | `from-webapp-li` → `from-extension-li` | 35s | download inbox |
-| `readLinkedInThread` | `from-webapp-li` → `from-extension-li` | 30s | download singolo thread |
-| `backfillLinkedInThread` | `from-webapp-li` → `from-extension-li` | 120s | recupero storico |
-| `diagnosticLinkedInDom` | `from-webapp-li` → `from-extension-li` | 30s | diagnostica |
+| Action                   | Direction (req → resp)                 | Timeout        | Uso                                         |
+| ------------------------ | -------------------------------------- | -------------- | ------------------------------------------- |
+| `ping` / `setConfig`     | `from-webapp-li` → `from-extension-li` | 4s / immediato | health + config                             |
+| `sendMessage`            | `from-webapp-li` → `from-extension-li` | **120s**       | unico path di invio (HybridOps.sendMessage) |
+| `readLinkedInInbox`      | `from-webapp-li` → `from-extension-li` | 35s            | download inbox                              |
+| `readLinkedInThread`     | `from-webapp-li` → `from-extension-li` | 30s            | download singolo thread                     |
+| `backfillLinkedInThread` | `from-webapp-li` → `from-extension-li` | 120s           | recupero storico                            |
+| `diagnosticLinkedInDom`  | `from-webapp-li` → `from-extension-li` | 30s            | diagnostica                                 |
 
 ### WhatsApp — azioni ammesse
 
-| Action | Direction | Timeout | Uso |
-|---|---|---|---|
-| `ping` / `verifySession` | `from-webapp-wa` → `from-extension-wa` | 5s / 30s | health + auth |
-| `sendWhatsApp` | `from-webapp-wa` → `from-extension-wa` | **60s** | unico path di invio |
-| `readUnread` / `listSidebarChats` | `from-webapp-wa` → `from-extension-wa` | 60s | download inbox |
-| `readThread` | `from-webapp-wa` → `from-extension-wa` | 60s | download thread |
-| `backfillChat` | `from-webapp-wa` → `from-extension-wa` | 120s | recupero storico |
-| `learnDom` | `from-webapp-wa` → `from-extension-wa` | 90s | DOM learning AI |
+| Action                            | Direction                              | Timeout  | Uso                 |
+| --------------------------------- | -------------------------------------- | -------- | ------------------- |
+| `ping` / `verifySession`          | `from-webapp-wa` → `from-extension-wa` | 5s / 30s | health + auth       |
+| `sendWhatsApp`                    | `from-webapp-wa` → `from-extension-wa` | **60s**  | unico path di invio |
+| `readUnread` / `listSidebarChats` | `from-webapp-wa` → `from-extension-wa` | 60s      | download inbox      |
+| `readThread`                      | `from-webapp-wa` → `from-extension-wa` | 60s      | download thread     |
+| `backfillChat`                    | `from-webapp-wa` → `from-extension-wa` | 120s     | recupero storico    |
+| `learnDom`                        | `from-webapp-wa` → `from-extension-wa` | 90s      | DOM learning AI     |
 
 Aggiungere nuove action o modificare timeout richiede aggiornamento di questo
 documento + bump versione estensione.
@@ -160,13 +170,13 @@ documento + bump versione estensione.
 
 L'app **non chiama mai i bridge direttamente fuori da questo modulo**.
 
-| Funzione | Quando usarla |
-|---|---|
-| `sendLinkedInDirect()` | solo chat LinkedIn manualmente aperta dall'utente |
-| `queueLinkedInForApproval()` | bulk, cadenze, AI, autopilot, classificatore email |
-| `sendWhatsAppDirect()` | solo chat WA manualmente aperta dall'utente |
-| `queueWhatsAppForApproval()` | bulk, cadenze, AI, autopilot, classificatore email |
-| `linkedinDownloader.ts` / `whatsappDownloader.ts` | re-export degli hook download (sync + backfill) |
+| Funzione                                          | Quando usarla                                      |
+| ------------------------------------------------- | -------------------------------------------------- |
+| `sendLinkedInDirect()`                            | solo chat LinkedIn manualmente aperta dall'utente  |
+| `queueLinkedInForApproval()`                      | bulk, cadenze, AI, autopilot, classificatore email |
+| `sendWhatsAppDirect()`                            | solo chat WA manualmente aperta dall'utente        |
+| `queueWhatsAppForApproval()`                      | bulk, cadenze, AI, autopilot, classificatore email |
+| `linkedinDownloader.ts` / `whatsappDownloader.ts` | re-export degli hook download (sync + backfill)    |
 
 ### Regola di approvazione (NON negoziabile)
 

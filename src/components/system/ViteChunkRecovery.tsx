@@ -5,7 +5,8 @@ const log = createLogger("ViteChunkRecovery");
 
 const CHUNK_RELOAD_KEY = "__vite_chunk_reload_at__";
 const CHUNK_RELOAD_COOLDOWN_MS = 15000;
-const DYNAMIC_IMPORT_ERROR_RE = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
+const DYNAMIC_IMPORT_ERROR_RE =
+  /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
 
 type VitePreloadErrorEvent = Event & {
   payload?: unknown;

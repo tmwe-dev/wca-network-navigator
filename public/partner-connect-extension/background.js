@@ -4,10 +4,18 @@
 // Fix: MV3 alarms + POST relay + state persistence + ReDoS protection + max iterations
 
 importScripts(
-  'crypto-utils.js', 'stealth.js', 'rate-limiter.js', 'cache.js',
-  'agent.js', 'hydra-client.js', 'brain.js',
-  'task-runner.js', 'file-manager.js', 'connectors.js', 'pipeline.js',
-  'elevenlabs.js'
+  "crypto-utils.js",
+  "stealth.js",
+  "rate-limiter.js",
+  "cache.js",
+  "agent.js",
+  "hydra-client.js",
+  "brain.js",
+  "task-runner.js",
+  "file-manager.js",
+  "connectors.js",
+  "pipeline.js",
+  "elevenlabs.js",
 );
 
 // ============================================================
@@ -16,7 +24,7 @@ importScripts(
 class FireScrapeError extends Error {
   constructor(message, code, details) {
     super(message);
-    this.name = 'FireScrapeError';
+    this.name = "FireScrapeError";
     this.code = code;
     this.details = details;
   }
@@ -37,15 +45,17 @@ const BackgroundTab = {
       try {
         const t = await chrome.tabs.get(this.tabId);
         if (t && t.id) return this.tabId;
-      } catch { /* tab chiuso, ricreiamo */ }
+      } catch {
+        /* tab chiuso, ricreiamo */
+      }
     }
     // Crea finestra minimizzata fuori schermo (no focus stealing)
     try {
       const win = await chrome.windows.create({
-        url: 'about:blank',
+        url: "about:blank",
         focused: false,
-        state: 'minimized',
-        type: 'normal',
+        state: "minimized",
+        type: "normal",
         width: 1024,
         height: 768,
         left: -2000,
@@ -55,7 +65,7 @@ const BackgroundTab = {
       this.tabId = win.tabs && win.tabs[0] ? win.tabs[0].id : null;
     } catch (err) {
       // Fallback: tab inattivo nella finestra corrente
-      const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
+      const tab = await chrome.tabs.create({ url: "about:blank", active: false });
       this.tabId = tab.id;
       this.windowId = tab.windowId;
     }
@@ -70,15 +80,19 @@ const BackgroundTab = {
     // Auto-accept popup consenso PRIMA che il caller scrappi.
     // Senza questo, Sherlock Deep Search (fs.readUrl → navigateBackground →
     // handleScrape) leggeva solo il banner cookie invece del contenuto reale.
-    try { await autoAcceptConsent(tabId); } catch (e) {
-      relayLog({ kind: 'consent', accepted: false, where: 'BackgroundTab.navigate', error: e?.message || String(e) });
+    try {
+      await autoAcceptConsent(tabId);
+    } catch (e) {
+      relayLog({ kind: "consent", accepted: false, where: "BackgroundTab.navigate", error: e?.message || String(e) });
     }
     return tabId;
   },
 
   async close() {
     if (this.tabId !== null) {
-      try { await chrome.tabs.remove(this.tabId); } catch {}
+      try {
+        await chrome.tabs.remove(this.tabId);
+      } catch {}
     }
     this.tabId = null;
     this.windowId = null;
@@ -91,8 +105,8 @@ const BackgroundTab = {
 const RELAY = {
   api: "https://wca-app.vercel.app/api/claude-bridge",
   polling: false,
-  pollTimer: false,      // boolean: true if alarm active
-  tabsTimer: false,      // boolean: true if alarm active
+  pollTimer: false, // boolean: true if alarm active
+  tabsTimer: false, // boolean: true if alarm active
   lastPollTs: 0,
   commandsExecuted: 0,
   lastCommand: null,
@@ -102,7 +116,7 @@ const RELAY = {
   maxFailures: 5,
   circuitOpen: false,
   circuitResetTimer: null,
-  hmacSecret: '',  // Configurabile dall'utente
+  hmacSecret: "", // Configurabile dall'utente
 };
 
 // ============================================================
@@ -110,24 +124,26 @@ const RELAY = {
 // ============================================================
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // ── WhatsApp Relay: webapp → background → WhatsApp tab ──
-  if (msg.type === 'wa-relay') {
-    handleWaRelay(msg).then(sendResponse).catch(err =>
-      sendResponse({ success: false, error: err.message })
-    );
+  if (msg.type === "wa-relay") {
+    handleWaRelay(msg)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
     return true;
   }
 
   // ── WhatsApp sidebar changed: WA tab → background → all webapp tabs ──
-  if (msg.type === 'wa-sidebar-changed') {
+  if (msg.type === "wa-sidebar-changed") {
     // Forward to all non-WhatsApp tabs (our webapp)
     chrome.tabs.query({}, (tabs) => {
       for (const tab of tabs) {
-        if (tab.id && tab.url && !tab.url.includes('web.whatsapp.com')) {
-          chrome.tabs.sendMessage(tab.id, {
-            type: 'wa-push-event',
-            event: 'sidebar-changed',
-            timestamp: msg.timestamp,
-          }).catch(() => {});
+        if (tab.id && tab.url && !tab.url.includes("web.whatsapp.com")) {
+          chrome.tabs
+            .sendMessage(tab.id, {
+              type: "wa-push-event",
+              event: "sidebar-changed",
+              timestamp: msg.timestamp,
+            })
+            .catch(() => {});
         }
       }
     });
@@ -136,112 +152,114 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   // ── LinkedIn Relay: webapp → background → LinkedIn tab ──
-  if (msg.type === 'li-relay') {
-    handleLiRelay(msg).then(sendResponse).catch(err =>
-      sendResponse({ success: false, error: err.message })
-    );
+  if (msg.type === "li-relay") {
+    handleLiRelay(msg)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
     return true;
   }
 
   const handlers = {
     // Scraping
-    'scrape':         handleScrape,
-    'crawl-start':    handleCrawlStart,
-    'crawl-stop':     handleCrawlStop,
-    'crawl-status':   handleCrawlStatus,
-    'map':            handleMap,
-    'batch':          handleBatch,
-    'screenshot':     handleScreenshot,
-    'extract':        handleExtract,
+    scrape: handleScrape,
+    "crawl-start": handleCrawlStart,
+    "crawl-stop": handleCrawlStop,
+    "crawl-status": handleCrawlStatus,
+    map: handleMap,
+    batch: handleBatch,
+    screenshot: handleScreenshot,
+    extract: handleExtract,
     // Agent
-    'agent-action':   handleAgentAction,
-    'agent-sequence': handleAgentSequence,
-    'agent-snapshot': handleAgentSnapshot,
+    "agent-action": handleAgentAction,
+    "agent-sequence": handleAgentSequence,
+    "agent-snapshot": handleAgentSnapshot,
     // Relay
-    'relay-start':    handleRelayStart,
-    'relay-stop':     handleRelayStop,
-    'relay-status':   handleRelayStatus,
-    'relay-send-tabs': handleRelaySendTabs,
+    "relay-start": handleRelayStart,
+    "relay-stop": handleRelayStop,
+    "relay-status": handleRelayStatus,
+    "relay-send-tabs": handleRelaySendTabs,
     // Brain
-    'brain-analyze':    handleBrainAnalyze,
-    'brain-think':      handleBrainThink,
-    'brain-stats':      handleBrainStats,
-    'brain-config':     handleBrainConfig,
-    'brain-get-config': handleBrainGetConfig,
+    "brain-analyze": handleBrainAnalyze,
+    "brain-think": handleBrainThink,
+    "brain-stats": handleBrainStats,
+    "brain-config": handleBrainConfig,
+    "brain-get-config": handleBrainGetConfig,
     // Library
-    'library-search': handleLibrarySearch,
-    'library-export': handleLibraryExport,
-    'library-clear':  handleLibraryClear,
+    "library-search": handleLibrarySearch,
+    "library-export": handleLibraryExport,
+    "library-clear": handleLibraryClear,
     // Stats
-    'cache-stats':    handleCacheStats,
-    'rate-stats':     handleRateStats,
-    'cache-clear':    handleCacheClear,
-    'cache-cleanup':  handleCacheCleanup,
+    "cache-stats": handleCacheStats,
+    "rate-stats": handleRateStats,
+    "cache-clear": handleCacheClear,
+    "cache-cleanup": handleCacheCleanup,
     // TaskRunner
-    'task-create':    handleTaskCreate,
-    'task-start':     handleTaskStart,
-    'task-pause':     handleTaskPause,
-    'task-cancel':    handleTaskCancel,
-    'task-retry':     handleTaskRetry,
-    'task-status':    handleTaskStatus,
-    'task-list':      handleTaskList,
-    'task-stats':     handleTaskStats,
+    "task-create": handleTaskCreate,
+    "task-start": handleTaskStart,
+    "task-pause": handleTaskPause,
+    "task-cancel": handleTaskCancel,
+    "task-retry": handleTaskRetry,
+    "task-status": handleTaskStatus,
+    "task-list": handleTaskList,
+    "task-stats": handleTaskStats,
     // FileManager
-    'file-download':  handleFileDownload,
-    'file-list':      handleFileList,
-    'file-search':    handleFileSearch,
-    'file-redownload': handleFileRedownload,
-    'file-stats':     handleFileStats,
+    "file-download": handleFileDownload,
+    "file-list": handleFileList,
+    "file-search": handleFileSearch,
+    "file-redownload": handleFileRedownload,
+    "file-stats": handleFileStats,
     // Connectors
-    'connector-list':      handleConnectorList,
-    'connector-configure': handleConnectorConfigure,
-    'connector-execute':   handleConnectorExecute,
-    'connector-test':      handleConnectorTest,
+    "connector-list": handleConnectorList,
+    "connector-configure": handleConnectorConfigure,
+    "connector-execute": handleConnectorExecute,
+    "connector-test": handleConnectorTest,
     // Pipeline
-    'pipeline-save':       handlePipelineSave,
-    'pipeline-load':       handlePipelineLoad,
-    'pipeline-list':       handlePipelineList,
-    'pipeline-execute':    handlePipelineExecute,
-    'pipeline-delete':     handlePipelineDelete,
-    'pipeline-templates':  handlePipelineTemplates,
-    'pipeline-stats':      handlePipelineStats,
+    "pipeline-save": handlePipelineSave,
+    "pipeline-load": handlePipelineLoad,
+    "pipeline-list": handlePipelineList,
+    "pipeline-execute": handlePipelineExecute,
+    "pipeline-delete": handlePipelineDelete,
+    "pipeline-templates": handlePipelineTemplates,
+    "pipeline-stats": handlePipelineStats,
     // ElevenLabs
-    'el-config-get':       handleElConfigGet,
-    'el-config-set':       handleElConfigSet,
-    'el-voices':           handleElVoices,
-    'el-voice-search':     handleElVoiceSearch,
-    'el-voices-by-lang':   handleElVoicesByLang,
-    'el-voice-preview':    handleElVoicePreview,
-    'el-models':           handleElModels,
-    'el-speak':            handleElSpeak,
-    'el-speak-page':       handleElSpeakPage,
-    'el-transcribe':       handleElTranscribe,
-    'el-agents-list':      handleElAgentsList,
-    'el-agent-create':     handleElAgentCreate,
-    'el-agent-update':     handleElAgentUpdate,
-    'el-agent-delete':     handleElAgentDelete,
-    'el-agent-local-list': handleElAgentLocalList,
-    'el-agent-local-save': handleElAgentLocalSave,
-    'el-agent-local-remove': handleElAgentLocalRemove,
-    'el-stats':            handleElStats,
-    'el-history':          handleElHistory,
-    'el-languages':        handleElLanguages,
+    "el-config-get": handleElConfigGet,
+    "el-config-set": handleElConfigSet,
+    "el-voices": handleElVoices,
+    "el-voice-search": handleElVoiceSearch,
+    "el-voices-by-lang": handleElVoicesByLang,
+    "el-voice-preview": handleElVoicePreview,
+    "el-models": handleElModels,
+    "el-speak": handleElSpeak,
+    "el-speak-page": handleElSpeakPage,
+    "el-transcribe": handleElTranscribe,
+    "el-agents-list": handleElAgentsList,
+    "el-agent-create": handleElAgentCreate,
+    "el-agent-update": handleElAgentUpdate,
+    "el-agent-delete": handleElAgentDelete,
+    "el-agent-local-list": handleElAgentLocalList,
+    "el-agent-local-save": handleElAgentLocalSave,
+    "el-agent-local-remove": handleElAgentLocalRemove,
+    "el-stats": handleElStats,
+    "el-history": handleElHistory,
+    "el-languages": handleElLanguages,
     // Google Search
-    'google-search':       handleGoogleSearch,
+    "google-search": handleGoogleSearch,
   };
   const handler = handlers[msg.action];
   if (handler) {
     handler(msg, sender)
       .then(sendResponse)
-      .catch(err => sendResponse({
-        error: err.message,
-        code: err.code || 'UNKNOWN',
-      }));
+      .catch((err) =>
+        sendResponse({
+          error: err.message,
+          code: err.code || "UNKNOWN",
+        }),
+      );
     return true;
   } else {
     sendResponse({
-      error: 'Unknown action: ' + msg.action,
-      code: 'UNKNOWN_ACTION',
+      error: "Unknown action: " + msg.action,
+      code: "UNKNOWN_ACTION",
     });
     return false;
   }
@@ -251,28 +269,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // WHATSAPP TAB RELAY
 // ============================================================
 async function handleWaRelay(msg) {
-  const tabs = await chrome.tabs.query({ url: '*://web.whatsapp.com/*' });
+  const tabs = await chrome.tabs.query({ url: "*://web.whatsapp.com/*" });
   if (!tabs.length) {
-    return { success: false, error: 'WhatsApp Web non è aperto. Apri web.whatsapp.com in un tab.' };
+    return { success: false, error: "WhatsApp Web non è aperto. Apri web.whatsapp.com in un tab." };
   }
   const waTab = tabs[0];
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
-      resolve({ success: false, error: 'WhatsApp tab timeout (60s)' });
+      resolve({ success: false, error: "WhatsApp tab timeout (60s)" });
     }, 60000);
-    chrome.tabs.sendMessage(waTab.id, {
-      type: 'wa-command',
-      action: msg.waAction,
-      requestId: msg.requestId,
-      payload: msg.payload || {},
-    }, (response) => {
-      clearTimeout(timeout);
-      if (chrome.runtime.lastError) {
-        resolve({ success: false, error: chrome.runtime.lastError.message });
-        return;
-      }
-      resolve(response || { success: false, error: 'No response from WA tab' });
-    });
+    chrome.tabs.sendMessage(
+      waTab.id,
+      {
+        type: "wa-command",
+        action: msg.waAction,
+        requestId: msg.requestId,
+        payload: msg.payload || {},
+      },
+      (response) => {
+        clearTimeout(timeout);
+        if (chrome.runtime.lastError) {
+          resolve({ success: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+        resolve(response || { success: false, error: "No response from WA tab" });
+      },
+    );
   });
 }
 
@@ -287,44 +309,57 @@ async function handleWaRelay(msg) {
 // verso una tab linkedin.com dove Partner Connect non inietta alcun
 // content script.
 const LI_BLOCKED_ACTIONS = new Set([
-  'sendMessage', 'sendMessageWithMethod', 'sendConnectionRequest',
-  'searchProfile', 'readLinkedInInbox', 'readLinkedInThread',
-  'backfillLinkedInThread', 'syncCookie', 'autoLogin',
-  'learnDom', 'diagnosticLinkedInDom', 'remapSendDom', 'getSendPlan',
-  'setConfig',
+  "sendMessage",
+  "sendMessageWithMethod",
+  "sendConnectionRequest",
+  "searchProfile",
+  "readLinkedInInbox",
+  "readLinkedInThread",
+  "backfillLinkedInThread",
+  "syncCookie",
+  "autoLogin",
+  "learnDom",
+  "diagnosticLinkedInDom",
+  "remapSendDom",
+  "getSendPlan",
+  "setConfig",
 ]);
 
 async function handleLiRelay(msg) {
   if (LI_BLOCKED_ACTIONS.has(msg.liAction)) {
     return {
       success: false,
-      error: 'linkedin_handled_by_dedicated_extension',
-      errorCode: 'LI_DELEGATED',
-      hint: 'Usa il canale from-webapp-li (estensione LinkedIn Cookie Sync).',
+      error: "linkedin_handled_by_dedicated_extension",
+      errorCode: "LI_DELEGATED",
+      hint: "Usa il canale from-webapp-li (estensione LinkedIn Cookie Sync).",
     };
   }
-  const tabs = await chrome.tabs.query({ url: '*://www.linkedin.com/*' });
+  const tabs = await chrome.tabs.query({ url: "*://www.linkedin.com/*" });
   if (!tabs.length) {
-    return { success: false, error: 'LinkedIn non è aperto.' };
+    return { success: false, error: "LinkedIn non è aperto." };
   }
   const liTab = tabs[0];
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
-      resolve({ success: false, error: 'LinkedIn tab timeout' });
+      resolve({ success: false, error: "LinkedIn tab timeout" });
     }, 60000);
-    chrome.tabs.sendMessage(liTab.id, {
-      type: 'li-command',
-      action: msg.liAction,
-      requestId: msg.requestId,
-      payload: msg.payload || {},
-    }, (response) => {
-      clearTimeout(timeout);
-      if (chrome.runtime.lastError) {
-        resolve({ success: false, error: chrome.runtime.lastError.message });
-        return;
-      }
-      resolve(response || { success: false, error: 'No response from LI tab' });
-    });
+    chrome.tabs.sendMessage(
+      liTab.id,
+      {
+        type: "li-command",
+        action: msg.liAction,
+        requestId: msg.requestId,
+        payload: msg.payload || {},
+      },
+      (response) => {
+        clearTimeout(timeout);
+        if (chrome.runtime.lastError) {
+          resolve({ success: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+        resolve(response || { success: false, error: "No response from LI tab" });
+      },
+    );
   });
 }
 
@@ -336,33 +371,37 @@ async function handleLiRelay(msg) {
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   // Initialize storage on install/update
-  const { relayPolling } = await chrome.storage.local.get(['relayPolling']);
+  const { relayPolling } = await chrome.storage.local.get(["relayPolling"]);
   if (relayPolling && !RELAY.pollTimer) {
     await startRelayAlarms();
   }
-  console.log('[FireScrape] Extension installed/updated');
+  console.log("[FireScrape] Extension installed/updated");
 });
 
 chrome.runtime.onStartup.addListener(async () => {
   // Restore state on browser restart
-  const { relayPolling } = await chrome.storage.local.get(['relayPolling']);
+  const { relayPolling } = await chrome.storage.local.get(["relayPolling"]);
   if (relayPolling && !RELAY.pollTimer) {
     await startRelayAlarms();
-    console.log('[FireScrape] Relay restored on startup');
+    console.log("[FireScrape] Relay restored on startup");
   }
 });
 
 // Handle alarms (MV3 required)
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === 'relay-poll') {
+  if (alarm.name === "relay-poll") {
     await relayPoll();
-  } else if (alarm.name === 'relay-tabs') {
+  } else if (alarm.name === "relay-tabs") {
     await relaySendTabs();
-  } else if (alarm.name === 'cache-cleanup') {
+  } else if (alarm.name === "cache-cleanup") {
     await Cache.cleanup();
-    try { await TaskRunner.cleanup(); } catch {}
-  } else if (alarm.name === 'task-runner-tick') {
-    try { await TaskRunner.restore(); } catch {}
+    try {
+      await TaskRunner.cleanup();
+    } catch {}
+  } else if (alarm.name === "task-runner-tick") {
+    try {
+      await TaskRunner.restore();
+    } catch {}
   }
 });
 
@@ -376,7 +415,7 @@ let nativePort = null;
 
 function connectNativeBridge() {
   try {
-    nativePort = chrome.runtime.connectNative('com.firescrape.bridge');
+    nativePort = chrome.runtime.connectNative("com.firescrape.bridge");
 
     nativePort.onMessage.addListener(async (msg) => {
       const bridgeId = msg._bridgeId;
@@ -384,38 +423,61 @@ function connectNativeBridge() {
 
       // Usa lo stesso handler map del messaging interno
       const handlers = {
-        'scrape': handleScrape, 'crawl-start': handleCrawlStart,
-        'crawl-stop': handleCrawlStop, 'crawl-status': handleCrawlStatus,
-        'map': handleMap, 'batch': handleBatch,
-        'screenshot': handleScreenshot, 'extract': handleExtract,
-        'agent-action': handleAgentAction, 'agent-sequence': handleAgentSequence,
-        'agent-snapshot': handleAgentSnapshot,
-        'relay-start': handleRelayStart, 'relay-stop': handleRelayStop,
-        'relay-status': handleRelayStatus, 'relay-send-tabs': handleRelaySendTabs,
-        'brain-analyze': handleBrainAnalyze, 'brain-think': handleBrainThink,
-        'brain-stats': handleBrainStats, 'brain-config': handleBrainConfig,
-        'brain-get-config': handleBrainGetConfig,
-        'library-search': handleLibrarySearch, 'library-export': handleLibraryExport,
-        'library-clear': handleLibraryClear,
-        'cache-stats': handleCacheStats, 'rate-stats': handleRateStats,
-        'cache-clear': handleCacheClear, 'cache-cleanup': handleCacheCleanup,
+        scrape: handleScrape,
+        "crawl-start": handleCrawlStart,
+        "crawl-stop": handleCrawlStop,
+        "crawl-status": handleCrawlStatus,
+        map: handleMap,
+        batch: handleBatch,
+        screenshot: handleScreenshot,
+        extract: handleExtract,
+        "agent-action": handleAgentAction,
+        "agent-sequence": handleAgentSequence,
+        "agent-snapshot": handleAgentSnapshot,
+        "relay-start": handleRelayStart,
+        "relay-stop": handleRelayStop,
+        "relay-status": handleRelayStatus,
+        "relay-send-tabs": handleRelaySendTabs,
+        "brain-analyze": handleBrainAnalyze,
+        "brain-think": handleBrainThink,
+        "brain-stats": handleBrainStats,
+        "brain-config": handleBrainConfig,
+        "brain-get-config": handleBrainGetConfig,
+        "library-search": handleLibrarySearch,
+        "library-export": handleLibraryExport,
+        "library-clear": handleLibraryClear,
+        "cache-stats": handleCacheStats,
+        "rate-stats": handleRateStats,
+        "cache-clear": handleCacheClear,
+        "cache-cleanup": handleCacheCleanup,
         // TaskRunner
-        'task-create': handleTaskCreate, 'task-start': handleTaskStart,
-        'task-pause': handleTaskPause, 'task-cancel': handleTaskCancel,
-        'task-retry': handleTaskRetry, 'task-status': handleTaskStatus,
-        'task-list': handleTaskList, 'task-stats': handleTaskStats,
+        "task-create": handleTaskCreate,
+        "task-start": handleTaskStart,
+        "task-pause": handleTaskPause,
+        "task-cancel": handleTaskCancel,
+        "task-retry": handleTaskRetry,
+        "task-status": handleTaskStatus,
+        "task-list": handleTaskList,
+        "task-stats": handleTaskStats,
         // FileManager
-        'file-download': handleFileDownload, 'file-list': handleFileList,
-        'file-search': handleFileSearch, 'file-redownload': handleFileRedownload,
-        'file-stats': handleFileStats,
+        "file-download": handleFileDownload,
+        "file-list": handleFileList,
+        "file-search": handleFileSearch,
+        "file-redownload": handleFileRedownload,
+        "file-stats": handleFileStats,
         // Connectors
-        'connector-list': handleConnectorList, 'connector-configure': handleConnectorConfigure,
-        'connector-execute': handleConnectorExecute, 'connector-test': handleConnectorTest,
+        "connector-list": handleConnectorList,
+        "connector-configure": handleConnectorConfigure,
+        "connector-execute": handleConnectorExecute,
+        "connector-test": handleConnectorTest,
         // Pipeline
-        'pipeline-save': handlePipelineSave, 'pipeline-load': handlePipelineLoad,
-        'pipeline-list': handlePipelineList, 'pipeline-execute': handlePipelineExecute,
-        'pipeline-delete': handlePipelineDelete, 'pipeline-templates': handlePipelineTemplates,
-        'pipeline-stats': handlePipelineStats,
+        "pipeline-save": handlePipelineSave,
+        "pipeline-load": handlePipelineLoad,
+        "pipeline-list": handlePipelineList,
+        "pipeline-execute": handlePipelineExecute,
+        "pipeline-delete": handlePipelineDelete,
+        "pipeline-templates": handlePipelineTemplates,
+        "pipeline-stats": handlePipelineStats,
       };
 
       const handler = handlers[msg.action];
@@ -424,10 +486,10 @@ function connectNativeBridge() {
         if (handler) {
           response = await handler(msg);
         } else {
-          response = { error: 'Unknown action: ' + msg.action, code: 'UNKNOWN_ACTION' };
+          response = { error: "Unknown action: " + msg.action, code: "UNKNOWN_ACTION" };
         }
       } catch (err) {
-        response = { error: err.message, code: err.code || 'UNKNOWN' };
+        response = { error: err.message, code: err.code || "UNKNOWN" };
       }
 
       // Rispondi con lo stesso bridgeId per matching request/response
@@ -440,15 +502,15 @@ function connectNativeBridge() {
 
     nativePort.onDisconnect.addListener(() => {
       const err = chrome.runtime.lastError;
-      console.log('[FireScrape] Native bridge disconnected', err?.message || '');
+      console.log("[FireScrape] Native bridge disconnected", err?.message || "");
       nativePort = null;
       // Auto-reconnect dopo 5 secondi
       setTimeout(connectNativeBridge, 5000);
     });
 
-    console.log('[FireScrape] Native bridge connected');
+    console.log("[FireScrape] Native bridge connected");
   } catch (err) {
-    console.log('[FireScrape] Native bridge not available:', err.message);
+    console.log("[FireScrape] Native bridge not available:", err.message);
     nativePort = null;
   }
 }
@@ -460,7 +522,7 @@ connectNativeBridge();
 // UTILITIES
 // ============================================================
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function waitForTabLoad(tabId) {
@@ -470,7 +532,7 @@ function waitForTabLoad(tabId) {
       resolve();
     }, 15000);
     function listener(id, info) {
-      if (id === tabId && info.status === 'complete') {
+      if (id === tabId && info.status === "complete") {
         clearTimeout(timeout);
         chrome.tabs.onUpdated.removeListener(listener);
         setTimeout(resolve, 500);
@@ -492,12 +554,14 @@ async function withTab(url, fn) {
     try {
       await autoAcceptConsent(tab.id);
     } catch (e) {
-      relayLog({ kind: 'consent', accepted: false, error: e?.message || String(e) });
+      relayLog({ kind: "consent", accepted: false, error: e?.message || String(e) });
     }
     return await fn(tab);
   } finally {
     if (tab?.id) {
-      try { await chrome.tabs.remove(tab.id); } catch {}
+      try {
+        await chrome.tabs.remove(tab.id);
+      } catch {}
     }
   }
 }
@@ -517,42 +581,78 @@ async function autoAcceptConsent(tabId) {
       target: { tabId, allFrames: true },
       func: () => {
         const KNOWN_SELECTORS = [
-          '#onetrust-accept-btn-handler',
-          '#accept-recommended-btn-handler',
-          '#CybotCookiebotDialogBodyLevelButtonAccept',
-          '#CybotCookiebotDialogBodyLevelButtonAcceptAll',
-          '#CybotCookiebotDialogBodyButtonAccept',
-          '#didomi-notice-agree-button',
-          '.didomi-continue-without-agreeing',
+          "#onetrust-accept-btn-handler",
+          "#accept-recommended-btn-handler",
+          "#CybotCookiebotDialogBodyLevelButtonAccept",
+          "#CybotCookiebotDialogBodyLevelButtonAcceptAll",
+          "#CybotCookiebotDialogBodyButtonAccept",
+          "#didomi-notice-agree-button",
+          ".didomi-continue-without-agreeing",
           '.qc-cmp2-summary-buttons button[mode="primary"]',
-          'button.iubenda-cs-accept-btn',
-          '.cky-btn-accept',
+          "button.iubenda-cs-accept-btn",
+          ".cky-btn-accept",
           'button[data-testid="uc-accept-all-button"]',
-          '#truste-consent-button',
-          '#hs-eu-confirmation-button',
-          'button.fc-cta-consent',
-          '.cmplz-btn.cmplz-accept',
-          '#axeptio_btn_acceptAll',
+          "#truste-consent-button",
+          "#hs-eu-confirmation-button",
+          "button.fc-cta-consent",
+          ".cmplz-btn.cmplz-accept",
+          "#axeptio_btn_acceptAll",
           'button[aria-label*="accept all" i]',
           'button[aria-label*="accetta tutti" i]',
           'button[aria-label*="accept cookies" i]',
         ];
         const TEXT_PATTERNS = [
-          /^accept all$/i, /^accept$/i, /^i accept$/i, /^agree$/i, /^agree & continue$/i,
-          /^accetta tutti$/i, /^accetta$/i, /^accetto$/i, /^ho capito$/i, /^consenti$/i, /^acconsento$/i,
-          /^d'accord$/i, /^accepter$/i, /^tout accepter$/i, /^j'accepte$/i,
-          /^akzeptieren$/i, /^alle akzeptieren$/i, /^einverstanden$/i,
-          /^aceptar$/i, /^aceptar todo$/i, /^acepto$/i,
-          /^aceitar$/i, /^aceitar tudo$/i,
-          /^ok$/i, /^got it$/i, /^continue$/i,
+          /^accept all$/i,
+          /^accept$/i,
+          /^i accept$/i,
+          /^agree$/i,
+          /^agree & continue$/i,
+          /^accetta tutti$/i,
+          /^accetta$/i,
+          /^accetto$/i,
+          /^ho capito$/i,
+          /^consenti$/i,
+          /^acconsento$/i,
+          /^d'accord$/i,
+          /^accepter$/i,
+          /^tout accepter$/i,
+          /^j'accepte$/i,
+          /^akzeptieren$/i,
+          /^alle akzeptieren$/i,
+          /^einverstanden$/i,
+          /^aceptar$/i,
+          /^aceptar todo$/i,
+          /^acepto$/i,
+          /^aceitar$/i,
+          /^aceitar tudo$/i,
+          /^ok$/i,
+          /^got it$/i,
+          /^continue$/i,
         ];
         // Blocklist: NON cliccare mai su questi (commerciali / contrari).
         const BLOCK_PATTERNS = [
-          /reject/i, /decline/i, /deny/i, /rifiuta/i, /no,?\s*thanks/i,
-          /manage/i, /preferenze/i, /settings/i, /options?/i, /personalizza/i, /scegli/i,
-          /subscribe/i, /sign\s*up/i, /register/i, /login/i, /sign\s*in/i,
-          /buy/i, /checkout/i, /add to cart/i, /acquista/i,
-          /save (my )?choices/i, /salva (le )?preferenze/i,
+          /reject/i,
+          /decline/i,
+          /deny/i,
+          /rifiuta/i,
+          /no,?\s*thanks/i,
+          /manage/i,
+          /preferenze/i,
+          /settings/i,
+          /options?/i,
+          /personalizza/i,
+          /scegli/i,
+          /subscribe/i,
+          /sign\s*up/i,
+          /register/i,
+          /login/i,
+          /sign\s*in/i,
+          /buy/i,
+          /checkout/i,
+          /add to cart/i,
+          /acquista/i,
+          /save (my )?choices/i,
+          /salva (le )?preferenze/i,
         ];
 
         // Raccoglie candidati anche da shadow DOM aperti.
@@ -564,7 +664,7 @@ async function autoAcceptConsent(tabId) {
           } catch {}
           // Shadow roots aperti
           try {
-            root.querySelectorAll('*').forEach((el) => {
+            root.querySelectorAll("*").forEach((el) => {
               if (el.shadowRoot) collectCandidates(el.shadowRoot, out, depth + 1);
             });
           } catch {}
@@ -590,13 +690,15 @@ async function autoAcceptConsent(tabId) {
 
         function tryClick(el) {
           try {
-            el.scrollIntoView({ block: 'center' });
-            el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-            el.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, cancelable: true, view: window }));
-            el.dispatchEvent(new MouseEvent('click',     { bubbles: true, cancelable: true, view: window }));
-            if (typeof el.click === 'function') el.click();
+            el.scrollIntoView({ block: "center" });
+            el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window }));
+            el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window }));
+            el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+            if (typeof el.click === "function") el.click();
             return true;
-          } catch { return false; }
+          } catch {
+            return false;
+          }
         }
 
         function attempt() {
@@ -604,7 +706,7 @@ async function autoAcceptConsent(tabId) {
           for (const sel of KNOWN_SELECTORS) {
             const el = document.querySelector(sel);
             if (el && visible(el)) {
-              if (tryClick(el)) return { selector: sel, text: (el.innerText || '').slice(0, 40) };
+              if (tryClick(el)) return { selector: sel, text: (el.innerText || "").slice(0, 40) };
             }
           }
           // 2) candidati testuali con scoring (light DOM + shadow DOM aperti)
@@ -613,12 +715,14 @@ async function autoAcceptConsent(tabId) {
           let best = null;
           for (const el of candidates) {
             if (!visible(el)) continue;
-            const txt = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim();
+            const txt = (el.innerText || el.value || el.getAttribute("aria-label") || "").trim();
             if (!txt || txt.length > 60) continue;
             // Filtro grezzo: deve assomigliare a un consenso
             const looksConsent =
               TEXT_PATTERNS.some((re) => re.test(txt)) ||
-              /accept|agree|consent|allow|accetta|accetto|consenti|acconsento|aceptar|aceitar|akzept|d'accord|tout accepter|alle akzeptieren/i.test(txt);
+              /accept|agree|consent|allow|accetta|accetto|consenti|acconsento|aceptar|aceitar|akzept|d'accord|tout accepter|alle akzeptieren/i.test(
+                txt,
+              );
             if (!looksConsent) continue;
             const s = scoreCandidate(txt);
             if (s <= 0) continue;
@@ -634,9 +738,9 @@ async function autoAcceptConsent(tabId) {
         // si rendono usando overflow:hidden e cancellarlo prima li nasconde).
         function unlockScroll() {
           try {
-            document.documentElement.style.overflow = '';
-            document.body.style.overflow = '';
-            document.body.classList.remove('modal-open', 'no-scroll', 'noscroll', 'overflow-hidden');
+            document.documentElement.style.overflow = "";
+            document.body.style.overflow = "";
+            document.body.classList.remove("modal-open", "no-scroll", "noscroll", "overflow-hidden");
           } catch {}
         }
 
@@ -659,7 +763,7 @@ async function autoAcceptConsent(tabId) {
             attempts,
           };
         })();
-      }
+      },
     });
     // results contiene un entry per frame (allFrames:true). Considera "accettato"
     // se almeno un frame ha cliccato qualcosa.
@@ -669,7 +773,7 @@ async function autoAcceptConsent(tabId) {
       ? { accepted: true, selector: accepted.selector, text: accepted.text, frames: arr.length }
       : { accepted: false, frames: arr.length };
     if (summary.accepted) {
-      relayLog({ kind: 'consent', ...summary });
+      relayLog({ kind: "consent", ...summary });
       // Settle per lasciare al sito il tempo di ri-renderizzare il contenuto reale
       await sleep(900);
     }
@@ -683,7 +787,7 @@ async function autoAcceptConsent(tabId) {
 function isValidHttpUrl(str) {
   try {
     const url = new URL(str);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
   }
@@ -692,16 +796,16 @@ function isValidHttpUrl(str) {
 async function scrapeTab(tabId) {
   const results = await chrome.scripting.executeScript({
     target: { tabId },
-    files: ['content.js']
+    files: ["content.js"],
   });
-  if (!results?.[0]?.result) throw new FireScrapeError('Nessun contenuto estratto', 'SCRAPE_EMPTY');
+  if (!results?.[0]?.result) throw new FireScrapeError("Nessun contenuto estratto", "SCRAPE_EMPTY");
   return results[0].result;
 }
 
 async function extractLinks(tabId) {
   const results = await chrome.scripting.executeScript({
     target: { tabId },
-    func: () => [...document.querySelectorAll('a[href]')].map(a => a.href).filter(h => h.startsWith('http'))
+    func: () => [...document.querySelectorAll("a[href]")].map((a) => a.href).filter((h) => h.startsWith("http")),
   });
   return results?.[0]?.result || [];
 }
@@ -715,7 +819,7 @@ function relayLog(entry) {
 // SCRAPE PROTETTO (con cache + stealth)
 // ============================================================
 async function protectedScrape(url, options = {}) {
-  const { cacheType = 'domain', skipCache = false } = options;
+  const { cacheType = "domain", skipCache = false } = options;
   if (!skipCache) {
     const cached = await Cache.get(cacheType, url);
     if (cached) return { ...cached, _fromCache: true };
@@ -727,7 +831,7 @@ async function protectedScrape(url, options = {}) {
   }
 
   return await withTab(url, async (tab) => {
-    await Stealth.browseNaturally(tab.id, { scroll: true, readTime: 'read' });
+    await Stealth.browseNaturally(tab.id, { scroll: true, readTime: "read" });
     await Stealth.domainAwareDelay(url);
     const result = await scrapeTab(tab.id);
     RateLimiter.recordRequest(url);
@@ -740,14 +844,14 @@ async function protectedScrape(url, options = {}) {
 // 0. GOOGLE SEARCH (background tab)
 // ============================================================
 async function handleGoogleSearch(msg) {
-  if (!msg.query) throw new FireScrapeError('Query mancante', 'NO_QUERY');
+  if (!msg.query) throw new FireScrapeError("Query mancante", "NO_QUERY");
   const limit = msg.limit || 5;
-  const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(msg.query) + '&num=' + limit;
+  const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(msg.query) + "&num=" + limit;
 
   // Check cache first
-  const cacheKey = 'gsearch:v2:' + msg.query;
+  const cacheKey = "gsearch:v2:" + msg.query;
   if (!msg.skipCache) {
-    const cached = await Cache.get('search', cacheKey);
+    const cached = await Cache.get("search", cacheKey);
     if (cached) return { ...cached, _fromCache: true };
   }
 
@@ -768,9 +872,18 @@ async function handleGoogleSearch(msg) {
           try {
             const parsed = new URL(href);
             const host = parsed.hostname.toLowerCase();
-            const isGoogleHost = host === 'google.com' || host.startsWith('google.') || host.startsWith('www.google.') || host.endsWith('.google.com');
-            if (isGoogleHost && (parsed.pathname === '/url' || parsed.pathname === '/imgres')) {
-              return parsed.searchParams.get('url') || parsed.searchParams.get('q') || parsed.searchParams.get('imgurl') || href;
+            const isGoogleHost =
+              host === "google.com" ||
+              host.startsWith("google.") ||
+              host.startsWith("www.google.") ||
+              host.endsWith(".google.com");
+            if (isGoogleHost && (parsed.pathname === "/url" || parsed.pathname === "/imgres")) {
+              return (
+                parsed.searchParams.get("url") ||
+                parsed.searchParams.get("q") ||
+                parsed.searchParams.get("imgurl") ||
+                href
+              );
             }
             return parsed.href;
           } catch (e) {
@@ -778,33 +891,36 @@ async function handleGoogleSearch(msg) {
           }
         };
 
-        const els = document.querySelectorAll('div.g, div[data-sokoban-container]');
+        const els = document.querySelectorAll("div.g, div[data-sokoban-container]");
         for (let i = 0; i < els.length && items.length < maxResults; i++) {
-          const linkEl = els[i].querySelector('a[href]');
+          const linkEl = els[i].querySelector("a[href]");
           if (!linkEl) continue;
           const url = unwrapGoogleUrl(linkEl.href);
           if (!url) continue;
           if (/google\.com\/(search|maps|imgres|sorry)/.test(url)) continue;
-          const titleEl = els[i].querySelector('h3');
-          const title = titleEl ? titleEl.textContent.trim() : '';
-          const snippetEl = els[i].querySelector('[data-sncf], .VwiC3b, .IsZvec, span.st');
-          const description = snippetEl ? snippetEl.textContent.trim() : '';
+          const titleEl = els[i].querySelector("h3");
+          const title = titleEl ? titleEl.textContent.trim() : "";
+          const snippetEl = els[i].querySelector("[data-sncf], .VwiC3b, .IsZvec, span.st");
+          const description = snippetEl ? snippetEl.textContent.trim() : "";
           items.push({ url: url, title: title, description: description });
         }
         return items;
       },
-      args: [limit]
+      args: [limit],
     });
 
     const data = (results[0] && results[0].result) || [];
     RateLimiter.recordRequest(searchUrl);
     const response = { success: true, data: data, query: msg.query, count: data.length };
-    await Cache.set('search', cacheKey, response);
+    await Cache.set("search", cacheKey, response);
     return response;
   } catch (err) {
-    throw new FireScrapeError('Google search failed: ' + err.message, 'SEARCH_ERROR');
+    throw new FireScrapeError("Google search failed: " + err.message, "SEARCH_ERROR");
   } finally {
-    if (tab) try { chrome.tabs.remove(tab.id); } catch (e) {}
+    if (tab)
+      try {
+        chrome.tabs.remove(tab.id);
+      } catch (e) {}
   }
 }
 
@@ -823,27 +939,34 @@ async function handleScrape(msg) {
   } else if (BackgroundTab.tabId !== null) {
     try {
       const bt = await chrome.tabs.get(BackgroundTab.tabId);
-      if (bt && bt.url && !/^about:/.test(bt.url)) { tabId = bt.id; url = bt.url; }
-    } catch { /* ignore */ }
+      if (bt && bt.url && !/^about:/.test(bt.url)) {
+        tabId = bt.id;
+        url = bt.url;
+      }
+    } catch {
+      /* ignore */
+    }
   }
   if (tabId === null) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+    if (!tab?.id) throw new FireScrapeError("Nessun tab attivo", "NO_TAB");
     tabId = tab.id;
     url = tab.url;
   }
   if (!msg.skipCache) {
-    const cached = await Cache.get('domain', url);
+    const cached = await Cache.get("domain", url);
     if (cached) return { ...cached, _fromCache: true };
   }
   // Rete di sicurezza: anche se navigate non ha già accettato (es. caller
   // diverso da BackgroundTab.navigate), proviamo qui prima di estrarre.
-  try { await autoAcceptConsent(tabId); } catch (e) {
-    relayLog({ kind: 'consent', accepted: false, where: 'handleScrape', error: e?.message || String(e) });
+  try {
+    await autoAcceptConsent(tabId);
+  } catch (e) {
+    relayLog({ kind: "consent", accepted: false, where: "handleScrape", error: e?.message || String(e) });
   }
   const result = await scrapeTab(tabId);
   RateLimiter.recordRequest(url);
-  await Cache.set('domain', url, result);
+  await Cache.set("domain", url, result);
   return result;
 }
 
@@ -851,13 +974,16 @@ async function handleScrape(msg) {
 // 2. CRAWL (con stato persistente)
 // ============================================================
 const crawlState = {
-  queue: [], visited: new Set(), results: [], running: false,
+  queue: [],
+  visited: new Set(),
+  results: [],
+  running: false,
   config: { maxPages: 50, delay: 800, sameDomain: true, maxDepth: 3 },
 };
 
 async function handleCrawlStart(msg) {
-  if (crawlState.running) throw new FireScrapeError('Crawl già in corso', 'CRAWL_RUNNING');
-  if (!msg.url || !isValidHttpUrl(msg.url)) throw new FireScrapeError('URL non valido', 'INVALID_URL');
+  if (crawlState.running) throw new FireScrapeError("Crawl già in corso", "CRAWL_RUNNING");
+  if (!msg.url || !isValidHttpUrl(msg.url)) throw new FireScrapeError("URL non valido", "INVALID_URL");
 
   const config = { ...crawlState.config, ...msg.config };
   crawlState.config = config;
@@ -876,7 +1002,7 @@ async function handleCrawlStart(msg) {
 
       let tab = null;
       try {
-        const cached = await Cache.get('domain', url);
+        const cached = await Cache.get("domain", url);
         if (cached) {
           crawlState.results.push({ url, depth, ...cached, _fromCache: true });
           broadcastProgress();
@@ -891,7 +1017,9 @@ async function handleCrawlStart(msg) {
 
         tab = await chrome.tabs.create({ url, active: false });
         await waitForTabLoad(tab.id);
-        try { await autoAcceptConsent(tab.id); } catch {}
+        try {
+          await autoAcceptConsent(tab.id);
+        } catch {}
         await Stealth.scrollTab(tab.id);
         await sleep(500 + Math.random() * 1000);
         const result = await scrapeTab(tab.id);
@@ -900,7 +1028,7 @@ async function handleCrawlStart(msg) {
         tab = null; // Segnala che il tab è stato chiuso
 
         RateLimiter.recordRequest(url);
-        await Cache.set('domain', url, result);
+        await Cache.set("domain", url, result);
         crawlState.results.push({ url, depth, ...result });
 
         const newLinks = [];
@@ -908,9 +1036,10 @@ async function handleCrawlStart(msg) {
           try {
             const lu = new URL(link);
             if (config.sameDomain && lu.hostname !== startDomain) continue;
-            lu.hash = '';
+            lu.hash = "";
             const clean = lu.href;
-            if (crawlState.visited.has(clean) || /\.(pdf|jpg|png|gif|zip|mp4|mp3|exe|css|js)$/i.test(lu.pathname)) continue;
+            if (crawlState.visited.has(clean) || /\.(pdf|jpg|png|gif|zip|mp4|mp3|exe|css|js)$/i.test(lu.pathname))
+              continue;
             newLinks.push({ url: clean, depth: depth + 1 });
           } catch {}
         }
@@ -921,19 +1050,21 @@ async function handleCrawlStart(msg) {
       } finally {
         // Cleanup: chiudi tab se ancora aperto
         if (tab?.id) {
-          try { await chrome.tabs.remove(tab.id); } catch {}
+          try {
+            await chrome.tabs.remove(tab.id);
+          } catch {}
         }
       }
     }
     crawlState.running = false;
     broadcastProgress();
   })();
-  return { status: 'started', config };
+  return { status: "started", config };
 }
 
 async function handleCrawlStop() {
   crawlState.running = false;
-  return { status: 'stopped', pages: crawlState.results.length };
+  return { status: "stopped", pages: crawlState.results.length };
 }
 
 async function handleCrawlStatus() {
@@ -947,20 +1078,22 @@ async function handleCrawlStatus() {
 }
 
 function broadcastProgress() {
-  chrome.runtime.sendMessage({
-    action: 'crawl-progress',
-    visited: crawlState.visited.size,
-    queued: crawlState.queue.length,
-    results: crawlState.results.length,
-    running: crawlState.running,
-  }).catch(() => {});
+  chrome.runtime
+    .sendMessage({
+      action: "crawl-progress",
+      visited: crawlState.visited.size,
+      queued: crawlState.queue.length,
+      results: crawlState.results.length,
+      running: crawlState.running,
+    })
+    .catch(() => {});
 }
 
 // ============================================================
 // 3. MAP (con try-finally)
 // ============================================================
 async function handleMap(msg) {
-  if (!msg.url || !isValidHttpUrl(msg.url)) throw new FireScrapeError('URL non valido', 'INVALID_URL');
+  if (!msg.url || !isValidHttpUrl(msg.url)) throw new FireScrapeError("URL non valido", "INVALID_URL");
   const startUrl = msg.url;
   const maxUrls = Math.min(msg.maxUrls || 200, 500);
   const startDomain = new URL(startUrl).hostname;
@@ -973,11 +1106,14 @@ async function handleMap(msg) {
     if (visited.has(url)) continue;
     visited.add(url);
 
-    const cacheKey = 'map:' + url;
-    const cached = await Cache.get('search', cacheKey);
+    const cacheKey = "map:" + url;
+    const cached = await Cache.get("search", cacheKey);
     if (cached) {
       urlMap.push(cached);
-      if (cached.links) cached.links.forEach(l => { if (!visited.has(l)) queue.push(l); });
+      if (cached.links)
+        cached.links.forEach((l) => {
+          if (!visited.has(l)) queue.push(l);
+        });
       continue;
     }
 
@@ -988,19 +1124,21 @@ async function handleMap(msg) {
     try {
       tab = await chrome.tabs.create({ url, active: false });
       await waitForTabLoad(tab.id);
-      try { await autoAcceptConsent(tab.id); } catch {}
+      try {
+        await autoAcceptConsent(tab.id);
+      } catch {}
       await sleep(Stealth.gaussianRandom(1500, 500));
 
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => ({
           title: document.title,
-          links: [...document.querySelectorAll('a[href]')].map(a => a.href).filter(h => h.startsWith('http')),
+          links: [...document.querySelectorAll("a[href]")].map((a) => a.href).filter((h) => h.startsWith("http")),
           meta: {
-            description: document.querySelector('meta[name="description"]')?.content || '',
-            type: document.querySelector('meta[property="og:type"]')?.content || 'page',
-          }
-        })
+            description: document.querySelector('meta[name="description"]')?.content || "",
+            type: document.querySelector('meta[property="og:type"]')?.content || "page",
+          },
+        }),
       });
 
       RateLimiter.recordRequest(url);
@@ -1008,7 +1146,7 @@ async function handleMap(msg) {
       if (data) {
         const entry = { url, title: data.title, ...data.meta, linksCount: data.links.length, links: data.links };
         urlMap.push(entry);
-        await Cache.set('search', cacheKey, entry);
+        await Cache.set("search", cacheKey, entry);
         for (const link of data.links) {
           try {
             const u = new URL(link);
@@ -1018,8 +1156,13 @@ async function handleMap(msg) {
           } catch {}
         }
       }
-    } catch {} finally {
-      if (tab?.id) { try { await chrome.tabs.remove(tab.id); } catch {} }
+    } catch {
+    } finally {
+      if (tab?.id) {
+        try {
+          await chrome.tabs.remove(tab.id);
+        } catch {}
+      }
     }
   }
   return { urls: urlMap.map(({ links, ...rest }) => rest), total: urlMap.length };
@@ -1029,8 +1172,8 @@ async function handleMap(msg) {
 // 4. BATCH (con try-finally per ogni tab)
 // ============================================================
 async function handleBatch(msg) {
-  const urls = (msg.urls || []).filter(u => isValidHttpUrl(u));
-  if (urls.length === 0) throw new FireScrapeError('Nessun URL valido', 'NO_URLS');
+  const urls = (msg.urls || []).filter((u) => isValidHttpUrl(u));
+  if (urls.length === 0) throw new FireScrapeError("Nessun URL valido", "NO_URLS");
   const concurrency = Math.min(msg.concurrency || 3, 5);
   const results = [];
   const shuffled = Stealth.shuffleUrls(urls);
@@ -1039,21 +1182,23 @@ async function handleBatch(msg) {
     const batch = shuffled.slice(i, i + concurrency);
     const promises = batch.map(async (url) => {
       try {
-        const cached = await Cache.get('domain', url);
+        const cached = await Cache.get("domain", url);
         if (cached) return { url, ...cached, _fromCache: true };
         const check = RateLimiter.canRequest(url);
         if (!check.allowed) await sleep(Math.min(check.retryAfter, 15000));
 
         return await withTab(url, async (tab) => {
-          await Stealth.browseNaturally(tab.id, { scroll: true, readTime: 'quick' });
+          await Stealth.browseNaturally(tab.id, { scroll: true, readTime: "quick" });
           const result = await scrapeTab(tab.id);
           RateLimiter.recordRequest(url);
-          await Cache.set('domain', url, result);
+          await Cache.set("domain", url, result);
           return { url, ...result };
         });
-      } catch (err) { return { url, error: err.message }; }
+      } catch (err) {
+        return { url, error: err.message };
+      }
     });
-    results.push(...await Promise.all(promises));
+    results.push(...(await Promise.all(promises)));
     if (i + concurrency < shuffled.length) await sleep(Stealth.gaussianRandom(3000, 1000));
   }
   return { results, total: results.length };
@@ -1064,31 +1209,34 @@ async function handleBatch(msg) {
 // ============================================================
 async function handleScreenshot(msg) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
-  const format = msg.format || 'png';
+  if (!tab?.id) throw new FireScrapeError("Nessun tab attivo", "NO_TAB");
+  const format = msg.format || "png";
   const quality = msg.quality || 90;
   if (msg.fullPage) return await captureFullPage(tab.id, format, quality);
-  const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: format === 'jpg' ? 'jpeg' : 'png', quality });
+  const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: format === "jpg" ? "jpeg" : "png", quality });
   return { screenshot: dataUrl, format, url: tab.url, title: tab.title };
 }
 
 async function captureFullPage(tabId, format, quality) {
   const dims = await chrome.scripting.executeScript({
     target: { tabId },
-    func: () => ({ scrollHeight: document.documentElement.scrollHeight, clientHeight: document.documentElement.clientHeight })
+    func: () => ({
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+    }),
   });
   const { scrollHeight, clientHeight } = dims[0].result;
   const screenshots = [];
   let scrollY = 0;
   let iterations = 0;
-  const maxIterations = 50;  // Prevent infinite loop
+  const maxIterations = 50; // Prevent infinite loop
 
   while (scrollY < scrollHeight && iterations < maxIterations) {
     iterations++;
     await chrome.scripting.executeScript({ target: { tabId }, func: (y) => window.scrollTo(0, y), args: [scrollY] });
     await sleep(200);
     screenshots.push({
-      dataUrl: await chrome.tabs.captureVisibleTab(null, { format: format === 'jpg' ? 'jpeg' : 'png', quality }),
+      dataUrl: await chrome.tabs.captureVisibleTab(null, { format: format === "jpg" ? "jpeg" : "png", quality }),
       scrollY,
     });
     scrollY += clientHeight;
@@ -1107,15 +1255,17 @@ async function handleExtract(msg) {
     try {
       const bt = await chrome.tabs.get(BackgroundTab.tabId);
       if (bt && bt.url && !/^about:/.test(bt.url)) tabId = bt.id;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   if (tabId === null) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+    if (!tab?.id) throw new FireScrapeError("Nessun tab attivo", "NO_TAB");
     tabId = tab.id;
   }
-  if (!msg.schema || typeof msg.schema !== 'object') {
-    throw new FireScrapeError('Schema non valido', 'INVALID_SCHEMA');
+  if (!msg.schema || typeof msg.schema !== "object") {
+    throw new FireScrapeError("Schema non valido", "INVALID_SCHEMA");
   }
 
   const results = await chrome.scripting.executeScript({
@@ -1128,15 +1278,20 @@ async function handleExtract(msg) {
         // ReDoS protection: limit selector length
         if (selector.length > 200) continue;
         try {
-          if (selector.startsWith('//')) {
+          if (selector.startsWith("//")) {
             const r = document.evaluate(selector, document, null, XPathResult.STRING_TYPE, null);
             extracted[key] = r.stringValue.trim();
-          } else if (selector.startsWith('regex:')) {
-            const m = document.body.textContent.match(new RegExp(selector.replace('regex:', ''), 'i'));
+          } else if (selector.startsWith("regex:")) {
+            const m = document.body.textContent.match(new RegExp(selector.replace("regex:", ""), "i"));
             extracted[key] = m ? m[1] || m[0] : null;
           } else {
             const els = document.querySelectorAll(selector);
-            extracted[key] = els.length === 0 ? null : els.length === 1 ? els[0].textContent.trim() : [...els].map(e => e.textContent.trim());
+            extracted[key] =
+              els.length === 0
+                ? null
+                : els.length === 1
+                  ? els[0].textContent.trim()
+                  : [...els].map((e) => e.textContent.trim());
           }
         } catch {
           extracted[key] = null;
@@ -1144,10 +1299,13 @@ async function handleExtract(msg) {
       }
       return extracted;
     },
-    args: [msg.schema]
+    args: [msg.schema],
   });
-  let finalUrl = '';
-  try { const t = await chrome.tabs.get(tabId); finalUrl = t.url || ''; } catch {}
+  let finalUrl = "";
+  try {
+    const t = await chrome.tabs.get(tabId);
+    finalUrl = t.url || "";
+  } catch {}
   return { data: results?.[0]?.result, url: finalUrl };
 }
 
@@ -1157,37 +1315,41 @@ async function handleExtract(msg) {
 async function handleAgentAction(msg) {
   const step = msg.step || {};
   // Fast path: navigate in background (riusa singleton tab nascosto)
-  if (step.action === 'navigate' && (step.background === true || step.reuseTab === true)) {
-    if (!step.url) throw new FireScrapeError('URL mancante', 'NO_URL');
+  if (step.action === "navigate" && (step.background === true || step.reuseTab === true)) {
+    if (!step.url) throw new FireScrapeError("URL mancante", "NO_URL");
     const tabId = await BackgroundTab.navigate(step.url);
-    const result = { ok: true, action: 'navigate', url: step.url, tabId, background: true };
-    relayLog({ type: 'agent-action', step, result });
+    const result = { ok: true, action: "navigate", url: step.url, tabId, background: true };
+    relayLog({ type: "agent-action", step, result });
     return result;
   }
   // Default: usa tab attivo
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+  if (!tab?.id) throw new FireScrapeError("Nessun tab attivo", "NO_TAB");
   const result = await Agent.executeAction(tab.id, step);
-  relayLog({ type: 'agent-action', step, result });
+  relayLog({ type: "agent-action", step, result });
   return result;
 }
 
 async function handleAgentSequence(msg) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+  if (!tab?.id) throw new FireScrapeError("Nessun tab attivo", "NO_TAB");
   if (!Array.isArray(msg.steps) || msg.steps.length > 50) {
-    throw new FireScrapeError('Steps non valido (max 50)', 'INVALID_STEPS');
+    throw new FireScrapeError("Steps non valido (max 50)", "INVALID_STEPS");
   }
   const result = await Agent.executeSequence(tab.id, msg.steps);
-  relayLog({ type: 'agent-sequence', stepsCount: msg.steps.length, result: { ok: result.ok, totalSteps: result.totalSteps } });
+  relayLog({
+    type: "agent-sequence",
+    stepsCount: msg.steps.length,
+    result: { ok: result.ok, totalSteps: result.totalSteps },
+  });
   return result;
 }
 
 async function handleAgentSnapshot() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+  if (!tab?.id) throw new FireScrapeError("Nessun tab attivo", "NO_TAB");
   const results = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: Agent.snapshotScript() });
-  return results?.[0]?.result || { ok: false, error: 'Nessun risultato' };
+  return results?.[0]?.result || { ok: false, error: "Nessun risultato" };
 }
 
 // ============================================================
@@ -1200,8 +1362,8 @@ async function startRelayAlarms() {
   RELAY.circuitOpen = false;
 
   // Create alarms (if not already created)
-  await chrome.alarms.create('relay-poll', { periodInMinutes: 0.05 });  // ~3 seconds
-  await chrome.alarms.create('relay-tabs', { periodInMinutes: 0.2 });   // ~12 seconds
+  await chrome.alarms.create("relay-poll", { periodInMinutes: 0.05 }); // ~3 seconds
+  await chrome.alarms.create("relay-tabs", { periodInMinutes: 0.2 }); // ~12 seconds
 
   RELAY.pollTimer = true;
   RELAY.tabsTimer = true;
@@ -1211,30 +1373,33 @@ async function startRelayAlarms() {
 
   // Send tabs immediately
   await relaySendTabs();
-  relayLog({ type: 'relay', event: 'started' });
+  relayLog({ type: "relay", event: "started" });
 }
 
 async function handleRelayStart() {
-  if (RELAY.pollTimer) return { status: 'already_running' };
+  if (RELAY.pollTimer) return { status: "already_running" };
   await startRelayAlarms();
-  return { status: 'started' };
+  return { status: "started" };
 }
 
 async function handleRelayStop() {
-  await chrome.alarms.clear('relay-poll');
-  await chrome.alarms.clear('relay-tabs');
+  await chrome.alarms.clear("relay-poll");
+  await chrome.alarms.clear("relay-tabs");
 
   RELAY.pollTimer = false;
   RELAY.tabsTimer = false;
 
-  if (RELAY.circuitResetTimer) { clearTimeout(RELAY.circuitResetTimer); RELAY.circuitResetTimer = null; }
+  if (RELAY.circuitResetTimer) {
+    clearTimeout(RELAY.circuitResetTimer);
+    RELAY.circuitResetTimer = null;
+  }
   RELAY.circuitOpen = false;
 
   // Persist state
   await chrome.storage.local.set({ relayPolling: false });
 
-  relayLog({ type: 'relay', event: 'stopped' });
-  return { status: 'stopped' };
+  relayLog({ type: "relay", event: "stopped" });
+  return { status: "stopped" };
 }
 
 async function handleRelayStatus() {
@@ -1258,12 +1423,12 @@ async function handleRelaySendTabs() {
 // Circuit breaker: apri/chiudi
 function relayCircuitTrip() {
   RELAY.circuitOpen = true;
-  relayLog({ type: 'circuit-breaker', event: 'OPEN', failures: RELAY.consecutiveFailures });
+  relayLog({ type: "circuit-breaker", event: "OPEN", failures: RELAY.consecutiveFailures });
   // Reset automatico dopo 30 secondi
   RELAY.circuitResetTimer = setTimeout(() => {
     RELAY.circuitOpen = false;
     RELAY.consecutiveFailures = 0;
-    relayLog({ type: 'circuit-breaker', event: 'HALF-OPEN' });
+    relayLog({ type: "circuit-breaker", event: "HALF-OPEN" });
   }, 30000);
 }
 
@@ -1281,7 +1446,7 @@ async function relayPoll() {
       // VALIDAZIONE COMANDO
       const validation = CryptoUtils.validateCommand(data.command);
       if (!validation.valid) {
-        relayLog({ type: 'command-rejected', reason: validation.reason, command: data.command?.type });
+        relayLog({ type: "command-rejected", reason: validation.reason, command: data.command?.type });
         RELAY.polling = false;
         return;
       }
@@ -1291,38 +1456,38 @@ async function relayPoll() {
         const payload = JSON.stringify(data.command);
         const valid = await CryptoUtils.verify(payload, data.signature, RELAY.hmacSecret);
         if (!valid) {
-          relayLog({ type: 'command-rejected', reason: 'Firma HMAC non valida' });
+          relayLog({ type: "command-rejected", reason: "Firma HMAC non valida" });
           RELAY.polling = false;
           return;
         }
       } else if (RELAY.hmacSecret && !data.signature) {
         // HMAC required but not provided
-        relayLog({ type: 'command-rejected', reason: 'Firma HMAC mancante' });
+        relayLog({ type: "command-rejected", reason: "Firma HMAC mancante" });
         RELAY.polling = false;
         return;
       }
 
       RELAY.lastCommand = data.command;
       RELAY.commandsExecuted++;
-      relayLog({ type: 'command-in', command: data.command });
+      relayLog({ type: "command-in", command: data.command });
 
       const result = await relayExecuteCommand(data.command);
-      relayLog({ type: 'command-out', result: { ok: result.ok || !result.error } });
+      relayLog({ type: "command-out", result: { ok: result.ok || !result.error } });
 
       // Send result via POST body instead of GET query param
       try {
         await fetch(RELAY.api, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'done', result })
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "done", result }),
         });
       } catch (e) {
-        relayLog({ type: 'error', message: 'Failed to send result: ' + e.message });
+        relayLog({ type: "error", message: "Failed to send result: " + e.message });
       }
     }
   } catch (e) {
     RELAY.consecutiveFailures++;
-    relayLog({ type: 'error', message: e.message, failures: RELAY.consecutiveFailures });
+    relayLog({ type: "error", message: e.message, failures: RELAY.consecutiveFailures });
     if (RELAY.consecutiveFailures >= RELAY.maxFailures) {
       relayCircuitTrip();
     }
@@ -1335,38 +1500,38 @@ async function relayExecuteCommand(cmd) {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const tabId = cmd.tabId || tab?.id;
-    if (!tabId) return { error: 'Nessun tab attivo' };
+    if (!tabId) return { error: "Nessun tab attivo" };
 
     switch (cmd.type) {
-      case 'nav':
-        if (!isValidHttpUrl(cmd.url)) return { error: 'URL non valido' };
+      case "nav":
+        if (!isValidHttpUrl(cmd.url)) return { error: "URL non valido" };
         await chrome.tabs.update(tabId, { url: cmd.url, active: true });
         await waitForTabLoad(tabId);
         return { ok: true, tabId, url: cmd.url };
 
-      case 'click':
-        return await Agent.executeAction(tabId, { action: 'click', selector: cmd.selector, options: cmd.options });
-      case 'type':
-        return await Agent.executeAction(tabId, { action: 'type', selector: cmd.selector, text: cmd.text });
-      case 'read':
-        return await Agent.executeAction(tabId, { action: 'read', selector: cmd.selector, options: cmd.options });
-      case 'wait':
-        return await Agent.executeAction(tabId, { action: 'wait', selector: cmd.selector, timeout: cmd.timeout });
-      case 'scroll':
-        return await Agent.executeAction(tabId, { action: 'scroll', target: cmd.target || cmd.selector });
-      case 'select':
-        return await Agent.executeAction(tabId, { action: 'select', selector: cmd.selector, value: cmd.value });
-      case 'formFill':
-        return await Agent.executeAction(tabId, { action: 'formFill', fields: cmd.fields });
-      case 'snapshot':
+      case "click":
+        return await Agent.executeAction(tabId, { action: "click", selector: cmd.selector, options: cmd.options });
+      case "type":
+        return await Agent.executeAction(tabId, { action: "type", selector: cmd.selector, text: cmd.text });
+      case "read":
+        return await Agent.executeAction(tabId, { action: "read", selector: cmd.selector, options: cmd.options });
+      case "wait":
+        return await Agent.executeAction(tabId, { action: "wait", selector: cmd.selector, timeout: cmd.timeout });
+      case "scroll":
+        return await Agent.executeAction(tabId, { action: "scroll", target: cmd.target || cmd.selector });
+      case "select":
+        return await Agent.executeAction(tabId, { action: "select", selector: cmd.selector, value: cmd.value });
+      case "formFill":
+        return await Agent.executeAction(tabId, { action: "formFill", fields: cmd.fields });
+      case "snapshot":
         const snap = await chrome.scripting.executeScript({ target: { tabId }, func: Agent.snapshotScript() });
         return snap?.[0]?.result || { ok: false };
-      case 'sequence':
+      case "sequence":
         return await Agent.executeSequence(tabId, cmd.steps);
-      case 'scrape':
+      case "scrape":
         return await scrapeTab(tabId);
-      case 'screenshot':
-        return { screenshot: await chrome.tabs.captureVisibleTab(null, { format: 'png' }), tabId };
+      case "screenshot":
+        return { screenshot: await chrome.tabs.captureVisibleTab(null, { format: "png" }), tabId };
       default:
         return { error: `Comando non permesso: ${cmd.type}` };
     }
@@ -1379,14 +1544,14 @@ async function relaySendTabs() {
   try {
     const tabs = await chrome.tabs.query({});
     // Filter sensitive URLs: send only hostname + pathname
-    const simple = tabs.map(t => {
+    const simple = tabs.map((t) => {
       try {
         const url = new URL(t.url);
         return {
           id: t.id,
           url: url.hostname + url.pathname,
           title: t.title,
-          active: t.active
+          active: t.active,
         };
       } catch {
         // Fallback for non-http URLs
@@ -1394,16 +1559,16 @@ async function relaySendTabs() {
           id: t.id,
           url: t.url,
           title: t.title,
-          active: t.active
+          active: t.active,
         };
       }
     });
 
     // Send via POST body
     await fetch(RELAY.api, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'tabs', result: simple })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "tabs", result: simple }),
     });
   } catch {}
 }
@@ -1414,25 +1579,33 @@ async function relaySendTabs() {
 async function handleBrainAnalyze() {
   await Brain.init();
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+  if (!tab?.id) throw new FireScrapeError("Nessun tab attivo", "NO_TAB");
 
-  let scrapeData = null, snapshotData = null;
-  try { scrapeData = await scrapeTab(tab.id); } catch {}
+  let scrapeData = null,
+    snapshotData = null;
   try {
-    const snapResult = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: Agent.snapshotScript() });
+    scrapeData = await scrapeTab(tab.id);
+  } catch {}
+  try {
+    const snapResult = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: Agent.snapshotScript(),
+    });
     snapshotData = snapResult?.[0]?.result;
   } catch {}
 
   const result = await Brain.analyzePage(scrapeData, snapshotData);
 
   if (scrapeData && !result._fromLibrary) {
-    let domain = 'unknown';
-    try { domain = new URL(tab.url).hostname; } catch {}
+    let domain = "unknown";
+    try {
+      domain = new URL(tab.url).hostname;
+    } catch {}
     await Library.add({
       domain,
       url: tab.url,
-      category: result.category || 'analysis',
-      tags: [...(result.tags || []), 'auto-scrape'],
+      category: result.category || "analysis",
+      tags: [...(result.tags || []), "auto-scrape"],
       data: { analysis: result, scrape_summary: scrapeData?.metadata },
       confidence: result.confidence || 50,
     });
@@ -1443,12 +1616,14 @@ async function handleBrainAnalyze() {
 
 async function handleBrainThink(msg) {
   await Brain.init();
-  if (!msg.prompt || typeof msg.prompt !== 'string') {
-    throw new FireScrapeError('Prompt mancante', 'INVALID_PROMPT');
+  if (!msg.prompt || typeof msg.prompt !== "string") {
+    throw new FireScrapeError("Prompt mancante", "INVALID_PROMPT");
   }
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const context = { url: tab?.url };
-  try { context.domain = new URL(tab.url).hostname; } catch {}
+  try {
+    context.domain = new URL(tab.url).hostname;
+  } catch {}
   return await Brain.think(msg.prompt, context);
 }
 
@@ -1459,8 +1634,8 @@ async function handleBrainStats() {
 
 async function handleBrainConfig(msg) {
   await Brain.init();
-  if (!msg.config || typeof msg.config !== 'object') {
-    throw new FireScrapeError('Config non valida', 'INVALID_CONFIG');
+  if (!msg.config || typeof msg.config !== "object") {
+    throw new FireScrapeError("Config non valida", "INVALID_CONFIG");
   }
   await Brain.updateConfig(msg.config);
   return { ok: true };
@@ -1470,7 +1645,7 @@ async function handleBrainGetConfig() {
   await Brain.init();
   // Return safe config — no sensitive keys exposed
   const safe = { ...Brain.config };
-  if (safe.supabaseKey) safe.supabaseKey = safe.supabaseKey.slice(0, 10) + '...' + safe.supabaseKey.slice(-4);
+  if (safe.supabaseKey) safe.supabaseKey = safe.supabaseKey.slice(0, 10) + "..." + safe.supabaseKey.slice(-4);
   // Remove any legacy Claude fields
   delete safe.claudeApiKey;
   delete safe.claudeModel;
@@ -1481,9 +1656,9 @@ async function handleBrainGetConfig() {
 // 10. LIBRARY
 // ============================================================
 async function handleLibrarySearch(msg) {
-  const q = (msg.query || '').trim();
+  const q = (msg.query || "").trim();
   if (!q) return await Library.search({ limit: 20 });
-  if (q.includes('.')) {
+  if (q.includes(".")) {
     return await Library.search({ domain: q, limit: 20 });
   }
   const byTag = await Library.search({ tag: q, limit: 20 });
@@ -1491,42 +1666,54 @@ async function handleLibrarySearch(msg) {
   return await Library.search({ text: q, limit: 20 });
 }
 
-async function handleLibraryExport() { return await Library.exportAll(); }
-async function handleLibraryClear() { return await Library.clear(); }
+async function handleLibraryExport() {
+  return await Library.exportAll();
+}
+async function handleLibraryClear() {
+  return await Library.clear();
+}
 
 // ============================================================
 // 11. STATS & MANAGEMENT
 // ============================================================
-async function handleCacheStats() { return await Cache.getStats(); }
-async function handleRateStats() { return RateLimiter.getStats(); }
-async function handleCacheClear() { return await Cache.clear(); }
-async function handleCacheCleanup() { return await Cache.cleanup(); }
+async function handleCacheStats() {
+  return await Cache.getStats();
+}
+async function handleRateStats() {
+  return RateLimiter.getStats();
+}
+async function handleCacheClear() {
+  return await Cache.clear();
+}
+async function handleCacheCleanup() {
+  return await Cache.cleanup();
+}
 
 // ============================================================
 // 12. TASK RUNNER
 // ============================================================
 async function handleTaskCreate(msg) {
-  if (!msg.task || typeof msg.task !== 'object') throw new FireScrapeError('Task definition mancante', 'INVALID_TASK');
+  if (!msg.task || typeof msg.task !== "object") throw new FireScrapeError("Task definition mancante", "INVALID_TASK");
   return await TaskRunner.create(msg.task);
 }
 async function handleTaskStart(msg) {
-  if (!msg.taskId) throw new FireScrapeError('taskId mancante', 'MISSING_ID');
+  if (!msg.taskId) throw new FireScrapeError("taskId mancante", "MISSING_ID");
   return await TaskRunner.start(msg.taskId);
 }
 async function handleTaskPause(msg) {
-  if (!msg.taskId) throw new FireScrapeError('taskId mancante', 'MISSING_ID');
+  if (!msg.taskId) throw new FireScrapeError("taskId mancante", "MISSING_ID");
   return await TaskRunner.pause(msg.taskId);
 }
 async function handleTaskCancel(msg) {
-  if (!msg.taskId) throw new FireScrapeError('taskId mancante', 'MISSING_ID');
+  if (!msg.taskId) throw new FireScrapeError("taskId mancante", "MISSING_ID");
   return await TaskRunner.cancel(msg.taskId);
 }
 async function handleTaskRetry(msg) {
-  if (!msg.taskId) throw new FireScrapeError('taskId mancante', 'MISSING_ID');
+  if (!msg.taskId) throw new FireScrapeError("taskId mancante", "MISSING_ID");
   return await TaskRunner.retry(msg.taskId);
 }
 async function handleTaskStatus(msg) {
-  if (!msg.taskId) throw new FireScrapeError('taskId mancante', 'MISSING_ID');
+  if (!msg.taskId) throw new FireScrapeError("taskId mancante", "MISSING_ID");
   return await TaskRunner.getStatus(msg.taskId);
 }
 async function handleTaskList(msg) {
@@ -1541,8 +1728,8 @@ async function handleTaskStats() {
 // ============================================================
 async function handleFileDownload(msg) {
   await FileManager.init();
-  if (!msg.data) throw new FireScrapeError('Dati mancanti', 'MISSING_DATA');
-  const format = msg.format || 'json';
+  if (!msg.data) throw new FireScrapeError("Dati mancanti", "MISSING_DATA");
+  const format = msg.format || "json";
   const filename = msg.filename || `export-${Date.now()}.${format}`;
   return await FileManager.downloadData(msg.data, filename, format, msg.options || {});
 }
@@ -1552,11 +1739,11 @@ async function handleFileList(msg) {
 }
 async function handleFileSearch(msg) {
   await FileManager.init();
-  return await FileManager.search(msg.query || '');
+  return await FileManager.search(msg.query || "");
 }
 async function handleFileRedownload(msg) {
   await FileManager.init();
-  if (!msg.fileId) throw new FireScrapeError('fileId mancante', 'MISSING_ID');
+  if (!msg.fileId) throw new FireScrapeError("fileId mancante", "MISSING_ID");
   return await FileManager.redownload(msg.fileId);
 }
 async function handleFileStats() {
@@ -1573,17 +1760,17 @@ async function handleConnectorList() {
 }
 async function handleConnectorConfigure(msg) {
   await Connectors.init();
-  if (!msg.connectorId || !msg.config) throw new FireScrapeError('connectorId e config richiesti', 'INVALID_PARAMS');
+  if (!msg.connectorId || !msg.config) throw new FireScrapeError("connectorId e config richiesti", "INVALID_PARAMS");
   return await Connectors.configure(msg.connectorId, msg.config);
 }
 async function handleConnectorExecute(msg) {
   await Connectors.init();
-  if (!msg.connectorId || !msg.method) throw new FireScrapeError('connectorId e method richiesti', 'INVALID_PARAMS');
+  if (!msg.connectorId || !msg.method) throw new FireScrapeError("connectorId e method richiesti", "INVALID_PARAMS");
   return await Connectors.execute(msg.connectorId, msg.method, msg.params || {});
 }
 async function handleConnectorTest(msg) {
   await Connectors.init();
-  if (!msg.connectorId) throw new FireScrapeError('connectorId richiesto', 'INVALID_PARAMS');
+  if (!msg.connectorId) throw new FireScrapeError("connectorId richiesto", "INVALID_PARAMS");
   return await Connectors.test(msg.connectorId);
 }
 
@@ -1591,22 +1778,22 @@ async function handleConnectorTest(msg) {
 // 15. PIPELINE
 // ============================================================
 async function handlePipelineSave(msg) {
-  if (!msg.pipeline) throw new FireScrapeError('Pipeline definition mancante', 'INVALID_PIPELINE');
+  if (!msg.pipeline) throw new FireScrapeError("Pipeline definition mancante", "INVALID_PIPELINE");
   return await Pipeline.save(msg.pipeline);
 }
 async function handlePipelineLoad(msg) {
-  if (!msg.pipelineId) throw new FireScrapeError('pipelineId mancante', 'MISSING_ID');
+  if (!msg.pipelineId) throw new FireScrapeError("pipelineId mancante", "MISSING_ID");
   return await Pipeline.load(msg.pipelineId);
 }
 async function handlePipelineList() {
   return await Pipeline.list();
 }
 async function handlePipelineExecute(msg) {
-  if (!msg.pipelineId) throw new FireScrapeError('pipelineId mancante', 'MISSING_ID');
+  if (!msg.pipelineId) throw new FireScrapeError("pipelineId mancante", "MISSING_ID");
   return await Pipeline.execute(msg.pipelineId, msg.variables || {});
 }
 async function handlePipelineDelete(msg) {
-  if (!msg.pipelineId) throw new FireScrapeError('pipelineId mancante', 'MISSING_ID');
+  if (!msg.pipelineId) throw new FireScrapeError("pipelineId mancante", "MISSING_ID");
   return await Pipeline.remove(msg.pipelineId);
 }
 async function handlePipelineTemplates() {
@@ -1633,15 +1820,15 @@ async function handleElVoices(msg) {
 }
 async function handleElVoiceSearch(msg) {
   await ElevenLabs.init();
-  return { voices: await ElevenLabs.searchVoices(msg.query || '') };
+  return { voices: await ElevenLabs.searchVoices(msg.query || "") };
 }
 async function handleElVoicesByLang(msg) {
   await ElevenLabs.init();
-  return { voices: await ElevenLabs.getVoicesByLanguage(msg.language || 'it') };
+  return { voices: await ElevenLabs.getVoicesByLanguage(msg.language || "it") };
 }
 async function handleElVoicePreview(msg) {
   await ElevenLabs.init();
-  if (!msg.voiceId) throw new FireScrapeError('voiceId mancante', 'MISSING_ID');
+  if (!msg.voiceId) throw new FireScrapeError("voiceId mancante", "MISSING_ID");
   return await ElevenLabs.previewVoice(msg.voiceId);
 }
 async function handleElModels() {
@@ -1650,7 +1837,7 @@ async function handleElModels() {
 }
 async function handleElSpeak(msg) {
   await ElevenLabs.init();
-  if (!msg.text) throw new FireScrapeError('Testo mancante', 'MISSING_TEXT');
+  if (!msg.text) throw new FireScrapeError("Testo mancante", "MISSING_TEXT");
   const result = await ElevenLabs.speak(msg.text, msg.options || {});
   // Converti blob in base64 per transport via messaging
   const reader = new FileReader();
@@ -1672,7 +1859,7 @@ async function handleElSpeakPage(msg) {
 }
 async function handleElTranscribe(msg) {
   await ElevenLabs.init();
-  if (!msg.audioBase64) throw new FireScrapeError('Audio data mancante', 'MISSING_AUDIO');
+  if (!msg.audioBase64) throw new FireScrapeError("Audio data mancante", "MISSING_AUDIO");
   const resp = await fetch(msg.audioBase64);
   const blob = await resp.blob();
   return await ElevenLabs.transcribe(blob, msg.options || {});
@@ -1683,17 +1870,17 @@ async function handleElAgentsList() {
 }
 async function handleElAgentCreate(msg) {
   await ElevenLabs.init();
-  if (!msg.agent) throw new FireScrapeError('Agent config mancante', 'INVALID_PARAMS');
+  if (!msg.agent) throw new FireScrapeError("Agent config mancante", "INVALID_PARAMS");
   return await ElevenLabs.createAgent(msg.agent);
 }
 async function handleElAgentUpdate(msg) {
   await ElevenLabs.init();
-  if (!msg.agentId) throw new FireScrapeError('agentId mancante', 'MISSING_ID');
+  if (!msg.agentId) throw new FireScrapeError("agentId mancante", "MISSING_ID");
   return await ElevenLabs.updateAgent(msg.agentId, msg.updates || {});
 }
 async function handleElAgentDelete(msg) {
   await ElevenLabs.init();
-  if (!msg.agentId) throw new FireScrapeError('agentId mancante', 'MISSING_ID');
+  if (!msg.agentId) throw new FireScrapeError("agentId mancante", "MISSING_ID");
   return await ElevenLabs.deleteAgent(msg.agentId);
 }
 async function handleElAgentLocalList() {
@@ -1702,12 +1889,12 @@ async function handleElAgentLocalList() {
 }
 async function handleElAgentLocalSave(msg) {
   await ElevenLabs.init();
-  if (!msg.agent) throw new FireScrapeError('Agent data mancante', 'INVALID_PARAMS');
+  if (!msg.agent) throw new FireScrapeError("Agent data mancante", "INVALID_PARAMS");
   return await ElevenLabs.saveLocalAgent(msg.agent);
 }
 async function handleElAgentLocalRemove(msg) {
   await ElevenLabs.init();
-  if (!msg.agentId) throw new FireScrapeError('agentId mancante', 'MISSING_ID');
+  if (!msg.agentId) throw new FireScrapeError("agentId mancante", "MISSING_ID");
   return await ElevenLabs.removeLocalAgent(msg.agentId);
 }
 async function handleElStats() {
@@ -1727,12 +1914,30 @@ async function handleElLanguages() {
 // INIT NEW MODULES + AUTO-CLEANUP
 // ============================================================
 (async () => {
-  try { await FileManager.init(); } catch (e) { console.warn('[FireScrape] FileManager init error:', e.message); }
-  try { await Connectors.init(); } catch (e) { console.warn('[FireScrape] Connectors init error:', e.message); }
-  try { await TaskRunner.restore(); } catch (e) { console.warn('[FireScrape] TaskRunner restore error:', e.message); }
-  try { await ElevenLabs.init(); } catch (e) { console.warn('[FireScrape] ElevenLabs init error:', e.message); }
+  try {
+    await FileManager.init();
+  } catch (e) {
+    console.warn("[FireScrape] FileManager init error:", e.message);
+  }
+  try {
+    await Connectors.init();
+  } catch (e) {
+    console.warn("[FireScrape] Connectors init error:", e.message);
+  }
+  try {
+    await TaskRunner.restore();
+  } catch (e) {
+    console.warn("[FireScrape] TaskRunner restore error:", e.message);
+  }
+  try {
+    await ElevenLabs.init();
+  } catch (e) {
+    console.warn("[FireScrape] ElevenLabs init error:", e.message);
+  }
 })();
 
-chrome.alarms.create('cache-cleanup', { periodInMinutes: 60 });
+chrome.alarms.create("cache-cleanup", { periodInMinutes: 60 });
 
-console.log("[FireScrape v3.2] Service worker avviato — Full stack: Scrape + Agent + Brain + Tasks + Files + Connectors + Pipeline + ElevenLabs");
+console.log(
+  "[FireScrape v3.2] Service worker avviato — Full stack: Scrape + Agent + Brain + Tasks + Files + Connectors + Pipeline + ElevenLabs",
+);

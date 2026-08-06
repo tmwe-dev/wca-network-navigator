@@ -17,10 +17,15 @@
 
     // Handle ping locally for fastest response
     if (data.action === "ping") {
-      window.postMessage({
-        direction: "from-extension", action: "ping", requestId: data.requestId,
-        response: { success: true, version: "content-bridge-v4" }
-      }, appOrigin);
+      window.postMessage(
+        {
+          direction: "from-extension",
+          action: "ping",
+          requestId: data.requestId,
+          response: { success: true, version: "content-bridge-v4" },
+        },
+        appOrigin,
+      );
       return;
     }
 
@@ -33,22 +38,52 @@
     try {
       chrome.runtime.sendMessage(msg, function (response) {
         if (chrome.runtime.lastError) {
-          window.postMessage({
-            direction: "from-extension", action: data.action, requestId: data.requestId,
-            response: { success: false, state: "bridge_error", errorCode: "EXT_CONTEXT_INVALIDATED", error: "Extension context invalidated" }
-          }, appOrigin);
+          window.postMessage(
+            {
+              direction: "from-extension",
+              action: data.action,
+              requestId: data.requestId,
+              response: {
+                success: false,
+                state: "bridge_error",
+                errorCode: "EXT_CONTEXT_INVALIDATED",
+                error: "Extension context invalidated",
+              },
+            },
+            appOrigin,
+          );
           return;
         }
-        window.postMessage({
-          direction: "from-extension", action: data.action, requestId: data.requestId,
-          response: response || { success: false, state: "bridge_error", errorCode: "EXT_NO_RESPONSE", error: "No response from extension" }
-        }, appOrigin);
+        window.postMessage(
+          {
+            direction: "from-extension",
+            action: data.action,
+            requestId: data.requestId,
+            response: response || {
+              success: false,
+              state: "bridge_error",
+              errorCode: "EXT_NO_RESPONSE",
+              error: "No response from extension",
+            },
+          },
+          appOrigin,
+        );
       });
     } catch (err) {
-      window.postMessage({
-        direction: "from-extension", action: data.action, requestId: data.requestId,
-        response: { success: false, state: "bridge_error", errorCode: "EXT_CONTEXT_INVALIDATED", error: "Extension context invalidated" }
-      }, appOrigin);
+      window.postMessage(
+        {
+          direction: "from-extension",
+          action: data.action,
+          requestId: data.requestId,
+          response: {
+            success: false,
+            state: "bridge_error",
+            errorCode: "EXT_CONTEXT_INVALIDATED",
+            error: "Extension context invalidated",
+          },
+        },
+        appOrigin,
+      );
     }
   });
 

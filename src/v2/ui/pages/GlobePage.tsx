@@ -8,7 +8,7 @@ import { Suspense, lazy, useState, useCallback } from "react";
 const CampaignGlobe = lazy(() =>
   import("@/components/campaigns/CampaignGlobe").then((m) => ({
     default: m.CampaignGlobe,
-  }))
+  })),
 );
 
 export function GlobePage(): React.ReactElement {
@@ -27,10 +27,7 @@ export function GlobePage(): React.ReactElement {
           </div>
         }
       >
-        <CampaignGlobe
-          selectedCountry={selectedCountry}
-          onCountrySelect={handleCountrySelect}
-        />
+        <CampaignGlobe selectedCountry={selectedCountry} onCountrySelect={handleCountrySelect} />
       </Suspense>
     </div>
   );

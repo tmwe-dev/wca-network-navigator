@@ -4,9 +4,7 @@
  * stesso user_id. Senza cache = 50 lookup DB; con cache = 1 per utente
  * distinto. Cache locale al request, nessuno stato persistente.
  */
-export function createPauseChecker(
-  lookup: (userId: string) => Promise<boolean>,
-): (userId: string) => Promise<boolean> {
+export function createPauseChecker(lookup: (userId: string) => Promise<boolean>): (userId: string) => Promise<boolean> {
   const cache = new Map<string, boolean>();
   return async (userId: string) => {
     const hit = cache.get(userId);

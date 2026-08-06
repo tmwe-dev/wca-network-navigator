@@ -7,7 +7,7 @@ test.describe("download-pipeline", () => {
     await page.goto("/download");
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(1500);
-    expect(errors.filter(e => !e.includes("net::ERR"))).toHaveLength(0);
+    expect(errors.filter((e) => !e.includes("net::ERR"))).toHaveLength(0);
   });
 
   test("download page has country selection UI", async ({ page }) => {

@@ -53,7 +53,11 @@ export function AiSuggestionChip({ suggestion, onAccept, className }: Props) {
         color,
         border: `1px dashed ${color}66`,
       }}
-      title={suggestion.reason ? `AI suggerisce: ${suggestion.label} — ${suggestion.reason}` : `AI suggerisce: ${suggestion.label}`}
+      title={
+        suggestion.reason
+          ? `AI suggerisce: ${suggestion.label} — ${suggestion.reason}`
+          : `AI suggerisce: ${suggestion.label}`
+      }
     >
       <Sparkles className="h-2.5 w-2.5" />
       {suggestion.icon && <span>{suggestion.icon}</span>}

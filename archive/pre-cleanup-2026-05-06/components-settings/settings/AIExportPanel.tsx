@@ -20,7 +20,6 @@ import { AGENT_PROMPTS } from "@/data/agentPrompts";
 import { AGENT_TEMPLATES, AGENT_DEFAULT_KB } from "@/data/agentTemplates";
 import { OPERATIONS_PROCEDURES } from "@/data/operationsProcedures";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("AIExportPanel");
 // Static source files served at build-time as raw text
@@ -96,7 +95,10 @@ type AgentPersonaRow = {
 };
 
 const safeFilename = (s: string) =>
-  s.replace(/[^a-z0-9-_]+/gi, "_").replace(/_+/g, "_").slice(0, 80);
+  s
+    .replace(/[^a-z0-9-_]+/gi, "_")
+    .replace(/_+/g, "_")
+    .slice(0, 80);
 
 function mdAgent(a: AgentRow): string {
   const tools = JSON.stringify(a.assigned_tools, null, 2);
@@ -292,14 +294,12 @@ export function AIExportPanel({ userId }: { userId: string }) {
           .gte("level", 2)
           .order("importance", { ascending: false })
           .limit(500),
-        supabase
-          .from("app_settings")
-          .select("id,key,value,updated_at")
-          .eq("user_id", userId)
-          .order("key"),
+        supabase.from("app_settings").select("id,key,value,updated_at").eq("user_id", userId).order("key"),
         supabase
           .from("agent_personas")
-          .select("id,agent_id,tone,custom_tone_prompt,language,style_rules,vocabulary_do,vocabulary_dont,example_messages,signature_template")
+          .select(
+            "id,agent_id,tone,custom_tone_prompt,language,style_rules,vocabulary_do,vocabulary_dont,example_messages,signature_template",
+          )
           .eq("user_id", userId),
       ]);
 
@@ -351,8 +351,10 @@ export function AIExportPanel({ userId }: { userId: string }) {
           body += `- **Tono**: ${p.tone ?? "—"}\n- **Lingua**: ${p.language ?? "—"}\n\n`;
           if (p.custom_tone_prompt) body += `## Tone Prompt\n\n${p.custom_tone_prompt}\n\n`;
           if (p.style_rules?.length) body += `## Style Rules\n\n${p.style_rules.map((r) => `- ${r}`).join("\n")}\n\n`;
-          if (p.vocabulary_do?.length) body += `## Vocabulary DO\n\n${p.vocabulary_do.map((r) => `- ${r}`).join("\n")}\n\n`;
-          if (p.vocabulary_dont?.length) body += `## Vocabulary DON'T\n\n${p.vocabulary_dont.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.vocabulary_do?.length)
+            body += `## Vocabulary DO\n\n${p.vocabulary_do.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.vocabulary_dont?.length)
+            body += `## Vocabulary DON'T\n\n${p.vocabulary_dont.map((r) => `- ${r}`).join("\n")}\n\n`;
           if (p.signature_template) body += `## Signature\n\n\`\`\`\n${p.signature_template}\n\`\`\`\n\n`;
           personasFolder.file(`${safeFilename(name)}.md`, body);
         }
@@ -440,9 +442,9 @@ export function AIExportPanel({ userId }: { userId: string }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Scarica un archivio <code>.zip</code> leggibile con tutti i prompt degli agenti, le voci di
-          knowledge base, i prompt operativi, le memorie consolidate e la logica applicata
-          (scope, template, procedure). Formato Markdown + JSON di backup tecnico.
+          Scarica un archivio <code>.zip</code> leggibile con tutti i prompt degli agenti, le voci di knowledge base, i
+          prompt operativi, le memorie consolidate e la logica applicata (scope, template, procedure). Formato Markdown
+          + JSON di backup tecnico.
         </p>
         <Button onClick={exportAll} disabled={busy} className="w-full sm:w-auto">
           <FileDown className="h-4 w-4 mr-2" />

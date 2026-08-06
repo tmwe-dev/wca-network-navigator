@@ -26,14 +26,17 @@ const MAX_TOTAL_FILE_CHARS = 20_000;
 
 // Limiti REALI per stabilità AI: il modello non può ragionare su 3M token.
 // Per "Migliora tutto" su KB grande, il contesto per blocco resta <15K chars.
-const MAX_RELEVANT_DOCTRINE_CHARS = 10_000;  // budget reale per call
+const MAX_RELEVANT_DOCTRINE_CHARS = 10_000; // budget reale per call
 const MAX_RELEVANT_FILE_CHARS = 20_000;
-const MAX_NEARBY_BLOCKS = 5;                  // top blocchi vicini con contenuto completo
-const MAX_INDEX_BLOCKS = 100;                 // indice compatto per gli altri
+const MAX_NEARBY_BLOCKS = 5; // top blocchi vicini con contenuto completo
+const MAX_INDEX_BLOCKS = 100; // indice compatto per gli altri
 
 function compactText(text: string, maxChars: number, label: string): string {
-  // eslint-disable-next-line no-control-regex
-  const normalized = text.replace(/\u0000/g, "").replace(/\s{3,}/g, "  ").trim();
+  const normalized = text
+    // eslint-disable-next-line no-control-regex
+    .replace(/\u0000/g, "")
+    .replace(/\s{3,}/g, "  ")
+    .trim();
   if (!normalized) return "";
   if (normalized.length <= maxChars) return normalized;
   return `${normalized.slice(0, maxChars).trimEnd()}\n[… ${label} troncato per stabilità runtime]`;
@@ -46,8 +49,14 @@ function compactText(text: string, maxChars: number, label: string): string {
 function relevanceScore(block: Block, tabLabel: string, referenceText: string): number {
   const refLower = referenceText.toLowerCase();
   const keywords = [
-    ...block.label.toLowerCase().split(/[\s\-_—/]+/).filter((w) => w.length > 3),
-    ...tabLabel.toLowerCase().split(/[\s\-_—/]+/).filter((w) => w.length > 3),
+    ...block.label
+      .toLowerCase()
+      .split(/[\s\-_—/]+/)
+      .filter((w) => w.length > 3),
+    ...tabLabel
+      .toLowerCase()
+      .split(/[\s\-_—/]+/)
+      .filter((w) => w.length > 3),
   ];
   // Estrai anche keyword dal contenuto del blocco (prime 200 chars)
   const contentWords = block.content
@@ -75,11 +84,7 @@ function relevanceScore(block: Block, tabLabel: string, referenceText: string): 
  * le top sezioni fino a esaurire il budget. Le sezioni omesse vengono
  * dichiarate nell'header per trasparenza.
  */
-export function filterDoctrineForBlock(
-  fullDoctrine: string,
-  block: Block,
-  tabLabel: string,
-): string {
+export function filterDoctrineForBlock(fullDoctrine: string, block: Block, tabLabel: string): string {
   if (fullDoctrine.length <= MAX_RELEVANT_DOCTRINE_CHARS) {
     return `--- KB DOCTRINE (rilevante per "${block.label}") ---\n${fullDoctrine}\n--- FINE KB DOCTRINE ---`;
   }
@@ -92,7 +97,11 @@ export function filterDoctrineForBlock(
   const scored = sections.map((section) => ({
     section,
     score: relevanceScore(block, tabLabel, section),
-    title: section.split("\n")[0]?.replace(/^###\s*/, "").trim() || "(senza titolo)",
+    title:
+      section
+        .split("\n")[0]
+        ?.replace(/^###\s*/, "")
+        .trim() || "(senza titolo)",
   }));
   scored.sort((a, b) => b.score - a.score);
 
@@ -155,7 +164,9 @@ export function filterSystemMapForBlock(
     .slice(0, MAX_NEARBY_BLOCKS);
 
   if (nearbyScored.length > 0) {
-    parts.push(`--- BLOCCHI VICINI (top ${nearbyScored.length} dello stesso tab: ${currentTabLabel} — NON contraddirli) ---`);
+    parts.push(
+      `--- BLOCCHI VICINI (top ${nearbyScored.length} dello stesso tab: ${currentTabLabel} — NON contraddirli) ---`,
+    );
     for (const { item } of nearbyScored) {
       parts.push(`### ${item.block.label}\n${item.block.content}`);
     }
@@ -211,9 +222,7 @@ export function filterReferenceForBlock(
         score: relevanceScore(block, tabLabel, s),
       }));
       scored.sort((a, b) => b.score - a.score);
-      const relevant = scored
-        .filter((s) => s.score > 0)
-        .slice(0, 5);
+      const relevant = scored.filter((s) => s.score > 0).slice(0, 5);
       if (relevant.length > 0) {
         parts.push("=== MATERIALE DI RIFERIMENTO (sezioni rilevanti per questo blocco) ===");
         let budget = MAX_RELEVANT_FILE_CHARS;
@@ -226,7 +235,9 @@ export function filterReferenceForBlock(
       }
     } else {
       // Testo breve: includi tutto (entro limite)
-      parts.push(`=== MATERIALE DI RIFERIMENTO ===\n${compactText(referenceMaterial, MAX_RELEVANT_FILE_CHARS, "materiale")}\n=== FINE MATERIALE ===`);
+      parts.push(
+        `=== MATERIALE DI RIFERIMENTO ===\n${compactText(referenceMaterial, MAX_RELEVANT_FILE_CHARS, "materiale")}\n=== FINE MATERIALE ===`,
+      );
     }
   }
 
@@ -255,7 +266,9 @@ export function filterReferenceForBlock(
       }
     } else {
       // File piccolo: includi tutto
-      parts.push(`--- FILE: ${f.name} (${f.sizeKb}KB) ---\n${compactText(f.content, MAX_FILE_CHARS, f.name)}\n--- FINE FILE ---`);
+      parts.push(
+        `--- FILE: ${f.name} (${f.sizeKb}KB) ---\n${compactText(f.content, MAX_FILE_CHARS, f.name)}\n--- FINE FILE ---`,
+      );
     }
   }
 
@@ -276,8 +289,16 @@ export async function buildExtraContext(
   // Profilo azienda da app_settings
   try {
     const profileKeys = [
-      "ai_company_name", "ai_company_alias", "ai_contact_name", "ai_contact_role",
-      "ai_sector", "ai_tone", "ai_language", "ai_business_goals", "ai_behavior_rules", "ai_style_instructions",
+      "ai_company_name",
+      "ai_company_alias",
+      "ai_contact_name",
+      "ai_contact_role",
+      "ai_sector",
+      "ai_tone",
+      "ai_language",
+      "ai_business_goals",
+      "ai_behavior_rules",
+      "ai_style_instructions",
     ];
     const settings: Record<string, string> = {};
     for (const key of profileKeys) {
@@ -287,11 +308,15 @@ export async function buildExtraContext(
     if (Object.keys(settings).length > 0) {
       parts.push(buildCompanyProfile(settings));
     }
-  } catch { /* skip profile if unavailable */ }
+  } catch {
+    /* skip profile if unavailable */
+  }
 
   // Materiale di riferimento (testo libero)
   if (referenceMaterial.trim()) {
-    parts.push(`\n=== MATERIALE DI RIFERIMENTO (fornito dall'operatore — usa per arricchire/modificare prompt e KB) ===\n${compactText(referenceMaterial, MAX_REFERENCE_CHARS, "materiale di riferimento")}\n=== FINE MATERIALE ===`);
+    parts.push(
+      `\n=== MATERIALE DI RIFERIMENTO (fornito dall'operatore — usa per arricchire/modificare prompt e KB) ===\n${compactText(referenceMaterial, MAX_REFERENCE_CHARS, "materiale di riferimento")}\n=== FINE MATERIALE ===`,
+    );
   }
 
   // File uploadati
@@ -309,7 +334,9 @@ export async function buildExtraContext(
     if (hiddenFiles > 0) {
       fileTexts.push(`[Altri ${hiddenFiles} file non inclusi integralmente per stabilità runtime]`);
     }
-    parts.push(`\n=== DOCUMENTI ALLEGATI (${uploadedFiles.length} file — usa come contesto per miglioramenti) ===\n${fileTexts.join("\n\n")}\n=== FINE DOCUMENTI ===`);
+    parts.push(
+      `\n=== DOCUMENTI ALLEGATI (${uploadedFiles.length} file — usa come contesto per miglioramenti) ===\n${fileTexts.join("\n\n")}\n=== FINE DOCUMENTI ===`,
+    );
   }
 
   return parts.join("\n");

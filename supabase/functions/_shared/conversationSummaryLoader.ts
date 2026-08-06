@@ -41,7 +41,9 @@ export async function loadConversationSummary(
   try {
     let q = supabase
       .from("contact_conversation_context")
-      .select("conversation_summary, last_exchanges, interaction_count, dominant_sentiment, response_rate, avg_response_time_hours, preferred_language, last_interaction_at")
+      .select(
+        "conversation_summary, last_exchanges, interaction_count, dominant_sentiment, response_rate, avg_response_time_hours, preferred_language, last_interaction_at",
+      )
       .eq("user_id", userId);
     if (partnerId) q = q.eq("partner_id", partnerId);
     else if (emailAddress) q = q.eq("email_address", emailAddress);
@@ -50,7 +52,9 @@ export async function loadConversationSummary(
     if (ctx?.conversation_summary) {
       const exchanges = Array.isArray(ctx.last_exchanges) ? ctx.last_exchanges.slice(0, 5) : [];
       const lines: string[] = [];
-      lines.push(`SUMMARY RELAZIONE (${ctx.interaction_count ?? 0} interazioni totali, ultimo contatto ${ctx.last_interaction_at ?? "n/a"}):`);
+      lines.push(
+        `SUMMARY RELAZIONE (${ctx.interaction_count ?? 0} interazioni totali, ultimo contatto ${ctx.last_interaction_at ?? "n/a"}):`,
+      );
       lines.push(ctx.conversation_summary);
       if (exchanges.length) {
         lines.push("");
@@ -75,7 +79,9 @@ export async function loadConversationSummary(
         interactionCount: ctx.interaction_count ?? 0,
       };
     }
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 
   // 2) Fallback: max 5 messaggi recenti (NON 30) per il primo bootstrap
   try {
@@ -91,14 +97,22 @@ export async function loadConversationSummary(
       const lines: string[] = [
         `STORIA RELAZIONE (bootstrap, ${history.length} messaggi recenti — summary non ancora generato):`,
       ];
-      for (const m of history as Array<{ channel: string; direction: string; subject: string | null; body_text: string | null; created_at: string }>) {
+      for (const m of history as Array<{
+        channel: string;
+        direction: string;
+        subject: string | null;
+        body_text: string | null;
+        created_at: string;
+      }>) {
         const subj = (m.subject ?? "").slice(0, 80);
         const excerpt = (m.body_text ?? "").replace(/\s+/g, " ").slice(0, 140);
         lines.push(`- [${m.created_at.slice(0, 10)}|${m.channel}|${m.direction}] ${subj} :: ${excerpt}`);
       }
       return { block: lines.join("\n"), source: "fallback-history", interactionCount: history.length };
     }
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 
   return { block: "", source: "none", interactionCount: 0 };
 }

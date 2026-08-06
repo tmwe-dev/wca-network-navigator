@@ -24,7 +24,14 @@ export function ProposalNavigator({ index, total, onPrev, onNext, onSkip }: Prop
         <span className="font-semibold text-foreground">{index + 1}</span> di <span>{total}</span>
       </div>
       <div className="flex gap-1">
-        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={onSkip} disabled={!canNext} title="Salta senza decidere">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2"
+          onClick={onSkip}
+          disabled={!canNext}
+          title="Salta senza decidere"
+        >
           <SkipForward className="w-3.5 h-3.5 mr-1" /> Salta
         </Button>
         <Button size="sm" variant="default" className="h-7 px-2" onClick={onNext} disabled={!canNext}>

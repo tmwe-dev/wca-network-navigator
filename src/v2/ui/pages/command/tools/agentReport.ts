@@ -4,10 +4,14 @@ import type { Tool, ToolResult } from "./types";
 
 function activityStatusToTimeline(status: string): "success" | "pending" | "warning" | "info" {
   switch (status) {
-    case "completed": return "success";
-    case "pending": return "pending";
-    case "cancelled": return "warning";
-    default: return "info";
+    case "completed":
+      return "success";
+    case "pending":
+      return "pending";
+    case "cancelled":
+      return "warning";
+    default:
+      return "info";
   }
 }
 
@@ -18,8 +22,9 @@ export const agentReportTool: Tool = {
 
   match(prompt: string): boolean {
     const p = prompt.toLowerCase();
-    return /agent[ie]?.*(report|settiman|perform|attivit|riepilog)/.test(p)
-      || /(report|perform|riepilog).*agent/.test(p);
+    return (
+      /agent[ie]?.*(report|settiman|perform|attivit|riepilog)/.test(p) || /(report|perform|riepilog).*agent/.test(p)
+    );
   },
 
   async execute(): Promise<ToolResult> {
@@ -47,9 +52,7 @@ export const agentReportTool: Tool = {
       })
       .sort((x, y) => activities.indexOf(x as never) - activities.indexOf(y as never));
 
-    const activeAgents = new Set(
-      activities.map((a) => a.executedByAgentId).filter(Boolean),
-    ).size;
+    const activeAgents = new Set(activities.map((a) => a.executedByAgentId).filter(Boolean)).size;
 
     const kpis = [
       { label: "Attività totali", value: String(activities.length) },

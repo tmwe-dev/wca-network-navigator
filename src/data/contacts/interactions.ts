@@ -1,9 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { ContactInteraction } from "./types";
 
-export async function findContactInteractions(
-  contactId: string
-): Promise<ContactInteraction[]> {
+export async function findContactInteractions(contactId: string): Promise<ContactInteraction[]> {
   const { data, error } = await supabase
     .from("contact_interactions")
     .select("*")
@@ -20,9 +18,7 @@ export async function createContactInteraction(interaction: {
   description?: string;
   outcome?: string;
 }) {
-  const { error: iError } = await supabase
-    .from("contact_interactions")
-    .insert(interaction);
+  const { error: iError } = await supabase.from("contact_interactions").insert(interaction);
   if (iError) throw iError;
 
   await supabase.rpc("increment_contact_interaction", {

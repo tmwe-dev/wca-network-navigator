@@ -3,6 +3,7 @@
 Piano di **riduzione dimensione/complessità** senza toccare feature. Ordinato in batch **piccoli e reversibili**. Ogni batch dichiara baseline, target, rischio, dipendenze, file candidati, gate GO/NO-GO, rollback e contributo prudente al punteggio (base 74.720 → target 90.000).
 
 **Vincoli assoluti**:
+
 - Nessun refactor architetturale generale, nessuna riscrittura.
 - Nessuna modifica schema/RLS/dati/config funzionale.
 - Tutti i batch sono **reversibili** con singolo revert.
@@ -11,6 +12,7 @@ Piano di **riduzione dimensione/complessità** senza toccare feature. Ordinato i
 ---
 
 ## Legenda severità (fatti / inferenze / non provabili)
+
 - **[FATTO]**: misurato dall'inventario (SHA1, LOC, marker).
 - **[INFERENZA]**: import graph statico + regex — probabile ma verificare.
 - **[NON PROVABILE STATICAMENTE]**: richiede runtime/execution/AST.
@@ -20,6 +22,7 @@ Piano di **riduzione dimensione/complessità** senza toccare feature. Ordinato i
 ## P0 — Rischi e contraddizioni immediate (score +250)
 
 ### P0.1 — Dedup esatto edge `caCerts.ts` (6 copie identiche)
+
 - **Baseline [FATTO]**: 6 file SHA1 identici in `apply-email-rules`, `backfill-email-rules`, `check-inbox`, `check-inbox-booking`, `imap-list-folders`, `manage-email-folders`.
 - **Target**: 1 sorgente in `supabase/functions/_shared/caCerts.ts` + 6 re-export shim di 1 riga.
 - **File candidati** (non modificati): i 6 elencati sopra + nuovo `_shared/caCerts.ts`.
@@ -29,6 +32,7 @@ Piano di **riduzione dimensione/complessità** senza toccare feature. Ordinato i
 - **Δpunteggio prudente**: **+40**.
 
 ### P0.2 — Dedup esatto `bounceDetector.ts`, `enqueueEnrichment.ts`, `mimeDecoder.ts`, test IMAP
+
 - **Baseline [FATTO]**: 5 cluster SHA1 identici tra `check-inbox` e `check-inbox-booking`.
 - **Target**: sorgente unica in `_shared/imap/` + shim.
 - **Rischio**: basso — moduli puri senza stato.
@@ -36,6 +40,7 @@ Piano di **riduzione dimensione/complessità** senza toccare feature. Ordinato i
 - **Δpunteggio**: **+50**.
 
 ### P0.3 — Migrations duplicate 20260403010412 vs 20260403010449
+
 - **Baseline [FATTO]**: due file `.sql` con SHA1 identico a 37 secondi di distanza.
 - **Target**: mantenere solo la prima; la seconda diventa migration no-op documentata (NON eliminare per non rompere lo storico applicato) oppure eliminata solo se **verificato** che non sia stata applicata in prod (richiede check da DB — se dubbio, no-op).
 - **Rischio**: alto se applicata in prod → resta **no-op**.
@@ -43,16 +48,19 @@ Piano di **riduzione dimensione/complessità** senza toccare feature. Ordinato i
 - **Δpunteggio**: **+20**.
 
 ### P0.4 — Near-dup migration 20260419100310 vs 20260420034510
+
 - Stesso trattamento di P0.3, con priorità inferiore.
 - **Δpunteggio**: **+10**.
 
 ### P0.5 — `AuroraBorealis.tsx` duplicato (globe + campaigns)
+
 - **Baseline [FATTO]**: SHA1 identico tra `src/components/campaigns/AuroraBorealis.tsx` e `src/standalone-globe/components/AuroraBorealis.tsx`.
 - **Target**: `standalone-globe` è il pacchetto isolato; re-export dal componente campaigns.
 - **Rischio**: basso — verificare che campaigns non alteri props di default.
 - **Δpunteggio**: **+15**.
 
 ### P0.6 — Guardrail expose upstream error (già in HEAD, verificare regressioni)
+
 - **Baseline [FATTO]**: HEAD ha già l'allargamento del payload d'errore in `whatsapp-ai-extract` (delta vs base richiesta).
 - **Azione P0**: solo audit — verificare che `linkedin-ai-extract`, `optimus-analyze` abbiano stessa disciplina o restino con messaggi generici (finding aperto, non fix in P0).
 - **Δpunteggio**: **0** (già in HEAD).
@@ -64,34 +72,39 @@ P0 totale: **+135**.
 ## P1 — Consolidamenti ad alta leva (score +900)
 
 ### P1.1 — Split file monster ≥600 righe
+
 Basato su `TOP_HOTSPOTS.md`. Suddivisione **per responsabilità**, nessun cambio comportamento.
 
-| # | File | Righe | Split candidato |
-|---|------|------:|-----------------|
-| 1 | `src/hooks/useCockpitLogic.ts` | 643 | estrarre `useCockpitFilters`, `useCockpitSelection`, `useCockpitPersistence` |
-| 2 | `src/data/partners.ts` | 684 | separare `partners.queries.ts` / `partners.mutations.ts` / `partners.mappers.ts` |
-| 3 | `src/data/funnemailInbox.ts` | 636 | separare query vs mutations |
-| 4 | `src/v2/ui/pages/prompt-lab/HarmonizeSystemDialog.tsx` | 723 | estrarre 3 sotto-componenti sezione |
-| 5 | `src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx` | 627 | pattern uguale |
-| 6 | `src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx` | 594 | estrarre form + list |
-| 7 | `supabase/functions/send-email/index.ts` | 616 | estrarre `_helpers.ts` (build MIME, dry-run, template) |
-| 8 | `supabase/functions/_shared/toolHandlersRead.ts` | funzione 527 | 1 handler per file |
-| 9 | `supabase/functions/_shared/toolHandlersWrite.ts` | funzione 469 | idem |
-| 10 | `src/components/test-extensions/LinkedInTest.tsx` | 667 | test-only: valutare spostamento in `e2e/` |
-| 11 | `src/components/test-extensions/WhatsAppTest.tsx` | 512 | idem |
+| #   | File                                                   |        Righe | Split candidato                                                                  |
+| --- | ------------------------------------------------------ | -----------: | -------------------------------------------------------------------------------- |
+| 1   | `src/hooks/useCockpitLogic.ts`                         |          643 | estrarre `useCockpitFilters`, `useCockpitSelection`, `useCockpitPersistence`     |
+| 2   | `src/data/partners.ts`                                 |          684 | separare `partners.queries.ts` / `partners.mutations.ts` / `partners.mappers.ts` |
+| 3   | `src/data/funnemailInbox.ts`                           |          636 | separare query vs mutations                                                      |
+| 4   | `src/v2/ui/pages/prompt-lab/HarmonizeSystemDialog.tsx` |          723 | estrarre 3 sotto-componenti sezione                                              |
+| 5   | `src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx`    |          627 | pattern uguale                                                                   |
+| 6   | `src/v2/ui/pages/prompt-lab/tabs/PromptTestsTab.tsx`   |          594 | estrarre form + list                                                             |
+| 7   | `supabase/functions/send-email/index.ts`               |          616 | estrarre `_helpers.ts` (build MIME, dry-run, template)                           |
+| 8   | `supabase/functions/_shared/toolHandlersRead.ts`       | funzione 527 | 1 handler per file                                                               |
+| 9   | `supabase/functions/_shared/toolHandlersWrite.ts`      | funzione 469 | idem                                                                             |
+| 10  | `src/components/test-extensions/LinkedInTest.tsx`      |          667 | test-only: valutare spostamento in `e2e/`                                        |
+| 11  | `src/components/test-extensions/WhatsAppTest.tsx`      |          512 | idem                                                                             |
 
 - **Rischio**: medio — split UI/hook può alterare re-render se mal fatto. Mitigazione: 1 file per batch, test unit di partenza obbligatori.
 - **Gate GO per singolo split**: tsgo verde, vitest verde, nessuna diff visiva su Playwright della route toccata.
 - **Δpunteggio**: **+500** cumulativo (11 sotto-batch, +30÷+80 ciascuno).
 
 ### P1.2 — Dedup boilerplate Edge Functions
+
 **[INFERENZA]** — 8 gruppi Edge condividono prefisso (agent-, ai-, funnemail-, kb-, save-, tmwe-…) e boilerplate ripetuto (CORS, authGuard, error shape).
+
 - **Azione**: continuare migrazione a `_shared/authGuard` (già iniziata E2/E3), estendere a `_shared/edgeResponse` per shape errori.
 - **Gate**: `deno check` verde, contract-test HTTP invariante su risposte auth/error.
 - **Δpunteggio**: **+200** (3 batch da 3 function ciascuno).
 
 ### P1.3 — DAL bypass residui (185 hit / 82 file)
+
 **[FATTO]** — top: `src/v2/io/supabase/queries/dashboard.ts` (20), `RulesAndActionsTab.tsx` (14), `InUscitaTab.tsx` (9).
+
 - **Azione**: 1 file per batch → sposta query in DAL centralizzato (`src/data/` o `src/v2/data/`), UI consuma via hook.
 - **Gate**: vitest hook verde, screenshot Playwright della pagina invariato.
 - **Δpunteggio**: **+200** (10 batch × +20).
@@ -103,17 +116,22 @@ P1 totale: **+900**.
 ## P2 — Migrazione legacy v1→v2 (solo con replacement attivo) (score +400)
 
 ### P2.1 — 45 basename in overlap v1/v2
+
 **[INFERENZA]** — stesso basename non implica stesso comportamento. Serve triage 1-a-1:
+
 1. Per ogni coppia: confrontare import graph (fan-in di v1 vs v2), route consumatrici, differenze API.
 2. Categorie:
    - **CONVERGE**: v2 sostituisce v1 → migrare importer + rimuovere v1 (1 batch per coppia).
    - **DIVERGE**: mantenere entrambi con rinomina esplicita (`XyzV1.tsx` / `XyzV2.tsx`).
    - **DEAD v1**: v1 non ha importer → candidato a rimozione (verifica route string / lazy).
+
 - **Vincolo**: NO rimozioni senza replacement verificato.
 - **Δpunteggio**: **+400** (progressivo, +8÷+20 per coppia).
 
 ### P2.2 — Orfani candidati (473 file)
+
 **[NON PROVABILE STATICAMENTE]** — l'import graph statico non vede lazy/route-string. Non rimuovere in blocco.
+
 - **Azione**: analisi campionaria + strumentazione runtime (log HMR/Vite ProbeReport) — **fuori scope P2**, resta backlog.
 - **Δpunteggio**: **0** (in P2, +TBD dopo strumentazione).
 
@@ -122,14 +140,17 @@ P1 totale: **+900**.
 ## P3 — Edge / KB / Agent (score +250)
 
 ### P3.1 — Consolidamento famiglie `check-inbox*` / `funnemail-*` / `email-*`
+
 - **Baseline [FATTO]**: `check-inbox` e `check-inbox-booking` condividono 5 moduli identici (già coperti P0.2). Rimane `index.ts` divergente → **NON unificare** (contratti diversi).
 - **Azione**: solo dedup moduli sotto (già in P0.2). Documentare in `docs/audit/edge-family-map.md`.
 - **Δpunteggio**: **+50**.
 
 ### P3.2 — `_shared/toolHandlersRead.ts` + `Write.ts` split (già in P1.1)
+
 - Nota: già coperto in P1.1 riga 8-9. Nessun doppio conteggio.
 
 ### P3.3 — KB prompt-lab file monster (P1.1 righe 4-6)
+
 - Idem, no doppio conteggio.
 
 ---
@@ -137,20 +158,24 @@ P1 totale: **+900**.
 ## P4 — Performance / bundle / test (score +265)
 
 ### P4.1 — `console.*` migration a `createLogger` (527 hit)
+
 - **[FATTO]** top 5 file: `scripts/report-classify-dedup.ts` (13), `scripts/seed-kb.ts` (10), `agent-execute/toolHandlers/emailTools.ts` (8), `replay-domain-events/index.ts` (8), `send-email/index.ts` (8).
 - **Azione**: 1 file per batch, `console.*` → `logger.*`.
 - **Δpunteggio**: **+80**.
 
 ### P4.2 — `any` residui runtime (977 totali, 67 file oltre soglia)
+
 - Top runtime (esclusi test): `src/hooks/*` e `src/data/*`. Test-only rimossi dal target (accettabili).
 - **Azione**: 1 file per batch, tipizzare via inference/generics.
 - **Δpunteggio**: **+80**.
 
 ### P4.3 — Test coverage LOC ratio 0.135 → 0.20
+
 - **Azione**: portare test unit sui top-hotspot (P1.1) come parte del batch stesso.
 - **Δpunteggio**: **+60**.
 
 ### P4.4 — Bundle size guard baseline
+
 - **Azione**: catturare baseline `scripts/bundle-size-guard.mjs`, aggiungere hard limit CI.
 - **Δpunteggio**: **+45**.
 
@@ -158,14 +183,14 @@ P1 totale: **+900**.
 
 ## Riassunto punteggio prudente
 
-| Fase | Descrizione | Δ |
-|------|-------------|--:|
-| P0 | Dedup esatti + contraddizioni | +135 |
-| P1 | Split file monster + Edge shared + DAL | +900 |
-| P2 | Legacy v1→v2 con replacement | +400 |
-| P3 | Consolidamento Edge/KB/Agent | +50 |
-| P4 | Console/any/test/bundle | +265 |
-| **Totale prudente** | | **+1.750** |
+| Fase                | Descrizione                            |          Δ |
+| ------------------- | -------------------------------------- | ---------: |
+| P0                  | Dedup esatti + contraddizioni          |       +135 |
+| P1                  | Split file monster + Edge shared + DAL |       +900 |
+| P2                  | Legacy v1→v2 con replacement           |       +400 |
+| P3                  | Consolidamento Edge/KB/Agent           |        +50 |
+| P4                  | Console/any/test/bundle                |       +265 |
+| **Totale prudente** |                                        | **+1.750** |
 
 Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.000 richiede batch aggiuntivi (P5+ da ridefinire su nuovo baseline dopo P0-P4).
 
@@ -237,10 +262,12 @@ Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.00
 ## Batch F20-P0.4 (VERIFIED_FIXED — con DEFERRED su target primario)
 
 ### Target primario: P001-018 → **DEFERRED**
+
 - Motivazione: fix richiederebbe import di `Database` generic da `src/integrations/supabase/types.ts` (auto-gen) dentro edge runtime. Cross-boundary vietato dall'architettura (edge non deve dipendere da `src/`). Alternativa (copia schema in `_shared/`) è alto-costo/high-drift.
 - Rimandato a batch dedicato che introduca `_shared/db-types.ts` DB-scoped (fuori scope P0).
 
 ### Fallback eseguito: **P001-004 VERIFIED_FIXED**
+
 - **Finding**: `src/components/test-extensions/LinkedInTest.tsx` L89-L103 — `runWithCooldown` crea `setInterval` clearato solo dal tick di decremento. Se il componente smonta mid-cooldown, l'interval leak-a (timer vivo + setState su unmounted → warning React).
 - **Path/range**: `src/components/test-extensions/LinkedInTest.tsx` L34-L103.
 - **File modificati**: 1 runtime (`LinkedInTest.tsx` — +14 righe, −2 righe).
@@ -258,6 +285,7 @@ Baseline 74.720 → **target dopo esecuzione completa: 76.470**. Il target 90.00
 - **Δpunteggio prudente**: **+15** (bug concurrency chiuso su componente diagnostico critico).
 
 ### Cumulativo P0 finding chiusi: **4 / 33** partition001
+
 P001-007 (DAL bypass) · P001-025 (Levenshtein reimpl) · P001-016 (logging non strutturato) · P001-004 (interval leak).
 
 ---
@@ -267,11 +295,13 @@ P001-007 (DAL bypass) · P001-025 (Levenshtein reimpl) · P001-016 (logging non 
 **Base**: `d6b6770451505ac261c49d6699a005005a88c0a0`. Nessun deploy, nessuna migration.
 
 ### 0. Riparazione documentale ledger (pre-requisito del brief)
+
 - Riga P001-004 (P0.4) era **JSONL invalido**: `cumulative_p0_fixed` / `cumulative_findings_closed` erano finiti dentro l'array `tests`. Spostati a campi top-level (`cumulative_p0_fixed` corretto a **4**).
 - Campi `commit` allineati ai commit effettivi: P0.3 → `39147d50e92f9c63f750b7378ded5d19739c5eb4`, P0.4 → `d6b6770451505ac261c49d6699a005005a88c0a0` (erano base/`post-P0.3`).
 - **Gate**: `JSON.parse` su **tutte** le righe → 15/15 valide (pre-fix 1 invalida). Evidenze sostanziali non alterate.
 
 ### 1. Finding trattato: **P001-002 — VERIFIED_FIXED**
+
 - **File**: `src/components/test-extensions/LinkedInTest.tsx` (unico runtime file toccato).
 - **Problema provato**: `JSON.parse(raw) as StoredLiTestRecipient` seguito da `saved?.url?.trim()`. Il cast non valida nulla: `"stringa"`, `42`, `[1,2]`, `{"url":123}` sono JSON validi e `.trim()` su non-stringa lancia `TypeError`, mascherato dal `try/catch`.
 - **Fix minimo (8 righe)**: parse in `unknown` → early-return se non object / `null` / array → early-return se `typeof candidate.url !== "string"` → `.trim()` su stringa certa.
@@ -282,6 +312,7 @@ P001-007 (DAL bypass) · P001-025 (Levenshtein reimpl) · P001-016 (logging non 
 - **Δpunteggio prudente**: **+12**.
 
 ### Cumulativo P0 finding chiusi: **5 / 33** partition001
+
 P001-007 · P001-025 · P001-016 · P001-004 · P001-002.
 
 ---
@@ -289,6 +320,7 @@ P001-007 · P001-025 · P001-016 · P001-004 · P001-002.
 ## Batch F20-P0.6 + P0.6b (ESEGUITI — sezione consolidata)
 
 ### Finding trattato: **P001-013 — VERIFIED_FIXED**
+
 - **File runtime**: `src/data/funnemailInbox.ts` (unico file runtime toccato nei due sotto-batch).
 - **Totale migrato**: **10 call site** da `untypedFrom()` (`any`) al client tipizzato `supabase.from()` — 8 in P0.6, 2 in P0.6b (`funnemail_sender_intel`, `partners`). Query, colonne, filtri, ordinamenti, firme, export ed error semantics invariati: cambia solo il tipo statico del builder.
 - **Residui motivati (4)**: 2 su sorgente dinamica `message_intelligence_v | channel_messages` (il client tipizzato non accetta un'unione di nomi tabella); 2 dentro `fetchAllPages<T>` dove il Row generato diverge dal tipo applicativo (`suggested_action: string` vs union, `funnemail_policy: Json` vs shape). Provato empiricamente: 2 errori TS2322 → rollback mirato. Motivazione documentata inline nel file.
@@ -296,6 +328,7 @@ P001-007 · P001-025 · P001-016 · P001-004 · P001-002.
 - **Ledger**: righe F20-P0.6 / F20-P0.6b allineate al commit effettivo `d79ecd00b4711cf3ce644058d3ff4373dd2234c7`.
 
 ### Cumulativo P0 finding chiusi: **6 / 33** partition001
+
 P001-007 · P001-025 · P001-016 · P001-004 · P001-002 · P001-013.
 
 ### Prossimo candidato unico: **P001-027**
@@ -305,6 +338,7 @@ P001-007 · P001-025 · P001-016 · P001-004 · P001-002 · P001-013.
 ## Batch F20-P0.7 (ESEGUITO)
 
 ### Finding trattato: **P001-027 — CONFIRMED_FACT / DEFERRED (nessun runtime edit)**
+
 - **Rettifica dell'evidenza originale**: il finding dichiarava «0 `.from()` diretti». **Falso**. La verifica sul file attuale `src/components/email-intelligence/manual-grouping/useGroupingData.ts` (447 righe) mostra `import { supabase } from "@/integrations/supabase/client"` e accessi diretti multipli. **Conteggio rettificato in P0.8** (il precedente «12 accessi / 10 `.from()`» era errato e incoerente col dettaglio elencato). Conteggio reale su file, per categoria:
   - **11 query DAL `supabase.from()`** — righe 58, 80, 104, 123, 132, 157, 232, 294, 329, 362, 385 su `email_sender_groups`, `email_address_rules`, `channel_messages` (escluse le 2 occorrenze di `Array.from` alle righe 186 e 251, non-Supabase);
   - **3 chiamate auth `supabase.auth.getSession()`** — righe 55, 99, 286;
@@ -321,6 +355,7 @@ P001-007 · P001-025 · P001-016 · P001-004 · P001-002 · P001-013.
 ## Batch F20-P0.8 (ESEGUITO)
 
 ### Finding trattato: **P001-008 — CONFIRMED_FACT / VERIFIED_FIXED**
+
 - **Conferma del finding (non assunto)**: il contratto `CockpitAIAction` (`src/components/cockpit/TopCommandBar.tsx:12-23`) dichiara `field?: string` **opzionale**; il producer unico è `useIntelliFlowOverlay.ts:108` che fa `const actions = (data?.actions as unknown[]) || []` sul payload di una edge function e lo passa a `executeAIActions` **senza schema né validazione runtime**. Quindi `field` può essere `undefined`, `null`, numero o oggetto: il `field!` a `useCockpitLogic.ts:162` era una bugia di tipo.
 - **Impatto reale**: con `field` undefined l'indicizzazione usava la chiave letterale `"undefined"` e, con `operator === "=="` e `value` undefined, il predicato risultava **vero per tutti i contatti** → selezione di massa involontaria a monte delle bulk action.
 - **Fix minimo applicato**: la closure esistente è stata estratta in funzione pura esportata `buildSelectWherePredicate(field: unknown, operator: unknown, value: unknown)` **nello stesso file** (nessun nuovo modulo runtime, nessuna modifica all'oggetto ritornato dall'hook). Guard: `typeof field !== "string" || field.length === 0` → `null`; nel `case "select_where"` un predicato `null` produce `log.debug` + `break`, cioè la **stessa semantica di skip silenzioso** già usata da `case "filter"` (`if (action.filters)`) e `case "view_mode"` (`if (action.mode)`). Nessuna nuova UX/toast.
@@ -335,6 +370,7 @@ Alla richiesta di riesecuzione del batch su base `42bbf5c3d54c336bc7b790c98b942a
 ### Chiusura P0
 
 **P0 chiuso**: non restano micro-fix runtime sicuri in partition001 entro il profilo del gate. I FACT residui richiedono tutti interventi strutturali → **P1**:
+
 - P001-027 (bypass DAL `useGroupingData`) → nuovo modulo `src/data/emailGrouping.ts` + riscrittura hook → **P1.3**;
 - residui untyped in `src/data/funnemailInbox.ts` → richiedono allineare i tipi applicativi (`suggested_action`, `funnemail_policy`) → **P1**;
 - P001-024 (615 righe `e2e/calendar-flow.spec.ts`, selettori CSS fragili) → sostituzione con `data-testid` + split in 3 spec → **P1**;
@@ -355,21 +391,22 @@ Alla richiesta di riesecuzione del batch su base `42bbf5c3d54c336bc7b790c98b942a
 
 **Classificazione integrale delle 11 query `supabase.from()` di `useGroupingData.ts`**
 
-| # | Funzione | Tabella | Tipo | Dettaglio |
-|---|---|---|---|---|
-| 1 | `loadGroups` | email_sender_groups | READ | `select *`, order `sort_order` asc, error ignorato |
-| 2 | `loadAssignedRules` | email_address_rules | READ | 7 col, `not group_name is null`, order `created_at` desc, range paginato 1000, throw |
-| 3 | `loadData` | email_sender_groups | READ | identica a #1 |
-| 4 | `loadData` | email_sender_groups | WRITE | `upsert` onConflict `nome_gruppo`, ignoreDuplicates, `.select()` |
-| 5 | `loadData` (fallback) | email_sender_groups | READ | identica a #1 |
-| 6 | `loadData` | email_address_rules | READ | uncategorized: `is group_id null` + `is group_name null`, order `email_count` desc, range |
-| 7 | `loadData` | email_address_rules | READ | classified: `or(group_id.not.is.null,group_name.not.is.null)`, order `email_count` desc, range |
-| 8 | `populateAddressRules` | channel_messages | READ dinamico | filtri condizionali su `activeMailbox` (personal/shared) |
-| 9 | `populateAddressRules` | email_address_rules | READ | `id,email_address,email_count`, order `id` asc, range |
-| 10 | `populateAddressRules` | email_address_rules | WRITE | `update email_count` eq id (batch 20) |
-| 11 | `populateAddressRules` | email_address_rules | WRITE | `upsert` onConflict `user_id,email_address` (batch 100) |
+| #   | Funzione               | Tabella             | Tipo          | Dettaglio                                                                                      |
+| --- | ---------------------- | ------------------- | ------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | `loadGroups`           | email_sender_groups | READ          | `select *`, order `sort_order` asc, error ignorato                                             |
+| 2   | `loadAssignedRules`    | email_address_rules | READ          | 7 col, `not group_name is null`, order `created_at` desc, range paginato 1000, throw           |
+| 3   | `loadData`             | email_sender_groups | READ          | identica a #1                                                                                  |
+| 4   | `loadData`             | email_sender_groups | WRITE         | `upsert` onConflict `nome_gruppo`, ignoreDuplicates, `.select()`                               |
+| 5   | `loadData` (fallback)  | email_sender_groups | READ          | identica a #1                                                                                  |
+| 6   | `loadData`             | email_address_rules | READ          | uncategorized: `is group_id null` + `is group_name null`, order `email_count` desc, range      |
+| 7   | `loadData`             | email_address_rules | READ          | classified: `or(group_id.not.is.null,group_name.not.is.null)`, order `email_count` desc, range |
+| 8   | `populateAddressRules` | channel_messages    | READ dinamico | filtri condizionali su `activeMailbox` (personal/shared)                                       |
+| 9   | `populateAddressRules` | email_address_rules | READ          | `id,email_address,email_count`, order `id` asc, range                                          |
+| 10  | `populateAddressRules` | email_address_rules | WRITE         | `update email_count` eq id (batch 20)                                                          |
+| 11  | `populateAddressRules` | email_address_rules | WRITE         | `upsert` onConflict `user_id,email_address` (batch 100)                                        |
 
 **Cluster estratto (4 query READ-ONLY)** → nuovo modulo `src/data/emailGrouping.ts`:
+
 - `fetchSenderGroupsOrdered()` ← query #1, #3, #5 (tre letture identiche unificate);
 - `fetchAssignedAddressRules()` ← query #2 (con paginazione a 1000 interna al DAL).
 
@@ -460,6 +497,7 @@ Equivalenza 1:1: tabella, payload `inserts` invariato, opzioni `{ onConflict: "n
 ---
 
 ## Regole trasversali su ogni batch
+
 1. **Un file per commit** dove possibile.
 2. **Test unit di regressione** aggiunto o esistente **prima** dello split.
 3. **Screenshot Playwright** della route toccata (before/after) per UI.
@@ -484,6 +522,7 @@ Equivalenza 1:1: tabella, payload `inserts` invariato, opzioni `{ onConflict: "n
 ## Checkpoint per turno successivo (se A1 non chiuso)
 
 A0 completato al 100%. A1 completato per **regole strutturali su 3.445 file semantici**. Restano fuori dal presente turno:
+
 1. **Ispezione manuale riga-per-riga** dei top 20 file per righe (LinkedInTest, useCockpitLogic, partners.ts, funnemailInbox.ts, HarmonizeSystemDialog, send-email/index, toolHandlersRead, toolHandlersWrite, PromptCopilotPanel, PromptTestsTab, ComposerCanvas, SenderActionsDialog, calendar-flow.spec, contact-merge-logic.test, useEmailComposerState, useGroupingData, useGlobalPromptImprover, useDeepSearchLocal, WhatsAppTest, RulesAndActionsTab).
 2. **Verifica applicazione DB migrations duplicate** (P0.3 gate).
 3. **Triage 1-a-1 delle 45 coppie v1/v2** (P2.1).

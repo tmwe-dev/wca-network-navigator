@@ -9,7 +9,18 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Users, Mail, MessageSquare, Inbox, Wrench, BookOpen, Bell, MailCheck, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  Users,
+  Mail,
+  MessageSquare,
+  Inbox,
+  Wrench,
+  BookOpen,
+  Bell,
+  MailCheck,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 import { fetchAgentRolesOverview } from "@/data/agentRolesOverview";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Card } from "@/components/ui/card";
@@ -81,15 +92,28 @@ export function AgentRolesOverviewPage(): React.ReactElement {
         <Card className="p-4 bg-muted/30">
           <p className="text-sm text-foreground font-medium mb-1">Come è organizzato il sistema</p>
           <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
-            <li><span className="text-foreground">Ogni agente</span> ha un ruolo e dei canali abilitati (email, WhatsApp, inbox).</li>
-            <li><span className="text-foreground">Le istruzioni</span> (tono, regole, vocabolario) di ogni agente si definiscono nella sua <span className="text-foreground">Persona</span>; i tool che può usare nelle <span className="text-foreground">Capability</span>.</li>
-            <li>La chat con l'agente serve a <span className="text-foreground">testarlo/parlarci</span>, non a istruirlo: per istruirlo si modifica la Persona.</li>
+            <li>
+              <span className="text-foreground">Ogni agente</span> ha un ruolo e dei canali abilitati (email, WhatsApp,
+              inbox).
+            </li>
+            <li>
+              <span className="text-foreground">Le istruzioni</span> (tono, regole, vocabolario) di ogni agente si
+              definiscono nella sua <span className="text-foreground">Persona</span>; i tool che può usare nelle{" "}
+              <span className="text-foreground">Capability</span>.
+            </li>
+            <li>
+              La chat con l'agente serve a <span className="text-foreground">testarlo/parlarci</span>, non a istruirlo:
+              per istruirlo si modifica la Persona.
+            </li>
           </ul>
         </Card>
 
         {/* Agenti */}
         <div>
-          <h2 className="text-sm font-semibold text-foreground mb-3">Agenti operativi attivi {agents.length > 0 && <span className="text-muted-foreground font-normal">({agents.length})</span>}</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-3">
+            Agenti operativi attivi{" "}
+            {agents.length > 0 && <span className="text-muted-foreground font-normal">({agents.length})</span>}
+          </h2>
           {isLoading ? (
             <p className="text-xs text-muted-foreground">Caricamento…</p>
           ) : agents.length === 0 ? (
@@ -110,10 +134,28 @@ export function AgentRolesOverviewPage(): React.ReactElement {
                     </div>
                     <p className="text-xs text-muted-foreground">{info.does}</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {a.can_send_email && <Badge variant="secondary" className="text-[10px] gap-1"><Mail className="w-3 h-3" />Email</Badge>}
-                      {a.can_send_whatsapp && <Badge variant="secondary" className="text-[10px] gap-1"><MessageSquare className="w-3 h-3" />WhatsApp</Badge>}
-                      {a.can_access_inbox && <Badge variant="secondary" className="text-[10px] gap-1"><Inbox className="w-3 h-3" />Inbox</Badge>}
-                      <Badge variant="outline" className="text-[10px] gap-1"><Wrench className="w-3 h-3" />{tools} tool</Badge>
+                      {a.can_send_email && (
+                        <Badge variant="secondary" className="text-[10px] gap-1">
+                          <Mail className="w-3 h-3" />
+                          Email
+                        </Badge>
+                      )}
+                      {a.can_send_whatsapp && (
+                        <Badge variant="secondary" className="text-[10px] gap-1">
+                          <MessageSquare className="w-3 h-3" />
+                          WhatsApp
+                        </Badge>
+                      )}
+                      {a.can_access_inbox && (
+                        <Badge variant="secondary" className="text-[10px] gap-1">
+                          <Inbox className="w-3 h-3" />
+                          Inbox
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-[10px] gap-1">
+                        <Wrench className="w-3 h-3" />
+                        {tools} tool
+                      </Badge>
                     </div>
                     <div className="flex items-center gap-2 pt-1 border-t border-border/40 text-[11px]">
                       <BookOpen className="w-3.5 h-3.5 text-muted-foreground" />
@@ -134,7 +176,9 @@ export function AgentRolesOverviewPage(): React.ReactElement {
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-foreground">Strategie email dopo il circuito di attesa</h2>
-            <Link to="/v2/agents/email-strategies" className="text-xs text-primary hover:underline">Gestisci →</Link>
+            <Link to="/v2/agents/email-strategies" className="text-xs text-primary hover:underline">
+              Gestisci →
+            </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <StrategyCard

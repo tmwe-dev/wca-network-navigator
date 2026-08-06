@@ -23,7 +23,6 @@ import { updateContactEnrichment } from "@/data/contacts";
 import { updateBusinessCard, getBusinessCardRawData } from "@/data/businessCards";
 import { getScrapeCacheEntry, upsertScrapeCacheEntry } from "@/data/scrapeCache";
 
-
 import { createLogger } from "@/lib/log";
 import { toJsonValue } from "@/lib/typedJson";
 const moduleLog = createLogger("baseEnrichment");
@@ -66,7 +65,11 @@ export interface WebsiteExcerpt {
  */
 export interface FsBridge {
   readonly isAvailable: boolean;
-  googleSearch: (query: string, limit?: number, skipCache?: boolean) => Promise<{
+  googleSearch: (
+    query: string,
+    limit?: number,
+    skipCache?: boolean,
+  ) => Promise<{
     success: boolean;
     error?: string;
     data?: Array<{ url?: string; title?: string; description?: string }>;
@@ -105,7 +108,9 @@ async function persistScrape(url: string, markdown: string): Promise<void> {
       mode: "static",
       payload: { markdown, source: "base-enrichment", captured_at: new Date().toISOString() },
     });
-  } catch { /* non-blocking */ }
+  } catch {
+    /* non-blocking */
+  }
 }
 
 /**
@@ -131,7 +136,14 @@ async function readUrlSmart(
   }
   await new Promise<void>((res) => {
     const t = setTimeout(res, 2000);
-    signal?.addEventListener("abort", () => { clearTimeout(t); res(); }, { once: true });
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(t);
+        res();
+      },
+      { once: true },
+    );
   });
   if (signal?.aborted) return "";
   const sc = await bridge.scrape(true);
@@ -160,7 +172,12 @@ function dedupe(values: string[]): string[] {
 
 function extractDomain(value: string | null | undefined): string | null {
   if (!value) return null;
-  const v = value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  const v = value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
   return v || null;
 }
 
@@ -303,7 +320,10 @@ async function persistEnrichmentPatch(
   if (source === "wca") {
     const existing = await getPartnerEnrichmentData(id);
     const merged = { ...existing, ...patch };
-    await updatePartner(id, { enrichment_data: toJsonValue(merged), ...(topLevel.logo_url ? { logo_url: topLevel.logo_url } : {}) });
+    await updatePartner(id, {
+      enrichment_data: toJsonValue(merged),
+      ...(topLevel.logo_url ? { logo_url: topLevel.logo_url } : {}),
+    });
     return;
   }
   if (source === "bca") {
@@ -340,7 +360,9 @@ export async function enrichBaseTarget(
   let siteScraped = false;
 
   const isCompanyLike = target.source === "wca" || target.source === "bca";
-  log(`▶ start (linkedin:${target.hasLinkedin?"✓":"✗"} logo:${target.hasLogo?"✓":"✗"} site:${target.hasWebsiteExcerpt?"✓":"✗"} domain:${target.domain || "—"})`);
+  log(
+    `▶ start (linkedin:${target.hasLinkedin ? "✓" : "✗"} logo:${target.hasLogo ? "✓" : "✗"} site:${target.hasWebsiteExcerpt ? "✓" : "✗"} domain:${target.domain || "—"})`,
+  );
 
   // Slug LinkedIn
   if (!target.hasLinkedin) {
@@ -397,6 +419,6 @@ export async function enrichBaseTarget(
     }
   }
 
-  log(`■ done (slug:${slugFound?"✓":"✗"} logo:${logoFound?"✓":"✗"} site:${siteScraped?"✓":"✗"})`);
+  log(`■ done (slug:${slugFound ? "✓" : "✗"} logo:${logoFound ? "✓" : "✗"} site:${siteScraped ? "✓" : "✗"})`);
   return { id: target.id, slugFound, logoFound, siteScraped, errors, logs };
 }

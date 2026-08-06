@@ -5,27 +5,18 @@
 
 import { supabase } from "./supabaseClient.ts";
 
-export async function handleGenerateOutreach(
-  args: Record<string, unknown>,
-  authHeader: string
-): Promise<unknown> {
-  const response = await fetch(
-    `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-outreach`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: authHeader },
-      body: JSON.stringify(args),
-    }
-  );
+export async function handleGenerateOutreach(args: Record<string, unknown>, authHeader: string): Promise<unknown> {
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-outreach`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify(args),
+  });
   const data = await response.json();
   if (!response.ok) return { error: data.error || "Errore generazione" };
   return { success: true, channel: data.channel, subject: data.subject, body: data.body };
 }
 
-export async function handleSendEmail(
-  args: Record<string, unknown>,
-  authHeader: string
-): Promise<unknown> {
+export async function handleSendEmail(args: Record<string, unknown>, authHeader: string): Promise<unknown> {
   const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: authHeader },
@@ -50,10 +41,7 @@ export async function handleSendEmail(
   return { success: true, message: `Email inviata a ${args.to_email}.` };
 }
 
-export async function handleScheduleEmail(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleScheduleEmail(args: Record<string, unknown>, userId: string): Promise<unknown> {
   const scheduledAt = String(args.scheduled_at);
   const { data, error } = await supabase
     .from("email_campaign_queue")
@@ -78,10 +66,7 @@ export async function handleScheduleEmail(
   };
 }
 
-export async function handleQueueOutreach(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleQueueOutreach(args: Record<string, unknown>, userId: string): Promise<unknown> {
   const channel = String(args.channel || "email");
   const body = String(args.body || "");
   if (!body) return { error: "body è obbligatorio" };

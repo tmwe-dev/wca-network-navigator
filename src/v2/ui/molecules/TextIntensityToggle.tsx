@@ -22,10 +22,7 @@ export function TextIntensityToggle({ className, compact = false }: Props) {
 
   return (
     <div
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded-md border border-border/60 bg-card/40 p-0.5",
-        className,
-      )}
+      className={cn("inline-flex items-center gap-0.5 rounded-md border border-border/60 bg-card/40 p-0.5", className)}
       role="radiogroup"
       aria-label="Intensità testo"
     >

@@ -53,7 +53,9 @@ describe("useEmailCount", () => {
 
   it("handles error from queryFn — retries exhausted", async () => {
     // With retry:false in test client, first error should surface
-    mockEq.mockImplementationOnce(() => { throw new Error("DB down"); });
+    mockEq.mockImplementationOnce(() => {
+      throw new Error("DB down");
+    });
     const { result } = renderHookWithProviders(() => useEmailCount());
     await waitFor(() => expect(result.current.error).not.toBeNull(), { timeout: 3000 });
   });

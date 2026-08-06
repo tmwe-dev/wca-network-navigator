@@ -6,27 +6,64 @@ import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 import { getProfileTruncation, getModel } from "./promptHelpers.ts";
 import { buildStrategicAdvisor } from "./strategicAdvisor.ts";
 import type { EmailPromptContext, PromptBlock, BuiltPrompts } from "./promptTypes.ts";
-import {
-  buildAddressPriorityBlock,
-  buildCommercialStateBlock,
-} from "../_shared/prompts/promptParts.ts";
+import { buildAddressPriorityBlock, buildCommercialStateBlock } from "../_shared/prompts/promptParts.ts";
 
-export type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow, EmailPromptContext, StrategicAdvisorContext, PromptBlock, BuiltPrompts } from "./promptTypes.ts";
+export type {
+  PartnerData,
+  ContactData,
+  NetworkRow,
+  ServiceRow,
+  SocialLinkRow,
+  EmailPromptContext,
+  StrategicAdvisorContext,
+  PromptBlock,
+  BuiltPrompts,
+} from "./promptTypes.ts";
 export { getModel };
 
 export function buildEmailPrompts(ctx: EmailPromptContext): BuiltPrompts {
   const {
-    partner, contact, contactEmail, quality, settings, networks, services, socialLinks,
-    historyContext, relationshipBlock, branchBlock, interlocutorBlock,
-    metInPersonContext, cachedEnrichmentContext, documentsContext,
-    stylePreferencesContext, editPatternsContext, responseInsightsContext,
+    partner,
+    contact,
+    contactEmail,
+    quality,
+    settings,
+    networks,
+    services,
+    socialLinks,
+    historyContext,
+    relationshipBlock,
+    branchBlock,
+    interlocutorBlock,
+    metInPersonContext,
+    cachedEnrichmentContext,
+    documentsContext,
+    stylePreferencesContext,
+    editPatternsContext,
+    responseInsightsContext,
     conversationIntelligenceContext,
-    salesKBSlice, salesKBSections, signatureBlock: _signatureBlock,
-    goal, base_proposal, oracle_type, oracle_tone, use_kb, language,
-    email_type_prompt, email_type_structure,
-    commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
-    playbookBlock, addressCustomPrompt, addressCategory,
-    operativePromptsBlock, operativePromptsApplied,
+    salesKBSlice,
+    salesKBSections,
+    signatureBlock: _signatureBlock,
+    goal,
+    base_proposal,
+    oracle_type,
+    oracle_tone,
+    use_kb,
+    language,
+    email_type_prompt,
+    email_type_structure,
+    commercialState,
+    touchCount,
+    lastChannel,
+    lastOutcome,
+    daysSinceLastContact,
+    warmthScore,
+    playbookBlock,
+    addressCustomPrompt,
+    addressCategory,
+    operativePromptsBlock,
+    operativePromptsApplied,
   } = ctx;
 
   // Resolve names
@@ -70,13 +107,15 @@ ${trunc.description > 0 && partner.profile_description ? `- Descrizione: ${partn
 ${trunc.rawProfile > 0 && partner.raw_profile_markdown ? `\nPROFILO COMPLETO (estratto):\n${partner.raw_profile_markdown.substring(0, trunc.rawProfile)}` : ""}
 ${linkedinContext}`;
 
-  const contactContext = contact ? `
+  const contactContext = contact
+    ? `
 CONTATTO DESTINATARIO:
 ${recipientName ? `- Nome persona: ${recipientName}` : `- Nome persona: non disponibile`}
 - Ruolo: ${contact.title || "N/A"}
 - Email: ${contact.email || contactEmail}
 ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || "N/A"}` : ""}
-` : `NOTA: Nessun contatto selezionato.`;
+`
+    : `NOTA: Nessun contatto selezionato.`;
 
   // Infer category from touchCount/commercialState if oracle_type is missing
   const tcFallback = touchCount ?? 0;
@@ -89,7 +128,7 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
   const dataPoints = {
     hasWebsite: /INFORMAZIONI SITO AZIENDALE/i.test(ce),
     hasLinkedin: /PROFILO LINKEDIN/i.test(ce),
-    contactProfilesCount: (ce.match(/CONTATTI CHIAVE/i) ? (ce.match(/^- /gm) || []).length : 0),
+    contactProfilesCount: ce.match(/CONTATTI CHIAVE/i) ? (ce.match(/^- /gm) || []).length : 0,
     hasSherlock: /INDAGINE SHERLOCK/i.test(ce),
     bcaCount: metInPersonContext ? (metInPersonContext.match(/Evento:/gi) || []).length : 0,
     historyCount: prevActCount,
@@ -118,7 +157,7 @@ ${quality !== "fast" ? `- Telefono: ${settings.ai_phone_signature || "N/A"}` : "
 - Network: ${settings.ai_networks || "N/A"}
 
 KNOWLEDGE BASE AZIENDALE:
-${use_kb !== false ? (settings.ai_knowledge_base || "Non configurata") : "(Knowledge Base disattivata dall'utente)"}
+${use_kb !== false ? settings.ai_knowledge_base || "Non configurata" : "(Knowledge Base disattivata dall'utente)"}
 ${use_kb !== false && salesKBSlice ? `\n# ARSENAL STRATEGICO (${salesKBSections.join(", ") || "legacy"}):\nLeggi ATTENTAMENTE queste tecniche e APPLICALE nel messaggio.\n\n${salesKBSlice}\n` : ""}
 STILE DI COMUNICAZIONE:
 - Tono: ${oracle_tone || settings.ai_tone || "professionale"}
@@ -133,11 +172,14 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
   const effectiveLanguage = language || settings.ai_language || detected.language;
 
   // Email type structure block
-  const emailTypeStructureBlock = (email_type_prompt || email_type_structure) ? `
+  const emailTypeStructureBlock =
+    email_type_prompt || email_type_structure
+      ? `
 # TIPO EMAIL "${emailCategory}" — STRUTTURA E ISTRUZIONI OBBLIGATORIE
 ${email_type_prompt ? `\n## Istruzioni operative del tipo:\n${email_type_prompt}\n` : ""}${email_type_structure ? `\n## Struttura tattica richiesta:\n${email_type_structure}\n` : ""}
 ⚠️ Questa struttura è VINCOLANTE: rispetta sezioni, ordine, vincoli di lunghezza e CTA prescritte.
-` : "";
+`
+      : "";
 
   // Address-specific priority instruction block (shared module)
   const addressPriorityBlock = buildAddressPriorityBlock({ addressCustomPrompt, addressCategory });
@@ -165,24 +207,52 @@ ${operativePromptsBlock ? `\n${operativePromptsBlock}\n` : ""}${playbookBlock ? 
 
   // Forge debug: track labeled system blocks
   const systemBlocks: PromptBlock[] = [];
-  if (addressCustomPrompt) systemBlocks.push({ label: "Address Custom Prompt (Priority)", content: addressCustomPrompt });
+  if (addressCustomPrompt)
+    systemBlocks.push({ label: "Address Custom Prompt (Priority)", content: addressCustomPrompt });
   if (addressCategory) systemBlocks.push({ label: "Address Category (Priority)", content: addressCategory });
-  systemBlocks.push({ label: "Identity (Editor)", content: `Editor che scrive a nome di "${senderCompanyForPrompt}". UN messaggio per UN destinatario dopo aver letto il dossier. Trasmette: serietà, personalizzazione vera, standard aziendale del mittente.` });
-  systemBlocks.push({ label: "Identità mittente — VINCOLANTE", content: `Mittente esclusivo: "${senderCompanyForPrompt}". Mai firmare/citare altre aziende, network o alleanze come identità del mittente.` });
-  systemBlocks.push({ label: "Missione messaggio", content: "Costruire ritratto preciso del partner → scegliere UNA leva di interesse → costruire l'email attorno a quella. Una idea forte, non elenco feature." });
+  systemBlocks.push({
+    label: "Identity (Editor)",
+    content: `Editor che scrive a nome di "${senderCompanyForPrompt}". UN messaggio per UN destinatario dopo aver letto il dossier. Trasmette: serietà, personalizzazione vera, standard aziendale del mittente.`,
+  });
+  systemBlocks.push({
+    label: "Identità mittente — VINCOLANTE",
+    content: `Mittente esclusivo: "${senderCompanyForPrompt}". Mai firmare/citare altre aziende, network o alleanze come identità del mittente.`,
+  });
+  systemBlocks.push({
+    label: "Missione messaggio",
+    content:
+      "Costruire ritratto preciso del partner → scegliere UNA leva di interesse → costruire l'email attorno a quella. Una idea forte, non elenco feature.",
+  });
   if (operativePromptsBlock) {
-    const appliedLabel = operativePromptsApplied && operativePromptsApplied.length > 0
-      ? ` [${operativePromptsApplied.join(" • ")}]`
-      : "";
-    systemBlocks.push({ label: `Prompt Lab — Operative Prompts (priority)${appliedLabel}`, content: operativePromptsBlock });
+    const appliedLabel =
+      operativePromptsApplied && operativePromptsApplied.length > 0 ? ` [${operativePromptsApplied.join(" • ")}]` : "";
+    systemBlocks.push({
+      label: `Prompt Lab — Operative Prompts (priority)${appliedLabel}`,
+      content: operativePromptsBlock,
+    });
   }
   if (playbookBlock) systemBlocks.push({ label: "Playbook (priority)", content: playbookBlock });
-  if (emailTypeStructureBlock) systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
+  if (emailTypeStructureBlock)
+    systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
   systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
-  systemBlocks.push({ label: "Regole dati", content: "Usa tutti i dati dei blocchi per ritratto + leva. Vietato inventare numeri/casi/certificazioni. Qualitativo se mancano dati." });
-  systemBlocks.push({ label: "Stile Editor", content: "Pro-a-pro, asciutto. Apertura osservazione concreta. UNA idea forte. CTA leggera. 80-150 parole. No bullet di feature, no entusiasmo finto." });
-  systemBlocks.push({ label: "Ancora obbligatoria", content: `Almeno 1 elemento specifico dal dossier. Se zero dati → tag [GENERIC] nel subject + presentazione onesta di "${senderCompanyForPrompt}".` });
-  systemBlocks.push({ label: "Output + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Subject prima riga, body HTML semplice, firma auto.` });
+  systemBlocks.push({
+    label: "Regole dati",
+    content:
+      "Usa tutti i dati dei blocchi per ritratto + leva. Vietato inventare numeri/casi/certificazioni. Qualitativo se mancano dati.",
+  });
+  systemBlocks.push({
+    label: "Stile Editor",
+    content:
+      "Pro-a-pro, asciutto. Apertura osservazione concreta. UNA idea forte. CTA leggera. 80-150 parole. No bullet di feature, no entusiasmo finto.",
+  });
+  systemBlocks.push({
+    label: "Ancora obbligatoria",
+    content: `Almeno 1 elemento specifico dal dossier. Se zero dati → tag [GENERIC] nel subject + presentazione onesta di "${senderCompanyForPrompt}".`,
+  });
+  systemBlocks.push({
+    label: "Output + Guardrails",
+    content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Subject prima riga, body HTML semplice, firma auto.`,
+  });
 
   // Commercial state context (shared module, by_warmth strategy = legacy generate-email tone heuristic)
   const commercialBlock = buildCommercialStateBlock({

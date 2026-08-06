@@ -19,9 +19,9 @@ export const analyzePartnerTool: Tool = {
       body: { partnerId: idMatch?.[0] ?? "", query: prompt },
     });
 
-    const sections = Array.isArray(data?.sections) ? data.sections : [
-      { heading: "Analisi", body: typeof data?.analysis === "string" ? data.analysis : JSON.stringify(data ?? {}) },
-    ];
+    const sections = Array.isArray(data?.sections)
+      ? data.sections
+      : [{ heading: "Analisi", body: typeof data?.analysis === "string" ? data.analysis : JSON.stringify(data ?? {}) }];
 
     return {
       kind: "report",

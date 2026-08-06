@@ -27,7 +27,10 @@ function wrapper() {
 }
 
 describe("useChannelMessagesV2 (B4.1 orchestration)", () => {
-  beforeEach(() => { viewMock.mockReset(); legacyMock.mockReset(); });
+  beforeEach(() => {
+    viewMock.mockReset();
+    legacyMock.mockReset();
+  });
 
   it("usa la view canonica quando ritorna Ok e NON chiama la legacy", async () => {
     viewMock.mockResolvedValue({ _tag: "Ok", value: [{ id: "v1" }] });

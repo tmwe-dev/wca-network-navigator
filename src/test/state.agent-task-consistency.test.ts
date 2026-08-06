@@ -63,11 +63,11 @@ describe("Agent Work Hours (CET logic)", () => {
     }
 
     // Default 6-24
-    expect(isOutsideWorkHours(3, 6, 24)).toBe(true);  // 3 AM → outside
-    expect(isOutsideWorkHours(6, 6, 24)).toBe(false);  // 6 AM → inside
+    expect(isOutsideWorkHours(3, 6, 24)).toBe(true); // 3 AM → outside
+    expect(isOutsideWorkHours(6, 6, 24)).toBe(false); // 6 AM → inside
     expect(isOutsideWorkHours(12, 6, 24)).toBe(false); // noon → inside
     expect(isOutsideWorkHours(23, 6, 24)).toBe(false); // 11 PM → inside
-    expect(isOutsideWorkHours(0, 6, 24)).toBe(true);   // midnight → outside
+    expect(isOutsideWorkHours(0, 6, 24)).toBe(true); // midnight → outside
 
     // Custom 8-18
     expect(isOutsideWorkHours(7, 8, 18)).toBe(true);

@@ -37,7 +37,7 @@ describe("Empty catch blocks audit", () => {
     // Only log.ts infra files are exempt (would cause recursion)
     const _total = violations.reduce((sum, v) => sum + v.count, 0);
     const exemptFiles = ["lib/log.ts", "lib/log/remoteSink.ts"];
-    const nonExempt = violations.filter(v => !exemptFiles.some(e => v.file.endsWith(e)));
+    const nonExempt = violations.filter((v) => !exemptFiles.some((e) => v.file.endsWith(e)));
     const nonExemptTotal = nonExempt.reduce((sum, v) => sum + v.count, 0);
     expect(nonExemptTotal).toBe(0);
   });

@@ -9,12 +9,16 @@ import { queryClient } from "@/lib/queryClient";
 import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { InboundNotificationsProvider } from "@/components/providers/InboundNotificationsProvider";
-const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
+const ContactRecordDrawer = lazyRetry(() =>
+  import("@/components/contact-drawer/ContactRecordDrawer").then((m) => ({ default: m.ContactRecordDrawer })),
+);
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { BackgroundSyncIndicator } from "@/components/BackgroundSyncIndicator";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { DrawerErrorBoundary } from "@/components/ui/DrawerErrorBoundary";
-const RuntimeDiagnosticPanel = lazyRetry(() => import("@/components/system/RuntimeDiagnosticPanel").then(m => ({ default: m.RuntimeDiagnosticPanel })));
+const RuntimeDiagnosticPanel = lazyRetry(() =>
+  import("@/components/system/RuntimeDiagnosticPanel").then((m) => ({ default: m.RuntimeDiagnosticPanel })),
+);
 import { withFeatureBoundary } from "@/components/system/FeatureErrorBoundary";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
@@ -44,34 +48,34 @@ function appendLocationParts(target: string, search: string, hash: string): stri
 
 const LEGACY_V1_REDIRECTS: Record<string, string> = {
   "": DEFAULT_HOME_ROUTE,
-  "network": "/v2/network",
-  "crm": "/v2/crm",
-  "outreach": "/v2/outreach",
-  "inreach": "/v2/inreach",
-  "agenda": "/v2/outreach/agenda",
+  network: "/v2/network",
+  crm: "/v2/crm",
+  outreach: "/v2/outreach",
+  inreach: "/v2/inreach",
+  agenda: "/v2/outreach/agenda",
   "agent-chat": "/v2/agents",
-  "settings": "/v2/settings",
+  settings: "/v2/settings",
   "settings/operators": "/v2/settings",
   "settings/users": "/v2/settings/admin-users",
   "email-composer": "/v2/outreach/composer",
-  "ra": "/v2/research",
+  ra: "/v2/research",
   "ra/explorer": "/v2/ra-explorer",
   "ra/scraping": "/v2/ra-scraping",
-  "campaigns": "/v2/campaigns",
+  campaigns: "/v2/campaigns",
   "campaign-jobs": "/v2/campaigns/jobs",
-  "diagnostics": "/v2/settings/diagnostics",
-  "guida": "/v2/guida",
+  diagnostics: "/v2/settings/diagnostics",
+  guida: "/v2/guida",
   "ai-lab": "/v2/ai-staff/lab",
   "mission-builder": "/v2/agents/missions",
-  "telemetry": "/v2/settings/telemetry",
+  telemetry: "/v2/settings/telemetry",
   "staff-direzionale": "/v2/ai-staff",
   "ai-arena": "/v2/ai-arena",
   "ai-control": "/v2/ai-control",
   "email-intelligence": "/v2/email-intelligence",
-  "operations": "/v2/partner-directory",
-  "contacts": "/v2/crm/contacts",
-  "cockpit": "/v2/outreach",
-  "reminders": "/v2/outreach/agenda",
+  operations: "/v2/partner-directory",
+  contacts: "/v2/crm/contacts",
+  cockpit: "/v2/outreach",
+  reminders: "/v2/outreach/agenda",
 };
 
 function PageFallback() {
@@ -118,65 +122,68 @@ const App = () => (
       <QueryClientProvider client={queryClient}>
         <AuthLifecycle />
         <TextIntensityProvider>
-        <InboundNotificationsProvider>
-          <ContactDrawerProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <GlobalFiltersProvider>
-                <ViteChunkRecovery />
-                <PWAUpdatePrompt />
-                <BackgroundSyncIndicator />
-                <ConnectionBanner />
-                <RuntimeDiagnosticPanel />
-                <TraceConsole />
-                <GlobalSherlockLauncher />
-                <Suspense fallback={<PageFallback />}>
-                  <Routes>
-                  <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
+          <InboundNotificationsProvider>
+            <ContactDrawerProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                  <GlobalFiltersProvider>
+                    <ViteChunkRecovery />
+                    <PWAUpdatePrompt />
+                    <BackgroundSyncIndicator />
+                    <ConnectionBanner />
+                    <RuntimeDiagnosticPanel />
+                    <TraceConsole />
+                    <GlobalSherlockLauncher />
+                    <Suspense fallback={<PageFallback />}>
+                      <Routes>
+                        <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
 
-                  {/* Nuovo menu esclusivo del sistema semplificato (non tocca /v2/*). */}
-                  <Route path="/app" element={<SimpleHomePage />} />
+                        {/* Nuovo menu esclusivo del sistema semplificato (non tocca /v2/*). */}
+                        <Route path="/app" element={<SimpleHomePage />} />
 
-                  {/* Public routes */}
-                  <Route path="/auth" element={<LegacyRedirect to="/v2/login" />} />
-                  <Route path="/onboarding" element={<LegacyRedirect to="/v2/onboarding" />} />
-                  <Route path="/reset-password" element={<LegacyRedirect to="/v2/reset-password" />} />
+                        {/* Public routes */}
+                        <Route path="/auth" element={<LegacyRedirect to="/v2/login" />} />
+                        <Route path="/onboarding" element={<LegacyRedirect to="/v2/onboarding" />} />
+                        <Route path="/reset-password" element={<LegacyRedirect to="/v2/reset-password" />} />
 
-                  {/* OAuth consent route per client MCP esterni */}
-                  <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+                        {/* OAuth consent route per client MCP esterni */}
+                        <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
-                  {/* V1 deprecated — redirect every legacy route to V2 */}
-                  <Route path="/v1/*" element={<V1DeprecationRedirect />} />
+                        {/* V1 deprecated — redirect every legacy route to V2 */}
+                        <Route path="/v1/*" element={<V1DeprecationRedirect />} />
 
-                  {/* V2 routes */}
-                  <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
+                        {/* V2 routes */}
+                        <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
 
-                  {/* Legacy bare paths — redirect to V2 equivalents */}
-                  <Route path="/email-composer" element={<LegacyRedirect to="/v2/outreach/composer" />} />
-                  <Route path="/network" element={<LegacyRedirect to="/v2/network" />} />
-                  <Route path="/crm" element={<LegacyRedirect to="/v2/crm" />} />
-                  <Route path="/outreach" element={<LegacyRedirect to="/v2/outreach" />} />
-                  <Route path="/inreach" element={<LegacyRedirect to="/v2/inreach" />} />
-                  <Route path="/agenda" element={<LegacyRedirect to="/v2/outreach/agenda" />} />
-                  <Route path="/campaigns" element={<LegacyRedirect to="/v2/campaigns" />} />
-                  <Route path="/settings" element={<LegacyRedirect to="/v2/settings" />} />
-                  <Route path="/ai-staff" element={<LegacyRedirect to="/v2/ai-staff" />} />
-                  <Route path="/ai-staff/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
-                  <Route path="/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
+                        {/* Legacy bare paths — redirect to V2 equivalents */}
+                        <Route path="/email-composer" element={<LegacyRedirect to="/v2/outreach/composer" />} />
+                        <Route path="/network" element={<LegacyRedirect to="/v2/network" />} />
+                        <Route path="/crm" element={<LegacyRedirect to="/v2/crm" />} />
+                        <Route path="/outreach" element={<LegacyRedirect to="/v2/outreach" />} />
+                        <Route path="/inreach" element={<LegacyRedirect to="/v2/inreach" />} />
+                        <Route path="/agenda" element={<LegacyRedirect to="/v2/outreach/agenda" />} />
+                        <Route path="/campaigns" element={<LegacyRedirect to="/v2/campaigns" />} />
+                        <Route path="/settings" element={<LegacyRedirect to="/v2/settings" />} />
+                        <Route path="/ai-staff" element={<LegacyRedirect to="/v2/ai-staff" />} />
+                        <Route
+                          path="/ai-staff/email-forge"
+                          element={<LegacyRedirect to="/v2/ai-staff/email-forge" />}
+                        />
+                        <Route path="/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
 
-                  <Route path="*" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
-                </Routes>
-              </Suspense>
-              </GlobalFiltersProvider>
-            </BrowserRouter>
-            <DrawerErrorBoundary scope="ContactRecordDrawer">
-              <ContactRecordDrawer />
-            </DrawerErrorBoundary>
-          </TooltipProvider>
-          </ContactDrawerProvider>
-        </InboundNotificationsProvider>
+                        <Route path="*" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
+                      </Routes>
+                    </Suspense>
+                  </GlobalFiltersProvider>
+                </BrowserRouter>
+                <DrawerErrorBoundary scope="ContactRecordDrawer">
+                  <ContactRecordDrawer />
+                </DrawerErrorBoundary>
+              </TooltipProvider>
+            </ContactDrawerProvider>
+          </InboundNotificationsProvider>
         </TextIntensityProvider>
       </QueryClientProvider>
     </AuthProvider>

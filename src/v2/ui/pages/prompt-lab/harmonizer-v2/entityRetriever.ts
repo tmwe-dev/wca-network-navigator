@@ -11,7 +11,6 @@ import { findEmailAddressRules } from "@/data/emailAddressRules";
 import { findCommercialPlaybooks } from "@/data/commercialPlaybooks";
 import { findAgentPersonas } from "@/data/agentPersonas";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("entityRetriever");
 export interface FullEntryContent {
@@ -34,10 +33,7 @@ export function createRetrieverCache(userId: string): RetrieverCache {
 }
 
 /** Carica TUTTI i record di una tabella e li mette in cache. */
-async function loadTableIntoCache(
-  cache: RetrieverCache,
-  table: string,
-): Promise<void> {
+async function loadTableIntoCache(cache: RetrieverCache, table: string): Promise<void> {
   if (cache.loadedTables.has(table)) return;
 
   try {
@@ -134,9 +130,8 @@ export async function retrieveContents(
     if (found) {
       out.push({
         ...found,
-        content: found.content.length > 4000
-          ? `${found.content.slice(0, 4000)}\n[...troncato per safety...]`
-          : found.content,
+        content:
+          found.content.length > 4000 ? `${found.content.slice(0, 4000)}\n[...troncato per safety...]` : found.content,
       });
     }
   }

@@ -11,9 +11,18 @@ type BusinessCardsRow = Database["public"]["Tables"]["business_cards"]["Row"];
 type ChannelMessagesRow = Database["public"]["Tables"]["channel_messages"]["Row"];
 type CockpitQueueRow = Database["public"]["Tables"]["cockpit_queue"]["Row"];
 
-export type EnrichPartnerRow = Pick<PartnersRow, "id" | "company_name" | "email" | "website" | "country_code" | "logo_url" | "enrichment_data">;
-export type EnrichContactRow = Pick<ImportedContactsRow, "id" | "name" | "company_name" | "email" | "enrichment_data" | "country">;
-export type EnrichBcaRow = Pick<BusinessCardsRow, "id" | "company_name" | "contact_name" | "email" | "phone" | "mobile" | "location" | "matched_partner_id">;
+export type EnrichPartnerRow = Pick<
+  PartnersRow,
+  "id" | "company_name" | "email" | "website" | "country_code" | "logo_url" | "enrichment_data"
+>;
+export type EnrichContactRow = Pick<
+  ImportedContactsRow,
+  "id" | "name" | "company_name" | "email" | "enrichment_data" | "country"
+>;
+export type EnrichBcaRow = Pick<
+  BusinessCardsRow,
+  "id" | "company_name" | "contact_name" | "email" | "phone" | "mobile" | "location" | "matched_partner_id"
+>;
 export type EnrichEmailSenderRow = Pick<ChannelMessagesRow, "from_address">;
 export type EnrichCockpitQueueRow = Pick<CockpitQueueRow, "id" | "source_id" | "source_type" | "partner_id" | "status">;
 export type EnrichPartnerLookupRow = Pick<PartnersRow, "id" | "company_name" | "email" | "website">;
@@ -103,7 +112,11 @@ async function loadAllCockpitQueue(batchSize = 1000): Promise<EnrichCockpitQueue
   while (page < 200) {
     const from = page * batchSize;
     const to = from + batchSize - 1;
-    const { data, error } = await supabase.from("cockpit_queue").select(COCKPIT_SELECT).range(from, to).limit(batchSize);
+    const { data, error } = await supabase
+      .from("cockpit_queue")
+      .select(COCKPIT_SELECT)
+      .range(from, to)
+      .limit(batchSize);
     if (error) throw error;
     if (data && data.length) all.push(...data);
     if (!data || data.length < batchSize) break;
@@ -139,9 +152,14 @@ export async function getPartnersLookupByIds(
   const pMap = new Map<string, { country_code: string | null; website: string | null; logo_url: string | null }>();
   for (let i = 0; i < ids.length; i += 200) {
     const slice = ids.slice(i, i + 200);
-    const { data, error } = await supabase.from("partners").select("id, country_code, website, logo_url").in("id", slice);
+    const { data, error } = await supabase
+      .from("partners")
+      .select("id, country_code, website, logo_url")
+      .in("id", slice);
     if (error) throw error;
-    (data || []).forEach((p) => pMap.set(p.id, { country_code: p.country_code, website: p.website, logo_url: p.logo_url }));
+    (data || []).forEach((p) =>
+      pMap.set(p.id, { country_code: p.country_code, website: p.website, logo_url: p.logo_url }),
+    );
   }
   return pMap;
 }

@@ -1,6 +1,6 @@
 /**
  * EMAIL SENDING + CAMPAIGN QUEUE TESTS — Scorecard Areas B & C
- * Validates send accuracy, recipient correctness, queue lifecycle, 
+ * Validates send accuracy, recipient correctness, queue lifecycle,
  * mixed outcomes, idempotency enforcement, and auto-finalization.
  */
 import { describe, it, expect } from "vitest";
@@ -37,7 +37,7 @@ describe("Email Sending — False positive detection", () => {
 
     expect(sideEffectsRun).toContain("interaction");
     expect(sideEffectsRun).toContain("activity");
-    expect(sideEffectsRun.filter(s => s === "interaction")).toHaveLength(1);
+    expect(sideEffectsRun.filter((s) => s === "interaction")).toHaveLength(1);
   });
 });
 
@@ -66,11 +66,11 @@ describe("Email Sending — Recipient validation", () => {
 describe("Campaign Queue — Full lifecycle", () => {
   it("queue transitions: idle → processing → completed", () => {
     const lifecycle: string[] = [];
-    
+
     // Start
     lifecycle.push("idle");
     lifecycle.push("processing");
-    
+
     // Process all items
     const allItemsSent = true;
     if (allItemsSent) {
@@ -82,7 +82,7 @@ describe("Campaign Queue — Full lifecycle", () => {
 
   it("queue transitions: idle → processing → paused → processing → completed", () => {
     const lifecycle = ["idle", "processing", "paused", "processing", "completed"];
-    
+
     expect(lifecycle[0]).toBe("idle");
     expect(lifecycle[2]).toBe("paused");
     expect(lifecycle[lifecycle.length - 1]).toBe("completed");
@@ -96,13 +96,13 @@ describe("Campaign Queue — Full lifecycle", () => {
     ];
 
     // Cancel: pending items → cancelled
-    const afterCancel = items.map(i => ({
+    const afterCancel = items.map((i) => ({
       ...i,
       status: i.status === "pending" ? "cancelled" : i.status,
     }));
 
-    expect(afterCancel.filter(i => i.status === "cancelled")).toHaveLength(2);
-    expect(afterCancel.filter(i => i.status === "sent")).toHaveLength(1);
+    expect(afterCancel.filter((i) => i.status === "cancelled")).toHaveLength(2);
+    expect(afterCancel.filter((i) => i.status === "sent")).toHaveLength(1);
   });
 });
 
@@ -116,8 +116,8 @@ describe("Campaign Queue — Mixed outcome accuracy", () => {
       { status: "failed" },
     ];
 
-    const sent = results.filter(r => r.status === "sent").length;
-    const failed = results.filter(r => r.status === "failed").length;
+    const sent = results.filter((r) => r.status === "sent").length;
+    const failed = results.filter((r) => r.status === "failed").length;
 
     expect(sent).toBe(3);
     expect(failed).toBe(2);
@@ -169,15 +169,10 @@ describe("Campaign Queue — Auto-finalization", () => {
   });
 
   it("auto-finalization sets correct final counts", () => {
-    const finalStats = [
-      { status: "sent" },
-      { status: "sent" },
-      { status: "failed" },
-      { status: "sent" },
-    ];
+    const finalStats = [{ status: "sent" }, { status: "sent" }, { status: "failed" }, { status: "sent" }];
 
-    const finalSent = finalStats.filter(s => s.status === "sent").length;
-    const finalFailed = finalStats.filter(s => s.status === "failed").length;
+    const finalSent = finalStats.filter((s) => s.status === "sent").length;
+    const finalFailed = finalStats.filter((s) => s.status === "failed").length;
 
     const draftUpdate = {
       queue_status: "completed",

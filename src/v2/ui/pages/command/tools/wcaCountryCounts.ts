@@ -14,7 +14,10 @@ export const wcaCountryCountsTool: Tool = {
   id: "wca-country-counts",
   label: "Conteggi partner per paese",
   description: "Mostra distribuzione partner per paese (totali, attivi, nuovi 30gg). Solo lettura locale.",
-  match: (p) => /\b(conteggi|counts?|distribuzione|breakdown|quanti\s+partner)\b[^.]{0,30}\b(paes[ie]|country|countries|nazion[ie])\b/i.test(p),
+  match: (p) =>
+    /\b(conteggi|counts?|distribuzione|breakdown|quanti\s+partner)\b[^.]{0,30}\b(paes[ie]|country|countries|nazion[ie])\b/i.test(
+      p,
+    ),
 
   execute: async (): Promise<ToolResult> => {
     const res = await invokeEdge<Resp>("wca-country-counts", {

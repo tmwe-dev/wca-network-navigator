@@ -1,9 +1,26 @@
 import SectionWrapper from "./SectionWrapper";
 
 const roadmap = [
-  { quarter: "Q2 2026", items: ["Ricerca autonoma Report Aziende via agente", "Voice AI per chiamate outbound", "Dashboard analytics avanzata"] },
-  { quarter: "Q3 2026", items: ["Multi-tenant: più aziende sullo stesso sistema", "Integrazione CRM esterni (Salesforce, HubSpot)", "App mobile per approvazioni on-the-go"] },
-  { quarter: "Q4 2026", items: ["Marketplace servizi tra partner", "AI negotiation assistant", "Predictive scoring con ML"] },
+  {
+    quarter: "Q2 2026",
+    items: [
+      "Ricerca autonoma Report Aziende via agente",
+      "Voice AI per chiamate outbound",
+      "Dashboard analytics avanzata",
+    ],
+  },
+  {
+    quarter: "Q3 2026",
+    items: [
+      "Multi-tenant: più aziende sullo stesso sistema",
+      "Integrazione CRM esterni (Salesforce, HubSpot)",
+      "App mobile per approvazioni on-the-go",
+    ],
+  },
+  {
+    quarter: "Q4 2026",
+    items: ["Marketplace servizi tra partner", "AI negotiation assistant", "Predictive scoring con ML"],
+  },
 ];
 
 const RoadmapSection = () => (

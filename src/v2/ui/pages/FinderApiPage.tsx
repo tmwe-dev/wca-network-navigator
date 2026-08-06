@@ -64,7 +64,6 @@ const FinderApiPage = () => {
     if (lastAssistantContent && !voiceOut.muted) {
       voiceOut.speak(lastAssistantContent);
     }
-     
   }, [lastAssistantContent]);
 
   return (
@@ -80,7 +79,9 @@ const FinderApiPage = () => {
       />
 
       <div className="flex-1 flex overflow-hidden relative z-10">
-        <div className={`flex-1 flex flex-col transition-all duration-700 ease-out ${f.canvasOpen ? "max-w-[50%]" : ""}`}>
+        <div
+          className={`flex-1 flex flex-col transition-all duration-700 ease-out ${f.canvasOpen ? "max-w-[50%]" : ""}`}
+        >
           <CommandHistory
             messages={f.messages}
             isEmpty={isEmpty}

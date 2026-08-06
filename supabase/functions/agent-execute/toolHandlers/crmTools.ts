@@ -2,13 +2,28 @@ import type { AgentExecuteSupabaseClient as SupabaseClient } from "../shared.ts"
 import { escapeLike, resolvePartnerId } from "../shared.ts";
 import { applyLeadStatusChange } from "../../_shared/leadStatusGuard.ts";
 
-interface ActivityRow { id: string; title: string; status: string; activity_type: string; scheduled_at: string | null; due_date: string | null; source_meta: Record<string, unknown> | null; partner_id: string | null; description: string | null; created_at: string; }
-interface SourceMetaRecord { company_name?: string; scheduled?: boolean; [key: string]: unknown; }
+interface ActivityRow {
+  id: string;
+  title: string;
+  status: string;
+  activity_type: string;
+  scheduled_at: string | null;
+  due_date: string | null;
+  source_meta: Record<string, unknown> | null;
+  partner_id: string | null;
+  description: string | null;
+  created_at: string;
+}
+interface SourceMetaRecord {
+  company_name?: string;
+  scheduled?: boolean;
+  [key: string]: unknown;
+}
 
 export async function handleUpdatePartner(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const partner = await resolvePartnerId(args);
   if (!partner) return { error: "Partner non trovato" };
@@ -51,10 +66,7 @@ export async function handleUpdatePartner(
   return { success: true, partner: partner.name, message: `Partner "${partner.name}" aggiornato.` };
 }
 
-export async function handleAddPartnerNote(
-  supabase: SupabaseClient,
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleAddPartnerNote(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
   const partner = await resolvePartnerId(args);
   if (!partner) return { error: "Partner non trovato" };
   const { error } = await supabase.from("interactions").insert({
@@ -70,7 +82,7 @@ export async function handleAddPartnerNote(
 export async function handleCreateReminder(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const partner = await resolvePartnerId(args);
   if (!partner) return { error: "Partner non trovato" };
@@ -89,10 +101,10 @@ export async function handleCreateReminder(
 export async function handleCreateActivity(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let partnerId = args.partner_id as string | null;
-  let companyName = args.company_name as string || "";
+  let companyName = (args.company_name as string) || "";
   if (!partnerId && companyName) {
     const r = await resolvePartnerId(args);
     if (r) {
@@ -100,26 +112,27 @@ export async function handleCreateActivity(
       companyName = r.name;
     }
   }
-  const { data, error } = await supabase.from("activities").insert({
-    title: String(args.title),
-    description: args.description ? String(args.description) : null,
-    activity_type: String(args.activity_type),
-    source_type: "partner",
-    source_id: partnerId || crypto.randomUUID(),
-    partner_id: partnerId,
-    due_date: args.due_date ? String(args.due_date) : null,
-    priority: String(args.priority || "medium"),
-    source_meta: { company_name: companyName } as Record<string, unknown>,
-    user_id: userId,
-  }).select("id").single();
+  const { data, error } = await supabase
+    .from("activities")
+    .insert({
+      title: String(args.title),
+      description: args.description ? String(args.description) : null,
+      activity_type: String(args.activity_type),
+      source_type: "partner",
+      source_id: partnerId || crypto.randomUUID(),
+      partner_id: partnerId,
+      due_date: args.due_date ? String(args.due_date) : null,
+      priority: String(args.priority || "medium"),
+      source_meta: { company_name: companyName } as Record<string, unknown>,
+      user_id: userId,
+    })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
   return { success: true, activity_id: data.id, message: `Attività "${args.title}" creata.` };
 }
 
-export async function handleUpdateActivity(
-  supabase: SupabaseClient,
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleUpdateActivity(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
   const updates: Record<string, unknown> = {};
   if (args.status) {
     updates.status = args.status;
@@ -132,11 +145,12 @@ export async function handleUpdateActivity(
   return { success: true, message: "Attività aggiornata." };
 }
 
-export async function handleListActivities(
-  supabase: SupabaseClient,
-  args: Record<string, unknown>
-): Promise<unknown> {
-  let query = supabase.from("activities").select("id, title, activity_type, status, priority, due_date, partner_id, source_meta, created_at").order("due_date", { ascending: true, nullsFirst: false }).limit(Number(args.limit) || 30);
+export async function handleListActivities(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
+  let query = supabase
+    .from("activities")
+    .select("id, title, activity_type, status, priority, due_date, partner_id, source_meta, created_at")
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .limit(Number(args.limit) || 30);
   if (args.status) query = query.eq("status", args.status);
   if (args.activity_type) query = query.eq("activity_type", args.activity_type);
   const { data, error } = await query;
@@ -152,7 +166,7 @@ export async function handleListActivities(
 
 export async function handleManagePartnerContact(
   supabase: SupabaseClient,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const action = String(args.action);
   if (action === "delete" && args.contact_id) {
@@ -187,10 +201,7 @@ export async function handleManagePartnerContact(
   return { error: "Azione non valida" };
 }
 
-export async function handleUpdateReminder(
-  supabase: SupabaseClient,
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleUpdateReminder(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
   if (args.delete) {
     const { error } = await supabase.from("reminders").delete().eq("id", args.reminder_id);
     return error ? { error: error.message } : { success: true };
@@ -206,7 +217,7 @@ export async function handleUpdateReminder(
 export async function handleUpdateLeadStatus(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const status = String(args.status);
   if (args.contact_ids && Array.isArray(args.contact_ids)) {
@@ -233,7 +244,7 @@ export async function handleUpdateLeadStatus(
 export async function handleBulkUpdatePartners(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const updates: Record<string, unknown> = {};
   let leadStatusChange: string | undefined;
@@ -295,22 +306,33 @@ export async function handleBulkUpdatePartners(
 export async function handleDeleteRecords(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const table = String(args.table);
   const ids = args.ids as string[];
   const valid = ["partners", "prospects", "activities", "reminders"];
   if (!valid.includes(table)) return { error: `Tabella non valida: ${table}` };
-  const { error } = await supabase.from(table as "partners" | "prospects" | "activities" | "reminders").delete().eq("user_id", userId).in("id", ids);
+  const { error } = await supabase
+    .from(table as "partners" | "prospects" | "activities" | "reminders")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", ids);
   return error ? { error: error.message } : { success: true, deleted: ids.length };
 }
 
 export async function handleGetEmailClassifications(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
-  let q = supabase.from("email_classifications").select("id, email_address, category, confidence, ai_summary, sentiment, urgency, keywords, action_suggested, classified_at, partner_id").eq("user_id", userId).order("classified_at", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
+  let q = supabase
+    .from("email_classifications")
+    .select(
+      "id, email_address, category, confidence, ai_summary, sentiment, urgency, keywords, action_suggested, classified_at, partner_id",
+    )
+    .eq("user_id", userId)
+    .order("classified_at", { ascending: false })
+    .limit(Math.min(Number(args.limit) || 20, 50));
   if (args.email_address) q = q.eq("email_address", args.email_address);
   if (args.partner_id) q = q.eq("partner_id", args.partner_id);
   if (args.category) q = q.eq("category", args.category);
@@ -322,29 +344,48 @@ export async function handleGetEmailClassifications(
 export async function handleAssignContactsToAgent(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
-  const { data: agents } = await supabase.from("agents").select("id, name").eq("user_id", userId).ilike("name", `%${escapeLike(args.agent_name as string)}%`).limit(1);
+  const { data: agents } = await supabase
+    .from("agents")
+    .select("id, name")
+    .eq("user_id", userId)
+    .ilike("name", `%${escapeLike(args.agent_name as string)}%`)
+    .limit(1);
   if (!agents || agents.length === 0) return { error: `Agente "${args.agent_name}" non trovato.` };
   const targetAgent = agents[0];
   const sourceType = String(args.source_type || "partner");
   let contactIds: { id: string; name: string }[] = [];
 
   if (sourceType === "partner") {
-    let pq = supabase.from("partners").select("id, company_name").limit(Number(args.limit) || 20);
+    let pq = supabase
+      .from("partners")
+      .select("id, company_name")
+      .limit(Number(args.limit) || 20);
     if (args.country_code) pq = pq.eq("country_code", String(args.country_code).toUpperCase());
     if (args.lead_status) pq = pq.eq("lead_status", args.lead_status);
     const { data } = await pq;
     contactIds = (data || []).map((p: Record<string, unknown>) => ({ id: p.id, name: p.company_name }));
   } else {
-    let cq = supabase.from("imported_contacts").select("id, name, company_name").limit(Number(args.limit) || 20);
+    let cq = supabase
+      .from("imported_contacts")
+      .select("id, name, company_name")
+      .limit(Number(args.limit) || 20);
     if (args.lead_status) cq = cq.eq("lead_status", args.lead_status);
     const { data } = await cq;
-    contactIds = (data || []).map((c: { id: string; company_name: string | null; name: string | null }) => ({ id: c.id, name: c.company_name || c.name || "—" }));
+    contactIds = (data || []).map((c: { id: string; company_name: string | null; name: string | null }) => ({
+      id: c.id,
+      name: c.company_name || c.name || "—",
+    }));
   }
 
   if (contactIds.length === 0) return { error: "Nessun contatto trovato con i filtri specificati." };
-  const assignments = contactIds.map((c) => ({ agent_id: targetAgent.id, source_type: sourceType, source_id: c.id, user_id: userId }));
+  const assignments = contactIds.map((c) => ({
+    agent_id: targetAgent.id,
+    source_type: sourceType,
+    source_id: c.id,
+    user_id: userId,
+  }));
   const { error } = await supabase.from("client_assignments").insert(assignments);
   if (error) return { error: error.message };
   return {

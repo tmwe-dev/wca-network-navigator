@@ -16,20 +16,18 @@ export async function executeCreateContact(
     lead_status: String(args.lead_status || "new"),
     row_number: 0,
   };
-  for (
-    const f of [
-      "name",
-      "email",
-      "company_name",
-      "phone",
-      "mobile",
-      "position",
-      "city",
-      "country",
-      "origin",
-      "note",
-    ]
-  ) {
+  for (const f of [
+    "name",
+    "email",
+    "company_name",
+    "phone",
+    "mobile",
+    "position",
+    "city",
+    "country",
+    "origin",
+    "note",
+  ]) {
     if (args[f]) insertPayload[f] = String(args[f]);
   }
 
@@ -94,9 +92,7 @@ export async function executeScheduleEmail(
 ): Promise<unknown> {
   const toEmail = String(args.to_email || "");
   if (!toEmail) return { error: "to_email è obbligatorio" };
-  const scheduledAt = args.scheduled_at
-    ? String(args.scheduled_at)
-    : new Date(Date.now() + 3600_000).toISOString();
+  const scheduledAt = args.scheduled_at ? String(args.scheduled_at) : new Date(Date.now() + 3600_000).toISOString();
   const { data, error } = await supabase
     .from("outreach_queue")
     .insert({

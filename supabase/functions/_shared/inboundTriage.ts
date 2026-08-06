@@ -32,7 +32,7 @@ export interface TriageResult {
 export async function runInboundTriage(input: TriageInput): Promise<TriageResult | null> {
   // Solo email per ora (alert WhatsApp richiede contesto email).
   if (input.channel !== "email") return null;
-  const apiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+  const apiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return null;
 
   // Carica il prompt operativo "Inbound Triage TMWE" dal Prompt Lab.
@@ -46,7 +46,9 @@ export async function runInboundTriage(input: TriageInput): Promise<TriageResult
       limit: 4,
     });
     promptBlock = r.block;
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 
   const system = `Sei il triage operativo di TMWE / Find Air. Restituisci SOLO JSON valido conforme allo schema della tool call.
 ${promptBlock ? "\n" + promptBlock : ""}`;
@@ -54,12 +56,10 @@ ${promptBlock ? "\n" + promptBlock : ""}`;
   // PRIMA di farlo vedere al modello. Fail-safe: in caso di errore, fallback al raw troncato.
   let bodyBlock: string;
   try {
-    const wrapped = await normalizeSanitizeAndWrap(
-      input.bodyText || "",
-      "INBOUND BODY",
-      "email-inbound",
-      { maxChars: 3000, policy: "redact" },
-    );
+    const wrapped = await normalizeSanitizeAndWrap(input.bodyText || "", "INBOUND BODY", "email-inbound", {
+      maxChars: 3000,
+      policy: "redact",
+    });
     bodyBlock = wrapped.block;
   } catch {
     bodyBlock = (input.bodyText || "").slice(0, 3000);
@@ -80,35 +80,54 @@ ${bodyBlock}`;
           { role: "system", content: system },
           { role: "user", content: user },
         ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "triage_inbound",
-            parameters: {
-              type: "object",
-              properties: {
-                business_category: {
-                  type: "string",
-                  enum: ["operations", "administrative", "commercial_demand", "commercial_supply", "informational", "system", "newsletter", "bounce"],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "triage_inbound",
+              parameters: {
+                type: "object",
+                properties: {
+                  business_category: {
+                    type: "string",
+                    enum: [
+                      "operations",
+                      "administrative",
+                      "commercial_demand",
+                      "commercial_supply",
+                      "informational",
+                      "system",
+                      "newsletter",
+                      "bounce",
+                    ],
+                  },
+                  urgency_score: { type: "integer", minimum: 0, maximum: 100 },
+                  urgency_reason: { type: "string", maxLength: 240 },
+                  priority_bucket: {
+                    type: "string",
+                    enum: ["P1_urgent", "P2_commercial", "P3_standard_ops", "P4_supply", "P5_noise"],
+                  },
+                  should_alert: { type: "boolean" },
+                  alert_categories: {
+                    type: "array",
+                    items: { type: "string", enum: ["operations_urgent", "admin_urgent", "commercial_urgent"] },
+                  },
+                  suggested_summary_for_alert: { type: "string", maxLength: 280 },
                 },
-                urgency_score: { type: "integer", minimum: 0, maximum: 100 },
-                urgency_reason: { type: "string", maxLength: 240 },
-                priority_bucket: {
-                  type: "string",
-                  enum: ["P1_urgent", "P2_commercial", "P3_standard_ops", "P4_supply", "P5_noise"],
-                },
-                should_alert: { type: "boolean" },
-                alert_categories: {
-                  type: "array",
-                  items: { type: "string", enum: ["operations_urgent", "admin_urgent", "commercial_urgent"] },
-                },
-                suggested_summary_for_alert: { type: "string", maxLength: 280 },
+                required: [
+                  "business_category",
+                  "urgency_score",
+                  "urgency_reason",
+                  "priority_bucket",
+                  "should_alert",
+                  "alert_categories",
+                  "suggested_summary_for_alert",
+                ],
+                additionalProperties: false,
               },
-              required: ["business_category", "urgency_score", "urgency_reason", "priority_bucket", "should_alert", "alert_categories", "suggested_summary_for_alert"],
-              additionalProperties: false,
             },
           },
-        }],
+        ],
         tool_choice: { type: "function", function: { name: "triage_inbound" } },
       }),
     });
@@ -153,5 +172,7 @@ export async function maybeDispatchAlert(
         channel: args.channel,
       },
     });
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 }

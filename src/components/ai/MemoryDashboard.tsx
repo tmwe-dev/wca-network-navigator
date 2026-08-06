@@ -41,7 +41,10 @@ export default function MemoryDashboard() {
   const { data: memories, isLoading } = useQuery({
     queryKey: queryKeys.ai.memories,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return [];
       const data = await findUserMemories(user.id, 100);
       return (data || []) as unknown as MemoryRow[];
@@ -64,7 +67,8 @@ export default function MemoryDashboard() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await deleteMemory(id); const error = null;
+      await deleteMemory(id);
+      const error = null;
       if (error) throw error;
     },
     onSuccess: () => {
@@ -75,21 +79,25 @@ export default function MemoryDashboard() {
 
   const runPromoterMutation = useMutation({
     mutationFn: async () => {
-      const data = await invokeEdge<Record<string, unknown>>("memory-promoter", { context: "MemoryDashboard.memory_promoter" });
+      const data = await invokeEdge<Record<string, unknown>>("memory-promoter", {
+        context: "MemoryDashboard.memory_promoter",
+      });
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ai.memories });
       const s = data?.stats as Record<string, number> | undefined;
-      toast.success(`Promoter: ${s?.promoted_l1_to_l2 || 0} → L2, ${s?.promoted_l2_candidate || 0} candidati L3, ${s?.pruned || 0} rimossi`);
+      toast.success(
+        `Promoter: ${s?.promoted_l1_to_l2 || 0} → L2, ${s?.promoted_l2_candidate || 0} candidati L3, ${s?.pruned || 0} rimossi`,
+      );
     },
     onError: () => toast.error("Errore nel promoter"),
   });
 
-  const pending = memories?.filter(m => m.pending_promotion) || [];
-  const l3 = memories?.filter(m => m.level === 3) || [];
-  const l2 = memories?.filter(m => m.level === 2 && !m.pending_promotion) || [];
-  const l1 = memories?.filter(m => m.level === 1) || [];
+  const pending = memories?.filter((m) => m.pending_promotion) || [];
+  const l3 = memories?.filter((m) => m.level === 3) || [];
+  const l2 = memories?.filter((m) => m.level === 2 && !m.pending_promotion) || [];
+  const l1 = memories?.filter((m) => m.level === 1) || [];
 
   const MemoryCard = ({ m }: { m: MemoryRow }) => {
     const info = LEVEL_LABELS[m.level] || LEVEL_LABELS[1];
@@ -100,30 +108,52 @@ export default function MemoryDashboard() {
         <div className="flex-1 min-w-0 space-y-1">
           <p className="text-sm leading-snug">{m.content}</p>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="outline" className="text-[10px] h-4">{info.label}</Badge>
+            <Badge variant="outline" className="text-[10px] h-4">
+              {info.label}
+            </Badge>
             <Badge variant="secondary" className="text-[10px] h-4">
               Conf: {(m.confidence * 100).toFixed(0)}%
             </Badge>
             <Badge variant="secondary" className="text-[10px] h-4">
               Accessi: {m.access_count}
             </Badge>
-            {m.tags?.map(t => (
-              <Badge key={t} variant="outline" className="text-[10px] h-4 text-muted-foreground">{t}</Badge>
+            {m.tags?.map((t) => (
+              <Badge key={t} variant="outline" className="text-[10px] h-4 text-muted-foreground">
+                {t}
+              </Badge>
             ))}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {m.pending_promotion && (
             <>
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-green-500" onClick={() => promoteMutation.mutate({ id: m.id, approve: true })} aria-label="Conferma">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-green-500"
+                onClick={() => promoteMutation.mutate({ id: m.id, approve: true })}
+                aria-label="Conferma"
+              >
                 <Check className="h-3.5 w-3.5" />
               </Button>
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => promoteMutation.mutate({ id: m.id, approve: false })} aria-label="Chiudi">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-red-500"
+                onClick={() => promoteMutation.mutate({ id: m.id, approve: false })}
+                aria-label="Chiudi"
+              >
                 <X className="h-3.5 w-3.5" />
               </Button>
             </>
           )}
-          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => deleteMutation.mutate(m.id)} aria-label="Elimina">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-muted-foreground"
+            onClick={() => deleteMutation.mutate(m.id)}
+            aria-label="Elimina"
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -131,7 +161,12 @@ export default function MemoryDashboard() {
     );
   };
 
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
+  if (isLoading)
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
 
   return (
     <div className="space-y-4">
@@ -146,7 +181,11 @@ export default function MemoryDashboard() {
           onClick={() => runPromoterMutation.mutate()}
           disabled={runPromoterMutation.isPending}
         >
-          {runPromoterMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 mr-1.5" />}
+          {runPromoterMutation.isPending ? (
+            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <Zap className="w-3.5 h-3.5 mr-1.5" />
+          )}
           Esegui Promoter
         </Button>
       </div>
@@ -158,7 +197,7 @@ export default function MemoryDashboard() {
           { label: "L3 Permanenti", count: l3.length, color: "text-green-500" },
           { label: "L2 Operative", count: l2.length, color: "text-yellow-500" },
           { label: "L1 Sessione", count: l1.length, color: "text-muted-foreground" },
-        ].map(s => (
+        ].map((s) => (
           <Card key={s.label}>
             <CardContent className="p-3 text-center">
               <p className={cn("text-xl font-bold", s.color)}>{s.count}</p>
@@ -171,26 +210,51 @@ export default function MemoryDashboard() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full">
           <TabsTrigger value="pending" className="flex-1">
-            Da approvare {pending.length > 0 && <Badge variant="destructive" className="ml-1.5 h-4 text-[10px]">{pending.length}</Badge>}
+            Da approvare{" "}
+            {pending.length > 0 && (
+              <Badge variant="destructive" className="ml-1.5 h-4 text-[10px]">
+                {pending.length}
+              </Badge>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="l3" className="flex-1">Permanenti ({l3.length})</TabsTrigger>
-          <TabsTrigger value="l2" className="flex-1">Operative ({l2.length})</TabsTrigger>
-          <TabsTrigger value="l1" className="flex-1">Sessione ({l1.length})</TabsTrigger>
+          <TabsTrigger value="l3" className="flex-1">
+            Permanenti ({l3.length})
+          </TabsTrigger>
+          <TabsTrigger value="l2" className="flex-1">
+            Operative ({l2.length})
+          </TabsTrigger>
+          <TabsTrigger value="l1" className="flex-1">
+            Sessione ({l1.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="space-y-2 mt-3">
           {pending.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">Nessuna memoria in attesa di approvazione</p>
-          ) : pending.map(m => <MemoryCard key={m.id} m={m} />)}
+          ) : (
+            pending.map((m) => <MemoryCard key={m.id} m={m} />)
+          )}
         </TabsContent>
         <TabsContent value="l3" className="space-y-2 mt-3">
-          {l3.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessuna memoria permanente</p> : l3.map(m => <MemoryCard key={m.id} m={m} />)}
+          {l3.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Nessuna memoria permanente</p>
+          ) : (
+            l3.map((m) => <MemoryCard key={m.id} m={m} />)
+          )}
         </TabsContent>
         <TabsContent value="l2" className="space-y-2 mt-3">
-          {l2.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessuna memoria operativa</p> : l2.map(m => <MemoryCard key={m.id} m={m} />)}
+          {l2.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Nessuna memoria operativa</p>
+          ) : (
+            l2.map((m) => <MemoryCard key={m.id} m={m} />)
+          )}
         </TabsContent>
         <TabsContent value="l1" className="space-y-2 mt-3">
-          {l1.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessuna memoria di sessione</p> : l1.map(m => <MemoryCard key={m.id} m={m} />)}
+          {l1.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Nessuna memoria di sessione</p>
+          ) : (
+            l1.map((m) => <MemoryCard key={m.id} m={m} />)
+          )}
         </TabsContent>
       </Tabs>
     </div>

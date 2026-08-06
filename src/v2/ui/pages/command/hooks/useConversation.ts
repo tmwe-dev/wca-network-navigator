@@ -42,9 +42,7 @@ export function useConversation() {
       if (conversationId) return conversationId;
       if (!userId) return null;
       if (creatingRef.current) return creatingRef.current;
-      const title = firstUserPrompt
-        ? firstUserPrompt.slice(0, 60)
-        : "Nuova conversazione";
+      const title = firstUserPrompt ? firstUserPrompt.slice(0, 60) : "Nuova conversazione";
       const p = (async () => {
         const res = await createConversation(userId!, title);
         if (!isOk(res)) return null;
@@ -86,9 +84,7 @@ export function useConversation() {
       tool_id?: string;
       tool_result?: unknown;
     }) => {
-      const id = await ensureConversation(
-        msg.role === "user" ? msg.content : undefined,
-      );
+      const id = await ensureConversation(msg.role === "user" ? msg.content : undefined);
       if (!id) return;
       const res = await appendMessage(id, msg);
       if (isOk(res)) setMessages((prev) => [...prev, res.value]);

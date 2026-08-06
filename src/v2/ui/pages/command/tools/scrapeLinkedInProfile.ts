@@ -12,8 +12,7 @@ export const scrapeLinkedInProfileTool: Tool = {
   label: "Cerca profilo LinkedIn",
   description:
     "Cerca il profilo LinkedIn di una persona usando Google (Partner Connect). Salva il profilo come business card.",
-  match: (p: string) =>
-    /scrape.*linkedin|estrai.*linkedin|scarica.*linkedin|cerca.*linkedin/i.test(p),
+  match: (p: string) => /scrape.*linkedin|estrai.*linkedin|scarica.*linkedin|cerca.*linkedin/i.test(p),
   execute: async (_prompt, context) => {
     if (!context?.confirmed) {
       return {
@@ -41,7 +40,7 @@ export const scrapeLinkedInProfileTool: Tool = {
     // Get current user
     const {
       data: { user },
-    } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+    } = await supabase.auth.getSession().then((r) => ({ data: { user: r.data.session?.user ?? null } }));
     if (!user) throw new Error("Utente non autenticato");
 
     // Note: In tool context, we cannot use hooks directly. This is a limitation.
@@ -49,7 +48,8 @@ export const scrapeLinkedInProfileTool: Tool = {
     return {
       kind: "result",
       title: "Usa LinkedIn Lookup",
-      message: "Per cercare profili LinkedIn, usa il pulsante 'LinkedIn Lookup' nell'interfaccia Cockpit. Usa Google Search tramite Partner Connect, non il direct scraping.",
+      message:
+        "Per cercare profili LinkedIn, usa il pulsante 'LinkedIn Lookup' nell'interfaccia Cockpit. Usa Google Search tramite Partner Connect, non il direct scraping.",
       meta: { count: 0, sourceLabel: "Please use Cockpit UI → LinkedIn Lookup" },
     } as ToolResult;
   },

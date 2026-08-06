@@ -16,9 +16,19 @@ import { join } from "node:path";
 const FULL = process.argv.includes("--full");
 const sh = (cmd, opts = {}) => {
   try {
-    return execSync(cmd, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"], ...opts }).trim();
+    return execSync(cmd, {
+      encoding: "utf8",
+      maxBuffer: 256 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"],
+      ...opts,
+    }).trim();
   } catch (error) {
-    return { failed: true, code: error.status ?? null, stdout: String(error.stdout ?? ""), stderr: String(error.stderr ?? "") };
+    return {
+      failed: true,
+      code: error.status ?? null,
+      stdout: String(error.stdout ?? ""),
+      stderr: String(error.stderr ?? ""),
+    };
   }
 };
 
@@ -69,8 +79,10 @@ const report = {
     for (const kind of ["dependencies", "devDependencies"]) {
       for (const [name, range] of Object.entries(pkg[kind] ?? {})) {
         if (!(name in (root[kind] ?? {}))) problems.push({ kind, name, range, issue: "missing-in-lock-root" });
-        else if (root[kind][name] !== range) problems.push({ kind, name, range, lock: root[kind][name], issue: "version-mismatch" });
-        if (!lock.packages[`node_modules/${name}`]) problems.push({ kind, name, range, issue: "missing-installed-entry" });
+        else if (root[kind][name] !== range)
+          problems.push({ kind, name, range, lock: root[kind][name], issue: "version-mismatch" });
+        if (!lock.packages[`node_modules/${name}`])
+          problems.push({ kind, name, range, issue: "missing-installed-entry" });
       }
     }
     return {

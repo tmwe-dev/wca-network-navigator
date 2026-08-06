@@ -33,15 +33,50 @@ import { toast } from "sonner";
 
 const DOMAINS = ["", "commercial", "operative", "administrative", "support", "internal"] as const;
 const CATEGORIES = [
-  "", "interested", "not_interested", "request_info", "question", "meeting_request",
-  "complaint", "follow_up", "auto_reply", "unsubscribe", "bounce", "spam", "uncategorized",
-  "quote_request", "booking_request", "shipment_tracking", "documentation_request",
-  "rate_inquiry", "cargo_status", "invoice_query", "payment_request", "payment_confirmation",
-  "credit_note", "account_statement", "service_inquiry", "technical_issue", "feedback",
-  "newsletter", "system_notification", "internal_communication",
+  "",
+  "interested",
+  "not_interested",
+  "request_info",
+  "question",
+  "meeting_request",
+  "complaint",
+  "follow_up",
+  "auto_reply",
+  "unsubscribe",
+  "bounce",
+  "spam",
+  "uncategorized",
+  "quote_request",
+  "booking_request",
+  "shipment_tracking",
+  "documentation_request",
+  "rate_inquiry",
+  "cargo_status",
+  "invoice_query",
+  "payment_request",
+  "payment_confirmation",
+  "credit_note",
+  "account_statement",
+  "service_inquiry",
+  "technical_issue",
+  "feedback",
+  "newsletter",
+  "system_notification",
+  "internal_communication",
 ] as const;
 const SENTIMENTS = ["", "positive", "negative", "neutral", "mixed"] as const;
-const LEAD_STATUSES = ["", "new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted", "archived", "blacklisted"] as const;
+const LEAD_STATUSES = [
+  "",
+  "new",
+  "first_touch_sent",
+  "holding",
+  "engaged",
+  "qualified",
+  "negotiation",
+  "converted",
+  "archived",
+  "blacklisted",
+] as const;
 const PRIORITIES = ["", "low", "normal", "high", "critical"] as const;
 
 type Draft = Partial<AgentRoutingRule> & { _new?: boolean; _dirty?: boolean };
@@ -109,20 +144,23 @@ function RuleEditor({
               placeholder="Nome regola"
             />
             {isGlobal ? (
-              <Badge variant="outline" className="gap-1"><Globe2 className="h-3 w-3" /> globale</Badge>
+              <Badge variant="outline" className="gap-1">
+                <Globe2 className="h-3 w-3" /> globale
+              </Badge>
             ) : (
-              <Badge variant="default" className="gap-1"><Sparkles className="h-3 w-3" /> persona</Badge>
+              <Badge variant="default" className="gap-1">
+                <Sparkles className="h-3 w-3" /> persona
+              </Badge>
             )}
             {rule.match_count !== undefined && rule.match_count > 0 && (
-              <Badge variant="secondary" className="text-[10px]">{rule.match_count} match</Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                {rule.match_count} match
+              </Badge>
             )}
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <Switch
-                checked={!!rule.enabled}
-                onCheckedChange={(v) => onChange({ enabled: v })}
-              />
+              <Switch checked={!!rule.enabled} onCheckedChange={(v) => onChange({ enabled: v })} />
               <span className="text-xs text-muted-foreground">attiva</span>
             </div>
             <Button size="sm" variant="ghost" onClick={onDelete}>
@@ -145,11 +183,10 @@ function RuleEditor({
         <div className="grid md:grid-cols-3 gap-3">
           <div>
             <Label className="text-xs">Persona (vuoto = globale)</Label>
-            <Select
-              value={nullableSelect(rule.agent_id)}
-              onValueChange={(v) => onChange({ agent_id: fromSelect(v) })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={nullableSelect(rule.agent_id)} onValueChange={(v) => onChange({ agent_id: fromSelect(v) })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">— globale —</SelectItem>
                 {agents.map((a) => (
@@ -184,10 +221,30 @@ function RuleEditor({
         <section>
           <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Match (quando applicare)</h4>
           <div className="grid md:grid-cols-4 gap-3">
-            <SelectField label="Dominio" value={rule.match_domain} options={DOMAINS as readonly string[]} onChange={(v) => onChange({ match_domain: v })} />
-            <SelectField label="Categoria" value={rule.match_category} options={CATEGORIES as readonly string[]} onChange={(v) => onChange({ match_category: v })} />
-            <SelectField label="Sentiment" value={rule.match_sentiment} options={SENTIMENTS as readonly string[]} onChange={(v) => onChange({ match_sentiment: v })} />
-            <SelectField label="Lead status" value={rule.match_lead_status} options={LEAD_STATUSES as readonly string[]} onChange={(v) => onChange({ match_lead_status: v })} />
+            <SelectField
+              label="Dominio"
+              value={rule.match_domain}
+              options={DOMAINS as readonly string[]}
+              onChange={(v) => onChange({ match_domain: v })}
+            />
+            <SelectField
+              label="Categoria"
+              value={rule.match_category}
+              options={CATEGORIES as readonly string[]}
+              onChange={(v) => onChange({ match_category: v })}
+            />
+            <SelectField
+              label="Sentiment"
+              value={rule.match_sentiment}
+              options={SENTIMENTS as readonly string[]}
+              onChange={(v) => onChange({ match_sentiment: v })}
+            />
+            <SelectField
+              label="Lead status"
+              value={rule.match_lead_status}
+              options={LEAD_STATUSES as readonly string[]}
+              onChange={(v) => onChange({ match_lead_status: v })}
+            />
           </div>
           <div className="mt-3">
             <Label className="text-xs">Keywords (any-match, separate da virgola)</Label>
@@ -195,7 +252,10 @@ function RuleEditor({
               value={(rule.match_keywords ?? []).join(", ")}
               onChange={(e) =>
                 onChange({
-                  match_keywords: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                  match_keywords: e.target.value
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
                 })
               }
               placeholder="es. urgente, preventivo, booking"
@@ -204,19 +264,33 @@ function RuleEditor({
         </section>
 
         <section>
-          <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Bias pre-classificazione (suggerimenti AI)</h4>
+          <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">
+            Bias pre-classificazione (suggerimenti AI)
+          </h4>
           <div className="grid md:grid-cols-3 gap-3">
             <div>
               <Label className="text-xs">Hint dominio</Label>
-              <Input value={rule.bias_domain_hint ?? ""} onChange={(e) => onChange({ bias_domain_hint: e.target.value || null })} placeholder="es. operative" />
+              <Input
+                value={rule.bias_domain_hint ?? ""}
+                onChange={(e) => onChange({ bias_domain_hint: e.target.value || null })}
+                placeholder="es. operative"
+              />
             </div>
             <div>
               <Label className="text-xs">Hint categoria</Label>
-              <Input value={rule.bias_category_hint ?? ""} onChange={(e) => onChange({ bias_category_hint: e.target.value || null })} placeholder="es. quote_request" />
+              <Input
+                value={rule.bias_category_hint ?? ""}
+                onChange={(e) => onChange({ bias_category_hint: e.target.value || null })}
+                placeholder="es. quote_request"
+              />
             </div>
             <div>
               <Label className="text-xs">Hint tono</Label>
-              <Input value={rule.bias_tone_hint ?? ""} onChange={(e) => onChange({ bias_tone_hint: e.target.value || null })} placeholder="es. urgente, formale" />
+              <Input
+                value={rule.bias_tone_hint ?? ""}
+                onChange={(e) => onChange({ bias_tone_hint: e.target.value || null })}
+                placeholder="es. urgente, formale"
+              />
             </div>
           </div>
           <div className="mt-3">
@@ -233,16 +307,33 @@ function RuleEditor({
         <section>
           <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Override post-classificazione</h4>
           <div className="grid md:grid-cols-4 gap-3">
-            <SelectField label="Forza next lead_status" value={rule.override_next_status} options={LEAD_STATUSES as readonly string[]} onChange={(v) => onChange({ override_next_status: v })} />
+            <SelectField
+              label="Forza next lead_status"
+              value={rule.override_next_status}
+              options={LEAD_STATUSES as readonly string[]}
+              onChange={(v) => onChange({ override_next_status: v })}
+            />
             <div>
               <Label className="text-xs">Forza action_type</Label>
-              <Input value={rule.override_action_type ?? ""} onChange={(e) => onChange({ override_action_type: e.target.value || null })} placeholder="es. schedule_meeting" />
+              <Input
+                value={rule.override_action_type ?? ""}
+                onChange={(e) => onChange({ override_action_type: e.target.value || null })}
+                placeholder="es. schedule_meeting"
+              />
             </div>
-            <SelectField label="Forza priorità" value={rule.override_priority} options={PRIORITIES as readonly string[]} onChange={(v) => onChange({ override_priority: v })} />
+            <SelectField
+              label="Forza priorità"
+              value={rule.override_priority}
+              options={PRIORITIES as readonly string[]}
+              onChange={(v) => onChange({ override_priority: v })}
+            />
             <div>
               <Label className="text-xs">Confidence floor</Label>
               <Input
-                type="number" step="0.05" min={0} max={1}
+                type="number"
+                step="0.05"
+                min={0}
+                max={1}
                 value={rule.override_confidence_floor ?? ""}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -266,7 +357,10 @@ function RuleEditor({
 }
 
 function SelectField({
-  label, value, options, onChange,
+  label,
+  value,
+  options,
+  onChange,
 }: {
   label: string;
   value: string | null | undefined;
@@ -277,12 +371,18 @@ function SelectField({
     <div>
       <Label className="text-xs">{label}</Label>
       <Select value={nullableSelect(value)} onValueChange={(v) => onChange(fromSelect(v))}>
-        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
         <SelectContent>
           <SelectItem value="__none__">— qualsiasi —</SelectItem>
-          {options.filter((o) => o).map((o) => (
-            <SelectItem key={o} value={o}>{o}</SelectItem>
-          ))}
+          {options
+            .filter((o) => o)
+            .map((o) => (
+              <SelectItem key={o} value={o}>
+                {o}
+              </SelectItem>
+            ))}
         </SelectContent>
       </Select>
     </div>
@@ -403,9 +503,9 @@ export function AgentRoutingTab() {
         <div>
           <h2 className="text-lg font-semibold">Routing persona-aware</h2>
           <p className="text-sm text-muted-foreground">
-            Regole DB che il classificatore email applica per ogni persona. Sostituiscono la logica
-            hardcoded di escalation: bias pre-classificazione + override post-classificazione.
-            Persona-specifiche battono globali; priorità più bassa = valutata prima.
+            Regole DB che il classificatore email applica per ogni persona. Sostituiscono la logica hardcoded di
+            escalation: bias pre-classificazione + override post-classificazione. Persona-specifiche battono globali;
+            priorità più bassa = valutata prima.
           </p>
         </div>
         <Button onClick={addNew}>
@@ -416,8 +516,8 @@ export function AgentRoutingTab() {
       <Alert>
         <ShieldAlert className="h-4 w-4" />
         <AlertDescription className="text-xs">
-          Le regole NON aggirano i guardrail di sicurezza (hard guards: tabelle vietate, soft-delete,
-          bulk caps, lead_status_guard). L'override del lead_status passa comunque per
+          Le regole NON aggirano i guardrail di sicurezza (hard guards: tabelle vietate, soft-delete, bulk caps,
+          lead_status_guard). L'override del lead_status passa comunque per
           <code className="mx-1">applyLeadStatusChange</code>.
         </AlertDescription>
       </Alert>
@@ -439,8 +539,8 @@ export function AgentRoutingTab() {
         {!isLoading && merged.length === 0 && (
           <Alert>
             <AlertDescription>
-              Nessuna regola di routing configurata. Crea la prima per personalizzare come ogni
-              persona interpreta le email in arrivo.
+              Nessuna regola di routing configurata. Crea la prima per personalizzare come ogni persona interpreta le
+              email in arrivo.
             </AlertDescription>
           </Alert>
         )}

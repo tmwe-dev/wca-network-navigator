@@ -40,38 +40,100 @@ export interface TableOwnership {
 
 export const TABLE_OWNERSHIP: TableOwnership[] = [
   // ── LEAD DOMAIN ──
-  { table: "partners", domain: "lead", writeAuthority: "LeadProcessManager", syncsWith: ["business_cards"], notes: "lead_status owned by LeadPM" },
-  { table: "business_cards", domain: "lead", writeAuthority: "LeadProcessManager", syncsWith: ["partners"], notes: "Business cards — lead_status via LeadPM" },
-  { table: "imported_contacts", domain: "lead", writeAuthority: "LeadProcessManager", notes: "Legacy contacts — lead_status via LeadPM" },
+  {
+    table: "partners",
+    domain: "lead",
+    writeAuthority: "LeadProcessManager",
+    syncsWith: ["business_cards"],
+    notes: "lead_status owned by LeadPM",
+  },
+  {
+    table: "business_cards",
+    domain: "lead",
+    writeAuthority: "LeadProcessManager",
+    syncsWith: ["partners"],
+    notes: "Business cards — lead_status via LeadPM",
+  },
+  {
+    table: "imported_contacts",
+    domain: "lead",
+    writeAuthority: "LeadProcessManager",
+    notes: "Legacy contacts — lead_status via LeadPM",
+  },
   { table: "partner_contacts", domain: "lead", writeAuthority: "CRM/UI", notes: "Contact details" },
 
   // ── EMAIL DOMAIN ──
-  { table: "channel_messages", domain: "email", writeAuthority: "EmailProcessManager", notes: "Inbound/outbound messages" },
-  { table: "email_classifications", domain: "email", writeAuthority: "EmailProcessManager", notes: "AI classification results (via classify-inbound-message)" },
-  { table: "email_address_rules", domain: "email", writeAuthority: "EmailProcessManager", notes: "Per-address rules (bounce/unsub hygiene)" },
+  {
+    table: "channel_messages",
+    domain: "email",
+    writeAuthority: "EmailProcessManager",
+    notes: "Inbound/outbound messages",
+  },
+  {
+    table: "email_classifications",
+    domain: "email",
+    writeAuthority: "EmailProcessManager",
+    notes: "AI classification results (via classify-inbound-message)",
+  },
+  {
+    table: "email_address_rules",
+    domain: "email",
+    writeAuthority: "EmailProcessManager",
+    notes: "Per-address rules (bounce/unsub hygiene)",
+  },
   { table: "email_templates", domain: "email", writeAuthority: "UI/admin", notes: "Email templates" },
 
   // ── OUTREACH DOMAIN ──
   { table: "outreach_queue", domain: "outreach", writeAuthority: "OutreachProcessManager", notes: "Send queue" },
   { table: "outreach_schedules", domain: "outreach", writeAuthority: "cadence-engine", notes: "Scheduled touchpoints" },
-  { table: "outreach_missions", domain: "outreach", writeAuthority: "UI/mission-executor", notes: "Multi-step campaigns" },
-  { table: "mission_actions", domain: "outreach", writeAuthority: "mission-executor", notes: "Individual campaign steps" },
+  {
+    table: "outreach_missions",
+    domain: "outreach",
+    writeAuthority: "UI/mission-executor",
+    notes: "Multi-step campaigns",
+  },
+  {
+    table: "mission_actions",
+    domain: "outreach",
+    writeAuthority: "mission-executor",
+    notes: "Individual campaign steps",
+  },
 
   // ── AI/AUTOMATION DOMAIN ──
-  { table: "ai_pending_actions", domain: "ai_automation", writeAuthority: "multiple (see dedup_key)", notes: "Approval queue" },
+  {
+    table: "ai_pending_actions",
+    domain: "ai_automation",
+    writeAuthority: "multiple (see dedup_key)",
+    notes: "Approval queue",
+  },
   { table: "agent_tasks", domain: "ai_automation", writeAuthority: "agent-execute", notes: "Agent task queue" },
   { table: "agent_personas", domain: "ai_automation", writeAuthority: "UI/admin", notes: "Agent definitions" },
   { table: "ai_memory", domain: "ai_automation", writeAuthority: "voice-brain-bridge/agents", notes: "Agent memory" },
 
   // ── ENRICHMENT DOMAIN ──
-  { table: "partner_deep_search_results", domain: "enrichment", writeAuthority: "deep-search/sherlock", notes: "Search results" },
+  {
+    table: "partner_deep_search_results",
+    domain: "enrichment",
+    writeAuthority: "deep-search/sherlock",
+    notes: "Search results",
+  },
   { table: "partner_certifications", domain: "enrichment", writeAuthority: "enrichment pipeline", notes: "Certs" },
-  { table: "partner_network_memberships", domain: "enrichment", writeAuthority: "enrichment pipeline", notes: "Memberships" },
+  {
+    table: "partner_network_memberships",
+    domain: "enrichment",
+    writeAuthority: "enrichment pipeline",
+    notes: "Memberships",
+  },
   { table: "partner_services", domain: "enrichment", writeAuthority: "enrichment pipeline", notes: "Services" },
 
   // ── LEARNING DOMAIN ──
   { table: "kb_entries", domain: "learning", writeAuthority: "UI/admin/architect", notes: "Knowledge base" },
-  { table: "suggested_improvements", domain: "learning", writeAuthority: "LearningProcessManager", notes: "Improvement loop" },
+  {
+    table: "suggested_improvements",
+    domain: "learning",
+    writeAuthority: "LearningProcessManager",
+    notes: "Improvement loop",
+  },
   { table: "operative_prompts", domain: "learning", writeAuthority: "UI/admin", notes: "Operative prompts" },
   { table: "prompt_blocks", domain: "learning", writeAuthority: "UI/admin", notes: "Prompt components" },
 
@@ -81,16 +143,46 @@ export const TABLE_OWNERSHIP: TableOwnership[] = [
   // ── RA (Report Aziende) DOMAIN ──
   // Separate bounded context for Italian business data. Own lead_status lifecycle (9-state machine).
   // Does NOT integrate with partners/imported_contacts lead lifecycle.
-  { table: "ra_prospects", domain: "ra", writeAuthority: "UI/useUpdateRALeadStatus", notes: "Italian business prospects — separate lead lifecycle, audit trail via ra_audit" },
+  {
+    table: "ra_prospects",
+    domain: "ra",
+    writeAuthority: "UI/useUpdateRALeadStatus",
+    notes: "Italian business prospects — separate lead lifecycle, audit trail via ra_audit",
+  },
   { table: "ra_contacts", domain: "ra", writeAuthority: "UI/useUpsertRAProspect", notes: "Prospect contacts" },
-  { table: "ra_interactions", domain: "ra", writeAuthority: "UI/interaction logger", notes: "Interaction history (call/email/meeting/note/pec)" },
+  {
+    table: "ra_interactions",
+    domain: "ra",
+    writeAuthority: "UI/interaction logger",
+    notes: "Interaction history (call/email/meeting/note/pec)",
+  },
   { table: "ra_scraping_jobs", domain: "ra", writeAuthority: "scrape-aziende-batch", notes: "Data import jobs" },
-  { table: "ra_audit", domain: "ra", writeAuthority: "raAuditLogger", notes: "RA domain audit trail — append-only, tracks lead_status changes" },
+  {
+    table: "ra_audit",
+    domain: "ra",
+    writeAuthority: "raAuditLogger",
+    notes: "RA domain audit trail — append-only, tracks lead_status changes",
+  },
 
   // ── AUDIT DOMAIN (read-only from other domains) ──
-  { table: "activities", domain: "audit", writeAuthority: "multiple (activityLogger)", notes: "Activity log — append-only" },
-  { table: "supervisor_audit_log", domain: "audit", writeAuthority: "supervisorAudit", notes: "Audit trail — append-only" },
-  { table: "domain_events", domain: "audit", writeAuthority: "EventBus (publishAndPersist)", notes: "Event store — append-only" },
+  {
+    table: "activities",
+    domain: "audit",
+    writeAuthority: "multiple (activityLogger)",
+    notes: "Activity log — append-only",
+  },
+  {
+    table: "supervisor_audit_log",
+    domain: "audit",
+    writeAuthority: "supervisorAudit",
+    notes: "Audit trail — append-only",
+  },
+  {
+    table: "domain_events",
+    domain: "audit",
+    writeAuthority: "EventBus (publishAndPersist)",
+    notes: "Event store — append-only",
+  },
   { table: "contact_interactions", domain: "audit", writeAuthority: "interactionLogger", notes: "Interaction counts" },
 
   // ── SYSTEM DOMAIN ──
@@ -103,7 +195,7 @@ export const TABLE_OWNERSHIP: TableOwnership[] = [
 // ═══════════════════════════════════════════════════════════
 
 const ownershipMap = new Map<string, TableOwnership>();
-TABLE_OWNERSHIP.forEach(t => ownershipMap.set(t.table, t));
+TABLE_OWNERSHIP.forEach((t) => ownershipMap.set(t.table, t));
 
 export function getTableDomain(table: string): DomainName | "unknown" {
   return ownershipMap.get(table)?.domain || "unknown";
@@ -151,10 +243,7 @@ export const ALLOWED_CROSS_READS: Record<string, string> = {
  * Check if a cross-domain read is allowed.
  * Returns the reason if allowed, null if violation.
  */
-export function checkCrossDomainRead(
-  readerDomain: DomainName,
-  table: string,
-): { allowed: boolean; reason?: string } {
+export function checkCrossDomainRead(readerDomain: DomainName, table: string): { allowed: boolean; reason?: string } {
   const tableDomain = getTableDomain(table);
   if (tableDomain === readerDomain || tableDomain === "audit" || tableDomain === "system") {
     return { allowed: true, reason: "Same domain or shared domain" };
@@ -171,16 +260,12 @@ export function checkCrossDomainRead(
  * Runtime guard — logs warning for unauthorized cross-domain reads.
  * Non-blocking: logs but doesn't throw. Use in development/staging.
  */
-export function guardCrossDomainRead(
-  readerDomain: DomainName,
-  table: string,
-  caller: string,
-): void {
+export function guardCrossDomainRead(readerDomain: DomainName, table: string, caller: string): void {
   const check = checkCrossDomainRead(readerDomain, table);
   if (!check.allowed) {
     console.warn(
       `[BoundedContext] VIOLATION: ${caller} (domain: ${readerDomain}) reads "${table}" ` +
-      `(domain: ${getTableDomain(table)}). Add to ALLOWED_CROSS_READS or use a read model.`
+        `(domain: ${getTableDomain(table)}). Add to ALLOWED_CROSS_READS or use a read model.`,
     );
   }
 }

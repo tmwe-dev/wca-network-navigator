@@ -38,11 +38,23 @@ export function useGroupingData() {
   // Lifted out of GroupDropZone so we open ONE channel + ONE query
   // instead of N (one per group) → big perf win when filtering/dragging.
   const [assignedByGroup, setAssignedByGroup] = useState<
-    Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>
+    Map<
+      string,
+      Array<{
+        id: string;
+        email_address: string;
+        display_name: string | null;
+        company_name: string | null;
+        domain: string | null;
+      }>
+    >
   >(new Map());
 
   const loadGroups = async () => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (!user) return;
     setGroups(await fetchSenderGroupsOrdered());
   };
@@ -53,11 +65,26 @@ export function useGroupingData() {
    */
   const loadAssignedRules = async () => {
     const rows = await fetchAssignedAddressRules();
-    const map = new Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>();
+    const map = new Map<
+      string,
+      Array<{
+        id: string;
+        email_address: string;
+        display_name: string | null;
+        company_name: string | null;
+        domain: string | null;
+      }>
+    >();
     for (const r of rows) {
       if (!r.group_name) continue;
       const arr = map.get(r.group_name) || [];
-      arr.push({ id: r.id, email_address: r.email_address, display_name: r.display_name, company_name: r.company_name, domain: r.domain });
+      arr.push({
+        id: r.id,
+        email_address: r.email_address,
+        display_name: r.display_name,
+        company_name: r.company_name,
+        domain: r.domain,
+      });
       map.set(r.group_name, arr);
     }
     setAssignedByGroup(map);
@@ -66,7 +93,10 @@ export function useGroupingData() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       // Load groups
@@ -101,7 +131,7 @@ export function useGroupingData() {
       // Dedup by email_address: rules can exist per-user (shared visibility),
       // so the same address may appear N times. Keep the row with the
       // highest email_count and sum counts across owners for accurate volume.
-      const dedupMap = new Map<string, typeof rules[number] & { _summed: number }>();
+      const dedupMap = new Map<string, (typeof rules)[number] & { _summed: number }>();
       for (const r of rules) {
         const key = r.email_address.toLowerCase();
         const existing = dedupMap.get(key);
@@ -140,14 +170,12 @@ export function useGroupingData() {
       // effettivamente scritto nella casella corrente. Se l'allowlist
       // non è ancora pronta (null) mostriamo lista vuota — sarà ripopolata
       // dall'effect che osserva mailboxKey.
-      const filteredSenders = allowlist
-        ? senderList.filter((s) => allowlist.has(s.email.toLowerCase()))
-        : [];
+      const filteredSenders = allowlist ? senderList.filter((s) => allowlist.has(s.email.toLowerCase())) : [];
       setSenders(filteredSenders);
 
       // Load classified senders (have group_id OR group_name) → mostrati nel rail con opacità ridotta.
       const classifiedRules = await fetchClassifiedAddressRules();
-      const classifiedDedup = new Map<string, typeof classifiedRules[number] & { _summed: number }>();
+      const classifiedDedup = new Map<string, (typeof classifiedRules)[number] & { _summed: number }>();
       for (const r of classifiedRules) {
         const key = r.email_address.toLowerCase();
         const existing = classifiedDedup.get(key);
@@ -178,9 +206,7 @@ export function useGroupingData() {
           : undefined,
         isBlocked: r.is_blocked === true,
       }));
-      const filteredClassified = allowlist
-        ? classifiedList.filter((s) => allowlist.has(s.email.toLowerCase()))
-        : [];
+      const filteredClassified = allowlist ? classifiedList.filter((s) => allowlist.has(s.email.toLowerCase())) : [];
       setClassifiedSenders(filteredClassified);
 
       // After loading uncategorized senders, also refresh assigned-rules map.
@@ -195,7 +221,10 @@ export function useGroupingData() {
   const populateAddressRules = async () => {
     setIsPopulating(true);
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return;
 
       // Get only THIS user's inbound email senders
@@ -311,7 +340,6 @@ export function useGroupingData() {
   useEffect(() => {
     loadData();
     // Re-load quando cambia mailbox o quando l'allowlist diventa pronta.
-     
   }, [mailboxKey, allowlist]);
 
   return {

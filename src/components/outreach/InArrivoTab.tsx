@@ -16,13 +16,13 @@ import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const EmailInboxView = lazyRetry(() =>
-  import("@/components/outreach/EmailInboxView").then(m => ({ default: m.EmailInboxView }))
+  import("@/components/outreach/EmailInboxView").then((m) => ({ default: m.EmailInboxView })),
 );
 const WhatsAppInboxView = lazyRetry(() =>
-  import("@/components/outreach/WhatsAppInboxView").then(m => ({ default: m.WhatsAppInboxView }))
+  import("@/components/outreach/WhatsAppInboxView").then((m) => ({ default: m.WhatsAppInboxView })),
 );
 const LinkedInInboxView = lazyRetry(() =>
-  import("@/components/outreach/LinkedInInboxView").then(m => ({ default: m.LinkedInInboxView }))
+  import("@/components/outreach/LinkedInInboxView").then((m) => ({ default: m.LinkedInInboxView })),
 );
 
 type Channel = "email" | "whatsapp" | "linkedin";
@@ -66,7 +66,6 @@ export function InArrivoTab() {
     // Pulisci lo state per evitare ri-trigger su back/forward.
     navigate(location.pathname, { replace: true, state: null });
     return () => clearTimeout(t);
-     
   }, [location.state]);
 
   useEffect(() => {
@@ -92,7 +91,7 @@ export function InArrivoTab() {
   const { data: liUnread = 0 } = useUnreadCount("linkedin");
 
   const { activeOperator, viewingAll } = useActiveOperator();
-  const operatorUserId = viewingAll ? undefined : (activeOperator?.user_id || undefined);
+  const operatorUserId = viewingAll ? undefined : activeOperator?.user_id || undefined;
 
   // WhatsApp — single unified sync (cursor-based, no unread filter)
   const waSync = useWhatsAppAdaptiveSync();
@@ -108,7 +107,7 @@ export function InArrivoTab() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="px-3 py-1.5 border-b border-border/30 flex items-center gap-1 flex-wrap">
-        {CHANNELS.map(ch => {
+        {CHANNELS.map((ch) => {
           const badge = badges[ch.channel];
           return (
             <button
@@ -119,18 +118,18 @@ export function InArrivoTab() {
                 channel === ch.value
                   ? "bg-primary/15 text-primary border border-primary/30"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
-                pulsingChannel === ch.value && "animate-pulse-once"
+                pulsingChannel === ch.value && "animate-pulse-once",
               )}
             >
               <ch.icon className="w-3 h-3" />
               {ch.label}
               {badge > 0 && (
-                <span className={cn(
-                  "ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none",
-                  channel === ch.value
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground"
-                )}>
+                <span
+                  className={cn(
+                    "ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none",
+                    channel === ch.value ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
+                  )}
+                >
                   {badge > 99 ? "99+" : badge}
                 </span>
               )}

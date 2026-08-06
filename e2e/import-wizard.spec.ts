@@ -8,9 +8,17 @@ test.describe("ImportWizard @regression", () => {
   });
   test("mostra header o login", async ({ page }) => {
     await page.goto("/import");
-    const candidates = [page.getByRole("heading", { name: /import|importazione/i }), page.getByRole("button", { name: /accedi|login/i })];
+    const candidates = [
+      page.getByRole("heading", { name: /import|importazione/i }),
+      page.getByRole("button", { name: /accedi|login/i }),
+    ];
     let visible = false;
-    for (const c of candidates) { if ((await c.count()) > 0) { visible = true; break; } }
+    for (const c of candidates) {
+      if ((await c.count()) > 0) {
+        visible = true;
+        break;
+      }
+    }
     expect(visible).toBe(true);
   });
   test("no ErrorBoundary", async ({ page }) => {

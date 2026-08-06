@@ -23,7 +23,10 @@ export interface ContactInteractionRecordRow {
 }
 
 /** Interazioni contatto per il drawer (Circuito di Attesa), limitate. */
-export async function findContactInteractionsForRecord(contactId: string, limit = 20): Promise<ContactInteractionRecordRow[]> {
+export async function findContactInteractionsForRecord(
+  contactId: string,
+  limit = 20,
+): Promise<ContactInteractionRecordRow[]> {
   const { data } = await supabase
     .from("contact_interactions")
     .select("id, contact_id, interaction_type, title, description, outcome, created_by, created_at")

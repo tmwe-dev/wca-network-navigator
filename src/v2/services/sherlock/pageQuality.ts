@@ -73,9 +73,13 @@ export function assessPageQuality(rawMarkdown: string): PageUsability {
 
 export function reasonLabel(reason: Exclude<PageUsability, { usable: true }>["reason"]): string {
   switch (reason) {
-    case "not_found": return "Pagina inesistente";
-    case "captcha": return "Bloccato (captcha)";
-    case "paywall": return "Login richiesto";
-    case "empty": return "Pagina vuota";
+    case "not_found":
+      return "Pagina inesistente";
+    case "captcha":
+      return "Bloccato (captcha)";
+    case "paywall":
+      return "Login richiesto";
+    case "empty":
+      return "Pagina vuota";
   }
 }

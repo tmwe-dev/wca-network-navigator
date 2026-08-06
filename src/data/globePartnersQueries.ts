@@ -76,7 +76,7 @@ export async function getBusinessCardsForCampaignRaw(): Promise<BusinessCardCamp
   const { data, error } = await supabase
     .from("business_cards")
     .select(
-      "id, company_name, contact_name, email, event_name, met_at, location, matched_partner_id, partner:matched_partner_id(id, company_name, city, country_code, country_name, email, logo_url)"
+      "id, company_name, contact_name, email, event_name, met_at, location, matched_partner_id, partner:matched_partner_id(id, company_name, city, country_code, country_name, email, logo_url)",
     )
     .order("created_at", { ascending: false })
     .limit(1000)
@@ -85,7 +85,9 @@ export async function getBusinessCardsForCampaignRaw(): Promise<BusinessCardCamp
   return data ?? [];
 }
 
-export async function getBcaCountryCountsRaw(): Promise<Array<{ matched_partner_id: string | null; partner: { country_code: string | null } | null }>> {
+export async function getBcaCountryCountsRaw(): Promise<
+  Array<{ matched_partner_id: string | null; partner: { country_code: string | null } | null }>
+> {
   const { data, error } = await supabase
     .from("business_cards")
     .select("matched_partner_id, partner:matched_partner_id(country_code)")

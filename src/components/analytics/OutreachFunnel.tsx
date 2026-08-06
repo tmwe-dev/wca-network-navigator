@@ -45,12 +45,8 @@ export function OutreachFunnel({ data, loading = false }: OutreachFunnelProps) {
   return (
     <Card className="p-4">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-foreground">
-          Funnel di Conversione Outreach
-        </h3>
-        <p className="text-xs text-muted-foreground">
-          Tassi di conversione da contatto a affare
-        </p>
+        <h3 className="text-sm font-semibold text-foreground">Funnel di Conversione Outreach</h3>
+        <p className="text-xs text-muted-foreground">Tassi di conversione da contatto a affare</p>
       </div>
 
       <div className="space-y-4 py-4">
@@ -59,16 +55,12 @@ export function OutreachFunnel({ data, loading = false }: OutreachFunnelProps) {
           const width = (stage.value / maxValue) * 100;
           const nextStage = stages[index + 1];
           const conversionRate =
-            nextStage && stage.value > 0
-              ? ((nextStage.value / stage.value) * 100).toFixed(1)
-              : "0";
+            nextStage && stage.value > 0 ? ((nextStage.value / stage.value) * 100).toFixed(1) : "0";
 
           return (
             <div key={stage.label} className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">
-                  {stage.label}
-                </span>
+                <span className="text-sm font-medium text-foreground">{stage.label}</span>
                 <span className="text-xs text-muted-foreground">
                   {stage.value.toLocaleString("it-IT")} ({percentage.toFixed(1)}%)
                 </span>
@@ -76,16 +68,11 @@ export function OutreachFunnel({ data, loading = false }: OutreachFunnelProps) {
 
               <div className="flex items-center gap-2">
                 <div
-                  className={cn(
-                    "h-10 rounded-lg transition-all duration-300 shadow-sm",
-                    stage.color
-                  )}
+                  className={cn("h-10 rounded-lg transition-all duration-300 shadow-sm", stage.color)}
                   style={{ width: `${width}%` }}
                 />
                 {nextStage && (
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {conversionRate}%
-                  </span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{conversionRate}%</span>
                 )}
               </div>
             </div>
@@ -98,19 +85,13 @@ export function OutreachFunnel({ data, loading = false }: OutreachFunnelProps) {
         <div className="text-center py-2">
           <p className="text-xs text-muted-foreground">Tasso Complessivo</p>
           <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-            {totalValue > 0
-              ? ((data.deal / data.contacted) * 100).toFixed(1)
-              : "0"}
-            %
+            {totalValue > 0 ? ((data.deal / data.contacted) * 100).toFixed(1) : "0"}%
           </p>
         </div>
         <div className="text-center py-2">
           <p className="text-xs text-muted-foreground">Tasso Risposta</p>
           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-            {totalValue > 0
-              ? ((data.replied / data.contacted) * 100).toFixed(1)
-              : "0"}
-            %
+            {totalValue > 0 ? ((data.replied / data.contacted) * 100).toFixed(1) : "0"}%
           </p>
         </div>
       </div>

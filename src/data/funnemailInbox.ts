@@ -11,11 +11,7 @@
  * NESSUNA logica: solo SELECT.
  */
 import { readValidatedRows, selectFromValidatedTable } from "@/data/validatedQuery";
-import {
-  parseChannelMessageRow,
-  parseInboxBodyRow,
-  type InboxBodyRow,
-} from "@/data/_shared/channelMessageRowParser";
+import { parseChannelMessageRow, parseInboxBodyRow, type InboxBodyRow } from "@/data/_shared/channelMessageRowParser";
 import { supabase } from "@/integrations/supabase/client";
 /**
  * Tutte le letture/scritture su tabella LETTERALE usano il client tipizzato
@@ -38,7 +34,10 @@ const inboxLog = createLogger("dal:funnemail-inbox");
  */
 type InboxReadSource = "message_intelligence_v" | "channel_messages";
 
-interface RawResult<T> { data: T[] | null; error: { message: string; code?: string } | null }
+interface RawResult<T> {
+  data: T[] | null;
+  error: { message: string; code?: string } | null;
+}
 
 /**
  * Esegue una singola lettura Inbox provando prima la view canonica; su errore
@@ -149,9 +148,7 @@ function parseFunnemailDecisionRow(raw: RawFunnemailDecisionRow): FunnemailDecis
     suggested_action: SUGGESTED_ACTIONS.has(raw.suggested_action)
       ? (raw.suggested_action as FunnemailDecisionRow["suggested_action"])
       : "none",
-    urgency: URGENCIES.has(raw.urgency)
-      ? (raw.urgency as FunnemailDecisionRow["urgency"])
-      : "normal",
+    urgency: URGENCIES.has(raw.urgency) ? (raw.urgency as FunnemailDecisionRow["urgency"]) : "normal",
   };
 }
 
@@ -282,15 +279,17 @@ export interface FunnemailGroupFolder {
 export interface FunnemailGroupedInbox {
   folders: FunnemailGroupFolder[];
   counts: Record<string, number>;
-  messages: Array<ChannelMessage & {
-    funnemail_group_slug: string;
-    funnemail_group_name: string | null;
-    funnemail_folder_label: string | null;
-    funnemail_folder_icon: string | null;
-    funnemail_decision: FunnemailDecisionRow | null;
-    sender_intel: SenderIntelRow | null;
-    partner_snapshot: FunnemailPartnerSnapshot | null;
-  }>;
+  messages: Array<
+    ChannelMessage & {
+      funnemail_group_slug: string;
+      funnemail_group_name: string | null;
+      funnemail_folder_label: string | null;
+      funnemail_folder_icon: string | null;
+      funnemail_decision: FunnemailDecisionRow | null;
+      sender_intel: SenderIntelRow | null;
+      partner_snapshot: FunnemailPartnerSnapshot | null;
+    }
+  >;
 }
 
 interface EmailSenderGroupRow {
@@ -315,8 +314,7 @@ function parseEmailSenderGroupRow(raw: RawEmailSenderGroupRow): EmailSenderGroup
       : undefined;
   return {
     ...raw,
-    funnemail_policy:
-      typeof autoMarkRead === "boolean" ? { auto_mark_read: autoMarkRead } : null,
+    funnemail_policy: typeof autoMarkRead === "boolean" ? { auto_mark_read: autoMarkRead } : null,
   };
 }
 
@@ -365,36 +363,32 @@ function extractEmail(raw: string | null | undefined): string | null {
 }
 
 function _slugifyGroup(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "group";
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "group"
+  );
 }
 
 /** Carica snapshot partner per una lista di id (usato da useInboxEnrichment). */
-export async function listPartnerSnapshotsByIds(
-  ids: string[],
-): Promise<FunnemailPartnerSnapshot[]> {
-  const { data, error } = await supabase.from("partners")
-    .select(
-      "id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website",
-    )
+export async function listPartnerSnapshotsByIds(ids: string[]): Promise<FunnemailPartnerSnapshot[]> {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website")
     .in("id", ids);
   if (error) return [];
   return (data ?? []) as FunnemailPartnerSnapshot[];
 }
 
 /** Carica intel Scout per una lista di domini (usato da useInboxEnrichment). */
-export async function listSenderIntelByDomains(
-  domains: string[],
-): Promise<SenderIntelRow[]> {
-  const { data, error } = await supabase.from("funnemail_sender_intel")
-    .select(
-      "email_domain,is_known_partner,partner_id,company_type,country,website,role_guess",
-    )
+export async function listSenderIntelByDomains(domains: string[]): Promise<SenderIntelRow[]> {
+  const { data, error } = await supabase
+    .from("funnemail_sender_intel")
+    .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
     .in("email_domain", domains);
   if (error) return [];
   return (data ?? []) as SenderIntelRow[];
@@ -403,7 +397,8 @@ export async function listSenderIntelByDomains(
 /** Carica intel Scout per un dominio (best-effort, non throwa). */
 export async function getSenderIntelByDomain(domain: string): Promise<SenderIntelRow | null> {
   if (!domain) return null;
-  const { data } = await supabase.from("funnemail_sender_intel")
+  const { data } = await supabase
+    .from("funnemail_sender_intel")
     .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
     .eq("email_domain", domain.toLowerCase())
     .maybeSingle();
@@ -412,7 +407,8 @@ export async function getSenderIntelByDomain(domain: string): Promise<SenderInte
 
 /** Lista cartelle attive ordinate per sezione e sort_order. */
 export async function listFunnemailFolders(): Promise<FunnemailFolder[]> {
-  const { data, error } = await supabase.from("funnemail_folders")
+  const { data, error } = await supabase
+    .from("funnemail_folders")
     .select("slug,label,description,icon,section,sort_order,accept_into_agenda,prompt_hint")
     .eq("is_active", true)
     .order("section", { ascending: true })
@@ -424,7 +420,8 @@ export async function listFunnemailFolders(): Promise<FunnemailFolder[]> {
 /** Conteggio decisioni per slug negli ultimi 30 giorni. */
 export async function countFunnemailByFolder(): Promise<Record<string, number>> {
   const since = new Date(Date.now() - 30 * 86400_000).toISOString();
-  const { data, error } = await supabase.from("funnemail_decisions")
+  const { data, error } = await supabase
+    .from("funnemail_decisions")
     .select("folder_slug")
     .gte("created_at", since)
     .limit(5000);
@@ -441,11 +438,9 @@ export async function countFunnemailByFolder(): Promise<Record<string, number>> 
  * Lista mail in una cartella: join logico (in JS) tra funnemail_decisions e
  * channel_messages tramite message_id_external.
  */
-export async function listMailsByFolder(
-  folderSlug: string,
-  limit = 50,
-): Promise<FunnemailMailRow[]> {
-  const { data: decisions, error: dErr } = await supabase.from("funnemail_decisions")
+export async function listMailsByFolder(folderSlug: string, limit = 50): Promise<FunnemailMailRow[]> {
+  const { data: decisions, error: dErr } = await supabase
+    .from("funnemail_decisions")
     .select("*")
     .eq("folder_slug", folderSlug)
     .order("created_at", { ascending: false })
@@ -455,26 +450,30 @@ export async function listMailsByFolder(
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.message_id);
-  const msgs = await readInboxOnce<InboxBodyRow>(
-    "listMailsByFolder",
-    (source) =>
-      readValidatedRows(selectFromValidatedTable(
+  const msgs = await readInboxOnce<InboxBodyRow>("listMailsByFolder", (source) =>
+    readValidatedRows(
+      selectFromValidatedTable(
         source,
         "message_id_external,subject,from_address,body_text,body_html,email_date,partner_id",
       )
         .eq("channel", "email")
         .eq("direction", "inbound")
-        .in("message_id_external", ids), parseInboxBodyRow),
+        .in("message_id_external", ids),
+      parseInboxBodyRow,
+    ),
   );
 
-  const byId = new Map<string, {
-    subject: string | null;
-    from_address: string | null;
-    body_text: string | null;
-    body_html: string | null;
-    email_date: string | null;
-    partner_id: string | null;
-  }>();
+  const byId = new Map<
+    string,
+    {
+      subject: string | null;
+      from_address: string | null;
+      body_text: string | null;
+      body_html: string | null;
+      email_date: string | null;
+      partner_id: string | null;
+    }
+  >();
   for (const m of msgs) {
     byId.set(m.message_id_external, {
       subject: m.subject,
@@ -502,10 +501,9 @@ export async function listMailsByFolder(
 }
 
 /** Decision singola per message_id. */
-export async function getFunnemailDecision(
-  messageId: string,
-): Promise<FunnemailDecisionRow | null> {
-  const { data, error } = await supabase.from("funnemail_decisions")
+export async function getFunnemailDecision(messageId: string): Promise<FunnemailDecisionRow | null> {
+  const { data, error } = await supabase
+    .from("funnemail_decisions")
     .select("*")
     .eq("message_id", messageId)
     .maybeSingle();
@@ -514,11 +512,9 @@ export async function getFunnemailDecision(
 }
 
 /** Override manuale della cartella scelta dall'AI. */
-export async function overrideFunnemailFolder(
-  messageId: string,
-  newFolderSlug: string,
-): Promise<void> {
-  const { error } = await supabase.from("funnemail_decisions")
+export async function overrideFunnemailFolder(messageId: string, newFolderSlug: string): Promise<void> {
+  const { error } = await supabase
+    .from("funnemail_decisions")
     .update({
       override_folder_slug: newFolderSlug,
       override_at: new Date().toISOString(),
@@ -531,7 +527,8 @@ export async function markFunnemailMessagesRead(messageIds: string[]): Promise<v
   if (messageIds.length === 0) return;
   // NOTA B4.6b: SCRITTURA — resta su `channel_messages` (la view canonica è
   // read-only). Non tentare mai `.update()` su `message_intelligence_v`.
-  const { error } = await supabase.from("channel_messages")
+  const { error } = await supabase
+    .from("channel_messages")
     .update({ read_at: new Date().toISOString() })
     .in("id", messageIds);
   if (error) throw error;
@@ -563,9 +560,7 @@ export async function listFunnemailGroupedInbox(
       (source, from, to) => {
         const cols = source === "message_intelligence_v" ? MESSAGE_LIST_SELECT_VIEW : MESSAGE_LIST_SELECT;
         const createdAtCol = source === "message_intelligence_v" ? "message_created_at" : "created_at";
-        let q = selectFromValidatedTable(source, cols)
-          .eq("channel", "email")
-          .eq("direction", "inbound");
+        let q = selectFromValidatedTable(source, cols).eq("channel", "email").eq("direction", "inbound");
         if (targetUserId) q = q.eq("user_id", targetUserId);
         // Filtro casella: personale = mailbox_id NULL (legacy + caselle non taggate);
         // condivisa = mailbox_id == id specifico. Nessun filtro = vista aggregata.
@@ -588,24 +583,36 @@ export async function listFunnemailGroupedInbox(
     // `suggested_action` / `urgency` sono `text` nel database: si legge la
     // shape reale e si valida verso la union applicativa.
     fetchAllPages<RawFunnemailDecisionRow>(
-      (from, to) => supabase
-        .from("funnemail_decisions")
-        .select("id,message_id,folder_slug,suggested_action,goes_to_agenda,urgency,confidence,reasoning,commercial_handoff,from_address,partner_id,override_folder_slug,created_at")
-        .order("created_at", { ascending: false })
-        .range(from, to),
+      (from, to) =>
+        supabase
+          .from("funnemail_decisions")
+          .select(
+            "id,message_id,folder_slug,suggested_action,goes_to_agenda,urgency,confidence,reasoning,commercial_handoff,from_address,partner_id,override_folder_slug,created_at",
+          )
+          .order("created_at", { ascending: false })
+          .range(from, to),
       MAX_MESSAGES,
     ).then((rows) => rows.map(parseFunnemailDecisionRow)),
     // `funnemail_policy` è `jsonb`: validata verso la shape applicativa.
-    fetchAllPages<RawEmailSenderGroupRow>((from, to) => supabase
-      .from("email_sender_groups")
-      .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
-      .eq("user_id", userId)
-      .order("sort_order", { ascending: true })
-      .range(from, to), MAX_RULES_OR_GROUPS).then((rows) => rows.map(parseEmailSenderGroupRow)),
-    fetchAllPages<EmailAddressRuleRow>((from, to) => supabase.from("email_address_rules")
-      .select("email_address,group_name,category")
-      .eq("user_id", userId)
-      .range(from, to), MAX_RULES_OR_GROUPS),
+    fetchAllPages<RawEmailSenderGroupRow>(
+      (from, to) =>
+        supabase
+          .from("email_sender_groups")
+          .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
+          .eq("user_id", userId)
+          .order("sort_order", { ascending: true })
+          .range(from, to),
+      MAX_RULES_OR_GROUPS,
+    ).then((rows) => rows.map(parseEmailSenderGroupRow)),
+    fetchAllPages<EmailAddressRuleRow>(
+      (from, to) =>
+        supabase
+          .from("email_address_rules")
+          .select("email_address,group_name,category")
+          .eq("user_id", userId)
+          .range(from, to),
+      MAX_RULES_OR_GROUPS,
+    ),
   ]);
 
   // Mappa funnemail_folders -> FunnemailGroupFolder.
@@ -676,56 +683,69 @@ export async function listFunnemailGroupedInbox(
 
   const validSlugs = new Set(folders.map((f) => f.slug));
   const folderBySlug = new Map(folders.map((f) => [f.slug, f]));
-  const domains = Array.from(new Set(messages.map((m) => extractEmail(m.from_address)?.split("@")[1]).filter((d): d is string => Boolean(d))));
-  const partnerIds = Array.from(new Set([
-    ...messages.map((m) => m.partner_id),
-    ...decisions.map((d) => d.partner_id),
-  ].filter((id): id is string => Boolean(id))));
-  const intelPromise: Promise<SenderIntelRow[]> = domains.length > 0
-    ? (async () => {
-      const { data, error } = await supabase.from("funnemail_sender_intel")
-        .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
-        .in("email_domain", domains);
-      if (error) throw error;
-      return data ?? [];
-    })()
-    : Promise.resolve([]);
-  const partnerPromise: Promise<FunnemailPartnerSnapshot[]> = partnerIds.length > 0
-    ? (async () => {
-      const { data, error } = await supabase.from("partners")
-        .select("id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website")
-        .in("id", partnerIds);
-      if (error) throw error;
-      return data ?? [];
-    })()
-    : Promise.resolve([]);
-  const [intelRows, partnerRows] = await Promise.all([
-    intelPromise,
-    partnerPromise,
-  ]);
+  const domains = Array.from(
+    new Set(messages.map((m) => extractEmail(m.from_address)?.split("@")[1]).filter((d): d is string => Boolean(d))),
+  );
+  const partnerIds = Array.from(
+    new Set(
+      [...messages.map((m) => m.partner_id), ...decisions.map((d) => d.partner_id)].filter((id): id is string =>
+        Boolean(id),
+      ),
+    ),
+  );
+  const intelPromise: Promise<SenderIntelRow[]> =
+    domains.length > 0
+      ? (async () => {
+          const { data, error } = await supabase
+            .from("funnemail_sender_intel")
+            .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
+            .in("email_domain", domains);
+          if (error) throw error;
+          return data ?? [];
+        })()
+      : Promise.resolve([]);
+  const partnerPromise: Promise<FunnemailPartnerSnapshot[]> =
+    partnerIds.length > 0
+      ? (async () => {
+          const { data, error } = await supabase
+            .from("partners")
+            .select(
+              "id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website",
+            )
+            .in("id", partnerIds);
+          if (error) throw error;
+          return data ?? [];
+        })()
+      : Promise.resolve([]);
+  const [intelRows, partnerRows] = await Promise.all([intelPromise, partnerPromise]);
   const intelByDomain = new Map(intelRows.map((row) => [row.email_domain, row]));
   const partnerById = new Map(partnerRows.map((row) => [row.id, row]));
   const counts: Record<string, number> = Object.fromEntries(folders.map((f) => [f.slug, 0]));
 
   const groupedMessages = messages.map((message) => {
     let slug: string | null = null;
-    const externalId = (message as ChannelMessage & { message_id_external?: string | null }).message_id_external ?? null;
-    const decision = externalId ? decisions.find((d) => d.message_id === externalId) ?? null : null;
+    const externalId =
+      (message as ChannelMessage & { message_id_external?: string | null }).message_id_external ?? null;
+    const decision = externalId ? (decisions.find((d) => d.message_id === externalId) ?? null) : null;
     if (externalId) slug = decisionByMsgId.get(externalId) ?? null;
     if (!slug) {
       const address = extractEmail(message.from_address);
       const domain = address?.split("@")[1] ?? null;
-      slug = (address ? ruleFolderByAddress.get(address) : undefined) ?? (domain ? ruleFolderByDomain.get(domain) : undefined) ?? null;
+      slug =
+        (address ? ruleFolderByAddress.get(address) : undefined) ??
+        (domain ? ruleFolderByDomain.get(domain) : undefined) ??
+        null;
     }
     if (!slug || !validSlugs.has(slug)) slug = "to_sort";
     counts[slug] = (counts[slug] ?? 0) + 1;
     const address = extractEmail(message.from_address);
     const domain = address?.split("@")[1] ?? null;
-    const intel = domain ? intelByDomain.get(domain) ?? null : null;
-    const partner = (message.partner_id ? partnerById.get(message.partner_id) : null)
-      ?? (decision?.partner_id ? partnerById.get(decision.partner_id) : null)
-      ?? (intel?.partner_id ? partnerById.get(intel.partner_id) : null)
-      ?? null;
+    const intel = domain ? (intelByDomain.get(domain) ?? null) : null;
+    const partner =
+      (message.partner_id ? partnerById.get(message.partner_id) : null) ??
+      (decision?.partner_id ? partnerById.get(decision.partner_id) : null) ??
+      (intel?.partner_id ? partnerById.get(intel.partner_id) : null) ??
+      null;
     const folder = folderBySlug.get(slug) ?? null;
     return {
       ...message,

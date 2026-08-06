@@ -90,18 +90,19 @@ export function evaluateRatchet(results, budget = BUDGET) {
 }
 
 function main() {
-  const raw = execFileSync(
-    "npx",
-    ["eslint", ".", "--max-warnings", "999999", "-f", "json"],
-    { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
-  );
+  const raw = execFileSync("npx", ["eslint", ".", "--max-warnings", "999999", "-f", "json"], {
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+  });
 
   const results = JSON.parse(raw);
   const { errors, failures, improvements, total, budgetTotal } = evaluateRatchet(results, BUDGET);
 
   for (const line of improvements) process.stdout.write(`${line}\n`);
 
-  process.stdout.write(`\nESLint: 0 errori attesi, ${errors.length} trovati. Warning ${total} / budget ${budgetTotal}.\n`);
+  process.stdout.write(
+    `\nESLint: 0 errori attesi, ${errors.length} trovati. Warning ${total} / budget ${budgetTotal}.\n`,
+  );
 
   if (failures.length > 0) {
     process.stderr.write(`\nLINT RATCHET FALLITO:\n${failures.join("\n")}\n`);

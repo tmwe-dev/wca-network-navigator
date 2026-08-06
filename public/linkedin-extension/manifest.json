@@ -3,19 +3,8 @@
   "name": "LinkedIn Cookie Sync",
   "version": "3.9.59",
   "description": "3.9.59 — Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Persistent Worker Tab invariata.",
-  "permissions": [
-    "cookies",
-    "tabs",
-    "activeTab",
-    "scripting",
-    "debugger",
-    "storage",
-    "webNavigation"
-  ],
-  "host_permissions": [
-    "https://*.linkedin.com/*",
-    "https://www.linkedin.com/*"
-  ],
+  "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage", "webNavigation"],
+  "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {
     "service_worker": "background.js"
   },
@@ -29,9 +18,7 @@
         "http://127.0.0.1:*/*",
         "*://127.0.0.1:*/*"
       ],
-      "js": [
-        "content.js"
-      ],
+      "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true,
       "match_about_blank": true,

@@ -4,9 +4,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Mail, MessageCircle, Linkedin, Phone, StickyNote } from "lucide-react";
 import { useReminders } from "@/hooks/useReminders";
 import {
-  format, startOfMonth, endOfMonth, eachDayOfInterval,
-  isSameMonth, isSameDay, addMonths, subMonths,
-  startOfWeek, endOfWeek, isToday,
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  addMonths,
+  subMonths,
+  startOfWeek,
+  endOfWeek,
+  isToday,
 } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -39,8 +47,7 @@ export default function AgendaCalendarPage({
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const getRemindersCount = (day: Date) =>
-    reminders?.filter((r) => isSameDay(new Date(r.due_date), day)).length || 0;
+  const getRemindersCount = (day: Date) => reminders?.filter((r) => isSameDay(new Date(r.due_date), day)).length || 0;
 
   const activityTypes: { value: ActivityTypeFilter; label: string; icon: typeof Mail }[] = [
     { value: "all", label: "Tutti", icon: Mail },
@@ -65,13 +72,33 @@ export default function AgendaCalendarPage({
           {format(currentMonth, "MMMM yyyy", { locale: it })}
         </h2>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} aria-label="Precedente">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            aria-label="Precedente"
+          >
             <ChevronLeft className="w-3.5 h-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => { setCurrentMonth(new Date()); onSelectDay(new Date()); }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-[10px]"
+            onClick={() => {
+              setCurrentMonth(new Date());
+              onSelectDay(new Date());
+            }}
+          >
             Oggi
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} aria-label="Successivo">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            aria-label="Successivo"
+          >
             <ChevronRight className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -80,7 +107,9 @@ export default function AgendaCalendarPage({
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-px px-3 mb-1">
         {["Lu", "Ma", "Me", "Gi", "Ve", "Sa", "Do"].map((d) => (
-          <div key={d} className="text-center text-[9px] font-medium text-muted-foreground py-1">{d}</div>
+          <div key={d} className="text-center text-[9px] font-medium text-muted-foreground py-1">
+            {d}
+          </div>
         ))}
       </div>
 
@@ -100,15 +129,14 @@ export default function AgendaCalendarPage({
                 !isCurrent && "opacity-30",
                 isSelected && "bg-primary text-primary-foreground shadow-md",
                 !isSelected && isToday(day) && "bg-accent text-accent-foreground",
-                !isSelected && !isToday(day) && "hover:bg-muted/50"
+                !isSelected && !isToday(day) && "hover:bg-muted/50",
               )}
             >
               <span className="font-medium">{format(day, "d")}</span>
               {count > 0 && (
-                <div className={cn(
-                  "w-1.5 h-1.5 rounded-full mt-0.5",
-                  isSelected ? "bg-primary-foreground" : "bg-primary"
-                )} />
+                <div
+                  className={cn("w-1.5 h-1.5 rounded-full mt-0.5", isSelected ? "bg-primary-foreground" : "bg-primary")}
+                />
               )}
             </button>
           );
@@ -125,7 +153,9 @@ export default function AgendaCalendarPage({
                 key={t.value}
                 className={cn(
                   "flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors text-xs",
-                  filters.activityType === t.value ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground"
+                  filters.activityType === t.value
+                    ? "bg-primary/10 text-primary"
+                    : "hover:bg-muted/50 text-muted-foreground",
                 )}
                 onClick={() => onFiltersChange({ ...filters, activityType: t.value })}
               >
@@ -144,15 +174,13 @@ export default function AgendaCalendarPage({
                 key={t.value}
                 className={cn(
                   "flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors text-xs",
-                  filters.responseStatus === t.value ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground"
+                  filters.responseStatus === t.value
+                    ? "bg-primary/10 text-primary"
+                    : "hover:bg-muted/50 text-muted-foreground",
                 )}
                 onClick={() => onFiltersChange({ ...filters, responseStatus: t.value })}
               >
-                <Checkbox
-                  checked={filters.responseStatus === t.value}
-                  className="w-3 h-3"
-                  tabIndex={-1}
-                />
+                <Checkbox checked={filters.responseStatus === t.value} className="w-3 h-3" tabIndex={-1} />
                 <span>{t.label}</span>
               </label>
             ))}

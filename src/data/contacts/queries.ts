@@ -14,11 +14,30 @@ type ImportedContactUpdate = Database["public"]["Tables"]["imported_contacts"]["
  * (`id`, `user_id`, `created_at`, `import_log_id`) e i campi di soft-delete.
  */
 const NULLABLE_STRING_COLUMNS = [
-  "address", "city", "company_alias", "company_name", "contact_alias",
-  "converted_at", "country", "deep_search_at", "email", "external_id",
-  "last_interaction_at", "lead_score_updated_at", "mobile", "name", "note",
-  "operator_id", "origin", "phone", "position", "status_reason",
-  "transferred_at", "transferred_to_partner_id", "wca_partner_id", "zip_code",
+  "address",
+  "city",
+  "company_alias",
+  "company_name",
+  "contact_alias",
+  "converted_at",
+  "country",
+  "deep_search_at",
+  "email",
+  "external_id",
+  "last_interaction_at",
+  "lead_score_updated_at",
+  "mobile",
+  "name",
+  "note",
+  "operator_id",
+  "origin",
+  "phone",
+  "position",
+  "status_reason",
+  "transferred_at",
+  "transferred_to_partner_id",
+  "wca_partner_id",
+  "zip_code",
 ] as const;
 
 const REQUIRED_STRING_COLUMNS = ["email_status"] as const;
@@ -83,17 +102,13 @@ function toDuplicateSource(value: string | null): ImportDuplicateMatch["source"]
   return "imported_contact";
 }
 
-
 import { createLogger } from "@/lib/log";
 import { toRecords } from "@/lib/records";
 const log = createLogger("queries");
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ContactQuery = any;
 
-function applyContactFilters(
-  q: ContactQuery,
-  filters: ContactFilters
-): ContactQuery {
+function applyContactFilters(q: ContactQuery, filters: ContactFilters): ContactQuery {
   q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
 
   if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId);
@@ -102,7 +117,7 @@ function applyContactFilters(
     const s = sanitizeSearchTerm(filters.search);
     if (s) {
       q = q.or(
-        `company_name.ilike.%${s}%,company_alias.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%,city.ilike.%${s}%,country.ilike.%${s}%,position.ilike.%${s}%,origin.ilike.%${s}%,phone.ilike.%${s}%,mobile.ilike.%${s}%`
+        `company_name.ilike.%${s}%,company_alias.ilike.%${s}%,name.ilike.%${s}%,email.ilike.%${s}%,city.ilike.%${s}%,country.ilike.%${s}%,position.ilike.%${s}%,origin.ilike.%${s}%,phone.ilike.%${s}%,mobile.ilike.%${s}%`,
       );
     }
   }
@@ -151,10 +166,7 @@ export async function findContacts(filters: ContactFilters = {}) {
   const page = filters.page ?? 0;
   const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
 
-  let q = supabase
-    .from("imported_contacts")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
+  let q = supabase.from("imported_contacts").select("*", { count: "exact" }).order("created_at", { ascending: false });
 
   q = applyContactFilters(q, filters);
 
@@ -176,9 +188,7 @@ export interface ContactWindowFilters {
   offset?: number;
 }
 
-export async function findContactsWindow(
-  filters: ContactWindowFilters = {},
-): Promise<ImportedContactRow[]> {
+export async function findContactsWindow(filters: ContactWindowFilters = {}): Promise<ImportedContactRow[]> {
   let q = supabase.from("imported_contacts").select("*");
   if (filters.importLogId) q = q.eq("import_log_id", filters.importLogId);
   if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
@@ -195,32 +205,20 @@ export async function findContactsWindow(
 
 /** Conteggio esatto dei contatti importati. */
 export async function countImportedContacts(): Promise<number> {
-  const { count, error } = await supabase
-    .from("imported_contacts")
-    .select("*", { count: "exact", head: true });
+  const { count, error } = await supabase.from("imported_contacts").select("*", { count: "exact", head: true });
   if (error) throw error;
   return count ?? 0;
 }
 
 /** Inserisce un singolo contatto importato e restituisce la riga creata. */
-export async function createImportedContact(
-  input: ImportedContactInsert,
-): Promise<ImportedContactRow> {
-  const { data, error } = await supabase
-    .from("imported_contacts")
-    .insert(input)
-    .select()
-    .single();
+export async function createImportedContact(input: ImportedContactInsert): Promise<ImportedContactRow> {
+  const { data, error } = await supabase.from("imported_contacts").insert(input).select().single();
   if (error) throw error;
   return data;
 }
 
 export async function getContactById(id: string) {
-  const { data, error } = await supabase
-    .from("imported_contacts")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("imported_contacts").select("*").eq("id", id).single();
   if (error) throw error;
   return data;
 }
@@ -253,69 +251,53 @@ export async function getContactsByIds(ids: string[], select = "id, name, compan
   const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
-    const { data, error } = await supabase
-      .from("imported_contacts")
-      .select(select)
-      .in("id", batch);
+    const { data, error } = await supabase.from("imported_contacts").select(select).in("id", batch);
     if (error) throw error;
-    if (data) results.push(...(toRecords(data)));
+    if (data) results.push(...toRecords(data));
   }
   return results;
 }
 
 export async function updateContact(id: string, updates: Record<string, unknown>) {
   // GUARD: strip lead_status from generic updates — must go through updateLeadStatus() / RPC
-   
+
   const { lead_status: _stripped, ...safeUpdates } = updates;
   if (_stripped !== undefined) {
     log.warn("[updateContact] lead_status stripped from generic update — use updateLeadStatus() instead");
   }
-  const { error } = await supabase
-    .from("imported_contacts")
-    .update(toContactUpdate(safeUpdates))
-    .eq("id", id);
+  const { error } = await supabase.from("imported_contacts").update(toContactUpdate(safeUpdates)).eq("id", id);
   if (error) throw error;
 }
 
 export async function deleteContacts(ids: string[]) {
-  const { error } = await supabase
-    .from("imported_contacts")
-    .delete()
-    .in("id", ids);
+  const { error } = await supabase.from("imported_contacts").delete().in("id", ids);
   if (error) throw error;
 }
 
 export async function insertContacts(contacts: Record<string, unknown>[]) {
   for (let i = 0; i < contacts.length; i += 100) {
-    const { error } = await supabase.from("imported_contacts").insert(contacts.slice(i, i + 100) as ImportedContactInsert[]);
+    const { error } = await supabase
+      .from("imported_contacts")
+      .insert(contacts.slice(i, i + 100) as ImportedContactInsert[]);
     if (error) throw error;
   }
 }
 
 export async function updateContactStatus(id: string, status: string, extra?: Record<string, unknown>) {
   // P3.7: apply_lead_status_rpc non esiste a DB. UPDATE diretto.
-  const { error } = await supabase
-    .from("imported_contacts")
-    .update({ lead_status: status })
-    .eq("id", id);
+  const { error } = await supabase.from("imported_contacts").update({ lead_status: status }).eq("id", id);
   if (error) throw error;
 
   // Apply additional non-status updates if provided
   if (extra && Object.keys(extra).length > 0) {
-    const { error: updateError } = await supabase
-      .from("imported_contacts")
-      .update(toContactUpdate(extra))
-      .eq("id", id);
+    const { error: updateError } = await supabase.from("imported_contacts").update(toContactUpdate(extra)).eq("id", id);
     if (updateError) throw updateError;
   }
 }
 
 export async function updateLeadStatus(ids: string[], status: LeadStatus) {
   // P3.7: UPDATE bulk diretto (RPC apply_lead_status_rpc non esiste a DB).
-  const { error: bulkErr } = await supabase
-    .from("imported_contacts")
-    .update({ lead_status: status })
-    .in("id", ids);
+  const { error: bulkErr } = await supabase.from("imported_contacts").update({ lead_status: status }).in("id", ids);
   if (bulkErr) throw bulkErr;
 
   // Handle converted_at timestamp if needed
@@ -329,18 +311,12 @@ export async function updateLeadStatus(ids: string[], status: LeadStatus) {
 }
 
 export async function toggleContactSelection(id: string, selected: boolean) {
-  const { error } = await supabase
-    .from("imported_contacts")
-    .update({ is_selected: selected })
-    .eq("id", id);
+  const { error } = await supabase.from("imported_contacts").update({ is_selected: selected }).eq("id", id);
   if (error) throw error;
 }
 
 export async function markContactTransferred(id: string) {
-  const { error } = await supabase
-    .from("imported_contacts")
-    .update({ is_transferred: true })
-    .eq("id", id);
+  const { error } = await supabase.from("imported_contacts").update({ is_transferred: true }).eq("id", id);
   if (error) throw error;
 }
 
@@ -392,11 +368,7 @@ export async function findImportDuplicates(
 }
 
 export async function updateContactEnrichment(id: string, enrichmentPatch: Record<string, unknown>) {
-  const { data } = await supabase
-    .from("imported_contacts")
-    .select("enrichment_data")
-    .eq("id", id)
-    .single();
+  const { data } = await supabase.from("imported_contacts").select("enrichment_data").eq("id", id).single();
   const existing = (data?.enrichment_data as Record<string, unknown>) ?? {};
   const merged = structuredClone({ ...existing, ...enrichmentPatch });
   const { error } = await supabase
@@ -421,10 +393,7 @@ export async function findContactByEmail(email: string) {
  * Bulk update dell'origine per N contatti CRM. Hard-cap di sicurezza a 5000 ids.
  * Ritorna il numero di righe aggiornate.
  */
-export async function bulkUpdateContactsOrigin(
-  ids: string[],
-  newOrigin: string,
-): Promise<{ updated: number }> {
+export async function bulkUpdateContactsOrigin(ids: string[], newOrigin: string): Promise<{ updated: number }> {
   const cleaned = newOrigin.trim();
   if (!cleaned) throw new Error("Origine non può essere vuota");
   if (cleaned.length > 100) throw new Error("Origine max 100 caratteri");
@@ -444,9 +413,7 @@ export async function bulkUpdateContactsOrigin(
  * Distinct delle origini esistenti su imported_contacts (non cancellati),
  * con conteggio. Limitato a 200 valori.
  */
-export async function listDistinctContactOrigins(): Promise<
-  Array<{ origin: string; count: number }>
-> {
+export async function listDistinctContactOrigins(): Promise<Array<{ origin: string; count: number }>> {
   const { data, error } = await supabase
     .from("imported_contacts")
     .select("origin")

@@ -37,9 +37,7 @@ describe("linkedinSearch", () => {
 
   describe("unwrapGoogleResultUrl", () => {
     it("estrae l'URL dal redirect google /url", () => {
-      const r = unwrapGoogleResultUrl(
-        "https://www.google.com/url?q=https://linkedin.com/in/luca&sa=t"
-      );
+      const r = unwrapGoogleResultUrl("https://www.google.com/url?q=https://linkedin.com/in/luca&sa=t");
       expect(r).toBe("https://linkedin.com/in/luca");
     });
 
@@ -75,9 +73,7 @@ describe("linkedinSearch", () => {
     });
 
     it("estrae da redirect google", () => {
-      expect(
-        isLinkedInProfileUrl("https://www.google.com/url?q=https://linkedin.com/in/x")
-      ).toBe(true);
+      expect(isLinkedInProfileUrl("https://www.google.com/url?q=https://linkedin.com/in/x")).toBe(true);
     });
   });
 
@@ -92,9 +88,7 @@ describe("linkedinSearch", () => {
     });
 
     it("normalizza URL da redirect google", () => {
-      const r = normalizeLinkedInProfileUrl(
-        "https://www.google.com/url?q=https://www.linkedin.com/in/luca/"
-      );
+      const r = normalizeLinkedInProfileUrl("https://www.google.com/url?q=https://www.linkedin.com/in/luca/");
       expect(r).toBe("https://www.linkedin.com/in/luca");
     });
   });
@@ -153,7 +147,7 @@ describe("linkedinSearch", () => {
           headline: "CEO at Acme Logistics — Milano",
           profileUrl: "https://linkedin.com/in/mario",
         },
-        { name: "Mario Rossi", company: "Acme Logistics", role: "CEO" }
+        { name: "Mario Rossi", company: "Acme Logistics", role: "CEO" },
       );
       expect(r).toBeGreaterThan(0.9);
     });
@@ -161,15 +155,13 @@ describe("linkedinSearch", () => {
     it("score base 0.3 su URL valido senza match", () => {
       const r = scoreLinkedInCandidate(
         { name: "Pippo", headline: "x", profileUrl: "https://linkedin.com/in/x" },
-        { name: "Mario Rossi", company: "Acme" }
+        { name: "Mario Rossi", company: "Acme" },
       );
       expect(r).toBeCloseTo(0.3, 5);
     });
 
     it("score 0 senza profileUrl", () => {
-      expect(
-        scoreLinkedInCandidate({ name: "Mario Rossi", profileUrl: null }, { name: "Mario Rossi" })
-      ).toBe(0);
+      expect(scoreLinkedInCandidate({ name: "Mario Rossi", profileUrl: null }, { name: "Mario Rossi" })).toBe(0);
     });
 
     it("score capped a 1", () => {
@@ -179,7 +171,7 @@ describe("linkedinSearch", () => {
           headline: "ceo at acme logistics, mario rossi acme acme acme",
           profileUrl: "https://linkedin.com/in/x",
         },
-        { name: "Mario Rossi", company: "Acme Logistics", role: "ceo" }
+        { name: "Mario Rossi", company: "Acme Logistics", role: "ceo" },
       );
       expect(r).toBeLessThanOrEqual(1);
     });
@@ -206,10 +198,7 @@ describe("linkedinSearch", () => {
     });
 
     it("ritorna candidate=null se nessun match LinkedIn", () => {
-      const r = pickBestLinkedInCandidate(
-        [{ url: "https://x.com/y", title: "x" }],
-        { name: "Mario Rossi" }
-      );
+      const r = pickBestLinkedInCandidate([{ url: "https://x.com/y", title: "x" }], { name: "Mario Rossi" });
       expect(r.candidate).toBeNull();
       expect(r.confidence).toBe(0);
       expect(r.candidates).toEqual([]);

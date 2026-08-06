@@ -5,9 +5,9 @@
  */
 
 const FileManager = {
-  _dbName: 'FireScrapeFiles',
+  _dbName: "FireScrapeFiles",
   _dbVersion: 1,
-  _storeName: 'files',
+  _storeName: "files",
   _db: null,
   _pendingDownloads: new Map(), // downloadId → fileRecord
   _supabaseUrl: null,
@@ -21,7 +21,7 @@ const FileManager = {
     this._supabaseKey = supabaseKey;
     await this._getDb();
     this._setupDownloadListener();
-    console.log('[FileManager] Initialized');
+    console.log("[FileManager] Initialized");
   },
 
   /**
@@ -36,10 +36,10 @@ const FileManager = {
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains(this._storeName)) {
-          const store = db.createObjectStore(this._storeName, { keyPath: 'id' });
-          store.createIndex('created_at', 'created_at', { unique: false });
-          store.createIndex('taskId', 'taskId', { unique: false });
-          store.createIndex('status', 'status', { unique: false });
+          const store = db.createObjectStore(this._storeName, { keyPath: "id" });
+          store.createIndex("created_at", "created_at", { unique: false });
+          store.createIndex("taskId", "taskId", { unique: false });
+          store.createIndex("status", "status", { unique: false });
         }
       };
 
@@ -64,17 +64,17 @@ const FileManager = {
 
       if (!fileRecord) return;
 
-      if (state?.current === 'complete') {
-        fileRecord.status = 'completed';
+      if (state?.current === "complete") {
+        fileRecord.status = "completed";
         fileRecord.completed_at = Date.now();
         await this._trackDownload(id, fileRecord);
         this._pendingDownloads.delete(id);
-      } else if (state?.current === 'interrupted') {
-        fileRecord.status = 'failed';
+      } else if (state?.current === "interrupted") {
+        fileRecord.status = "failed";
         await this._trackDownload(id, fileRecord);
         this._pendingDownloads.delete(id);
-      } else if (state?.current === 'in_progress') {
-        fileRecord.status = 'downloading';
+      } else if (state?.current === "in_progress") {
+        fileRecord.status = "downloading";
         await this._trackDownload(id, fileRecord);
       }
     });
@@ -89,15 +89,15 @@ const FileManager = {
    */
   generate(data, format, options = {}) {
     switch (format) {
-      case 'csv':
+      case "csv":
         return this._generateCSV(data, options);
-      case 'json':
+      case "json":
         return JSON.stringify(data, null, 2);
-      case 'html':
+      case "html":
         return this._generateHTML(data, options);
-      case 'md':
+      case "md":
         return this._generateMarkdown(data, options);
-      case 'txt':
+      case "txt":
         return this._generateText(data, options);
       default:
         throw new Error(`Unsupported format: ${format}`);
@@ -108,29 +108,24 @@ const FileManager = {
    * Generate CSV from array of objects
    */
   _generateCSV(data, options = {}) {
-    const {
-      delimiter = ',',
-      includeHeaders = true,
-      bom = true,
-      fields = null,
-    } = options;
+    const { delimiter = ",", includeHeaders = true, bom = true, fields = null } = options;
 
     if (!Array.isArray(data) || data.length === 0) {
-      return bom ? '\uFEFF' : '';
+      return bom ? "\uFEFF" : "";
     }
 
-    let csv = bom ? '\uFEFF' : '';
+    let csv = bom ? "\uFEFF" : "";
     const keys = fields || Object.keys(data[0]);
 
     // Add headers
     if (includeHeaders) {
-      csv += keys.map((k) => this._escapeCSVField(k)).join(delimiter) + '\n';
+      csv += keys.map((k) => this._escapeCSVField(k)).join(delimiter) + "\n";
     }
 
     // Add rows
     for (const row of data) {
-      const values = keys.map((k) => this._escapeCSVField(row[k] ?? ''));
-      csv += values.join(delimiter) + '\n';
+      const values = keys.map((k) => this._escapeCSVField(row[k] ?? ""));
+      csv += values.join(delimiter) + "\n";
     }
 
     return csv;
@@ -140,9 +135,9 @@ const FileManager = {
    * Escape CSV field: handle quotes, commas, newlines
    */
   _escapeCSVField(value) {
-    if (value === null || value === undefined) return '';
+    if (value === null || value === undefined) return "";
     const str = String(value);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
       return `"${str.replace(/"/g, '""')}"`;
     }
     return str;
@@ -152,7 +147,7 @@ const FileManager = {
    * Generate HTML report with styled table
    */
   _generateHTML(data, options = {}) {
-    const { title = 'Export Report', template = 'default' } = options;
+    const { title = "Export Report", template = "default" } = options;
     const rows = Array.isArray(data) ? data : [data];
 
     if (rows.length === 0) {
@@ -173,16 +168,12 @@ const FileManager = {
     const headers = Object.keys(rows[0]);
     const tableRows = rows
       .map((row) => {
-        const cells = headers
-          .map((h) => `<td>${this._escapeHTML(row[h])}</td>`)
-          .join('');
+        const cells = headers.map((h) => `<td>${this._escapeHTML(row[h])}</td>`).join("");
         return `<tr>${cells}</tr>`;
       })
-      .join('\n');
+      .join("\n");
 
-    const headerCells = headers
-      .map((h) => `<th>${this._escapeHTML(h)}</th>`)
-      .join('');
+    const headerCells = headers.map((h) => `<th>${this._escapeHTML(h)}</th>`).join("");
 
     return `<!DOCTYPE html>
 <html>
@@ -214,19 +205,19 @@ const FileManager = {
    * Generate Markdown table
    */
   _generateMarkdown(data, options = {}) {
-    const { title = 'Export' } = options;
+    const { title = "Export" } = options;
     const rows = Array.isArray(data) ? data : [data];
 
     if (rows.length === 0) return `# ${title}\n\nNo data.`;
 
     const headers = Object.keys(rows[0]);
     let md = `# ${title}\n\n`;
-    md += '| ' + headers.join(' | ') + ' |\n';
-    md += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
+    md += "| " + headers.join(" | ") + " |\n";
+    md += "| " + headers.map(() => "---").join(" | ") + " |\n";
 
     for (const row of rows) {
-      const cells = headers.map((h) => String(row[h] ?? ''));
-      md += '| ' + cells.join(' | ') + ' |\n';
+      const cells = headers.map((h) => String(row[h] ?? ""));
+      md += "| " + cells.join(" | ") + " |\n";
     }
 
     return md;
@@ -241,22 +232,22 @@ const FileManager = {
       .map((row) => {
         return Object.entries(row)
           .map(([k, v]) => `${k}: ${v}`)
-          .join('\n');
+          .join("\n");
       })
-      .join('\n\n');
+      .join("\n\n");
   },
 
   /**
    * Escape HTML special characters
    */
   _escapeHTML(str) {
-    if (!str) return '';
+    if (!str) return "";
     return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   },
 
   /**
@@ -264,17 +255,17 @@ const FileManager = {
    * @returns {Promise<{fileId, downloadId, filename}>}
    */
   async download(content, filename, options = {}) {
-    const { format = 'txt', taskId = null, tags = [], metadata = {} } = options;
+    const { format = "txt", taskId = null, tags = [], metadata = {} } = options;
 
     const mimeTypes = {
-      csv: 'text/csv',
-      json: 'application/json',
-      html: 'text/html',
-      txt: 'text/plain',
-      md: 'text/markdown',
+      csv: "text/csv",
+      json: "application/json",
+      html: "text/html",
+      txt: "text/plain",
+      md: "text/markdown",
     };
 
-    const mimeType = mimeTypes[format] || 'application/octet-stream';
+    const mimeType = mimeTypes[format] || "application/octet-stream";
     const blob = new Blob([content], { type: mimeType });
     const blobUrl = URL.createObjectURL(blob);
 
@@ -288,7 +279,7 @@ const FileManager = {
       size: blob.size,
       downloadId: null,
       downloadPath: null,
-      status: 'pending',
+      status: "pending",
       taskId,
       tags,
       content: blob.size < 10 * 1024 * 1024 ? content : null, // Store if <10MB
@@ -322,7 +313,7 @@ const FileManager = {
             downloadId,
             filename,
           });
-        }
+        },
       );
     });
   },
@@ -341,14 +332,12 @@ const FileManager = {
   async _trackDownload(downloadId, fileRecord) {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction([this._storeName], 'readwrite');
+      const tx = db.transaction([this._storeName], "readwrite");
       const store = tx.objectStore(this._storeName);
       const req = store.put(fileRecord);
 
       req.onsuccess = () => {
-        this._syncToSupabase(fileRecord).catch((err) =>
-          console.error('[FileManager] Supabase sync failed:', err)
-        );
+        this._syncToSupabase(fileRecord).catch((err) => console.error("[FileManager] Supabase sync failed:", err));
         resolve();
       };
 
@@ -362,7 +351,7 @@ const FileManager = {
   async getDownload(fileId) {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction([this._storeName], 'readonly');
+      const tx = db.transaction([this._storeName], "readonly");
       const store = tx.objectStore(this._storeName);
       const req = store.get(fileId);
 
@@ -379,9 +368,9 @@ const FileManager = {
     const db = await this._getDb();
 
     return new Promise((resolve, reject) => {
-      const tx = db.transaction([this._storeName], 'readonly');
+      const tx = db.transaction([this._storeName], "readonly");
       const store = tx.objectStore(this._storeName);
-      const req = store.index('created_at').openCursor(null, 'prev');
+      const req = store.index("created_at").openCursor(null, "prev");
 
       const files = [];
       let count = 0;
@@ -394,10 +383,7 @@ const FileManager = {
         }
 
         const record = cursor.value;
-        if (
-          (!format || record.format === format) &&
-          (!taskId || record.taskId === taskId)
-        ) {
+        if ((!format || record.format === format) && (!taskId || record.taskId === taskId)) {
           if (count >= offset && files.length < limit) {
             files.push(record);
           }
@@ -419,7 +405,7 @@ const FileManager = {
     const lowerQuery = query.toLowerCase();
 
     return new Promise((resolve, reject) => {
-      const tx = db.transaction([this._storeName], 'readonly');
+      const tx = db.transaction([this._storeName], "readonly");
       const store = tx.objectStore(this._storeName);
       const req = store.getAll();
 
@@ -427,7 +413,7 @@ const FileManager = {
         const results = req.result.filter(
           (file) =>
             file.filename.toLowerCase().includes(lowerQuery) ||
-            file.tags.some((tag) => tag.toLowerCase().includes(lowerQuery))
+            file.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)),
         );
         resolve(results);
       };
@@ -450,7 +436,7 @@ const FileManager = {
   async redownload(fileId) {
     const record = await this.getDownload(fileId);
     if (!record || !record.content) {
-      throw new Error('File not found or content unavailable');
+      throw new Error("File not found or content unavailable");
     }
 
     return this.download(record.content, record.filename, {
@@ -479,16 +465,16 @@ const FileManager = {
       };
 
       await fetch(`${this._supabaseUrl}/rest/v1/file_exports`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           apikey: this._supabaseKey,
           Authorization: `Bearer ${this._supabaseKey}`,
         },
         body: JSON.stringify(payload),
       });
     } catch (err) {
-      console.error('[FileManager] Supabase sync error:', err.message);
+      console.error("[FileManager] Supabase sync error:", err.message);
     }
   },
 
@@ -500,9 +486,9 @@ const FileManager = {
     const cutoff = Date.now() - daysOld * 24 * 60 * 60 * 1000;
 
     return new Promise((resolve, reject) => {
-      const tx = db.transaction([this._storeName], 'readwrite');
+      const tx = db.transaction([this._storeName], "readwrite");
       const store = tx.objectStore(this._storeName);
-      const index = store.index('created_at');
+      const index = store.index("created_at");
       const range = IDBKeyRange.upperBound(cutoff);
       const req = index.openCursor(range);
 
@@ -530,7 +516,7 @@ const FileManager = {
     const db = await this._getDb();
 
     return new Promise((resolve, reject) => {
-      const tx = db.transaction([this._storeName], 'readonly');
+      const tx = db.transaction([this._storeName], "readonly");
       const store = tx.objectStore(this._storeName);
       const req = store.getAll();
 

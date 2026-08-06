@@ -26,14 +26,14 @@ export function FinderApiCanvas({ results, kbProposal, onSaveKb, onDismissKb, on
         </button>
       </div>
 
-      {results.length === 0 && !kbProposal && (
-        <p className="text-xs text-muted-foreground">Nessun risultato ancora.</p>
-      )}
+      {results.length === 0 && !kbProposal && <p className="text-xs text-muted-foreground">Nessun risultato ancora.</p>}
 
       {results.map((r, i) => (
         <div key={i} className="rounded-lg border border-border/30 p-4 bg-background/40">
           <div className="flex items-center gap-2 mb-3">
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${r.ok ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${r.ok ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}
+            >
               {r.ok ? "OK" : "ERROR"}
             </span>
             <code className="text-xs text-primary">{r.op}</code>

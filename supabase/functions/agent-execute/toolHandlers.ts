@@ -53,11 +53,7 @@ import {
   handleGetApprovalDashboard,
 } from "./toolHandlers/analysisTools.ts";
 
-import {
-  handleGetBlacklist,
-  handleListReminders,
-  handleGetPartnersWithoutContacts,
-} from "./toolHandlers/dataTools.ts";
+import { handleGetBlacklist, handleListReminders, handleGetPartnersWithoutContacts } from "./toolHandlers/dataTools.ts";
 
 import {
   handleGetInbox,
@@ -119,11 +115,7 @@ const SIDE_EFFECT_TOOLS = new Set<string>([
 // Regola di prodotto: messaggi WA/LinkedIn predisposti dal sistema vanno in
 // uscita "da autorizzare" come le email. Le chat manuali e gli invii singoli
 // dell'operatore restano diretti perché non passano da agent-execute.
-const ALWAYS_APPROVAL_TOOLS = new Set<string>([
-  "send_whatsapp",
-  "send_linkedin",
-  "send_linkedin_message",
-]);
+const ALWAYS_APPROVAL_TOOLS = new Set<string>(["send_whatsapp", "send_linkedin", "send_linkedin_message"]);
 
 async function isApprovalRequired(userId: string, toolName: string): Promise<boolean> {
   if (ALWAYS_APPROVAL_TOOLS.has(toolName)) return true;
@@ -141,30 +133,25 @@ export async function executeTool(
   args: Record<string, unknown>,
   userId: string,
   authHeader: string,
-  context?: ExecuteContext
+  context?: ExecuteContext,
 ): Promise<unknown> {
   // ── Centralized approval gate for side-effect tools ──
   if (SIDE_EFFECT_TOOLS.has(name) || ALWAYS_APPROVAL_TOOLS.has(name)) {
     const requiresApproval = await isApprovalRequired(userId, name);
     if (requiresApproval) {
       const partnerId = (args.partner_id ?? args.partnerId) as string | undefined;
-      const recipient = (args.to_email ??
-        args.to ??
-        args.email ??
-        args.recipient) as string | undefined;
-      const { error: queueError } = await supabase
-        .from("ai_pending_actions")
-        .insert({
-          user_id: userId,
-          partner_id: partnerId ? String(partnerId) : null,
-          email_address: recipient ? String(recipient) : null,
-          action_type: name,
-          action_payload: args,
-          reasoning: `Agent tool "${name}" intercepted by approval guard (agent_require_approval=true).`,
-          confidence: 0.9,
-          source: "agent_autonomous",
-          status: "pending",
-        });
+      const recipient = (args.to_email ?? args.to ?? args.email ?? args.recipient) as string | undefined;
+      const { error: queueError } = await supabase.from("ai_pending_actions").insert({
+        user_id: userId,
+        partner_id: partnerId ? String(partnerId) : null,
+        email_address: recipient ? String(recipient) : null,
+        action_type: name,
+        action_payload: args,
+        reasoning: `Agent tool "${name}" intercepted by approval guard (agent_require_approval=true).`,
+        confidence: 0.9,
+        source: "agent_autonomous",
+        status: "pending",
+      });
 
       if (queueError) {
         console.error(`[approval-guard] Failed to queue ${name}:`, queueError);
@@ -277,7 +264,9 @@ export async function executeTool(
     // ── DATA TOOLS ──
     case "create_download_job":
     case "download_single_partner":
-      return { error: "Tool non disponibile: i dati WCA sono già locali e l'AI non può scaricare profili o directory." };
+      return {
+        error: "Tool non disponibile: i dati WCA sono già locali e l'AI non può scaricare profili o directory.",
+      };
     case "get_blacklist":
       return handleGetBlacklist(supabase, userId, args);
     case "list_reminders":
@@ -347,7 +336,9 @@ export async function executeTool(
     case "generate_aliases":
       return handleGenerateAliases(args, authHeader);
     case "scan_directory":
-      return { error: "Tool non disponibile: l'AI non può scansionare directory WCA; usa i dati locali già sincronizzati." };
+      return {
+        error: "Tool non disponibile: l'AI non può scansionare directory WCA; usa i dati locali già sincronizzati.",
+      };
     case "suggest_next_contacts":
       return handleSuggestNextContacts(args);
 

@@ -28,7 +28,8 @@ export interface AssistantResult {
 }
 
 export async function runAssistant(config: AssistantConfig): Promise<AssistantResult> {
-  const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+  const LOVABLE_API_KEY =
+    Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
   const model = config.model || "google/gemini-3-flash-preview";
@@ -68,7 +69,7 @@ export async function runAssistant(config: AssistantConfig): Promise<AssistantRe
     if (attempt < MAX_RETRIES) {
       const delay = 1000 * Math.pow(2, attempt);
       console.warn(`AI gateway 5xx (${status}), retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms`);
-      await new Promise(r => setTimeout(r, delay));
+      await new Promise((r) => setTimeout(r, delay));
     } else {
       const text = await response.text();
       console.error("AI gateway error after retries:", status, text);
@@ -138,13 +139,8 @@ export async function runAssistant(config: AssistantConfig): Promise<AssistantRe
 
   // Credit deduction
   if (config.creditLabel && config.userId) {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-    const totalCredits = Math.max(1, Math.ceil(
-      (totalUsage.prompt_tokens + totalUsage.completion_tokens * 3) / 1000,
-    ));
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const totalCredits = Math.max(1, Math.ceil((totalUsage.prompt_tokens + totalUsage.completion_tokens * 3) / 1000));
     await supabase.rpc("deduct_credits", {
       p_user_id: config.userId,
       p_amount: totalCredits,

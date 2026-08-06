@@ -11,7 +11,7 @@ describe("Task creation correctness", () => {
       agent_id: "agent-1",
       user_id: "user-1",
       task_type: "screening",
-      description: "📨 Email da test@example.com: \"Test subject\"",
+      description: '📨 Email da test@example.com: "Test subject"',
       target_filters: {
         message_id: "msg-1",
         partner_id: "partner-1",
@@ -58,7 +58,7 @@ describe("Routing correctness", () => {
       assigned = clientAssignment.agent_id;
     } else {
       const cc = partnerCountry.toUpperCase();
-      const terAgent = agents.find(a => a.territory_codes?.some(t => t.toUpperCase() === cc));
+      const terAgent = agents.find((a) => a.territory_codes?.some((t) => t.toUpperCase() === cc));
       assigned = terAgent?.id || null;
     }
 
@@ -78,7 +78,7 @@ describe("Routing correctness", () => {
       assigned = (clientAssignment as any).agent_id;
     } else {
       const cc = partnerCountry.toUpperCase();
-      const terAgent = agents.find(a => a.territory_codes?.some(t => t.toUpperCase() === cc));
+      const terAgent = agents.find((a) => a.territory_codes?.some((t) => t.toUpperCase() === cc));
       assigned = terAgent?.id || null;
     }
 
@@ -123,7 +123,7 @@ describe("Approval discipline", () => {
   it("forceApproval overrides auto-approve for all tasks", () => {
     const forceApproval = true;
     const isHigh = false;
-    const taskStatus = (isHigh || forceApproval) ? "proposed" : "pending";
+    const taskStatus = isHigh || forceApproval ? "proposed" : "pending";
     expect(taskStatus).toBe("proposed");
   });
 });
@@ -131,20 +131,15 @@ describe("Approval discipline", () => {
 // ── Test 4: Duplicate task prevention ──
 describe("Duplicate task prevention", () => {
   it("existing task for same message_id is not recreated", () => {
-    const existingTasks = [
-      { target_filters: { message_id: "msg-1" } },
-      { target_filters: { message_id: "msg-2" } },
-    ];
-    const alreadyProcessedIds = new Set(
-      existingTasks.map(t => t.target_filters?.message_id).filter(Boolean)
-    );
+    const existingTasks = [{ target_filters: { message_id: "msg-1" } }, { target_filters: { message_id: "msg-2" } }];
+    const alreadyProcessedIds = new Set(existingTasks.map((t) => t.target_filters?.message_id).filter(Boolean));
 
     const newMessages = [
       { id: "msg-1" }, // already processed
       { id: "msg-3" }, // new
     ];
 
-    const toProcess = newMessages.filter(m => !alreadyProcessedIds.has(m.id));
+    const toProcess = newMessages.filter((m) => !alreadyProcessedIds.has(m.id));
     expect(toProcess).toHaveLength(1);
     expect(toProcess[0].id).toBe("msg-3");
   });
@@ -159,15 +154,10 @@ describe("Duplicate task prevention", () => {
 // ── Test 5: Stats integrity ──
 describe("Stats integrity", () => {
   it("tasks_completed only incremented on status=completed", () => {
-    const tasks = [
-      { status: "completed" },
-      { status: "failed" },
-      { status: "completed" },
-      { status: "pending" },
-    ];
+    const tasks = [{ status: "completed" }, { status: "failed" }, { status: "completed" }, { status: "pending" }];
 
-    const completed = tasks.filter(t => t.status === "completed").length;
-    const failed = tasks.filter(t => t.status === "failed").length;
+    const completed = tasks.filter((t) => t.status === "completed").length;
+    const failed = tasks.filter((t) => t.status === "failed").length;
 
     expect(completed).toBe(2);
     expect(failed).toBe(1);
@@ -183,7 +173,7 @@ describe("No zombie tasks", () => {
       { status: "executing", started_at: null }, // zombie candidate
     ];
 
-    const zombies = runningTasks.filter(t => t.status === "executing" && !t.started_at);
+    const zombies = runningTasks.filter((t) => t.status === "executing" && !t.started_at);
     expect(zombies).toHaveLength(1); // detected
   });
 });
@@ -209,9 +199,9 @@ describe("Settings compliance", () => {
       return currentHour < startHour || currentHour >= endHour;
     }
 
-    expect(isOutsideWorkHours(6, 24, 3)).toBe(true);  // 3am → outside
+    expect(isOutsideWorkHours(6, 24, 3)).toBe(true); // 3am → outside
     expect(isOutsideWorkHours(6, 24, 10)).toBe(false); // 10am → inside
-    expect(isOutsideWorkHours(6, 24, 0)).toBe(true);   // midnight → outside
-    expect(isOutsideWorkHours(8, 18, 19)).toBe(true);  // 7pm → outside
+    expect(isOutsideWorkHours(6, 24, 0)).toBe(true); // midnight → outside
+    expect(isOutsideWorkHours(8, 18, 19)).toBe(true); // 7pm → outside
   });
 });

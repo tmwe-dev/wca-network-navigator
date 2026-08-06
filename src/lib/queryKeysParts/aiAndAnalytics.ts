@@ -87,16 +87,14 @@ export const aiAndAnalyticsKeys = {
       ["analytics-ai-usage", dateRange.from.toISOString(), dateRange.to.toISOString()] as const,
     pipelineMetrics: () => ["analytics-pipeline"] as const,
     activityTimeline: (days: number) => ["analytics-timeline", days] as const,
-    metricsComparison: (
-      current: { from: Date; to: Date },
-      previous: { from: Date; to: Date },
-    ) => [
-      "analytics-comparison",
-      current.from.toISOString(),
-      current.to.toISOString(),
-      previous.from.toISOString(),
-      previous.to.toISOString(),
-    ] as const,
+    metricsComparison: (current: { from: Date; to: Date }, previous: { from: Date; to: Date }) =>
+      [
+        "analytics-comparison",
+        current.from.toISOString(),
+        current.to.toISOString(),
+        previous.from.toISOString(),
+        previous.to.toISOString(),
+      ] as const,
   },
   responseRateCard: ["response-rate-card"] as const,
   activeSchedules: ["active-schedules"] as const,

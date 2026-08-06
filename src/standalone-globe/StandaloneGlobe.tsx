@@ -26,15 +26,15 @@ interface EarthProps {
 }
 
 // Earth component with smooth zoom and rotation to selected country
-function Earth({ 
-  selectedCountry, 
+function Earth({
+  selectedCountry,
   onCountrySelect,
   targetZoom,
   targetRotation,
   countries,
   countryPartners,
   userInteracting,
-  isResetting
+  isResetting,
 }: EarthProps) {
   const earthRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
@@ -57,27 +57,27 @@ function Earth({
   useFrame((state, delta) => {
     if (earthRef.current) {
       const time = state.clock.elapsedTime;
-      
+
       // Handle reset animation
       if (isResetting.current) {
         // Initialize start time on first frame of reset
         if (resetStartTimeRef.current === 0) {
           resetStartTimeRef.current = time;
         }
-        
+
         const resetDuration = 1.5;
         const elapsed = time - resetStartTimeRef.current;
         const progress = Math.min(elapsed / resetDuration, 1);
         const eased = easeInOutCubic(progress);
-        
+
         // Animate rotation back to neutral with continuous Y rotation
         currentRotation.current.x = resetStartRotationRef.current.x * (1 - eased);
         currentRotation.current.y = resetStartRotationRef.current.y + delta * 0.08 * eased;
-        
+
         // Animate zoom back to default
         const targetZ = resetStartZoomRef.current + (targetZoom.current - resetStartZoomRef.current) * eased;
         camera.position.z = targetZ;
-        
+
         if (progress >= 1) {
           isResetting.current = false;
           userInteracting.current = false;
@@ -87,32 +87,24 @@ function Earth({
       // Auto-rotate when no selection and user not interacting
       else if (!selectedCountry && !userInteracting.current) {
         currentRotation.current.y += delta * 0.08;
-        
+
         // Smooth zoom to default
         const currentZ = camera.position.z;
         const diff = targetZoom.current - currentZ;
         camera.position.z = currentZ + diff * 0.04;
-      } 
+      }
       // Animate to selected country
       else if (selectedCountry && !userInteracting.current) {
         // Smooth rotation to target
-        currentRotation.current.x = THREE.MathUtils.lerp(
-          currentRotation.current.x,
-          targetRotation.current.x,
-          0.03
-        );
-        currentRotation.current.y = THREE.MathUtils.lerp(
-          currentRotation.current.y,
-          targetRotation.current.y,
-          0.03
-        );
-        
+        currentRotation.current.x = THREE.MathUtils.lerp(currentRotation.current.x, targetRotation.current.x, 0.03);
+        currentRotation.current.y = THREE.MathUtils.lerp(currentRotation.current.y, targetRotation.current.y, 0.03);
+
         // Smooth zoom
         const currentZ = camera.position.z;
         const diff = targetZoom.current - currentZ;
         camera.position.z = currentZ + diff * 0.04;
       }
-      
+
       // Apply rotation
       earthRef.current.rotation.x = currentRotation.current.x;
       earthRef.current.rotation.y = currentRotation.current.y;
@@ -123,7 +115,7 @@ function Earth({
   useEffect(() => {
     if (selectedCountry) {
       userInteracting.current = false;
-      
+
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
         // Convert lat/lng to rotation angles
@@ -131,7 +123,7 @@ function Earth({
         const lngRad = THREE.MathUtils.degToRad(-(country.lng + 90));
         // Latitude -> X rotation (pitch)
         const latRad = THREE.MathUtils.degToRad(country.lat);
-        
+
         targetRotation.current.y = lngRad;
         targetRotation.current.x = latRad;
         targetZoom.current = 1.6; // Zoom in
@@ -144,7 +136,7 @@ function Earth({
 
   const selectedCountryData = useMemo(() => {
     if (!selectedCountry) return null;
-    return countries.find(c => c.code === selectedCountry) || null;
+    return countries.find((c) => c.code === selectedCountry) || null;
   }, [selectedCountry, countries]);
 
   return (
@@ -156,29 +148,15 @@ function Earth({
       <AuroraBorealis />
       <NetworkConnections countries={countries} />
 
-      <FlyingAirplanes 
-        countries={countries} 
-        isActive={!selectedCountry && !userInteracting.current}
-      />
+      <FlyingAirplanes countries={countries} isActive={!selectedCountry && !userInteracting.current} />
 
-      <InstancedCountryMarkers
-        countries={countries}
-        selectedCountry={selectedCountry}
-        onSelect={onCountrySelect}
-      />
+      <InstancedCountryMarkers countries={countries} selectedCountry={selectedCountry} onSelect={onCountrySelect} />
 
       {selectedCountryData && (
-        <SelectionHighlight
-          lat={selectedCountryData.lat}
-          lng={selectedCountryData.lng}
-          isVisible={true}
-        />
+        <SelectionHighlight lat={selectedCountryData.lat} lng={selectedCountryData.lng} isVisible={true} />
       )}
 
-      <CityMarkers
-        partners={countryPartners}
-        isVisible={!!selectedCountry}
-      />
+      <CityMarkers partners={countryPartners} isVisible={!!selectedCountry} />
     </group>
   );
 }
@@ -193,8 +171,8 @@ interface GlobeSceneProps {
 }
 
 // Scene setup with lights, stars, and controls
-function GlobeScene({ 
-  selectedCountry, 
+function GlobeScene({
+  selectedCountry,
   onCountrySelect,
   countries,
   countryPartners,
@@ -218,8 +196,8 @@ function GlobeScene({
 
       <Stars radius={100} depth={50} count={5000} factor={4} saturation={0.5} fade speed={0.5} />
 
-      <Earth 
-        selectedCountry={selectedCountry} 
+      <Earth
+        selectedCountry={selectedCountry}
         onCountrySelect={onCountrySelect}
         targetZoom={targetZoom}
         targetRotation={targetRotation}
@@ -246,7 +224,7 @@ function GlobeScene({
 
 /**
  * StandaloneGlobe - A fully self-contained 3D interactive globe component
- * 
+ *
  * Features:
  * - Smooth rotation animation when selecting countries
  * - Auto-rotation when idle
@@ -254,8 +232,8 @@ function GlobeScene({
  * - Aurora borealis and network connection effects
  * - Flying airplane animations
  */
-export function StandaloneGlobe({ 
-  selectedCountry, 
+export function StandaloneGlobe({
+  selectedCountry,
   onCountrySelect,
   countries = DEFAULT_COUNTRIES,
   countryPartners = [],
@@ -263,9 +241,12 @@ export function StandaloneGlobe({
   const userInteracting = useRef(false);
   const isResetting = useRef(false);
 
-  const handleGlobeCountrySelect = useCallback((code: string) => {
-    onCountrySelect(code === selectedCountry ? null : code);
-  }, [selectedCountry, onCountrySelect]);
+  const handleGlobeCountrySelect = useCallback(
+    (code: string) => {
+      onCountrySelect(code === selectedCountry ? null : code);
+    },
+    [selectedCountry, onCountrySelect],
+  );
 
   return (
     <div className="relative w-full h-full">
@@ -279,8 +260,8 @@ export function StandaloneGlobe({
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       >
-        <GlobeScene 
-          selectedCountry={selectedCountry} 
+        <GlobeScene
+          selectedCountry={selectedCountry}
           onCountrySelect={handleGlobeCountrySelect}
           countries={countries}
           countryPartners={countryPartners}

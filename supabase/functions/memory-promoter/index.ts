@@ -60,7 +60,16 @@ serve(async (req) => {
     const paused = await cronPausedResponse(supabase, "memory-promoter");
     if (paused) return paused;
 
-    const stats = { promoted_l1_to_l2: 0, promoted_l2_candidate: 0, promoted_l2_to_l3: 0, decayed: 0, pruned: 0, embeddings_generated: 0, conflicts_detected: 0, consolidated: 0 };
+    const stats = {
+      promoted_l1_to_l2: 0,
+      promoted_l2_candidate: 0,
+      promoted_l2_to_l3: 0,
+      decayed: 0,
+      pruned: 0,
+      embeddings_generated: 0,
+      conflicts_detected: 0,
+      consolidated: 0,
+    };
 
     // ── 1. L1 → L2 Promotion ──
     // Criteria: access_count >= 3 AND confidence >= 0.40
@@ -69,7 +78,7 @@ serve(async (req) => {
       .select("id, access_count, confidence, content, memory_type, embedding")
       .eq("level", 1)
       .gte("access_count", 3)
-      .gte("confidence", 0.40);
+      .gte("confidence", 0.4);
 
     if (l1Candidates?.length) {
       const ids = (l1Candidates as MemoryRow[]).map((m) => m.id);
@@ -95,14 +104,11 @@ serve(async (req) => {
       .eq("level", 2)
       .eq("pending_promotion", false)
       .gte("access_count", 8)
-      .gte("confidence", 0.70);
+      .gte("confidence", 0.7);
 
     if (l2Candidates?.length) {
       const ids = (l2Candidates as Array<{ id: string }>).map((m) => m.id);
-      await supabase
-        .from("ai_memory")
-        .update({ pending_promotion: true })
-        .in("id", ids);
+      await supabase.from("ai_memory").update({ pending_promotion: true }).in("id", ids);
       stats.promoted_l2_candidate = ids.length;
     }
 
@@ -194,20 +200,13 @@ serve(async (req) => {
       }
 
       for (const u of updates) {
-        await supabase
-          .from("ai_memory")
-          .update({ confidence: u.confidence })
-          .eq("id", u.id);
+        await supabase.from("ai_memory").update({ confidence: u.confidence }).eq("id", u.id);
       }
       stats.decayed = updates.length;
     }
 
     // ── 4. Prune: remove L1 with confidence < 0.02 ──
-    const { data: prunable } = await supabase
-      .from("ai_memory")
-      .select("id")
-      .eq("level", 1)
-      .lt("confidence", 0.02);
+    const { data: prunable } = await supabase.from("ai_memory").select("id").eq("level", 1).lt("confidence", 0.02);
 
     if (prunable?.length) {
       const ids = (prunable as Array<{ id: string }>).map((m) => m.id);
@@ -296,7 +295,10 @@ serve(async (req) => {
         .not("email_address", "is", null);
 
       if (recentDecisions && recentDecisions.length > 0) {
-        const addressStats = new Map<string, { approvals: number; rejections: number; totalConf: number; count: number }>();
+        const addressStats = new Map<
+          string,
+          { approvals: number; rejections: number; totalConf: number; count: number }
+        >();
 
         for (const d of recentDecisions as Record<string, unknown>[]) {
           const addr = String(d.email_address || "").toLowerCase();
@@ -316,9 +318,9 @@ serve(async (req) => {
           const avgConf = s.totalConf / s.count;
           let newThreshold: number;
 
-          if (approvalRate > 0.9) newThreshold = Math.max(0.50, avgConf - 0.10);
+          if (approvalRate > 0.9) newThreshold = Math.max(0.5, avgConf - 0.1);
           else if (approvalRate > 0.7) newThreshold = Math.max(0.65, avgConf - 0.05);
-          else if (approvalRate > 0.5) newThreshold = Math.min(0.90, avgConf + 0.05);
+          else if (approvalRate > 0.5) newThreshold = Math.min(0.9, avgConf + 0.05);
           else newThreshold = Math.min(0.95, avgConf + 0.15);
 
           const { error: updateErr } = await supabase
@@ -332,14 +334,13 @@ serve(async (req) => {
       swallowedError("memory_promoter.threshold_eval_failed", threshErr);
     }
 
-
     return new Response(JSON.stringify({ success: true, stats }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

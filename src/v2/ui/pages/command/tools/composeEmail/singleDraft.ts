@@ -75,13 +75,19 @@ export async function buildSingleComposerResult(args: {
   notes.push(leadStatusNote(partner.lead_status));
   notes.push(`Ultima interazione: ${daysSince(partner.last_interaction_at)}`);
   if (partner.lead_status === "holding") {
-    notes.push("Holding Pattern attivo: il partner è in attesa di follow-up programmato. Valuta se forzare un nuovo invio.");
+    notes.push(
+      "Holding Pattern attivo: il partner è in attesa di follow-up programmato. Valuta se forzare un nuovo invio.",
+    );
   }
   if (partner.lead_status === "archived") {
-    notes.push(`Archiviato${partner.status_reason ? ` — motivo: ${partner.status_reason}` : ""}. Rivaluta prima di scrivere.`);
+    notes.push(
+      `Archiviato${partner.status_reason ? ` — motivo: ${partner.status_reason}` : ""}. Rivaluta prima di scrivere.`,
+    );
   }
   if (!contact) {
-    notes.push(`Nessun contatto censito per ${partner.company_name}: la mail userà il nome generico "${recipientName ?? "destinatario"}".`);
+    notes.push(
+      `Nessun contatto censito per ${partner.company_name}: la mail userà il nome generico "${recipientName ?? "destinatario"}".`,
+    );
   } else if (!contact.email && !email) {
     notes.push("Contatto trovato ma senza email: aggiungi l'indirizzo prima di inviare.");
   }

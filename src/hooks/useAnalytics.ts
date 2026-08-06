@@ -119,10 +119,7 @@ export function useActivityTimeline(days: number = 30) {
 /**
  * Hook for metrics comparison (current vs previous period)
  */
-export function useMetricsComparison(
-  current: { from: Date; to: Date },
-  previous: { from: Date; to: Date }
-) {
+export function useMetricsComparison(current: { from: Date; to: Date }, previous: { from: Date; to: Date }) {
   const { user } = useAuth();
 
   return useQuery({

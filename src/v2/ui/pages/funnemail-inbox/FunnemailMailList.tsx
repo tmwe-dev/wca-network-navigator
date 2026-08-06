@@ -87,9 +87,7 @@ function sortMessages(msgs: ChannelMessage[], mode: SortMode): ChannelMessage[] 
       arr.sort((a, b) => getSenderKey(a).localeCompare(getSenderKey(b)));
       break;
     case "subject_asc":
-      arr.sort((a, b) =>
-        stripReplyPrefixes(a.subject).localeCompare(stripReplyPrefixes(b.subject)),
-      );
+      arr.sort((a, b) => stripReplyPrefixes(a.subject).localeCompare(stripReplyPrefixes(b.subject)));
       break;
     case "date_desc":
     default: {
@@ -105,12 +103,21 @@ function sortMessages(msgs: ChannelMessage[], mode: SortMode): ChannelMessage[] 
 }
 
 export function FunnemailMailList({
-  messages, selectedId, onSelect,
-  bulkMarkRead, bulkArchive, bulkDelete, bulkAssignGroup, bulkBusy,
-  onReclassify, reclassifying,
+  messages,
+  selectedId,
+  onSelect,
+  bulkMarkRead,
+  bulkArchive,
+  bulkDelete,
+  bulkAssignGroup,
+  bulkBusy,
+  onReclassify,
+  reclassifying,
 }: Props): JSX.Element {
   const [{ sort, group }, setPrefs] = useState<StoredPrefs>(() => loadPrefs());
-  useEffect(() => { savePrefs({ sort, group }); }, [sort, group]);
+  useEffect(() => {
+    savePrefs({ sort, group });
+  }, [sort, group]);
   const gFilters = useGlobalFilters();
   const qc = useQueryClient();
   const hideRead = gFilters.filters.funnemailView === "unread";
@@ -142,12 +149,11 @@ export function FunnemailMailList({
     });
 
   // Reset selezione se cambiano sort/group/filtri (lista cambia identità)
-  useEffect(() => { clearChecked(); }, [sort, group]);
+  useEffect(() => {
+    clearChecked();
+  }, [sort, group]);
 
-  const checkedMessages = useMemo(
-    () => messages.filter((m) => checkedIds.has(m.id)),
-    [messages, checkedIds],
-  );
+  const checkedMessages = useMemo(() => messages.filter((m) => checkedIds.has(m.id)), [messages, checkedIds]);
 
   const sourceIds = useMemo(() => {
     const ids: { partnerId?: string; contactId?: string }[] = [];
@@ -168,10 +174,19 @@ export function FunnemailMailList({
         ? holdingSet.has(`c:${msg.source_id}`)
         : false;
     const grp = getGroup(msg.from_address);
-    const aiRaw = (msg as ChannelMessage & { ai_classification_suggestion?: { category?: string; suggested_group?: string | null; reason?: string | null } | null }).ai_classification_suggestion;
-    const aiSuggestion = aiRaw && (aiRaw.suggested_group || aiRaw.category)
-      ? { label: aiRaw.suggested_group || aiRaw.category || "", reason: aiRaw.reason ?? null }
-      : null;
+    const aiRaw = (
+      msg as ChannelMessage & {
+        ai_classification_suggestion?: {
+          category?: string;
+          suggested_group?: string | null;
+          reason?: string | null;
+        } | null;
+      }
+    ).ai_classification_suggestion;
+    const aiSuggestion =
+      aiRaw && (aiRaw.suggested_group || aiRaw.category)
+        ? { label: aiRaw.suggested_group || aiRaw.category || "", reason: aiRaw.reason ?? null }
+        : null;
     const claim = claimsCtl.claimsByMessageId.get(msg.id) ?? null;
     const claimPending = claimsCtl.pendingMessageId === msg.id;
     const status = statusesCtl.statusesByMessageId.get(msg.id) ?? null;
@@ -194,13 +209,23 @@ export function FunnemailMailList({
         claim={claim}
         myUserId={claimsCtl.myUserId}
         claimPending={claimPending}
-        onClaim={() => { void claimsCtl.claim({ messageId: msg.id }); }}
-        onRelease={() => { void claimsCtl.release(msg.id); }}
+        onClaim={() => {
+          void claimsCtl.claim({ messageId: msg.id });
+        }}
+        onRelease={() => {
+          void claimsCtl.release(msg.id);
+        }}
         status={status}
-        onSetStatus={(s) => { void statusesCtl.setStatus({ messageId: msg.id, status: s }); }}
+        onSetStatus={(s) => {
+          void statusesCtl.setStatus({ messageId: msg.id, status: s });
+        }}
         reminder={reminder}
-        onCreateReminder={(remindAt, note) => { void remindersCtl.create({ messageId: msg.id, remindAt, note }); }}
-        onDismissReminder={(id) => { void remindersCtl.dismiss(id); }}
+        onCreateReminder={(remindAt, note) => {
+          void remindersCtl.create({ messageId: msg.id, remindAt, note });
+        }}
+        onDismissReminder={(id) => {
+          void remindersCtl.dismiss(id);
+        }}
       />
     );
   };
@@ -236,20 +261,28 @@ export function FunnemailMailList({
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         {toolbar}
-        <FlatVirtualList
-          messages={sortedAll}
-          selectedId={selectedId}
-          renderCard={renderCard}
-        />
+        <FlatVirtualList messages={sortedAll} selectedId={selectedId} renderCard={renderCard} />
         {checkedIds.size > 0 && (
           <FunnemailBulkBar
             count={checkedIds.size}
             busy={bulkBusy}
             onClear={clearChecked}
-            onMarkRead={() => { void bulkMarkRead(checkedMessages); clearChecked(); }}
-            onAssignGroup={(name) => { void bulkAssignGroup(checkedMessages, name); clearChecked(); }}
-            onArchive={() => { bulkArchive(checkedMessages); clearChecked(); }}
-            onDelete={() => { bulkDelete(checkedMessages); clearChecked(); }}
+            onMarkRead={() => {
+              void bulkMarkRead(checkedMessages);
+              clearChecked();
+            }}
+            onAssignGroup={(name) => {
+              void bulkAssignGroup(checkedMessages, name);
+              clearChecked();
+            }}
+            onArchive={() => {
+              bulkArchive(checkedMessages);
+              clearChecked();
+            }}
+            onDelete={() => {
+              bulkDelete(checkedMessages);
+              clearChecked();
+            }}
             selectedIds={checkedMessages.map((m) => m.id)}
           />
         )}
@@ -276,10 +309,22 @@ export function FunnemailMailList({
           count={checkedIds.size}
           busy={bulkBusy}
           onClear={clearChecked}
-          onMarkRead={() => { void bulkMarkRead(checkedMessages); clearChecked(); }}
-          onAssignGroup={(name) => { void bulkAssignGroup(checkedMessages, name); clearChecked(); }}
-          onArchive={() => { bulkArchive(checkedMessages); clearChecked(); }}
-          onDelete={() => { bulkDelete(checkedMessages); clearChecked(); }}
+          onMarkRead={() => {
+            void bulkMarkRead(checkedMessages);
+            clearChecked();
+          }}
+          onAssignGroup={(name) => {
+            void bulkAssignGroup(checkedMessages, name);
+            clearChecked();
+          }}
+          onArchive={() => {
+            bulkArchive(checkedMessages);
+            clearChecked();
+          }}
+          onDelete={() => {
+            bulkDelete(checkedMessages);
+            clearChecked();
+          }}
           selectedIds={checkedMessages.map((m) => m.id)}
         />
       )}
@@ -324,7 +369,9 @@ function FlatVirtualList({ messages, selectedId, renderCard }: FlatProps): JSX.E
               ref={virtualizer.measureElement}
               style={{
                 position: "absolute",
-                top: 0, left: 0, width: "100%",
+                top: 0,
+                left: 0,
+                width: "100%",
                 transform: `translateY(${row.start}px)`,
               }}
             >
@@ -350,8 +397,14 @@ interface GroupedProps {
 }
 
 function GroupedList({
-  messages, groupMode, renderCard,
-  bulkMarkRead, bulkArchive, bulkDelete, bulkAssignGroup, bulkBusy,
+  messages,
+  groupMode,
+  renderCard,
+  bulkMarkRead,
+  bulkArchive,
+  bulkDelete,
+  bulkAssignGroup,
+  bulkBusy,
   onSelectGroup,
 }: GroupedProps): JSX.Element {
   const groups = useMemo(() => {
@@ -366,12 +419,13 @@ function GroupedList({
   }, [messages, groupMode]);
 
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
-  const toggle = (key: string) => setCollapsed((prev) => {
-    const next = new Set(prev);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    return next;
-  });
+  const toggle = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   return (
     <div className="min-h-0 flex-1 overflow-auto">
@@ -385,8 +439,12 @@ function GroupedList({
               expanded={expanded}
               onToggle={() => toggle(key)}
               busy={bulkBusy}
-              onMarkAllRead={() => { void bulkMarkRead(msgs); }}
-              onAssignGroup={(groupName) => { void bulkAssignGroup(msgs, groupName); }}
+              onMarkAllRead={() => {
+                void bulkMarkRead(msgs);
+              }}
+              onAssignGroup={(groupName) => {
+                void bulkAssignGroup(msgs, groupName);
+              }}
               onArchiveAll={() => bulkArchive(msgs)}
               onDeleteAll={() => bulkDelete(msgs)}
               onSelectAll={onSelectGroup ? () => onSelectGroup(msgs) : undefined}

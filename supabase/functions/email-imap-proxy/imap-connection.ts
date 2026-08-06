@@ -6,14 +6,8 @@ export interface ImapConn {
   close: () => void;
 }
 
-export async function connectImap(
-  host: string,
-  port: number,
-  tls: boolean
-): Promise<ImapConn> {
-  const conn = tls
-    ? await Deno.connectTls({ hostname: host, port })
-    : await Deno.connect({ hostname: host, port });
+export async function connectImap(host: string, port: number, tls: boolean): Promise<ImapConn> {
+  const conn = tls ? await Deno.connectTls({ hostname: host, port }) : await Deno.connect({ hostname: host, port });
 
   const reader = conn.readable.getReader();
   const imap: ImapConn = {
@@ -43,10 +37,7 @@ export async function readResponse(imap: ImapConn): Promise<string> {
       const lines = result.split("\r\n");
 
       for (const line of lines) {
-        if (
-          line.startsWith(tagPattern) ||
-          (imap.tag === 0 && line.startsWith("*"))
-        ) {
+        if (line.startsWith(tagPattern) || (imap.tag === 0 && line.startsWith("*"))) {
           imap.buffer = lines
             .slice(lines.indexOf(line) + 1)
             .filter((l) => l)
@@ -66,10 +57,7 @@ export async function readResponse(imap: ImapConn): Promise<string> {
   }
 }
 
-export async function sendCommand(
-  imap: ImapConn,
-  command: string
-): Promise<string> {
+export async function sendCommand(imap: ImapConn, command: string): Promise<string> {
   imap.tag++;
   const tag = `A${imap.tag}`;
   const encoder = new TextEncoder();
@@ -84,9 +72,9 @@ export async function sendCommand(
     await writer.write(encoder.encode(`${tag} ${command}\r\n`));
     writer.releaseLock();
   } else {
-    await (
-      imap.conn as unknown as { write: (data: Uint8Array) => Promise<void> }
-    ).write(encoder.encode(`${tag} ${command}\r\n`));
+    await (imap.conn as unknown as { write: (data: Uint8Array) => Promise<void> }).write(
+      encoder.encode(`${tag} ${command}\r\n`),
+    );
   }
 
   const decoder = new TextDecoder();
@@ -96,11 +84,7 @@ export async function sendCommand(
   const start = Date.now();
 
   while (true) {
-    if (
-      result.includes(`${tag} OK`) ||
-      result.includes(`${tag} NO`) ||
-      result.includes(`${tag} BAD`)
-    ) {
+    if (result.includes(`${tag} OK`) || result.includes(`${tag} NO`) || result.includes(`${tag} BAD`)) {
       return result;
     }
 

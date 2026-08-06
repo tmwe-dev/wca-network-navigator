@@ -34,7 +34,8 @@ export function cleanCompanyName(raw: string): string {
   if (!raw) return raw;
   let s = raw.trim();
   // suffissi legali in coda
-  const legal = /\s*[,.-]?\s*\b(s\.?\s?r\.?\s?l\.?(?:\s?s)?|s\.?\s?p\.?\s?a\.?|s\.?\s?n\.?\s?c\.?|s\.?\s?a\.?\s?s\.?|ltd\.?|limited|llc\.?|inc\.?|corp\.?|corporation|gmbh|ag|kg|ohg|bv|nv|sa|sl|oy|ab|as|aps|pvt\.?|pty\.?|co\.?|company|holding|group|grp|international|int\.?l)\b\.?$/i;
+  const legal =
+    /\s*[,.-]?\s*\b(s\.?\s?r\.?\s?l\.?(?:\s?s)?|s\.?\s?p\.?\s?a\.?|s\.?\s?n\.?\s?c\.?|s\.?\s?a\.?\s?s\.?|ltd\.?|limited|llc\.?|inc\.?|corp\.?|corporation|gmbh|ag|kg|ohg|bv|nv|sa|sl|oy|ab|as|aps|pvt\.?|pty\.?|co\.?|company|holding|group|grp|international|int\.?l)\b\.?$/i;
   // applica fino a 3 volte (es. "X Ltd. Co.")
   for (let i = 0; i < 3; i++) {
     const next = s.replace(legal, "").trim();
@@ -56,10 +57,18 @@ const cascadeListeners = new Set<CascadeListener>();
 export const cascadeBus = {
   subscribe(fn: CascadeListener): () => void {
     cascadeListeners.add(fn);
-    return () => { cascadeListeners.delete(fn); };
+    return () => {
+      cascadeListeners.delete(fn);
+    };
   },
   emit(e: CascadeEvent): void {
-    cascadeListeners.forEach((fn) => { try { fn(e); } catch { /* noop */ } });
+    cascadeListeners.forEach((fn) => {
+      try {
+        fn(e);
+      } catch {
+        /* noop */
+      }
+    });
   },
 };
 
@@ -69,7 +78,20 @@ export function extractSeniority(title: string | undefined): { seniority: string
   if (parts.length < 2) return null;
   const role = parts[1].split(" | ")[0]?.trim();
   if (!role) return null;
-  const senior = ["CEO", "Director", "VP", "President", "Owner", "Founder", "Managing", "General Manager", "Head", "Chief", "Partner", "Principal"];
+  const senior = [
+    "CEO",
+    "Director",
+    "VP",
+    "President",
+    "Owner",
+    "Founder",
+    "Managing",
+    "General Manager",
+    "Head",
+    "Chief",
+    "Partner",
+    "Principal",
+  ];
   const mid = ["Manager", "Supervisor", "Lead", "Senior", "Coordinator", "Team Lead"];
   let seniority = "junior";
   if (senior.some((k) => role.includes(k))) seniority = "senior";
@@ -84,7 +106,8 @@ export function getLastName(name: string): string {
 
 export function extractDomainKeyword(email: string | null | undefined): string | null {
   if (!email) return null;
-  const genericDomains = /^(gmail|yahoo|hotmail|outlook|live|msn|aol|icloud|me|mac|libero|alice|tin|virgilio|tiscali|fastwebnet|aruba|pec|legalmail|mail|protonmail|zoho|yandex|gmx|web|email|inbox)\b/i;
+  const genericDomains =
+    /^(gmail|yahoo|hotmail|outlook|live|msn|aol|icloud|me|mac|libero|alice|tin|virgilio|tiscali|fastwebnet|aruba|pec|legalmail|mail|protonmail|zoho|yandex|gmx|web|email|inbox)\b/i;
   const parts = email.split("@");
   if (parts.length !== 2) return null;
   const domain = parts[1].split(".")[0];
@@ -98,13 +121,10 @@ export async function delay(ms: number) {
 
 export async function aiCall(prompt: string): Promise<string | null> {
   try {
-    const result = await invokeEdge<{ content: string | null }>(
-      "ai-deep-search-helper",
-      {
-        body: { prompt, model: AI_MODEL },
-        context: "useDeepSearchLocal.aiCall",
-      }
-    );
+    const result = await invokeEdge<{ content: string | null }>("ai-deep-search-helper", {
+      body: { prompt, model: AI_MODEL },
+      context: "useDeepSearchLocal.aiCall",
+    });
     return result?.content ?? null;
   } catch (e) {
     log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
@@ -156,6 +176,13 @@ export async function calculateRating(
   else if (bc.length >= 3) internationalScore = 3;
   else if (bc.length >= 1) internationalScore = 2;
 
-  const rawRating = websiteScore * 0.2 + serviceMix * 0.2 + networkScore * 0.15 + seniorityScore * 0.15 + internationalScore * 0.1 + 1 * 0.1 + 1 * 0.1;
+  const rawRating =
+    websiteScore * 0.2 +
+    serviceMix * 0.2 +
+    networkScore * 0.15 +
+    seniorityScore * 0.15 +
+    internationalScore * 0.1 +
+    1 * 0.1 +
+    1 * 0.1;
   return Math.min(5, Math.max(1, Math.round(rawRating * 2) / 2));
 }

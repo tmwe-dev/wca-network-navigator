@@ -9,6 +9,7 @@ tags: [harmonizer, context, wca, glossary]
 ## Cos'è il prodotto
 
 WCA Network Navigator è un CRM / Business Intelligence per gestire **partner logistici** appartenenti alle 17 reti globali della **World Cargo Alliance**. Serve operatori commerciali italiani che lavorano contemporaneamente su:
+
 - relazioni con partner esteri delle reti WCA (mantenimento + sviluppo)
 - prospect esterni alle reti (scouting + qualifica)
 - biglietti da visita raccolti durante eventi (BCA, business cards arena)
@@ -26,6 +27,7 @@ L'Harmonizer **non deve mai inventare nomi di reti**. Se un blocco desiderato me
 ## Ruoli operatori
 
 Tre ruoli definiti via `user_roles.role` (enum `app_role`):
+
 - **admin** — vede tutto, può modificare configurazioni, gestire utenti, eseguire migrazioni
 - **operator** — operatore commerciale standard, lavora sui contatti assegnati o condivisi
 - **viewer** — sola lettura

@@ -29,6 +29,7 @@ ALTER TABLE public.app_settings ADD CONSTRAINT app_settings_key_user_id_unique U
 ```
 
 Settings keys used:
+
 - `ai_automations_paused` - boolean string ("true"/"false")
 - `ai_automations_paused_at` - ISO 8601 timestamp
 - `ai_automations_paused_reason` - optional reason text
@@ -36,6 +37,7 @@ Settings keys used:
 #### Edge Functions Modifications
 
 **check-inbox** (`supabase/functions/check-inbox/index.ts`):
+
 ```typescript
 // LOVABLE-93: global pause check
 const { data: pauseSettings } = await supabase
@@ -55,10 +57,12 @@ if (pauseSettings?.value === "true") {
 ```
 
 **cadence-engine** (`supabase/functions/cadence-engine/index.ts`):
+
 - Per-action pause check in the loop
 - Skips action processing if `ai_automations_paused` is true for the user
 
 **pending-action-executor** (`supabase/functions/pending-action-executor/index.ts`):
+
 - Early return if paused before action execution starts
 
 #### Helper Functions
@@ -66,8 +70,8 @@ if (pauseSettings?.value === "true") {
 In `src/data/appSettings.ts`:
 
 ```typescript
-export async function getAiAutomationsPaused(userId: string): Promise<boolean>
-export async function setAiAutomationsPaused(userId: string, paused: boolean, reason?: string): Promise<void>
+export async function getAiAutomationsPaused(userId: string): Promise<boolean>;
+export async function setAiAutomationsPaused(userId: string, paused: boolean, reason?: string): Promise<void>;
 ```
 
 #### UI Component
@@ -75,6 +79,7 @@ export async function setAiAutomationsPaused(userId: string, paused: boolean, re
 New component: `src/components/ai-control/GlobalAIAutomationPause.tsx`
 
 Features:
+
 - Real-time pause status display
 - Toggle switch with confirmation dialog
 - Shows pause timestamp and reason
@@ -116,12 +121,14 @@ ADD COLUMN provider TEXT;
 ```
 
 Added indexes for faster queries:
+
 ```sql
 CREATE INDEX idx_credit_transactions_user_created ON public.credit_transactions(user_id, created_at DESC);
 CREATE INDEX idx_credit_transactions_operation ON public.credit_transactions(operation);
 ```
 
 Existing tables used:
+
 - `user_credits` - Balance and total consumed
 - `credit_transactions` - Individual transaction history
 
@@ -130,6 +137,7 @@ Existing tables used:
 New component: `src/components/ai-control/CostDashboardWidget.tsx`
 
 Features:
+
 - 3 stat cards: Balance, Cost This Period, Avg Cost/Operation
 - Time range selector: Day, Week, Month
 - Tabs for different views:
@@ -138,6 +146,7 @@ Features:
   - **Transactions**: Detailed transaction list
 
 Operation types tracked:
+
 - `ai_call` - Claude API calls
 - `classify` - Email classification
 - `generate_email` - Email generation
@@ -158,6 +167,7 @@ Operation types tracked:
 ### AI Control Center Page
 
 Updated `src/v2/ui/pages/AIControlCenterPage.tsx`:
+
 - Added "Pause Control" button → GlobalAIAutomationPause component
 - Added "API Costs" button → CostDashboardWidget component
 - Both are lazy-loaded for performance
@@ -165,6 +175,7 @@ Updated `src/v2/ui/pages/AIControlCenterPage.tsx`:
 ### Related Functions
 
 The pause check integrates cleanly with:
+
 - `consume-credits/index.ts` - Credit deduction (not affected by pause)
 - `deduct_credits` RPC - Direct credit function (not affected by pause)
 
@@ -179,6 +190,7 @@ supabase migration up
 Migration file: `supabase/migrations/20260421205000_lovable93_global_pause_cost_tracking.sql`
 
 This migration:
+
 - Adds `user_id` to `app_settings`
 - Creates composite unique constraint
 - Adds performance indexes

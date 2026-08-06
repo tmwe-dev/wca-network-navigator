@@ -15,9 +15,7 @@ import type { Json } from "@/integrations/supabase/types";
 
 /** Narrowing runtime esplicito: converte un Json in Record<string, unknown>. */
 function toRecord(json: Json | null | undefined): Record<string, unknown> {
-  return typeof json === "object" && json !== null && !Array.isArray(json)
-    ? (json as Record<string, unknown>)
-    : {};
+  return typeof json === "object" && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>) : {};
 }
 
 export interface FunnemailEvalCase {
@@ -96,7 +94,8 @@ function mapEvalRunRow(row: {
 }
 
 export async function listFunnemailEvalCases(): Promise<FunnemailEvalCase[]> {
-  const { data, error } = await supabase.from("funnemail_eval_cases")
+  const { data, error } = await supabase
+    .from("funnemail_eval_cases")
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -104,7 +103,8 @@ export async function listFunnemailEvalCases(): Promise<FunnemailEvalCase[]> {
 }
 
 export async function listFunnemailEvalRuns(limit = 100): Promise<FunnemailEvalRun[]> {
-  const { data, error } = await supabase.from("funnemail_eval_runs")
+  const { data, error } = await supabase
+    .from("funnemail_eval_runs")
     .select("*")
     .order("run_at", { ascending: false })
     .limit(limit);

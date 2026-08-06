@@ -10,19 +10,20 @@ tags: [harmonizer, business, constraints, doctrine]
 
 Valori esatti del campo `lead_status` su `imported_contacts`, `partners`, `business_cards` (sincronizzati via trigger):
 
-| Valore DB | Significato | Ordine progressione |
-|---|---|---|
-| `new` | Lead appena creato, mai contattato | 0 |
-| `first_touch_sent` | Inviato primo messaggio, in attesa di risposta | 1 |
-| `holding` | Nessuna risposta, in circuito d'attesa con re-touch programmati | 2 |
-| `engaged` | Ha risposto positivamente, conversazione attiva | 3 |
-| `qualified` | Qualificato come opportunità reale | 4 |
-| `negotiation` | In trattativa commerciale | 5 |
-| `converted` | Cliente acquisito | 6 |
-| `archived` | Chiuso pulito (no follow-up futuri ma non negativo) | terminale |
-| `blacklisted` | Chiuso negativo, non ricontattare | terminale |
+| Valore DB          | Significato                                                     | Ordine progressione |
+| ------------------ | --------------------------------------------------------------- | ------------------- |
+| `new`              | Lead appena creato, mai contattato                              | 0                   |
+| `first_touch_sent` | Inviato primo messaggio, in attesa di risposta                  | 1                   |
+| `holding`          | Nessuna risposta, in circuito d'attesa con re-touch programmati | 2                   |
+| `engaged`          | Ha risposto positivamente, conversazione attiva                 | 3                   |
+| `qualified`        | Qualificato come opportunità reale                              | 4                   |
+| `negotiation`      | In trattativa commerciale                                       | 5                   |
+| `converted`        | Cliente acquisito                                               | 6                   |
+| `archived`         | Chiuso pulito (no follow-up futuri ma non negativo)             | terminale           |
+| `blacklisted`      | Chiuso negativo, non ricontattare                               | terminale           |
 
 **Vincoli sull'Harmonizer**:
+
 - ❌ Mai proporre nuovi stati
 - ❌ Mai rinominare uno stato esistente
 - ❌ Mai cambiare l'ordine di progressione

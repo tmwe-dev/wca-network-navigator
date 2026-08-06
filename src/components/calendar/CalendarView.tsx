@@ -15,11 +15,7 @@ interface CalendarViewProps {
   eventTypeFilter?: EventType | null;
 }
 
-export function CalendarView({
-  onEventClick,
-  onCreateEvent,
-  eventTypeFilter,
-}: CalendarViewProps) {
+export function CalendarView({ onEventClick, onCreateEvent, eventTypeFilter }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const year = currentDate.getFullYear();
@@ -37,9 +33,7 @@ export function CalendarView({
   const { data: events = [] } = useCalendarEvents(monthStart, monthEnd);
 
   // Filter events by type if specified
-  const filteredEvents = eventTypeFilter
-    ? events.filter((e) => e.event_type === eventTypeFilter)
-    : events;
+  const filteredEvents = eventTypeFilter ? events.filter((e) => e.event_type === eventTypeFilter) : events;
 
   // Create a map of events by date
   const eventsByDate = new Map<string, CalendarEvent[]>();
@@ -115,30 +109,15 @@ export function CalendarView({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={previousMonth}
-            className="border-gray-700 hover:bg-gray-800"
-          >
+          <Button variant="outline" size="sm" onClick={previousMonth} className="border-gray-700 hover:bg-gray-800">
             <ChevronLeft className="w-4 h-4" />
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToToday}
-            className="border-gray-700 hover:bg-gray-800"
-          >
+          <Button variant="outline" size="sm" onClick={goToToday} className="border-gray-700 hover:bg-gray-800">
             Oggi
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={nextMonth}
-            className="border-gray-700 hover:bg-gray-800"
-          >
+          <Button variant="outline" size="sm" onClick={nextMonth} className="border-gray-700 hover:bg-gray-800">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -148,10 +127,7 @@ export function CalendarView({
       <div className="grid grid-cols-7 gap-1">
         {/* Day headers */}
         {dayNames.map((dayName) => (
-          <div
-            key={dayName}
-            className="p-2 text-center text-sm font-semibold text-gray-400"
-          >
+          <div key={dayName} className="p-2 text-center text-sm font-semibold text-gray-400">
             {dayName}
           </div>
         ))}
@@ -182,11 +158,7 @@ export function CalendarView({
                 }
               }}
             >
-              <div
-                className={`text-sm font-semibold mb-1 ${
-                  isCurrentMonth ? "text-white" : "text-gray-600"
-                }`}
-              >
+              <div className={`text-sm font-semibold mb-1 ${isCurrentMonth ? "text-white" : "text-gray-600"}`}>
                 {day?.getDate()}
               </div>
 
@@ -203,9 +175,7 @@ export function CalendarView({
                 ))}
 
                 {dayEvents.length > 3 && (
-                  <div className="text-xs text-gray-400 px-1">
-                    +{dayEvents.length - 3} altro
-                  </div>
+                  <div className="text-xs text-gray-400 px-1">+{dayEvents.length - 3} altro</div>
                 )}
               </div>
             </div>

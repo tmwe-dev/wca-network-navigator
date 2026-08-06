@@ -5,6 +5,7 @@
 > UI. Fonte SSOT del menu: `src/v2/ui/templates/navConfig.tsx` — `FULL_NAV_ITEMS`.
 >
 > Legenda semaforo:
+>
 > - 🟢 Verde: pagina carica, header/rail coerenti, funzioni presenti.
 > - 🟡 Giallo: carica ma con difetti UX o dati mancanti visibili.
 > - 🔴 Rosso: bug funzionale o errore runtime bloccante.
@@ -32,12 +33,14 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## COMANDO
 
 ### 🟢 Command — `/v2/command`
+
 - Header pulito, orbe centrale + input "Scrivi un obiettivo…".
 - 19 bottoni, 1 input. Nessun error boundary.
 - Empty-state elegante ("Cosa vuoi ottenere?"). OK.
 - Debito: fix cron_job_status 400.
 
 ### 🟡 Missioni — `/v2/agents/autopilot`
+
 - `h1: Agent Missions` (inglese) mentre voce menu è "Missioni" (italiano).
 - Empty state ok ("Nessuna missione. Crea la prima missione autopilot.").
 - CTA "+ Nuova Missione" presente in alto a destra.
@@ -48,6 +51,7 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## ESPLORA
 
 ### 🟡 Vendi — `/v2/explore/network`
+
 - Carica lista partner (WCA), rail filtri sx visibile ("FILTRI WCA PARTNER").
 - **219 bottoni visibili**: densità estrema, la tabella genera un bottone per
   cella/azione. Verificare virtualizzazione o riduzione bottoni per riga.
@@ -58,18 +62,21 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## PIPELINE
 
 ### 🔴 Autorizza — `/v2/cestinone`
+
 - **Nessun `h1` visibile**: la pagina non ha titolo, l'utente non sa dove si trova.
 - Console: `400` su una risorsa (probabilmente RPC cronjob).
 - 13 bottoni, 1 input. Non è chiaro cosa "autorizzare".
 - **Fix**: aggiungere header con titolo "Cestinone / Autorizza" + descrizione.
 
 ### 🟡 Cockpit — `/v2/cockpit`
+
 - Due `h2`: "CONFIGURAZIONE EMAIL AI" e "Cockpit". Doppio titolo, header
   non uniformato.
 - 61 bottoni, 4 input. Densità alta ma funzionale.
 - OK come funzioni, da uniformare a `StandardPageFrame`.
 
 ### 🟢 Agenda — `/v2/agenda`
+
 - Rail filtri sx ("FILTRI AGENDA"), lista giornata a destra ("Venerdì 17 Luglio
   2026"), sezione "DA RISPONDERE" visibile. Coerente.
 - 74 bottoni, 1 input.
@@ -79,11 +86,13 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## COMUNICA
 
 ### 🟡 Comms — `/v2/comms`
+
 - `h2: Comunicazioni` + preview conversazione. OK.
 - Console: **2× 404** su risorse (probabilmente asset icona o edge legacy).
   Da tracciare.
 
 ### 🔴 Leggi — `/v2/inbox`
+
 - Rail "FILTRI FUNNEMAIL" — la voce menu è "Leggi" ma la pagina espone
   filtri "Funnemail": incoerenza semantica (l'utente non capisce se sta in
   inbox o in Funnemail).
@@ -92,18 +101,21 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
   di caricare le cartelle IMAP dall'UI. **Da fixare**.
 
 ### 🔴 Scrivi — `/v2/email`
+
 - **Nessun `h1`/`h2`**: pagina senza titolo.
 - Empty state 1 hit ma layout vuoto (28 bottoni, 3 input, 0 heading).
 - Da capire se è EmailComposerPage o EmailForge: la rotta `/v2/email` merita
   landing page dedicata con scelta "Composer / Forge / Strategies".
 
 ### 🔴 Funnemail — `/v2/email-intelligence`
+
 - Rail filtri + 5 tab visibili + lista cartelle con contatori (ADS 162,
   AIrline_News 35…). Struttura densa ma leggibile.
 - **Stesso CORS su `manage-email-folders`** (blocca il refresh cartelle).
 - 148 bottoni: da valutare compressione (menu contestuale invece che bottoni).
 
 ### 🟡 Funnemail Inbox — `/v2/funnemail-inbox`
+
 - Solo rail "FILTRI FUNNEMAIL", **0 headings visibili** e 15 bottoni.
 - Sembra una pagina "guscio" senza contenuto principale evidente. Verificare
   se serve fondere con `/v2/email-intelligence` (voce menu duplicata).
@@ -111,9 +123,11 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
   stessa area concettuale.
 
 ### 🟢 Rubrica WhatsApp — `/v2/rubrica/whatsapp`
+
 - `h1: Rubrica WhatsApp`, 10 bottoni, 1 input di ricerca. Pulito.
 
 ### 🟢 Rubrica LinkedIn — `/v2/rubrica/linkedin`
+
 - `h1: Rubrica LinkedIn`, layout speculare a WhatsApp. Empty state coerente.
 
 ---
@@ -121,11 +135,13 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## CERVELLO
 
 ### 🔴 Agenti — `/v2/intelligence/agents`
+
 - **`h1: Funnemail`** invece di "Agenti": la rotta `/v2/intelligence/agents`
   atterra sulla stessa pagina di `/v2/intelligence` (default tab Funnemail).
   L'utente clicca "Agenti" ma vede "Funnemail". **Bug di routing/tab default**.
 
 ### 🟡 Intelligence — `/v2/intelligence`
+
 - Stessa pagina di sopra (`h1: Funnemail`, 30 bottoni). Le due voci di menu
   puntano al medesimo componente. **Consolidare o rendere tab distinta**.
 
@@ -134,6 +150,7 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## LAB
 
 ### 🟢 Lab — `/v2/lab`
+
 - 15 tab pill, header "Scenari AI — banco di prova edge function", tab "Assistente
   AI · 1" con badge. Struttura Config-Driven come da memoria.
 - 38 bottoni, 7 input. OK.
@@ -143,6 +160,7 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## CONFIG
 
 ### 🟢 Config — `/v2/settings`
+
 - 4 tab visibili, contenuti "Numero WhatsApp", "Language", "Intensità testo".
 - 37 bottoni, coerente.
 
@@ -151,6 +169,7 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## Backlog fix prioritizzato
 
 ### P0 — Bug funzionali
+
 1. **CORS `manage-email-folders`** (Leggi + Funnemail): edge function
    deve rispondere al preflight `OPTIONS` con `Access-Control-Allow-Origin`.
 2. **`/v2/intelligence/agents` mostra Funnemail**: fix default tab / routing.
@@ -158,6 +177,7 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 4. **`/v2/email` senza titolo/landing**: creare landing o rimappare la voce.
 
 ### P1 — Coerenza semantica menu
+
 5. Voci menu vs `h1`: "Missioni"↔"Agent Missions", "Vendi"↔"WCA Partner",
    "Leggi"↔filtri "Funnemail", "Agenti"↔"Funnemail". Allineare label o titoli.
 6. Sovrapposizione **Leggi / Funnemail / Funnemail Inbox** — 3 voci, 1
@@ -165,6 +185,7 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 7. Sovrapposizione **Agenti / Intelligence** — stessa pagina, 2 voci.
 
 ### P2 — Debito trasversale
+
 8. Rimuovere/fixare `rpc/cron_job_status` (400 su ogni pagina).
 9. Confinare banner "Blacklist non aggiornata" al modulo Acquisition.
 10. `StandardPageFrame` non adottato uniformemente (Missioni, Cockpit, Autorizza,
@@ -172,6 +193,7 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 11. Migrare CSP `frame-ancestors` da `<meta>` a header HTTP.
 
 ### P3 — UX densità
+
 12. `/v2/explore/network`: 219 bottoni visibili — comprimere azioni per riga.
 13. `/v2/email-intelligence`: 148 bottoni — usare menu contestuali.
 
@@ -188,6 +210,7 @@ Ricorrono su 15+ pagine, vanno risolti UNA volta sola.
 ## Stato interventi 2026-07-17 (batch 2)
 
 P0 chiusi (verificati Playwright):
+
 - `/v2/cestinone` → H1 "Autorizza" (sub "Cestinone — conferma, modifica o rinvia").
 - `/v2/email` → H1 "Scrivi" (sub "Email — componi messaggio").
 - `/v2/inbox` → H1 "Leggi" (sub "Inbox — email ricevute").
@@ -197,6 +220,7 @@ P0 chiusi (verificati Playwright):
 - `AuthenticatedLayout` document.title usa etichette nav i18n.
 
 P1 chiusi:
+
 - Voci menu allineate a H1 pagina (Vendi/Leggi/Scrivi/Autorizza/Spedisci).
 - Menu ridotto: rimosse voci duplicate `funnemail_inbox` e `intelligence`
   (le rotte restano attive per bookmark/redirect).
@@ -204,6 +228,7 @@ P1 chiusi:
 - Comunica passa da 7 a 6 voci (rimossa "Funnemail Inbox").
 
 P2 chiusi:
+
 - `cron_job_status()` ottimizzata: singola scansione delle esecuzioni
   cron delle ultime 24h (CTE `DISTINCT ON (jobid)`) al posto del LATERAL
   per riga. Elimina i timeout 500/400 nella top bar.
@@ -221,6 +246,7 @@ Screenshot completi salvati in `/tmp/browser/audit/*.png`; JSON grezzo in
 ## Stato interventi 2026-07-17 (batch 3 — P3)
 
 P3 verificati (Playwright, viewport 1280x1800):
+
 - `/v2/explore/network`: densità bottoni è funzione della card partner
   (WCA, contatto, email, telefono, città, azioni). Con banner blacklist
   confinato, il conteggio bottoni per schermata è calato ~30%. Ulteriori

@@ -22,8 +22,15 @@ import { createTracer, newTraceId } from "../_shared/pipelineTrace.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
 const CLASSIFICATIONS = [
-  "interested", "not_interested", "neutral", "question",
-  "objection", "ooo", "bounce", "spam", "unsubscribe",
+  "interested",
+  "not_interested",
+  "neutral",
+  "question",
+  "objection",
+  "ooo",
+  "bounce",
+  "spam",
+  "unsubscribe",
 ] as const;
 const SENTIMENTS = ["positive", "neutral", "negative"] as const;
 const URGENCIES = ["low", "normal", "high"] as const;
@@ -35,25 +42,27 @@ interface SimulateBody {
   channel?: "email" | "whatsapp" | "linkedin";
 }
 
-interface AuthOk { userId: string; }
+interface AuthOk {
+  userId: string;
+}
 
 async function authenticate(req: Request, corsH: Record<string, string>): Promise<AuthOk | Response> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsH, "Content-Type": "application/json" },
+      status: 401,
+      headers: { ...corsH, "Content-Type": "application/json" },
     });
   }
-  const sb = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    { global: { headers: { Authorization: authHeader } } },
-  );
+  const sb = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+    global: { headers: { Authorization: authHeader } },
+  });
   const token = authHeader.replace("Bearer ", "");
   const { data, error } = await sb.auth.getClaims(token);
   if (error || !data?.claims?.sub) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsH, "Content-Type": "application/json" },
+      status: 401,
+      headers: { ...corsH, "Content-Type": "application/json" },
     });
   }
   return { userId: data.claims.sub };
@@ -68,7 +77,10 @@ Deno.serve(async (req) => {
 
   try {
     const auth = await authenticate(req, corsH);
-    if (auth instanceof Response) { endMetrics(metrics, false, auth.status); return auth; }
+    if (auth instanceof Response) {
+      endMetrics(metrics, false, auth.status);
+      return auth;
+    }
 
     const body = (await req.json().catch(() => ({}))) as SimulateBody;
     const channel = body.channel ?? "email";
@@ -81,11 +93,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "from + body required" }), { status: 400, headers });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     const traceId = newTraceId();
     const tracer = createTracer(supabase, {
@@ -118,7 +128,8 @@ Deno.serve(async (req) => {
     const normSubject = normalizeContent(subject, { source: "email-inbound", maxChars: 300 });
     const normBody = normalizeContent(text, { source: "email-inbound", maxChars: 3000 });
     const { block: bodyWrapped } = safeWrap(normBody.text, "INBOUND BODY", {
-      source: "email-inbound", policy: "redact",
+      source: "email-inbound",
+      policy: "redact",
     });
     await tracer.step("simulate:normalize", {
       input: { rawSubjectChars: subject.length, rawBodyChars: text.length },
@@ -147,7 +158,9 @@ Deno.serve(async (req) => {
       appliedNames = opResult.appliedNames ?? [];
     } catch (e) {
       await tracer.step("simulate:prompt_lab_load", {
-        status: "error", errorMessage: (e as Error).message, durationMs: Date.now() - t3,
+        status: "error",
+        errorMessage: (e as Error).message,
+        durationMs: Date.now() - t3,
       });
     }
     await tracer.step("simulate:prompt_lab_load", {
@@ -156,34 +169,39 @@ Deno.serve(async (req) => {
     });
 
     // ── Stage 4: AI classification ──
-    const channelHint = channel === "whatsapp"
-      ? "This is a WhatsApp message (short, informal)."
-      : channel === "linkedin"
-      ? "This is a LinkedIn message (professional networking)."
-      : "This is an email reply (business communication).";
+    const channelHint =
+      channel === "whatsapp"
+        ? "This is a WhatsApp message (short, informal)."
+        : channel === "linkedin"
+          ? "This is a LinkedIn message (professional networking)."
+          : "This is an email reply (business communication).";
     const fallbackSys = `You are a B2B inbound message classifier for a logistics CRM.\n${channelHint}\n\nClassify the message and extract structured metadata using the provided tool.`;
-    const systemPrompt = promptLabBlock
-      ? `${channelHint}\n\n${promptLabBlock}`
-      : fallbackSys;
+    const systemPrompt = promptLabBlock ? `${channelHint}\n\n${promptLabBlock}` : fallbackSys;
     const userPrompt = `Channel: ${channel}\nFrom: ${from}\nSubject: ${normSubject.text || "(none)"}\nBody:\n${bodyWrapped}`;
 
     const t4 = Date.now();
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     const model = "google/gemini-3-flash-preview";
     let classification: Record<string, unknown> = {
-      classification: "neutral", confidence: 0, sentiment: "neutral",
-      urgency: "normal", intent: "", reasoning: "No API key (skipped)",
+      classification: "neutral",
+      confidence: 0,
+      sentiment: "neutral",
+      urgency: "normal",
+      intent: "",
+      reasoning: "No API key (skipped)",
     };
     let aiError: string | null = null;
     if (LOVABLE_API_KEY && !blocked) {
       try {
         const r = await aiFetch({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            tools: [{
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
               type: "function",
               function: {
                 name: "classify_message",
@@ -201,9 +219,10 @@ Deno.serve(async (req) => {
                   required: ["classification", "confidence", "sentiment", "urgency", "reasoning"],
                 },
               },
-            }],
-            tool_choice: { type: "function", function: { name: "classify_message" } },
-          });
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "classify_message" } },
+        });
         const j = await r.json();
         const args = j?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
         if (args) classification = JSON.parse(args);
@@ -216,7 +235,8 @@ Deno.serve(async (req) => {
       output: { ...classification, _systemPrompt: systemPrompt, _userPrompt: userPrompt },
       status: aiError ? "error" : "success",
       errorMessage: aiError,
-      aiModel: model, aiScope: "classification",
+      aiModel: model,
+      aiScope: "classification",
       durationMs: Date.now() - t4,
     });
 
@@ -252,11 +272,21 @@ Deno.serve(async (req) => {
     const cls = (classification.classification as string) ?? "neutral";
     let proposedGroup = domainGroupHint ?? "Inbox";
     let proposedAction = "review";
-    if (cls === "spam") { proposedGroup = "Spam"; proposedAction = "auto_archive"; }
-    else if (cls === "unsubscribe") { proposedGroup = "Unsubscribe"; proposedAction = "auto_unsubscribe"; }
-    else if (cls === "bounce") { proposedGroup = "Bounces"; proposedAction = "mark_bounce"; }
-    else if (cls === "ooo") { proposedGroup = "OOO"; proposedAction = "ignore"; }
-    else if (cls === "interested") { proposedAction = "notify_human"; }
+    if (cls === "spam") {
+      proposedGroup = "Spam";
+      proposedAction = "auto_archive";
+    } else if (cls === "unsubscribe") {
+      proposedGroup = "Unsubscribe";
+      proposedAction = "auto_unsubscribe";
+    } else if (cls === "bounce") {
+      proposedGroup = "Bounces";
+      proposedAction = "mark_bounce";
+    } else if (cls === "ooo") {
+      proposedGroup = "OOO";
+      proposedAction = "ignore";
+    } else if (cls === "interested") {
+      proposedAction = "notify_human";
+    }
     await tracer.step("simulate:routing", {
       input: { classification: cls, domainGroupHint },
       output: { proposedGroup, proposedAction, knownPartnerId: knownPartner?.id ?? null },
@@ -274,16 +304,15 @@ Deno.serve(async (req) => {
       injectionBlocked: blocked,
     };
     await tracer.step("simulate:verdict", {
-      output: verdict, status: "success", durationMs: 0,
+      output: verdict,
+      status: "success",
+      durationMs: 0,
     });
 
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({ ok: true, ...verdict }), { status: 200, headers });
   } catch (e) {
     endMetrics(metrics, false, 500);
-    return new Response(
-      JSON.stringify({ error: (e as Error).message }),
-      { status: 500, headers },
-    );
+    return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers });
   }
 });

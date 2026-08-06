@@ -59,10 +59,10 @@ Deno.serve(async (req) => {
 
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: parsed.error.flatten().fieldErrors }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
     const input = parsed.data;
 
@@ -75,10 +75,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existing) {
-      return new Response(
-        JSON.stringify({ skipped: "already_sent", log_id: existing.id }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ skipped: "already_sent", log_id: existing.id }), {
+        status: 200,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
 
     // Load template (explicit name OR fallback by language)
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       {
         status: sendOk ? 200 : 500,
         headers: { ...cors, "Content-Type": "application/json" },
-      }
+      },
     );
   } catch (err) {
     return edgeError("AUTORESPONDER_FAILED", extractErrorMessage(err));

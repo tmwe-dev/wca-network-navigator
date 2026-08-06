@@ -67,11 +67,14 @@ export async function findAbTests(limit = 50): Promise<ABTestRow[]> {
 }
 
 export async function completeAbTest(id: string, winner: "a" | "b") {
-  const { error } = await supabase.from("ab_tests").update({
-    status: "completed",
-    winner,
-    completed_at: new Date().toISOString(),
-  }).eq("id", id);
+  const { error } = await supabase
+    .from("ab_tests")
+    .update({
+      status: "completed",
+      winner,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", id);
   if (error) throw error;
 }
 

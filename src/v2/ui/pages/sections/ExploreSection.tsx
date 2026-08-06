@@ -7,7 +7,7 @@ import { DeepSearchPage } from "@/v2/ui/pages/DeepSearchPage";
 import { ContactsPage } from "@/v2/ui/pages/ContactsPage";
 
 const BCAUnifiedHub = lazy(() => import("@/components/contacts/bca/BCAUnifiedHub"));
-const CampaignsPage = lazy(() => import("@/v2/ui/pages/CampaignsPage").then(m => ({ default: m.Campaigns })));
+const CampaignsPage = lazy(() => import("@/v2/ui/pages/CampaignsPage").then((m) => ({ default: m.Campaigns })));
 
 function TabFallback() {
   return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
@@ -19,9 +19,9 @@ export function ExploreSection(): React.ReactElement {
       <div className="flex-1 min-h-0 overflow-hidden">
         <Routes>
           <Route index element={<Navigate to="/v2/explore/network" replace />} />
-          <Route path="map"         element={<GlobePage />} />
-          <Route path="network"     element={<NetworkPage />} />
-          <Route path="contacts"    element={<ContactsPage />} />
+          <Route path="map" element={<GlobePage />} />
+          <Route path="network" element={<NetworkPage />} />
+          <Route path="contacts" element={<ContactsPage />} />
           <Route
             path="biglietti"
             element={
@@ -30,7 +30,7 @@ export function ExploreSection(): React.ReactElement {
               </Suspense>
             }
           />
-          <Route path="search"      element={<Navigate to="/v2/explore/contacts" replace />} />
+          <Route path="search" element={<Navigate to="/v2/explore/contacts" replace />} />
           <Route path="deep-search" element={<DeepSearchPage />} />
           <Route
             path="campaigns"
@@ -40,7 +40,7 @@ export function ExploreSection(): React.ReactElement {
               </Suspense>
             }
           />
-          <Route path="*"           element={<Navigate to="/v2/explore/map" replace />} />
+          <Route path="*" element={<Navigate to="/v2/explore/map" replace />} />
         </Routes>
       </div>
     </div>

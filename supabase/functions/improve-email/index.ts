@@ -16,7 +16,13 @@ import { detectEmailType } from "../_shared/emailTypeDetector.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 
-interface KbEntry { title: string; content: string; category: string; chapter: string; tags: string[]; }
+interface KbEntry {
+  title: string;
+  content: string;
+  category: string;
+  chapter: string;
+  tags: string[];
+}
 
 async function fetchKbEntriesForImprove(
   supabase: ReturnType<typeof createClient>,
@@ -32,10 +38,14 @@ async function fetchKbEntriesForImprove(
   // FIX 3b-I: accept email_type_kb_categories (allineato con generate-email)
   if (extraCategories?.length) categories.push(...extraCategories);
   const { data: entries } = await supabase
-    .from("kb_entries").select("title, content, category, chapter, tags")
-    .eq("user_id", userId).eq("is_active", true)
+    .from("kb_entries")
+    .select("title, content, category, chapter, tags")
+    .eq("user_id", userId)
+    .eq("is_active", true)
     .in("category", [...new Set(categories)])
-    .order("priority", { ascending: false }).order("sort_order").limit(5);
+    .order("priority", { ascending: false })
+    .order("sort_order")
+    .limit(5);
   if (!entries || entries.length === 0) return { text: "", sections: [] };
   const sections = [...new Set((entries as KbEntry[]).map((e) => e.category))];
   // Budget hard sul content per entry: evita context explosion su KB grandi
@@ -67,15 +77,19 @@ async function loadPartnerContact(
   let partner: PartnerCtx | null = null;
   let contact: ContactCtx | null = null;
   if (partnerId) {
-    const { data } = await supabase.from("partners")
+    const { data } = await supabase
+      .from("partners")
       .select("company_name, company_alias, country_name, city, lead_status")
-      .eq("id", partnerId).maybeSingle();
+      .eq("id", partnerId)
+      .maybeSingle();
     if (data) partner = data as PartnerCtx;
   }
   if (contactId) {
-    const { data } = await supabase.from("partner_contacts")
+    const { data } = await supabase
+      .from("partner_contacts")
       .select("name, contact_alias, title")
-      .eq("id", contactId).maybeSingle();
+      .eq("id", contactId)
+      .maybeSingle();
     if (data) contact = data as ContactCtx;
   }
   return { partner, contact };
@@ -88,11 +102,13 @@ async function loadHistoryStats(
   if (!partnerId) return { touchCount: 0, daysSince: null, lastChannel: null };
   // Compact: ci servono solo l'ultima interazione + un count totale.
   // Limite 5 sufficiente: consumo token minimo, ridotto da 20.
-  const { data, count } = await supabase.from("activities")
+  const { data, count } = await supabase
+    .from("activities")
     .select("activity_type, sent_at, created_at", { count: "exact" })
     .eq("partner_id", partnerId)
     .in("activity_type", ["email", "whatsapp", "linkedin"])
-    .order("created_at", { ascending: false }).limit(5);
+    .order("created_at", { ascending: false })
+    .limit(5);
   const rows = (data || []) as Array<{ activity_type: string; sent_at: string | null; created_at: string }>;
   const touchCount = count ?? rows.length;
   if (!rows.length) return { touchCount: 0, daysSince: null, lastChannel: null };
@@ -112,7 +128,8 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -125,7 +142,8 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const userId = claimsData.claims.sub;
@@ -148,22 +166,32 @@ serve(async (req) => {
 
     if (pauseSettings?.value === "true") {
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 503,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     const {
-      subject, html_body, recipient_count, recipient_countries,
-      oracle_tone, use_kb,
-      email_type_id, email_type_prompt, email_type_structure,
+      subject,
+      html_body,
+      recipient_count,
+      recipient_countries,
+      oracle_tone,
+      use_kb,
+      email_type_id,
+      email_type_prompt,
+      email_type_structure,
       email_type_kb_categories,
-      custom_goal, partner_id, contact_id,
+      custom_goal,
+      partner_id,
+      contact_id,
       learned_patterns,
       quality: rawQuality,
     } = await req.json();
     // FIX 3b-G: accept quality param (allineato con generate-email)
-    const quality: "fast" | "standard" | "premium" =
-      (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard");
+    const quality: "fast" | "standard" | "premium" = ["fast", "standard", "premium"].includes(rawQuality)
+      ? rawQuality
+      : "standard";
     if (!html_body) throw new Error("html_body is required");
 
     // ── LOVABLE-110: learned_patterns — client-side o fallback server-side ──
@@ -178,12 +206,16 @@ serve(async (req) => {
           .order("priority", { ascending: false })
           .limit(30);
         if (lpRows && lpRows.length > 0) {
-          effectiveLearnedPatterns = (lpRows as Array<{ suggestion_type: string; priority: string; title: string; content: string }>)
+          effectiveLearnedPatterns = (
+            lpRows as Array<{ suggestion_type: string; priority: string; title: string; content: string }>
+          )
             .map((r) => `[${r.suggestion_type}|${r.priority}] ${r.title}: ${r.content.substring(0, 200)}`)
             .join("\n");
         }
       } catch (lpErr) {
-        log.warn("learned_patterns_fallback_failed", { reason: lpErr instanceof Error ? lpErr.message : String(lpErr) });
+        log.warn("learned_patterns_fallback_failed", {
+          reason: lpErr instanceof Error ? lpErr.message : String(lpErr),
+        });
       }
     }
 
@@ -218,9 +250,10 @@ serve(async (req) => {
         typeResolutionImprove = detectEmailType(contract);
         // FIX 3b-B: surface type conflicts as warnings (non-blocking, a differenza di generate-email)
         if (typeResolutionImprove && !typeResolutionImprove.proceed) {
-          const blockingConflicts = typeResolutionImprove.conflicts
-            ?.filter((c: { severity: string }) => c.severity === "blocking")
-            .map((c: { suggestion: string }) => c.suggestion) ?? [];
+          const blockingConflicts =
+            typeResolutionImprove.conflicts
+              ?.filter((c: { severity: string }) => c.severity === "blocking")
+              .map((c: { suggestion: string }) => c.suggestion) ?? [];
           if (blockingConflicts.length) {
             contractWarningsImprove.push(`TYPE_CONFLICT (non-blocking): ${blockingConflicts.join("; ")}`);
           }
@@ -237,7 +270,9 @@ serve(async (req) => {
       .eq("user_id", userId)
       .like("key", "ai_%");
     const settings: Record<string, string> = {};
-    (settingsRows || []).forEach((r: { key: string; value: string | null }) => { settings[r.key] = r.value || ""; });
+    (settingsRows || []).forEach((r: { key: string; value: string | null }) => {
+      settings[r.key] = r.value || "";
+    });
 
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompany = settings.ai_company_alias || settings.ai_company_name || "";
@@ -284,9 +319,10 @@ serve(async (req) => {
           const block = formatEnrichmentForPrompt(unified, quality);
           // Budget hard: enrichment può crescere senza limiti su partner attivi
           const MAX_ENRICHMENT_CHARS = 3_000;
-          const safeBlock = block && block.length > MAX_ENRICHMENT_CHARS
-            ? block.slice(0, MAX_ENRICHMENT_CHARS) + "\n[...enrichment troncato per stabilità]"
-            : block;
+          const safeBlock =
+            block && block.length > MAX_ENRICHMENT_CHARS
+              ? block.slice(0, MAX_ENRICHMENT_CHARS) + "\n[...enrichment troncato per stabilità]"
+              : block;
           if (safeBlock) enrichmentContext = `\nDATI ARRICCHIMENTO PARTNER:\n${safeBlock}\n`;
         }
       } catch (e) {
@@ -296,10 +332,11 @@ serve(async (req) => {
 
     // ── KB strategica (filtrata per tipo) ──
     // FIX 3b-I: pass email_type_kb_categories (allineato con generate-email)
-    const extraKbCats = Array.isArray(email_type_kb_categories) ? email_type_kb_categories as string[] : undefined;
-    const kbResult = use_kb !== false
-      ? await fetchKbEntriesForImprove(supabase, userId, email_type_id || null, isFollowUp, extraKbCats)
-      : { text: "", sections: [] };
+    const extraKbCats = Array.isArray(email_type_kb_categories) ? (email_type_kb_categories as string[]) : undefined;
+    const kbResult =
+      use_kb !== false
+        ? await fetchKbEntriesForImprove(supabase, userId, email_type_id || null, isFollowUp, extraKbCats)
+        : { text: "", sections: [] };
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
     if (!kbResult.text && fullSalesKB) {
       console.warn("[improve-email] kb_entries vuoto, fallback monolitico");
@@ -397,9 +434,7 @@ ${html_body}`;
       includeUniversal: true,
       limit: 5,
     });
-    const finalSystemPrompt = promptLab.block
-      ? `${promptLab.block}\n\n${systemPrompt}`
-      : systemPrompt;
+    const finalSystemPrompt = promptLab.block ? `${promptLab.block}\n\n${systemPrompt}` : systemPrompt;
     // ── Calligrafia (regole di formattazione email — SSOT KB "calligrafia") ──
     const calligrafiaSection = await buildCalligrafiaSection(supabase, userId);
     const finalSystemPromptWithCalligrafia = `${finalSystemPrompt}\n${calligrafiaSection}`;
@@ -446,34 +481,40 @@ ${html_body}`;
       // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto.
       const optimus = await loadOptimusSettings(supabase, userId);
       if (improvedBody) {
-        journalistResult = await journalistReview(supabase, userId, {
-          final_draft: improvedBody,
-          resolved_brief: {
-            email_type: email_type_id ?? undefined,
-            objective: custom_goal ?? undefined,
-            playbook_active: playbookActive ? "yes" : undefined,
+        journalistResult = await journalistReview(
+          supabase,
+          userId,
+          {
+            final_draft: improvedBody,
+            resolved_brief: {
+              email_type: email_type_id ?? undefined,
+              objective: custom_goal ?? undefined,
+              playbook_active: playbookActive ? "yes" : undefined,
+            },
+            channel: "email",
+            commercial_state: {
+              lead_status: (commercialState as string) || partner?.lead_status || "new",
+              touch_count: history.touchCount,
+              last_outcome: lastOutcome ?? undefined,
+              days_since_last_inbound: history.daysSince ?? undefined,
+              has_active_conversation: history.touchCount > 0,
+            },
+            partner: {
+              id: partner_id ?? null,
+              company_name: partner?.company_alias || partner?.company_name,
+              country: partner?.country_name,
+            },
+            contact: contact ? { name: contact.contact_alias || contact.name, role: contact.title } : undefined,
+            // FIX 3b-D: pass history to journalist (allineato con generate-email)
+            history_summary:
+              history.touchCount > 0
+                ? `${history.touchCount} interazioni, ultimo ${history.daysSince ?? "?"} gg fa via ${history.lastChannel || "?"}`
+                : undefined,
+            kb_summary: kbResult.sections.join(", ") || undefined,
+            is_reply: isFollowUp || history.touchCount > 0,
           },
-          channel: "email",
-          commercial_state: {
-            lead_status: (commercialState as string) || partner?.lead_status || "new",
-            touch_count: history.touchCount,
-            last_outcome: lastOutcome ?? undefined,
-            days_since_last_inbound: history.daysSince ?? undefined,
-            has_active_conversation: history.touchCount > 0,
-          },
-          partner: {
-            id: partner_id ?? null,
-            company_name: partner?.company_alias || partner?.company_name,
-            country: partner?.country_name,
-          },
-          contact: contact ? { name: contact.contact_alias || contact.name, role: contact.title } : undefined,
-          // FIX 3b-D: pass history to journalist (allineato con generate-email)
-          history_summary: history.touchCount > 0
-            ? `${history.touchCount} interazioni, ultimo ${history.daysSince ?? "?"} gg fa via ${history.lastChannel || "?"}`
-            : undefined,
-          kb_summary: kbResult.sections.join(", ") || undefined,
-          is_reply: isFollowUp || history.touchCount > 0,
-        }, { mode: optimus.mode, strictness: optimus.strictness });
+          { mode: optimus.mode, strictness: optimus.strictness },
+        );
         if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
           improvedBody = journalistResult.edited_text;
         }
@@ -492,41 +533,46 @@ ${html_body}`;
     });
     await log.flush();
 
-    return new Response(JSON.stringify({
-      subject: improvedSubject,
-      body: improvedBody,
-      // FIX ISSUE 1: Set journalist_reviewed=true so send-email knows review already passed
-      journalist_reviewed: journalistResult ? journalistResult.verdict !== "block" : false,
-      readiness,
-      decision,
-      journalist_review: journalistResult ? {
-        journalist: journalistResult.journalist,
-        verdict: journalistResult.verdict,
-        warnings: journalistResult.warnings,
-        edits: journalistResult.edits,
-        quality_score: journalistResult.quality_score,
-        reasoning: journalistResult.reasoning_summary,
-      } : null,
-      _context_summary: {
-        kb_sections: kbResult.sections,
-        touch_count: history.touchCount,
-        days_since_last_contact: history.daysSince,
-        last_channel: history.lastChannel,
-        last_outcome: lastOutcome,
-        warmth_score: warmthScore,
-        commercial_state: commercialState,
-        playbook_active: playbookActive,
-        coherence_warning: !!coherenceWarning,
-        partner_loaded: !!partner,
-        contact_loaded: !!contact,
-        oracle_type: email_type_id ?? null,
+    return new Response(
+      JSON.stringify({
+        subject: improvedSubject,
+        body: improvedBody,
+        // FIX ISSUE 1: Set journalist_reviewed=true so send-email knows review already passed
+        journalist_reviewed: journalistResult ? journalistResult.verdict !== "block" : false,
+        readiness,
+        decision,
+        journalist_review: journalistResult
+          ? {
+              journalist: journalistResult.journalist,
+              verdict: journalistResult.verdict,
+              warnings: journalistResult.warnings,
+              edits: journalistResult.edits,
+              quality_score: journalistResult.quality_score,
+              reasoning: journalistResult.reasoning_summary,
+            }
+          : null,
+        _context_summary: {
+          kb_sections: kbResult.sections,
+          touch_count: history.touchCount,
+          days_since_last_contact: history.daysSince,
+          last_channel: history.lastChannel,
+          last_outcome: lastOutcome,
+          warmth_score: warmthScore,
+          commercial_state: commercialState,
+          playbook_active: playbookActive,
+          coherence_warning: !!coherenceWarning,
+          partner_loaded: !!partner,
+          contact_loaded: !!contact,
+          oracle_type: email_type_id ?? null,
+        },
+        contract_used: true,
+        contract_warnings: contractWarningsImprove,
+        type_resolution: typeResolutionImprove,
+      }),
+      {
+        headers: { ...dynCors, "Content-Type": "application/json" },
       },
-      contract_used: true,
-      contract_warnings: contractWarningsImprove,
-      type_resolution: typeResolutionImprove,
-    }), {
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    );
   } catch (e: unknown) {
     console.error("improve-email error:", e);
     return mapErrorToResponse(e, getCorsHeaders(req.headers.get("origin")));

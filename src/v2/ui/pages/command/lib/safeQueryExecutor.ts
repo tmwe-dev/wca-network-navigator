@@ -75,9 +75,7 @@ async function validatePlan(plan: QueryPlan): Promise<{ table: AllowedTable; liv
 
   for (const f of plan.filters) {
     if (!validColumns.has(f.column)) {
-      throw new QueryValidationError(
-        `Colonna filtro "${f.column}" non valida per "${plan.table}".`,
-      );
+      throw new QueryValidationError(`Colonna filtro "${f.column}" non valida per "${plan.table}".`);
     }
     if (f.op === "in" && !Array.isArray(f.value)) {
       throw new QueryValidationError(`Operatore "in" richiede un array per "${f.column}".`);
@@ -108,9 +106,7 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
   const { table, liveColumns } = await validatePlan(plan);
 
   // Determina colonne da selezionare (default: prime 10 reali)
-  const selectCols = plan.columns?.length
-    ? plan.columns.join(",")
-    : liveColumns.slice(0, 10).join(",");
+  const selectCols = plan.columns?.length ? plan.columns.join(",") : liveColumns.slice(0, 10).join(",");
 
   // Cap limit
   const limit = Math.min(plan.limit ?? 50, HARD_LIMIT);
@@ -144,7 +140,10 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
         // Accent-insensitive: ILIKE wraps value with %; if the value has
         // diacritics, also OR-match on the stripped variant so "Arcanà"
         // hits rows stored as "Arcana" / "Arcana'" / "Acana".
-        const stripped = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[''`]/g, "");
+        const stripped = raw
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[''`]/g, "");
         if (stripped && stripped.toLowerCase() !== raw.toLowerCase()) {
           // Postgrest .or() syntax: column.ilike.%val%,column.ilike.%stripped%
           // Escape commas/parens that would break the .or() grammar.

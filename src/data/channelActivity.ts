@@ -35,9 +35,10 @@ export async function listRecentChannelActivity(limit = 30): Promise<ChannelActi
   const rows: ChannelActivityRow[] = [];
   for (const m of (msgs.data ?? []) as Array<Record<string, unknown>>) {
     const dir = String(m.direction ?? "");
-    const who = dir === "in"
-      ? (m.from_name as string | null) ?? (m.from_address as string | null)
-      : (m.to_name as string | null) ?? (m.to_address as string | null);
+    const who =
+      dir === "in"
+        ? ((m.from_name as string | null) ?? (m.from_address as string | null))
+        : ((m.to_name as string | null) ?? (m.to_address as string | null));
     rows.push({
       id: String(m.id),
       channel: String(m.channel),

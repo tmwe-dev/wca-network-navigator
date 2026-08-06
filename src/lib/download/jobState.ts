@@ -1,6 +1,12 @@
 import {
-  claimDownloadJob, updateDownloadJob, getJobItemById, updateJobItem,
-  updateJobItemsByJobIdAndStatus, getJobItemsByJobId, insertJobEvent, findRunningJobs,
+  claimDownloadJob,
+  updateDownloadJob,
+  getJobItemById,
+  updateJobItem,
+  updateJobItemsByJobIdAndStatus,
+  getJobItemsByJobId,
+  insertJobEvent,
+  findRunningJobs,
 } from "@/data/downloadJobs";
 
 /** Claim a job: set status to running + emit event.
@@ -25,7 +31,7 @@ export async function updateItem(
 ): Promise<void> {
   const current = await getJobItemById(itemId, "attempt_count");
   const currentObj = current as Record<string, unknown> | null;
-  const newAttempt = ((Number(currentObj?.attempt_count) || 0)) + 1;
+  const newAttempt = (Number(currentObj?.attempt_count) || 0) + 1;
 
   const payload: Record<string, unknown> = {
     status,
@@ -58,7 +64,7 @@ export async function snapshotProgress(jobId: string, lastWcaId?: number, lastCo
   const items = await getJobItemsByJobId(jobId, "status, contacts_found, contacts_missing");
   if (!items.length) return;
 
-  const finalized = items.filter(i => !["pending", "processing"].includes(i.status));
+  const finalized = items.filter((i) => !["pending", "processing"].includes(i.status));
   const contactsFound = items.reduce((s, i) => s + (i.contacts_found || 0), 0);
   const contactsMissing = items.reduce((s, i) => s + (i.contacts_missing || 0), 0);
 
@@ -78,13 +84,13 @@ export async function finalizeJob(jobId: string): Promise<void> {
   const items = await getJobItemsByJobId(jobId, "status");
   if (!items.length) return;
 
-  const hasErrors = items.some(i => ["temporary_error", "permanent_error", "page_not_loaded"].includes(i.status));
-  const allDone = items.every(i => !["pending", "processing"].includes(i.status));
+  const hasErrors = items.some((i) => ["temporary_error", "permanent_error", "page_not_loaded"].includes(i.status));
+  const allDone = items.every((i) => !["pending", "processing"].includes(i.status));
 
   if (!allDone) return;
 
   const finalStatus = hasErrors ? "completed_with_errors" : "completed";
-  const failedIds = items.filter(i => ["temporary_error", "permanent_error", "page_not_loaded"].includes(i.status));
+  const failedIds = items.filter((i) => ["temporary_error", "permanent_error", "page_not_loaded"].includes(i.status));
 
   await updateDownloadJob(jobId, {
     status: finalStatus,
@@ -120,7 +126,10 @@ export async function recoverOrphanJobs(): Promise<string[]> {
 
   if (runningJobs.length > 0) {
     for (const job of runningJobs) {
-      await updateDownloadJob(job.id, { status: "stopped", error_message: "Interrotto — job orfano (pagina ricaricata)" });
+      await updateDownloadJob(job.id, {
+        status: "stopped",
+        error_message: "Interrotto — job orfano (pagina ricaricata)",
+      });
       await updateJobItemsByJobIdAndStatus(job.id, "processing", { status: "pending" });
       recovered.push(job.id);
       await emitEvent(job.id, null, "job_recovered", {
@@ -135,7 +144,10 @@ export async function recoverOrphanJobs(): Promise<string[]> {
 
 /** Emit an event to the append-only log. */
 export async function emitEvent(
-  jobId: string, itemId: string | null, eventType: string, payload: Record<string, unknown>,
+  jobId: string,
+  itemId: string | null,
+  eventType: string,
+  payload: Record<string, unknown>,
 ): Promise<void> {
   await insertJobEvent({
     job_id: jobId,

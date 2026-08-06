@@ -19,10 +19,9 @@ export interface FunnemailClaimWithOperator extends FunnemailClaimRow {
 const TABLE = "funnemail_message_claims" as const;
 
 /** Lista claim attivi (non ancora rilasciati). Visibilità globale via RLS. */
-export async function listActiveFunnemailClaims(
-  groupId?: string | null,
-): Promise<FunnemailClaimWithOperator[]> {
-  let q = supabase.from(TABLE)
+export async function listActiveFunnemailClaims(groupId?: string | null): Promise<FunnemailClaimWithOperator[]> {
+  let q = supabase
+    .from(TABLE)
     .select("message_id, group_id, claimed_by, claimed_at, released_at, user_id")
     .is("released_at", null);
   if (groupId) q = q.eq("group_id", groupId);
@@ -35,10 +34,7 @@ export async function listActiveFunnemailClaims(
   const ids = Array.from(new Set(rows.map((r) => r.claimed_by)));
   if (ids.length === 0) return [];
 
-  const { data: ops } = await supabase
-    .from("operators")
-    .select("user_id, name, email")
-    .in("user_id", ids);
+  const { data: ops } = await supabase.from("operators").select("user_id, name, email").in("user_id", ids);
 
   const map = new Map<string, string>();
   for (const o of (ops ?? []) as Array<{ user_id: string | null; name: string | null; email: string | null }>) {
@@ -63,7 +59,8 @@ export async function claimFunnemailMessage(args: {
   if (!uid) throw new Error("not_authenticated");
 
   // Verifica claim esistente attivo
-  const { data: existing } = await supabase.from(TABLE)
+  const { data: existing } = await supabase
+    .from(TABLE)
     .select("message_id, group_id, claimed_by, claimed_at, released_at, user_id")
     .eq("message_id", args.messageId)
     .is("released_at", null)
@@ -73,25 +70,25 @@ export async function claimFunnemailMessage(args: {
     return { ok: false, conflict: existing };
   }
 
-  const { error } = await supabase.from(TABLE)
-    .upsert(
-      {
-        message_id: args.messageId,
-        group_id: args.groupId ?? null,
-        claimed_by: uid,
-        user_id: uid,
-        claimed_at: new Date().toISOString(),
-        released_at: null,
-      },
-      { onConflict: "message_id" },
-    );
+  const { error } = await supabase.from(TABLE).upsert(
+    {
+      message_id: args.messageId,
+      group_id: args.groupId ?? null,
+      claimed_by: uid,
+      user_id: uid,
+      claimed_at: new Date().toISOString(),
+      released_at: null,
+    },
+    { onConflict: "message_id" },
+  );
   if (error) throw error;
   return { ok: true };
 }
 
 /** Rilascia il claim (soft, per audit). Solo proprietario o admin via RLS. */
 export async function releaseFunnemailMessage(messageId: string): Promise<void> {
-  const { error } = await supabase.from(TABLE)
+  const { error } = await supabase
+    .from(TABLE)
     .update({ released_at: new Date().toISOString() })
     .eq("message_id", messageId)
     .is("released_at", null);
@@ -99,14 +96,10 @@ export async function releaseFunnemailMessage(messageId: string): Promise<void> 
 }
 
 /** Forza presa in carico (admin only, RPC SECURITY DEFINER). */
-export async function forceClaimFunnemailMessage(args: {
-  messageId: string;
-  groupId?: string | null;
-}): Promise<void> {
-  const { error } = await (supabase.rpc as unknown as (
-    fn: string,
-    args: Record<string, unknown>,
-  ) => Promise<{ error: unknown }>)("force_claim_message", {
+export async function forceClaimFunnemailMessage(args: { messageId: string; groupId?: string | null }): Promise<void> {
+  const { error } = await (
+    supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: unknown }>
+  )("force_claim_message", {
     p_message_id: args.messageId,
     p_group_id: args.groupId ?? null,
   });

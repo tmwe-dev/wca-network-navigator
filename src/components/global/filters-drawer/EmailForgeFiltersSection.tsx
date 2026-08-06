@@ -36,12 +36,12 @@ import { cn } from "@/lib/utils";
 
 // Mappa id tipo-email → icona richiesta
 const EMAIL_TYPE_ICON: Record<string, React.ElementType> = {
-  primo_contatto: Award,        // medaglia
-  follow_up: PersonStanding,    // uomo in corsa
-  richiesta_info: Search,       // lente
-  proposta: Briefcase,          // valigetta
-  partnership: Handshake,       // mani che si stringono
-  network_espresso: Truck,      // camioncino
+  primo_contatto: Award, // medaglia
+  follow_up: PersonStanding, // uomo in corsa
+  richiesta_info: Search, // lente
+  proposta: Briefcase, // valigetta
+  partnership: Handshake, // mani che si stringono
+  network_espresso: Truck, // camioncino
 };
 
 const TONE_ITEMS = [
@@ -79,7 +79,7 @@ function IconTile({
         "flex flex-col items-center justify-center gap-1 rounded-md border px-1 py-1.5 transition-colors min-w-0",
         active
           ? "border-primary bg-primary/10 text-primary"
-          : "border-border/40 hover:border-border bg-card text-muted-foreground hover:text-foreground"
+          : "border-border/40 hover:border-border bg-card text-muted-foreground hover:text-foreground",
       )}
     >
       <Icon className="w-4 h-4 shrink-0" />
@@ -147,13 +147,11 @@ export function EmailForgeFiltersSection() {
               "flex flex-col items-center justify-center gap-1 rounded-md border px-1 py-1.5 transition-colors",
               lab.useKB
                 ? "border-primary bg-primary/10 text-primary"
-                : "border-border/40 hover:border-border bg-card text-muted-foreground"
+                : "border-border/40 hover:border-border bg-card text-muted-foreground",
             )}
           >
             <BookOpen className="w-4 h-4" />
-            <span className="text-[9px] leading-tight font-medium">
-              KB {lab.useKB ? "ON" : "OFF"}
-            </span>
+            <span className="text-[9px] leading-tight font-medium">KB {lab.useKB ? "ON" : "OFF"}</span>
           </button>
         </div>
       </FilterSection>
@@ -178,10 +176,7 @@ export function EmailForgeFiltersSection() {
       </FilterSection>
 
       <FilterSection icon={UserIcon} label="Destinatario">
-        <ForgeRecipientPicker
-          value={lab.recipient}
-          onChange={(r) => forgeLabStore.set({ recipient: r })}
-        />
+        <ForgeRecipientPicker value={lab.recipient} onChange={(r) => forgeLabStore.set({ recipient: r })} />
       </FilterSection>
 
       <Button

@@ -53,7 +53,12 @@ export function ContactDetail({ contact, onClose, className }: Props) {
           {contact.linkedinUrl && (
             <div className="flex items-center gap-2 text-xs">
               <Linkedin className="h-3.5 w-3.5 text-muted-foreground" />
-              <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+              <a
+                href={contact.linkedinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline truncate"
+              >
                 Profilo LinkedIn
               </a>
             </div>
@@ -61,7 +66,9 @@ export function ContactDetail({ contact, onClose, className }: Props) {
         </div>
 
         <div className="pt-2 border-t border-border/40 space-y-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Azioni rapide</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Azioni rapide
+          </span>
           <div className="grid grid-cols-2 gap-2">
             <Button size="sm" variant="outline" className="text-xs h-8">
               <Mail className="h-3 w-3 mr-1.5" /> Email

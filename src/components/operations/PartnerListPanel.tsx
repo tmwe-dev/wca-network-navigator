@@ -4,13 +4,14 @@ import { useInView } from "@/hooks/useInView";
 import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Search, Telescope, Plane, RotateCcw, X, ArrowUpDown } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePartnersPaginated } from "@/hooks/usePartnersPaginated";
 import { useToggleFavorite } from "@/hooks/usePartners";
@@ -42,17 +43,28 @@ interface PartnerListPanelProps {
 }
 
 export function PartnerListPanel({
-  countryCodes, countryNames, isDark,
-  onDeepSearch, onGenerateAliases,
-  deepSearchRunning, aliasGenerating,
-  directoryOnly: _directoryOnlyProp, onDirectoryOnlyChange: _onDirectoryOnlyChange,
-  onSelectPartner, selectedPartnerId,
+  countryCodes,
+  countryNames,
+  isDark,
+  onDeepSearch,
+  onGenerateAliases,
+  deepSearchRunning,
+  aliasGenerating,
+  directoryOnly: _directoryOnlyProp,
+  onDirectoryOnlyChange: _onDirectoryOnlyChange,
+  onSelectPartner,
+  selectedPartnerId,
 }: PartnerListPanelProps) {
   const g = useGlobalFilters();
   const navigate = useAppNavigate();
   type ProgressFilterKey = "deep" | null;
   const [progressFilter, setProgressFilter] = useState<ProgressFilterKey>(null);
-  const [emailTarget, setEmailTarget] = useState<{ email: string; name: string; company: string; partnerId: string } | null>(null);
+  const [emailTarget, setEmailTarget] = useState<{
+    email: string;
+    name: string;
+    company: string;
+    partnerId: string;
+  } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hideHolding, setHideHolding] = useState(true);
   const [activeCountryTab, setActiveCountryTab] = useState<string | null>(null);
@@ -79,7 +91,7 @@ export function PartnerListPanel({
 
   const partners = useMemo(() => {
     if (!paginatedData) return [];
-    return paginatedData.pages.flatMap(p => p.partners);
+    return paginatedData.pages.flatMap((p) => p.partners);
   }, [paginatedData]);
 
   // Infinite scroll sentinel
@@ -96,9 +108,12 @@ export function PartnerListPanel({
   const totalCount = paginatedData?.pages?.[0]?.total ?? stats.total;
   const currentSortLabel = useMemo(() => {
     switch (activeSort) {
-      case "rating": return "Rating";
-      case "recent": return "Più recenti";
-      default: return "Nome";
+      case "rating":
+        return "Rating";
+      case "recent":
+        return "Più recenti";
+      default:
+        return "Nome";
     }
   }, [activeSort]);
   const headerTitle = useMemo(() => {
@@ -116,7 +131,14 @@ export function PartnerListPanel({
     let list = partners || [];
 
     if (progressFilter === "deep") {
-      list = list.filter((p) => !(p.enrichment_data && typeof p.enrichment_data === "object" && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
+      list = list.filter(
+        (p) =>
+          !(
+            p.enrichment_data &&
+            typeof p.enrichment_data === "object" &&
+            (p.enrichment_data as Record<string, unknown>)?.deep_search_at
+          ),
+      );
     }
 
     // Country tab filter
@@ -132,14 +154,25 @@ export function PartnerListPanel({
     if (countryCodes.length <= 1) return [];
     let list = partners || [];
     if (progressFilter === "deep") {
-      list = list.filter((p) => !(p.enrichment_data && typeof p.enrichment_data === "object" && (p.enrichment_data as Record<string, unknown>)?.deep_search_at));
+      list = list.filter(
+        (p) =>
+          !(
+            p.enrichment_data &&
+            typeof p.enrichment_data === "object" &&
+            (p.enrichment_data as Record<string, unknown>)?.deep_search_at
+          ),
+      );
     }
     const counts: Record<string, number> = {};
     for (const p of list as { country_code?: string }[]) {
       const cc = p.country_code || "??";
       counts[cc] = (counts[cc] || 0) + 1;
     }
-    return countryCodes.map(cc => ({ code: cc, name: countryNames[countryCodes.indexOf(cc)] || cc, count: counts[cc] || 0 }));
+    return countryCodes.map((cc) => ({
+      code: cc,
+      name: countryNames[countryCodes.indexOf(cc)] || cc,
+      count: counts[cc] || 0,
+    }));
   }, [countryCodes, countryNames, partners, progressFilter]);
 
   // Reset active tab when countries change
@@ -148,72 +181,116 @@ export function PartnerListPanel({
   }, [countryCodes.join(",")]);
 
   const togglePartnerSelect = useCallback((id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
 
-  const handleSendTo = useCallback(async (destination: "cockpit" | "workspace") => {
-    if (selectedIds.size === 0) return;
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-    const userId = user?.id;
-    if (!userId) { toast.error("Utente non autenticato"); return; }
-    const partnerList = (partners || []).filter((p: { id: string }) => selectedIds.has(p.id));
+  const handleSendTo = useCallback(
+    async (destination: "cockpit" | "workspace") => {
+      if (selectedIds.size === 0) return;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
+      const userId = user?.id;
+      if (!userId) {
+        toast.error("Utente non autenticato");
+        return;
+      }
+      const partnerList = (partners || []).filter((p: { id: string }) => selectedIds.has(p.id));
 
-    if (destination === "cockpit") {
-      const items: { source_type: string; source_id: string; partner_id: string; user_id: string; status: string }[] = [];
-      for (const p of partnerList as { id: string; partner_contacts?: { id: string; is_primary?: boolean; name?: string; email?: string; mobile?: string; direct_phone?: string }[] }[]) {
-        const contacts = p.partner_contacts || [];
-        if (contacts.length > 0) {
-          for (const c of contacts) {
-            items.push({ source_type: "partner_contact", source_id: c.id, partner_id: p.id, user_id: userId, status: "queued" });
+      if (destination === "cockpit") {
+        const items: { source_type: string; source_id: string; partner_id: string; user_id: string; status: string }[] =
+          [];
+        for (const p of partnerList as {
+          id: string;
+          partner_contacts?: {
+            id: string;
+            is_primary?: boolean;
+            name?: string;
+            email?: string;
+            mobile?: string;
+            direct_phone?: string;
+          }[];
+        }[]) {
+          const contacts = p.partner_contacts || [];
+          if (contacts.length > 0) {
+            for (const c of contacts) {
+              items.push({
+                source_type: "partner_contact",
+                source_id: c.id,
+                partner_id: p.id,
+                user_id: userId,
+                status: "queued",
+              });
+            }
+          } else {
+            items.push({
+              source_type: "partner_contact",
+              source_id: p.id,
+              partner_id: p.id,
+              user_id: userId,
+              status: "queued",
+            });
           }
-        } else {
-          items.push({ source_type: "partner_contact", source_id: p.id, partner_id: p.id, user_id: userId, status: "queued" });
         }
-      }
-      if (items.length > 0) {
-        await insertCockpitQueueItems(items);
-        // Store for auto-preselection in Cockpit
-        const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
-        addCockpitPreselection(items.map(i => i.source_id));
-      }
-      toast.success(`${partnerList.length} partner inviati a Cockpit`);
-    } else {
-      const inserts = partnerList.map((p: { id: string; company_name?: string; country_code?: string; city?: string; partner_contacts?: { id: string; is_primary?: boolean; name?: string; email?: string }[] }) => {
-        const contacts = p.partner_contacts || [];
-        const primary = contacts.find((c) => c.is_primary) || contacts[0];
-        return {
-          activity_type: "send_email" as const,
-          title: `Email a ${p.company_name}`,
-          source_type: "partner",
-          source_id: p.id,
-          partner_id: p.id,
-          selected_contact_id: primary?.id || null,
-          status: "pending" as const,
-          source_meta: {
-            company_name: p.company_name,
-            country_code: p.country_code,
-            city: p.city,
-            contact_name: primary?.name || null,
-            contact_email: primary?.email || null,
+        if (items.length > 0) {
+          await insertCockpitQueueItems(items);
+          // Store for auto-preselection in Cockpit
+          const { addCockpitPreselection } = await import("@/lib/cockpitPreselection");
+          addCockpitPreselection(items.map((i) => i.source_id));
+        }
+        toast.success(`${partnerList.length} partner inviati a Cockpit`);
+      } else {
+        const inserts = partnerList.map(
+          (p: {
+            id: string;
+            company_name?: string;
+            country_code?: string;
+            city?: string;
+            partner_contacts?: { id: string; is_primary?: boolean; name?: string; email?: string }[];
+          }) => {
+            const contacts = p.partner_contacts || [];
+            const primary = contacts.find((c) => c.is_primary) || contacts[0];
+            return {
+              activity_type: "send_email" as const,
+              title: `Email a ${p.company_name}`,
+              source_type: "partner",
+              source_id: p.id,
+              partner_id: p.id,
+              selected_contact_id: primary?.id || null,
+              status: "pending" as const,
+              source_meta: {
+                company_name: p.company_name,
+                country_code: p.country_code,
+                city: p.city,
+                contact_name: primary?.name || null,
+                contact_email: primary?.email || null,
+              },
+              user_id: userId,
+            };
           },
-          user_id: userId,
-        };
-      });
-      await createActivities(inserts as Parameters<typeof createActivities>[0]);
-      toast.success(`${inserts.length} partner inviati a Workspace`);
-    }
-    setSelectedIds(new Set());
-    const tab = destination === "cockpit" ? "cockpit" : "workspace";
-    navigate(`/outreach?tab=${tab}`);
-  }, [selectedIds, partners, navigate]);
+        );
+        await createActivities(inserts as Parameters<typeof createActivities>[0]);
+        toast.success(`${inserts.length} partner inviati a Workspace`);
+      }
+      setSelectedIds(new Set());
+      const tab = destination === "cockpit" ? "cockpit" : "workspace";
+      navigate(`/outreach?tab=${tab}`);
+    },
+    [selectedIds, partners, navigate],
+  );
 
-  const handleSelectPartner = useCallback((id: string) => {
-    if (onSelectPartner) onSelectPartner(id);
-  }, [onSelectPartner]);
+  const handleSelectPartner = useCallback(
+    (id: string) => {
+      if (onSelectPartner) onSelectPartner(id);
+    },
+    [onSelectPartner],
+  );
 
   // Auto-select first partner when list loads and nothing is selected
   useEffect(() => {
@@ -223,7 +300,7 @@ export function PartnerListPanel({
   }, [filteredPartners, selectedPartnerId, onSelectPartner]);
 
   const toggleProgressFilter = (key: ProgressFilterKey) => {
-    setProgressFilter(prev => prev === key ? null : key);
+    setProgressFilter((prev) => (prev === key ? null : key));
   };
 
   return (
@@ -236,25 +313,35 @@ export function PartnerListPanel({
             <div className="flex items-center gap-0.5 flex-shrink-0">
               {hasSelectedCountries ? (
                 <>
-                  {countryCodes.slice(0, 5).map(cc => (
-                    <span key={cc} className="text-lg leading-none">{getCountryFlag(cc)}</span>
+                  {countryCodes.slice(0, 5).map((cc) => (
+                    <span key={cc} className="text-lg leading-none">
+                      {getCountryFlag(cc)}
+                    </span>
                   ))}
-                  {countryCodes.length > 5 && <span className={cn("text-[10px] font-bold ml-0.5", "text-muted-foreground")}>+{countryCodes.length - 5}</span>}
+                  {countryCodes.length > 5 && (
+                    <span className={cn("text-[10px] font-bold ml-0.5", "text-muted-foreground")}>
+                      +{countryCodes.length - 5}
+                    </span>
+                  )}
                 </>
               ) : (
                 <span className="text-lg leading-none">🌍</span>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-bold truncate text-foreground">
-                {headerTitle}
-              </h2>
-              <span className="text-[10px] font-mono text-muted-foreground">
-                {stats.total} partner
-              </span>
+              <h2 className="text-sm font-bold truncate text-foreground">{headerTitle}</h2>
+              <span className="text-[10px] font-mono text-muted-foreground">{stats.total} partner</span>
             </div>
             {/* Deep Search filter only */}
-            <IconIndicator icon={Telescope} count={stats.total - stats.withDeep} label="Senza Deep Search" isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} verified={verified.deep} />
+            <IconIndicator
+              icon={Telescope}
+              count={stats.total - stats.withDeep}
+              label="Senza Deep Search"
+              isDark={isDark}
+              onClick={() => toggleProgressFilter("deep")}
+              active={progressFilter === "deep"}
+              verified={verified.deep}
+            />
           </div>
 
           {/* ROW 2: Active filters summary + Reset */}
@@ -299,7 +386,7 @@ export function PartnerListPanel({
                   { value: "name", label: "Nome" },
                   { value: "rating", label: "Rating" },
                   { value: "recent", label: "Più recenti" },
-                ].map(o => (
+                ].map((o) => (
                   <DropdownMenuItem
                     key={o.value}
                     onClick={() => g.setNetworkSort(o.value)}
@@ -329,7 +416,9 @@ export function PartnerListPanel({
             )}
 
             <span className="ml-auto text-[10px] tabular-nums whitespace-nowrap text-muted-foreground">
-              {isLoading ? "..." : `${filteredPartners.length}${totalCount > 0 ? ` / ${totalCount}` : ""}${progressFilter ? " filtrati" : ""}`}
+              {isLoading
+                ? "..."
+                : `${filteredPartners.length}${totalCount > 0 ? ` / ${totalCount}` : ""}${progressFilter ? " filtrati" : ""}`}
             </span>
           </div>
 
@@ -365,7 +454,8 @@ export function PartnerListPanel({
             <div className="w-px h-3 bg-border/50 mx-1" />
             <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <Plane className="w-3 h-3" />Nascondi in circuito ({holdingCount})
+              <Plane className="w-3 h-3" />
+              Nascondi in circuito ({holdingCount})
             </span>
           </div>
 
@@ -377,10 +467,14 @@ export function PartnerListPanel({
               onClear={() => setSelectedIds(new Set())}
               onCockpit={() => handleSendTo("cockpit")}
               onWorkspace={() => handleSendTo("workspace")}
-              onDeepSearch={onDeepSearch ? () => {
-                const ids = Array.from(selectedIds);
-                if (ids.length > 0) onDeepSearch(ids);
-              } : undefined}
+              onDeepSearch={
+                onDeepSearch
+                  ? () => {
+                      const ids = Array.from(selectedIds);
+                      if (ids.length > 0) onDeepSearch(ids);
+                    }
+                  : undefined
+              }
               deepSearchLoading={deepSearchRunning}
               onLinkedIn={() => {
                 const partner = (partners || []).find((p: { id: string }) => selectedIds.has(p.id));
@@ -391,12 +485,18 @@ export function PartnerListPanel({
               }}
               onWhatsApp={() => {
                 const partnerList = (partners || []).filter((p: { id: string }) => selectedIds.has(p.id));
-                for (const p of partnerList as { id: string; partner_contacts?: { mobile?: string; direct_phone?: string }[] }[]) {
+                for (const p of partnerList as {
+                  id: string;
+                  partner_contacts?: { mobile?: string; direct_phone?: string }[];
+                }[]) {
                   const contacts = p.partner_contacts || [];
                   const c = contacts.find((c) => c.mobile || c.direct_phone);
                   if (c) {
                     const phone = (c.mobile || c.direct_phone || "").replace(/[^0-9+]/g, "");
-                    if (phone) { window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank"); break; }
+                    if (phone) {
+                      window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
+                      break;
+                    }
                   }
                 }
               }}
@@ -411,14 +511,17 @@ export function PartnerListPanel({
 
         {/* ═══ COUNTRY TABS ═══ */}
         {countryTabCounts.length > 1 && (
-          <div ref={tabsRef} className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 overflow-x-auto scrollbar-none flex-shrink-0">
+          <div
+            ref={tabsRef}
+            className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 overflow-x-auto scrollbar-none flex-shrink-0"
+          >
             <button
               onClick={() => setActiveCountryTab(null)}
               className={cn(
                 "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
                 activeCountryTab == null
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted",
               )}
             >
               Tutti
@@ -431,7 +534,7 @@ export function PartnerListPanel({
                   "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors",
                   activeCountryTab === code
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted",
                 )}
               >
                 <span>{getCountryFlag(code)}</span>
@@ -458,8 +561,17 @@ export function PartnerListPanel({
         />
       </div>
       {emailTarget && (
-        <SendEmailDialog open={!!emailTarget} onOpenChange={(open) => { if (!open) setEmailTarget(null); }}
-          recipientEmail={emailTarget.email} recipientName={emailTarget.name} companyName={emailTarget.company} partnerId={emailTarget.partnerId} isDark={isDark} />
+        <SendEmailDialog
+          open={!!emailTarget}
+          onOpenChange={(open) => {
+            if (!open) setEmailTarget(null);
+          }}
+          recipientEmail={emailTarget.email}
+          recipientName={emailTarget.name}
+          companyName={emailTarget.company}
+          partnerId={emailTarget.partnerId}
+          isDark={isDark}
+        />
       )}
     </TooltipProvider>
   );

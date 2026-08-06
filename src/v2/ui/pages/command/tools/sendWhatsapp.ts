@@ -22,7 +22,8 @@ function extractMessage(prompt: string): string {
 export const sendWhatsappTool: Tool = {
   id: "send-whatsapp",
   label: "Invia WhatsApp",
-  description: "Accoda un messaggio WhatsApp tramite l'estensione bridge (rate limit 5/min, finestra oraria operativa).",
+  description:
+    "Accoda un messaggio WhatsApp tramite l'estensione bridge (rate limit 5/min, finestra oraria operativa).",
   match: (p) => /\b(?:invia|manda|scrivi|spedisci)\b[^.]{0,40}\b(?:whatsapp|wa)\b/i.test(p),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
@@ -38,7 +39,11 @@ export const sendWhatsappTool: Tool = {
           { label: "Anteprima", value: message_text.slice(0, 140) + (message_text.length > 140 ? "…" : "") },
           { label: "Canale", value: "WhatsApp · extension bridge" },
         ],
-        governance: { role: "COMMERCIALE", permission: "WRITE:CHANNEL_MESSAGES", policy: "POLICY v1.0 · WA-RATE-5/MIN" },
+        governance: {
+          role: "COMMERCIALE",
+          permission: "WRITE:CHANNEL_MESSAGES",
+          policy: "POLICY v1.0 · WA-RATE-5/MIN",
+        },
         pendingPayload: { recipient, message_text },
         toolId: "send-whatsapp",
       };

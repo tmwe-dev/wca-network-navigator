@@ -1,14 +1,7 @@
 /**
  * PartnerDistributionChart — Donut chart of partners by status
  */
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Legend,
-  Tooltip,
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -26,10 +19,7 @@ const COLORS = [
   "#ec4899", // pink
 ];
 
-export function PartnerDistributionChart({
-  data,
-  loading = false,
-}: PartnerDistributionChartProps) {
+export function PartnerDistributionChart({ data, loading = false }: PartnerDistributionChartProps) {
   if (loading) {
     return (
       <Card className="p-4">
@@ -41,9 +31,7 @@ export function PartnerDistributionChart({
   return (
     <Card className="p-4">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-foreground">
-          Distribuzione Partner per Stato
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground">Distribuzione Partner per Stato</h3>
         <p className="text-xs text-muted-foreground">Composizione attuale</p>
       </div>
 
@@ -65,10 +53,7 @@ export function PartnerDistributionChart({
               isAnimationActive
             >
               {data.map((_, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip
@@ -83,11 +68,7 @@ export function PartnerDistributionChart({
                 return value;
               }}
             />
-            <Legend
-              wrapperStyle={{ paddingTop: "20px" }}
-              layout="horizontal"
-              align="center"
-            />
+            <Legend wrapperStyle={{ paddingTop: "20px" }} layout="horizontal" align="center" />
           </PieChart>
         </ResponsiveContainer>
       )}

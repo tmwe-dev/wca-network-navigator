@@ -7,7 +7,11 @@ import { ThemeCtx, t } from "@/components/download/theme";
 import { AtecoGrid } from "@/components/prospects/AtecoGrid";
 import { ProspectListPanel } from "@/components/prospects/ProspectListPanel";
 import { ProspectImporter } from "@/components/prospects/ProspectImporter";
-import { ProspectAdvancedFilters, EMPTY_FILTERS, type ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
+import {
+  ProspectAdvancedFilters,
+  EMPTY_FILTERS,
+  type ProspectFilters,
+} from "@/components/prospects/ProspectAdvancedFilters";
 import { Input } from "@/components/ui/input";
 import { useProspectStats } from "@/hooks/useProspectStats";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -19,7 +23,19 @@ function formatCurrency(n: number | null) {
   return `€${n.toFixed(0)}`;
 }
 
-function StatItem({ icon: Icon, label, value, color, isDark: _isDark }: { icon: React.ElementType; label: string; value: string | number; color: string; isDark: boolean }) {
+function StatItem({
+  icon: Icon,
+  label,
+  value,
+  color,
+  isDark: _isDark,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  color: string;
+  isDark: boolean;
+}) {
   return (
     <div className="flex items-center gap-2">
       <Icon className={`w-4 h-4 ${color}`} />
@@ -56,15 +72,15 @@ export function ProspectPage() {
   const { data: stats } = useProspectStats();
 
   const toggleAteco = useCallback((code: string) => {
-    setSelectedAteco(prev => prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]);
+    setSelectedAteco((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
   }, []);
 
   const removeAteco = useCallback((code: string) => {
-    setSelectedAteco(prev => prev.filter(c => c !== code));
+    setSelectedAteco((prev) => prev.filter((c) => c !== code));
   }, []);
 
   const selectMultipleAteco = useCallback((codes: string[]) => {
-    setSelectedAteco(prev => {
+    setSelectedAteco((prev) => {
       const set = new Set(prev);
       for (const c of codes) set.add(c);
       return Array.from(set);
@@ -78,38 +94,90 @@ export function ProspectPage() {
 
   return (
     <ThemeCtx.Provider value={isDark}>
-      <div data-testid="page-prospects" className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`} style={{ overscrollBehavior: 'contain' }}>
+      <div
+        data-testid="page-prospects"
+        className={`h-[calc(100vh-4rem)] relative overflow-hidden -m-6 ${th.pageBg}`}
+        style={{ overscrollBehavior: "contain" }}
+      >
         <div className={`absolute inset-0 bg-gradient-to-br ${th.pageGrad1}`} />
-        <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`} />
-        <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-primary/[0.03]" : "from-primary/5"} via-transparent to-transparent animate-pulse`} style={{ animationDuration: '10s' }} />
+        <div
+          className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${th.pageGrad2} via-transparent to-transparent`}
+        />
+        <div
+          className={`absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] ${isDark ? "from-primary/[0.03]" : "from-primary/5"} via-transparent to-transparent animate-pulse`}
+          style={{ animationDuration: "10s" }}
+        />
 
         <div className="relative z-10 h-full flex flex-col">
           <div className="flex items-center justify-between px-6 py-2 flex-shrink-0">
             <div className="flex items-center gap-3">
               <h1 className={`text-lg font-semibold ${th.h1}`}>Prospect Center</h1>
-              <span className={`text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-primary/15 text-primary border border-primary/25" : "bg-primary/10 text-primary border border-primary/20"}`}>
+              <span
+                className={`text-xs px-2.5 py-1 rounded-full ${isDark ? "bg-primary/15 text-primary border border-primary/25" : "bg-primary/10 text-primary border border-primary/20"}`}
+              >
                 Report Aziende
               </span>
             </div>
-            <button onClick={toggleTheme} className={`p-2 rounded-xl transition-all ${isDark ? "bg-card/60 hover:bg-card text-primary" : "bg-card/80 hover:bg-card shadow-sm text-primary"}`}>
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-xl transition-all ${isDark ? "bg-card/60 hover:bg-card text-primary" : "bg-card/80 hover:bg-card shadow-sm text-primary"}`}
+            >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
 
           {stats && stats.total > 0 && (
             <div className="flex-shrink-0 mx-6 mb-3">
-              <div className={`flex items-center justify-center gap-8 px-6 py-2.5 rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
-                <StatItem icon={Building2} label="Prospect" value={stats.total.toLocaleString()} color="text-primary" isDark={isDark} />
+              <div
+                className={`flex items-center justify-center gap-8 px-6 py-2.5 rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}
+              >
+                <StatItem
+                  icon={Building2}
+                  label="Prospect"
+                  value={stats.total.toLocaleString()}
+                  color="text-primary"
+                  isDark={isDark}
+                />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
-                <StatItem icon={Mail} label="Email" value={stats.withEmail.toLocaleString()} color="text-success" isDark={isDark} />
+                <StatItem
+                  icon={Mail}
+                  label="Email"
+                  value={stats.withEmail.toLocaleString()}
+                  color="text-success"
+                  isDark={isDark}
+                />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
-                <StatItem icon={Mail} label="PEC" value={stats.withPec.toLocaleString()} color="text-success" isDark={isDark} />
+                <StatItem
+                  icon={Mail}
+                  label="PEC"
+                  value={stats.withPec.toLocaleString()}
+                  color="text-success"
+                  isDark={isDark}
+                />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
-                <StatItem icon={Phone} label="Telefoni" value={stats.withPhone.toLocaleString()} color="text-primary" isDark={isDark} />
+                <StatItem
+                  icon={Phone}
+                  label="Telefoni"
+                  value={stats.withPhone.toLocaleString()}
+                  color="text-primary"
+                  isDark={isDark}
+                />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
-                <StatItem icon={Euro} label="Fatturato Medio" value={formatCurrency(stats.avgFatturato)} color="text-primary" isDark={isDark} />
+                <StatItem
+                  icon={Euro}
+                  label="Fatturato Medio"
+                  value={formatCurrency(stats.avgFatturato)}
+                  color="text-primary"
+                  isDark={isDark}
+                />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
-                <StatItem icon={FileText} label="Settori ATECO" value={stats.atecoSections} color="text-primary" isDark={isDark} />
+                <StatItem
+                  icon={FileText}
+                  label="Settori ATECO"
+                  value={stats.atecoSections}
+                  color="text-primary"
+                  isDark={isDark}
+                />
               </div>
             </div>
           )}
@@ -121,11 +189,14 @@ export function ProspectPage() {
                 <Input
                   placeholder="Cerca per nome o P.IVA..."
                   value={quickSearch}
-                  onChange={e => setQuickSearch(e.target.value)}
+                  onChange={(e) => setQuickSearch(e.target.value)}
                   className={`pl-9 pr-8 h-10 rounded-xl text-sm ${isDark ? "bg-white/5 border-white/10 text-foreground placeholder:text-muted-foreground" : "bg-card border-border placeholder:text-muted-foreground"}`}
                 />
                 {quickSearch && (
-                  <button onClick={() => setQuickSearch("")} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground`}>
+                  <button
+                    onClick={() => setQuickSearch("")}
+                    className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground`}
+                  >
                     <X className="w-4 h-4" />
                   </button>
                 )}
@@ -149,23 +220,33 @@ export function ProspectPage() {
 
             <div className="flex-1 min-h-0 flex flex-col">
               <Tabs defaultValue="prospect" className="flex-1 min-h-0 flex flex-col">
-                <TabsList className={`self-start mb-2 ${isDark ? "bg-white/[0.06] border border-white/[0.08]" : "bg-white/60 border border-white/80"}`}>
-                  <TabsTrigger value="prospect" className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-primary-foreground" : ""}`}>
+                <TabsList
+                  className={`self-start mb-2 ${isDark ? "bg-white/[0.06] border border-white/[0.08]" : "bg-white/60 border border-white/80"}`}
+                >
+                  <TabsTrigger
+                    value="prospect"
+                    className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-primary-foreground" : ""}`}
+                  >
                     <FileText className="w-3.5 h-3.5" /> Prospect
                   </TabsTrigger>
-                  <TabsTrigger value="import" className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-primary-foreground" : ""}`}>
+                  <TabsTrigger
+                    value="import"
+                    className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-primary-foreground" : ""}`}
+                  >
                     <Download className="w-3.5 h-3.5" /> Importa
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="prospect" className="flex-1 min-h-0 mt-0">
                   {quickSearch.length >= 2 ? (
-                    <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
-                      <div className={`flex items-center gap-3 px-4 py-2 border-b ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
+                    <div
+                      className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}
+                    >
+                      <div
+                        className={`flex items-center gap-3 px-4 py-2 border-b ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}
+                      >
                         <Search className={`w-4 h-4 text-primary`} />
-                        <span className={`text-sm font-semibold ${th.h2}`}>
-                          Ricerca: "{quickSearch}"
-                        </span>
+                        <span className={`text-sm font-semibold ${th.h2}`}>Ricerca: "{quickSearch}"</span>
                       </div>
                       <ProspectListPanel
                         atecoCodes={selectedAteco}
@@ -177,24 +258,38 @@ export function ProspectPage() {
                       />
                     </div>
                   ) : selectedAteco.length === 0 ? (
-                    <div className={`h-full flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
+                    <div
+                      className={`h-full flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}
+                    >
                       <div className="text-center space-y-3">
-                        <FileText className={`w-20 h-20 mx-auto ${isDark ? "text-primary-foreground" : "text-slate-200"}`} />
+                        <FileText
+                          className={`w-20 h-20 mx-auto ${isDark ? "text-primary-foreground" : "text-slate-200"}`}
+                        />
                         <p className={`text-lg ${th.h2}`}>Seleziona un codice ATECO</p>
-                        <p className={`text-sm ${th.sub}`}>Clicca su uno o più codici ATECO per visualizzare i prospect associati</p>
+                        <p className={`text-sm ${th.sub}`}>
+                          Clicca su uno o più codici ATECO per visualizzare i prospect associati
+                        </p>
                         <p className={`text-xs ${th.dim}`}>oppure usa la ricerca per nome / P.IVA</p>
                         {stats && stats.total === 0 && (
-                          <div className={`mt-4 p-4 rounded-xl border text-xs ${isDark ? "bg-primary/10 border-primary/20 text-primary" : "bg-primary/5 border-primary/20 text-primary"}`}>
+                          <div
+                            className={`mt-4 p-4 rounded-xl border text-xs ${isDark ? "bg-primary/10 border-primary/20 text-primary" : "bg-primary/5 border-primary/20 text-primary"}`}
+                          >
                             Nessun prospect nel database. Vai su "Importa" per scaricare dati da Report Aziende.
                           </div>
                         )}
                       </div>
                     </div>
                   ) : (
-                    <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
-                      <div className={`flex items-center gap-3 px-4 py-2 border-b ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}>
+                    <div
+                      className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}
+                    >
+                      <div
+                        className={`flex items-center gap-3 px-4 py-2 border-b ${isDark ? "border-white/[0.08]" : "border-slate-200/60"}`}
+                      >
                         <span className={`text-sm font-semibold ${th.h2}`}>
-                          {selectedAteco.length === 1 ? `ATECO ${selectedAteco[0]}` : `${selectedAteco.length} codici ATECO`}
+                          {selectedAteco.length === 1
+                            ? `ATECO ${selectedAteco[0]}`
+                            : `${selectedAteco.length} codici ATECO`}
                         </span>
                       </div>
                       <ProspectListPanel
@@ -209,8 +304,16 @@ export function ProspectPage() {
                 </TabsContent>
 
                 <TabsContent value="import" className="flex-1 min-h-0 mt-0">
-                  <div className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}>
-                    <ProspectImporter isDark={isDark} atecoCodes={selectedAteco} regions={regionFilter} provinces={provinceFilter} filters={advFilters} />
+                  <div
+                    className={`h-full rounded-2xl border overflow-hidden ${isDark ? "bg-white/[0.02] backdrop-blur-xl border-white/[0.08]" : "bg-white/40 backdrop-blur-xl border-white/80"}`}
+                  >
+                    <ProspectImporter
+                      isDark={isDark}
+                      atecoCodes={selectedAteco}
+                      regions={regionFilter}
+                      provinces={provinceFilter}
+                      filters={advFilters}
+                    />
                   </div>
                 </TabsContent>
               </Tabs>

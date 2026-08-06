@@ -10,10 +10,7 @@ import { operatorId, userId } from "../../../core/domain/entities";
 
 export async function fetchOperators(): Promise<Result<Operator[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("operators")
-      .select("*")
-      .order("created_at", { ascending: true });
+    const { data, error } = await supabase.from("operators").select("*").order("created_at", { ascending: true });
     if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "operators" }, "fetchOperators"));
     if (!data) return ok([]);
     const ops: Operator[] = [];

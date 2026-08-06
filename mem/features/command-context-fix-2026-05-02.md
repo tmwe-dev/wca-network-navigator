@@ -5,11 +5,13 @@ type: feature
 ---
 
 ## Problema risolto
+
 Sequenza "Arabia Saudita → Amman → prepara un invito a tutti" non passava
 i 31 partner di Amman a `compose-email`. Il tool cadeva nel ramo "singolo
 partner" e cercava un'azienda chiamata "calcio" → 0 risultati.
 
 ## Cause
+
 1. `executeApprovedStep` non passava `originalPrompt`/`history`/`contextHint`.
 2. `compose-email` riceveva JSON serializzato e non trovava il testo naturale.
 3. `lastQueryResultContext` salvava solo `partnerIds`+`countryCode`, non i
@@ -18,6 +20,7 @@ partner" e cercava un'azienda chiamata "calcio" → 0 risultati.
 5. Nessun guardrail: invito generico → ricerca azienda fittizia.
 
 ## Fix
+
 - `planRunner.executeApprovedStep` propaga `extras` (originalPrompt/history).
 - `composeEmail.resolveNaturalPrompt` estrae il prompt da JSON o da context.
 - `lastQueryResultContext` ora salva `table`, `filters`, `count`, `selectionLabel`.
@@ -28,4 +31,5 @@ partner" e cercava un'azienda chiamata "calcio" → 0 risultati.
   prompt è un invito generico senza identificazione esplicita.
 
 ## Test
+
 24/24 verdi in `lastQueryResultContext.test.ts`.

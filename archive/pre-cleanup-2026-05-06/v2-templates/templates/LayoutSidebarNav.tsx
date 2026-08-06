@@ -6,9 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { prefetchRoute } from "@/lib/prefetchRoutes";
-import {
-  LogOut, Command, Wifi, WifiOff, Sun, Moon,
-} from "lucide-react";
+import { LogOut, Command, Wifi, WifiOff, Sun, Moon } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { navItemsDef, navGroupsDef } from "./navConfig";
 import { OrphanPagesNav } from "./OrphanPagesNav";
@@ -33,8 +31,15 @@ interface SidebarProps {
 }
 
 export function LayoutSidebarNav({
-  profileName, wcaStatusColor, wcaStatusLabel, wcaSessionActive,
-  onWcaReconnect, isDark, onToggleTheme, onSignOut, onMobileClose,
+  profileName,
+  wcaStatusColor,
+  wcaStatusLabel,
+  wcaSessionActive,
+  onWcaReconnect,
+  isDark,
+  onToggleTheme,
+  onSignOut,
+  onMobileClose,
   onOpenCommandPalette,
 }: SidebarProps): React.ReactElement {
   const navigate = useNavigate();
@@ -55,15 +60,16 @@ export function LayoutSidebarNav({
           </div>
           <div>
             <h2 className="text-sm font-bold text-foreground leading-tight">WCA Partners</h2>
-            {profileName ? (
-              <p className="text-[10px] text-muted-foreground truncate">{profileName}</p>
-            ) : null}
+            {profileName ? <p className="text-[10px] text-muted-foreground truncate">{profileName}</p> : null}
           </div>
         </div>
       </div>
       {onOpenCommandPalette && (
         <button
-          onClick={() => { onOpenCommandPalette(); onMobileClose?.(); }}
+          onClick={() => {
+            onOpenCommandPalette();
+            onMobileClose?.();
+          }}
           className="mx-3 mt-2 mb-1 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15 transition-colors"
           aria-label="Apri ricerca rapida"
           data-testid="sidebar-command-button"
@@ -79,20 +85,20 @@ export function LayoutSidebarNav({
         <div className="space-y-1" aria-label="Navigazione principale">
           {navItemsDef.map((navItem) => {
             const navId =
-              navItem.path.replace("/v2/", "").replace("/v2", "dashboard").replace(/\//g, "-") ||
-              "dashboard";
+              navItem.path.replace("/v2/", "").replace("/v2", "dashboard").replace(/\//g, "-") || "dashboard";
             const translated = t(navItem.labelKey);
             // Fallback: when the i18n key is not registered yet, show a humanized stem.
             const label =
-              translated === navItem.labelKey
-                ? navItem.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
-                : translated;
+              translated === navItem.labelKey ? navItem.labelKey.replace(/^nav\./, "").replace(/_/g, " ") : translated;
             return (
               <button
                 key={navItem.path}
                 data-testid={`nav-${navId}`}
                 onMouseEnter={() => prefetchRoute(navItem.path)}
-                onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
+                onClick={() => {
+                  navigate(navItem.path);
+                  onMobileClose?.();
+                }}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors capitalize",
                   isActive(navItem.path)

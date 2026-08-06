@@ -4,7 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, Loader2, Globe, Linkedin, Phone, Brain, Mail, LayoutDashboard, Users, CreditCard, type LucideIcon } from "lucide-react";
+import {
+  Save,
+  Loader2,
+  Globe,
+  Linkedin,
+  Phone,
+  Brain,
+  Mail,
+  LayoutDashboard,
+  Users,
+  CreditCard,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 
@@ -32,10 +44,30 @@ const CONTEXT_LABELS: Record<string, { label: string; description: string; icon:
 };
 
 const OPTIONS = [
-  { key: "scrapeWebsite" as const, label: "Scrape sito web", icon: Globe, description: "Analizza il sito aziendale del partner" },
-  { key: "scrapeLinkedin" as const, label: "Scrape LinkedIn", icon: Linkedin, description: "Analizza il profilo LinkedIn (se URL presente)" },
-  { key: "verifyWhatsapp" as const, label: "Verifica WhatsApp", icon: Phone, description: "Controlla se il numero è su WhatsApp" },
-  { key: "aiAnalysis" as const, label: "Analisi AI profilo", icon: Brain, description: "Genera un briefing AI sul partner" },
+  {
+    key: "scrapeWebsite" as const,
+    label: "Scrape sito web",
+    icon: Globe,
+    description: "Analizza il sito aziendale del partner",
+  },
+  {
+    key: "scrapeLinkedin" as const,
+    label: "Scrape LinkedIn",
+    icon: Linkedin,
+    description: "Analizza il profilo LinkedIn (se URL presente)",
+  },
+  {
+    key: "verifyWhatsapp" as const,
+    label: "Verifica WhatsApp",
+    icon: Phone,
+    description: "Controlla se il numero è su WhatsApp",
+  },
+  {
+    key: "aiAnalysis" as const,
+    label: "Analisi AI profilo",
+    icon: Brain,
+    description: "Genera un briefing AI sul partner",
+  },
 ];
 
 export function DeepSearchConfig() {
@@ -49,12 +81,14 @@ export function DeepSearchConfig() {
       try {
         const parsed = JSON.parse(settings.deep_search_config);
         setConfig({ ...DEFAULT_CONFIG, ...parsed });
-      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* use defaults */ }
+      } catch (e) {
+        log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* use defaults */
+      }
     }
   }, [settings?.deep_search_config]);
 
   const handleToggle = (context: string, option: keyof ContextConfig) => {
-    setConfig(prev => ({
+    setConfig((prev) => ({
       ...prev,
       [context]: { ...prev[context], [option]: !prev[context][option] },
     }));
@@ -65,8 +99,12 @@ export function DeepSearchConfig() {
     try {
       await updateSetting.mutateAsync({ key: "deep_search_config", value: JSON.stringify(config) });
       toast.success("Configurazione Deep Search salvata");
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
-    finally { setSaving(false); }
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const activeCount = (ctx: ContextConfig) => Object.values(ctx).filter(Boolean).length;
@@ -91,12 +129,14 @@ export function DeepSearchConfig() {
                   <meta.icon className="h-4 w-4 text-primary" />
                   <CardTitle className="text-sm">{meta.label}</CardTitle>
                 </div>
-                <Badge variant="secondary" className="text-[10px]">{activeCount(config[key])} / 4</Badge>
+                <Badge variant="secondary" className="text-[10px]">
+                  {activeCount(config[key])} / 4
+                </Badge>
               </div>
               <p className="text-[10px] text-muted-foreground">{meta.description}</p>
             </CardHeader>
             <CardContent className="pt-0 space-y-2">
-              {OPTIONS.map(opt => (
+              {OPTIONS.map((opt) => (
                 <label key={opt.key} className="flex items-center gap-2.5 cursor-pointer group">
                   <Checkbox
                     checked={config[key]?.[opt.key] ?? false}

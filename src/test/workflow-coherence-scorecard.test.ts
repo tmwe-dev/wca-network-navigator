@@ -8,15 +8,10 @@ import { describe, it, expect } from "vitest";
 describe("UI vs DB consistency", () => {
   it("draft sent_count must match actual sent queue items", () => {
     // Simulates the auto-finalization logic in process-email-queue lines 226-241
-    const queueItems = [
-      { status: "sent" },
-      { status: "sent" },
-      { status: "failed" },
-      { status: "sent" },
-    ];
+    const queueItems = [{ status: "sent" }, { status: "sent" }, { status: "failed" }, { status: "sent" }];
 
-    const actualSent = queueItems.filter(s => s.status === "sent").length;
-    const actualFailed = queueItems.filter(s => s.status === "failed").length;
+    const actualSent = queueItems.filter((s) => s.status === "sent").length;
+    const actualFailed = queueItems.filter((s) => s.status === "failed").length;
 
     // Draft update uses these exact counts
     const draftUpdate = {
@@ -31,13 +26,10 @@ describe("UI vs DB consistency", () => {
   });
 
   it("all-failed queue produces error status, not sent", () => {
-    const queueItems = [
-      { status: "failed" },
-      { status: "failed" },
-    ];
+    const queueItems = [{ status: "failed" }, { status: "failed" }];
 
-    const finalSent = queueItems.filter(s => s.status === "sent").length;
-    const finalFailed = queueItems.filter(s => s.status === "failed").length;
+    const finalSent = queueItems.filter((s) => s.status === "sent").length;
+    const finalFailed = queueItems.filter((s) => s.status === "failed").length;
 
     const draftStatus = finalFailed > 0 && finalSent === 0 ? "error" : "sent";
     expect(draftStatus).toBe("error");

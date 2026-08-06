@@ -8,7 +8,10 @@ export const ACTIVITY_TOOLS: Record<string, unknown> = {
     function: {
       name: "list_reminders",
       description: "List reminders.",
-      parameters: { type: "object", properties: { status: { type: "string" }, priority: { type: "string" }, partner_name: { type: "string" } } },
+      parameters: {
+        type: "object",
+        properties: { status: { type: "string" }, priority: { type: "string" }, partner_name: { type: "string" } },
+      },
     },
   },
   add_partner_note: {
@@ -18,7 +21,13 @@ export const ACTIVITY_TOOLS: Record<string, unknown> = {
       description: "Add a note/interaction to a partner.",
       parameters: {
         type: "object",
-        properties: { partner_id: { type: "string" }, company_name: { type: "string" }, subject: { type: "string" }, notes: { type: "string" }, interaction_type: { type: "string" } },
+        properties: {
+          partner_id: { type: "string" },
+          company_name: { type: "string" },
+          subject: { type: "string" },
+          notes: { type: "string" },
+          interaction_type: { type: "string" },
+        },
         required: ["subject"],
       },
     },
@@ -30,7 +39,14 @@ export const ACTIVITY_TOOLS: Record<string, unknown> = {
       description: "Create a reminder for a partner.",
       parameters: {
         type: "object",
-        properties: { partner_id: { type: "string" }, company_name: { type: "string" }, title: { type: "string" }, description: { type: "string" }, due_date: { type: "string" }, priority: { type: "string" } },
+        properties: {
+          partner_id: { type: "string" },
+          company_name: { type: "string" },
+          title: { type: "string" },
+          description: { type: "string" },
+          due_date: { type: "string" },
+          priority: { type: "string" },
+        },
         required: ["title", "due_date"],
       },
     },
@@ -42,7 +58,13 @@ export const ACTIVITY_TOOLS: Record<string, unknown> = {
       description: "Update or delete a reminder.",
       parameters: {
         type: "object",
-        properties: { reminder_id: { type: "string" }, status: { type: "string" }, priority: { type: "string" }, due_date: { type: "string" }, delete: { type: "boolean" } },
+        properties: {
+          reminder_id: { type: "string" },
+          status: { type: "string" },
+          priority: { type: "string" },
+          due_date: { type: "string" },
+          delete: { type: "boolean" },
+        },
         required: ["reminder_id"],
       },
     },
@@ -54,7 +76,14 @@ export const ACTIVITY_TOOLS: Record<string, unknown> = {
       description: "List activities from the agenda.",
       parameters: {
         type: "object",
-        properties: { status: { type: "string" }, activity_type: { type: "string" }, partner_name: { type: "string" }, due_before: { type: "string" }, due_after: { type: "string" }, limit: { type: "number" } },
+        properties: {
+          status: { type: "string" },
+          activity_type: { type: "string" },
+          partner_name: { type: "string" },
+          due_before: { type: "string" },
+          due_after: { type: "string" },
+          limit: { type: "number" },
+        },
       },
     },
   },
@@ -65,7 +94,17 @@ export const ACTIVITY_TOOLS: Record<string, unknown> = {
       description: "Create a new activity.",
       parameters: {
         type: "object",
-        properties: { title: { type: "string" }, description: { type: "string" }, activity_type: { type: "string" }, partner_id: { type: "string" }, company_name: { type: "string" }, due_date: { type: "string" }, priority: { type: "string" }, email_subject: { type: "string" }, email_body: { type: "string" } },
+        properties: {
+          title: { type: "string" },
+          description: { type: "string" },
+          activity_type: { type: "string" },
+          partner_id: { type: "string" },
+          company_name: { type: "string" },
+          due_date: { type: "string" },
+          priority: { type: "string" },
+          email_subject: { type: "string" },
+          email_body: { type: "string" },
+        },
         required: ["title", "activity_type"],
       },
     },
@@ -77,7 +116,12 @@ export const ACTIVITY_TOOLS: Record<string, unknown> = {
       description: "Update an activity.",
       parameters: {
         type: "object",
-        properties: { activity_id: { type: "string" }, status: { type: "string" }, priority: { type: "string" }, due_date: { type: "string" } },
+        properties: {
+          activity_id: { type: "string" },
+          status: { type: "string" },
+          priority: { type: "string" },
+          due_date: { type: "string" },
+        },
         required: ["activity_id"],
       },
     },
@@ -87,7 +131,16 @@ export const ACTIVITY_TOOLS: Record<string, unknown> = {
     function: {
       name: "search_business_cards",
       description: "Search business cards.",
-      parameters: { type: "object", properties: { event_name: { type: "string" }, company_name: { type: "string" }, contact_name: { type: "string" }, match_status: { type: "string" }, limit: { type: "number" } } },
+      parameters: {
+        type: "object",
+        properties: {
+          event_name: { type: "string" },
+          company_name: { type: "string" },
+          contact_name: { type: "string" },
+          match_status: { type: "string" },
+          limit: { type: "number" },
+        },
+      },
     },
   },
   delete_records: {

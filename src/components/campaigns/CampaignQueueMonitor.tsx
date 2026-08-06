@@ -18,9 +18,7 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusCh
   const { items, stats } = useEmailCampaignQueue(draftId);
   const { processing, startProcessing, pauseProcessing, cancelProcessing } = useProcessQueue();
 
-  const progressPercent = stats.total > 0 
-    ? ((stats.sent + stats.failed + stats.cancelled) / stats.total) * 100 
-    : 0;
+  const progressPercent = stats.total > 0 ? ((stats.sent + stats.failed + stats.cancelled) / stats.total) * 100 : 0;
 
   const isActive = queueStatus === "processing" || processing;
   const isPaused = queueStatus === "paused";
@@ -28,11 +26,35 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusCh
   const isCancelled = queueStatus === "cancelled";
 
   const statusBadge = useMemo(() => {
-    if (isActive) return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30"><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Invio in corso</Badge>;
-    if (isPaused) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30"><Pause className="w-3 h-3 mr-1" /> In pausa</Badge>;
-    if (isCompleted) return <Badge className="bg-green-500/20 text-green-400 border-green-500/30"><CheckCircle2 className="w-3 h-3 mr-1" /> Completata</Badge>;
-    if (isCancelled) return <Badge className="bg-red-500/20 text-red-400 border-red-500/30"><XCircle className="w-3 h-3 mr-1" /> Annullata</Badge>;
-    return <Badge variant="outline"><Clock className="w-3 h-3 mr-1" /> In coda</Badge>;
+    if (isActive)
+      return (
+        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+          <Loader2 className="w-3 h-3 mr-1 animate-spin" /> Invio in corso
+        </Badge>
+      );
+    if (isPaused)
+      return (
+        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+          <Pause className="w-3 h-3 mr-1" /> In pausa
+        </Badge>
+      );
+    if (isCompleted)
+      return (
+        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+          <CheckCircle2 className="w-3 h-3 mr-1" /> Completata
+        </Badge>
+      );
+    if (isCancelled)
+      return (
+        <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+          <XCircle className="w-3 h-3 mr-1" /> Annullata
+        </Badge>
+      );
+    return (
+      <Badge variant="outline">
+        <Clock className="w-3 h-3 mr-1" /> In coda
+      </Badge>
+    );
   }, [isActive, isPaused, isCompleted, isCancelled]);
 
   const recentItems = useMemo(() => {
@@ -59,17 +81,39 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusCh
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Progresso</span>
-            <span className="font-mono">{stats.sent + stats.failed}/{stats.total}</span>
+            <span className="font-mono">
+              {stats.sent + stats.failed}/{stats.total}
+            </span>
           </div>
           <Progress value={progressPercent} className="h-3" />
         </div>
 
         {/* Stats grid */}
         <div className="grid grid-cols-4 gap-2">
-          <StatBox label="In coda" value={stats.pending} icon={<Clock className="w-3.5 h-3.5" />} color="text-muted-foreground" />
-          <StatBox label="Inviate" value={stats.sent} icon={<CheckCircle2 className="w-3.5 h-3.5" />} color="text-green-400" />
-          <StatBox label="Fallite" value={stats.failed} icon={<AlertCircle className="w-3.5 h-3.5" />} color="text-red-400" />
-          <StatBox label="Annullate" value={stats.cancelled} icon={<XCircle className="w-3.5 h-3.5" />} color="text-muted-foreground" />
+          <StatBox
+            label="In coda"
+            value={stats.pending}
+            icon={<Clock className="w-3.5 h-3.5" />}
+            color="text-muted-foreground"
+          />
+          <StatBox
+            label="Inviate"
+            value={stats.sent}
+            icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+            color="text-green-400"
+          />
+          <StatBox
+            label="Fallite"
+            value={stats.failed}
+            icon={<AlertCircle className="w-3.5 h-3.5" />}
+            color="text-red-400"
+          />
+          <StatBox
+            label="Annullate"
+            value={stats.cancelled}
+            icon={<XCircle className="w-3.5 h-3.5" />}
+            color="text-muted-foreground"
+          />
         </div>
 
         {/* Controls */}
@@ -86,12 +130,27 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusCh
             </Button>
           )}
           {isActive && (
-            <Button size="sm" variant="outline" onClick={() => { pauseProcessing(draftId); onStatusChange?.("paused"); }}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                pauseProcessing(draftId);
+                onStatusChange?.("paused");
+              }}
+            >
               <Pause className="w-4 h-4 mr-1" /> Pausa
             </Button>
           )}
           {!isCompleted && !isCancelled && stats.total > 0 && (
-            <Button size="sm" variant="destructive" onClick={() => { cancelProcessing(draftId); onStatusChange?.("cancelled"); }} disabled={isCancelled}>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                cancelProcessing(draftId);
+                onStatusChange?.("cancelled");
+              }}
+              disabled={isCancelled}
+            >
               <XCircle className="w-4 h-4 mr-1" /> Annulla
             </Button>
           )}
@@ -121,7 +180,17 @@ export function CampaignQueueMonitor({ draftId, queueStatus, onClose, onStatusCh
   );
 }
 
-function StatBox({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
+function StatBox({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  color: string;
+}) {
   return (
     <div className="text-center p-2 rounded-lg bg-muted/30 border border-border/50">
       <div className={`flex items-center justify-center gap-1 ${color}`}>
@@ -135,10 +204,15 @@ function StatBox({ label, value, icon, color }: { label: string; value: number; 
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
-    case "sent": return <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />;
-    case "failed": return <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />;
-    case "sending": return <Loader2 className="w-3 h-3 text-blue-400 animate-spin shrink-0" />;
-    case "cancelled": return <XCircle className="w-3 h-3 text-muted-foreground shrink-0" />;
-    default: return <Clock className="w-3 h-3 text-muted-foreground shrink-0" />;
+    case "sent":
+      return <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />;
+    case "failed":
+      return <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />;
+    case "sending":
+      return <Loader2 className="w-3 h-3 text-blue-400 animate-spin shrink-0" />;
+    case "cancelled":
+      return <XCircle className="w-3 h-3 text-muted-foreground shrink-0" />;
+    default:
+      return <Clock className="w-3 h-3 text-muted-foreground shrink-0" />;
   }
 }

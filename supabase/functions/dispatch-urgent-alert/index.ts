@@ -88,11 +88,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers });
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } },
-  );
+  const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+    auth: { persistSession: false },
+  });
 
   // Carica destinatari attivi del proprietario con almeno una categoria che interseca.
   const { data, error } = await supabase
@@ -107,9 +105,7 @@ Deno.serve(async (req) => {
   }
 
   const recipients = (data ?? []) as RecipientRow[];
-  const matched = recipients.filter(
-    (r) => body.urgency_score >= (r.min_urgency_score ?? 70),
-  );
+  const matched = recipients.filter((r) => body.urgency_score >= (r.min_urgency_score ?? 70));
 
   const dispatched: string[] = [];
   const skipped: { id: string; reason: string }[] = [];
@@ -162,8 +158,5 @@ Deno.serve(async (req) => {
     else dispatched.push(r.id);
   }
 
-  return new Response(
-    JSON.stringify({ ok: true, dispatched: dispatched.length, skipped }),
-    { status: 200, headers },
-  );
+  return new Response(JSON.stringify({ ok: true, dispatched: dispatched.length, skipped }), { status: 200, headers });
 });

@@ -18,13 +18,7 @@ import { Briefcase, Truck, Receipt, Wrench, HelpCircle, GripVertical, CalendarDa
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   findActivitiesForKanban,
   updateActivityDepartment,
@@ -45,17 +39,53 @@ interface ColumnDef {
 }
 
 const COLUMNS: readonly ColumnDef[] = [
-  { id: "unassigned", label: "Da assegnare",     icon: <HelpCircle className="h-3.5 w-3.5" />, colorClass: "text-muted-foreground", bgClass: "bg-muted/30",       borderClass: "border-border/40" },
-  { id: "commercial", label: "Commerciale",      icon: <Briefcase className="h-3.5 w-3.5" />,  colorClass: "text-blue-400",         bgClass: "bg-blue-500/10",    borderClass: "border-blue-500/20" },
-  { id: "operations", label: "Operativo",        icon: <Truck className="h-3.5 w-3.5" />,      colorClass: "text-warning",        bgClass: "bg-warning/10",   borderClass: "border-warning/20" },
-  { id: "admin",      label: "Amministrativo",   icon: <Receipt className="h-3.5 w-3.5" />,    colorClass: "text-indigo-400",       bgClass: "bg-indigo-500/10",  borderClass: "border-indigo-500/20" },
-  { id: "general",    label: "Servizi Generali", icon: <Wrench className="h-3.5 w-3.5" />,     colorClass: "text-purple-400",       bgClass: "bg-purple-500/10",  borderClass: "border-purple-500/20" },
+  {
+    id: "unassigned",
+    label: "Da assegnare",
+    icon: <HelpCircle className="h-3.5 w-3.5" />,
+    colorClass: "text-muted-foreground",
+    bgClass: "bg-muted/30",
+    borderClass: "border-border/40",
+  },
+  {
+    id: "commercial",
+    label: "Commerciale",
+    icon: <Briefcase className="h-3.5 w-3.5" />,
+    colorClass: "text-blue-400",
+    bgClass: "bg-blue-500/10",
+    borderClass: "border-blue-500/20",
+  },
+  {
+    id: "operations",
+    label: "Operativo",
+    icon: <Truck className="h-3.5 w-3.5" />,
+    colorClass: "text-warning",
+    bgClass: "bg-warning/10",
+    borderClass: "border-warning/20",
+  },
+  {
+    id: "admin",
+    label: "Amministrativo",
+    icon: <Receipt className="h-3.5 w-3.5" />,
+    colorClass: "text-indigo-400",
+    bgClass: "bg-indigo-500/10",
+    borderClass: "border-indigo-500/20",
+  },
+  {
+    id: "general",
+    label: "Servizi Generali",
+    icon: <Wrench className="h-3.5 w-3.5" />,
+    colorClass: "text-purple-400",
+    bgClass: "bg-purple-500/10",
+    borderClass: "border-purple-500/20",
+  },
 ] as const;
 
 function priorityBadge(p: string | null): { label: string; cls: string } | null {
   if (!p) return null;
   const v = p.toLowerCase();
-  if (v === "high" || v === "p0" || v === "critical") return { label: "P0", cls: "bg-destructive/15 text-destructive border-destructive/30" };
+  if (v === "high" || v === "p0" || v === "critical")
+    return { label: "P0", cls: "bg-destructive/15 text-destructive border-destructive/30" };
   if (v === "medium" || v === "p1") return { label: "P1", cls: "bg-warning/15 text-warning border-warning/30" };
   if (v === "low" || v === "p2") return { label: "P2", cls: "bg-info/15 text-info border-info/30" };
   return null;
@@ -106,8 +136,7 @@ export function DepartmentKanbanView(): React.ReactElement {
   });
 
   const moveMut = useMutation({
-    mutationFn: ({ id, dept }: { id: string; dept: ActivityDepartment | null }) =>
-      updateActivityDepartment(id, dept),
+    mutationFn: ({ id, dept }: { id: string; dept: ActivityDepartment | null }) => updateActivityDepartment(id, dept),
     onSuccess: () => {
       invalidateActivityCache(qc);
       qc.invalidateQueries({ queryKey: queryKeys.activities.departmentKanban });
@@ -117,7 +146,11 @@ export function DepartmentKanbanView(): React.ReactElement {
 
   const groups = useMemo(() => {
     const out: Record<ColumnId, KanbanJobCard[]> = {
-      unassigned: [], commercial: [], operations: [], admin: [], general: [],
+      unassigned: [],
+      commercial: [],
+      operations: [],
+      admin: [],
+      general: [],
     };
     for (const j of jobs || []) {
       const key: ColumnId = j.department ?? "unassigned";
@@ -146,9 +179,15 @@ export function DepartmentKanbanView(): React.ReactElement {
       if (!draggedId) return;
       const dept: ActivityDepartment | null = col === "unassigned" ? null : col;
       const job = (jobs || []).find((j) => j.id === draggedId);
-      if (!job) { setDraggedId(null); return; }
+      if (!job) {
+        setDraggedId(null);
+        return;
+      }
       const current: ColumnId = job.department ?? "unassigned";
-      if (current === col) { setDraggedId(null); return; }
+      if (current === col) {
+        setDraggedId(null);
+        return;
+      }
       moveMut.mutate({ id: draggedId, dept });
       setDraggedId(null);
     },
@@ -186,7 +225,9 @@ export function DepartmentKanbanView(): React.ReactElement {
             <div className={cn("flex items-center gap-2 border-b px-3 py-2", col.borderClass)}>
               <span className={col.colorClass}>{col.icon}</span>
               <span className="text-sm font-semibold text-foreground">{col.label}</span>
-              <Badge variant="outline" className="ml-auto text-xs">{items.length}</Badge>
+              <Badge variant="outline" className="ml-auto text-xs">
+                {items.length}
+              </Badge>
             </div>
             <ScrollArea className="flex-1">
               <div className="space-y-2 p-2">
@@ -213,17 +254,18 @@ export function DepartmentKanbanView(): React.ReactElement {
                             <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                               {cardKindLabel(j)}
                             </div>
-                            <div className="line-clamp-2 font-medium text-foreground">
-                              {cardHeadline(j)}
-                            </div>
+                            <div className="line-clamp-2 font-medium text-foreground">{cardHeadline(j)}</div>
                             {j.partner_name && (
                               <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                                {j.partner_country ? `${j.partner_country} · ` : ""}{j.partner_name}
+                                {j.partner_country ? `${j.partner_country} · ` : ""}
+                                {j.partner_name}
                               </div>
                             )}
                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                               {prio && (
-                                <span className={cn("rounded border px-1.5 py-0.5 text-[10px] font-semibold", prio.cls)}>
+                                <span
+                                  className={cn("rounded border px-1.5 py-0.5 text-[10px] font-semibold", prio.cls)}
+                                >
                                   {prio.label}
                                 </span>
                               )}
@@ -250,9 +292,7 @@ export function DepartmentKanbanView(): React.ReactElement {
           {detail && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-base">
-                  {detail.email_subject || cardHeadline(detail)}
-                </DialogTitle>
+                <DialogTitle className="text-base">{detail.email_subject || cardHeadline(detail)}</DialogTitle>
                 <DialogDescription className="text-xs">
                   {cardKindLabel(detail)}
                   {detail.partner_name ? ` · ${detail.partner_name}` : ""}
@@ -264,20 +304,26 @@ export function DepartmentKanbanView(): React.ReactElement {
                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                   <span>Creato: {new Date(detail.created_at).toLocaleString("it-IT")}</span>
                   {detail.due_date && <span>Scadenza: {new Date(detail.due_date).toLocaleString("it-IT")}</span>}
-                  {detail.scheduled_at && <span>Schedulato: {new Date(detail.scheduled_at).toLocaleString("it-IT")}</span>}
+                  {detail.scheduled_at && (
+                    <span>Schedulato: {new Date(detail.scheduled_at).toLocaleString("it-IT")}</span>
+                  )}
                   <span>Stato: {detail.status}</span>
                 </div>
 
                 {detail.description && (
                   <section>
-                    <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrizione</h4>
+                    <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Descrizione
+                    </h4>
                     <p className="whitespace-pre-line">{detail.description}</p>
                   </section>
                 )}
 
                 {detail.email_body && (
                   <section>
-                    <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email originale</h4>
+                    <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Email originale
+                    </h4>
                     <pre className="whitespace-pre-wrap break-words rounded bg-muted/40 p-3 text-xs">
                       {detail.email_body}
                     </pre>
@@ -285,7 +331,9 @@ export function DepartmentKanbanView(): React.ReactElement {
                 )}
 
                 {!detail.description && !detail.email_body && (
-                  <p className="text-xs italic text-muted-foreground">Nessun dettaglio aggiuntivo registrato per questo job.</p>
+                  <p className="text-xs italic text-muted-foreground">
+                    Nessun dettaglio aggiuntivo registrato per questo job.
+                  </p>
                 )}
 
                 {detail.partner_id && (

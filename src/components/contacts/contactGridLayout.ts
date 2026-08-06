@@ -8,8 +8,7 @@
  *  Col4: città + canali (allineati sinistra)
  *  Col5: stato/score + menu
  */
-export const CONTACT_GRID_COLS =
-  "52px 60px minmax(180px,1.4fr) minmax(160px,1fr) 110px";
+export const CONTACT_GRID_COLS = "52px 60px minmax(180px,1.4fr) minmax(160px,1fr) 110px";
 export const CONTACT_GRID_CLASS = "grid items-center gap-x-2";
 
 /** Capitalize first letter, rest lowercase */

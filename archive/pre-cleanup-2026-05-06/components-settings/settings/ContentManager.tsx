@@ -12,14 +12,32 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  BookOpen, Target, FileText, Link2, Plus, Trash2, Save, Loader2,
-  Upload, ExternalLink, X, File, RefreshCw,
-  Handshake, Mail, Search, Globe, Briefcase, TrendingUp, Users, Package, FileCheck,
-  ChevronDown, Sparkles,
+  BookOpen,
+  Target,
+  FileText,
+  Link2,
+  Plus,
+  Trash2,
+  Save,
+  Loader2,
+  Upload,
+  ExternalLink,
+  X,
+  File,
+  RefreshCw,
+  Handshake,
+  Mail,
+  Search,
+  Globe,
+  Briefcase,
+  TrendingUp,
+  Users,
+  Package,
+  FileCheck,
+  ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
@@ -46,10 +64,21 @@ function formatSize(bytes: number) {
 }
 
 function hostname(url: string) {
-  try { return new URL(url).hostname; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return url; }
+  try {
+    return new URL(url).hostname;
+  } catch (e) {
+    log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) });
+    return url;
+  }
 }
 
-function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }: {
+function ContentGridView({
+  settingKey,
+  defaults,
+  items,
+  onUpdate,
+  contentType,
+}: {
   settingKey: string;
   defaults: ContentItem[];
   items: ContentItem[];
@@ -81,7 +110,7 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
     }
     // Any remaining keys not in CONTENT_CATEGORIES
     for (const key of Object.keys(groups)) {
-      if (!CONTENT_CATEGORIES.some(c => c.key === key)) {
+      if (!CONTENT_CATEGORIES.some((c) => c.key === key)) {
         ordered.push({ key, label: key, ...groups[key] });
       }
     }
@@ -89,9 +118,10 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
   }, [items]);
 
   const toggleSection = (key: string) => {
-    setCollapsedSections(prev => {
+    setCollapsedSections((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -120,11 +150,20 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
     if (isNew && editText.trim()) {
       setCategorizing(true);
       try {
-        const data = await invokeEdge<{ category?: string }>("categorize-content", { body: { name: editName.trim(), text: editText.trim(), type: contentType === "proposal" ? "proposal" : "goal" }, context: "ContentManager.categorize_content" });
+        const data = await invokeEdge<{ category?: string }>("categorize-content", {
+          body: {
+            name: editName.trim(),
+            text: editText.trim(),
+            type: contentType === "proposal" ? "proposal" : "goal",
+          },
+          context: "ContentManager.categorize_content",
+        });
         if (data?.category) {
           finalCategory = data.category;
         }
-      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* fallback to manual */ }
+      } catch (e) {
+        log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* fallback to manual */
+      }
       setCategorizing(false);
     }
 
@@ -142,21 +181,28 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
   };
 
   const handleDelete = (index: number) => {
-    onUpdate(settingKey, items.filter((_, i) => i !== index));
+    onUpdate(
+      settingKey,
+      items.filter((_, i) => i !== index),
+    );
     toast.success("Elemento eliminato");
   };
 
   const handleLoadDefaults = () => {
-    const existingNames = new Set(items.map(i => i.name));
-    const newDefaults = defaults.filter(d => !existingNames.has(d.name));
-    if (newDefaults.length === 0) { toast.info("Tutti i default sono già presenti"); return; }
+    const existingNames = new Set(items.map((i) => i.name));
+    const newDefaults = defaults.filter((d) => !existingNames.has(d.name));
+    if (newDefaults.length === 0) {
+      toast.info("Tutti i default sono già presenti");
+      return;
+    }
     onUpdate(settingKey, [...items, ...newDefaults]);
     toast.success(`${newDefaults.length} elementi predefiniti aggiunti`);
   };
 
-  const availableCategories = contentType === "proposal"
-    ? CONTENT_CATEGORIES.filter(c => ["proposta_servizi", "partnership", "altro"].includes(c.key))
-    : CONTENT_CATEGORIES;
+  const availableCategories =
+    contentType === "proposal"
+      ? CONTENT_CATEGORIES.filter((c) => ["proposta_servizi", "partnership", "altro"].includes(c.key))
+      : CONTENT_CATEGORIES;
 
   return (
     <>
@@ -175,7 +221,7 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
             Nessun elemento. Clicca "Carica default" per iniziare.
           </div>
         ) : (
-          grouped.map(group => {
+          grouped.map((group) => {
             const CatIcon = CATEGORY_ICONS[group.key] || FileText;
             const isOpen = !collapsedSections.has(group.key);
             return (
@@ -186,8 +232,12 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
                 >
                   <CatIcon className="w-4 h-4 text-primary" />
                   <span className="text-sm font-semibold">{group.label}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{group.items.length}</Badge>
-                  <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform ${isOpen ? "" : "-rotate-90"}`} />
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    {group.items.length}
+                  </Badge>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform ${isOpen ? "" : "-rotate-90"}`}
+                  />
                 </button>
 
                 {isOpen && (
@@ -209,7 +259,10 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
                               size="sm"
                               variant="ghost"
                               className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-destructive h-6 w-6 p-0"
-                              onClick={(e) => { e.stopPropagation(); handleDelete(realIndex); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(realIndex);
+                              }}
                             >
                               <X className="w-3.5 h-3.5" />
                             </Button>
@@ -233,13 +286,13 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
           <div className="space-y-3 py-2">
             <Input
               value={editName}
-              onChange={e => setEditName(e.target.value)}
+              onChange={(e) => setEditName(e.target.value)}
               placeholder="Nome"
               className="text-sm"
             />
             <Textarea
               value={editText}
-              onChange={e => setEditText(e.target.value)}
+              onChange={(e) => setEditText(e.target.value)}
               placeholder="Descrizione..."
               rows={5}
               className="text-sm"
@@ -247,22 +300,30 @@ function ContentGridView({ settingKey, defaults, items, onUpdate, contentType }:
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground flex items-center gap-1">
                 Categoria
-                {isNew && <span className="flex items-center gap-0.5 text-primary"><Sparkles className="w-3 h-3" /> auto AI</span>}
+                {isNew && (
+                  <span className="flex items-center gap-0.5 text-primary">
+                    <Sparkles className="w-3 h-3" /> auto AI
+                  </span>
+                )}
               </label>
               <Select value={editCategory} onValueChange={setEditCategory}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableCategories.map(c => (
-                    <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                  {availableCategories.map((c) => (
+                    <SelectItem key={c.key} value={c.key}>
+                      {c.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditItem(null)}>Annulla</Button>
+            <Button variant="ghost" onClick={() => setEditItem(null)}>
+              Annulla
+            </Button>
             <Button onClick={handleSave} disabled={!editName.trim() || categorizing}>
               {categorizing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
               {categorizing ? "Categorizzo..." : "Salva"}
@@ -285,12 +346,22 @@ export default function ContentManager() {
 
   const goals: ContentItem[] = useMemo(() => {
     if (!settings?.custom_goals) return [];
-    try { return JSON.parse(settings.custom_goals); } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
+    try {
+      return JSON.parse(settings.custom_goals);
+    } catch (e) {
+      log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) });
+      return [];
+    }
   }, [settings]);
 
   const proposals: ContentItem[] = useMemo(() => {
     if (!settings?.custom_proposals) return [];
-    try { return JSON.parse(settings.custom_proposals); } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return []; }
+    try {
+      return JSON.parse(settings.custom_proposals);
+    } catch (e) {
+      log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) });
+      return [];
+    }
   }, [settings]);
 
   useEffect(() => {
@@ -308,7 +379,8 @@ export default function ContentManager() {
   const { data: documents = [], isLoading: loadingDocs } = useQuery({
     queryKey: queryKeys.workspaceDocs.all,
     queryFn: async () => {
-      const data = await findWorkspaceDocs(); const error = null;
+      const data = await findWorkspaceDocs();
+      const error = null;
       if (error) throw error;
       return data || [];
     },
@@ -316,7 +388,7 @@ export default function ContentManager() {
 
   const allLinks = useMemo(() => {
     const set = new Set<string>();
-    presets.forEach(p => ((p.reference_links as string[] | null) || []).forEach((l: string) => set.add(l)));
+    presets.forEach((p) => ((p.reference_links as string[] | null) || []).forEach((l: string) => set.add(l)));
     return Array.from(set);
   }, [presets]);
 
@@ -329,15 +401,23 @@ export default function ContentManager() {
         const path = `${crypto.randomUUID()}.${file.name.split(".").pop() || "bin"}`;
         const { error: upErr } = await supabase.storage.from("workspace-docs").upload(path, file);
         if (upErr) throw upErr;
-        const { data: urlData } = await supabase.storage.from("workspace-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
+        const { data: urlData } = await supabase.storage
+          .from("workspace-docs")
+          .createSignedUrl(path, 60 * 60 * 24 * 365);
         await createWorkspaceDoc({
-          file_name: file.name, file_url: urlData?.signedUrl || path, file_size: file.size,
+          file_name: file.name,
+          file_url: urlData?.signedUrl || path,
+          file_size: file.size,
         });
       }
       toast.success(`${files.length} documento/i caricato/i`);
       qc.invalidateQueries({ queryKey: queryKeys.workspaceDocs.all });
-    } catch (err: unknown) { toast.error("Errore upload: " + (err instanceof Error ? err.message : String(err))); }
-    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
+    } catch (err: unknown) {
+      toast.error("Errore upload: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   const handleDeleteDoc = async (id: string) => {
@@ -350,18 +430,37 @@ export default function ContentManager() {
   const handleAddLink = () => {
     if (!newLinkUrl.trim()) return;
     const target = presets[0];
-    if (!target) { toast.error("Crea prima un preset nel Workspace"); return; }
+    if (!target) {
+      toast.error("Crea prima un preset nel Workspace");
+      return;
+    }
     const links = [...((target.reference_links as string[] | null) || []), newLinkUrl.trim()];
-    save.mutate({
-      id: target.id, name: target.name, goal: target.goal ?? "", base_proposal: target.base_proposal ?? "",
-      document_ids: (target.document_ids as string[] | null) ?? [], reference_links: links,
-    }, { onSuccess: () => { setNewLinkUrl(""); toast.success("Link aggiunto"); } });
+    save.mutate(
+      {
+        id: target.id,
+        name: target.name,
+        goal: target.goal ?? "",
+        base_proposal: target.base_proposal ?? "",
+        document_ids: (target.document_ids as string[] | null) ?? [],
+        reference_links: links,
+      },
+      {
+        onSuccess: () => {
+          setNewLinkUrl("");
+          toast.success("Link aggiunto");
+        },
+      },
+    );
   };
 
   const isLoading = loadingPresets || loadingDocs || loadingSettings;
 
   if (isLoading) {
-    return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
@@ -395,17 +494,41 @@ export default function ContentManager() {
         </TabsList>
 
         <TabsContent value="goals" className="m-0">
-          <ContentGridView settingKey="custom_goals" defaults={DEFAULT_GOALS} items={goals} onUpdate={handleUpdateItems} contentType="goal" />
+          <ContentGridView
+            settingKey="custom_goals"
+            defaults={DEFAULT_GOALS}
+            items={goals}
+            onUpdate={handleUpdateItems}
+            contentType="goal"
+          />
         </TabsContent>
 
         <TabsContent value="proposals" className="m-0">
-          <ContentGridView settingKey="custom_proposals" defaults={DEFAULT_PROPOSALS} items={proposals} onUpdate={handleUpdateItems} contentType="proposal" />
+          <ContentGridView
+            settingKey="custom_proposals"
+            defaults={DEFAULT_PROPOSALS}
+            items={proposals}
+            onUpdate={handleUpdateItems}
+            contentType="proposal"
+          />
         </TabsContent>
 
         <TabsContent value="documents" className="m-0 space-y-2">
-          <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload}
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt" />
-          <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => fileRef.current?.click()} disabled={uploading}>
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleUpload}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
             {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             {uploading ? "Caricamento..." : "Carica documento"}
           </Button>
@@ -423,7 +546,9 @@ export default function ContentManager() {
                     </p>
                   </div>
                   <a href={d.file_url} target="_blank" rel="noopener noreferrer">
-                    <Button size="sm" variant="ghost"><ExternalLink className="w-3.5 h-3.5" /></Button>
+                    <Button size="sm" variant="ghost">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Button>
                   </a>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeleteDoc(d.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
@@ -436,8 +561,12 @@ export default function ContentManager() {
 
         <TabsContent value="links" className="m-0 space-y-2">
           <div className="flex gap-2">
-            <Input value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)}
-              placeholder="https://..." className="h-8 text-xs" />
+            <Input
+              value={newLinkUrl}
+              onChange={(e) => setNewLinkUrl(e.target.value)}
+              placeholder="https://..."
+              className="h-8 text-xs"
+            />
             <Button size="sm" variant="outline" onClick={handleAddLink} disabled={!newLinkUrl.trim()}>
               <Plus className="w-3.5 h-3.5" />
             </Button>
@@ -448,8 +577,17 @@ export default function ContentManager() {
             <div className="space-y-1">
               {allLinks.map((link, i) => (
                 <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-md border bg-card text-xs">
-                  <img src={`https://www.google.com/s2/favicons?domain=${hostname(link)}&sz=16`} alt="" className="w-4 h-4" />
-                  <a href={link} target="_blank" rel="noopener noreferrer" className="flex-1 truncate text-primary hover:underline">
+                  <img
+                    src={`https://www.google.com/s2/favicons?domain=${hostname(link)}&sz=16`}
+                    alt=""
+                    className="w-4 h-4"
+                  />
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 truncate text-primary hover:underline"
+                  >
                     {hostname(link)}
                   </a>
                   <ExternalLink className="w-3 h-3 text-muted-foreground" />

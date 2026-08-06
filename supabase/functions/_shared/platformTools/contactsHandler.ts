@@ -12,20 +12,14 @@
 import { supabase, escapeLike } from "./supabaseClient.ts";
 import { applyLeadStatusChange } from "../leadStatusGuard.ts";
 
-export async function handleSearchContacts(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleSearchContacts(args: Record<string, unknown>): Promise<unknown> {
   const isCount = !!args.count_only;
   const cols = isCount
     ? "id"
     : "id, name, company_name, email, phone, mobile, country, city, position, lead_status, lead_score, origin, note, company_alias, contact_alias, last_interaction_at, interaction_count, deep_search_at, created_at";
-  let query = supabase
-    .from("imported_contacts")
-    .select(cols, isCount ? { count: "exact", head: true } : undefined);
-  if (args.search_name)
-    query = query.ilike("name", `%${escapeLike(String(args.search_name))}%`);
-  if (args.company_name)
-    query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
+  let query = supabase.from("imported_contacts").select(cols, isCount ? { count: "exact", head: true } : undefined);
+  if (args.search_name) query = query.ilike("name", `%${escapeLike(String(args.search_name))}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
   if (args.country) query = query.ilike("country", `%${escapeLike(String(args.country))}%`);
   if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
   if (args.email) query = query.ilike("email", `%${escapeLike(String(args.email))}%`);
@@ -75,9 +69,7 @@ export async function handleSearchContacts(
   return { count: data?.length || 0, page, page_size: limit, contacts: data || [] };
 }
 
-export async function handleGetContactDetail(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGetContactDetail(args: Record<string, unknown>): Promise<unknown> {
   let contact: Record<string, unknown> | null = null;
   if (args.contact_id) {
     const { data } = await supabase
@@ -106,7 +98,9 @@ export async function handleGetContactDetail(
   if (!contact) return { error: "Contatto non trovato" };
 
   const contactId = String(contact.id);
-  const contactEmail = String(contact.email || "").toLowerCase().trim();
+  const contactEmail = String(contact.email || "")
+    .toLowerCase()
+    .trim();
   const transferredPartnerId = (contact.transferred_to_partner_id as string) || null;
 
   const [
@@ -261,10 +255,7 @@ export async function handleGetContactDetail(
   };
 }
 
-export async function handleUpdateLeadStatus(
-  args: Record<string, unknown>,
-  userId?: string
-): Promise<unknown> {
+export async function handleUpdateLeadStatus(args: Record<string, unknown>, userId?: string): Promise<unknown> {
   const status = String(args.status);
   if (args.contact_ids && Array.isArray(args.contact_ids)) {
     const contactIds = args.contact_ids as string[];

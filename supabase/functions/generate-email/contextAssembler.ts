@@ -21,13 +21,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow } from "./promptBuilder.ts";
-import {
-  loadMetInPerson,
-} from "./entityLoader.ts";
-import {
-  loadConversationContext,
-  buildConversationBlock,
-} from "./conversationIntel.ts";
+import { loadMetInPerson } from "./entityLoader.ts";
+import { loadConversationContext, buildConversationBlock } from "./conversationIntel.ts";
 import { ensureAliasesExist } from "./aliasPreparation.ts";
 import { loadPartnerMetadata } from "./dataLoader.ts";
 import { assembleStyleContext } from "./styleContextAssembler.ts";
@@ -88,11 +83,7 @@ export interface ContextBlocks {
 // ── Backward-compatible exports ──
 
 export { generateAliasesInline } from "./aliasGenerator.ts";
-export {
-  loadEntityFromActivity,
-  loadStandalonePartner,
-  type LoadedEntity,
-} from "./entityLoader.ts";
+export { loadEntityFromActivity, loadStandalonePartner, type LoadedEntity } from "./entityLoader.ts";
 export {
   loadConversationContext,
   buildConversationBlock,
@@ -149,12 +140,7 @@ export async function assembleContextBlocks(
   }
 
   // ── Load commercial intelligence (relationship metrics, branches, commercial state) ──
-  const commIntel = await assembleCommercialIntelligence(
-    supabase,
-    effectivePartnerId,
-    partner,
-    sourceType,
-  );
+  const commIntel = await assembleCommercialIntelligence(supabase, effectivePartnerId, partner, sourceType);
 
   // ── Load met in person context ──
   const metInPersonContext = await loadMetInPerson(supabase, effectivePartnerId ?? null);
@@ -169,20 +155,10 @@ export async function assembleContextBlocks(
   );
 
   // ── Load documents and signature block ──
-  const docAndSig = await assembleDocumentsAndSignature(
-    supabase,
-    quality,
-    settings,
-    opts.document_ids,
-  );
+  const docAndSig = await assembleDocumentsAndSignature(supabase, quality, settings, opts.document_ids);
 
   // ── Load conversation intelligence ──
-  const convIntel = await loadConversationContext(
-    supabase,
-    userId,
-    contactEmail,
-    effectivePartnerId ?? null,
-  );
+  const convIntel = await loadConversationContext(supabase, userId, contactEmail, effectivePartnerId ?? null);
   const conversationIntelligenceContext = buildConversationBlock(convIntel);
 
   // ── Extract custom_prompt and category from email_address_rules ──

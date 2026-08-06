@@ -32,15 +32,27 @@ function isInHoldingPattern(status: string | undefined): boolean {
   return !!status && status !== "new";
 }
 
-function Filterable({ field, value, children, onFilterClick, className }: {
-  field: string; value: string | null; children: React.ReactNode;
-  onFilterClick?: (field: string, value: string) => void; className?: string;
+function Filterable({
+  field,
+  value,
+  children,
+  onFilterClick,
+  className,
+}: {
+  field: string;
+  value: string | null;
+  children: React.ReactNode;
+  onFilterClick?: (field: string, value: string) => void;
+  className?: string;
 }) {
   if (!value || !onFilterClick) return <span className={className}>{children}</span>;
   return (
     <span
       className={cn(className, "cursor-pointer hover:underline hover:text-primary transition-colors")}
-      onClick={(e) => { e.stopPropagation(); onFilterClick(field, value); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onFilterClick(field, value);
+      }}
       title={`Filtra: ${value}`}
     >
       {children}
@@ -48,7 +60,17 @@ function Filterable({ field, value, children, onFilterClick, className }: {
   );
 }
 
-export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect: _onSelect, onToggle, onViewDetail, index, onFilterClick }: ContactCardProps) {
+export function ContactCard({
+  c,
+  isActive,
+  isSelected,
+  hasBusinessCard,
+  onSelect: _onSelect,
+  onToggle,
+  onViewDetail,
+  index,
+  onFilterClick,
+}: ContactCardProps) {
   const { open: openDrawer } = useContactDrawer();
   const cName = clean(c.company_name);
   const cContact = clean(c.name);
@@ -75,7 +97,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
 
   const handleRowClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('[data-no-filter]')) return;
+    if (target.closest("[data-no-filter]")) return;
     if (rawCompany && onFilterClick) {
       onFilterClick("company", rawCompany);
     }
@@ -87,18 +109,13 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         "relative cursor-pointer border-b border-border/40 transition-colors text-xs",
         "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l",
         isWcaMatched ? "before:bg-primary/40" : "before:bg-transparent",
-        isActive
-          ? "bg-primary/15"
-          : isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+        isActive ? "bg-primary/15" : isSelected ? "bg-primary/5" : "hover:bg-muted/40",
       )}
       onClick={handleRowClick}
       onDoubleClick={() => openDrawer({ sourceType: "contact", sourceId: c.id })}
     >
       {/* Row 1 */}
-      <div
-        className={cn(CONTACT_GRID_CLASS, "px-2 pt-2 pb-0.5")}
-        style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
-      >
+      <div className={cn(CONTACT_GRID_CLASS, "px-2 pt-2 pb-0.5")} style={{ gridTemplateColumns: CONTACT_GRID_COLS }}>
         {/* Col 1: Index + Checkbox */}
         <div className="flex items-center gap-1" data-no-filter>
           {typeof index === "number" && (
@@ -120,15 +137,24 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
         {/* Col 3: Company + posizione + nome contatto */}
         <div className="min-w-0 overflow-hidden">
           <div className="flex items-center gap-1.5">
-            <Filterable field="company" value={rawCompany} onFilterClick={onFilterClick}
+            <Filterable
+              field="company"
+              value={rawCompany}
+              onFilterClick={onFilterClick}
               className={cn(
                 "font-semibold truncate text-[12px]",
-                !rawCompany ? "text-muted-foreground italic" : "text-foreground"
-              )}>
+                !rawCompany ? "text-muted-foreground italic" : "text-foreground",
+              )}
+            >
               {displayCompany}
             </Filterable>
             {isWcaMatched && (
-              <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0">WCA</Badge>
+              <Badge
+                variant="secondary"
+                className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0"
+              >
+                WCA
+              </Badge>
             )}
             {inHolding && (
               <span title="In circuito di attesa" className="shrink-0">
@@ -136,28 +162,40 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
               </span>
             )}
             {(c.interaction_count ?? 0) > 0 && (
-              <HoldingPatternBadge interactionCount={c.interaction_count ?? 0} lastInteractionAt={c.last_interaction_at} size="sm" />
+              <HoldingPatternBadge
+                interactionCount={c.interaction_count ?? 0}
+                lastInteractionAt={c.last_interaction_at}
+                size="sm"
+              />
             )}
             {isAiProcessed && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
             {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
             {displayContact && (
-              <Filterable field="name" value={displayContact} onFilterClick={onFilterClick} className="flex items-center gap-1 min-w-0">
+              <Filterable
+                field="name"
+                value={displayContact}
+                onFilterClick={onFilterClick}
+                className="flex items-center gap-1 min-w-0"
+              >
                 <User className="w-3 h-3 text-muted-foreground shrink-0" />
                 <span className="truncate text-foreground text-[10px]">{displayContact}</span>
               </Filterable>
             )}
-            {cPosition && (
-              <span className="text-[10px] text-primary truncate">· {capitalizeLabel(cPosition)}</span>
-            )}
+            {cPosition && <span className="text-[10px] text-primary truncate">· {capitalizeLabel(cPosition)}</span>}
           </div>
         </div>
 
         {/* Col 4: Città + canali (allineati sinistra) */}
         <div className="min-w-0 overflow-hidden flex flex-col items-start gap-0.5">
           {cCity ? (
-            <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-muted-foreground text-[11px] block max-w-full">
+            <Filterable
+              field="city"
+              value={cCity}
+              onFilterClick={onFilterClick}
+              className="truncate text-muted-foreground text-[11px] block max-w-full"
+            >
               {capitalizeLabel(cCity)}
             </Filterable>
           ) : (
@@ -177,15 +215,24 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
 
         {/* Col 5: Score + count + lente + menu */}
         <div className="flex items-center justify-end gap-1" data-no-filter>
-          <LeadScoreBadge score={c.lead_score ?? undefined} breakdown={c.lead_score_breakdown as Record<string, number> | undefined} />
-          <span className={cn(
-            "inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full",
-            (c.interaction_count ?? 0) > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
-          )}>
-            <MessageCircle className="w-2.5 h-2.5" />{c.interaction_count || 0}
+          <LeadScoreBadge
+            score={c.lead_score ?? undefined}
+            breakdown={c.lead_score_breakdown as Record<string, number> | undefined}
+          />
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full",
+              (c.interaction_count ?? 0) > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground",
+            )}
+          >
+            <MessageCircle className="w-2.5 h-2.5" />
+            {c.interaction_count || 0}
           </span>
           <button
-            onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetail?.();
+            }}
             className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors text-muted-foreground hover:text-primary"
             title="Visualizza dettaglio"
           >
@@ -196,10 +243,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
       </div>
 
       {/* Row 2 — email + lead status + origine */}
-      <div
-        className={cn(CONTACT_GRID_CLASS, "px-2 pb-2")}
-        style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
-      >
+      <div className={cn(CONTACT_GRID_CLASS, "px-2 pb-2")} style={{ gridTemplateColumns: CONTACT_GRID_COLS }}>
         <div />
         <div />
         {/* Col 3: email truncata */}
@@ -222,7 +266,10 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           )}
           {cOrigin && (
             <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
-              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/15 text-primary font-semibold border-0 truncate max-w-[100px]">
+              <Badge
+                variant="secondary"
+                className="text-[9px] px-1.5 py-0 bg-primary/15 text-primary font-semibold border-0 truncate max-w-[100px]"
+              >
                 {capitalizeLabel(cOrigin)}
               </Badge>
             </Filterable>

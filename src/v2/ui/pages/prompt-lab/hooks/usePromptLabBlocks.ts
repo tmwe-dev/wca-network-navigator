@@ -26,7 +26,6 @@ export function usePromptLabBlocks(initialLoader: () => Promise<Block[]>, deps: 
     return () => {
       cancelled = true;
     };
-     
   }, deps);
 
   const updateContent = useCallback((id: string, content: string) => {
@@ -51,9 +50,7 @@ export function usePromptLabBlocks(initialLoader: () => Promise<Block[]>, deps: 
 
   const acceptAll = useCallback(() => {
     setBlocks((prev) =>
-      prev.map((b) =>
-        b.improved ? { ...b, content: b.improved, improved: undefined, dirty: true } : b,
-      ),
+      prev.map((b) => (b.improved ? { ...b, content: b.improved, improved: undefined, dirty: true } : b)),
     );
   }, []);
 

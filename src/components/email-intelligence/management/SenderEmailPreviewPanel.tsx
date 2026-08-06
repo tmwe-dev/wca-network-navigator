@@ -11,19 +11,24 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
-import {
-  ChevronLeft, ChevronRight, Mail, Loader2,
-  ArrowDownLeft, ArrowUpRight, MessageCircle, Linkedin,
-  ListCollapse, ListTree, Search, ZoomIn, ZoomOut, RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  Mail,
+  Loader2,
+  ArrowDownLeft,
+  ArrowUpRight,
+  MessageCircle,
+  Linkedin,
+  ListCollapse,
+  ListTree,
+  Search,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
@@ -72,16 +77,29 @@ function EmailBody({ message, compact = false }: { message: PreviewEmail; compac
     bodyHtml: message.body_html,
     bodyText: message.body_text,
   });
-  const normalized = useMemo(
-    () => normalizeEmailContent({ bodyHtml, bodyText }),
-    [bodyHtml, bodyText],
-  );
+  const normalized = useMemo(() => normalizeEmailContent({ bodyHtml, bodyText }), [bodyHtml, bodyText]);
   const sanitizedHtml = useMemo(() => {
     if (!normalized.bodyHtml) return null;
     return DOMPurify.sanitize(normalized.bodyHtml, {
       USE_PROFILES: { html: true },
       ADD_TAGS: ["style", "center"],
-      ADD_ATTR: ["target", "style", "class", "bgcolor", "background", "align", "valign", "width", "height", "cellpadding", "cellspacing", "border", "color", "face", "size"],
+      ADD_ATTR: [
+        "target",
+        "style",
+        "class",
+        "bgcolor",
+        "background",
+        "align",
+        "valign",
+        "width",
+        "height",
+        "cellpadding",
+        "cellspacing",
+        "border",
+        "color",
+        "face",
+        "size",
+      ],
       ALLOW_DATA_ATTR: true,
       FORBID_TAGS: ["script", "form", "input", "textarea", "select", "button"],
       FORBID_ATTR: ["onload", "onerror", "onclick", "onmouseover", "onfocus", "onblur"],
@@ -114,9 +132,7 @@ function EmailBody({ message, compact = false }: { message: PreviewEmail; compac
       </pre>
     );
   }
-  return (
-    <p className="text-xs text-muted-foreground">(corpo email non disponibile)</p>
-  );
+  return <p className="text-xs text-muted-foreground">(corpo email non disponibile)</p>;
 }
 
 export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmailPreviewPanelProps) {
@@ -131,7 +147,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
   const [showList, setShowList] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
 
-  useEffect(() => { setFaviconError(false); }, [senderEmail]);
+  useEffect(() => {
+    setFaviconError(false);
+  }, [senderEmail]);
 
   useEffect(() => {
     if (!senderEmail) {
@@ -155,7 +173,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
         if (!cancelled) setIsLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [senderEmail]);
 
   const current = emails[selectedIdx] ?? null;
@@ -187,15 +207,15 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
           ) : (
             <Mail className="h-4 w-4 text-primary flex-shrink-0" />
           )}
-          {flag && <span className="text-sm leading-none flex-shrink-0" aria-hidden>{flag}</span>}
+          {flag && (
+            <span className="text-sm leading-none flex-shrink-0" aria-hidden>
+              {flag}
+            </span>
+          )}
           <span className="text-xs font-semibold truncate" title={titleLabel}>
             {titleLabel}
           </span>
-          {domain && (
-            <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">
-              · {domain}
-            </span>
-          )}
+          {domain && <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">· {domain}</span>}
         </div>
         {emails.length > 0 && (
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -203,7 +223,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    size="icon" variant="ghost" className="h-6 w-6"
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6"
                     onClick={() => current && setFullViewEmail(current)}
                     disabled={!current}
                     aria-label="Apri email a tutta pagina"
@@ -220,16 +242,14 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    size="icon" variant={showList ? "secondary" : "ghost"} className="h-6 w-6"
+                    size="icon"
+                    variant={showList ? "secondary" : "ghost"}
+                    className="h-6 w-6"
                     onClick={() => setShowList((v) => !v)}
                     aria-label={showList ? "Nascondi elenco email" : "Mostra elenco email"}
                     aria-pressed={showList}
                   >
-                    {showList ? (
-                      <ListCollapse className="h-3.5 w-3.5" />
-                    ) : (
-                      <ListTree className="h-3.5 w-3.5" />
-                    )}
+                    {showList ? <ListCollapse className="h-3.5 w-3.5" /> : <ListTree className="h-3.5 w-3.5" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-[10px]">
@@ -238,7 +258,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
               </Tooltip>
             </TooltipProvider>
             <Button
-              size="icon" variant="ghost" className="h-6 w-6"
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6"
               disabled={selectedIdx === 0}
               onClick={() => setSelectedIdx((i) => Math.max(0, i - 1))}
               aria-label="Email precedente"
@@ -249,7 +271,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
               {selectedIdx + 1}/{emails.length}
             </Badge>
             <Button
-              size="icon" variant="ghost" className="h-6 w-6"
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6"
               disabled={selectedIdx >= emails.length - 1}
               onClick={() => setSelectedIdx((i) => Math.min(emails.length - 1, i + 1))}
               aria-label="Email successiva"
@@ -272,49 +296,46 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
         <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
           <ResizablePanel defaultSize={45} minSize={15}>
             <ScrollArea className="h-full">
-            <div className="p-1.5 space-y-1">
-              {emails.map((em, idx) => {
-                const bodyPreview = (em.body_text ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
-                return (
-                  <button
-                    key={em.id}
-                    onClick={() => setSelectedIdx(idx)}
-                    onDoubleClick={() => setFullViewEmail(em)}
-                    title="Doppio clic per aprire a tutta pagina"
-                    className={cn(
-                      "w-full text-left px-2 py-1.5 rounded text-xs transition-colors",
-                      idx === selectedIdx
-                        ? "bg-primary/15 border border-primary/20"
-                        : "hover:bg-muted/40 border border-transparent"
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      {em.direction === "inbound" ? (
-                        <ArrowDownLeft className="h-3 w-3 text-primary flex-shrink-0" />
-                      ) : (
-                        <ArrowUpRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              <div className="p-1.5 space-y-1">
+                {emails.map((em, idx) => {
+                  const bodyPreview = (em.body_text ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
+                  return (
+                    <button
+                      key={em.id}
+                      onClick={() => setSelectedIdx(idx)}
+                      onDoubleClick={() => setFullViewEmail(em)}
+                      title="Doppio clic per aprire a tutta pagina"
+                      className={cn(
+                        "w-full text-left px-2 py-1.5 rounded text-xs transition-colors",
+                        idx === selectedIdx
+                          ? "bg-primary/15 border border-primary/20"
+                          : "hover:bg-muted/40 border border-transparent",
                       )}
-                      <ChannelIcon channel={em.channel} className="h-3 w-3 flex-shrink-0" />
-                      <span className="font-semibold truncate flex-1">
-                        {em.subject || "(senza oggetto)"}
-                      </span>
-                      {em.email_date && (
-                        <span className="text-[9px] text-muted-foreground flex-shrink-0">
-                          {new Date(em.email_date).toLocaleDateString("it-IT", {
-                            day: "2-digit", month: "short",
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    {bodyPreview && (
-                      <div className="text-[10px] text-muted-foreground line-clamp-1 pl-[18px]">
-                        {bodyPreview}
+                    >
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        {em.direction === "inbound" ? (
+                          <ArrowDownLeft className="h-3 w-3 text-primary flex-shrink-0" />
+                        ) : (
+                          <ArrowUpRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <ChannelIcon channel={em.channel} className="h-3 w-3 flex-shrink-0" />
+                        <span className="font-semibold truncate flex-1">{em.subject || "(senza oggetto)"}</span>
+                        {em.email_date && (
+                          <span className="text-[9px] text-muted-foreground flex-shrink-0">
+                            {new Date(em.email_date).toLocaleDateString("it-IT", {
+                              day: "2-digit",
+                              month: "short",
+                            })}
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                      {bodyPreview && (
+                        <div className="text-[10px] text-muted-foreground line-clamp-1 pl-[18px]">{bodyPreview}</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </ScrollArea>
           </ResizablePanel>
 
@@ -327,17 +348,15 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
             </ResizablePanel>
           )}
         </ResizablePanelGroup>
+      ) : /* Modalità default: solo il preview, a tutta altezza. */
+      current ? (
+        <div className="flex-1 min-h-0">
+          <EmailDetail current={current} />
+        </div>
       ) : (
-        /* Modalità default: solo il preview, a tutta altezza. */
-        current ? (
-          <div className="flex-1 min-h-0">
-            <EmailDetail current={current} />
-          </div>
-        ) : (
-          <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground p-4 text-center">
-            Nessuna email da mostrare
-          </div>
-        )
+        <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground p-4 text-center">
+          Nessuna email da mostrare
+        </div>
       )}
 
       {/* Dialog full-page email */}
@@ -357,7 +376,11 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
  * con controlli di zoom in / zoom out / reset.
  */
 function FullPageEmailDialog({
-  email, onClose, senderLabel, flag, faviconUrl,
+  email,
+  onClose,
+  senderLabel,
+  flag,
+  faviconUrl,
 }: {
   email: PreviewEmail | null;
   onClose: () => void;
@@ -366,13 +389,20 @@ function FullPageEmailDialog({
   faviconUrl: string | null;
 }) {
   const [zoom, setZoom] = useState(1);
-  useEffect(() => { if (email) setZoom(1); }, [email?.id]);
+  useEffect(() => {
+    if (email) setZoom(1);
+  }, [email?.id]);
   const inc = () => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2)));
   const dec = () => setZoom((z) => Math.max(0.6, +(z - 0.1).toFixed(2)));
   const reset = () => setZoom(1);
 
   return (
-    <Dialog open={email != null} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={email != null}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] max-h-[94vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-5 py-3 border-b flex-shrink-0">
           <div className="flex items-center gap-2 pr-8">
@@ -381,7 +411,11 @@ function FullPageEmailDialog({
             ) : (
               email && <ChannelIcon channel={email.channel} className="h-5 w-5 flex-shrink-0" />
             )}
-            {flag && <span className="text-base leading-none" aria-hidden>{flag}</span>}
+            {flag && (
+              <span className="text-base leading-none" aria-hidden>
+                {flag}
+              </span>
+            )}
             <DialogTitle className="text-base truncate flex-1 min-w-0 text-left">
               <span className="font-semibold mr-2">{senderLabel}</span>
               <span className="text-muted-foreground font-normal">·</span>
@@ -395,7 +429,9 @@ function FullPageEmailDialog({
                       <ZoomOut className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-[10px]">Zoom out</TooltipContent>
+                  <TooltipContent side="bottom" className="text-[10px]">
+                    Zoom out
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <button
@@ -413,7 +449,9 @@ function FullPageEmailDialog({
                       <ZoomIn className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-[10px]">Zoom in</TooltipContent>
+                  <TooltipContent side="bottom" className="text-[10px]">
+                    Zoom in
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <TooltipProvider delayDuration={200}>
@@ -423,7 +461,9 @@ function FullPageEmailDialog({
                       <RotateCcw className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-[10px]">Reset zoom</TooltipContent>
+                  <TooltipContent side="bottom" className="text-[10px]">
+                    Reset zoom
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -436,54 +476,54 @@ function FullPageEmailDialog({
               className="px-5 py-3 space-y-3 origin-top-left transition-transform"
               style={{ transform: `scale(${zoom})`, width: `${100 / zoom}%` }}
             >
-                {/* Meta */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="gap-1 text-[10px]">
-                    <ChannelIcon channel={email.channel} className="h-2.5 w-2.5" />
-                    {email.channel || "email"}
-                  </Badge>
-                  <Badge
-                    variant={email.direction === "inbound" ? "default" : "secondary"}
-                    className="gap-1 text-[10px]"
-                  >
-                    {email.direction === "inbound" ? (
-                      <ArrowDownLeft className="h-2.5 w-2.5" />
-                    ) : (
-                      <ArrowUpRight className="h-2.5 w-2.5" />
-                    )}
-                    {email.direction === "inbound" ? "ricevuta" : "inviata"}
-                  </Badge>
-                  {email.email_date && (
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {new Date(email.email_date).toLocaleString("it-IT", {
-                        day: "2-digit", month: "long", year: "numeric",
-                        hour: "2-digit", minute: "2-digit",
-                      })}
-                    </span>
+              {/* Meta */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="gap-1 text-[10px]">
+                  <ChannelIcon channel={email.channel} className="h-2.5 w-2.5" />
+                  {email.channel || "email"}
+                </Badge>
+                <Badge variant={email.direction === "inbound" ? "default" : "secondary"} className="gap-1 text-[10px]">
+                  {email.direction === "inbound" ? (
+                    <ArrowDownLeft className="h-2.5 w-2.5" />
+                  ) : (
+                    <ArrowUpRight className="h-2.5 w-2.5" />
                   )}
-                </div>
+                  {email.direction === "inbound" ? "ricevuta" : "inviata"}
+                </Badge>
+                {email.email_date && (
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {new Date(email.email_date).toLocaleString("it-IT", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
+              </div>
 
-                {/* From / To */}
-                <div className="text-xs space-y-1 border rounded-md p-3 bg-muted/20">
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground font-medium w-10 flex-shrink-0">Da:</span>
-                    <span className="text-foreground break-all">{email.from_address || "—"}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground font-medium w-10 flex-shrink-0">A:</span>
-                    <span className="text-foreground break-all">{email.to_address || "—"}</span>
-                  </div>
+              {/* From / To */}
+              <div className="text-xs space-y-1 border rounded-md p-3 bg-muted/20">
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground font-medium w-10 flex-shrink-0">Da:</span>
+                  <span className="text-foreground break-all">{email.from_address || "—"}</span>
                 </div>
-
-                {/* Corpo full — stesso renderer di Outreach. */}
-                <div className="pt-1">
-                  <EmailBody message={email} />
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground font-medium w-10 flex-shrink-0">A:</span>
+                  <span className="text-foreground break-all">{email.to_address || "—"}</span>
                 </div>
               </div>
+
+              {/* Corpo full — stesso renderer di Outreach. */}
+              <div className="pt-1">
+                <EmailBody message={email} />
+              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -515,8 +555,11 @@ function EmailDetail({ current }: { current: PreviewEmail }) {
           {current.email_date && (
             <span className="text-[10px] text-muted-foreground ml-auto">
               {new Date(current.email_date).toLocaleString("it-IT", {
-                day: "2-digit", month: "short", year: "numeric",
-                hour: "2-digit", minute: "2-digit",
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
               })}
             </span>
           )}
@@ -534,9 +577,7 @@ function EmailDetail({ current }: { current: PreviewEmail }) {
         </div>
 
         {current.subject && (
-          <div className="text-xs font-semibold text-foreground pt-1 border-t">
-            {current.subject}
-          </div>
+          <div className="text-xs font-semibold text-foreground pt-1 border-t">{current.subject}</div>
         )}
 
         <div className="pt-1">

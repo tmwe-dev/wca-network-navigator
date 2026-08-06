@@ -28,7 +28,7 @@ export function DownloadAgendaView() {
 
   const activeJob = useMemo(() => {
     if (!jobs) return null;
-    return jobs.find(j => j.status === "running") || jobs.find(j => j.status === "pending") || jobs[0];
+    return jobs.find((j) => j.status === "running") || jobs.find((j) => j.status === "pending") || jobs[0];
   }, [jobs]);
 
   const processedIds = useMemo(() => {
@@ -50,19 +50,20 @@ export function DownloadAgendaView() {
     if (!partners) return [];
     if (search.length < 2) return partners;
     const q = search.toLowerCase();
-    return partners.filter(p =>
-      p.company_name.toLowerCase().includes(q) ||
-      p.city?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q)
+    return partners.filter(
+      (p) =>
+        p.company_name.toLowerCase().includes(q) ||
+        p.city?.toLowerCase().includes(q) ||
+        p.email?.toLowerCase().includes(q),
     );
   }, [partners, search]);
 
   const stats = useMemo(() => {
     if (!partners) return { total: 0, withEmail: 0, withPhone: 0, processed: 0 };
-    const withEmail = partners.filter(p => p.email || p.partner_contacts?.some(c => c.email)).length;
-    const withPhone = partners.filter(p => p.phone || p.partner_contacts?.some(c => c.mobile)).length;
+    const withEmail = partners.filter((p) => p.email || p.partner_contacts?.some((c) => c.email)).length;
+    const withPhone = partners.filter((p) => p.phone || p.partner_contacts?.some((c) => c.mobile)).length;
     const processedSet = new Set(processedIds);
-    const processed = partners.filter(p => p.wca_id && processedSet.has(p.wca_id)).length;
+    const processed = partners.filter((p) => p.wca_id && processedSet.has(p.wca_id)).length;
     return { total: partners.length, withEmail, withPhone, processed };
   }, [partners, processedIds]);
 
@@ -90,7 +91,7 @@ export function DownloadAgendaView() {
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
           <Input
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Cerca..."
             className="pl-7 h-7 w-40 text-xs bg-muted/30 border-border/30"
           />
@@ -100,10 +101,10 @@ export function DownloadAgendaView() {
       {/* Partner list */}
       <ScrollArea className="flex-1 min-h-0">
         <div className="divide-y divide-border/20">
-          {filtered.map(p => {
+          {filtered.map((p) => {
             const isProcessed = p.wca_id ? new Set(processedIds).has(p.wca_id) : false;
-            const hasEmail = !!(p.email || p.partner_contacts?.some(c => c.email));
-            const hasPhone = !!(p.phone || p.partner_contacts?.some(c => c.mobile));
+            const hasEmail = !!(p.email || p.partner_contacts?.some((c) => c.email));
+            const hasPhone = !!(p.phone || p.partner_contacts?.some((c) => c.mobile));
             const contactCount = p.partner_contacts?.length || 0;
 
             return (
@@ -111,7 +112,7 @@ export function DownloadAgendaView() {
                 key={p.id}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 text-xs hover:bg-muted/20 transition-colors",
-                  isProcessed && "bg-emerald-500/5"
+                  isProcessed && "bg-emerald-500/5",
                 )}
               >
                 <span className="text-base shrink-0">{getCountryFlag(p.country_code)}</span>
@@ -129,7 +130,7 @@ export function DownloadAgendaView() {
 
                 {/* Network badges */}
                 <div className="flex gap-1 shrink-0">
-                  {(p.partner_networks || []).slice(0, 2).map(n => (
+                  {(p.partner_networks || []).slice(0, 2).map((n) => (
                     <Badge key={n.network_name} variant="outline" className="text-[9px] px-1.5 py-0 h-4">
                       {n.network_name}
                     </Badge>
@@ -150,9 +151,7 @@ export function DownloadAgendaView() {
                   )}
                 </div>
 
-                <span className="text-[10px] text-muted-foreground w-6 text-right shrink-0">
-                  {contactCount}
-                </span>
+                <span className="text-[10px] text-muted-foreground w-6 text-right shrink-0">{contactCount}</span>
               </div>
             );
           })}

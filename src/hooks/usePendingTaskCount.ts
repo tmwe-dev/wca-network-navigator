@@ -10,7 +10,10 @@ export function usePendingTaskCount() {
   const query = useQuery({
     queryKey: queryKeys.pendingTaskCount,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return 0;
       return countPendingAgentTasksForUser(user.id);
     },
@@ -25,7 +28,9 @@ export function usePendingTaskCount() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return realtimeCount ?? query.data ?? 0;

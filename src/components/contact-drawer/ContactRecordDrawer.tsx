@@ -21,8 +21,14 @@ export const ContactRecordDrawer = forwardRef<HTMLDivElement>(function ContactRe
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); goNext(); }
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); goPrev(); }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        goNext();
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        goPrev();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -35,17 +41,14 @@ export const ContactRecordDrawer = forwardRef<HTMLDivElement>(function ContactRe
       {
         onSuccess: () => toast({ title: "Salvato ✓" }),
         onError: () => toast({ title: "Errore nel salvataggio", variant: "destructive" }),
-      }
+      },
     );
   };
 
   const ed = record?.enrichmentData as Record<string, unknown> | null | undefined;
-  const hasEnrichment = Boolean(ed && (
-    ed.contact_profile ||
-    ed.company_profile ||
-    ed.linkedin_url ||
-    ed.linkedin_profile_url
-  ));
+  const hasEnrichment = Boolean(
+    ed && (ed.contact_profile || ed.company_profile || ed.linkedin_url || ed.linkedin_profile_url),
+  );
 
   return (
     <AnimatePresence>
@@ -85,11 +88,7 @@ export const ContactRecordDrawer = forwardRef<HTMLDivElement>(function ContactRe
                 <ScrollArea className="flex-1">
                   <div className="p-6 space-y-5">
                     {/* Editable fields + status */}
-                    <ContactRecordFields
-                      record={record}
-                      onSave={handleSave}
-                      isSaving={updateMutation.isPending}
-                    />
+                    <ContactRecordFields record={record} onSave={handleSave} isSaving={updateMutation.isPending} />
 
                     {/* Communication actions */}
                     {(<ContactRecordActions record={record} />) as ReactNode}

@@ -39,11 +39,7 @@ export async function createHarmonizerFollowup(input: HarmonizerFollowupInsert):
     evidence: toJsonValue(input.evidence ?? []),
     created_by: input.created_by,
   };
-  const { data, error } = await supabase
-    .from("harmonizer_followups")
-    .insert([row])
-    .select("id")
-    .single();
+  const { data, error } = await supabase.from("harmonizer_followups").insert([row]).select("id").single();
   if (error) throw error;
   return (data as { id: string }).id;
 }
@@ -64,7 +60,7 @@ export function followupFromProposal(
     block_name: p.block_label ?? null,
     missing_contracts: p.missing_contracts ?? [],
     code_policy_needed:
-      p.resolution_layer === "code_policy" ? (p.payload?.code_policy_needed as string) ?? null : null,
+      p.resolution_layer === "code_policy" ? ((p.payload?.code_policy_needed as string) ?? null) : null,
     severity: p.severity ?? (p.impact === "high" ? "high" : p.impact === "low" ? "low" : "medium"),
     impact_score: p.impact_score ?? (p.impact === "high" ? 8 : p.impact === "low" ? 3 : 5),
     evidence: [

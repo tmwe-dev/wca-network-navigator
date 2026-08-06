@@ -20,7 +20,6 @@ import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("TokenUsageCounter");
 interface TokenUsageCounterProps {
@@ -38,7 +37,10 @@ export function TokenUsageCounter({ className }: TokenUsageCounterProps) {
     setShowDropdown(open);
     if (open) {
       try {
-        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+        const {
+          data: { session: __s },
+        } = await supabase.auth.getSession();
+        const user = __s?.user ?? null;
         if (user) {
           const breakdown = await getUsageByFunction(user.id, 7);
           setFunctionBreakdown(breakdown);
@@ -90,7 +92,7 @@ export function TokenUsageCounter({ className }: TokenUsageCounterProps) {
             bgColor,
             textColor,
             "hover:opacity-80",
-            className
+            className,
           )}
           aria-label="Token usage"
         >
@@ -117,13 +119,8 @@ export function TokenUsageCounter({ className }: TokenUsageCounterProps) {
                 {formatTokenCount(todayTokens)} / {formatTokenCount(dailyLimit)}
               </span>
             </div>
-            <Progress
-              value={Math.min(dailyPercentage, 100)}
-              className="h-1.5"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {Math.round(dailyPercentage)}% di limite giornaliero
-            </p>
+            <Progress value={Math.min(dailyPercentage, 100)} className="h-1.5" />
+            <p className="text-xs text-muted-foreground mt-1">{Math.round(dailyPercentage)}% di limite giornaliero</p>
           </div>
 
           <DropdownMenuSeparator />
@@ -136,10 +133,7 @@ export function TokenUsageCounter({ className }: TokenUsageCounterProps) {
                 {formatTokenCount(tokenUsage.monthTokens)} / {formatTokenCount(tokenUsage.monthlyLimit)}
               </span>
             </div>
-            <Progress
-              value={Math.min(tokenUsage.monthlyPercentage, 100)}
-              className="h-1.5"
-            />
+            <Progress value={Math.min(tokenUsage.monthlyPercentage, 100)} className="h-1.5" />
             <p className="text-xs text-muted-foreground mt-1">
               {Math.round(tokenUsage.monthlyPercentage)}% di limite mensile
             </p>
@@ -159,9 +153,7 @@ export function TokenUsageCounter({ className }: TokenUsageCounterProps) {
                   .slice(0, 5)
                   .map(([funcName, tokens]) => (
                     <div key={funcName} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        {getFunctionDisplayName(funcName)}
-                      </span>
+                      <span className="text-muted-foreground">{getFunctionDisplayName(funcName)}</span>
                       <Badge variant="outline" className="text-xs">
                         {formatTokenCount(tokens)}
                       </Badge>

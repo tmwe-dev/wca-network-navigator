@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDownloadJobTerminalLog } from "@/data/downloadViews";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { queryKeys } from "@/lib/queryKeys";
 import {
-  Terminal, Building2, Mail, Phone, FileText,
-  CheckCircle, XCircle, AlertTriangle, SkipForward, Zap, Clock,
+  Terminal,
+  Building2,
+  Mail,
+  Phone,
+  FileText,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  SkipForward,
+  Zap,
+  Clock,
 } from "lucide-react";
 
 interface LogEntry {
@@ -43,8 +50,13 @@ function parseLogEntry(entry: LogEntry) {
 
     return {
       kind: "result" as const,
-      companyName, wcaId, hasProfile, hasEmail, hasPhone,
-      emailCount, phoneCount,
+      companyName,
+      wcaId,
+      hasProfile,
+      hasEmail,
+      hasPhone,
+      emailCount,
+      phoneCount,
       success: hasEmail || hasPhone,
     };
   }
@@ -66,30 +78,40 @@ function parseLogEntry(entry: LogEntry) {
 function CompanyAvatar({ name, success }: { name: string; success: boolean }) {
   const initials = name
     .split(/[\s&]+/)
-    .filter(w => w.length > 1)
+    .filter((w) => w.length > 1)
     .slice(0, 2)
-    .map(w => w[0].toUpperCase())
+    .map((w) => w[0].toUpperCase())
     .join("");
 
   return (
-    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
-      success
-        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-        : "bg-destructive/15 text-destructive border border-destructive/20"
-    }`}>
+    <div
+      className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
+        success
+          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+          : "bg-destructive/15 text-destructive border border-destructive/20"
+      }`}
+    >
       {initials || <Building2 className="w-3.5 h-3.5" />}
     </div>
   );
 }
 
 /* ── Result card for a processed company ── */
-function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof parseLogEntry> & { kind: "result" } }) {
+function ResultRow({
+  entry,
+  parsed,
+}: {
+  entry: LogEntry;
+  parsed: ReturnType<typeof parseLogEntry> & { kind: "result" };
+}) {
   return (
-    <div className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
-      parsed.success
-        ? "bg-emerald-500/[0.06] border border-emerald-500/10"
-        : "bg-destructive/[0.04] border border-destructive/10"
-    }`}>
+    <div
+      className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
+        parsed.success
+          ? "bg-emerald-500/[0.06] border border-emerald-500/10"
+          : "bg-destructive/[0.04] border border-destructive/10"
+      }`}
+    >
       <CompanyAvatar name={parsed.companyName} success={parsed.success} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -135,7 +157,13 @@ function ResultRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<type
 }
 
 /* ── Processing indicator (START) ── */
-function StartRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeof parseLogEntry> & { kind: "start" } }) {
+function StartRow({
+  entry,
+  parsed,
+}: {
+  entry: LogEntry;
+  parsed: ReturnType<typeof parseLogEntry> & { kind: "start" };
+}) {
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg">
       <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 border border-primary/20 shrink-0">
@@ -143,7 +171,9 @@ function StartRow({ entry, parsed }: { entry: LogEntry; parsed: ReturnType<typeo
       </div>
       <span className="text-xs text-muted-foreground">
         Estrazione <span className="font-mono text-primary">#{parsed.wcaId}</span>
-        <span className="ml-2 text-muted-foreground">{parsed.current}/{parsed.total}</span>
+        <span className="ml-2 text-muted-foreground">
+          {parsed.current}/{parsed.total}
+        </span>
       </span>
       <span className="ml-auto text-[10px] text-muted-foreground font-mono">{entry.ts}</span>
     </div>
@@ -220,13 +250,13 @@ export function JobTerminalViewer({ open, onOpenChange, jobId, jobStatus, countr
     setAutoScroll(scrollHeight - scrollTop - clientHeight < 60);
   };
 
-  const entries = (logs || []).filter(e => e.type !== "GATE");
+  const entries = (logs || []).filter((e) => e.type !== "GATE");
 
-  const results = entries.filter(e => {
+  const results = entries.filter((e) => {
     const p = parseLogEntry(e);
     return p.kind === "result";
   });
-  const successCount = results.filter(e => {
+  const successCount = results.filter((e) => {
     const p = parseLogEntry(e);
     return p.kind === "result" && p.success;
   }).length;

@@ -58,10 +58,9 @@ export async function listAgentRoutingRules(): Promise<AgentRoutingRule[]> {
 }
 
 export async function createAgentRoutingRule(
-  input: Omit<
-    AgentRoutingRule,
-    "id" | "user_id" | "match_count" | "last_matched_at" | "created_at" | "updated_at"
-  > & { user_id: string },
+  input: Omit<AgentRoutingRule, "id" | "user_id" | "match_count" | "last_matched_at" | "created_at" | "updated_at"> & {
+    user_id: string;
+  },
 ): Promise<AgentRoutingRule> {
   const { data, error } = await supabase
     .from("agent_routing_rules")
@@ -85,9 +84,6 @@ export async function updateAgentRoutingRule(
 }
 
 export async function deleteAgentRoutingRule(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("agent_routing_rules")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("agent_routing_rules").delete().eq("id", id);
   if (error) throw error;
 }

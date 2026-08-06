@@ -10,15 +10,11 @@ import { createInteraction } from "@/data/interactions";
 import { activityKeys, insertActivity } from "@/data/activities";
 import { updatePartner } from "@/data/partners";
 import { useAuth } from "@/providers/AuthProvider";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {
@@ -43,7 +39,9 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
 
   const m = useMutation({
     mutationFn: async () => {
-      const subj = subject || (type === "note" ? "Nota" : type === "call" ? "Chiamata" : type === "meeting" ? "Incontro" : "Email");
+      const subj =
+        subject ||
+        (type === "note" ? "Nota" : type === "call" ? "Chiamata" : type === "meeting" ? "Incontro" : "Email");
       await createInteraction({
         partner_id: partnerId,
         interaction_type: type,
@@ -55,10 +53,7 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
 
       // Ogni interazione manuale è anche un'attività in agenda dell'operatore
       const activityType: "phone_call" | "meeting" | "send_email" | "other" =
-        type === "call" ? "phone_call"
-        : type === "meeting" ? "meeting"
-        : type === "email" ? "send_email"
-        : "other";
+        type === "call" ? "phone_call" : type === "meeting" ? "meeting" : type === "email" ? "send_email" : "other";
       const today = new Date().toISOString().slice(0, 10);
       await insertActivity({
         partner_id: partnerId,
@@ -87,7 +82,10 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
       qc.invalidateQueries({ queryKey: activityKeys.all });
       qc.invalidateQueries({ queryKey: ["partner", partnerId] });
       toast.success(holding ? "Salvato. Azienda in circuito di attesa." : "Salvato.");
-      setSubject(""); setNotes(""); setType("note"); setHolding(false);
+      setSubject("");
+      setNotes("");
+      setType("note");
+      setHolding(false);
       onOpenChange(false);
     },
     onError: (e: unknown) => {
@@ -105,7 +103,9 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
             <Select value={type} onValueChange={(v) => setType(v as IType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="note">📝 Nota</SelectItem>
                 <SelectItem value="call">📞 Chiamata</SelectItem>
@@ -116,11 +116,20 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Oggetto</label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Es. Chiamata con Mario Rossi" />
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Es. Chiamata con Mario Rossi"
+            />
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Note</label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder="Cosa è successo, prossimi passi…" />
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
+              placeholder="Cosa è successo, prossimi passi…"
+            />
           </div>
           <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
             <Checkbox checked={holding} onCheckedChange={(v) => setHolding(Boolean(v))} />
@@ -128,8 +137,12 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
           </label>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Annulla</Button>
-          <Button onClick={() => m.mutate()} disabled={m.isPending}>Salva</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Annulla
+          </Button>
+          <Button onClick={() => m.mutate()} disabled={m.isPending}>
+            Salva
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

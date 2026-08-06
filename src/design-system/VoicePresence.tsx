@@ -40,8 +40,8 @@ const VoicePresence = ({ active, speaking = false, listening = false }: VoicePre
                 height: speaking
                   ? [2, Math.random() * 28 + 4, 2]
                   : listening
-                  ? [1, Math.random() * 20 + 2, 1]
-                  : [1, Math.random() * 4 + 1, 1],
+                    ? [1, Math.random() * 20 + 2, 1]
+                    : [1, Math.random() * 4 + 1, 1],
               }}
               transition={{
                 duration: speaking ? 0.4 + Math.random() * 0.3 : 0.8 + Math.random() * 0.5,

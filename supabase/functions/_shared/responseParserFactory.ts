@@ -47,7 +47,10 @@ export function stripMarkdownFences(text: string): string {
   if (!text) return "";
   let cleaned = text.trim();
   if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json|JSON)?\s*\n?/, "").replace(/\n?```\s*$/, "").trim();
+    cleaned = cleaned
+      .replace(/^```(?:json|JSON)?\s*\n?/, "")
+      .replace(/\n?```\s*$/, "")
+      .trim();
   }
   return cleaned;
 }

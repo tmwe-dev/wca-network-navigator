@@ -7,15 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTokenCount, getFunctionDisplayName } from "@/lib/tokenFormat";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export function TokenUsageTable() {
   const { data: userData } = useTokenCockpitUser();
@@ -72,37 +64,21 @@ export function TokenUsageTable() {
               {tableDataMemoized.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
-                    <Badge variant="outline">
-                      {getFunctionDisplayName(row.function_name)}
-                    </Badge>
+                    <Badge variant="outline">{getFunctionDisplayName(row.function_name)}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {row.model || "-"}
-                  </TableCell>
-                  <TableCell className="text-right text-sm">
-                    {formatTokenCount(row.input_tokens)}
-                  </TableCell>
-                  <TableCell className="text-right text-sm">
-                    {formatTokenCount(row.output_tokens)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {formatTokenCount(row.total_tokens)}
-                  </TableCell>
-                  <TableCell className="text-right text-sm">
-                    {formatCost(row.cost_estimate)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(row.created_at)}
-                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{row.model || "-"}</TableCell>
+                  <TableCell className="text-right text-sm">{formatTokenCount(row.input_tokens)}</TableCell>
+                  <TableCell className="text-right text-sm">{formatTokenCount(row.output_tokens)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatTokenCount(row.total_tokens)}</TableCell>
+                  <TableCell className="text-right text-sm">{formatCost(row.cost_estimate)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDate(row.created_at)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
       ) : (
-        <div className="h-40 flex items-center justify-center text-muted-foreground">
-          Nessun utilizzo recente
-        </div>
+        <div className="h-40 flex items-center justify-center text-muted-foreground">Nessun utilizzo recente</div>
       )}
     </Card>
   );

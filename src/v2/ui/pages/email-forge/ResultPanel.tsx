@@ -85,9 +85,7 @@ export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-auto p-3 space-y-3">
-        {result.journalist_review && (
-          <JournalistBadge review={result.journalist_review} />
-        )}
+        {result.journalist_review && <JournalistBadge review={result.journalist_review} />}
         <div>
           <div className="text-xs uppercase tracking-wide text-foreground mb-1">Subject</div>
           <div className="text-sm font-medium border border-border/60 rounded px-2 py-1.5 bg-card">
@@ -99,8 +97,12 @@ export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
           <div className="text-xs uppercase tracking-wide text-foreground mb-1">Body</div>
           <Tabs defaultValue="preview" className="w-full">
             <TabsList className="h-7">
-              <TabsTrigger value="preview" className="text-xs h-6 px-2">Preview</TabsTrigger>
-              <TabsTrigger value="html" className="text-xs h-6 px-2">Codice</TabsTrigger>
+              <TabsTrigger value="preview" className="text-xs h-6 px-2">
+                Preview
+              </TabsTrigger>
+              <TabsTrigger value="html" className="text-xs h-6 px-2">
+                Codice
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="preview" className="mt-2">
               <div
@@ -117,13 +119,8 @@ export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
         </div>
 
         <div>
-          <div className="text-xs uppercase tracking-wide text-foreground mb-1">
-            Cosa sa Oracolo
-          </div>
-          <OracleContextPanel
-            summary={result._context_summary ?? null}
-            hasRecipient={hasRecipient}
-          />
+          <div className="text-xs uppercase tracking-wide text-foreground mb-1">Cosa sa Oracolo</div>
+          <OracleContextPanel summary={result._context_summary ?? null} hasRecipient={hasRecipient} />
         </div>
 
         {preContext && (
@@ -140,5 +137,3 @@ export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
     </div>
   );
 }
-
-

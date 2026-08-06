@@ -18,9 +18,7 @@ export function PromptColumn({ agent }: { agent: AgentRegistryEntry }) {
       </header>
       <ul className="divide-y">
         {agent.promptSources.length === 0 && (
-          <li className="text-muted-foreground px-3 py-4 text-xs italic">
-            Nessuna sorgente prompt registrata.
-          </li>
+          <li className="text-muted-foreground px-3 py-4 text-xs italic">Nessuna sorgente prompt registrata.</li>
         )}
         {agent.promptSources.map((src, i) => (
           <li key={i} className="px-3 py-2.5">
@@ -30,9 +28,7 @@ export function PromptColumn({ agent }: { agent: AgentRegistryEntry }) {
                 <p className="text-muted-foreground mt-0.5 truncate text-[10px]" title={src.source}>
                   {src.source}
                 </p>
-                {src.hint && (
-                  <p className="text-muted-foreground mt-0.5 text-[10px] italic">{src.hint}</p>
-                )}
+                {src.hint && <p className="text-muted-foreground mt-0.5 text-[10px] italic">{src.hint}</p>}
               </div>
               <Button asChild size="sm" variant="ghost" className="h-6 px-2 text-[10px]">
                 <Link to={`/v2/prompt-lab?tab=${src.promptLabTab}`} title="Apri nell'editor del Prompt Lab">

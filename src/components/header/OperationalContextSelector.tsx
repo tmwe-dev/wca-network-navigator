@@ -32,14 +32,8 @@ function iconForMailbox(m: AccessibleMailbox) {
  */
 export function OperationalContextSelector(): React.ReactElement | null {
   const { data: currentOp } = useCurrentOperator();
-  const {
-    operators,
-    activeOperator,
-    setActiveOperatorId,
-    viewingAll,
-    isImpersonating,
-    setViewingAll,
-  } = useActiveOperator();
+  const { operators, activeOperator, setActiveOperatorId, viewingAll, isImpersonating, setViewingAll } =
+    useActiveOperator();
   const { mailboxes, activeMailbox, setActiveMailboxId } = useActiveMailbox();
 
   const isAdmin = !!currentOp?.is_admin;
@@ -80,9 +74,7 @@ export function OperationalContextSelector(): React.ReactElement | null {
           ) : (
             <ActiveMailboxIcon className="h-3.5 w-3.5 shrink-0" />
           )}
-          <span className="hidden md:inline truncate max-w-[220px]">
-            {activeMailbox?.email ?? mailboxLabel}
-          </span>
+          <span className="hidden md:inline truncate max-w-[220px]">{activeMailbox?.email ?? mailboxLabel}</span>
           <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
@@ -92,10 +84,7 @@ export function OperationalContextSelector(): React.ReactElement | null {
             <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
               Visibilità (admin)
             </DropdownMenuLabel>
-            <DropdownMenuItem
-              onSelect={() => setViewingAll()}
-              className="flex items-center gap-2"
-            >
+            <DropdownMenuItem onSelect={() => setViewingAll()} className="flex items-center gap-2">
               <Eye className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1 text-sm font-medium">Tutti gli operatori</span>
               {viewingAll && <Check className="h-4 w-4 text-primary" />}
@@ -142,9 +131,7 @@ export function OperationalContextSelector(): React.ReactElement | null {
                     <div className="flex items-center gap-1.5 text-sm font-medium truncate">
                       {m.label}
                       {m.kind === "shared" && (
-                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                          aziendale
-                        </span>
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">aziendale</span>
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">{m.email}</div>

@@ -47,9 +47,7 @@ async function loadAlwaysOnCategories(supabase: SupabaseClient): Promise<string[
       .eq("is_active", true)
       .eq("always_on", true)
       .limit(50);
-    const cats = (data ?? [])
-      .map((r: { category: string | null }) => r.category)
-      .filter((c): c is string => !!c);
+    const cats = (data ?? []).map((r: { category: string | null }) => r.category).filter((c): c is string => !!c);
     if (cats.length) return [...new Set(cats)];
   } catch {
     // Table may not exist or be readable — fall back silently
@@ -91,8 +89,6 @@ export async function fetchKbEntriesStrategic(
 
   if (!entries || entries.length === 0) return { text: "", sections_used: [] };
   const sectionsUsed = [...new Set((entries as KbEntry[]).map((e) => e.category))];
-  const text = (entries as KbEntry[])
-    .map((e) => `### ${e.title} [${e.chapter}]\n${e.content}`)
-    .join("\n\n---\n\n");
+  const text = (entries as KbEntry[]).map((e) => `### ${e.title} [${e.chapter}]\n${e.content}`).join("\n\n---\n\n");
   return { text, sections_used: sectionsUsed };
 }

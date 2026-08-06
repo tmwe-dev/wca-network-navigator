@@ -68,9 +68,10 @@ export async function loadActivePlaybook(
     if (playbook.description) lines.push(`Obiettivo: ${playbook.description}`);
     if (playbook.prompt_template) lines.push(`\nIstruzioni operative:\n${playbook.prompt_template}`);
     if (playbook.suggested_actions) {
-      const actions = typeof playbook.suggested_actions === "string"
-        ? playbook.suggested_actions
-        : JSON.stringify(playbook.suggested_actions);
+      const actions =
+        typeof playbook.suggested_actions === "string"
+          ? playbook.suggested_actions
+          : JSON.stringify(playbook.suggested_actions);
       lines.push(`\nAzioni suggerite: ${actions}`);
     }
     lines.push(

@@ -3,7 +3,9 @@ name: Super Mario AI Gateway
 description: Gateway AI unificato per Command (e scope futuri); KB statica+dinamica+situazionale, hard guards, audit redatto
 type: feature
 ---
+
 **Edge function**: `supabase/functions/super-mario/`
+
 - `index.ts` — orchestrator (auth JWT locale, no getUser di rete)
 - `identityLoader.ts` — DB `super_mario_identities` (cache 5min, fallback)
 - `runtimeContract.ts` — schema risposta JSON + hard guards in chiaro per LLM
@@ -17,11 +19,13 @@ type: feature
 - `auditLogger.ts` — log redatto (SHA256 prompt, PII strip) → `super_mario_invocations` (retention 30gg via expires_at)
 
 **DB**:
+
 - `super_mario_identities` (scope unique, content, version)
 - `conversation_summaries` (from/to_message_index + summary versionato)
 - `super_mario_invocations` (trace_id, prompt hash, redacted, tool_calls_json, audit_warnings, error_code)
 
 **Frontend**:
+
 - `src/v2/ai/superMario.ts` — `invokeSuperMario({ source, userMessage, turns, ... })` via `invokeAi` (charter R1+R2)
 - `src/lib/ai/invokeAi.ts` — `super-mario` aggiunto a `AI_FUNCTION_NAMES`
 - `src/v2/ui/pages/command/tools/registry.ts` — `RiskLevel` + `riskLevel` su `ToolMetadata`; `SEND_TOOL_IDS` separato da `WRITE_TOOL_IDS`
@@ -29,6 +33,7 @@ type: feature
 **Cablaggio Command**: PENDING. Il client esiste, `useCommandSubmit` non lo usa ancora (per non rompere). Migrazione incrementale: feature flag → A/B → rimozione `useResultCommentary` e regex `aiBridge`.
 
 **Scope KB dinamica**:
+
 - email/outreach/whatsapp → contesti operative_prompts: email, email-quality, outreach, multi-channel, post-send, whatsapp
 - partner-search → general
 - agenda/general → general

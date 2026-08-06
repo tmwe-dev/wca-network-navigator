@@ -2,8 +2,20 @@ import { fetchContacts } from "@/v2/io/supabase/queries/contacts";
 import type { Tool, ToolResult } from "./types";
 
 const STOPWORDS = new Set([
-  "follow","up","followup","cliente","clienti","inattivi","inattivo",
-  "mostra","trova","prepara","batch","giorni","contattare","contatto",
+  "follow",
+  "up",
+  "followup",
+  "cliente",
+  "clienti",
+  "inattivi",
+  "inattivo",
+  "mostra",
+  "trova",
+  "prepara",
+  "batch",
+  "giorni",
+  "contattare",
+  "contatto",
 ]);
 
 export const followupBatchTool: Tool = {
@@ -39,9 +51,7 @@ export const followupBatchTool: Tool = {
 
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const inactive = contacts.filter((c) => {
-      const lastActivity = c.lastInteractionAt
-        ? new Date(c.lastInteractionAt).getTime()
-        : 0;
+      const lastActivity = c.lastInteractionAt ? new Date(c.lastInteractionAt).getTime() : 0;
       return lastActivity < cutoff;
     });
 
@@ -56,11 +66,7 @@ export const followupBatchTool: Tool = {
         id: c.id as string,
         title: c.name ?? c.companyName ?? "—",
         subtitle: c.companyName ?? "",
-        meta: [
-          c.email ?? "no-email",
-          c.country ?? "—",
-          c.leadStatus ?? "—",
-        ],
+        meta: [c.email ?? "no-email", c.country ?? "—", c.leadStatus ?? "—"],
         lastContact: c.lastInteractionAt ?? c.createdAt ?? null,
         suggestedAction: "Invia follow-up",
       })),

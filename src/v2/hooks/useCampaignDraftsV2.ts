@@ -5,11 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import { fetchCampaignStatsCounts } from "@/data/campaignStats";
-import {
-  findCampaignDrafts,
-  findCampaignQueueItemsForDraft,
-  setCampaignDraftQueueStatus,
-} from "@/data/emailCampaigns";
+import { findCampaignDrafts, findCampaignQueueItemsForDraft, setCampaignDraftQueueStatus } from "@/data/emailCampaigns";
 
 interface CampaignDraft {
   readonly id: string;
@@ -55,9 +51,13 @@ export function useCampaignDraftsV2() {
         return [];
       }
       return data.map((d) => ({
-        id: d.id, subject: d.subject, status: d.status,
-        totalCount: d.total_count, sentCount: d.sent_count,
-        queueStatus: d.queue_status, queueDelaySeconds: d.queue_delay_seconds,
+        id: d.id,
+        subject: d.subject,
+        status: d.status,
+        totalCount: d.total_count,
+        sentCount: d.sent_count,
+        queueStatus: d.queue_status,
+        queueDelaySeconds: d.queue_delay_seconds,
         createdAt: d.created_at,
       }));
     },
@@ -77,9 +77,12 @@ export function useCampaignQueueV2(draftId: string | null) {
         return [];
       }
       return data.map((q) => ({
-        id: q.id, recipientEmail: q.recipient_email,
-        recipientName: q.recipient_name, status: q.status,
-        sentAt: q.sent_at, errorMessage: q.error_message,
+        id: q.id,
+        recipientEmail: q.recipient_email,
+        recipientName: q.recipient_name,
+        status: q.status,
+        sentAt: q.sent_at,
+        errorMessage: q.error_message,
       }));
     },
   });

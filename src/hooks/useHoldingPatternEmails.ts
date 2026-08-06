@@ -16,8 +16,8 @@ interface SourceRef {
 }
 
 export function useHoldingPatternEmails(sources: SourceRef[]): Set<string> {
-  const partnerIds = [...new Set(sources.map(s => s.partnerId).filter(Boolean))] as string[];
-  const contactIds = [...new Set(sources.map(s => s.contactId).filter(Boolean))] as string[];
+  const partnerIds = [...new Set(sources.map((s) => s.partnerId).filter(Boolean))] as string[];
+  const contactIds = [...new Set(sources.map((s) => s.contactId).filter(Boolean))] as string[];
 
   const { data } = useQuery({
     queryKey: queryKeys.contacts.holdingPatternEmails(partnerIds.sort().join(","), contactIds.sort().join(",")),
@@ -31,7 +31,9 @@ export function useHoldingPatternEmails(sources: SourceRef[]): Set<string> {
 
       if (contactIds.length > 0) {
         const contacts = await getContactsByIds(contactIds, "id, lead_status");
-        contacts.filter((c) => ACTIVE_STATUSES.includes(c.lead_status as string)).forEach((c) => result.add(`c:${c.id}`));
+        contacts
+          .filter((c) => ACTIVE_STATUSES.includes(c.lead_status as string))
+          .forEach((c) => result.add(`c:${c.id}`));
       }
 
       return [...result];

@@ -53,7 +53,10 @@ export async function findOperativePromptsFull(_userId: string): Promise<Operati
   return (data ?? []) as OperativePromptFull[];
 }
 
-export async function updateOperativePrompt(id: string, patch: Database["public"]["Tables"]["operative_prompts"]["Update"]): Promise<void> {
+export async function updateOperativePrompt(
+  id: string,
+  patch: Database["public"]["Tables"]["operative_prompts"]["Update"],
+): Promise<void> {
   const { error } = await supabase.from("operative_prompts").update(patch).eq("id", id);
   if (error) throw error;
 }

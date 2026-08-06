@@ -9,7 +9,9 @@ vi.mock("@/lib/api/invokeEdge", () => ({
 
 vi.mock("@/lib/api/apiError", () => ({
   isApiError: (e: any) => e instanceof Error && "code" in e,
-  ApiError: class extends Error { code = "TEST"; },
+  ApiError: class extends Error {
+    code = "TEST";
+  },
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -85,7 +87,15 @@ describe("useOutreachGenerator", () => {
   });
 
   it("reset clears the result", async () => {
-    mockInvokeEdge.mockResolvedValue({ channel: "email", subject: "S", body: "B", contact_name: null, contact_email: null, company_name: null, language: "en" });
+    mockInvokeEdge.mockResolvedValue({
+      channel: "email",
+      subject: "S",
+      body: "B",
+      contact_name: null,
+      contact_email: null,
+      company_name: null,
+      language: "en",
+    });
     const { result } = renderHookWithProviders(() => useOutreachGenerator());
     await act(async () => {
       await result.current.generate({ channel: "email", contact_name: "A", company_name: "B" });

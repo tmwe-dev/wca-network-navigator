@@ -28,13 +28,9 @@ function _parseInternal(rawContent: string): ParsedEmailResponse {
 }
 
 export function parseEmailResponse(rawContent: string, signatureBlock: string, model = "unknown"): ParsedEmailResponse {
-  const parsed = safeParseEmailResponse(
-    rawContent,
-    "generate-email",
-    model,
-    _parseInternal,
-    { fallbackSubject: "Follow-up" },
-  );
+  const parsed = safeParseEmailResponse(rawContent, "generate-email", model, _parseInternal, {
+    fallbackSubject: "Follow-up",
+  });
   const body = appendEmailSignature(parsed.body, signatureBlock);
   return { subject: parsed.subject, body };
 }

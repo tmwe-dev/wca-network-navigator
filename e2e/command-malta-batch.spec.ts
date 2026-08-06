@@ -23,10 +23,7 @@ test.describe("Command — Malta batch (regression bug 9 partner → 9 bozze)", 
       test.skip(true, "Skip: richiesta auth, eseguire con credenziali E2E_USER_*");
     }
 
-    const textarea = page
-      .locator('textarea, input[type="text"]')
-      .filter({ hasText: "" })
-      .first();
+    const textarea = page.locator('textarea, input[type="text"]').filter({ hasText: "" }).first();
     const textareaVisible = await textarea.isVisible({ timeout: 5000 }).catch(() => false);
     if (!textareaVisible) {
       test.skip(true, "Skip: input Command non trovato in viewport corrente");
@@ -44,9 +41,7 @@ test.describe("Command — Malta batch (regression bug 9 partner → 9 bozze)", 
     await textarea.press("Enter");
 
     // Attesa risultato: cerchiamo segnali di batch attivo
-    const batchSignal = page
-      .getByText(/(\d+)\s+(?:bozze|partner|mail|email)/i)
-      .first();
+    const batchSignal = page.getByText(/(\d+)\s+(?:bozze|partner|mail|email)/i).first();
     const reached = await batchSignal.isVisible({ timeout: 30000 }).catch(() => false);
 
     if (!reached && generateEmailCalls === 0) {

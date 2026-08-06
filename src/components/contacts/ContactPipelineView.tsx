@@ -27,13 +27,62 @@ interface Stage {
 }
 
 const STAGES: Stage[] = [
-  { id: "new", label: "Nuovo", icon: <UserPlus className="h-3.5 w-3.5" />, colorClass: "text-muted-foreground", bgClass: "bg-muted/30", borderClass: "border-border/40" },
-  { id: "first_touch_sent", label: "Primo Contatto", icon: <Send className="h-3.5 w-3.5" />, colorClass: "text-blue-400", bgClass: "bg-blue-500/10", borderClass: "border-blue-500/20" },
-  { id: "holding", label: "In Attesa", icon: <Clock className="h-3.5 w-3.5" />, colorClass: "text-amber-400", bgClass: "bg-amber-500/10", borderClass: "border-amber-500/20" },
-  { id: "engaged", label: "Coinvolto", icon: <Snowflake className="h-3.5 w-3.5" />, colorClass: "text-cyan-400", bgClass: "bg-cyan-500/10", borderClass: "border-cyan-500/20" },
-  { id: "qualified", label: "Qualificato", icon: <Star className="h-3.5 w-3.5" />, colorClass: "text-indigo-400", bgClass: "bg-indigo-500/10", borderClass: "border-indigo-500/20" },
-  { id: "negotiation", label: "Trattativa", icon: <Handshake className="h-3.5 w-3.5" />, colorClass: "text-purple-400", bgClass: "bg-purple-500/10", borderClass: "border-purple-500/20" },
-  { id: "converted", label: "Cliente", icon: <Star className="h-3.5 w-3.5" />, colorClass: "text-yellow-300", bgClass: "bg-yellow-500/10", borderClass: "border-yellow-500/20" },
+  {
+    id: "new",
+    label: "Nuovo",
+    icon: <UserPlus className="h-3.5 w-3.5" />,
+    colorClass: "text-muted-foreground",
+    bgClass: "bg-muted/30",
+    borderClass: "border-border/40",
+  },
+  {
+    id: "first_touch_sent",
+    label: "Primo Contatto",
+    icon: <Send className="h-3.5 w-3.5" />,
+    colorClass: "text-blue-400",
+    bgClass: "bg-blue-500/10",
+    borderClass: "border-blue-500/20",
+  },
+  {
+    id: "holding",
+    label: "In Attesa",
+    icon: <Clock className="h-3.5 w-3.5" />,
+    colorClass: "text-amber-400",
+    bgClass: "bg-amber-500/10",
+    borderClass: "border-amber-500/20",
+  },
+  {
+    id: "engaged",
+    label: "Coinvolto",
+    icon: <Snowflake className="h-3.5 w-3.5" />,
+    colorClass: "text-cyan-400",
+    bgClass: "bg-cyan-500/10",
+    borderClass: "border-cyan-500/20",
+  },
+  {
+    id: "qualified",
+    label: "Qualificato",
+    icon: <Star className="h-3.5 w-3.5" />,
+    colorClass: "text-indigo-400",
+    bgClass: "bg-indigo-500/10",
+    borderClass: "border-indigo-500/20",
+  },
+  {
+    id: "negotiation",
+    label: "Trattativa",
+    icon: <Handshake className="h-3.5 w-3.5" />,
+    colorClass: "text-purple-400",
+    bgClass: "bg-purple-500/10",
+    borderClass: "border-purple-500/20",
+  },
+  {
+    id: "converted",
+    label: "Cliente",
+    icon: <Star className="h-3.5 w-3.5" />,
+    colorClass: "text-yellow-300",
+    bgClass: "bg-yellow-500/10",
+    borderClass: "border-yellow-500/20",
+  },
 ];
 
 interface PipelineContact {
@@ -62,7 +111,9 @@ export function ContactPipelineView(): React.ReactElement {
 
   const stageGroups = useMemo(() => {
     const groups: Record<string, PipelineContact[]> = {};
-    STAGES.forEach((s) => { groups[s.id] = []; });
+    STAGES.forEach((s) => {
+      groups[s.id] = [];
+    });
     for (const c of contacts || []) {
       const status = c.lead_status || "new";
       if (groups[status]) groups[status].push(c);
@@ -87,37 +138,42 @@ export function ContactPipelineView(): React.ReactElement {
     setDragOverStage(null);
   }, []);
 
-  const handleDrop = useCallback(async (e: React.DragEvent, newStatus: string) => {
-    e.preventDefault();
-    setDragOverStage(null);
-    const contactId = e.dataTransfer.getData("text/plain");
-    setDraggedId(null);
-    if (!contactId) return;
+  const handleDrop = useCallback(
+    async (e: React.DragEvent, newStatus: string) => {
+      e.preventDefault();
+      setDragOverStage(null);
+      const contactId = e.dataTransfer.getData("text/plain");
+      setDraggedId(null);
+      if (!contactId) return;
 
-    const contact = contacts?.find((c) => c.id === contactId);
-    if (!contact || contact.lead_status === newStatus) return;
+      const contact = contacts?.find((c) => c.id === contactId);
+      if (!contact || contact.lead_status === newStatus) return;
 
-    // Optimistic update
-    qc.setQueryData<PipelineContact[]>(["pipeline-contacts"], (old) =>
-      (old || []).map((c) => c.id === contactId ? { ...c, lead_status: newStatus } : c)
-    );
+      // Optimistic update
+      qc.setQueryData<PipelineContact[]>(["pipeline-contacts"], (old) =>
+        (old || []).map((c) => (c.id === contactId ? { ...c, lead_status: newStatus } : c)),
+      );
 
-    try {
-      // Route through updateLeadStatus helper which enforces server-side guard via RPC
-      await updateLeadStatus("imported_contacts", contactId, newStatus);
-      toast.success(`Stato aggiornato a "${STAGES.find((s) => s.id === newStatus)?.label}"`);
-    } catch (err: unknown) {
-      toast.error(`Errore aggiornamento stato: ${err instanceof Error ? err.message : "Sconosciuto"}`);
-      qc.invalidateQueries({ queryKey: queryKeys.contacts.pipeline() });
-    }
-  }, [contacts, qc]);
+      try {
+        // Route through updateLeadStatus helper which enforces server-side guard via RPC
+        await updateLeadStatus("imported_contacts", contactId, newStatus);
+        toast.success(`Stato aggiornato a "${STAGES.find((s) => s.id === newStatus)?.label}"`);
+      } catch (err: unknown) {
+        toast.error(`Errore aggiornamento stato: ${err instanceof Error ? err.message : "Sconosciuto"}`);
+        qc.invalidateQueries({ queryKey: queryKeys.contacts.pipeline() });
+      }
+    },
+    [contacts, qc],
+  );
 
   const totalContacts = contacts?.length || 0;
 
   if (isLoading) {
     return (
       <div className="p-4 space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-lg" />
+        ))}
       </div>
     );
   }
@@ -163,7 +219,7 @@ export function ContactPipelineView(): React.ReactElement {
                 key={stage.id}
                 className={cn(
                   "flex flex-col w-[220px] shrink-0 rounded-xl border bg-card/30 transition-colors",
-                  isOver ? "border-primary/50 bg-primary/5" : "border-border/30"
+                  isOver ? "border-primary/50 bg-primary/5" : "border-border/30",
                 )}
                 onDragOver={(e) => handleDragOver(e, stage.id)}
                 onDragLeave={handleDragLeave}
@@ -173,7 +229,9 @@ export function ContactPipelineView(): React.ReactElement {
                 <div className={cn("flex items-center gap-2 px-3 py-2 rounded-t-xl", stage.bgClass)}>
                   <span className={stage.colorClass}>{stage.icon}</span>
                   <span className="text-xs font-medium text-foreground">{stage.label}</span>
-                  <Badge variant="outline" className="ml-auto text-[9px] h-5 px-1.5 border-border/40">{items.length}</Badge>
+                  <Badge variant="outline" className="ml-auto text-[9px] h-5 px-1.5 border-border/40">
+                    {items.length}
+                  </Badge>
                 </div>
 
                 {/* Cards */}
@@ -187,8 +245,9 @@ export function ContactPipelineView(): React.ReactElement {
                         onDragEnd={() => setDraggedId(null)}
                         className={cn(
                           "rounded-lg border p-2.5 space-y-1 cursor-grab active:cursor-grabbing transition-all",
-                          stage.borderClass, "hover:bg-muted/30",
-                          draggedId === contact.id && "opacity-40 scale-95"
+                          stage.borderClass,
+                          "hover:bg-muted/30",
+                          draggedId === contact.id && "opacity-40 scale-95",
                         )}
                       >
                         <div className="flex items-start justify-between gap-1">

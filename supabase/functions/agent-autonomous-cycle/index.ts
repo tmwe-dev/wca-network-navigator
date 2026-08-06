@@ -8,11 +8,7 @@ import { LeadProcessManager } from "../_shared/processManagers/leadProcessManage
 import { getNextEngagementStep } from "../_shared/cadenceEngine.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 
-
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-);
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 // Defaults — overridden by app_settings at runtime
 const DEFAULT_BUDGET_PER_AGENT = 10;
@@ -20,7 +16,9 @@ const DEFAULT_CYCLE_LOOKBACK_MINUTES = 12;
 const _DEFAULT_WORK_START_HOUR = 6;
 const _DEFAULT_WORK_END_HOUR = 24; // midnight
 
-function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 // getCETHour and isOutsideWorkHours are imported from _shared/timeUtils.ts (line 3)
 // No local redeclaration — single source of truth for work-hours logic
@@ -47,7 +45,11 @@ function isHighStakes(item: Record<string, unknown>, criteria: HighStakesCriteri
 
 const DELAY_BETWEEN_AGENTS_MS = 3000;
 
-async function findAgentForPartner(userId: string, partnerId: string, agents: Array<Record<string, unknown>>): Promise<Record<string, unknown> | null> {
+async function findAgentForPartner(
+  userId: string,
+  partnerId: string,
+  agents: Array<Record<string, unknown>>,
+): Promise<Record<string, unknown> | null> {
   // Check client_assignments first
   const { data: assignment } = await supabase
     .from("client_assignments")
@@ -57,20 +59,16 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: Ar
     .maybeSingle();
 
   if (assignment?.agent_id) {
-    return agents.find(a => a.id === assignment.agent_id) || null;
+    return agents.find((a) => a.id === assignment.agent_id) || null;
   }
 
   // Check territory match via partner country
-  const { data: partner } = await supabase
-    .from("partners")
-    .select("country_code")
-    .eq("id", partnerId)
-    .maybeSingle();
+  const { data: partner } = await supabase.from("partners").select("country_code").eq("id", partnerId).maybeSingle();
 
   if (partner?.country_code) {
     const cc = partner.country_code.toUpperCase();
-    const territoryAgent = agents.find(a =>
-      Array.isArray(a.territory_codes) && a.territory_codes.some((t: string) => t.toUpperCase() === cc)
+    const territoryAgent = agents.find(
+      (a) => Array.isArray(a.territory_codes) && a.territory_codes.some((t: string) => t.toUpperCase() === cc),
     );
     if (territoryAgent) return territoryAgent;
   }
@@ -78,7 +76,13 @@ async function findAgentForPartner(userId: string, partnerId: string, agents: Ar
   return null;
 }
 
-async function screenIncomingMessages(userId: string, agents: Array<Record<string, unknown>>, budgetPerAgent: number, forceApproval: boolean, hsCriteria: HighStakesCriteria = DEFAULT_HIGH_STAKES): Promise<number> {
+async function screenIncomingMessages(
+  userId: string,
+  agents: Array<Record<string, unknown>>,
+  budgetPerAgent: number,
+  forceApproval: boolean,
+  hsCriteria: HighStakesCriteria = DEFAULT_HIGH_STAKES,
+): Promise<number> {
   let actionsCreated = 0;
   const lookback = new Date(Date.now() - DEFAULT_CYCLE_LOOKBACK_MINUTES * 60 * 1000).toISOString();
 
@@ -96,7 +100,7 @@ async function screenIncomingMessages(userId: string, agents: Array<Record<strin
   if (!messages || messages.length === 0) return 0;
 
   // Filter out messages that already have agent_tasks
-  const _msgIds = messages.map(m => m.id);
+  const _msgIds = messages.map((m) => m.id);
   const { data: existingTasks } = await supabase
     .from("agent_tasks")
     .select("target_filters")
@@ -104,12 +108,10 @@ async function screenIncomingMessages(userId: string, agents: Array<Record<strin
     .in("task_type", ["analysis", "screening"]);
 
   const alreadyProcessedIds = new Set(
-    (existingTasks || [])
-      .map(t => (t.target_filters as Record<string, unknown>)?.message_id)
-      .filter(Boolean)
+    (existingTasks || []).map((t) => (t.target_filters as Record<string, unknown>)?.message_id).filter(Boolean),
   );
 
-  const salesAgents = agents.filter(a => ["outreach", "sales", "account"].includes(a.role));
+  const salesAgents = agents.filter((a) => ["outreach", "sales", "account"].includes(a.role));
   const fallbackAgent = salesAgents[0] || agents[0];
 
   for (const msg of messages) {
@@ -151,7 +153,7 @@ async function screenIncomingMessages(userId: string, agents: Array<Record<strin
         channel: msg.channel,
         auto_approved: !stakes && !forceApproval,
       } as Record<string, unknown>,
-      status: (stakes || forceApproval) ? "proposed" : "pending",
+      status: stakes || forceApproval ? "proposed" : "pending",
     });
     actionsCreated++;
   }
@@ -175,17 +177,26 @@ serve(async (req) => {
   });
   if (guard.skip) {
     return new Response(
-      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
-      { headers: { ...dynCors, "Content-Type": "application/json" } }
+      JSON.stringify({
+        skipped: true,
+        reason: guard.reason,
+        next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined,
+      }),
+      { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   }
 
   try {
     // Get all users with active agents
-    const { data: allAgents } = await supabase.from("agents").select("id, user_id, name, role, territory_codes, is_active").eq("is_active", true);
+    const { data: allAgents } = await supabase
+      .from("agents")
+      .select("id, user_id, name, role, territory_codes, is_active")
+      .eq("is_active", true);
     if (!allAgents || allAgents.length === 0) {
       await cronGuardLogRun(supabase, "agent_autonomous", { processed: 0, message: "No active agents" });
-      return new Response(JSON.stringify({ message: "No active agents" }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ message: "No active agents" }), {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // Group by user
@@ -201,7 +212,11 @@ serve(async (req) => {
       // ── Per-user work-hours check ──
       const { workStartHour, workEndHour } = await loadWorkHourSettings(supabase, userId);
       if (isOutsideWorkHours(workStartHour, workEndHour)) {
-        results.push({ phase: "skipped", user_id: userId, reason: `Outside work hours (${workStartHour}-${workEndHour})` });
+        results.push({
+          phase: "skipped",
+          user_id: userId,
+          reason: `Outside work hours (${workStartHour}-${workEndHour})`,
+        });
         continue;
       }
 
@@ -218,17 +233,29 @@ serve(async (req) => {
           "high_stakes_min_rating",
         ]);
       const cfg: Record<string, string> = {};
-      userSettingsRows?.forEach((row: { key: string; value: string | null }) => { if (row.value) cfg[row.key] = row.value; });
+      userSettingsRows?.forEach((row: { key: string; value: string | null }) => {
+        if (row.value) cfg[row.key] = row.value;
+      });
 
       const budgetPerAgent = parseInt(cfg["agent_max_actions_per_cycle"] || String(DEFAULT_BUDGET_PER_AGENT), 10);
       const forceApproval = cfg["agent_require_approval"] === "true";
       const highStakesCriteria: HighStakesCriteria = {
-        statuses: cfg["high_stakes_statuses"] ? cfg["high_stakes_statuses"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.statuses,
-        sources: cfg["high_stakes_sources"] ? cfg["high_stakes_sources"].split(",").map((s: string) => s.trim()) : DEFAULT_HIGH_STAKES.sources,
+        statuses: cfg["high_stakes_statuses"]
+          ? cfg["high_stakes_statuses"].split(",").map((s: string) => s.trim())
+          : DEFAULT_HIGH_STAKES.statuses,
+        sources: cfg["high_stakes_sources"]
+          ? cfg["high_stakes_sources"].split(",").map((s: string) => s.trim())
+          : DEFAULT_HIGH_STAKES.sources,
         min_rating: parseInt(cfg["high_stakes_min_rating"] || String(DEFAULT_HIGH_STAKES.min_rating), 10),
       };
       // ═══ PHASE 1: Screen incoming messages (email + WhatsApp) ═══
-      const screeningCount = await screenIncomingMessages(userId, agents, budgetPerAgent, forceApproval, highStakesCriteria);
+      const screeningCount = await screenIncomingMessages(
+        userId,
+        agents,
+        budgetPerAgent,
+        forceApproval,
+        highStakesCriteria,
+      );
       if (screeningCount > 0) {
         results.push({ phase: "screening", user_id: userId, actions_created: screeningCount });
         await sleep(DELAY_BETWEEN_AGENTS_MS);
@@ -243,17 +270,21 @@ serve(async (req) => {
         let actionsCreated = 0;
 
         // Check for overdue follow-ups
-        const { data: overdueFups } = await supabase.from("activities")
+        const { data: overdueFups } = await supabase
+          .from("activities")
           .select("id, title, partner_id, source_meta, due_date")
-          .eq("user_id", userId).eq("status", "pending").eq("activity_type", "follow_up")
+          .eq("user_id", userId)
+          .eq("status", "pending")
+          .eq("activity_type", "follow_up")
           .lt("due_date", new Date().toISOString().split("T")[0])
           .limit(budgetPerAgent - actionsCreated);
 
-        for (const fup of (overdueFups || [])) {
+        for (const fup of overdueFups || []) {
           if (actionsCreated >= budgetPerAgent) break;
 
           // Check if task already exists
-          const { data: existingTask } = await supabase.from("agent_tasks")
+          const { data: existingTask } = await supabase
+            .from("agent_tasks")
             .select("id")
             .eq("agent_id", agent.id)
             .contains("target_filters", { activity_id: fup.id } as Record<string, unknown>)
@@ -263,16 +294,26 @@ serve(async (req) => {
 
           let stakes = false;
           if (fup.partner_id) {
-            const { data: p } = await supabase.from("partners").select("rating, lead_status").eq("id", fup.partner_id).maybeSingle();
+            const { data: p } = await supabase
+              .from("partners")
+              .select("rating, lead_status")
+              .eq("id", fup.partner_id)
+              .maybeSingle();
             if (p) stakes = isHighStakes(p, highStakesCriteria);
           }
 
           const needsApproval = stakes || forceApproval;
           await supabase.from("agent_tasks").insert({
-            agent_id: agent.id, user_id: userId, task_type: "follow_up",
+            agent_id: agent.id,
+            user_id: userId,
+            task_type: "follow_up",
             description: `Follow-up scaduto: "${fup.title}". ${needsApproval ? "⚠️ Richiede approvazione Director." : "Auto-approvato."}`,
-            target_filters: { activity_id: fup.id, partner_id: fup.partner_id, auto_approved: !needsApproval } as Record<string, unknown>,
-      status: needsApproval ? "proposed" : "pending",
+            target_filters: {
+              activity_id: fup.id,
+              partner_id: fup.partner_id,
+              auto_approved: !needsApproval,
+            } as Record<string, unknown>,
+            status: needsApproval ? "proposed" : "pending",
           });
           actionsCreated++;
         }
@@ -295,10 +336,10 @@ serve(async (req) => {
         .not("lead_status", "is", null)
         .limit(50);
 
-      const salesAgent = agents.find(a => ["outreach", "sales", "account"].includes(a.role)) || agents[0];
+      const salesAgent = agents.find((a) => ["outreach", "sales", "account"].includes(a.role)) || agents[0];
 
       const leadPM = new LeadProcessManager(supabase);
-      for (const partner of (activePartners || [])) {
+      for (const partner of activePartners || []) {
         // Use LeadProcessManager for auto-apply transitions (event-driven)
         const pmResults = await leadPM.evaluateTimeBasedTransitions(partner.id, userId);
         const transitions = await evaluateTransitions(supabase, partner.id, userId);
@@ -306,12 +347,13 @@ serve(async (req) => {
           if (!t.shouldTransition) continue;
           if (t.autoApply) {
             // Already handled by LeadProcessManager above
-            const wasApplied = pmResults.some(r => r.to === t.to && r.applied);
+            const wasApplied = pmResults.some((r) => r.to === t.to && r.applied);
             if (wasApplied) transitionsApplied++;
           } else {
             if (!salesAgent) continue;
             // Check if proposal already exists
-            const { data: existing } = await supabase.from("agent_tasks")
+            const { data: existing } = await supabase
+              .from("agent_tasks")
               .select("id")
               .eq("agent_id", salesAgent.id)
               .eq("task_type", "state_transition")
@@ -324,7 +366,12 @@ serve(async (req) => {
               user_id: userId,
               task_type: "state_transition",
               description: `📊 Proposta transizione: partner ${partner.id} da "${t.from}" a "${t.to}". Trigger: ${t.trigger}`,
-              target_filters: { partner_id: partner.id, from_state: t.from, to_state: t.to, trigger: t.trigger } as Record<string, unknown>,
+              target_filters: {
+                partner_id: partner.id,
+                from_state: t.from,
+                to_state: t.to,
+                trigger: t.trigger,
+              } as Record<string, unknown>,
               status: "proposed",
             });
           }
@@ -340,13 +387,11 @@ serve(async (req) => {
         .eq("lead_status", "first_touch_sent")
         .limit(20);
 
-      for (const partner of (firstTouchPartners || [])) {
+      for (const partner of firstTouchPartners || []) {
         if (sequenceActions >= budgetPerAgent) break;
         if (!partner.last_interaction_at) continue;
 
-        const daysSinceFirst = Math.floor(
-          (Date.now() - new Date(partner.last_interaction_at).getTime()) / 86400000,
-        );
+        const daysSinceFirst = Math.floor((Date.now() - new Date(partner.last_interaction_at).getTime()) / 86400000);
 
         // Get completed steps
         const { data: completedActs } = await supabase
@@ -377,18 +422,17 @@ serve(async (req) => {
           .eq("platform", "linkedin")
           .maybeSingle();
 
-        const nextStep = getNextEngagementStep(
-          daysSinceFirst,
-          completedSteps,
-          !!liConn,
-          hasReply,
-        );
+        const nextStep = getNextEngagementStep(daysSinceFirst, completedSteps, !!liConn, hasReply);
 
         if (nextStep && salesAgent) {
-          const { data: existingSeq } = await supabase.from("agent_tasks")
+          const { data: existingSeq } = await supabase
+            .from("agent_tasks")
             .select("id")
             .eq("agent_id", salesAgent.id)
-            .contains("target_filters", { partner_id: partner.id, sequence_day: nextStep.day } as Record<string, unknown>)
+            .contains("target_filters", { partner_id: partner.id, sequence_day: nextStep.day } as Record<
+              string,
+              unknown
+            >)
             .maybeSingle();
           if (existingSeq) continue;
 
@@ -426,17 +470,14 @@ serve(async (req) => {
       const hour = today.getHours();
       if (dayOfWeek === 0 && hour >= 6 && hour <= 8) {
         try {
-          const auditResp = await fetch(
-            `${Deno.env.get("SUPABASE_URL")}/functions/v1/kb-supervisor`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify({ user_id: userId, audit_level: "structural" }),
+          const auditResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/kb-supervisor`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
             },
-          );
+            body: JSON.stringify({ user_id: userId, audit_level: "structural" }),
+          });
           const auditResult = await auditResp.json();
           results.push({
             phase: "kb_audit",
@@ -454,11 +495,11 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, cycle: new Date().toISOString(), results }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
-
   } catch (err) {
     await cronGuardLogRun(supabase, "agent_autonomous", {}, err instanceof Error ? err.message : String(err));
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore" }), {
-      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

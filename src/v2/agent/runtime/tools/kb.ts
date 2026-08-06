@@ -34,7 +34,8 @@ export const listKbTool: AgentTool = {
 
 export const readKbTool: AgentTool = {
   name: "read_kb",
-  description: "Read the full content of a KB entry by source_path slug (e.g. 'kb-source/workflow/wf-create-campaign.md').",
+  description:
+    "Read the full content of a KB entry by source_path slug (e.g. 'kb-source/workflow/wf-create-campaign.md').",
   parameters: {
     source_path: { type: "string", description: "source_path or partial slug to match", required: true },
   },

@@ -10,10 +10,26 @@ const ResultsSection = () => (
       </div>
       <div className="grid md:grid-cols-2 gap-8">
         {[
-          { icon: TrendingUp, title: "Scala globale senza team", desc: "Copertura di 190+ paesi con un team di 3 persone + agenti AI. Impossibile con metodi tradizionali." },
-          { icon: CheckCircle, title: "Follow-up al 100%", desc: "Nessun contatto viene dimenticato. Il sistema traccia ogni interazione e programma automaticamente il prossimo passo." },
-          { icon: Zap, title: "Velocità di risposta", desc: "Le risposte ai messaggi vengono preparate in minuti, non in giorni. L'AI analizza il contesto e genera draft personalizzati." },
-          { icon: Clock, title: "Operatività 24/7", desc: "Il sistema lavora anche di notte (email via cron server-side), mentre gli agenti riposano durante la pausa notturna per i canali sensibili." },
+          {
+            icon: TrendingUp,
+            title: "Scala globale senza team",
+            desc: "Copertura di 190+ paesi con un team di 3 persone + agenti AI. Impossibile con metodi tradizionali.",
+          },
+          {
+            icon: CheckCircle,
+            title: "Follow-up al 100%",
+            desc: "Nessun contatto viene dimenticato. Il sistema traccia ogni interazione e programma automaticamente il prossimo passo.",
+          },
+          {
+            icon: Zap,
+            title: "Velocità di risposta",
+            desc: "Le risposte ai messaggi vengono preparate in minuti, non in giorni. L'AI analizza il contesto e genera draft personalizzati.",
+          },
+          {
+            icon: Clock,
+            title: "Operatività 24/7",
+            desc: "Il sistema lavora anche di notte (email via cron server-side), mentre gli agenti riposano durante la pausa notturna per i canali sensibili.",
+          },
         ].map(({ icon: Icon, title, desc }) => (
           <div key={title} className="flex gap-4 p-6 rounded-xl bg-white/[0.02] border border-white/5">
             <Icon className="w-8 h-8 text-primary shrink-0" />

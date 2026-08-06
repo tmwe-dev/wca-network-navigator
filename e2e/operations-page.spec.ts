@@ -11,7 +11,7 @@ test.describe("operations-page", () => {
     page.on("pageerror", (err) => errors.push(err.message));
     await page.goto("/operations");
     await page.waitForTimeout(1500);
-    expect(errors.filter(e => !e.includes("net::ERR"))).toHaveLength(0);
+    expect(errors.filter((e) => !e.includes("net::ERR"))).toHaveLength(0);
   });
 
   test("operations page has no ErrorBoundary", async ({ page }) => {

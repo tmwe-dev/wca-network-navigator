@@ -3,9 +3,14 @@ import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LeadStatus } from "@/hooks/useContacts";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 // Tassonomia 9 stati — pipeline visivo (escluse fasi terminali archived/blacklisted gestite a parte)
@@ -79,7 +84,7 @@ export function HoldingPatternIndicator({ status, onChangeStatus, compact }: Pro
                 done && "border-transparent bg-success/20 text-success",
                 active && `border-transparent ${phase.color} text-white shadow-sm`,
                 future && "border-border bg-muted/50 text-muted-foreground",
-                onChangeStatus && "cursor-pointer hover:scale-105"
+                onChangeStatus && "cursor-pointer hover:scale-105",
               )}
               title={phase.label}
             >
@@ -95,16 +100,18 @@ export function HoldingPatternIndicator({ status, onChangeStatus, compact }: Pro
           <AlertDialogHeader>
             <AlertDialogTitle>Conferma cambio stato</AlertDialogTitle>
             <AlertDialogDescription>
-              Questo contatto è già stato portato allo stato "{PHASES.find(p => p.key === status)?.label}".
-              Vuoi davvero riportarlo a "{PHASES.find(p => p.key === confirmTarget)?.label}"?
+              Questo contatto è già stato portato allo stato "{PHASES.find((p) => p.key === status)?.label}". Vuoi
+              davvero riportarlo a "{PHASES.find((p) => p.key === confirmTarget)?.label}"?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (confirmTarget) onChangeStatus?.(confirmTarget);
-              setConfirmTarget(null);
-            }}>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmTarget) onChangeStatus?.(confirmTarget);
+                setConfirmTarget(null);
+              }}
+            >
               Conferma
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -22,53 +22,65 @@ export function CRMFiltersSection() {
   const qc = useQueryClient();
   const [countrySearch, setCountrySearch] = useState("");
   const [mergeOpen, setMergeOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; company_name: string | null; company_alias?: string | null; name?: string | null; email?: string | null; position?: string | null; country?: string | null }>>([]);
+  const [searchResults, setSearchResults] = useState<
+    Array<{
+      id: string;
+      company_name: string | null;
+      company_alias?: string | null;
+      name?: string | null;
+      email?: string | null;
+      position?: string | null;
+      country?: string | null;
+    }>
+  >([]);
   const [searching, setSearching] = useState(false);
 
   const [crmCountries, setCrmCountries] = useState<{ value: string; name: string; flag: string; total: number }[]>([]);
   const [crmOrigins, setCrmOrigins] = useState<FilterOption[]>([]);
 
   const fetchData = useCallback(async () => {
-      try {
-        const pageSize = 1000;
-        const allRows: Array<{ country: string | null; origin: string | null }> = [];
-        let from = 0;
-        while (true) {
-          const { data: page, error } = await findImportedContactsFacetPage(from, pageSize);
-          if (error || !page || page.length === 0) break;
-          allRows.push(...page);
-          if (page.length < pageSize) break;
-          from += pageSize;
-        }
-        const countryCounts: Record<string, number> = {};
-        const originCounts: Record<string, number> = {};
-        let unclassifiedCount = 0;
-        allRows.forEach((r) => {
-          const raw = (r.country || "").trim();
-          if (raw) countryCounts[raw] = (countryCounts[raw] || 0) + 1;
-          const o = (r.origin || "").trim();
-          if (o) originCounts[o] = (originCounts[o] || 0) + 1;
-          else unclassifiedCount += 1;
-        });
-        setCrmCountries(
-          Object.entries(countryCounts)
-            .map(([value, total]) => {
-              const resolved = resolveCountryCode(value);
-              const wcaCountry = resolved ? WCA_COUNTRIES.find((c) => c.code === resolved) : null;
-              return { value, name: wcaCountry?.name || value, flag: resolved ? getCountryFlag(resolved) : "", total };
-            })
-            .sort((a, b) => b.total - a.total)
-        );
-        setCrmOrigins(
-          [
-            // Pseudo-opzione "Non classificati" → mappata a origin IS NULL/'' nel loader
-            { value: "__unclassified__", label: "Non classificati", count: unclassifiedCount },
-            ...Object.entries(originCounts)
-              .map(([value, count]) => ({ value, label: capitalizeFirst(value), count }))
-              .sort((a, b) => (b.count || 0) - (a.count || 0)),
-          ]
-        );
-      } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
+    try {
+      const pageSize = 1000;
+      const allRows: Array<{ country: string | null; origin: string | null }> = [];
+      let from = 0;
+      while (true) {
+        const { data: page, error } = await findImportedContactsFacetPage(from, pageSize);
+        if (error || !page || page.length === 0) break;
+        allRows.push(...page);
+        if (page.length < pageSize) break;
+        from += pageSize;
+      }
+      const countryCounts: Record<string, number> = {};
+      const originCounts: Record<string, number> = {};
+      let unclassifiedCount = 0;
+      allRows.forEach((r) => {
+        const raw = (r.country || "").trim();
+        if (raw) countryCounts[raw] = (countryCounts[raw] || 0) + 1;
+        const o = (r.origin || "").trim();
+        if (o) originCounts[o] = (originCounts[o] || 0) + 1;
+        else unclassifiedCount += 1;
+      });
+      setCrmCountries(
+        Object.entries(countryCounts)
+          .map(([value, total]) => {
+            const resolved = resolveCountryCode(value);
+            const wcaCountry = resolved ? WCA_COUNTRIES.find((c) => c.code === resolved) : null;
+            return { value, name: wcaCountry?.name || value, flag: resolved ? getCountryFlag(resolved) : "", total };
+          })
+          .sort((a, b) => b.total - a.total),
+      );
+      setCrmOrigins([
+        // Pseudo-opzione "Non classificati" → mappata a origin IS NULL/'' nel loader
+        { value: "__unclassified__", label: "Non classificati", count: unclassifiedCount },
+        ...Object.entries(originCounts)
+          .map(([value, count]) => ({ value, label: capitalizeFirst(value), count }))
+          .sort((a, b) => (b.count || 0) - (a.count || 0)),
+      ]);
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* best-effort */
+    }
   }, []);
 
   useEffect(() => {
@@ -77,14 +89,14 @@ export function CRMFiltersSection() {
 
   const selectedCountries = useMemo(
     () => crmCountries.filter((c) => g.filters.crmSelectedCountries.has(c.value)),
-    [crmCountries, g.filters.crmSelectedCountries]
+    [crmCountries, g.filters.crmSelectedCountries],
   );
 
   const filteredCountries = useMemo(() => {
     const q = countrySearch.toLowerCase();
     const matches = !q
       ? crmCountries
-      : crmCountries.filter(c => c.name.toLowerCase().includes(q) || c.value.toLowerCase().includes(q));
+      : crmCountries.filter((c) => c.name.toLowerCase().includes(q) || c.value.toLowerCase().includes(q));
     return [...matches].sort((a, b) => {
       const aS = g.filters.crmSelectedCountries.has(a.value) ? 1 : 0;
       const bS = g.filters.crmSelectedCountries.has(b.value) ? 1 : 0;
@@ -95,13 +107,15 @@ export function CRMFiltersSection() {
 
   const toggleCountry = (value: string) => {
     const next = new Set(g.filters.crmSelectedCountries);
-    if (next.has(value)) next.delete(value); else next.add(value);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
     g.setCrmSelectedCountries(next);
   };
 
   const toggleCrmOrigin = (val: string) => {
     const next = new Set(g.filters.crmOrigin);
-    if (next.has(val)) next.delete(val); else next.add(val);
+    if (next.has(val)) next.delete(val);
+    else next.add(val);
     g.setCrmOrigin(next);
   };
 
@@ -127,14 +141,21 @@ export function CRMFiltersSection() {
 
   const searchValue = g.filters.search;
   useEffect(() => {
-    if (searchValue.trim().length < 2) { setSearchResults([]); return; }
+    if (searchValue.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
     setSearching(true);
     const doSearch = async () => {
       try {
         const data = await searchImportedContacts(searchValue);
         setSearchResults(data);
-      } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setSearchResults([]); }
-      finally { setSearching(false); }
+      } catch (e) {
+        log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) });
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
     };
     const timer = setTimeout(doSearch, 300);
     return () => clearTimeout(timer);
@@ -183,7 +204,7 @@ export function CRMFiltersSection() {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             value={g.filters.search}
-            onChange={e => g.setSearch(e.target.value)}
+            onChange={(e) => g.setSearch(e.target.value)}
             placeholder="Contatto, azienda, email…"
             className="h-9 pl-8 text-xs bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
           />
@@ -193,11 +214,15 @@ export function CRMFiltersSection() {
             {searching ? (
               <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">Ricerca in corso...</div>
             ) : searchResults.length === 0 ? (
-              <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">Nessun risultato per "{searchValue}"</div>
+              <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">
+                Nessun risultato per "{searchValue}"
+              </div>
             ) : (
               <>
                 <div className="px-2.5 py-1.5 bg-muted/30">
-                  <span className="text-[10px] font-semibold text-muted-foreground">{searchResults.length} risultati</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground">
+                    {searchResults.length} risultati
+                  </span>
                 </div>
                 {searchResults.map((c) => {
                   const resolvedCountry = resolveCountryCode(c.country || "");
@@ -211,12 +236,21 @@ export function CRMFiltersSection() {
                       className="w-full text-left px-2.5 py-2 hover:bg-primary/10 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-sm shrink-0 w-4 text-center">{resolvedCountry ? getCountryFlag(resolvedCountry) : ""}</span>
+                        <span className="text-sm shrink-0 w-4 text-center">
+                          {resolvedCountry ? getCountryFlag(resolvedCountry) : ""}
+                        </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{c.company_alias || c.company_name || "—"}</p>
-                          {c.name && <p className="text-[10px] text-muted-foreground truncate">{c.name}{c.position ? ` · ${c.position}` : ""}</p>}
+                          {c.name && (
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {c.name}
+                              {c.position ? ` · ${c.position}` : ""}
+                            </p>
+                          )}
                         </div>
-                        {c.email && <span className="text-[9px] text-muted-foreground truncate max-w-[110px]">{c.email}</span>}
+                        {c.email && (
+                          <span className="text-[9px] text-muted-foreground truncate max-w-[110px]">{c.email}</span>
+                        )}
                       </div>
                     </button>
                   );
@@ -246,8 +280,12 @@ export function CRMFiltersSection() {
       >
         {selectedCountries.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {selectedCountries.map(c => (
-              <button key={c.value} onClick={() => toggleCountry(c.value)} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20">
+            {selectedCountries.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => toggleCountry(c.value)}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20"
+              >
                 <span>{c.flag}</span>
                 <span className="max-w-[80px] truncate">{c.name}</span>
                 <span className="opacity-60">✕</span>
@@ -259,13 +297,13 @@ export function CRMFiltersSection() {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
           <Input
             value={countrySearch}
-            onChange={e => setCountrySearch(e.target.value)}
+            onChange={(e) => setCountrySearch(e.target.value)}
             placeholder="Cerca paese…"
             className="h-8 pl-7 text-xs bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
           />
         </div>
         <div className="max-h-[240px] overflow-y-auto rounded-lg border border-border bg-background/40 p-1">
-          {filteredCountries.map(c => (
+          {filteredCountries.map((c) => (
             <button
               key={c.value}
               onClick={() => toggleCountry(c.value)}
@@ -273,7 +311,7 @@ export function CRMFiltersSection() {
                 "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] transition-all border-l-2",
                 g.filters.crmSelectedCountries.has(c.value)
                   ? "bg-primary/10 border-primary text-primary"
-                  : "border-transparent hover:bg-muted text-foreground"
+                  : "border-transparent hover:bg-muted text-foreground",
               )}
             >
               <span className="text-sm">{c.flag}</span>
@@ -282,7 +320,9 @@ export function CRMFiltersSection() {
               <span className="text-[9px] tabular-nums opacity-60">{c.total}</span>
             </button>
           ))}
-          {filteredCountries.length === 0 && <div className="px-2 py-3 text-[10px] text-muted-foreground text-center">Nessun paese trovato</div>}
+          {filteredCountries.length === 0 && (
+            <div className="px-2 py-3 text-[10px] text-muted-foreground text-center">Nessun paese trovato</div>
+          )}
         </div>
       </FilterSection>
 
@@ -300,12 +340,55 @@ export function CRMFiltersSection() {
               Cambia origine ({g.filters.crmOrigin.size} sel.)
             </button>
           )}
-          <FilterDropdownMulti label="Origine" icon={Database} options={crmOrigins} selected={g.filters.crmOrigin} onToggle={toggleCrmOrigin} searchable placeholder="Cerca origine..." />
+          <FilterDropdownMulti
+            label="Origine"
+            icon={Database}
+            options={crmOrigins}
+            selected={g.filters.crmOrigin}
+            onToggle={toggleCrmOrigin}
+            searchable
+            placeholder="Cerca origine..."
+          />
         </div>
-        <FilterDropdownMulti label="Stato" icon={Users} options={statusOptions} selected={selectedStatus} onToggle={toggleLeadStatus} singleSelect capitalize={false} />
-        <FilterDropdownMulti label="Circuito" icon={Plane} options={holdingOptions} selected={selectedHolding} onToggle={toggleHolding} singleSelect capitalize={false} activeColor={g.filters.holdingPattern === "in" ? "danger" : g.filters.holdingPattern === "out" ? "info" : "default"} />
-        <FilterDropdownMulti label="Canale" icon={Wifi} options={channelOptions} selected={selectedChannel} onToggle={toggleChannel} singleSelect capitalize={false} />
-        <FilterDropdownMulti label="Qualità" icon={Sparkles} options={qualityOptions} selected={selectedQualitySet} onToggle={toggleQuality} singleSelect capitalize={false} />
+        <FilterDropdownMulti
+          label="Stato"
+          icon={Users}
+          options={statusOptions}
+          selected={selectedStatus}
+          onToggle={toggleLeadStatus}
+          singleSelect
+          capitalize={false}
+        />
+        <FilterDropdownMulti
+          label="Circuito"
+          icon={Plane}
+          options={holdingOptions}
+          selected={selectedHolding}
+          onToggle={toggleHolding}
+          singleSelect
+          capitalize={false}
+          activeColor={
+            g.filters.holdingPattern === "in" ? "danger" : g.filters.holdingPattern === "out" ? "info" : "default"
+          }
+        />
+        <FilterDropdownMulti
+          label="Canale"
+          icon={Wifi}
+          options={channelOptions}
+          selected={selectedChannel}
+          onToggle={toggleChannel}
+          singleSelect
+          capitalize={false}
+        />
+        <FilterDropdownMulti
+          label="Qualità"
+          icon={Sparkles}
+          options={qualityOptions}
+          selected={selectedQualitySet}
+          onToggle={toggleQuality}
+          singleSelect
+          capitalize={false}
+        />
       </div>
 
       {/* MATCH WCA — pivot specifico CRM */}
@@ -315,8 +398,15 @@ export function CRMFiltersSection() {
             { value: "all", label: "Tutti" },
             { value: "matched", label: "Matchati" },
             { value: "unmatched", label: "Non matchati" },
-          ].map(o => (
-            <Chip key={o.value} block active={g.filters.crmWcaMatch === o.value} onClick={() => g.setCrmWcaMatch(o.value)}>{o.label}</Chip>
+          ].map((o) => (
+            <Chip
+              key={o.value}
+              block
+              active={g.filters.crmWcaMatch === o.value}
+              onClick={() => g.setCrmWcaMatch(o.value)}
+            >
+              {o.label}
+            </Chip>
           ))}
         </ChipGroup>
       </FilterSection>
@@ -324,8 +414,10 @@ export function CRMFiltersSection() {
       {/* RAGGRUPPA — sempre in fondo (template canonico) */}
       <FilterSection icon={Layers} label="Raggruppa per">
         <ChipGroup columns={2}>
-          {CRM_GROUPBY.map(o => (
-            <Chip key={o.value} block active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
+          {CRM_GROUPBY.map((o) => (
+            <Chip key={o.value} block active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>
+              {o.label}
+            </Chip>
           ))}
         </ChipGroup>
       </FilterSection>

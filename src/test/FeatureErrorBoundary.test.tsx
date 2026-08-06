@@ -10,14 +10,18 @@ function ThrowingComponent({ shouldThrow }: { shouldThrow: boolean }) {
 describe("FeatureErrorBoundary", () => {
   // Suppress console.error for expected errors
   const originalError = console.error;
-  beforeEach(() => { console.error = vi.fn(); });
-  afterEach(() => { console.error = originalError; });
+  beforeEach(() => {
+    console.error = vi.fn();
+  });
+  afterEach(() => {
+    console.error = originalError;
+  });
 
   it("renders children when no error", () => {
     render(
       <FeatureErrorBoundary featureName="TestFeature">
         <ThrowingComponent shouldThrow={false} />
-      </FeatureErrorBoundary>
+      </FeatureErrorBoundary>,
     );
     expect(screen.getByText("Content OK")).toBeInTheDocument();
   });
@@ -26,7 +30,7 @@ describe("FeatureErrorBoundary", () => {
     render(
       <FeatureErrorBoundary featureName="Network">
         <ThrowingComponent shouldThrow={true} />
-      </FeatureErrorBoundary>
+      </FeatureErrorBoundary>,
     );
     expect(screen.getByText(/Errore in Network/)).toBeInTheDocument();
     expect(screen.getByText(/Test error in feature/)).toBeInTheDocument();
@@ -37,10 +41,10 @@ describe("FeatureErrorBoundary", () => {
     const { rerender: _rerender } = render(
       <FeatureErrorBoundary featureName="CRM">
         <ThrowingComponent shouldThrow={true} />
-      </FeatureErrorBoundary>
+      </FeatureErrorBoundary>,
     );
     expect(screen.getByText(/Errore in CRM/)).toBeInTheDocument();
-    
+
     // Click retry — boundary resets, but child still throws
     fireEvent.click(screen.getByText("Riprova"));
     // After retry with still-throwing child, error boundary catches again
@@ -51,7 +55,7 @@ describe("FeatureErrorBoundary", () => {
     render(
       <FeatureErrorBoundary featureName="Test" fallback={<div>Custom fallback</div>}>
         <ThrowingComponent shouldThrow={true} />
-      </FeatureErrorBoundary>
+      </FeatureErrorBoundary>,
     );
     expect(screen.getByText("Custom fallback")).toBeInTheDocument();
   });

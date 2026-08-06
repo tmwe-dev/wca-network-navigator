@@ -23,18 +23,13 @@ export function SectionRailTabs(): React.ReactElement {
   const activeRoot = sectionRoot(pathname);
 
   return (
-    <nav
-      aria-label="Sezioni principali"
-      className="hidden lg:flex items-center gap-0.5 min-w-0 overflow-x-auto"
-    >
+    <nav aria-label="Sezioni principali" className="hidden lg:flex items-center gap-0.5 min-w-0 overflow-x-auto">
       {navItemsDef.map((item) => {
         const itemRoot = sectionRoot(item.path);
         const active = activeRoot === itemRoot;
         const translated = t(item.labelKey);
         const label =
-          translated === item.labelKey
-            ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
-            : translated;
+          translated === item.labelKey ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ") : translated;
         return (
           <NavLink
             key={item.path}
@@ -48,9 +43,7 @@ export function SectionRailTabs(): React.ReactElement {
             )}
           >
             {label}
-            {active && (
-              <span className="absolute -bottom-[7px] left-2 right-2 h-0.5 bg-primary rounded-full" />
-            )}
+            {active && <span className="absolute -bottom-[7px] left-2 right-2 h-0.5 bg-primary rounded-full" />}
           </NavLink>
         );
       })}

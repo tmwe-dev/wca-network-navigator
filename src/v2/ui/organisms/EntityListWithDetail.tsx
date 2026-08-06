@@ -97,11 +97,7 @@ export function EntityListWithDetail({
   const cycle = (key: CompanySortKey) => {
     if (sortOverride) {
       const nextDir: "asc" | "desc" =
-        sortOverride.sortKey === key
-          ? sortOverride.sortDir === "asc"
-            ? "desc"
-            : "asc"
-          : "asc";
+        sortOverride.sortKey === key ? (sortOverride.sortDir === "asc" ? "desc" : "asc") : "asc";
       sortOverride.onChange(key, nextDir);
     } else {
       internal.cycle(key);
@@ -127,25 +123,34 @@ export function EntityListWithDetail({
 
   // Click bandiera → toggle paese (sync con global filters per WCA/CRM così
   // si allinea a CountryGridV2). Per BCA usiamo solo lo stato locale.
-  const handleCountryClick = React.useCallback((code: string) => {
-    const upper = (code || "").toUpperCase();
-    if (!upper) return;
-    if (source === "wca") {
-      const current = new Set(globalFilters.networkSelectedCountries ?? new Set<string>());
-      if (current.has(upper)) current.delete(upper);
-      else { current.clear(); current.add(upper); }
-      batchUpdate({ networkSelectedCountries: current });
-      return;
-    }
-    if (source === "crm") {
-      const current = new Set(globalFilters.crmSelectedCountries ?? new Set<string>());
-      if (current.has(upper)) current.delete(upper);
-      else { current.clear(); current.add(upper); }
-      batchUpdate({ crmSelectedCountries: current });
-      return;
-    }
-    setFilters((f) => ({ ...f, country: f.country === upper ? null : upper }));
-  }, [source, globalFilters, batchUpdate]);
+  const handleCountryClick = React.useCallback(
+    (code: string) => {
+      const upper = (code || "").toUpperCase();
+      if (!upper) return;
+      if (source === "wca") {
+        const current = new Set(globalFilters.networkSelectedCountries ?? new Set<string>());
+        if (current.has(upper)) current.delete(upper);
+        else {
+          current.clear();
+          current.add(upper);
+        }
+        batchUpdate({ networkSelectedCountries: current });
+        return;
+      }
+      if (source === "crm") {
+        const current = new Set(globalFilters.crmSelectedCountries ?? new Set<string>());
+        if (current.has(upper)) current.delete(upper);
+        else {
+          current.clear();
+          current.add(upper);
+        }
+        batchUpdate({ crmSelectedCountries: current });
+        return;
+      }
+      setFilters((f) => ({ ...f, country: f.country === upper ? null : upper }));
+    },
+    [source, globalFilters, batchUpdate],
+  );
 
   const handleCityClick = React.useCallback((city: string) => {
     const v = (city || "").trim();
@@ -157,56 +162,59 @@ export function EntityListWithDetail({
   }, []);
 
   // Rimozione di un singolo chip filtro dalla ActiveFiltersBar.
-  const handleRemoveChip = React.useCallback((key: string) => {
-    const [kind, ...rest] = key.split(":");
-    const value = rest.join(":");
-    switch (kind) {
-      case "country": {
-        const upper = value.toUpperCase();
-        if (source === "wca") {
-          const cur = new Set(globalFilters.networkSelectedCountries ?? new Set<string>());
-          cur.delete(upper);
-          batchUpdate({ networkSelectedCountries: cur });
-        } else if (source === "crm") {
-          const cur = new Set(globalFilters.crmSelectedCountries ?? new Set<string>());
-          cur.delete(upper);
-          batchUpdate({ crmSelectedCountries: cur });
+  const handleRemoveChip = React.useCallback(
+    (key: string) => {
+      const [kind, ...rest] = key.split(":");
+      const value = rest.join(":");
+      switch (kind) {
+        case "country": {
+          const upper = value.toUpperCase();
+          if (source === "wca") {
+            const cur = new Set(globalFilters.networkSelectedCountries ?? new Set<string>());
+            cur.delete(upper);
+            batchUpdate({ networkSelectedCountries: cur });
+          } else if (source === "crm") {
+            const cur = new Set(globalFilters.crmSelectedCountries ?? new Set<string>());
+            cur.delete(upper);
+            batchUpdate({ crmSelectedCountries: cur });
+          }
+          return;
         }
-        return;
+        case "local-country":
+          setFilters((f) => ({ ...f, country: null }));
+          return;
+        case "local-city":
+          setFilters((f) => ({ ...f, city: null }));
+          return;
+        case "search": {
+          if (source === "wca") batchUpdate({ networkSearch: "" });
+          else if (source === "crm") batchUpdate({ search: "" });
+          return;
+        }
+        case "holding":
+          batchUpdate({ holdingPattern: "out" });
+          return;
+        case "origin": {
+          const cur = new Set(globalFilters.crmOrigin ?? new Set<string>());
+          cur.delete(value);
+          batchUpdate({ crmOrigin: cur });
+          return;
+        }
+        case "quality":
+          batchUpdate({ crmQuality: "all" });
+          return;
+        case "channel":
+          batchUpdate({ crmChannel: "all" });
+          return;
+        case "wca":
+          batchUpdate({ crmWcaMatch: "all" });
+          return;
+        default:
+          return;
       }
-      case "local-country":
-        setFilters((f) => ({ ...f, country: null }));
-        return;
-      case "local-city":
-        setFilters((f) => ({ ...f, city: null }));
-        return;
-      case "search": {
-        if (source === "wca") batchUpdate({ networkSearch: "" });
-        else if (source === "crm") batchUpdate({ search: "" });
-        return;
-      }
-      case "holding":
-        batchUpdate({ holdingPattern: "out" });
-        return;
-      case "origin": {
-        const cur = new Set(globalFilters.crmOrigin ?? new Set<string>());
-        cur.delete(value);
-        batchUpdate({ crmOrigin: cur });
-        return;
-      }
-      case "quality":
-        batchUpdate({ crmQuality: "all" });
-        return;
-      case "channel":
-        batchUpdate({ crmChannel: "all" });
-        return;
-      case "wca":
-        batchUpdate({ crmWcaMatch: "all" });
-        return;
-      default:
-        return;
-    }
-  }, [source, globalFilters, batchUpdate]);
+    },
+    [source, globalFilters, batchUpdate],
+  );
 
   // Default: escludi holding pattern. Persistito per source.
   const holdingStorageKey = `list:${source}:holding`;
@@ -221,7 +229,11 @@ export function EntityListWithDetail({
   });
   const updateHoldingFilter = (m: HoldingFilterMode) => {
     setHoldingFilter(m);
-    try { window.localStorage.setItem(holdingStorageKey, m); } catch { /* swallow */ }
+    try {
+      window.localStorage.setItem(holdingStorageKey, m);
+    } catch {
+      /* swallow */
+    }
   };
 
   // Sblocco temporaneo (non persistito) del filtro holding quando si apre
@@ -247,8 +259,7 @@ export function EntityListWithDetail({
   // Step 0b: filtro holding (sempre visibile/applicato).
   const holdingFiltered = useMemo(() => {
     if (holdingFilter === "include") return enrichedCompanies;
-    const isHolding = (c: CompanyEntity) =>
-      c.meta?.holding === true || c.leadStatus === "holding";
+    const isHolding = (c: CompanyEntity) => c.meta?.holding === true || c.leadStatus === "holding";
     if (holdingFilter === "only") return enrichedCompanies.filter(isHolding);
     return enrichedCompanies.filter((c) => !isHolding(c)); // exclude
   }, [enrichedCompanies, holdingFilter]);
@@ -259,10 +270,7 @@ export function EntityListWithDetail({
   const visibleIds = useMemo(() => sorted.map((c) => c.id), [sorted]);
   const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selection.isSelected(id));
 
-  const selectedCompanies = useMemo(
-    () => companies.filter((c) => selection.isSelected(c.id)),
-    [companies, selection]
-  );
+  const selectedCompanies = useMemo(() => companies.filter((c) => selection.isSelected(c.id)), [companies, selection]);
 
   const activeFiltersCount = countActiveFilters(filters);
 
@@ -284,7 +292,10 @@ export function EntityListWithDetail({
   const autoFocusedRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (isLoading) return;
-    if (detailSlot) { autoFocusedRef.current = null; return; }
+    if (detailSlot) {
+      autoFocusedRef.current = null;
+      return;
+    }
     if (selection.count > 0) return;
     if (sorted.length === 0) return;
     const first = sorted[0];
@@ -302,7 +313,7 @@ export function EntityListWithDetail({
         "h-7 px-2 rounded-md text-[11px] font-medium border inline-flex items-center gap-1 transition-all",
         activeFiltersCount > 0
           ? "bg-primary/15 text-primary border-primary/40"
-          : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground"
+          : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground",
       )}
       title="Apri filtri avanzati"
     >
@@ -323,7 +334,7 @@ export function EntityListWithDetail({
         "h-7 px-2 rounded-md text-[11px] font-medium border inline-flex items-center gap-1 transition-all",
         allSelected
           ? "bg-primary/15 text-primary border-primary/40"
-          : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground"
+          : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground",
       )}
       title={allSelected ? "Deseleziona tutto" : "Seleziona tutti i visibili"}
     >
@@ -338,9 +349,7 @@ export function EntityListWithDetail({
         countLabel={
           <span>
             {sorted.length}/{companies.length} aziende
-            {selection.count > 0 && (
-              <span className="ml-2 text-primary font-semibold">· {selection.count} sel.</span>
-            )}
+            {selection.count > 0 && <span className="ml-2 text-primary font-semibold">· {selection.count} sel.</span>}
           </span>
         }
         sortKey={sortKey}
@@ -413,7 +422,7 @@ export function EntityListWithDetail({
       testId={testId ?? "entity-list-with-detail"}
       list={list}
       detail={right}
-      trailingLabel={selection.count >= 1 ? `${selection.count} selezionati` : trailingLabel ?? null}
+      trailingLabel={selection.count >= 1 ? `${selection.count} selezionati` : (trailingLabel ?? null)}
       hideHeader
     />
   );

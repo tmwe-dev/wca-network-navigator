@@ -3,10 +3,14 @@ import type { Tool, ToolResult } from "./types";
 
 function _jobStatusToNodeType(status: string): "trigger" | "action" | "condition" | "end" {
   switch (status) {
-    case "completed": return "end";
-    case "in_progress": return "action";
-    case "skipped": return "condition";
-    default: return "trigger";
+    case "completed":
+      return "end";
+    case "in_progress":
+      return "action";
+    case "skipped":
+      return "condition";
+    default:
+      return "trigger";
   }
 }
 
@@ -40,9 +44,9 @@ export const campaignStatusTool: Tool = {
     let batchIdx = 0;
     for (const [batchId, batchJobs] of batches) {
       if (batchIdx >= 6) break; // max 6 batches
-      const pending = batchJobs.filter(j => j.status === "pending").length;
-      const inProgress = batchJobs.filter(j => j.status === "in_progress").length;
-      const completed = batchJobs.filter(j => j.status === "completed").length;
+      const pending = batchJobs.filter((j) => j.status === "pending").length;
+      const inProgress = batchJobs.filter((j) => j.status === "in_progress").length;
+      const completed = batchJobs.filter((j) => j.status === "completed").length;
       const total = batchJobs.length;
       const country = batchJobs[0]?.countryName ?? "—";
       const jobType = batchJobs[0]?.jobType ?? "email";

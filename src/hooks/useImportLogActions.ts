@@ -19,7 +19,16 @@ const log = createLogger("useImportLogActions");
 
 // ─── Field aliases for CSV mapping ─────────────────────
 export const FIELD_ALIASES: Record<string, string[]> = {
-  company_name: ["company_name", "ragione_sociale", "azienda", "company", "societa", "ditta", "denominazione", "name_2"],
+  company_name: [
+    "company_name",
+    "ragione_sociale",
+    "azienda",
+    "company",
+    "societa",
+    "ditta",
+    "denominazione",
+    "name_2",
+  ],
   name: ["name", "nome", "contatto", "referente", "contact", "nome_contatto", "nome_referente"],
   email: ["email", "e_mail", "mail", "email_address", "posta_elettronica"],
   phone: ["phone", "telefono", "tel", "phone_number", "numero_telefono"],
@@ -48,10 +57,25 @@ export function findField(row: Record<string, unknown>, aliases: string[]): stri
 export function useCreateImport() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file, rows, userId }: { file: File; rows: Array<Record<string, unknown>>; userId: string }) => {
+    mutationFn: async ({
+      file,
+      rows,
+      userId,
+    }: {
+      file: File;
+      rows: Array<Record<string, unknown>>;
+      userId: string;
+    }) => {
       const { path: filePath, signedUrl } = await uploadImportFile(userId, file);
 
-      const importLog = await createImportLog({ user_id: userId, file_name: file.name, file_url: signedUrl || filePath, file_size: file.size, total_rows: rows.length, status: "pending" });
+      const importLog = await createImportLog({
+        user_id: userId,
+        file_name: file.name,
+        file_url: signedUrl || filePath,
+        file_size: file.size,
+        total_rows: rows.length,
+        status: "pending",
+      });
 
       const contacts = rows.map((row, index) => ({
         import_log_id: importLog.id,
@@ -85,7 +109,10 @@ export function useProcessImport() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (importLogId: string) => {
-      return invokeEdge<Record<string, unknown>>("process-ai-import", { body: { import_log_id: importLogId }, context: "useProcessImport" });
+      return invokeEdge<Record<string, unknown>>("process-ai-import", {
+        body: { import_log_id: importLogId },
+        context: "useProcessImport",
+      });
     },
     onSuccess: (_, importLogId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.imports.log(importLogId) });
@@ -128,13 +155,21 @@ export function useTransferToPartners() {
           is_active: true,
         });
 
-        if (pError || !partner) { log.error("transfer failed", { message: pError ?? "insert failed" }); continue; }
+        if (pError || !partner) {
+          log.error("transfer failed", { message: pError ?? "insert failed" });
+          continue;
+        }
 
         if (c.name) {
           await insertPartnerContact({
-            partner_id: partner.id, name: c.name, email: c.email,
-            direct_phone: c.phone, mobile: c.mobile, contact_alias: c.contact_alias,
-            title: (toRecord(c)).position || null, is_primary: true,
+            partner_id: partner.id,
+            name: c.name,
+            email: c.email,
+            direct_phone: c.phone,
+            mobile: c.mobile,
+            contact_alias: c.contact_alias,
+            title: toRecord(c).position || null,
+            is_primary: true,
           });
         }
 
@@ -155,7 +190,15 @@ export function useTransferToPartners() {
 export function useCreateActivitiesFromImport() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ contacts, activityType, campaignBatchId }: { contacts: ImportedContact[]; activityType: "send_email" | "phone_call"; campaignBatchId?: string }) => {
+    mutationFn: async ({
+      contacts,
+      activityType,
+      campaignBatchId,
+    }: {
+      contacts: ImportedContact[];
+      activityType: "send_email" | "phone_call";
+      campaignBatchId?: string;
+    }) => {
       let count = 0;
       for (const c of contacts) {
         const { partner, error: pError } = await createPartnerSafe({
@@ -163,21 +206,36 @@ export function useCreateActivitiesFromImport() {
           country_code: resolveCountryCode(c.country || "") || "XX",
           country_name: c.country || "Unknown",
           city: c.city || "Unknown",
-          phone: c.phone, email: c.email, company_alias: c.company_alias, is_active: true,
+          phone: c.phone,
+          email: c.email,
+          company_alias: c.company_alias,
+          is_active: true,
         });
         if (pError || !partner) continue;
 
         let contactId: string | null = null;
         if (c.name) {
-          const contact = await insertPartnerContact({ partner_id: partner.id, name: c.name, email: c.email, direct_phone: c.phone, mobile: c.mobile, contact_alias: c.contact_alias, is_primary: true });
+          const contact = await insertPartnerContact({
+            partner_id: partner.id,
+            name: c.name,
+            email: c.email,
+            direct_phone: c.phone,
+            mobile: c.mobile,
+            contact_alias: c.contact_alias,
+            is_primary: true,
+          });
           contactId = (contact as { id?: string } | null)?.id || null;
         }
 
         await insertActivity({
-          partner_id: partner.id, source_type: "partner", source_id: partner.id,
+          partner_id: partner.id,
+          source_type: "partner",
+          source_id: partner.id,
           activity_type: activityType,
           title: `${activityType === "send_email" ? "Email" : "Chiamata"} - ${c.company_name}`,
-          status: "pending", priority: "medium", selected_contact_id: contactId,
+          status: "pending",
+          priority: "medium",
+          selected_contact_id: contactId,
           campaign_batch_id: campaignBatchId || null,
         });
 
@@ -198,11 +256,25 @@ export function useCreateActivitiesFromImport() {
 
 export function useAnalyzeImportStructure() {
   return useMutation({
-    mutationFn: async ({ sampleRows, inputType, rawText }: { sampleRows?: Array<Record<string, unknown>>; inputType: "paste" | "file"; rawText?: string }) => {
-      return invokeEdge<{ column_mapping: Record<string, string>; parsed_rows: Array<Record<string, unknown>>; confidence: number; warnings: string[]; unmapped_columns?: string[] }>(
-        "analyze-import-structure",
-        { body: { sample_rows: sampleRows || [], input_type: inputType, raw_text: rawText }, context: "useAnalyzeImportStructure" }
-      );
+    mutationFn: async ({
+      sampleRows,
+      inputType,
+      rawText,
+    }: {
+      sampleRows?: Array<Record<string, unknown>>;
+      inputType: "paste" | "file";
+      rawText?: string;
+    }) => {
+      return invokeEdge<{
+        column_mapping: Record<string, string>;
+        parsed_rows: Array<Record<string, unknown>>;
+        confidence: number;
+        warnings: string[];
+        unmapped_columns?: string[];
+      }>("analyze-import-structure", {
+        body: { sample_rows: sampleRows || [], input_type: inputType, raw_text: rawText },
+        context: "useAnalyzeImportStructure",
+      });
     },
     onError: (err) => toast({ title: "Errore analisi AI", description: String(err), variant: "destructive" }),
   });
@@ -214,14 +286,20 @@ export function useFixImportErrors() {
     mutationFn: async ({ importLogId, customPrompt }: { importLogId: string; customPrompt?: string }) => {
       return invokeEdge<{ corrected: number; dismissed: number; has_more: boolean; remaining: number }>(
         "process-ai-import",
-        { body: { import_log_id: importLogId, mode: "fix_errors", custom_prompt: customPrompt || undefined }, context: "useFixImportErrors" }
+        {
+          body: { import_log_id: importLogId, mode: "fix_errors", custom_prompt: customPrompt || undefined },
+          context: "useFixImportErrors",
+        },
       );
     },
     onSuccess: (result, { importLogId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.imports.errors(importLogId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported(importLogId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.imports.log(importLogId) });
-      toast({ title: "Batch completato", description: `${result.corrected} corretti, ${result.dismissed} non recuperabili${result.has_more ? ` — ${result.remaining} rimanenti` : ""}` });
+      toast({
+        title: "Batch completato",
+        description: `${result.corrected} corretti, ${result.dismissed} non recuperabili${result.has_more ? ` — ${result.remaining} rimanenti` : ""}`,
+      });
     },
     onError: (err) => toast({ title: "Errore correzione AI", description: String(err), variant: "destructive" }),
   });
@@ -230,12 +308,32 @@ export function useFixImportErrors() {
 export function useCreateImportFromParsedRows() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ rows, userId, fileName, groupName, importSource }: { rows: Array<Record<string, unknown>>; userId: string; fileName: string; groupName?: string; importSource?: "standard" | "business_card" }) => {
+    mutationFn: async ({
+      rows,
+      userId,
+      fileName,
+      groupName,
+      importSource,
+    }: {
+      rows: Array<Record<string, unknown>>;
+      userId: string;
+      fileName: string;
+      groupName?: string;
+      importSource?: "standard" | "business_card";
+    }) => {
       const source = importSource || "standard";
       const normalizedGroupName = groupName?.trim() || null;
       const businessCardOrigin = normalizedGroupName ? `business_card:${normalizedGroupName}` : "business_card";
 
-      const importLog = await createImportLog({ user_id: userId, file_name: fileName, file_size: 0, total_rows: rows.length, status: "pending", normalization_method: "ai", group_name: normalizedGroupName });
+      const importLog = await createImportLog({
+        user_id: userId,
+        file_name: fileName,
+        file_size: 0,
+        total_rows: rows.length,
+        status: "pending",
+        normalization_method: "ai",
+        group_name: normalizedGroupName,
+      });
 
       const contacts = rows.map((row, index) => {
         const rawData = row._raw || row;
@@ -244,15 +342,23 @@ export function useCreateImportFromParsedRows() {
         const existingNote = mapped.note || null;
         const sourceNote = isBusinessCard ? "Importato da biglietto da visita" : null;
         return {
-          import_log_id: importLog.id, row_number: index + 1,
-          company_name: mapped.company_name || null, name: mapped.name || null,
-          email: mapped.email || null, phone: mapped.phone || null, mobile: mapped.mobile || null,
-          country: mapped.country || null, city: mapped.city || null, address: mapped.address || null,
+          import_log_id: importLog.id,
+          row_number: index + 1,
+          company_name: mapped.company_name || null,
+          name: mapped.name || null,
+          email: mapped.email || null,
+          phone: mapped.phone || null,
+          mobile: mapped.mobile || null,
+          country: mapped.country || null,
+          city: mapped.city || null,
+          address: mapped.address || null,
           zip_code: mapped.zip_code || null,
           note: [existingNote, sourceNote].filter(Boolean).join(" · ") || null,
           origin: isBusinessCard ? businessCardOrigin : mapped.origin || null,
-          company_alias: mapped.company_alias || null, contact_alias: mapped.contact_alias || null,
-          position: mapped.position || null, external_id: mapped.external_id || null,
+          company_alias: mapped.company_alias || null,
+          contact_alias: mapped.contact_alias || null,
+          position: mapped.position || null,
+          external_id: mapped.external_id || null,
           raw_data: rawData,
         };
       });
@@ -263,7 +369,12 @@ export function useCreateImportFromParsedRows() {
       }
 
       const totalBatches = Math.ceil(contacts.length / 100);
-      await updateImportLog(importLog.id, { status: "completed", imported_rows: contacts.length, processing_batch: totalBatches, total_batches: totalBatches });
+      await updateImportLog(importLog.id, {
+        status: "completed",
+        imported_rows: contacts.length,
+        processing_batch: totalBatches,
+        total_batches: totalBatches,
+      });
 
       return importLog as ImportLog;
     },

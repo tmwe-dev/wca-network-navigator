@@ -11,18 +11,39 @@ vi.mock("@/constants/agentAvatars", () => ({ resolveAgentAvatar: () => null }));
 vi.mock("@/constants/agentTemplates", () => ({ ROBIN_VOICE_CALL_URL: "https://voice.example.com" }));
 vi.mock("@/lib/security/htmlSanitizer", () => ({ sanitizeHtml: (h: string) => h }));
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { storage: { from: () => ({ upload: vi.fn().mockResolvedValue({ error: null }), getPublicUrl: () => ({ data: { publicUrl: "https://cdn/sig.png" } }) }) } },
+  supabase: {
+    storage: {
+      from: () => ({
+        upload: vi.fn().mockResolvedValue({ error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: "https://cdn/sig.png" } }),
+      }),
+    },
+  },
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("@/lib/log", () => ({ createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
+vi.mock("@/lib/log", () => ({
+  createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+}));
 
 import { AgentSignatureConfig } from "./AgentSignatureConfig";
 
 const AGENT = {
-  id: "a1", name: "Robin", role: "sales", system_prompt: "", avatar_emoji: "🤖",
-  is_active: true, signature_html: "<p>Best regards</p>", signature_image_url: "",
-  voice_call_url: "", user_id: "u1", assigned_tools: [], knowledge_base: {}, stats: {},
-  schedule_config: {}, created_at: "", updated_at: "",
+  id: "a1",
+  name: "Robin",
+  role: "sales",
+  system_prompt: "",
+  avatar_emoji: "🤖",
+  is_active: true,
+  signature_html: "<p>Best regards</p>",
+  signature_image_url: "",
+  voice_call_url: "",
+  user_id: "u1",
+  assigned_tools: [],
+  knowledge_base: {},
+  stats: {},
+  schedule_config: {},
+  created_at: "",
+  updated_at: "",
 } as any;
 
 describe("AgentSignatureConfig", () => {

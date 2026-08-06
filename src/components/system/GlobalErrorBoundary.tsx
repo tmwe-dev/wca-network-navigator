@@ -35,7 +35,10 @@ export class GlobalErrorBoundary extends Component<Props, State> {
 
   private async logErrorToDb(error: Error, info: ErrorInfo) {
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return;
       await insertReactCrashLog({
         user_id: user.id,
@@ -59,16 +62,20 @@ export class GlobalErrorBoundary extends Component<Props, State> {
       `UserAgent: ${navigator.userAgent}`,
     ];
     try {
-      const storageKey = Object.keys(localStorage).find(k => k.includes("supabase") && k.includes("auth"));
+      const storageKey = Object.keys(localStorage).find((k) => k.includes("supabase") && k.includes("auth"));
       if (storageKey) {
         const session = JSON.parse(localStorage.getItem(storageKey) || "{}");
         lines.push(`UserID: ${session?.user?.id || "unknown"}`);
       }
-    } catch { lines.push("UserID: unknown"); }
+    } catch {
+      lines.push("UserID: unknown");
+    }
     try {
       const lastErr = localStorage.getItem("last_wca_error");
       if (lastErr) lines.push(`Last WCA Error: ${lastErr}`);
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
     lines.push("", `Error: ${error?.message || "Unknown"}`, "", `Stack:\n${error?.stack || "N/A"}`);
     if (errorInfo?.componentStack) {
       lines.push("", `Component Stack:\n${errorInfo.componentStack}`);
@@ -77,7 +84,9 @@ export class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   private handleCopy = () => {
-    navigator.clipboard.writeText(this.getDiagnosticInfo()).catch((err) => { log.error("[Clipboard] copy failed:", { detail: err }); });
+    navigator.clipboard.writeText(this.getDiagnosticInfo()).catch((err) => {
+      log.error("[Clipboard] copy failed:", { detail: err });
+    });
   };
 
   private handleReload = () => {
@@ -93,7 +102,8 @@ export class GlobalErrorBoundary extends Component<Props, State> {
           <div className="text-5xl">💥</div>
           <h1 className="text-xl font-semibold text-foreground">Qualcosa è andato storto</h1>
           <p className="text-sm text-muted-foreground">
-            L'applicazione ha riscontrato un errore imprevisto. Puoi ricaricare la pagina o copiare le informazioni diagnostiche per il supporto.
+            L'applicazione ha riscontrato un errore imprevisto. Puoi ricaricare la pagina o copiare le informazioni
+            diagnostiche per il supporto.
           </p>
           <pre className="text-left text-xs bg-muted/50 border border-border rounded-lg p-4 max-h-48 overflow-auto text-muted-foreground whitespace-pre-wrap">
             {this.state.error?.message}

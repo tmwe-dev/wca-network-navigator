@@ -7,13 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { toJsonValue } from "@/lib/jsonGuards";
 import { toRecord } from "@/lib/records";
 
-export type BulkJobStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "completed_with_errors"
-  | "failed"
-  | "cancelled";
+export type BulkJobStatus = "pending" | "running" | "completed" | "completed_with_errors" | "failed" | "cancelled";
 
 export interface BulkJobRow {
   id: string;
@@ -79,9 +73,14 @@ export async function createBulkJob(input: {
 
 export async function updateBulkJob(
   id: string,
-  patch: Partial<Pick<BulkJobRow, "processed" | "success_count" | "error_count" | "status" | "error_message" | "completed_at">>,
+  patch: Partial<
+    Pick<BulkJobRow, "processed" | "success_count" | "error_count" | "status" | "error_message" | "completed_at">
+  >,
 ): Promise<void> {
-  const { error } = await supabase.from("bulk_jobs").update(patch as Database["public"]["Tables"]["bulk_jobs"]["Update"]).eq("id", id);
+  const { error } = await supabase
+    .from("bulk_jobs")
+    .update(patch as Database["public"]["Tables"]["bulk_jobs"]["Update"])
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }
 

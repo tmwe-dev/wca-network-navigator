@@ -117,7 +117,8 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY mancante" }), {
         status: 500,
@@ -141,12 +142,12 @@ serve(async (req) => {
         : null,
       gResults.length
         ? `**Risultati Google rilevanti**:\n${gResults
-            .map((r) => `- ${r.url}${r.title ? ` — ${r.title}` : ""}${r.snippet ? `\n  ${r.snippet.slice(0, 200)}` : ""}`)
+            .map(
+              (r) => `- ${r.url}${r.title ? ` — ${r.title}` : ""}${r.snippet ? `\n  ${r.snippet.slice(0, 200)}` : ""}`,
+            )
             .join("\n")}`
         : null,
-      body.last_page_summary
-        ? `**Sintesi ultima pagina**:\n${body.last_page_summary}`
-        : null,
+      body.last_page_summary ? `**Sintesi ultima pagina**:\n${body.last_page_summary}` : null,
       `**Findings raccolti finora**:\n\`\`\`json\n${JSON.stringify(body.findings_so_far ?? {}, null, 2).slice(0, 2000)}\n\`\`\``,
       `\nDecidi le prossime azioni (o stop). Sii chirurgico.`,
     ]
@@ -154,23 +155,23 @@ serve(async (req) => {
       .join("\n\n");
 
     const aiRes = await aiFetch({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userParts },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "decide_next",
-              description: "Decide le prossime URL da visitare, o stop=true",
-              parameters: SCHEMA,
-            },
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userParts },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "decide_next",
+            description: "Decide le prossime URL da visitare, o stop=true",
+            parameters: SCHEMA,
           },
-        ],
-        tool_choice: { type: "function", function: { name: "decide_next" } },
-      });
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "decide_next" } },
+    });
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
@@ -182,10 +183,10 @@ serve(async (req) => {
         });
       }
       if (aiRes.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crediti AI esauriti. Aggiungi fondi al workspace Lovable." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: "Crediti AI esauriti. Aggiungi fondi al workspace Lovable." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       return new Response(JSON.stringify({ error: "AI gateway error", detail: errText }), {
         status: 502,
@@ -214,9 +215,9 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("agentic-decide error", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Errore" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

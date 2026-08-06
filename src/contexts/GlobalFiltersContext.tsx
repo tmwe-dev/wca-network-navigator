@@ -1,7 +1,15 @@
 import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
-export type WorkspaceFilterKey = "with_email" | "no_email" | "with_contact" | "no_contact" | "with_alias" | "no_alias" | "enriched" | "not_enriched";
+export type WorkspaceFilterKey =
+  | "with_email"
+  | "no_email"
+  | "with_contact"
+  | "no_contact"
+  | "with_alias"
+  | "no_alias"
+  | "enriched"
+  | "not_enriched";
 export type EmailGenFilter = "all" | "generated" | "to_generate";
 export type SortingFilterMode = "all" | "unreviewed" | "reviewed" | "today" | "immediate" | "scheduled";
 export type CockpitChannelFilter = "with_email" | "with_linkedin" | "with_phone" | "with_whatsapp";
@@ -208,21 +216,24 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
 
   // Auto-generate all 33 legacy setters for backward compatibility
   const legacySetters = useMemo(() => {
-    const entries = Object.keys(defaults).map(key => [
+    const entries = Object.keys(defaults).map((key) => [
       toSetterName(key),
       (val: string) => dispatch({ type: "SET", key: key as keyof GlobalFilterState, value: val }),
     ]);
     return Object.fromEntries(entries) as unknown as LegacySetters;
   }, []);
 
-  const value = useMemo<GlobalFiltersCtxValue>(() => ({
-    filters,
-    setFilter,
-    batchUpdate,
-    resetFilters,
-    currentRoute: location.pathname,
-    ...legacySetters,
-  }), [filters, setFilter, batchUpdate, resetFilters, location.pathname, legacySetters]);
+  const value = useMemo<GlobalFiltersCtxValue>(
+    () => ({
+      filters,
+      setFilter,
+      batchUpdate,
+      resetFilters,
+      currentRoute: location.pathname,
+      ...legacySetters,
+    }),
+    [filters, setFilter, batchUpdate, resetFilters, location.pathname, legacySetters],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

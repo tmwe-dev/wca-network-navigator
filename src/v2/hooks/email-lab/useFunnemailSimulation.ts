@@ -70,19 +70,21 @@ export function useFunnemailSimulation(): UseFunnemailSimulationState {
   const fetchSteps = React.useCallback(async (tid: string) => {
     const data = await getTraceStepsOrdered(tid);
     if (mountedRef.current && Array.isArray(data)) {
-      setSteps(data.map((row) => ({
-        id: row.id,
-        step_name: row.step_name,
-        step_order: row.step_order,
-        status: row.status,
-        error_message: row.error_message,
-        input_summary: row.input_summary,
-        output_summary: row.output_summary,
-        ai_model: row.ai_model,
-        ai_scope: row.ai_scope,
-        duration_ms: row.duration_ms,
-        created_at: row.created_at,
-      })));
+      setSteps(
+        data.map((row) => ({
+          id: row.id,
+          step_name: row.step_name,
+          step_order: row.step_order,
+          status: row.status,
+          error_message: row.error_message,
+          input_summary: row.input_summary,
+          output_summary: row.output_summary,
+          ai_model: row.ai_model,
+          ai_scope: row.ai_scope,
+          duration_ms: row.duration_ms,
+          created_at: row.created_at,
+        })),
+      );
     }
   }, []);
 
@@ -96,13 +98,12 @@ export function useFunnemailSimulation(): UseFunnemailSimulationState {
     setVerdict(null);
   }, []);
 
-  const run = React.useCallback(async (input: SimulationInput) => {
-    reset();
-    setLoading(true);
-    try {
-      const res = await invokeAi<Record<string, unknown>>(
-        "simulate-funnemail-classify",
-        {
+  const run = React.useCallback(
+    async (input: SimulationInput) => {
+      reset();
+      setLoading(true);
+      try {
+        const res = await invokeAi<Record<string, unknown>>("simulate-funnemail-classify", {
           scope: "lab",
           context: { source: "EmailLab.FunnemailTab", route: "/v2/email-lab", mode: "simulate" },
           body: {
@@ -111,39 +112,40 @@ export function useFunnemailSimulation(): UseFunnemailSimulationState {
             body: input.body,
             channel: input.channel ?? "email",
           },
-        },
-      );
-      if (!mountedRef.current) return;
-      const v = res as unknown as SimulationVerdict & { ok?: boolean; error?: string };
-      if (v?.error) throw new Error(v.error);
-      setTraceId(v.traceId);
-      setVerdict({
-        traceId: v.traceId,
-        classification: v.classification,
-        proposedGroup: v.proposedGroup,
-        proposedAction: v.proposedAction,
-        knownPartner: v.knownPartner,
-        domain: v.domain,
-        injectionBlocked: v.injectionBlocked,
-      });
-      await fetchSteps(v.traceId);
-      // Polling breve (i log arrivano in ordine sparso): 800ms x 6 tentativi
-      let attempts = 0;
-      pollRef.current = window.setInterval(() => {
-        attempts++;
-        if (attempts > 6 || !mountedRef.current) {
-          if (pollRef.current) window.clearInterval(pollRef.current);
-          pollRef.current = null;
-          return;
-        }
-        void fetchSteps(v.traceId);
-      }, 800);
-    } catch (e) {
-      if (mountedRef.current) setError((e as Error).message);
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [fetchSteps, reset]);
+        });
+        if (!mountedRef.current) return;
+        const v = res as unknown as SimulationVerdict & { ok?: boolean; error?: string };
+        if (v?.error) throw new Error(v.error);
+        setTraceId(v.traceId);
+        setVerdict({
+          traceId: v.traceId,
+          classification: v.classification,
+          proposedGroup: v.proposedGroup,
+          proposedAction: v.proposedAction,
+          knownPartner: v.knownPartner,
+          domain: v.domain,
+          injectionBlocked: v.injectionBlocked,
+        });
+        await fetchSteps(v.traceId);
+        // Polling breve (i log arrivano in ordine sparso): 800ms x 6 tentativi
+        let attempts = 0;
+        pollRef.current = window.setInterval(() => {
+          attempts++;
+          if (attempts > 6 || !mountedRef.current) {
+            if (pollRef.current) window.clearInterval(pollRef.current);
+            pollRef.current = null;
+            return;
+          }
+          void fetchSteps(v.traceId);
+        }, 800);
+      } catch (e) {
+        if (mountedRef.current) setError((e as Error).message);
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    },
+    [fetchSteps, reset],
+  );
 
   return { loading, error, traceId, steps, verdict, run, reset };
 }

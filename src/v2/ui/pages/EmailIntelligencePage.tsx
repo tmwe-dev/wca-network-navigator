@@ -19,12 +19,18 @@ import { useMailboxSenderAllowlist } from "@/hooks/useMailboxSenderAllowlist";
 
 const ManualGroupingTab = lazy(() => import("@/components/email-intelligence/ManualGroupingTab"));
 const AISuggestionsTab = lazy(() => import("@/components/email-intelligence/AISuggestionsTab"));
-const SmartInboxView = lazy(() => import("@/components/email-intelligence/SmartInboxView").then(m => ({ default: m.SmartInboxView })));
+const SmartInboxView = lazy(() =>
+  import("@/components/email-intelligence/SmartInboxView").then((m) => ({ default: m.SmartInboxView })),
+);
 const RulesAndActionsTab = lazy(() => import("@/components/email-intelligence/RulesAndActionsTab"));
 const FunnemailTab = lazy(() => import("@/components/email-intelligence/FunnemailTab"));
 
 function TabFallback() {
-  return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
 }
 
 export function EmailIntelligencePage(): React.ReactElement {
@@ -109,11 +115,7 @@ export function EmailIntelligencePage(): React.ReactElement {
       <PageTitleHeader
         icon={Brain}
         title="Email Intelligence"
-        subtitle={
-          activeMailbox
-            ? `mittenti di ${activeMailbox.label}`
-            : "classificazione mittenti"
-        }
+        subtitle={activeMailbox ? `mittenti di ${activeMailbox.label}` : "classificazione mittenti"}
         right={
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <KpiPill label="Da classificare" value={uncategorizedCount} tone="primary" />
@@ -133,20 +135,45 @@ export function EmailIntelligencePage(): React.ReactElement {
           <FlatTabTrigger value="funnemail">Funnemail</FlatTabTrigger>
         </TabsList>
 
-        <TabsContent value="manual" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
-          <Suspense fallback={<TabFallback />}><ManualGroupingTab /></Suspense>
+        <TabsContent
+          value="manual"
+          className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3"
+        >
+          <Suspense fallback={<TabFallback />}>
+            <ManualGroupingTab />
+          </Suspense>
         </TabsContent>
-        <TabsContent value="ai-suggestions" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
-          <Suspense fallback={<TabFallback />}><AISuggestionsTab /></Suspense>
+        <TabsContent
+          value="ai-suggestions"
+          className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3"
+        >
+          <Suspense fallback={<TabFallback />}>
+            <AISuggestionsTab />
+          </Suspense>
         </TabsContent>
-        <TabsContent value="auto-classify" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
-          <Suspense fallback={<TabFallback />}><SmartInboxView /></Suspense>
+        <TabsContent
+          value="auto-classify"
+          className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3"
+        >
+          <Suspense fallback={<TabFallback />}>
+            <SmartInboxView />
+          </Suspense>
         </TabsContent>
-        <TabsContent value="rules" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
-          <Suspense fallback={<TabFallback />}><RulesAndActionsTab /></Suspense>
+        <TabsContent
+          value="rules"
+          className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3"
+        >
+          <Suspense fallback={<TabFallback />}>
+            <RulesAndActionsTab />
+          </Suspense>
         </TabsContent>
-        <TabsContent value="funnemail" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
-          <Suspense fallback={<TabFallback />}><FunnemailTab /></Suspense>
+        <TabsContent
+          value="funnemail"
+          className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3"
+        >
+          <Suspense fallback={<TabFallback />}>
+            <FunnemailTab />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>
@@ -155,13 +182,7 @@ export function EmailIntelligencePage(): React.ReactElement {
 
 /* ---------- helpers locali (presentational) ---------- */
 
-function FlatTabTrigger({
-  value,
-  children,
-}: {
-  value: string;
-  children: React.ReactNode;
-}): React.ReactElement {
+function FlatTabTrigger({ value, children }: { value: string; children: React.ReactNode }): React.ReactElement {
   return (
     <TabsTrigger
       value={value}
@@ -196,9 +217,7 @@ function KpiPill({
   }[tone];
   return (
     <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
-      <span className={cn("font-semibold tabular-nums", toneCls)}>
-        {value.toLocaleString("it-IT")}
-      </span>
+      <span className={cn("font-semibold tabular-nums", toneCls)}>{value.toLocaleString("it-IT")}</span>
       <span className="text-muted-foreground">{label}</span>
     </span>
   );

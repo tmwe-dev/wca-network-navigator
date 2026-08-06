@@ -51,28 +51,37 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
         const p = await findPartnerRecord(sourceId);
         if (!p) return null;
         const contacts = (p as Record<string, unknown>).partner_contacts as Array<Record<string, unknown>> | undefined;
-        const socialLinks = (p as Record<string, unknown>).partner_social_links as Array<Record<string, unknown>> | undefined;
-        const primary = contacts?.find(c => c.is_primary) || contacts?.[0];
-        const liLink = socialLinks?.find(l => l.platform === "linkedin");
+        const socialLinks = (p as Record<string, unknown>).partner_social_links as
+          | Array<Record<string, unknown>>
+          | undefined;
+        const primary = contacts?.find((c) => c.is_primary) || contacts?.[0];
+        const liLink = socialLinks?.find((l) => l.platform === "linkedin");
         return {
-          sourceType: "partner", sourceId,
+          sourceType: "partner",
+          sourceId,
           companyName: p.company_name,
           contactName: (primary?.name as string) || "",
           email: (primary?.email as string) || p.email,
           phone: (primary?.direct_phone as string) || p.phone,
           mobile: (primary?.mobile as string) || p.mobile,
-          country: p.country_name, city: p.city, address: p.address,
+          country: p.country_name,
+          city: p.city,
+          address: p.address,
           position: (primary?.title as string) || null,
-          website: p.website, leadStatus: p.lead_status,
+          website: p.website,
+          leadStatus: p.lead_status,
           emailStatus: ((p as Record<string, unknown>).email_status as "valid" | "bounced" | "invalid") || "valid",
           note: p.profile_description,
           enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
-          deepSearchAt: p.enriched_at, createdAt: p.created_at || "",
-          lastInteractionAt: p.last_interaction_at, interactionCount: p.interaction_count,
+          deepSearchAt: p.enriched_at,
+          createdAt: p.created_at || "",
+          lastInteractionAt: p.last_interaction_at,
+          interactionCount: p.interaction_count,
           linkedinUrl: (liLink?.url as string) || null,
           companyAlias: p.company_alias,
           contactAlias: (primary?.contact_alias as string) || null,
-          partnerId: p.id, raw: p,
+          partnerId: p.id,
+          raw: p,
         };
       }
 
@@ -81,20 +90,31 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
         if (!c) return null;
         const ed = (c.enrichment_data as Record<string, unknown>) || {};
         return {
-          sourceType: "contact", sourceId,
-          companyName: c.company_name || "", contactName: c.name || "",
-          email: c.email, phone: c.phone, mobile: c.mobile,
-          country: c.country, city: c.city, address: c.address,
-          position: c.position, website: (ed.company_website as string) || null,
+          sourceType: "contact",
+          sourceId,
+          companyName: c.company_name || "",
+          contactName: c.name || "",
+          email: c.email,
+          phone: c.phone,
+          mobile: c.mobile,
+          country: c.country,
+          city: c.city,
+          address: c.address,
+          position: c.position,
+          website: (ed.company_website as string) || null,
           leadStatus: c.lead_status,
           emailStatus: ((c as Record<string, unknown>).email_status as "valid" | "bounced" | "invalid") || "valid",
           note: c.note,
           enrichmentData: (c.enrichment_data as Record<string, unknown>) ?? null,
-          deepSearchAt: c.deep_search_at as string | null, createdAt: c.created_at,
-          lastInteractionAt: c.last_interaction_at as string | null, interactionCount: c.interaction_count as number,
+          deepSearchAt: c.deep_search_at as string | null,
+          createdAt: c.created_at,
+          lastInteractionAt: c.last_interaction_at as string | null,
+          interactionCount: c.interaction_count as number,
           linkedinUrl: (ed.linkedin_profile_url as string) || (ed.linkedin_url as string) || null,
-          companyAlias: c.company_alias as string | null, contactAlias: c.contact_alias as string | null,
-          partnerId: null, raw: toRecord(c),
+          companyAlias: c.company_alias as string | null,
+          contactAlias: c.contact_alias as string | null,
+          partnerId: null,
+          raw: toRecord(c),
         };
       }
 
@@ -104,21 +124,31 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
         const p = pr;
         const pc = (p.prospect_contacts as Array<Record<string, unknown>>)?.[0];
         return {
-          sourceType: "prospect", sourceId,
+          sourceType: "prospect",
+          sourceId,
           companyName: String(p.ragione_sociale || p.company_name || ""),
-          contactName: String(pc?.name as string || ""),
-          email: (p.email || pc?.email as string || null) as string | null, phone: (pc?.phone as string || null) as string | null, mobile: null,
-          country: "Italia", city: (p.sede_legale || null) as string | null, address: null,
-          position: (pc?.role as string || null) as string | null, website: (p.website || null) as string | null,
+          contactName: String((pc?.name as string) || ""),
+          email: (p.email || (pc?.email as string) || null) as string | null,
+          phone: ((pc?.phone as string) || null) as string | null,
+          mobile: null,
+          country: "Italia",
+          city: (p.sede_legale || null) as string | null,
+          address: null,
+          position: ((pc?.role as string) || null) as string | null,
+          website: (p.website || null) as string | null,
           leadStatus: String(p.lead_status || "new"),
           emailStatus: "valid",
           note: null,
           enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
-          deepSearchAt: null, createdAt: String(p.created_at),
+          deepSearchAt: null,
+          createdAt: String(p.created_at),
           lastInteractionAt: (p.last_interaction_at || null) as string | null,
           interactionCount: Number(p.interaction_count || 0),
-          linkedinUrl: (pc?.linkedin_url as string || null) as string | null,
-          companyAlias: null, contactAlias: null, partnerId: null, raw: p as Record<string, unknown>,
+          linkedinUrl: ((pc?.linkedin_url as string) || null) as string | null,
+          companyAlias: null,
+          contactAlias: null,
+          partnerId: null,
+          raw: p as Record<string, unknown>,
         };
       }
 
@@ -126,19 +156,31 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
         const bc = await findBusinessCardRecord(sourceId);
         if (!bc) return null;
         return {
-          sourceType: "bca", sourceId,
-          companyName: bc.company_name || "", contactName: bc.contact_name || "",
-          email: bc.email, phone: bc.phone, mobile: bc.mobile,
-          country: bc.location, city: null, address: null,
-          position: bc.position, website: null,
+          sourceType: "bca",
+          sourceId,
+          companyName: bc.company_name || "",
+          contactName: bc.contact_name || "",
+          email: bc.email,
+          phone: bc.phone,
+          mobile: bc.mobile,
+          country: bc.location,
+          city: null,
+          address: null,
+          position: bc.position,
+          website: null,
           leadStatus: bc.match_status || "pending",
           emailStatus: "valid",
           note: bc.notes,
           enrichmentData: (bc.raw_data as Record<string, unknown>) ?? null,
-          deepSearchAt: null, createdAt: bc.created_at,
-          lastInteractionAt: null, interactionCount: 0,
-          linkedinUrl: null, companyAlias: null, contactAlias: null,
-          partnerId: bc.matched_partner_id, raw: bc,
+          deepSearchAt: null,
+          createdAt: bc.created_at,
+          lastInteractionAt: null,
+          interactionCount: 0,
+          linkedinUrl: null,
+          companyAlias: null,
+          contactAlias: null,
+          partnerId: bc.matched_partner_id,
+          raw: bc,
         };
       }
 
@@ -152,7 +194,11 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
 export function useUpdateContactRecord() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sourceType, sourceId, updates }: {
+    mutationFn: async ({
+      sourceType,
+      sourceId,
+      updates,
+    }: {
       sourceType: RecordSourceType;
       sourceId: string;
       updates: Record<string, unknown>;

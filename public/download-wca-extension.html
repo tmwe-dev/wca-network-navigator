@@ -1,83 +1,137 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
-<head>
-<meta charset="utf-8">
-<title>Download Estensione WCA</title>
-<style>
-  body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #0f0f1a; color: #e0e0e0; }
-  h1 { font-size: 22px; }
-  p { color: #9ca3af; font-size: 14px; }
-  button { display: block; width: 100%; padding: 14px; margin: 10px 0; border: none; border-radius: 8px; background: #3b82f6; color: white; font-size: 15px; font-weight: 600; cursor: pointer; }
-  button:hover { background: #2563eb; }
-  .done { color: #6ee7b7; margin-top: 16px; }
-  .step { background: #1e1e2e; padding: 12px 16px; border-radius: 8px; margin: 8px 0; font-size: 13px; }
-</style>
-</head>
-<body>
-<h1>🌐 Estensione WCA Cookie Sync</h1>
-<p>Clicca il pulsante per scaricare tutti i 6 file. Salvali tutti nella <strong>stessa cartella</strong>.</p>
-<button onclick="downloadAll()">📦 Scarica tutti i file</button>
-<div id="status"></div>
-<h3 style="margin-top:24px;">Istruzioni:</h3>
-<div class="step">1. Crea una cartella (es. <code>wca-extension</code>) sul Desktop</div>
-<div class="step">2. Salva tutti i 6 file scaricati in quella cartella</div>
-<div class="step">3. Apri Chrome → <code>chrome://extensions/</code></div>
-<div class="step">4. Attiva <strong>Modalità sviluppatore</strong> (in alto a destra)</div>
-<div class="step">5. Clicca <strong>Carica estensione non pacchettizzata</strong> → seleziona la cartella</div>
+  <head>
+    <meta charset="utf-8" />
+    <title>Download Estensione WCA</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #0f0f1a;
+        color: #e0e0e0;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      p {
+        color: #9ca3af;
+        font-size: 14px;
+      }
+      button {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        margin: 10px 0;
+        border: none;
+        border-radius: 8px;
+        background: #3b82f6;
+        color: white;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #2563eb;
+      }
+      .done {
+        color: #6ee7b7;
+        margin-top: 16px;
+      }
+      .step {
+        background: #1e1e2e;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin: 8px 0;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🌐 Estensione WCA Cookie Sync</h1>
+    <p>Clicca il pulsante per scaricare tutti i 6 file. Salvali tutti nella <strong>stessa cartella</strong>.</p>
+    <button onclick="downloadAll()">📦 Scarica tutti i file</button>
+    <div id="status"></div>
+    <h3 style="margin-top: 24px">Istruzioni:</h3>
+    <div class="step">1. Crea una cartella (es. <code>wca-extension</code>) sul Desktop</div>
+    <div class="step">2. Salva tutti i 6 file scaricati in quella cartella</div>
+    <div class="step">3. Apri Chrome → <code>chrome://extensions/</code></div>
+    <div class="step">4. Attiva <strong>Modalità sviluppatore</strong> (in alto a destra)</div>
+    <div class="step">5. Clicca <strong>Carica estensione non pacchettizzata</strong> → seleziona la cartella</div>
 
-<script>
-var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
-var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
+    <script>
+      var SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
+      var SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
 
-var FILES = {
-"manifest.json": JSON.stringify({
-  "manifest_version": 3,
-  "name": "WCA Cookie Sync",
-  "version": "3.0",
-  "description": "Login automatico + sincronizzazione cookie + estrazione contatti WCA.",
-  "permissions": ["cookies", "tabs", "activeTab", "scripting"],
-  "host_permissions": ["https://*.wcaworld.com/*", "https://wcaworld.com/*", "https://www.wcaworld.com/*", SUPABASE_URL + "/*"],
-  "background": { "service_worker": "background.js" },
-  "content_scripts": [{ "matches": ["https://*.lovable.app/*", "https://*.lovableproject.com/*"], "js": ["content.js"], "run_at": "document_idle", "all_frames": true }],
-  "action": { "default_popup": "popup.html", "default_icon": "icon.png" },
-  "icons": { "48": "icon.png", "128": "icon.png" }
-}, null, 2),
+      var FILES = {
+        "manifest.json": JSON.stringify(
+          {
+            manifest_version: 3,
+            name: "WCA Cookie Sync",
+            version: "3.0",
+            description: "Login automatico + sincronizzazione cookie + estrazione contatti WCA.",
+            permissions: ["cookies", "tabs", "activeTab", "scripting"],
+            host_permissions: [
+              "https://*.wcaworld.com/*",
+              "https://wcaworld.com/*",
+              "https://www.wcaworld.com/*",
+              SUPABASE_URL + "/*",
+            ],
+            background: { service_worker: "background.js" },
+            content_scripts: [
+              {
+                matches: ["https://*.lovable.app/*", "https://*.lovableproject.com/*"],
+                js: ["content.js"],
+                run_at: "document_idle",
+                all_frames: true,
+              },
+            ],
+            action: { default_popup: "popup.html", default_icon: "icon.png" },
+            icons: { 48: "icon.png", 128: "icon.png" },
+          },
+          null,
+          2,
+        ),
 
-"background.js": null, // Will be fetched from server at download time
+        "background.js": null, // Will be fetched from server at download time
 
-"content.js": "// WCA Cookie Sync - Content Script Bridge\n\
+        "content.js":
+          '// WCA Cookie Sync - Content Script Bridge\n\
 (function () {\n\
   if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) return;\n\
-  window.addEventListener(\"message\", function (event) {\n\
+  window.addEventListener("message", function (event) {\n\
     if (event.source !== window) return;\n\
     var data = event.data;\n\
-    if (!data || data.direction !== \"from-webapp\") return;\n\
-    var msg = { source: \"wca-content-bridge\" };\n\
+    if (!data || data.direction !== "from-webapp") return;\n\
+    var msg = { source: "wca-content-bridge" };\n\
     var keys = Object.keys(data);\n\
     for (var i = 0; i < keys.length; i++) {\n\
-      if (keys[i] !== \"direction\") msg[keys[i]] = data[keys[i]];\n\
+      if (keys[i] !== "direction") msg[keys[i]] = data[keys[i]];\n\
     }\n\
     try {\n\
       chrome.runtime.sendMessage(msg,\n\
         function (response) {\n\
           if (chrome.runtime.lastError) {\n\
-            window.postMessage({ direction: \"from-extension\", action: data.action, requestId: data.requestId, response: { success: false, error: \"Extension context invalidated\" } }, \"*\");\n\
+            window.postMessage({ direction: "from-extension", action: data.action, requestId: data.requestId, response: { success: false, error: "Extension context invalidated" } }, "*");\n\
             return;\n\
           }\n\
-          window.postMessage({ direction: \"from-extension\", action: data.action, requestId: data.requestId, response: response || { success: false, error: \"No response from extension\" } }, \"*\");\n\
-          if (data.action === \"ping\") {\n\
-            window.postMessage({ direction: \"from-extension\", action: \"contentScriptReady\" }, \"*\");\n\
+          window.postMessage({ direction: "from-extension", action: data.action, requestId: data.requestId, response: response || { success: false, error: "No response from extension" } }, "*");\n\
+          if (data.action === "ping") {\n\
+            window.postMessage({ direction: "from-extension", action: "contentScriptReady" }, "*");\n\
           }\n\
         }\n\
       );\n\
     } catch (err) {\n\
-      window.postMessage({ direction: \"from-extension\", action: data.action, requestId: data.requestId, response: { success: false, error: \"Extension context invalidated\" } }, \"*\");\n\
+      window.postMessage({ direction: "from-extension", action: data.action, requestId: data.requestId, response: { success: false, error: "Extension context invalidated" } }, "*");\n\
     }\n\
   });\n\
-  window.postMessage({ direction: \"from-extension\", action: \"contentScriptReady\" }, \"*\");\n\
-})();",
+  window.postMessage({ direction: "from-extension", action: "contentScriptReady" }, "*");\n\
+})();',
 
-"popup.html": '<!DOCTYPE html>\n\
+        "popup.html":
+          '<!DOCTYPE html>\n\
 <html>\n\
 <head>\n\
 <meta charset="utf-8">\n\
@@ -108,31 +162,36 @@ var FILES = {
 </body>\n\
 </html>',
 
-"popup.js": "var SUPABASE_URL = \"" + SUPABASE_URL + "\";\n\
-var SUPABASE_ANON_KEY = \"" + SUPABASE_ANON_KEY + "\";\n\
-var statusEl = document.getElementById(\"status\");\n\
-var logEl = document.getElementById(\"log\");\n\
-var mainBtn = document.getElementById(\"mainBtn\");\n\
-function setStatus(text, cls) { statusEl.className = \"status \" + cls; statusEl.textContent = text; }\n\
-function log(text, cls) { cls = cls || \"\"; var line = document.createElement(\"div\"); line.className = cls; line.textContent = text; logEl.appendChild(line); logEl.scrollTop = logEl.scrollHeight; }\n\
+        "popup.js":
+          'var SUPABASE_URL = "' +
+          SUPABASE_URL +
+          '";\n\
+var SUPABASE_ANON_KEY = "' +
+          SUPABASE_ANON_KEY +
+          '";\n\
+var statusEl = document.getElementById("status");\n\
+var logEl = document.getElementById("log");\n\
+var mainBtn = document.getElementById("mainBtn");\n\
+function setStatus(text, cls) { statusEl.className = "status " + cls; statusEl.textContent = text; }\n\
+function log(text, cls) { cls = cls || ""; var line = document.createElement("div"); line.className = cls; line.textContent = text; logEl.appendChild(line); logEl.scrollTop = logEl.scrollHeight; }\n\
 function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }\n\
 async function getAllWcaCookies() {\n\
-  var byUrl = await chrome.cookies.getAll({ url: \"https://www.wcaworld.com/\" });\n\
-  var byDomain1 = await chrome.cookies.getAll({ domain: \".wcaworld.com\" });\n\
-  var byDomain2 = await chrome.cookies.getAll({ domain: \"www.wcaworld.com\" });\n\
-  var byDomain3 = await chrome.cookies.getAll({ domain: \"wcaworld.com\" });\n\
+  var byUrl = await chrome.cookies.getAll({ url: "https://www.wcaworld.com/" });\n\
+  var byDomain1 = await chrome.cookies.getAll({ domain: ".wcaworld.com" });\n\
+  var byDomain2 = await chrome.cookies.getAll({ domain: "www.wcaworld.com" });\n\
+  var byDomain3 = await chrome.cookies.getAll({ domain: "wcaworld.com" });\n\
   var aspxAuth = null;\n\
-  try { aspxAuth = await chrome.cookies.get({ url: \"https://www.wcaworld.com/\", name: \".ASPXAUTH\" }); } catch (e) {}\n\
+  try { aspxAuth = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" }); } catch (e) {}\n\
   var map = new Map();\n\
-  [byUrl, byDomain1, byDomain2, byDomain3].forEach(function (list) { list.forEach(function (c) { map.set(c.domain + \"|\" + c.name + \"|\" + c.path, c); }); });\n\
-  if (aspxAuth) map.set(\"aspxauth-direct\", aspxAuth);\n\
+  [byUrl, byDomain1, byDomain2, byDomain3].forEach(function (list) { list.forEach(function (c) { map.set(c.domain + "|" + c.name + "|" + c.path, c); }); });\n\
+  if (aspxAuth) map.set("aspxauth-direct", aspxAuth);\n\
   return Array.from(map.values());\n\
 }\n\
 function waitForTabLoad(tabId, ms) {\n\
   ms = ms || 20000;\n\
   return new Promise(function (resolve) {\n\
     var timeout = setTimeout(function () { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, ms);\n\
-    function listener(id, info) { if (id === tabId && info.status === \"complete\") { clearTimeout(timeout); chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 1500); } }\n\
+    function listener(id, info) { if (id === tabId && info.status === "complete") { clearTimeout(timeout); chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 1500); } }\n\
     chrome.tabs.onUpdated.addListener(listener);\n\
   });\n\
 }\n\
@@ -141,184 +200,194 @@ function waitForRedirectOrTimeout(tabId, ms) {\n\
   return new Promise(function (resolve) {\n\
     var timeout = setTimeout(function () { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, ms);\n\
     var navigated = false;\n\
-    function listener(id, info) { if (id === tabId && info.status === \"complete\" && !navigated) { navigated = true; clearTimeout(timeout); chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 2000); } }\n\
+    function listener(id, info) { if (id === tabId && info.status === "complete" && !navigated) { navigated = true; clearTimeout(timeout); chrome.tabs.onUpdated.removeListener(listener); setTimeout(resolve, 2000); } }\n\
     chrome.tabs.onUpdated.addListener(listener);\n\
   });\n\
 }\n\
 async function sendCookiesAndFinish(cookieStr, tabId) {\n\
-  log(\"⑨ Invio cookie al server...\", \"wait\");\n\
-  setStatus(\"⏳ Verifica finale...\", \"working\");\n\
+  log("⑨ Invio cookie al server...", "wait");\n\
+  setStatus("⏳ Verifica finale...", "working");\n\
   try {\n\
-    var saveRes = await fetch(SUPABASE_URL + \"/functions/v1/save-wca-cookie\", {\n\
-      method: \"POST\", headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY },\n\
+    var saveRes = await fetch(SUPABASE_URL + "/functions/v1/save-wca-cookie", {\n\
+      method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY },\n\
       body: JSON.stringify({ cookie: cookieStr }),\n\
     });\n\
     var saveData = await saveRes.json();\n\
     if (tabId) { try { chrome.tabs.remove(tabId); } catch (e) {} }\n\
-    if (saveData.hasAspxAuth || saveData.authenticated) { setStatus(\"✅ Connesso! Tutto OK.\", \"ok\"); log(\"✓ Cookie salvato e sessione attiva!\", \"done\"); }\n\
-    else { setStatus(\"❌ Connessione fallita\", \"error\"); log(\"Cookie senza autenticazione.\", \"fail\"); }\n\
-  } catch (err) { setStatus(\"❌ Errore invio: \" + err.message, \"error\"); log(\"Errore: \" + err.message, \"fail\"); }\n\
+    if (saveData.hasAspxAuth || saveData.authenticated) { setStatus("✅ Connesso! Tutto OK.", "ok"); log("✓ Cookie salvato e sessione attiva!", "done"); }\n\
+    else { setStatus("❌ Connessione fallita", "error"); log("Cookie senza autenticazione.", "fail"); }\n\
+  } catch (err) { setStatus("❌ Errore invio: " + err.message, "error"); log("Errore: " + err.message, "fail"); }\n\
   mainBtn.disabled = false;\n\
 }\n\
 function analyzeLoginPage() {\n\
   try {\n\
-    var forms = document.querySelectorAll(\"form\");\n\
-    var allInputs = document.querySelectorAll(\"input\");\n\
-    var inputDetails = Array.from(allInputs).filter(function (i) { return i.type !== \"hidden\"; }).map(function (i) { return (i.name || i.id || \"?\") + \"(\" + i.type + \")\"; }).join(\", \");\n\
+    var forms = document.querySelectorAll("form");\n\
+    var allInputs = document.querySelectorAll("input");\n\
+    var inputDetails = Array.from(allInputs).filter(function (i) { return i.type !== "hidden"; }).map(function (i) { return (i.name || i.id || "?") + "(" + i.type + ")"; }).join(", ");\n\
     return { url: window.location.href, formCount: forms.length, inputDetails: inputDetails, pageTitle: document.title };\n\
   } catch (e) { return { error: e.message }; }\n\
 }\n\
 function fillAndSubmitLogin(username, password) {\n\
   try {\n\
-    var userInput = document.querySelector(\"#UserName\") || document.querySelector(\"input[name='UserName']\") || document.querySelector(\"input[name='usr']\") || document.querySelector(\"input[type='text']\") || document.querySelector(\"input[type='email']\");\n\
-    var passInput = document.querySelector(\"#Password\") || document.querySelector(\"input[name='Password']\") || document.querySelector(\"input[name='pwd']\") || document.querySelector(\"input[type='password']\");\n\
-    if (!userInput || !passInput) return { success: false, error: \"Campi non trovati. User:\" + !!userInput + \" Pass:\" + !!passInput };\n\
-    var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, \"value\").set;\n\
-    userInput.focus(); nativeSet.call(userInput, username); userInput.dispatchEvent(new Event(\"input\", { bubbles: true })); userInput.dispatchEvent(new Event(\"change\", { bubbles: true }));\n\
-    passInput.focus(); nativeSet.call(passInput, password); passInput.dispatchEvent(new Event(\"input\", { bubbles: true })); passInput.dispatchEvent(new Event(\"change\", { bubbles: true }));\n\
-    var submitBtn = document.querySelector(\"input[type='submit']\") || document.querySelector(\"button[type='submit']\") || document.querySelector(\".btn-login\") || document.querySelector(\"button.btn-primary\");\n\
-    var form = userInput.closest(\"form\") || document.querySelector(\"form\");\n\
-    var method = \"unknown\";\n\
-    if (submitBtn) { submitBtn.click(); method = \"button\"; }\n\
-    else if (form) { form.submit(); method = \"form\"; }\n\
-    else { return { success: false, error: \"Nessun submit trovato\" }; }\n\
+    var userInput = document.querySelector("#UserName") || document.querySelector("input[name=\'UserName\']") || document.querySelector("input[name=\'usr\']") || document.querySelector("input[type=\'text\']") || document.querySelector("input[type=\'email\']");\n\
+    var passInput = document.querySelector("#Password") || document.querySelector("input[name=\'Password\']") || document.querySelector("input[name=\'pwd\']") || document.querySelector("input[type=\'password\']");\n\
+    if (!userInput || !passInput) return { success: false, error: "Campi non trovati. User:" + !!userInput + " Pass:" + !!passInput };\n\
+    var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;\n\
+    userInput.focus(); nativeSet.call(userInput, username); userInput.dispatchEvent(new Event("input", { bubbles: true })); userInput.dispatchEvent(new Event("change", { bubbles: true }));\n\
+    passInput.focus(); nativeSet.call(passInput, password); passInput.dispatchEvent(new Event("input", { bubbles: true })); passInput.dispatchEvent(new Event("change", { bubbles: true }));\n\
+    var submitBtn = document.querySelector("input[type=\'submit\']") || document.querySelector("button[type=\'submit\']") || document.querySelector(".btn-login") || document.querySelector("button.btn-primary");\n\
+    var form = userInput.closest("form") || document.querySelector("form");\n\
+    var method = "unknown";\n\
+    if (submitBtn) { submitBtn.click(); method = "button"; }\n\
+    else if (form) { form.submit(); method = "form"; }\n\
+    else { return { success: false, error: "Nessun submit trovato" }; }\n\
     return { success: true, method: method };\n\
   } catch (e) { return { success: false, error: e.message }; }\n\
 }\n\
 function diagnoseAfterLogin() {\n\
   try {\n\
-    var errorEl = document.querySelector(\".validation-summary-errors, .alert-danger, .error-message\");\n\
-    return { url: window.location.href, pageTitle: document.title, errorMessage: errorEl ? errorEl.textContent.trim().substring(0, 200) : null, isLoggedIn: !!document.querySelector(\"a[href*='Logout'], a[href*='logout'], a[href*='SignOut']\"), stillOnLoginPage: !!document.querySelector(\"input[type='password']\") };\n\
+    var errorEl = document.querySelector(".validation-summary-errors, .alert-danger, .error-message");\n\
+    return { url: window.location.href, pageTitle: document.title, errorMessage: errorEl ? errorEl.textContent.trim().substring(0, 200) : null, isLoggedIn: !!document.querySelector("a[href*=\'Logout\'], a[href*=\'logout\'], a[href*=\'SignOut\']"), stillOnLoginPage: !!document.querySelector("input[type=\'password\']") };\n\
   } catch (e) { return { error: e.message }; }\n\
 }\n\
-mainBtn.addEventListener(\"click\", async function () {\n\
+mainBtn.addEventListener("click", async function () {\n\
   mainBtn.disabled = true;\n\
-  logEl.innerHTML = \"\";\n\
-  setStatus(\"⏳ Avvio login automatico...\", \"working\");\n\
+  logEl.innerHTML = "";\n\
+  setStatus("⏳ Avvio login automatico...", "working");\n\
   try {\n\
-    log(\"① Recupero credenziali...\", \"wait\");\n\
-    var credRes = await fetch(SUPABASE_URL + \"/functions/v1/get-wca-credentials\", {\n\
-      method: \"POST\", headers: { \"Content-Type\": \"application/json\", \"apikey\": SUPABASE_ANON_KEY, \"Authorization\": \"Bearer \" + SUPABASE_ANON_KEY }, body: JSON.stringify({}),\n\
+    log("① Recupero credenziali...", "wait");\n\
+    var credRes = await fetch(SUPABASE_URL + "/functions/v1/get-wca-credentials", {\n\
+      method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY }, body: JSON.stringify({}),\n\
     });\n\
     var creds = await credRes.json();\n\
-    if (!creds.username || !creds.password) throw new Error(\"Credenziali WCA non configurate.\");\n\
-    log(\"✓ Credenziali ottenute\", \"done\");\n\
-    log(\"② Apro pagina di login...\", \"wait\");\n\
-    var tab = await chrome.tabs.create({ url: \"https://www.wcaworld.com/Account/Login\", active: false });\n\
-    log(\"✓ Pagina aperta\", \"done\");\n\
-    log(\"③ Attendo caricamento...\", \"wait\");\n\
+    if (!creds.username || !creds.password) throw new Error("Credenziali WCA non configurate.");\n\
+    log("✓ Credenziali ottenute", "done");\n\
+    log("② Apro pagina di login...", "wait");\n\
+    var tab = await chrome.tabs.create({ url: "https://www.wcaworld.com/Account/Login", active: false });\n\
+    log("✓ Pagina aperta", "done");\n\
+    log("③ Attendo caricamento...", "wait");\n\
     await waitForTabLoad(tab.id, 20000);\n\
-    log(\"✓ Pagina caricata\", \"done\");\n\
-    log(\"④ Analizzo form...\", \"wait\");\n\
+    log("✓ Pagina caricata", "done");\n\
+    log("④ Analizzo form...", "wait");\n\
     var analyzeRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: analyzeLoginPage });\n\
     var pageInfo = analyzeRes[0] && analyzeRes[0].result;\n\
-    if (pageInfo) log(\"   Campi: \" + (pageInfo.inputDetails || \"nessuno\"), \"wait\");\n\
-    log(\"⑤ Login automatico...\", \"wait\");\n\
-    setStatus(\"⏳ Login in corso...\", \"working\");\n\
+    if (pageInfo) log("   Campi: " + (pageInfo.inputDetails || "nessuno"), "wait");\n\
+    log("⑤ Login automatico...", "wait");\n\
+    setStatus("⏳ Login in corso...", "working");\n\
     var injRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: fillAndSubmitLogin, args: [creds.username, creds.password] });\n\
     var formResult = injRes[0] && injRes[0].result;\n\
-    if (!formResult || !formResult.success) throw new Error((formResult && formResult.error) || \"Form non trovato\");\n\
-    log(\"✓ Form inviato (\" + formResult.method + \")\", \"done\");\n\
-    log(\"⑥ Attendo risposta...\", \"wait\");\n\
+    if (!formResult || !formResult.success) throw new Error((formResult && formResult.error) || "Form non trovato");\n\
+    log("✓ Form inviato (" + formResult.method + ")", "done");\n\
+    log("⑥ Attendo risposta...", "wait");\n\
     await waitForRedirectOrTimeout(tab.id, 10000);\n\
-    log(\"✓ OK\", \"done\");\n\
-    log(\"⑦ Verifico...\", \"wait\");\n\
+    log("✓ OK", "done");\n\
+    log("⑦ Verifico...", "wait");\n\
     var diagRes = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: diagnoseAfterLogin });\n\
     var diag = diagRes[0] && diagRes[0].result;\n\
     if (diag) {\n\
-      if (diag.errorMessage) log(\"   ⚠ Errore: \" + diag.errorMessage, \"fail\");\n\
-      if (diag.isLoggedIn) log(\"   ✓ Login riuscito!\", \"done\");\n\
-      if (diag.stillOnLoginPage) log(\"   ✗ Ancora sulla pagina di login\", \"fail\");\n\
+      if (diag.errorMessage) log("   ⚠ Errore: " + diag.errorMessage, "fail");\n\
+      if (diag.isLoggedIn) log("   ✓ Login riuscito!", "done");\n\
+      if (diag.stillOnLoginPage) log("   ✗ Ancora sulla pagina di login", "fail");\n\
     }\n\
-    log(\"⑧ Leggo cookie...\", \"wait\");\n\
+    log("⑧ Leggo cookie...", "wait");\n\
     var allCookies = await getAllWcaCookies();\n\
-    var hasAuth = allCookies.some(function (c) { return c.name === \".ASPXAUTH\" || c.name === \".AspNet.ApplicationCookie\"; });\n\
-    log(\"   \" + allCookies.length + \" cookie, .ASPXAUTH: \" + (hasAuth ? \"✅\" : \"❌\"), hasAuth ? \"done\" : \"fail\");\n\
-    if (!hasAuth) { log(\"   Riprovo tra 5s...\", \"wait\"); await sleep(5000); allCookies = await getAllWcaCookies(); hasAuth = allCookies.some(function (c) { return c.name === \".ASPXAUTH\" || c.name === \".AspNet.ApplicationCookie\"; }); }\n\
-    if (!hasAuth && diag && diag.isLoggedIn) { log(\"   Login OK ma .ASPXAUTH non visibile. Invio cookie disponibili...\", \"wait\"); }\n\
-    if (!hasAuth && (!diag || !diag.isLoggedIn)) { if (tab.id) { try { chrome.tabs.remove(tab.id); } catch (e) {} } setStatus(\"❌ Login fallito\", \"error\"); log(\"Login non riuscito e .ASPXAUTH assente.\", \"fail\"); mainBtn.disabled = false; return; }\n\
-    var cookieStr = allCookies.map(function (c) { return c.name + \"=\" + c.value; }).join(\"; \");\n\
+    var hasAuth = allCookies.some(function (c) { return c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie"; });\n\
+    log("   " + allCookies.length + " cookie, .ASPXAUTH: " + (hasAuth ? "✅" : "❌"), hasAuth ? "done" : "fail");\n\
+    if (!hasAuth) { log("   Riprovo tra 5s...", "wait"); await sleep(5000); allCookies = await getAllWcaCookies(); hasAuth = allCookies.some(function (c) { return c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie"; }); }\n\
+    if (!hasAuth && diag && diag.isLoggedIn) { log("   Login OK ma .ASPXAUTH non visibile. Invio cookie disponibili...", "wait"); }\n\
+    if (!hasAuth && (!diag || !diag.isLoggedIn)) { if (tab.id) { try { chrome.tabs.remove(tab.id); } catch (e) {} } setStatus("❌ Login fallito", "error"); log("Login non riuscito e .ASPXAUTH assente.", "fail"); mainBtn.disabled = false; return; }\n\
+    var cookieStr = allCookies.map(function (c) { return c.name + "=" + c.value; }).join("; ");\n\
     await sendCookiesAndFinish(cookieStr, tab.id);\n\
-  } catch (err) { setStatus(\"❌ \" + err.message, \"error\"); log(\"Errore: \" + err.message, \"fail\"); mainBtn.disabled = false; }\n\
-});"
-};
+  } catch (err) { setStatus("❌ " + err.message, "error"); log("Errore: " + err.message, "fail"); mainBtn.disabled = false; }\n\
+});',
+      };
 
-function downloadFile(name, content, mimeType) {
-  var blob = new Blob([content], { type: mimeType || "text/plain" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+      function downloadFile(name, content, mimeType) {
+        var blob = new Blob([content], { type: mimeType || "text/plain" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
 
-async function downloadAll() {
-  var status = document.getElementById("status");
-  status.innerHTML = "";
+      async function downloadAll() {
+        var status = document.getElementById("status");
+        status.innerHTML = "";
 
-  // Fetch background.js and content.js from the server (always latest)
-  try {
-    var bgRes = await fetch("/chrome-extension/background.js");
-    FILES["background.js"] = await bgRes.text();
-    var csRes = await fetch("/chrome-extension/content.js");
-    FILES["content.js"] = await csRes.text();
-  } catch (e) {
-    status.innerHTML = '<p style="color:#fca5a5;">❌ Errore: impossibile scaricare i file dal server.</p>';
-    return;
-  }
+        // Fetch background.js and content.js from the server (always latest)
+        try {
+          var bgRes = await fetch("/chrome-extension/background.js");
+          FILES["background.js"] = await bgRes.text();
+          var csRes = await fetch("/chrome-extension/content.js");
+          FILES["content.js"] = await csRes.text();
+        } catch (e) {
+          status.innerHTML = '<p style="color:#fca5a5;">❌ Errore: impossibile scaricare i file dal server.</p>';
+          return;
+        }
 
-  // Download text files
-  var textFiles = Object.entries(FILES);
-  for (var i = 0; i < textFiles.length; i++) {
-    var name = textFiles[i][0];
-    var content = textFiles[i][1];
-    if (!content) continue; // skip if null (shouldn't happen after fetch)
-    var mime = name.endsWith(".json") ? "application/json" :
-               name.endsWith(".html") ? "text/html" :
-               "application/javascript";
-    await new Promise(function(r) { setTimeout(r, 400); });
-    downloadFile(name, content, mime);
-  }
+        // Download text files
+        var textFiles = Object.entries(FILES);
+        for (var i = 0; i < textFiles.length; i++) {
+          var name = textFiles[i][0];
+          var content = textFiles[i][1];
+          if (!content) continue; // skip if null (shouldn't happen after fetch)
+          var mime = name.endsWith(".json")
+            ? "application/json"
+            : name.endsWith(".html")
+              ? "text/html"
+              : "application/javascript";
+          await new Promise(function (r) {
+            setTimeout(r, 400);
+          });
+          downloadFile(name, content, mime);
+        }
 
-  // Download icon.png from the server
-  await new Promise(function(r) { setTimeout(r, 400); });
-  try {
-    var res = await fetch("/chrome-extension/icon.png");
-    var blob = await res.blob();
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "icon.png";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch(e) {
-    // Fallback: create a simple 128x128 icon
-    var canvas = document.createElement("canvas");
-    canvas.width = 128; canvas.height = 128;
-    var ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#3b82f6";
-    ctx.fillRect(0, 0, 128, 128);
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 48px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("WCA", 64, 64);
-    canvas.toBlob(function(blob) {
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url; a.download = "icon.png";
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
-  }
+        // Download icon.png from the server
+        await new Promise(function (r) {
+          setTimeout(r, 400);
+        });
+        try {
+          var res = await fetch("/chrome-extension/icon.png");
+          var blob = await res.blob();
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = "icon.png";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          // Fallback: create a simple 128x128 icon
+          var canvas = document.createElement("canvas");
+          canvas.width = 128;
+          canvas.height = 128;
+          var ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#3b82f6";
+          ctx.fillRect(0, 0, 128, 128);
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 48px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("WCA", 64, 64);
+          canvas.toBlob(function (blob) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url;
+            a.download = "icon.png";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          });
+        }
 
-  status.innerHTML = '<p class="done">✅ 6 file scaricati! Salvali tutti nella stessa cartella.</p>';
-}
-</script>
-</body>
+        status.innerHTML = '<p class="done">✅ 6 file scaricati! Salvali tutti nella stessa cartella.</p>';
+      }
+    </script>
+  </body>
 </html>

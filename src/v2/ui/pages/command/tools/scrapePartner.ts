@@ -2,11 +2,17 @@
  * scrapePartner tool — Scrapes a partner's website and proposes updates.
  * Wraps existing scrape-website edge function with scrape_cache.
  */
-import { getCachedScrapePayload, setCachedScrapePayload, updatePartnerFields, findPartnerBySearchTerm } from "@/data/commandScrapePartner";
+import {
+  getCachedScrapePayload,
+  setCachedScrapePayload,
+  updatePartnerFields,
+  findPartnerBySearchTerm,
+} from "@/data/commandScrapePartner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
-const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:partner\s+)?/i;
+const MATCH =
+  /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:partner\s+)?/i;
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -65,7 +71,11 @@ export const scrapePartnerTool: Tool = {
 
     const website = partner.website;
     if (!website) {
-      return { kind: "result", title: "Nessun Sito", message: `${partner.company_name} non ha un sito web registrato.` };
+      return {
+        kind: "result",
+        title: "Nessun Sito",
+        message: `${partner.company_name} non ha un sito web registrato.`,
+      };
     }
 
     // Cache lookup
@@ -79,7 +89,11 @@ export const scrapePartnerTool: Tool = {
         body: { url: website, mode: "static" },
       });
       if (sErr || !data) {
-        return { kind: "result", title: "Errore Scraping", message: `Impossibile analizzare ${website}: ${sErr?.message ?? "errore sconosciuto"}` };
+        return {
+          kind: "result",
+          title: "Errore Scraping",
+          message: `Impossibile analizzare ${website}: ${sErr?.message ?? "errore sconosciuto"}`,
+        };
       }
       scraped = data as Record<string, unknown>;
       await setCachedScrape(website, scraped);

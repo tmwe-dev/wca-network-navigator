@@ -1,6 +1,5 @@
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -14,8 +13,8 @@ Deno.serve(async (req) => {
     if (!extKey) throw new Error("WCA_EXTERNAL_SUPABASE_KEY not set");
 
     const headers: Record<string, string> = {
-      "apikey": extKey,
-      "Authorization": `Bearer ${extKey}`,
+      apikey: extKey,
+      Authorization: `Bearer ${extKey}`,
       "Content-Type": "application/json",
     };
 
@@ -37,17 +36,17 @@ Deno.serve(async (req) => {
     // Get the OpenAPI spec to extract all table names
     const schemaRes = await fetch(`${extUrl}/rest/v1/`, { headers });
     const schema = await schemaRes.json();
-    
+
     const tableNames = Object.keys(schema.paths || {})
-      .filter(p => p !== "/")
-      .map(p => p.replace("/", ""));
+      .filter((p) => p !== "/")
+      .map((p) => p.replace("/", ""));
 
     // Get counts for each table
     const tableCounts: Record<string, number | string> = {};
     for (const t of tableNames) {
       try {
-        const r = await fetch(`${extUrl}/rest/v1/${t}?select=*`, { 
-          headers: { ...headers, "Prefer": "count=exact", "Range": "0-0" } 
+        const r = await fetch(`${extUrl}/rest/v1/${t}?select=*`, {
+          headers: { ...headers, Prefer: "count=exact", Range: "0-0" },
         });
         const range = r.headers.get("content-range");
         tableCounts[t] = range || `status:${r.status}`;
@@ -68,17 +67,18 @@ Deno.serve(async (req) => {
 
       tableDetails = {
         table: targetTable,
-        columns: itemSchema?.properties ? Object.keys(itemSchema.properties) : (sampleRow ? Object.keys(sampleRow) : []),
+        columns: itemSchema?.properties ? Object.keys(itemSchema.properties) : sampleRow ? Object.keys(sampleRow) : [],
         sampleRow,
       };
     }
 
-    return new Response(JSON.stringify({ tables: tableNames, counts: tableCounts, tableDetails }, null, 2), { 
-      headers: { ...dynCors, "Content-Type": "application/json" } 
+    return new Response(JSON.stringify({ tables: tableNames, counts: tableCounts, tableDetails }, null, 2), {
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { 
-      status: 500, headers: { ...dynCors, "Content-Type": "application/json" } 
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

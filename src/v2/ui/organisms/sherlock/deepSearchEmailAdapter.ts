@@ -33,7 +33,9 @@ function inferCompanyName(email: string, displayName?: string | null): string {
   try {
     const { brand } = extractSenderBrand(email || "");
     if (brand && brand.trim()) return brand.trim();
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   const fromHelper = deriveSenderDisplayName(email);
   if (fromHelper && fromHelper.trim()) return fromHelper.trim();
   return domainOf(email).split(".")[0] || email;

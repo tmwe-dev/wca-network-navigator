@@ -11,9 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   listTmweCatalog,
   setTmweCatalogEnabled,
@@ -53,9 +51,11 @@ export const FinderApiCatalogTab = () => {
       if (riskFilter !== "all" && r.risk_level !== riskFilter) return false;
       if (groupFilter !== "all" && r.api_group !== groupFilter) return false;
       if (!q) return true;
-      return r.op.toLowerCase().includes(q)
-        || r.path.toLowerCase().includes(q)
-        || (r.description ?? "").toLowerCase().includes(q);
+      return (
+        r.op.toLowerCase().includes(q) ||
+        r.path.toLowerCase().includes(q) ||
+        (r.description ?? "").toLowerCase().includes(q)
+      );
     });
   }, [rows, search, riskFilter, groupFilter]);
 
@@ -107,7 +107,9 @@ export const FinderApiCatalogTab = () => {
               <span>{stats.total} endpoint</span>
               <span>· {stats.enabled} abilitati</span>
               {Object.entries(stats.byRisk).map(([r, n]) => (
-                <span key={r}>· {r}: {n}</span>
+                <span key={r}>
+                  · {r}: {n}
+                </span>
               ))}
             </div>
           </div>
@@ -138,7 +140,11 @@ export const FinderApiCatalogTab = () => {
               className="h-9 px-2 rounded-md border bg-background text-sm max-w-[200px]"
             >
               <option value="all">Tutti i gruppi</option>
-              {groups.map((g) => <option key={g} value={g}>{g}</option>)}
+              {groups.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
             </select>
           </div>
         </CardContent>
@@ -181,7 +187,11 @@ export const FinderApiCatalogTab = () => {
                     <TableCell className="font-mono text-xs">{r.method}</TableCell>
                     <TableCell className="font-mono text-xs">
                       {r.op}
-                      {r.is_alias && <Badge variant="outline" className="ml-2 text-[10px]">alias</Badge>}
+                      {r.is_alias && (
+                        <Badge variant="outline" className="ml-2 text-[10px]">
+                          alias
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{r.path}</TableCell>
                     <TableCell className="text-xs">{r.api_group}</TableCell>

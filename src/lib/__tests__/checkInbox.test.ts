@@ -29,25 +29,34 @@ describe("callCheckInbox", () => {
   });
 
   it("does not throw on worker resource limit", async () => {
-    vi.mocked(invokeEdge).mockRejectedValueOnce(new ApiError({
-      code: "SERVER_ERROR",
-      message: "Function failed due to not having enough compute resources",
-      httpStatus: 546,
-      details: { body: { code: "WORKER_RESOURCE_LIMIT" } },
-    }));
+    vi.mocked(invokeEdge).mockRejectedValueOnce(
+      new ApiError({
+        code: "SERVER_ERROR",
+        message: "Function failed due to not having enough compute resources",
+        httpStatus: 546,
+        details: { body: { code: "WORKER_RESOURCE_LIMIT" } },
+      }),
+    );
 
-    await expect(callCheckInbox()).resolves.toEqual(expect.objectContaining({
-      total: 0,
-      matched: 0,
-      transient: true,
-      resourceLimit: true,
-    }));
+    await expect(callCheckInbox()).resolves.toEqual(
+      expect.objectContaining({
+        total: 0,
+        matched: 0,
+        transient: true,
+        resourceLimit: true,
+      }),
+    );
   });
 
   it("deduplicates overlapping invocations", async () => {
     vi.mocked(invokeEdge).mockClear();
     let resolveInvoke: (value: any) => void = () => undefined;
-    vi.mocked(invokeEdge).mockImplementationOnce(() => new Promise((resolve) => { resolveInvoke = resolve; }));
+    vi.mocked(invokeEdge).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveInvoke = resolve;
+        }),
+    );
 
     const first = callCheckInbox();
     const second = callCheckInbox();

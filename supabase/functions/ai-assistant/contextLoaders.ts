@@ -10,7 +10,10 @@
  */
 
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
-import { loadOperativePrompts as loadOperativePromptsUnified, type PromptScope } from "../_shared/operativePromptsLoader.ts";
+import {
+  loadOperativePrompts as loadOperativePromptsUnified,
+  type PromptScope,
+} from "../_shared/operativePromptsLoader.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
@@ -28,8 +31,10 @@ export async function loadUserProfile(supabase: SupabaseClient, userId: string):
   const get = (k: string) => settings[k]?.trim() || "";
 
   if (get("ai_current_focus")) parts.push(`🎯 FOCUS CORRENTE: ${get("ai_current_focus")}`);
-  if (get("ai_company_name") || get("ai_company_alias")) parts.push(`AZIENDA: ${get("ai_company_name")} (${get("ai_company_alias")})`);
-  if (get("ai_contact_name") || get("ai_contact_alias")) parts.push(`REFERENTE: ${get("ai_contact_name")} (${get("ai_contact_alias")}) — ${get("ai_contact_role")}`);
+  if (get("ai_company_name") || get("ai_company_alias"))
+    parts.push(`AZIENDA: ${get("ai_company_name")} (${get("ai_company_alias")})`);
+  if (get("ai_contact_name") || get("ai_contact_alias"))
+    parts.push(`REFERENTE: ${get("ai_contact_name")} (${get("ai_contact_alias")}) — ${get("ai_contact_role")}`);
   if (get("ai_sector")) parts.push(`SETTORE: ${get("ai_sector")}`);
   if (get("ai_networks")) parts.push(`NETWORK: ${get("ai_networks")}`);
   if (get("ai_company_activities")) parts.push(`ATTIVITÀ: ${get("ai_company_activities")}`);
@@ -48,7 +53,9 @@ export async function loadMissionHistory(supabase: SupabaseClient, userId: strin
   try {
     const { data } = await supabase
       .from("outreach_missions")
-      .select("title, status, channel, total_contacts, processed_contacts, target_filters, ai_summary, created_at, completed_at")
+      .select(
+        "title, status, channel, total_contacts, processed_contacts, target_filters, ai_summary, created_at, completed_at",
+      )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(5);
@@ -81,9 +88,7 @@ export async function loadSystemDoctrine(supabase: SupabaseClient): Promise<stri
 
   if (!data?.length) return "";
 
-  const entries = (data as Record<string, unknown>[]).map(e =>
-    `### ${e.title}\n${e.content}`
-  ).join("\n\n");
+  const entries = (data as Record<string, unknown>[]).map((e) => `### ${e.title}\n${e.content}`).join("\n\n");
 
   return `\n\nDOTTRINA OPERATIVA (Knowledge Base Sistema):\n${entries}`;
 }

@@ -29,15 +29,13 @@ export function LabPage() {
   const [params, setParams] = useSearchParams();
 
   const rawGroup = params.get("group");
-  const group: LabTabGroup =
-    rawGroup && VALID_GROUPS.has(rawGroup) ? (rawGroup as LabTabGroup) : DEFAULT_LAB_GROUP;
+  const group: LabTabGroup = rawGroup && VALID_GROUPS.has(rawGroup) ? (rawGroup as LabTabGroup) : DEFAULT_LAB_GROUP;
 
   const tabsInGroup = useMemo(() => getLabTabsByGroup(group), [group]);
   const validTabIds = useMemo(() => new Set(tabsInGroup.map((t) => t.id)), [tabsInGroup]);
 
   const rawTab = params.get("tab");
-  const activeTab =
-    rawTab && validTabIds.has(rawTab) ? rawTab : DEFAULT_LAB_TAB_BY_GROUP[group];
+  const activeTab = rawTab && validTabIds.has(rawTab) ? rawTab : DEFAULT_LAB_TAB_BY_GROUP[group];
 
   const setGroup = (next: string) => {
     const np = new URLSearchParams(params);

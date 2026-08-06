@@ -28,7 +28,17 @@ export function EmptyPane({ label }: { label: string }): React.ReactElement {
   );
 }
 
-export function CheckRow({ ok, warn, label, detail }: { ok: boolean; warn?: boolean; label: string; detail?: string }): React.ReactElement {
+export function CheckRow({
+  ok,
+  warn,
+  label,
+  detail,
+}: {
+  ok: boolean;
+  warn?: boolean;
+  label: string;
+  detail?: string;
+}): React.ReactElement {
   const tone = warn
     ? "text-warning dark:text-warning"
     : ok

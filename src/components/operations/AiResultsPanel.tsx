@@ -56,8 +56,8 @@ function RatingStars({ rating }: { rating: number | null | undefined }) {
             i < full
               ? "fill-primary text-primary"
               : i === full && half
-              ? "fill-primary/50 text-primary"
-              : "text-muted-foreground"
+                ? "fill-primary/50 text-primary"
+                : "text-muted-foreground"
           }`}
         />
       ))}
@@ -74,14 +74,16 @@ function PartnerCard({ partner, isDark }: { partner: StructuredPartner; isDark: 
   return (
     <div
       className={`rounded-lg border transition-all cursor-pointer ${
-        isDark
-          ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
-          : "border-slate-200 bg-white hover:bg-slate-50"
+        isDark ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]" : "border-slate-200 bg-white hover:bg-slate-50"
       } ${expanded ? (isDark ? "ring-1 ring-violet-500/30" : "ring-1 ring-violet-300") : ""}`}
       onClick={() => setExpanded(!expanded)}
     >
       <div className="px-2.5 py-2 flex items-start gap-2">
-        <OptimizedImage src={flagUrl} alt={partner.country_code} className="w-4 h-3 mt-0.5 rounded-[1px] object-cover" />
+        <OptimizedImage
+          src={flagUrl}
+          alt={partner.country_code}
+          className="w-4 h-3 mt-0.5 rounded-[1px] object-cover"
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <span className={`text-[11px] font-semibold truncate ${isDark ? "text-white" : "text-slate-900"}`}>
@@ -91,9 +93,15 @@ function PartnerCard({ partner, isDark }: { partner: StructuredPartner; isDark: 
           </div>
           <div className={`flex items-center gap-1.5 text-[9px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
             <MapPin className="w-2.5 h-2.5" />
-            <span>{partner.city}, {partner.country_name}</span>
+            <span>
+              {partner.city}, {partner.country_name}
+            </span>
             {partner.office_type === "branch" && (
-              <span className={`px-1 rounded text-[8px] ${isDark ? "bg-blue-500/20 text-blue-300" : "bg-blue-50 text-blue-600"}`}>filiale</span>
+              <span
+                className={`px-1 rounded text-[8px] ${isDark ? "bg-blue-500/20 text-blue-300" : "bg-blue-50 text-blue-600"}`}
+              >
+                filiale
+              </span>
             )}
           </div>
           <div className="flex items-center gap-2 mt-1">
@@ -102,7 +110,9 @@ function PartnerCard({ partner, isDark }: { partner: StructuredPartner; isDark: 
             {partner.has_profile && <Globe className={`w-2.5 h-2.5 text-primary`} />}
           </div>
         </div>
-        <ChevronDown className={`w-3 h-3 shrink-0 mt-1 transition-transform ${isDark ? "text-slate-500" : "text-slate-400"} ${expanded ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`w-3 h-3 shrink-0 mt-1 transition-transform ${isDark ? "text-slate-500" : "text-slate-400"} ${expanded ? "rotate-180" : ""}`}
+        />
       </div>
 
       {expanded && (
@@ -111,7 +121,11 @@ function PartnerCard({ partner, isDark }: { partner: StructuredPartner; isDark: 
             {partner.email && (
               <div className="flex items-center gap-1.5">
                 <Mail className="w-3 h-3" />
-                <a href={`mailto:${partner.email}`} className="hover:underline truncate" onClick={e => e.stopPropagation()}>
+                <a
+                  href={`mailto:${partner.email}`}
+                  className="hover:underline truncate"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {partner.email}
                 </a>
               </div>
@@ -130,7 +144,7 @@ function PartnerCard({ partner, isDark }: { partner: StructuredPartner; isDark: 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:underline truncate"
-                  onClick={e => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {partner.website}
                 </a>
@@ -144,20 +158,30 @@ function PartnerCard({ partner, isDark }: { partner: StructuredPartner; isDark: 
             )}
           </div>
 
-          {(partner.services?.length || partner.certifications?.length) ? (
+          {partner.services?.length || partner.certifications?.length ? (
             <div className="flex flex-wrap gap-1 mt-1.5">
-              {partner.certifications?.map(c => (
-                <Badge key={c} variant="outline" className={`text-[8px] px-1 py-0 h-3.5 border-primary/30 text-primary`}>
+              {partner.certifications?.map((c) => (
+                <Badge
+                  key={c}
+                  variant="outline"
+                  className={`text-[8px] px-1 py-0 h-3.5 border-primary/30 text-primary`}
+                >
                   {c}
                 </Badge>
               ))}
-              {partner.services?.slice(0, 5).map(s => (
-                <Badge key={s} variant="secondary" className={`text-[8px] px-1 py-0 h-3.5 ${isDark ? "bg-white/5 text-slate-400" : ""}`}>
+              {partner.services?.slice(0, 5).map((s) => (
+                <Badge
+                  key={s}
+                  variant="secondary"
+                  className={`text-[8px] px-1 py-0 h-3.5 ${isDark ? "bg-white/5 text-slate-400" : ""}`}
+                >
                   {SERVICE_LABELS[s] || s}
                 </Badge>
               ))}
               {(partner.services?.length || 0) > 5 && (
-                <span className={`text-[8px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>+{(partner.services?.length || 0) - 5}</span>
+                <span className={`text-[8px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                  +{(partner.services?.length || 0) - 5}
+                </span>
               )}
             </div>
           ) : null}
@@ -174,7 +198,9 @@ export function AiResultsPanel({ partners }: Props) {
   if (!partners.length) return null;
 
   return (
-    <div className={`mt-2 rounded-xl border ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50/50"}`}>
+    <div
+      className={`mt-2 rounded-xl border ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50/50"}`}
+    >
       <button
         onClick={() => setCollapsed(!collapsed)}
         className={`w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-medium text-primary hover:bg-muted/50 rounded-t-xl transition-colors`}
@@ -185,7 +211,7 @@ export function AiResultsPanel({ partners }: Props) {
 
       {!collapsed && (
         <div className="px-2 pb-2 space-y-1.5 max-h-[300px] overflow-auto">
-          {partners.map(p => (
+          {partners.map((p) => (
             <PartnerCard key={p.id} partner={p} isDark={isDark} />
           ))}
         </div>

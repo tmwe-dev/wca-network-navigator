@@ -5,7 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 export async function findActiveEmailPrompts(select = "id, title, scope", limit = 20) {
-  const { data, error } = await supabase.from("email_prompts").select(select).eq("is_active", true).order("priority", { ascending: false }).limit(limit);
+  const { data, error } = await supabase
+    .from("email_prompts")
+    .select(select)
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(limit);
   if (error) throw error;
   return data ?? [];
 }
@@ -47,10 +52,7 @@ export async function updateEmailPrompt(id: string, patch: EmailPromptUpdate): P
 export type EmailPromptRow = Database["public"]["Tables"]["email_prompts"]["Row"];
 
 export async function findAllEmailPrompts(): Promise<EmailPromptRow[]> {
-  const { data, error } = await supabase
-    .from("email_prompts")
-    .select("*")
-    .order("priority", { ascending: false });
+  const { data, error } = await supabase.from("email_prompts").select("*").order("priority", { ascending: false });
   if (error) throw error;
   return (data ?? []) as EmailPromptRow[];
 }

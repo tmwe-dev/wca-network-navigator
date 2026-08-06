@@ -3,16 +3,14 @@
  * Shows current pause status, timestamp, and reason.
  * Provides toggle with confirmation dialog.
  */
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { findAiAutomationPauseSettings, upsertAiAutomationPauseSettings } from '@/data/appSettings';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import {
-  AlertCircle, Pause, Play, Clock, MessageSquare,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { findAiAutomationPauseSettings, upsertAiAutomationPauseSettings } from "@/data/appSettings";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { AlertCircle, Pause, Play, Clock, MessageSquare } from "lucide-react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,8 +19,7 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-
+} from "@/components/ui/alert-dialog";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("GlobalAIAutomationPause");
@@ -40,14 +37,16 @@ export function GlobalAIAutomationPause() {
   });
   const [loading, setLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
 
   // Load current pause state
   useEffect(() => {
     const loadPauseState = async () => {
       try {
-        const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+        const { data } = await supabase.auth
+          .getSession()
+          .then((r) => ({ data: { user: r.data.session?.user ?? null } }));
         if (!data?.user?.id) return;
         setUserId(data.user.id);
 
@@ -56,21 +55,21 @@ export function GlobalAIAutomationPause() {
         try {
           settings = await findAiAutomationPauseSettings(data.user.id);
         } catch (error) {
-          log.error('Error loading pause state:', { error: error });
+          log.error("Error loading pause state:", { error: error });
           return;
         }
 
-        const pausedSetting = settings?.find(s => s.key === 'ai_automations_paused');
-        const atSetting = settings?.find(s => s.key === 'ai_automations_paused_at');
-        const reasonSetting = settings?.find(s => s.key === 'ai_automations_paused_reason');
+        const pausedSetting = settings?.find((s) => s.key === "ai_automations_paused");
+        const atSetting = settings?.find((s) => s.key === "ai_automations_paused_at");
+        const reasonSetting = settings?.find((s) => s.key === "ai_automations_paused_reason");
 
         setPauseState({
-          isPaused: pausedSetting?.value === 'true',
+          isPaused: pausedSetting?.value === "true",
           pausedAt: atSetting?.value || null,
           pauseReason: reasonSetting?.value || null,
         });
       } catch (error) {
-        log.error('Error loading pause state:', { error: error });
+        log.error("Error loading pause state:", { error: error });
       } finally {
         setLoading(false);
       }
@@ -97,7 +96,7 @@ export function GlobalAIAutomationPause() {
       const ok = await upsertAiAutomationPauseSettings(userId, isPausedValue, reason);
 
       if (!ok) {
-        toast.error('Errore aggiornamento stato di pausa');
+        toast.error("Errore aggiornamento stato di pausa");
         return;
       }
 
@@ -108,16 +107,14 @@ export function GlobalAIAutomationPause() {
       });
 
       toast.success(
-        isPausedValue
-          ? 'Tutte le automazioni AI sono state sospese'
-          : 'Tutte le automazioni AI sono state riprese'
+        isPausedValue ? "Tutte le automazioni AI sono state sospese" : "Tutte le automazioni AI sono state riprese",
       );
 
-      setReason('');
+      setReason("");
       setShowConfirm(false);
     } catch (error) {
-      log.error('Error toggling pause:', { error: error });
-      toast.error('Errore aggiornamento stato di pausa');
+      log.error("Error toggling pause:", { error: error });
+      toast.error("Errore aggiornamento stato di pausa");
     } finally {
       setLoading(false);
     }
@@ -137,9 +134,7 @@ export function GlobalAIAutomationPause() {
     <>
       <Card
         className={`border-primary/20 bg-card/50 backdrop-blur-sm transition-all ${
-          pauseState.isPaused
-            ? 'border-red-500/30 bg-red-500/5'
-            : 'border-green-500/30 bg-green-500/5'
+          pauseState.isPaused ? "border-red-500/30 bg-red-500/5" : "border-green-500/30 bg-green-500/5"
         }`}
       >
         <CardHeader>
@@ -152,8 +147,8 @@ export function GlobalAIAutomationPause() {
               )}
               <CardTitle>Controllo Globale Automazioni AI</CardTitle>
             </div>
-            <Badge variant={pauseState.isPaused ? 'destructive' : 'default'}>
-              {pauseState.isPaused ? 'SOSPESO' : 'ATTIVO'}
+            <Badge variant={pauseState.isPaused ? "destructive" : "default"}>
+              {pauseState.isPaused ? "SOSPESO" : "ATTIVO"}
             </Badge>
           </div>
         </CardHeader>
@@ -164,9 +159,7 @@ export function GlobalAIAutomationPause() {
             <div className="flex gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
               <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1 space-y-1">
-                <p className="font-medium text-sm text-red-700">
-                  Tutte le automazioni AI sono sospese
-                </p>
+                <p className="font-medium text-sm text-red-700">Tutte le automazioni AI sono sospese</p>
                 {pauseState.pauseReason && (
                   <p className="text-xs text-red-600 flex items-center gap-1">
                     <MessageSquare className="h-3 w-3" />
@@ -176,7 +169,7 @@ export function GlobalAIAutomationPause() {
                 {pauseState.pausedAt && (
                   <p className="text-xs text-red-600 flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    Sospeso il {new Date(pauseState.pausedAt).toLocaleString('it-IT')}
+                    Sospeso il {new Date(pauseState.pausedAt).toLocaleString("it-IT")}
                   </p>
                 )}
               </div>
@@ -187,17 +180,13 @@ export function GlobalAIAutomationPause() {
           <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
             <div className="space-y-1">
               <p className="font-medium text-sm">
-                {pauseState.isPaused ? 'Riprendi Automazioni' : 'Sospendi Automazioni'}
+                {pauseState.isPaused ? "Riprendi Automazioni" : "Sospendi Automazioni"}
               </p>
               <p className="text-xs text-muted-foreground">
                 Disabilita globalmente check-inbox, cadence-engine e pending-action-executor
               </p>
             </div>
-            <Switch
-              checked={pauseState.isPaused}
-              onCheckedChange={handleTogglePause}
-              disabled={loading}
-            />
+            <Switch checked={pauseState.isPaused} onCheckedChange={handleTogglePause} disabled={loading} />
           </div>
 
           {/* Status Details */}
@@ -210,9 +199,7 @@ export function GlobalAIAutomationPause() {
               <div className="p-2 rounded bg-muted/50">
                 <p className="text-muted-foreground">Data</p>
                 <p className="font-semibold">
-                  {pauseState.pausedAt
-                    ? new Date(pauseState.pausedAt).toLocaleDateString('it-IT')
-                    : '—'}
+                  {pauseState.pausedAt ? new Date(pauseState.pausedAt).toLocaleDateString("it-IT") : "—"}
                 </p>
               </div>
             </div>
@@ -237,9 +224,7 @@ export function GlobalAIAutomationPause() {
 
           {/* Reason Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Motivo della sospensione (opzionale)
-            </label>
+            <label className="text-sm font-medium">Motivo della sospensione (opzionale)</label>
             <textarea
               placeholder="Es: Manutenzione del sistema, testing, pausa temporanea..."
               value={reason}
@@ -251,10 +236,7 @@ export function GlobalAIAutomationPause() {
 
           <div className="flex justify-end gap-2">
             <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => confirmToggle(true)}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={() => confirmToggle(true)} className="bg-red-600 hover:bg-red-700">
               Sospendi Automazioni
             </AlertDialogAction>
           </div>

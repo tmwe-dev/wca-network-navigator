@@ -6,7 +6,6 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Prospect = Database["public"]["Tables"]["prospects"]["Row"];
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("prospects");
 
@@ -27,21 +26,21 @@ export async function queryProspects(builder: (q: ProspectsQueryBuilder) => Pros
 
 export async function updateProspectLeadStatus(id: string, status: string) {
   // P3.7: apply_lead_status_rpc non esiste a DB. UPDATE diretto.
-  const { error } = await supabase
-    .from("prospects")
-    .update({ lead_status: status })
-    .eq("id", id);
+  const { error } = await supabase.from("prospects").update({ lead_status: status }).eq("id", id);
   if (error) throw error;
 }
 
 export async function updateProspect(id: string, updates: Record<string, unknown>) {
   // GUARD: strip lead_status — must go through updateProspectLeadStatus() / RPC
-   
+
   const { lead_status: _stripped, ...safeUpdates } = updates;
   if (_stripped !== undefined) {
     log.warn("[updateProspect] lead_status stripped from generic update — use updateProspectLeadStatus() instead");
   }
-  const { error } = await supabase.from("prospects").update(safeUpdates as ProspectUpdate).eq("id", id);
+  const { error } = await supabase
+    .from("prospects")
+    .update(safeUpdates as ProspectUpdate)
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -98,10 +97,7 @@ export async function applyProspectEnrichment(
 
 /** Contatti management di un prospect. */
 export async function findProspectContacts(prospectId: string): Promise<Array<Record<string, unknown>>> {
-  const { data, error } = await supabase
-    .from("prospect_contacts")
-    .select("*")
-    .eq("prospect_id", prospectId);
+  const { data, error } = await supabase.from("prospect_contacts").select("*").eq("prospect_id", prospectId);
   if (error) throw error;
   return (data ?? []) as Array<Record<string, unknown>>;
 }
@@ -113,10 +109,7 @@ export interface ProspectDedupRow {
 
 /** Partita IVA + ragione sociale esistenti, per il dedup import scraping. */
 export async function findProspectsForDedup(): Promise<ProspectDedupRow[]> {
-  const { data } = await supabase
-    .from("prospects")
-    .select("partita_iva, company_name")
-    .not("partita_iva", "is", null);
+  const { data } = await supabase.from("prospects").select("partita_iva, company_name").not("partita_iva", "is", null);
   return (data ?? []) as ProspectDedupRow[];
 }
 
@@ -131,7 +124,10 @@ export interface ProspectInteractionRecordRow {
 }
 
 /** Interazioni prospect per il drawer contatto (Circuito di Attesa). */
-export async function findProspectInteractionsForRecord(prospectId: string, limit = 20): Promise<ProspectInteractionRecordRow[]> {
+export async function findProspectInteractionsForRecord(
+  prospectId: string,
+  limit = 20,
+): Promise<ProspectInteractionRecordRow[]> {
   const { data } = await supabase
     .from("prospect_interactions")
     .select("*")
@@ -143,20 +139,14 @@ export async function findProspectInteractionsForRecord(prospectId: string, limi
 
 /** Tutti i prospect ordinati per company_name. Estratto da `useProspects`. */
 export async function findAllProspects(): Promise<Prospect[]> {
-  const { data, error } = await supabase
-    .from("prospects")
-    .select("*")
-    .order("company_name");
+  const { data, error } = await supabase.from("prospects").select("*").order("company_name");
   if (error) throw error;
   return data ?? [];
 }
 
 /** Chiavi di dedup (P.IVA + ragione sociale) per l'import prospect. */
 export async function findProspectDedupKeys(): Promise<Array<{ partita_iva: string | null; company_name: string }>> {
-  const { data } = await supabase
-    .from("prospects")
-    .select("partita_iva, company_name")
-    .not("partita_iva", "is", null);
+  const { data } = await supabase.from("prospects").select("partita_iva, company_name").not("partita_iva", "is", null);
   return data ?? [];
 }
 
@@ -164,10 +154,7 @@ export type ProspectContactRow = Database["public"]["Tables"]["prospect_contacts
 
 /** Contatti di un prospect. */
 export async function findProspectContactsByProspectId(prospectId: string): Promise<ProspectContactRow[]> {
-  const { data, error } = await supabase
-    .from("prospect_contacts")
-    .select("*")
-    .eq("prospect_id", prospectId);
+  const { data, error } = await supabase.from("prospect_contacts").select("*").eq("prospect_id", prospectId);
   if (error) throw error;
   return data ?? [];
 }

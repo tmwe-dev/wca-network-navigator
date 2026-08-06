@@ -115,9 +115,6 @@ export async function updateInsightDraft(
   id: string,
   patch: { proposed_change_text?: string; user_note?: string },
 ): Promise<void> {
-  const { error } = await supabase
-    .from("ai_classification_insights")
-    .update(patch)
-    .eq("id", id);
+  const { error } = await supabase.from("ai_classification_insights").update(patch).eq("id", id);
   if (error) throw error;
 }

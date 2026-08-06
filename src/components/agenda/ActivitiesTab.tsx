@@ -5,9 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Check, Search, Trash2, Activity, Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { useAllActivities, useUpdateActivity, useDeleteActivities, type AllActivity } from "@/hooks/useActivities";
 import { useSelection } from "@/hooks/useSelection";
@@ -31,13 +29,12 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
 
   const filtered = useMemo(() => {
     let list = activities || [];
-    if (batchFilter) list = list.filter(a => a.campaign_batch_id === batchFilter);
-    if (statusFilter !== "all") list = list.filter(a => a.status === statusFilter);
+    if (batchFilter) list = list.filter((a) => a.campaign_batch_id === batchFilter);
+    if (statusFilter !== "all") list = list.filter((a) => a.status === statusFilter);
     if (search.length >= 2) {
       const q = search.toLowerCase();
-      list = list.filter(a =>
-        a.title.toLowerCase().includes(q) ||
-        a.partners?.company_name?.toLowerCase().includes(q)
+      list = list.filter(
+        (a) => a.title.toLowerCase().includes(q) || a.partners?.company_name?.toLowerCase().includes(q),
       );
     }
     return list;
@@ -49,16 +46,16 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
     const all = activities || [];
     return {
       total: all.length,
-      pending: all.filter(a => a.status === "pending").length,
-      inProgress: all.filter(a => a.status === "in_progress").length,
-      completed: all.filter(a => a.status === "completed").length,
+      pending: all.filter((a) => a.status === "pending").length,
+      inProgress: all.filter((a) => a.status === "in_progress").length,
+      completed: all.filter((a) => a.status === "completed").length,
     };
   }, [activities]);
 
   const handleComplete = (id: string) => {
     updateActivity.mutate(
       { id, status: "completed", completed_at: new Date().toISOString() },
-      { onSuccess: () => toast.success("Attività completata") }
+      { onSuccess: () => toast.success("Attività completata") },
     );
   };
 
@@ -73,12 +70,12 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
 
   const handleBulkComplete = () => {
     const ids = Array.from(selectedIds);
-    const pending = filtered.filter(a => ids.includes(a.id) && a.status !== "completed");
+    const pending = filtered.filter((a) => ids.includes(a.id) && a.status !== "completed");
     if (!pending.length) return toast.info("Nessuna attività da completare nella selezione");
     Promise.all(
-      pending.map(a =>
-        updateActivity.mutateAsync({ id: a.id, status: "completed", completed_at: new Date().toISOString() })
-      )
+      pending.map((a) =>
+        updateActivity.mutateAsync({ id: a.id, status: "completed", completed_at: new Date().toISOString() }),
+      ),
     ).then(() => {
       toast.success(`${pending.length} attività completate`);
       clear();
@@ -137,7 +134,7 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
             <Input
               placeholder="Cerca..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-7 h-7 w-40 text-xs bg-muted/30 border-border/30"
             />
           </div>
@@ -166,10 +163,20 @@ export default function ActivitiesTab({ initialBatchFilter }: ActivitiesTabProps
               <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-primary/5 border border-primary/20">
                 <span className="text-xs font-semibold text-primary">{count} selezionati</span>
                 <div className="flex-1" />
-                <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-primary/20 text-primary hover:bg-primary/10" onClick={handleBulkComplete}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[10px] gap-1 border-primary/20 text-primary hover:bg-primary/10"
+                  onClick={handleBulkComplete}
+                >
                   <Check className="w-3 h-3" /> Completa
                 </Button>
-                <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-destructive/20 text-destructive hover:bg-destructive/10" onClick={handleBulkDelete}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[10px] gap-1 border-destructive/20 text-destructive hover:bg-destructive/10"
+                  onClick={handleBulkDelete}
+                >
                   <Trash2 className="w-3 h-3" /> Elimina
                 </Button>
               </div>
@@ -247,17 +254,11 @@ function ActivityRow({
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-xl border backdrop-blur-sm transition-all",
         "bg-card/40 border-border/30 hover:bg-card/60 hover:border-border/50",
-        selected && "bg-primary/5 border-primary/20 shadow-sm shadow-primary/5"
+        selected && "bg-primary/5 border-primary/20 shadow-sm shadow-primary/5",
       )}
     >
-      <Checkbox
-        checked={selected}
-        onCheckedChange={onToggle}
-        className="shrink-0"
-      />
-      {a.partners && (
-        <span className="text-base shrink-0">{getCountryFlag(a.partners.country_code)}</span>
-      )}
+      <Checkbox checked={selected} onCheckedChange={onToggle} className="shrink-0" />
+      {a.partners && <span className="text-base shrink-0">{getCountryFlag(a.partners.country_code)}</span>}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium truncate">{a.title}</span>
@@ -285,11 +286,23 @@ function ActivityRow({
         {a.status}
       </Badge>
       {a.status !== "completed" && (
-        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 hover:bg-emerald-500/10 hover:text-emerald-500" onClick={onComplete} aria-label="Conferma">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 shrink-0 hover:bg-emerald-500/10 hover:text-emerald-500"
+          onClick={onComplete}
+          aria-label="Conferma"
+        >
           <Check className="w-3 h-3" />
         </Button>
       )}
-      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={onDelete} aria-label="Elimina">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        onClick={onDelete}
+        aria-label="Elimina"
+      >
         <Trash2 className="w-3 h-3" />
       </Button>
     </motion.div>

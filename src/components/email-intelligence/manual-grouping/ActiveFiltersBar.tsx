@@ -25,7 +25,7 @@ const SORT_LABEL: Record<string, string> = {
   "name-desc": "Z → A",
   "count-asc": "Meno email",
   "count-desc": "Più email",
-  "ai_group": "AI smart",
+  ai_group: "AI smart",
 };
 
 export function ActiveFiltersBar() {

@@ -60,8 +60,9 @@ async function extractText(bytes: Uint8Array, mimeType: string, fileName: string
   // PDF
   if (mimeType === "application/pdf" || lowerName.endsWith(".pdf")) {
     const pdfParseMod = await import("npm:pdf-parse@1.1.1");
-    const pdfParse = (pdfParseMod as { default?: (b: Uint8Array) => Promise<{ text: string }> }).default
-      ?? (pdfParseMod as unknown as (b: Uint8Array) => Promise<{ text: string }>);
+    const pdfParse =
+      (pdfParseMod as { default?: (b: Uint8Array) => Promise<{ text: string }> }).default ??
+      (pdfParseMod as unknown as (b: Uint8Array) => Promise<{ text: string }>);
     const result = await pdfParse(bytes);
     return result.text || "";
   }
@@ -71,8 +72,10 @@ async function extractText(bytes: Uint8Array, mimeType: string, fileName: string
     lowerName.endsWith(".docx")
   ) {
     const mammothMod = await import("npm:mammoth@1.7.0");
-    const mammoth = (mammothMod as { default?: { extractRawText: (o: { buffer: Uint8Array }) => Promise<{ value: string }> } }).default
-      ?? (mammothMod as unknown as { extractRawText: (o: { buffer: Uint8Array }) => Promise<{ value: string }> });
+    const mammoth =
+      (mammothMod as { default?: { extractRawText: (o: { buffer: Uint8Array }) => Promise<{ value: string }> } })
+        .default ??
+      (mammothMod as unknown as { extractRawText: (o: { buffer: Uint8Array }) => Promise<{ value: string }> });
     const result = await mammoth.extractRawText({ buffer: bytes });
     return result.value || "";
   }
@@ -80,7 +83,10 @@ async function extractText(bytes: Uint8Array, mimeType: string, fileName: string
 }
 
 function chunkText(text: string, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP): string[] {
-  const cleaned = text.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  const cleaned = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
   if (cleaned.length <= size) return [cleaned];
 
   const paragraphs = cleaned.split(/\n\n+/);
@@ -121,8 +127,7 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
   const cors = getCorsHeaders(origin);
   const sec = getSecurityHeaders(cors);
-  const json = (body: unknown, status = 200) =>
-    new Response(JSON.stringify(body), { status, headers: sec });
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: sec });
 
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 

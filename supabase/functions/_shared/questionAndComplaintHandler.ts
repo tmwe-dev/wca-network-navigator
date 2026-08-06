@@ -232,10 +232,7 @@ export async function handleOutOfOffice(
     }
 
     try {
-      const dueInDays = Math.max(
-        1,
-        Math.round((followUpDate.getTime() - Date.now()) / 86400000),
-      );
+      const dueInDays = Math.max(1, Math.round((followUpDate.getTime() - Date.now()) / 86400000));
       const oooDescription = `Auto-reply rilevato. Ritorno previsto: ${returnDate.toLocaleDateString("it-IT")}. Follow-up programmato 1gg dopo il ritorno.`;
       const outcome = await insertFollowUpActivity(supabase, {
         userId: input.userId,

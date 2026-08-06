@@ -21,7 +21,7 @@ import { resolveMailbox, MailboxNotConfiguredError } from "../_shared/resolveMai
 /**
  * manage-email-folders — IMAP folder operations (move, archive, spam, list)
  * POST body: { action: "move"|"archive"|"spam"|"list_folders"|"create_folder", uids?: string[], target_folder?: string }
- * 
+ *
  * IMPORTANT: This does NOT touch email download (check-inbox). It only manages folder operations
  * after emails have been downloaded and categorized.
  */
@@ -34,19 +34,23 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const token = authHeader.replace("Bearer ", "");
-    const userClient = createClient(
-      supabaseUrl,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
     const { data: userData, error: authErr } = await userClient.auth.getUser(token);
     if (authErr || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
     const user = { id: userData.user.id };
 
@@ -60,7 +64,13 @@ serve(async (req) => {
     // Validate action
     const VALID_ACTIONS = ["move", "archive", "spam", "delete", "list_folders", "create_folder"];
     if (!action || !VALID_ACTIONS.includes(action)) {
-      return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "Invalid action. Must be one of: " + VALID_ACTIONS.join(", ") }), { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          error: "VALIDATION_ERROR",
+          message: "Invalid action. Must be one of: " + VALID_ACTIONS.join(", "),
+        }),
+        { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
     }
 
     // Risolve le credenziali della casella ATTIVA (header x-mailbox-id):
@@ -84,7 +94,10 @@ serve(async (req) => {
           { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
-      return new Response(JSON.stringify({ error: "IMAP not configured" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "IMAP not configured" }), {
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // Connect to IMAP (caCerts evita "invalid peer certificate: UnknownIssuer"
@@ -112,10 +125,14 @@ serve(async (req) => {
         if (n === null) break;
         response += decoder.decode(buf.subarray(0, n));
         if (
-          response.includes(`\n${tag} OK`) || response.startsWith(`${tag} OK`) ||
-          response.includes(`\n${tag} NO`) || response.startsWith(`${tag} NO`) ||
-          response.includes(`\n${tag} BAD`) || response.startsWith(`${tag} BAD`)
-        ) break;
+          response.includes(`\n${tag} OK`) ||
+          response.startsWith(`${tag} OK`) ||
+          response.includes(`\n${tag} NO`) ||
+          response.startsWith(`${tag} NO`) ||
+          response.includes(`\n${tag} BAD`) ||
+          response.startsWith(`${tag} BAD`)
+        )
+          break;
       }
       return response;
     };
@@ -128,7 +145,10 @@ serve(async (req) => {
     const loginResp = await sendCommand(`LOGIN "${IMAP_USER}" "${IMAP_PASSWORD}"`);
     if (!loginResp.includes("OK")) {
       conn.close();
-      return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "IMAP login failed" }), {
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     let result: Record<string, unknown> = {};
@@ -149,7 +169,10 @@ serve(async (req) => {
       }
 
       case "create_folder": {
-        if (!target_folder) { result = { error: "target_folder required" }; break; }
+        if (!target_folder) {
+          result = { error: "target_folder required" };
+          break;
+        }
         const createResp = await sendCommand(`CREATE "${target_folder}"`);
         result = { success: createResp.includes("OK") || createResp.includes("ALREADYEXISTS") };
         break;
@@ -159,7 +182,10 @@ serve(async (req) => {
       case "spam":
       case "delete":
       case "move": {
-        if (!uids || uids.length === 0) { result = { error: "uids required" }; break; }
+        if (!uids || uids.length === 0) {
+          result = { error: "uids required" };
+          break;
+        }
 
         // Select INBOX
         await sendCommand("SELECT INBOX");
@@ -199,7 +225,10 @@ serve(async (req) => {
           }
         }
 
-        if (!folder) { result = { error: "No target folder" }; break; }
+        if (!folder) {
+          result = { error: "No target folder" };
+          break;
+        }
 
         let moved = 0;
         for (const uid of uids) {
@@ -224,16 +253,29 @@ serve(async (req) => {
         const supabaseService = supabaseAdmin;
         for (const uid of uids) {
           const metaUpdate: Record<string, unknown> = {};
-          if (action === "archive") { metaUpdate.archived = true; metaUpdate.archived_at = new Date().toISOString(); }
-          if (action === "spam") { metaUpdate.spam = true; }
-          if (action === "move") { metaUpdate.moved_to = folder; }
-          if (action === "delete") { metaUpdate.deleted = true; }
+          if (action === "archive") {
+            metaUpdate.archived = true;
+            metaUpdate.archived_at = new Date().toISOString();
+          }
+          if (action === "spam") {
+            metaUpdate.spam = true;
+          }
+          if (action === "move") {
+            metaUpdate.moved_to = folder;
+          }
+          if (action === "delete") {
+            metaUpdate.deleted = true;
+          }
 
           const updatePayload: Record<string, unknown> = {
             category:
-              action === "spam" ? "spam" :
-              action === "archive" ? "archived" :
-              action === "delete" ? "deleted" : "moved",
+              action === "spam"
+                ? "spam"
+                : action === "archive"
+                  ? "archived"
+                  : action === "delete"
+                    ? "deleted"
+                    : "moved",
             folder,
           };
           if (action === "delete") updatePayload.hidden_by_rule = true;
@@ -260,9 +302,9 @@ serve(async (req) => {
     return new Response(JSON.stringify(result), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("manage-email-folders error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

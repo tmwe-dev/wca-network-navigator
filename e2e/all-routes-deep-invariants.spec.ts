@@ -79,9 +79,7 @@ test.describe("deep-invariants @nightly", () => {
       expect(res?.status() ?? 0).toBeLessThan(500);
       await page.waitForLoadState("networkidle").catch(() => {});
       await assertNoErrorBoundary(page);
-      expect(inv.pageErrors,
-        `pageerror su mobile: ${inv.pageErrors.join(" | ")}`
-      ).toHaveLength(0);
+      expect(inv.pageErrors, `pageerror su mobile: ${inv.pageErrors.join(" | ")}`).toHaveLength(0);
     });
   }
 });

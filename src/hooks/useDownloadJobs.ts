@@ -8,17 +8,28 @@ import { toast } from "@/hooks/use-toast";
 import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/providers/AuthProvider";
 import {
-  findDownloadJobs, updateDownloadJob, deleteJobsByStatus, findJobByCountryAndNetwork,
-  insertJobItems, insertJobEvent, findDeadPartnerIds, createDownloadJob,
-  invalidateDownloadJobs, updateJobItemsByJobIdAndStatus,
+  findDownloadJobs,
+  updateDownloadJob,
+  deleteJobsByStatus,
+  findJobByCountryAndNetwork,
+  insertJobItems,
+  insertJobEvent,
+  findDeadPartnerIds,
+  createDownloadJob,
+  invalidateDownloadJobs,
+  updateJobItemsByJobIdAndStatus,
   type DownloadJob,
 } from "@/data/downloadJobs";
 import { toRecord } from "@/lib/records";
 
 export type { DownloadJob };
 
-const RT_KEY = '__dlJobsRealtimeState__';
-interface RtState { refCount: number; channel: ReturnType<typeof supabase.channel> | null; queryClient: ReturnType<typeof useQueryClient> | null; }
+const RT_KEY = "__dlJobsRealtimeState__";
+interface RtState {
+  refCount: number;
+  channel: ReturnType<typeof supabase.channel> | null;
+  queryClient: ReturnType<typeof useQueryClient> | null;
+}
 function getRtState(): RtState {
   const w = toRecord(window);
   if (!w[RT_KEY]) w[RT_KEY] = { refCount: 0, channel: null, queryClient: null };
@@ -70,20 +81,31 @@ export function useCreateDownloadJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (params: {
-      country_code: string; country_name: string; network_name: string;
-      wca_ids: number[]; delay_seconds: number;
+      country_code: string;
+      country_name: string;
+      network_name: string;
+      wca_ids: number[];
+      delay_seconds: number;
     }) => {
       const deadIds = await findDeadPartnerIds(params.wca_ids);
       const deadSet = new Set(deadIds);
-      const filteredIds = params.wca_ids.filter(id => !deadSet.has(id));
+      const filteredIds = params.wca_ids.filter((id) => !deadSet.has(id));
       const skippedCount = params.wca_ids.length - filteredIds.length;
-      if (skippedCount > 0) toast({ title: "Filtro applicato", description: `${skippedCount} profili non più presenti su WCA esclusi` });
+      if (skippedCount > 0)
+        toast({ title: "Filtro applicato", description: `${skippedCount} profili non più presenti su WCA esclusi` });
       if (filteredIds.length === 0) {
-        toast({ title: "Nessun profilo da scaricare", description: "Tutti i profili risultano già rimossi da WCA", variant: "destructive" });
+        toast({
+          title: "Nessun profilo da scaricare",
+          description: "Tutti i profili risultano già rimossi da WCA",
+          variant: "destructive",
+        });
         return null;
       }
 
-      const existing = await findJobByCountryAndNetwork(params.country_code, params.network_name, ["pending", "running"]);
+      const existing = await findJobByCountryAndNetwork(params.country_code, params.network_name, [
+        "pending",
+        "running",
+      ]);
       if (existing) {
         const ageMs = Date.now() - new Date(existing.updated_at).getTime();
         if (ageMs > 120_000) {
@@ -93,12 +115,19 @@ export function useCreateDownloadJob() {
         }
       }
 
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       const jobId = await createDownloadJob({
-        country_code: params.country_code, country_name: params.country_name,
-        network_name: params.network_name, wca_ids: filteredIds,
-        total_count: filteredIds.length, delay_seconds: params.delay_seconds,
-        status: "pending", user_id: user?.id,
+        country_code: params.country_code,
+        country_name: params.country_name,
+        network_name: params.network_name,
+        wca_ids: filteredIds,
+        total_count: filteredIds.length,
+        delay_seconds: params.delay_seconds,
+        status: "pending",
+        user_id: user?.id,
       });
 
       const items = filteredIds.map((id, i) => ({ job_id: jobId, wca_id: id, position: i, status: "pending" }));
@@ -106,8 +135,13 @@ export function useCreateDownloadJob() {
       await insertJobEvent({ job_id: jobId, event_type: "job_created", payload: { total: filteredIds.length } });
       return jobId;
     },
-    onSuccess: () => { invalidateDownloadJobs(queryClient); toast({ title: "Job avviato", description: "Il download proseguirà in background" }); },
-    onError: (err) => { toast({ title: "Errore", description: err.message, variant: "destructive" }); },
+    onSuccess: () => {
+      invalidateDownloadJobs(queryClient);
+      toast({ title: "Job avviato", description: "Il download proseguirà in background" });
+    },
+    onError: (err) => {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    },
   });
 }
 

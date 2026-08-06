@@ -41,6 +41,6 @@ export function getPatternPause(index: number): number {
 export async function ensureMinDuration(startMs: number): Promise<void> {
   const elapsed = Date.now() - startMs;
   if (elapsed < MIN_OPERATION_DURATION_MS) {
-    await new Promise(r => setTimeout(r, MIN_OPERATION_DURATION_MS - elapsed));
+    await new Promise((r) => setTimeout(r, MIN_OPERATION_DURATION_MS - elapsed));
   }
 }

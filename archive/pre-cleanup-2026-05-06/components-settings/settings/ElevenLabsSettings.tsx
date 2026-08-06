@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Volume2, Play, Settings2, Loader2, RefreshCw, Square, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useUpdateSetting } from "@/hooks/useAppSettings";
 import { useAgents } from "@/hooks/useAgents";
@@ -55,11 +63,46 @@ const CATEGORY_SHORT: Record<string, string> = {
 };
 
 const FALLBACK_VOICES: Voice[] = [
-  { voice_id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", category: "premade", labels: { gender: "female", accent: "american" }, preview_url: null, description: null },
-  { voice_id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura", category: "premade", labels: { gender: "female" }, preview_url: null, description: null },
-  { voice_id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", category: "premade", labels: { gender: "male", accent: "british" }, preview_url: null, description: null },
-  { voice_id: "JBFqnCBsd6RMkjVDRZzb", name: "George", category: "premade", labels: { gender: "male", accent: "british" }, preview_url: null, description: null },
-  { voice_id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger", category: "premade", labels: { gender: "male", accent: "american" }, preview_url: null, description: null },
+  {
+    voice_id: "EXAVITQu4vr4xnSDxMaL",
+    name: "Sarah",
+    category: "premade",
+    labels: { gender: "female", accent: "american" },
+    preview_url: null,
+    description: null,
+  },
+  {
+    voice_id: "FGY2WhTYpPnrIDTdsKH5",
+    name: "Laura",
+    category: "premade",
+    labels: { gender: "female" },
+    preview_url: null,
+    description: null,
+  },
+  {
+    voice_id: "onwK4e9ZLuTAKqWW03F9",
+    name: "Daniel",
+    category: "premade",
+    labels: { gender: "male", accent: "british" },
+    preview_url: null,
+    description: null,
+  },
+  {
+    voice_id: "JBFqnCBsd6RMkjVDRZzb",
+    name: "George",
+    category: "premade",
+    labels: { gender: "male", accent: "british" },
+    preview_url: null,
+    description: null,
+  },
+  {
+    voice_id: "CwhRBWXzGAHq8TQ4Fs17",
+    name: "Roger",
+    category: "premade",
+    labels: { gender: "male", accent: "american" },
+    preview_url: null,
+    description: null,
+  },
 ];
 
 interface ElevenLabsSettingsProps {
@@ -98,12 +141,16 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
 
   const { agents } = useAgents();
 
-  useEffect(() => { loadVoices(); }, []);
+  useEffect(() => {
+    loadVoices();
+  }, []);
 
   const loadVoices = async () => {
     setLoadingVoices(true);
     try {
-      const data = await invokeEdge<Record<string, unknown>>("list-elevenlabs-voices", { context: "ElevenLabsSettings.list_elevenlabs_voices" });
+      const data = await invokeEdge<Record<string, unknown>>("list-elevenlabs-voices", {
+        context: "ElevenLabsSettings.list_elevenlabs_voices",
+      });
       setApiStatus(String(data.status || "error") as never);
       if (Array.isArray(data.voices) && data.voices.length > 0) setVoices(data.voices as never);
     } catch (e) {
@@ -127,7 +174,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
   };
 
   const playPreview = (voiceId: string) => {
-    const voice = voices.find(v => v.voice_id === voiceId);
+    const voice = voices.find((v) => v.voice_id === voiceId);
     if (!voice) return;
     if (playingId === voiceId) {
       audioRef.current?.pause();
@@ -143,7 +190,10 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
     audioRef.current = audio;
     setPlayingId(voiceId);
     audio.onended = () => setPlayingId(null);
-    audio.onerror = () => { setPlayingId(null); toast({ title: "Errore riproduzione", variant: "destructive" }); };
+    audio.onerror = () => {
+      setPlayingId(null);
+      toast({ title: "Errore riproduzione", variant: "destructive" });
+    };
     audio.play();
   };
 
@@ -155,9 +205,9 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
   };
 
   // Group by gender
-  const maleVoices = voices.filter(v => v.labels?.gender === "male");
-  const femaleVoices = voices.filter(v => v.labels?.gender === "female");
-  const otherVoices = voices.filter(v => !v.labels?.gender || !["male", "female"].includes(v.labels.gender));
+  const maleVoices = voices.filter((v) => v.labels?.gender === "male");
+  const femaleVoices = voices.filter((v) => v.labels?.gender === "female");
+  const otherVoices = voices.filter((v) => !v.labels?.gender || !["male", "female"].includes(v.labels.gender));
 
   const voiceLabel = (v: Voice) => {
     const flag = ACCENT_FLAGS[v.labels?.accent || ""] || "🌍";
@@ -165,23 +215,57 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
     return `${flag} ${v.name} · ${cat}`;
   };
 
-  const selectedVoice = voices.find(v => v.voice_id === selectedVoiceId);
+  const selectedVoice = voices.find((v) => v.voice_id === selectedVoiceId);
 
   const statusBadge = () => {
     switch (apiStatus) {
-      case "checking": return <Badge variant="outline" className="text-[10px] bg-yellow-500/10 text-yellow-400 border-yellow-500/30"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Verifica...</Badge>;
-      case "ok": return <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-400 border-green-500/30"><CheckCircle2 className="w-3 h-3 mr-1" />Connessa</Badge>;
-      case "invalid_key": return <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-400 border-red-500/30"><AlertCircle className="w-3 h-3 mr-1" />Chiave non valida</Badge>;
-      case "missing_key": return <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-400 border-red-500/30"><AlertCircle className="w-3 h-3 mr-1" />Non configurata</Badge>;
-      default: return <Badge variant="outline" className="text-[10px] bg-orange-500/10 text-orange-400 border-orange-500/30"><AlertCircle className="w-3 h-3 mr-1" />Errore</Badge>;
+      case "checking":
+        return (
+          <Badge variant="outline" className="text-[10px] bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+            Verifica...
+          </Badge>
+        );
+      case "ok":
+        return (
+          <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-400 border-green-500/30">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            Connessa
+          </Badge>
+        );
+      case "invalid_key":
+        return (
+          <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-400 border-red-500/30">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Chiave non valida
+          </Badge>
+        );
+      case "missing_key":
+        return (
+          <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-400 border-red-500/30">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Non configurata
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-[10px] bg-orange-500/10 text-orange-400 border-orange-500/30">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Errore
+          </Badge>
+        );
     }
   };
 
   return (
     <Tabs defaultValue="voce" className="space-y-4">
       <TabsList className="w-full justify-start">
-        <TabsTrigger value="voce" className="gap-1.5 text-xs"><Volume2 className="w-3.5 h-3.5" /> Voce & Agente</TabsTrigger>
-        <TabsTrigger value="avanzate" className="gap-1.5 text-xs"><Settings2 className="w-3.5 h-3.5" /> Avanzate</TabsTrigger>
+        <TabsTrigger value="voce" className="gap-1.5 text-xs">
+          <Volume2 className="w-3.5 h-3.5" /> Voce & Agente
+        </TabsTrigger>
+        <TabsTrigger value="avanzate" className="gap-1.5 text-xs">
+          <Settings2 className="w-3.5 h-3.5" /> Avanzate
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="voce" className="m-0 space-y-4">
@@ -191,7 +275,9 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
             <CardTitle className="text-sm">Lingua vocale</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-muted-foreground">La lingua determina la voce predefinita per TTS e il riconoscimento vocale (STT)</p>
+            <p className="text-xs text-muted-foreground">
+              La lingua determina la voce predefinita per TTS e il riconoscimento vocale (STT)
+            </p>
             <VoiceLanguageSelector value={voiceLang} onChange={handleLangChange} />
           </CardContent>
         </Card>
@@ -214,7 +300,13 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">Voce predefinita ({voices.length} disponibili)</CardTitle>
-              <Button size="sm" variant="outline" onClick={loadVoices} disabled={loadingVoices} className="text-xs gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={loadVoices}
+                disabled={loadingVoices}
+                className="text-xs gap-1.5"
+              >
                 {loadingVoices ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                 Aggiorna
               </Button>
@@ -230,7 +322,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
                   {maleVoices.length > 0 && (
                     <SelectGroup>
                       <SelectLabel>👨 Maschile</SelectLabel>
-                      {maleVoices.map(v => (
+                      {maleVoices.map((v) => (
                         <SelectItem key={v.voice_id} value={v.voice_id} className="text-xs">
                           {voiceLabel(v)}
                         </SelectItem>
@@ -240,7 +332,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
                   {femaleVoices.length > 0 && (
                     <SelectGroup>
                       <SelectLabel>👩 Femminile</SelectLabel>
-                      {femaleVoices.map(v => (
+                      {femaleVoices.map((v) => (
                         <SelectItem key={v.voice_id} value={v.voice_id} className="text-xs">
                           {voiceLabel(v)}
                         </SelectItem>
@@ -250,7 +342,7 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
                   {otherVoices.length > 0 && (
                     <SelectGroup>
                       <SelectLabel>🎭 Altro</SelectLabel>
-                      {otherVoices.map(v => (
+                      {otherVoices.map((v) => (
                         <SelectItem key={v.voice_id} value={v.voice_id} className="text-xs">
                           {voiceLabel(v)}
                         </SelectItem>
@@ -272,7 +364,8 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
             </div>
             {selectedVoice && (
               <p className="text-[10px] text-muted-foreground">
-                {ACCENT_FLAGS[selectedVoice.labels?.accent || ""] || "🌍"} {selectedVoice.name} — {selectedVoice.labels?.accent || "n/a"} · {selectedVoice.category}
+                {ACCENT_FLAGS[selectedVoice.labels?.accent || ""] || "🌍"} {selectedVoice.name} —{" "}
+                {selectedVoice.labels?.accent || "n/a"} · {selectedVoice.category}
               </p>
             )}
           </CardContent>
@@ -292,20 +385,24 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Agenti attivi</SelectLabel>
-                  {(agents || []).filter(a => a.is_active).map(a => (
-                    <SelectItem key={a.id} value={a.id} className="text-xs">
-                      {a.avatar_emoji} {a.name} — {a.role}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-                {(agents || []).some(a => !a.is_active) && (
-                  <SelectGroup>
-                    <SelectLabel>Inattivi</SelectLabel>
-                    {(agents || []).filter(a => !a.is_active).map(a => (
+                  {(agents || [])
+                    .filter((a) => a.is_active)
+                    .map((a) => (
                       <SelectItem key={a.id} value={a.id} className="text-xs">
                         {a.avatar_emoji} {a.name} — {a.role}
                       </SelectItem>
                     ))}
+                </SelectGroup>
+                {(agents || []).some((a) => !a.is_active) && (
+                  <SelectGroup>
+                    <SelectLabel>Inattivi</SelectLabel>
+                    {(agents || [])
+                      .filter((a) => !a.is_active)
+                      .map((a) => (
+                        <SelectItem key={a.id} value={a.id} className="text-xs">
+                          {a.avatar_emoji} {a.name} — {a.role}
+                        </SelectItem>
+                      ))}
                   </SelectGroup>
                 )}
               </SelectContent>
@@ -321,8 +418,15 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
           <CardContent className="space-y-2">
             <p className="text-xs text-muted-foreground">Inserisci un Voice ID dalla Voice Library di ElevenLabs</p>
             <div className="flex gap-2">
-              <Input value={customVoiceId} onChange={(e) => setCustomVoiceId(e.target.value)} placeholder="es. JBFqnCBsd6RMkjVDRZzb" className="text-xs" />
-              <Button size="sm" onClick={handleSaveCustomVoice} disabled={!customVoiceId.trim()}>Salva</Button>
+              <Input
+                value={customVoiceId}
+                onChange={(e) => setCustomVoiceId(e.target.value)}
+                placeholder="es. JBFqnCBsd6RMkjVDRZzb"
+                className="text-xs"
+              />
+              <Button size="sm" onClick={handleSaveCustomVoice} disabled={!customVoiceId.trim()}>
+                Salva
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -339,11 +443,13 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
               {statusBadge()}
             </div>
             <p className="text-[10px] text-muted-foreground">
-              La API Key è gestita dal connettore ElevenLabs. Per aggiornarla, riconnetti il connettore dalle impostazioni del workspace.
+              La API Key è gestita dal connettore ElevenLabs. Per aggiornarla, riconnetti il connettore dalle
+              impostazioni del workspace.
             </p>
             {apiStatus === "invalid_key" && (
               <p className="text-[10px] text-red-400">
-                La chiave attuale non è valida (errore 401). Riconnetti il connettore ElevenLabs per aggiornare la chiave.
+                La chiave attuale non è valida (errore 401). Riconnetti il connettore ElevenLabs per aggiornare la
+                chiave.
               </p>
             )}
           </CardContent>
@@ -354,7 +460,9 @@ export function ElevenLabsSettings({ settings, updateSetting }: ElevenLabsSettin
             <CardTitle className="text-sm">Agent ID (Conversational AI)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-muted-foreground">ID dell'agente ElevenLabs per conversazioni vocali in tempo reale</p>
+            <p className="text-xs text-muted-foreground">
+              ID dell'agente ElevenLabs per conversazioni vocali in tempo reale
+            </p>
             <div className="flex gap-2">
               <Input
                 value={settings?.elevenlabs_agent_id || ""}

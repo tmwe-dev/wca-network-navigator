@@ -41,7 +41,9 @@ export function VoiceElevenLabsTab() {
     void (async () => {
       try {
         const [a, p] = await Promise.all([findAgents(), findAgentPersonas(userId)]);
-        const voiceAgents = a.filter((x) => x.elevenlabs_agent_id || x.elevenlabs_voice_id || x.role === "voice" || true);
+        const voiceAgents = a.filter(
+          (x) => x.elevenlabs_agent_id || x.elevenlabs_voice_id || x.role === "voice" || true,
+        );
         setAgents(voiceAgents);
         setPersonas(p);
         if (voiceAgents.length > 0 && !agentId) setAgentId(voiceAgents[0].id);
@@ -49,7 +51,6 @@ export function VoiceElevenLabsTab() {
         toast.error(`Errore caricamento agenti: ${e instanceof Error ? e.message : String(e)}`);
       }
     })();
-     
   }, [userId]);
 
   const currentAgent = useMemo(() => agents.find((a) => a.id === agentId) ?? null, [agents, agentId]);
@@ -66,12 +67,21 @@ export function VoiceElevenLabsTab() {
     setVocabDont((currentPersona?.vocabulary_dont ?? []).join("\n"));
   }, [agentId, currentAgent, currentPersona]);
 
-  const personaSummary = useMemo(() => ({
-    language: currentPersona?.language ?? "it",
-    tone: personaTone,
-    vocabulary_do: vocabDo.split("\n").map((s) => s.trim()).filter(Boolean),
-    vocabulary_dont: vocabDont.split("\n").map((s) => s.trim()).filter(Boolean),
-  }), [currentPersona, personaTone, vocabDo, vocabDont]);
+  const personaSummary = useMemo(
+    () => ({
+      language: currentPersona?.language ?? "it",
+      tone: personaTone,
+      vocabulary_do: vocabDo
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      vocabulary_dont: vocabDont
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    }),
+    [currentPersona, personaTone, vocabDo, vocabDont],
+  );
 
   const coherence = useVoiceCoherenceCheck(personaSummary, voicePrompt);
 
@@ -82,14 +92,18 @@ export function VoiceElevenLabsTab() {
     }
     setSyncing(true);
     try {
-      const personaJson = JSON.stringify({
-        tone: personaTone,
-        custom_tone_prompt: personaCustomPrompt,
-        language: currentPersona.language,
-        style_rules: styleRules.split("\n").filter(Boolean),
-        vocabulary_do: vocabDo.split("\n").filter(Boolean),
-        vocabulary_dont: vocabDont.split("\n").filter(Boolean),
-      }, null, 2);
+      const personaJson = JSON.stringify(
+        {
+          tone: personaTone,
+          custom_tone_prompt: personaCustomPrompt,
+          language: currentPersona.language,
+          style_rules: styleRules.split("\n").filter(Boolean),
+          vocabulary_do: vocabDo.split("\n").filter(Boolean),
+          vocabulary_dont: vocabDont.split("\n").filter(Boolean),
+        },
+        null,
+        2,
+      );
 
       const improved = await lab.improveBlock({
         block: {
@@ -99,7 +113,8 @@ export function VoiceElevenLabsTab() {
           source: { kind: "ephemeral" },
           dirty: false,
         },
-        instruction: "Genera un voice prompt naturale e conversazionale per ElevenLabs (no markdown, no bullet, no liste numerate, frasi parlate). Deve essere coerente con la persona indicata. Restituisci SOLO il prompt.",
+        instruction:
+          "Genera un voice prompt naturale e conversazionale per ElevenLabs (no markdown, no bullet, no liste numerate, frasi parlate). Deve essere coerente con la persona indicata. Restituisci SOLO il prompt.",
         tabLabel: "Voice / ElevenLabs",
       });
       setImprovedVoice(improved);
@@ -137,11 +152,24 @@ export function VoiceElevenLabsTab() {
       await updateAgentPersona(currentPersona.id, {
         tone: personaTone,
         custom_tone_prompt: personaCustomPrompt,
-        style_rules: styleRules.split("\n").map((s) => s.trim()).filter(Boolean),
-        vocabulary_do: vocabDo.split("\n").map((s) => s.trim()).filter(Boolean),
-        vocabulary_dont: vocabDont.split("\n").map((s) => s.trim()).filter(Boolean),
+        style_rules: styleRules
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        vocabulary_do: vocabDo
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        vocabulary_dont: vocabDont
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
       });
-      await logSupervisorAudit({ action: "prompt_lab_save", target_table: "agent_personas", target_id: currentPersona.id });
+      await logSupervisorAudit({
+        action: "prompt_lab_save",
+        target_table: "agent_personas",
+        target_id: currentPersona.id,
+      });
       toast.success("Persona salvata");
     } catch (e) {
       toast.error(`Errore salvataggio persona: ${e instanceof Error ? e.message : String(e)}`);
@@ -161,7 +189,12 @@ export function VoiceElevenLabsTab() {
           <SelectContent>
             {agents.map((a) => (
               <SelectItem key={a.id} value={a.id} className="text-xs">
-                {a.avatar_emoji} {a.name} {a.elevenlabs_agent_id && <Badge variant="outline" className="ml-1 text-[9px]">11L</Badge>}
+                {a.avatar_emoji} {a.name}{" "}
+                {a.elevenlabs_agent_id && (
+                  <Badge variant="outline" className="ml-1 text-[9px]">
+                    11L
+                  </Badge>
+                )}
               </SelectItem>
             ))}
           </SelectContent>
@@ -172,8 +205,16 @@ export function VoiceElevenLabsTab() {
         {/* COL 1: PERSONA INTERNA */}
         <div className="col-span-5 border rounded-md p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Prompt interno (Persona)</h3>
-            <Button size="sm" variant="outline" className="h-6 text-xs" disabled={!currentPersona || savingPersona} onClick={handleSavePersona}>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Prompt interno (Persona)
+            </h3>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-xs"
+              disabled={!currentPersona || savingPersona}
+              onClick={handleSavePersona}
+            >
               {savingPersona ? "..." : "Salva persona"}
             </Button>
           </div>
@@ -182,24 +223,44 @@ export function VoiceElevenLabsTab() {
             <>
               <div>
                 <label className="text-[10px] font-medium text-muted-foreground">Tono</label>
-                <Textarea value={personaTone} onChange={(e) => setPersonaTone(e.target.value)} className="text-xs min-h-[40px]" />
+                <Textarea
+                  value={personaTone}
+                  onChange={(e) => setPersonaTone(e.target.value)}
+                  className="text-xs min-h-[40px]"
+                />
               </div>
               <div>
                 <label className="text-[10px] font-medium text-muted-foreground">Custom tone prompt</label>
-                <Textarea value={personaCustomPrompt} onChange={(e) => setPersonaCustomPrompt(e.target.value)} className="text-xs min-h-[60px] font-mono" />
+                <Textarea
+                  value={personaCustomPrompt}
+                  onChange={(e) => setPersonaCustomPrompt(e.target.value)}
+                  className="text-xs min-h-[60px] font-mono"
+                />
               </div>
               <div>
                 <label className="text-[10px] font-medium text-muted-foreground">Style rules (1 per riga)</label>
-                <Textarea value={styleRules} onChange={(e) => setStyleRules(e.target.value)} className="text-xs min-h-[50px] font-mono" />
+                <Textarea
+                  value={styleRules}
+                  onChange={(e) => setStyleRules(e.target.value)}
+                  className="text-xs min-h-[50px] font-mono"
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] font-medium text-muted-foreground">Vocabolario DO</label>
-                  <Textarea value={vocabDo} onChange={(e) => setVocabDo(e.target.value)} className="text-xs min-h-[50px] font-mono" />
+                  <Textarea
+                    value={vocabDo}
+                    onChange={(e) => setVocabDo(e.target.value)}
+                    className="text-xs min-h-[50px] font-mono"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] font-medium text-muted-foreground">Vocabolario DON'T</label>
-                  <Textarea value={vocabDont} onChange={(e) => setVocabDont(e.target.value)} className="text-xs min-h-[50px] font-mono" />
+                  <Textarea
+                    value={vocabDont}
+                    onChange={(e) => setVocabDont(e.target.value)}
+                    className="text-xs min-h-[50px] font-mono"
+                  />
                 </div>
               </div>
             </>
@@ -213,27 +274,48 @@ export function VoiceElevenLabsTab() {
           {coherence.map((c) => (
             <div key={c.field} className="space-y-0.5">
               <div className="flex items-center gap-1.5 text-xs font-medium">
-                <span className={cn(
-                  "h-2 w-2 rounded-full",
-                  c.status === "ok" && "bg-success",
-                  c.status === "warn" && "bg-warning",
-                  c.status === "fail" && "bg-destructive",
-                )} />
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    c.status === "ok" && "bg-success",
+                    c.status === "warn" && "bg-warning",
+                    c.status === "fail" && "bg-destructive",
+                  )}
+                />
                 {c.field}
               </div>
               <p className="text-[10px] text-muted-foreground">{c.message}</p>
             </div>
           ))}
-          <Button size="sm" className="w-full mt-3 h-7 text-xs" onClick={handleSync} disabled={syncing || !currentPersona}>
-            {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Sync <ArrowRight className="h-3 w-3" /></>}
+          <Button
+            size="sm"
+            className="w-full mt-3 h-7 text-xs"
+            onClick={handleSync}
+            disabled={syncing || !currentPersona}
+          >
+            {syncing ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="h-3 w-3" /> Sync <ArrowRight className="h-3 w-3" />
+              </>
+            )}
           </Button>
         </div>
 
         {/* COL 3: VOICE PROMPT */}
         <div className="col-span-5 border rounded-md p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Prompt ElevenLabs (Voice)</h3>
-            <Button size="sm" variant="outline" className="h-6 text-xs" disabled={!currentAgent || savingAgent} onClick={handleSaveAgent}>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Prompt ElevenLabs (Voice)
+            </h3>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-xs"
+              disabled={!currentAgent || savingAgent}
+              onClick={handleSaveAgent}
+            >
               {savingAgent ? "..." : "Salva voice"}
             </Button>
           </div>

@@ -7,10 +7,7 @@ type InitialEmailMessageContent = {
   bodyText?: string | null;
 };
 
-export function useEmailMessageContent(
-  messageId: string | null,
-  initialContent?: InitialEmailMessageContent,
-) {
+export function useEmailMessageContent(messageId: string | null, initialContent?: InitialEmailMessageContent) {
   const fallbackBodyHtml = initialContent?.bodyHtml ?? null;
   const fallbackBodyText = initialContent?.bodyText ?? null;
 

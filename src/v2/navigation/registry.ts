@@ -54,10 +54,10 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
   {
     title: "Legacy & Controllo",
     items: [
-      { label: "AI Control Center",    path: "/v2/ai-control" },
-      { label: "Dashboard (legacy)",   path: "/v2/dashboard" },
+      { label: "AI Control Center", path: "/v2/ai-control" },
+      { label: "Dashboard (legacy)", path: "/v2/dashboard" },
       { label: "Calendar (deep-link)", path: "/v2/calendar" },
-      { label: "AI Arena 3D",          path: "/v2/ai-arena" },
+      { label: "AI Arena 3D", path: "/v2/ai-arena" },
     ],
   },
   {
@@ -68,16 +68,16 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
       {
         title: "Hub",
         items: [
-          { label: "Test & Prompts",       path: "/v2/lab?group=tests" },
-          { label: "Observability",        path: "/v2/lab?group=observability" },
-          { label: "Design System",        path: "/v2/lab?group=design" },
+          { label: "Test & Prompts", path: "/v2/lab?group=tests" },
+          { label: "Observability", path: "/v2/lab?group=observability" },
+          { label: "Design System", path: "/v2/lab?group=design" },
         ],
       },
       {
         title: "Test specifici",
         items: [
           { label: "Email Forge (Lab AI)", path: "/v2/email/forge" },
-          { label: "KB Supervisor",        path: "/v2/ai-staff/kb-supervisor" },
+          { label: "KB Supervisor", path: "/v2/ai-staff/kb-supervisor" },
         ],
       },
     ],
@@ -85,9 +85,9 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
   {
     title: "Sistema & Diagnostica",
     items: [
-      { label: "Finder API",           path: "/v2/finder-api" },
-      { label: "Finder API Catalog",   path: "/v2/finder-api/schema" },
-      { label: "Guida",                path: "/v2/guida" },
+      { label: "Finder API", path: "/v2/finder-api" },
+      { label: "Finder API Catalog", path: "/v2/finder-api/schema" },
+      { label: "Guida", path: "/v2/guida" },
     ],
   },
 ] as const;

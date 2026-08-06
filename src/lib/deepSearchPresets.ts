@@ -131,7 +131,10 @@ export function getDeepSearchMeta(quality: DeepSearchQuality): DeepSearchPresetM
 /**
  * Adatta il preset al formato legacy DeepSearchConfig usato dallo store v2.
  */
-export function presetToForgeConfig(quality: DeepSearchQuality, priorityDomain = ""): {
+export function presetToForgeConfig(
+  quality: DeepSearchQuality,
+  priorityDomain = "",
+): {
   scrapeWebsite: boolean;
   linkedinContacts: boolean;
   linkedinCompany: boolean;

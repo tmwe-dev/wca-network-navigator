@@ -2,14 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Search,
-  Sparkles,
-  Globe,
-  Check,
-  Users,
-  RefreshCw,
-} from "lucide-react";
+import { Search, Sparkles, Globe, Check, Users, RefreshCw } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
@@ -25,7 +18,12 @@ const log = createLogger("NetworkFiltersSection");
 // Quality multi-select serializzato come CSV in `networkQuality`
 function parseQuality(raw: string): Set<string> {
   if (!raw || raw === "all") return new Set();
-  return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+  return new Set(
+    raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
 }
 function serializeQuality(set: Set<string>): string {
   if (set.size === 0) return "all";
@@ -55,15 +53,9 @@ export function NetworkFiltersSection() {
   >([]);
   const [searching, setSearching] = useState(false);
 
-  const qualitySet = useMemo(
-    () => parseQuality(g.filters.networkQuality),
-    [g.filters.networkQuality]
-  );
+  const qualitySet = useMemo(() => parseQuality(g.filters.networkQuality), [g.filters.networkQuality]);
 
-  const toggleQuality = (
-    key: "with" | "without",
-    field: (typeof NETWORK_QUALITY_TOGGLES)[number]
-  ) => {
+  const toggleQuality = (key: "with" | "without", field: (typeof NETWORK_QUALITY_TOGGLES)[number]) => {
     const value = key === "with" ? field.withValue : field.withoutValue;
     const opposite = key === "with" ? field.withoutValue : field.withValue;
     const next = new Set(qualitySet);
@@ -93,22 +85,15 @@ export function NetworkFiltersSection() {
   }, [statsData]);
 
   const selectedCountries = useMemo(
-    () =>
-      countries.filter((country) =>
-        g.filters.networkSelectedCountries.has(country.code)
-      ),
-    [countries, g.filters.networkSelectedCountries]
+    () => countries.filter((country) => g.filters.networkSelectedCountries.has(country.code)),
+    [countries, g.filters.networkSelectedCountries],
   );
 
   const filteredCountries = useMemo(() => {
     const q = countrySearch.toLowerCase();
     const matches = !q
       ? countries
-      : countries.filter(
-          (c) =>
-            c.name.toLowerCase().includes(q) ||
-            c.code.toLowerCase().includes(q)
-        );
+      : countries.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
     return [...matches].sort((a, b) => {
       const aSelected = g.filters.networkSelectedCountries.has(a.code) ? 1 : 0;
       const bSelected = g.filters.networkSelectedCountries.has(b.code) ? 1 : 0;
@@ -205,28 +190,19 @@ export function NetworkFiltersSection() {
                   "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-all border-l-2",
                   g.filters.networkSelectedCountries.has(c.code)
                     ? "bg-primary/10 border-primary text-primary"
-                    : "border-transparent hover:bg-muted text-foreground"
+                    : "border-transparent hover:bg-muted text-foreground",
                 )}
               >
                 <span className="text-base">{c.flag}</span>
-                <span className="flex-1 text-left truncate font-medium">
-                  {c.name}
-                </span>
-                {g.filters.networkSelectedCountries.has(c.code) && (
-                  <Check className="w-3 h-3 text-primary" />
-                )}
-                <Badge
-                  variant="secondary"
-                  className="text-[9px] h-4 px-1.5 tabular-nums"
-                >
+                <span className="flex-1 text-left truncate font-medium">{c.name}</span>
+                {g.filters.networkSelectedCountries.has(c.code) && <Check className="w-3 h-3 text-primary" />}
+                <Badge variant="secondary" className="text-[9px] h-4 px-1.5 tabular-nums">
                   {c.total}
                 </Badge>
               </button>
             ))}
             {filteredCountries.length === 0 && (
-              <div className="px-2 py-3 text-[11px] text-muted-foreground">
-                Nessun paese trovato.
-              </div>
+              <div className="px-2 py-3 text-[11px] text-muted-foreground">Nessun paese trovato.</div>
             )}
           </div>
         </div>
@@ -246,9 +222,7 @@ export function NetworkFiltersSection() {
         {networkSearchValue.trim().length >= 2 && (
           <div className="mt-2 max-h-[300px] overflow-y-auto rounded-lg border border-border/40 bg-muted/10 divide-y divide-border/20">
             {searching ? (
-              <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">
-                Ricerca in corso...
-              </div>
+              <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">Ricerca in corso...</div>
             ) : searchResults.length === 0 ? (
               <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">
                 Nessun risultato per "{networkSearchValue}"
@@ -276,71 +250,48 @@ export function NetworkFiltersSection() {
                       if (p.country_code) {
                         g.setNetworkSelectedCountries(new Set([p.country_code]));
                       }
-                      window.dispatchEvent(
-                        new CustomEvent("network-list-show-holding")
-                      );
+                      window.dispatchEvent(new CustomEvent("network-list-show-holding"));
                       window.dispatchEvent(
                         new CustomEvent("network-select-partner", {
                           detail: { partnerId: p.id },
-                        })
+                        }),
                       );
-                      window.dispatchEvent(
-                        new CustomEvent("filters-drawer-close")
-                      );
+                      window.dispatchEvent(new CustomEvent("filters-drawer-close"));
                     }}
                     className="w-full text-left px-2.5 py-2 hover:bg-primary/10 transition-colors cursor-pointer rounded-md"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-sm shrink-0">
-                        {getCountryFlag(p.country_code)}
-                      </span>
+                      <span className="text-sm shrink-0">{getCountryFlag(p.country_code)}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">
-                          {p.company_alias || p.company_name}
-                        </p>
-                        {p.city && (
-                          <p className="text-[10px] text-muted-foreground">
-                            {p.city}
-                          </p>
-                        )}
+                        <p className="text-xs font-medium truncate">{p.company_alias || p.company_name}</p>
+                        {p.city && <p className="text-[10px] text-muted-foreground">{p.city}</p>}
                       </div>
                       {p.email && (
-                        <span className="text-[9px] text-muted-foreground truncate max-w-[120px]">
-                          {p.email}
-                        </span>
+                        <span className="text-[9px] text-muted-foreground truncate max-w-[120px]">{p.email}</span>
                       )}
                     </div>
-                    {Array.isArray(p.partner_contacts) &&
-                      p.partner_contacts.length > 0 && (
-                        <div className="mt-1 ml-6 space-y-0.5">
-                          {p.partner_contacts.slice(0, 3).map((c) => (
-                            <div
-                              key={String(c.id)}
-                              className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
-                            >
-                              <Users className="w-2.5 h-2.5 shrink-0" />
-                              <span className="truncate">
-                                {String(c.contact_alias || c.name || "")}
-                              </span>
-                              {c.title && (
-                                <span className="text-[9px] opacity-60 truncate">
-                                  · {String(c.title)}
-                                </span>
-                              )}
-                              {c.email && (
-                                <span className="text-[9px] text-primary truncate ml-auto">
-                                  {String(c.email)}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                          {p.partner_contacts.length > 3 && (
-                            <span className="text-[9px] text-muted-foreground">
-                              +{p.partner_contacts.length - 3} altri
-                            </span>
-                          )}
-                        </div>
-                      )}
+                    {Array.isArray(p.partner_contacts) && p.partner_contacts.length > 0 && (
+                      <div className="mt-1 ml-6 space-y-0.5">
+                        {p.partner_contacts.slice(0, 3).map((c) => (
+                          <div
+                            key={String(c.id)}
+                            className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+                          >
+                            <Users className="w-2.5 h-2.5 shrink-0" />
+                            <span className="truncate">{String(c.contact_alias || c.name || "")}</span>
+                            {c.title && <span className="text-[9px] opacity-60 truncate">· {String(c.title)}</span>}
+                            {c.email && (
+                              <span className="text-[9px] text-primary truncate ml-auto">{String(c.email)}</span>
+                            )}
+                          </div>
+                        ))}
+                        {p.partner_contacts.length > 3 && (
+                          <span className="text-[9px] text-muted-foreground">
+                            +{p.partner_contacts.length - 3} altri
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </button>
                 ))}
               </>
@@ -386,7 +337,7 @@ export function NetworkFiltersSection() {
                       "h-7 px-2.5 rounded-md border text-[10px] font-semibold uppercase tracking-wide transition-all",
                       isWith
                         ? "bg-primary/15 border-primary text-primary shadow-sm shadow-primary/10"
-                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
                     Con
@@ -399,7 +350,7 @@ export function NetworkFiltersSection() {
                       "h-7 px-2.5 rounded-md border text-[10px] font-semibold uppercase tracking-wide transition-all",
                       isWithout
                         ? "bg-destructive/15 border-destructive text-destructive shadow-sm shadow-destructive/10"
-                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
                     Senza
@@ -412,12 +363,7 @@ export function NetworkFiltersSection() {
       </FilterSection>
 
       <FilterSection icon={RefreshCw} label="Azioni">
-        <Button
-          variant="default"
-          size="sm"
-          className="w-full h-9 text-xs gap-2"
-          onClick={handleSyncWca}
-        >
+        <Button variant="default" size="sm" className="w-full h-9 text-xs gap-2" onClick={handleSyncWca}>
           <RefreshCw className="w-3 h-3" /> Sincronizza WCA
         </Button>
       </FilterSection>

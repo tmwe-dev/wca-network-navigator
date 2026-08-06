@@ -13,7 +13,9 @@ export const dashboardSnapshotTool: Tool = {
 
   execute: async (): Promise<ToolResult> => {
     const result = await fetchDashboardCounts();
-    const c = isOk(result) ? result.value : { partners: 0, contacts: 0, pendingActivities: 0, activeAgents: 0, campaignJobs: 0, emailDrafts: 0 };
+    const c = isOk(result)
+      ? result.value
+      : { partners: 0, contacts: 0, pendingActivities: 0, activeAgents: 0, campaignJobs: 0, emailDrafts: 0 };
 
     return {
       kind: "table",

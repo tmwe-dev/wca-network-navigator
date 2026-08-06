@@ -26,19 +26,9 @@ const IGNORED_CONSOLE = [
 
 const IGNORED_PAGEERROR = ["ResizeObserver", "AbortError"];
 
-const SECRET_FRAGMENTS = [
-  "service_role",
-  "SUPABASE_SERVICE_ROLE",
-  "LOVABLE_API_KEY",
-  "sk_live_",
-  "sk-proj-",
-];
+const SECRET_FRAGMENTS = ["service_role", "SUPABASE_SERVICE_ROLE", "LOVABLE_API_KEY", "sk_live_", "sk-proj-"];
 
-const FORBIDDEN_DIRECT_AI_HOSTS = [
-  "api.openai.com",
-  "generativelanguage.googleapis.com",
-  "api.anthropic.com",
-];
+const FORBIDDEN_DIRECT_AI_HOSTS = ["api.openai.com", "generativelanguage.googleapis.com", "api.anthropic.com"];
 
 export type Invariants = {
   consoleErrors: string[];
@@ -91,9 +81,7 @@ export function attachInvariantWatchers(page: Page): Invariants {
 }
 
 export async function assertNoErrorBoundary(page: Page) {
-  const eb = await page
-    .getByText(/qualcosa è andato storto|something went wrong/i)
-    .count();
+  const eb = await page.getByText(/qualcosa è andato storto|something went wrong/i).count();
   expect(eb, "ErrorBoundary non deve essere visibile").toBe(0);
 }
 
@@ -130,15 +118,11 @@ export function assertInvariants(inv: Invariants) {
     inv.forbiddenAiCalls,
     `AI provider chiamato direttamente dal frontend (charter violato): ${inv.forbiddenAiCalls.join(" | ")}`,
   ).toHaveLength(0);
-  expect(
-    inv.secretLeaks,
-    `Possibile leak di segreti: ${inv.secretLeaks.join(" | ")}`,
-  ).toHaveLength(0);
+  expect(inv.secretLeaks, `Possibile leak di segreti: ${inv.secretLeaks.join(" | ")}`).toHaveLength(0);
   // Soglia tollerante sul rumore console (lib di terze parti)
-  expect(
-    inv.consoleErrors.length,
-    `Troppi console.error: ${inv.consoleErrors.slice(0, 5).join(" | ")}`,
-  ).toBeLessThan(8);
+  expect(inv.consoleErrors.length, `Troppi console.error: ${inv.consoleErrors.slice(0, 5).join(" | ")}`).toBeLessThan(
+    8,
+  );
 }
 
 /**

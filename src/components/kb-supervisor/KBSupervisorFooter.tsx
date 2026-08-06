@@ -14,7 +14,8 @@ export function KBSupervisorFooter({ lastAuditDate, totalDocuments, totalIssues 
     <footer className="border-t border-border px-4 py-1.5 flex items-center gap-4 bg-card text-xs text-muted-foreground">
       <span className="flex items-center gap-1.5">
         <Clock className="w-3.5 h-3.5" />
-        Ultimo audit: {lastAuditDate ? lastAuditDate.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "Mai"}
+        Ultimo audit:{" "}
+        {lastAuditDate ? lastAuditDate.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "Mai"}
       </span>
       <span className="flex items-center gap-1.5">
         <FileText className="w-3.5 h-3.5" />

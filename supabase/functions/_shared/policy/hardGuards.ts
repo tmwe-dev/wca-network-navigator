@@ -61,11 +61,7 @@ export const MAX_BULK_CAP_HARD = 100;
 export function assertNotDestructive(action: string): void {
   const a = action.trim().toLowerCase();
   if (a.startsWith("delete") || a.startsWith("drop") || a.startsWith("truncate")) {
-    throw new HardGuardError(
-      "DESTRUCTIVE_ACTION_FORBIDDEN",
-      `Azione distruttiva vietata: "${action}".`,
-      { action },
-    );
+    throw new HardGuardError("DESTRUCTIVE_ACTION_FORBIDDEN", `Azione distruttiva vietata: "${action}".`, { action });
   }
 }
 
@@ -78,11 +74,10 @@ export function assertBulkCap(count: number, max: number = DEFAULT_BULK_CAP): vo
     );
   }
   if (count > max) {
-    throw new HardGuardError(
-      "BULK_CAP_EXCEEDED",
-      `Bulk ${count} richiede approvazione (max auto: ${max}).`,
-      { count, max },
-    );
+    throw new HardGuardError("BULK_CAP_EXCEEDED", `Bulk ${count} richiede approvazione (max auto: ${max}).`, {
+      count,
+      max,
+    });
   }
 }
 
@@ -92,11 +87,9 @@ export function assertWhitelistedTable(tableName: string): void {
     throw new HardGuardError("TABLE_FORBIDDEN", `Tabella "${tableName}" vietata.`, { table: tableName });
   }
   if (!AI_WRITABLE_TABLES.has(t)) {
-    throw new HardGuardError(
-      "TABLE_NOT_WHITELISTED",
-      `Tabella "${tableName}" non in whitelist AI.`,
-      { table: tableName },
-    );
+    throw new HardGuardError("TABLE_NOT_WHITELISTED", `Tabella "${tableName}" non in whitelist AI.`, {
+      table: tableName,
+    });
   }
 }
 

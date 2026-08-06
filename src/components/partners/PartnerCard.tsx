@@ -4,12 +4,19 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Star, StarOff, Phone, Mail, Globe, MapPin, MessageCircle, UserCheck, UserX, AlertTriangle } from "lucide-react";
+  Star,
+  StarOff,
+  Phone,
+  Mail,
+  Globe,
+  MapPin,
+  MessageCircle,
+  UserCheck,
+  UserX,
+  AlertTriangle,
+} from "lucide-react";
 import {
   getCountryFlag,
   getYearsMember,
@@ -46,9 +53,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
   const hasWebsite = !!partner.website;
   const yearsM = partner.member_since ? getYearsMember(partner.member_since) : null;
   const whatsappNumber = partner.mobile || partner.phone;
-  const domain = hasWebsite
-    ? partner.website!.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
-    : null;
+  const domain = hasWebsite ? partner.website!.replace(/^https?:\/\//, "").replace(/\/.*$/, "") : null;
   const sherlockLevel = useSherlockLevel("partner", partner.id);
   const effectiveLogo = getEffectiveLogoUrl(partner);
 
@@ -56,9 +61,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
     <Card
       className={cn(
         "group hover:shadow-lg transition-all relative",
-        hasWebsite
-          ? "border-l-2 border-l-emerald-500/60"
-          : "border-l-2 border-l-destructive/40"
+        hasWebsite ? "border-l-2 border-l-emerald-500/60" : "border-l-2 border-l-destructive/40",
       )}
     >
       <CardContent className="p-4">
@@ -73,9 +76,19 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-11 h-11 rounded-lg bg-muted/50 border flex items-center justify-center overflow-hidden">
             {effectiveLogo && !logoError ? (
-              <OptimizedImage src={effectiveLogo} alt="" className="w-8 h-8 object-contain" onError={() => setLogoError(true)} />
+              <OptimizedImage
+                src={effectiveLogo}
+                alt=""
+                className="w-8 h-8 object-contain"
+                onError={() => setLogoError(true)}
+              />
             ) : hasWebsite && !faviconError ? (
-              <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} alt="" className="w-8 h-8 object-contain" onError={() => setFaviconError(true)} />
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+                alt=""
+                className="w-8 h-8 object-contain"
+                onError={() => setFaviconError(true)}
+              />
             ) : (
               <span className="text-2xl">{getCountryFlag(partner.country_code)}</span>
             )}
@@ -83,11 +96,24 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
-              <Link to={`/partners/${partner.id}`} className="text-sm font-semibold hover:text-primary transition-colors truncate block">
+              <Link
+                to={`/partners/${partner.id}`}
+                className="text-sm font-semibold hover:text-primary transition-colors truncate block"
+              >
                 {partner.company_name}
               </Link>
-              {partner.company_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0">{partner.company_alias}</span>}
-              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" aria-label="Preferito" onClick={() => onToggleFavorite(partner.id, !partner.is_favorite)}>
+              {partner.company_alias && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0">
+                  {partner.company_alias}
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 flex-shrink-0"
+                aria-label="Preferito"
+                onClick={() => onToggleFavorite(partner.id, !partner.is_favorite)}
+              >
                 {partner.is_favorite ? (
                   <Star className="w-3.5 h-3.5 fill-primary text-primary" />
                 ) : (
@@ -98,7 +124,9 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
 
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
               <MapPin className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{partner.city}, {partner.country_name}</span>
+              <span className="truncate">
+                {partner.city}, {partner.country_name}
+              </span>
               <span className="text-base ml-0.5">{getCountryFlag(partner.country_code)}</span>
             </div>
 
@@ -110,9 +138,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                     key={i}
                     className={cn(
                       "w-3 h-3",
-                      i < Math.round(partner.rating ?? 0)
-                        ? "fill-primary text-primary"
-                        : "text-muted-foreground"
+                      i < Math.round(partner.rating ?? 0) ? "fill-primary text-primary" : "text-muted-foreground",
                     )}
                   />
                 ))}
@@ -128,36 +154,34 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
             {formatPartnerType(partner.partner_type ?? null)}
           </Badge>
           {yearsM != null && (
-            <span className={cn("text-[10px] px-1.5 py-0.5 rounded", getMemberBadgeColor(yearsM))}>
-              {yearsM} yrs
-            </span>
+            <span className={cn("text-[10px] px-1.5 py-0.5 rounded", getMemberBadgeColor(yearsM))}>{yearsM} yrs</span>
           )}
           <EnrichmentBadge partner={partner} variant="pill" />
-          {sherlockLevel && (
-            <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
-          )}
+          {sherlockLevel && <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />}
           {(() => {
             const quality = getPartnerContactQuality(partner.partner_contacts);
-            if (quality === "complete") return (
-              <Tooltip>
-                <TooltipTrigger>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center gap-0.5">
-                    <UserCheck className="w-3 h-3" /> Contatti OK
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Ha email e telefono personale del responsabile</TooltipContent>
-              </Tooltip>
-            );
-            if (quality === "partial") return (
-              <Tooltip>
-                <TooltipTrigger>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary flex items-center gap-0.5">
-                    <AlertTriangle className="w-3 h-3" /> Parziale
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Manca email o telefono personale</TooltipContent>
-              </Tooltip>
-            );
+            if (quality === "complete")
+              return (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center gap-0.5">
+                      <UserCheck className="w-3 h-3" /> Contatti OK
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Ha email e telefono personale del responsabile</TooltipContent>
+                </Tooltip>
+              );
+            if (quality === "partial")
+              return (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary flex items-center gap-0.5">
+                      <AlertTriangle className="w-3 h-3" /> Parziale
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Manca email o telefono personale</TooltipContent>
+                </Tooltip>
+              );
             return (
               <Tooltip>
                 <TooltipTrigger>
@@ -177,7 +201,9 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
             {partner.partner_services!.slice(0, 4).map((s: { service_category: string }, i: number) => (
               <Tooltip key={i}>
                 <TooltipTrigger>
-                  <span className={cn("text-[9px] px-1.5 py-0.5 rounded font-medium", getServiceColor(s.service_category))}>
+                  <span
+                    className={cn("text-[9px] px-1.5 py-0.5 rounded font-medium", getServiceColor(s.service_category))}
+                  >
                     {formatServiceCategory(s.service_category)}
                   </span>
                 </TooltipTrigger>
@@ -202,7 +228,10 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
                     {n.network_name}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>{n.network_name}{n.expires ? ` — Scade ${new Date(n.expires).toLocaleDateString("it-IT")}` : ""}</TooltipContent>
+                <TooltipContent>
+                  {n.network_name}
+                  {n.expires ? ` — Scade ${new Date(n.expires).toLocaleDateString("it-IT")}` : ""}
+                </TooltipContent>
               </Tooltip>
             ))}
             {partner.partner_networks!.length > 3 && (
@@ -217,11 +246,12 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
         {(() => {
           const contacts = partner.partner_contacts || [];
           const primary = contacts.find((c) => c.is_primary) || contacts[0];
-          if (!primary) return (
-            <div className="mt-3 pt-2 border-t">
-              <span className="text-xs text-destructive font-medium">Nessun contatto personale</span>
-            </div>
-          );
+          if (!primary)
+            return (
+              <div className="mt-3 pt-2 border-t">
+                <span className="text-xs text-destructive font-medium">Nessun contatto personale</span>
+              </div>
+            );
           return (
             <div className="mt-3 pt-2 border-t space-y-0.5">
               <div className="flex items-center gap-1.5 text-xs">
@@ -232,7 +262,12 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
               {primary.email && (
                 <div className="flex items-center gap-1.5 text-xs ml-4">
                   <Mail className="w-3 h-3 text-primary shrink-0" />
-                  <a href={`mailto:${primary.email}`} className="text-primary hover:underline truncate max-w-[180px] font-medium">{primary.email}</a>
+                  <a
+                    href={`mailto:${primary.email}`}
+                    className="text-primary hover:underline truncate max-w-[180px] font-medium"
+                  >
+                    {primary.email}
+                  </a>
                 </div>
               )}
               {(primary.direct_phone || primary.mobile) && (
@@ -251,7 +286,9 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
-                  <a href={`tel:${partner.phone}`}><Phone className="w-4 h-4 text-muted-foreground" /></a>
+                  <a href={`tel:${partner.phone}`}>
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                  </a>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Chiama</TooltipContent>
@@ -261,7 +298,9 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
-                  <a href={`mailto:${partner.email}`}><Mail className="w-4 h-4 text-primary" /></a>
+                  <a href={`mailto:${partner.email}`}>
+                    <Mail className="w-4 h-4 text-primary" />
+                  </a>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Email</TooltipContent>
@@ -271,7 +310,11 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Chiama">
-                  <a href={`https://wa.me/${cleanPhoneForWhatsApp(whatsappNumber)}`} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={`https://wa.me/${cleanPhoneForWhatsApp(whatsappNumber)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <MessageCircle className="w-4 h-4 text-emerald-500" />
                   </a>
                 </Button>

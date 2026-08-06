@@ -7,17 +7,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 type BuilderReturn = { count: number | null; error: unknown };
 
 function makeBuilder(result: BuilderReturn, calls: string[]) {
-  const proxy: unknown = new Proxy({}, {
-    get(_t, prop) {
-      if (prop === "then") {
-        return (resolve: (v: BuilderReturn) => unknown) => resolve(result);
-      }
-      return (...args: unknown[]) => {
-        calls.push(`${String(prop)}(${args.map((a) => JSON.stringify(a)).join(",")})`);
-        return proxy;
-      };
+  const proxy: unknown = new Proxy(
+    {},
+    {
+      get(_t, prop) {
+        if (prop === "then") {
+          return (resolve: (v: BuilderReturn) => unknown) => resolve(result);
+        }
+        return (...args: unknown[]) => {
+          calls.push(`${String(prop)}(${args.map((a) => JSON.stringify(a)).join(",")})`);
+          return proxy;
+        };
+      },
     },
-  });
+  );
   return proxy;
 }
 
@@ -64,8 +67,8 @@ describe("DAL — fetchCampaignStatsCounts", () => {
     const err = new Error("RLS denied");
     const seq: BuilderReturn[] = [
       { count: null, error: err }, // sent: error valorizzato → deve silenziare a 0
-      { count: 7, error: null },   // pending: preservato
-      { count: 4, error: null },   // completed: preservato
+      { count: 7, error: null }, // pending: preservato
+      { count: 4, error: null }, // completed: preservato
     ];
     let i = 0;
     fromMock.mockImplementation(() => makeBuilder(seq[i++], []));

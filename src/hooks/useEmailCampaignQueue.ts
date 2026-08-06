@@ -5,7 +5,12 @@ import type { Database } from "@/integrations/supabase/types";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
-import { findCampaignQueueItems, insertCampaignQueueBatch, updateEmailDraft, getEmailDraftField } from "@/data/emailCampaigns";
+import {
+  findCampaignQueueItems,
+  insertCampaignQueueBatch,
+  updateEmailDraft,
+  getEmailDraftField,
+} from "@/data/emailCampaigns";
 import { queryKeys } from "@/lib/queryKeys";
 import { toRecord } from "@/lib/records";
 
@@ -17,33 +22,46 @@ type QueueInsert = Database["public"]["Tables"]["email_campaign_queue"]["Insert"
 export type QueueItem = QueueRow;
 
 export interface QueueStats {
-  total: number; pending: number; sending: number; sent: number; failed: number; cancelled: number;
+  total: number;
+  pending: number;
+  sending: number;
+  sent: number;
+  failed: number;
+  cancelled: number;
 }
 
 export function useEmailCampaignQueue(draftId: string | null) {
   const { data: items = [], refetch: refetchItems } = useQuery({
     queryKey: queryKeys.email.campaignQueue(draftId),
-    queryFn: () => draftId ? findCampaignQueueItems(draftId) : Promise.resolve([]),
+    queryFn: () => (draftId ? findCampaignQueueItems(draftId) : Promise.resolve([])),
     enabled: !!draftId,
     refetchInterval: false,
   });
 
   const stats: QueueStats = {
     total: items.length,
-    pending: items.filter(i => i.status === "pending").length,
-    sending: items.filter(i => i.status === "sending").length,
-    sent: items.filter(i => i.status === "sent").length,
-    failed: items.filter(i => i.status === "failed").length,
-    cancelled: items.filter(i => i.status === "cancelled").length,
+    pending: items.filter((i) => i.status === "pending").length,
+    sending: items.filter((i) => i.status === "sending").length,
+    sent: items.filter((i) => i.status === "sent").length,
+    failed: items.filter((i) => i.status === "failed").length,
+    cancelled: items.filter((i) => i.status === "cancelled").length,
   };
 
   useEffect(() => {
     if (!draftId) return;
     const channel = supabase
       .channel(`queue-${draftId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "email_campaign_queue", filter: `draft_id=eq.${draftId}` }, () => { refetchItems(); })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "email_campaign_queue", filter: `draft_id=eq.${draftId}` },
+        () => {
+          refetchItems();
+        },
+      )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [draftId, refetchItems]);
 
   return { items, stats, refetchItems };
@@ -58,13 +76,22 @@ export function useEnqueueCampaign() {
       delaySeconds: number;
     }) => {
       const rows: QueueInsert[] = params.recipients.map((r, i) => ({
-        draft_id: params.draftId, partner_id: r.partner_id, recipient_email: r.email,
-        recipient_name: r.name || null, subject: r.subject, html_body: r.html, status: "pending", position: i,
+        draft_id: params.draftId,
+        partner_id: r.partner_id,
+        recipient_email: r.email,
+        recipient_name: r.name || null,
+        subject: r.subject,
+        html_body: r.html,
+        status: "pending",
+        position: i,
       }));
       await insertCampaignQueueBatch(rows);
       await updateEmailDraft(params.draftId, {
-        queue_status: "idle", queue_delay_seconds: params.delaySeconds,
-        total_count: params.recipients.length, sent_count: 0, status: "queued",
+        queue_status: "idle",
+        queue_delay_seconds: params.delaySeconds,
+        total_count: params.recipients.length,
+        sent_count: 0,
+        status: "queued",
       });
       return { queued: rows.length };
     },
@@ -82,43 +109,73 @@ export function useProcessQueue() {
   const abortRef = useRef(false);
   const qc = useQueryClient();
 
-  const startProcessing = useCallback(async (draftId: string) => {
-    setProcessing(true);
-    abortRef.current = false;
-    let completed = false;
-    while (!completed && !abortRef.current) {
-      try {
-        const data = await invokeEdge<{ completed?: boolean; sent?: number; failed?: number }>("process-email-queue", {
-          body: { draft_id: draftId, action: "process" }, context: "useEmailCampaignQueue.process",
-        });
-        if (data?.completed) { completed = true; toast.success(`Campagna completata: ${data.sent} inviate, ${data.failed} fallite`); }
-        const draft = await getEmailDraftField(draftId, "queue_status");
-        if ((toRecord(draft))?.queue_status === "paused" || (toRecord(draft))?.queue_status === "cancelled") break;
-        if (!completed) await new Promise(r => setTimeout(r, 2000));
-      } catch (err) {
-        log.error("queue processing failed", { message: err instanceof Error ? err.message : String(err) });
-        toast.error("Errore nel processing della coda");
-        break;
+  const startProcessing = useCallback(
+    async (draftId: string) => {
+      setProcessing(true);
+      abortRef.current = false;
+      let completed = false;
+      while (!completed && !abortRef.current) {
+        try {
+          const data = await invokeEdge<{ completed?: boolean; sent?: number; failed?: number }>(
+            "process-email-queue",
+            {
+              body: { draft_id: draftId, action: "process" },
+              context: "useEmailCampaignQueue.process",
+            },
+          );
+          if (data?.completed) {
+            completed = true;
+            toast.success(`Campagna completata: ${data.sent} inviate, ${data.failed} fallite`);
+          }
+          const draft = await getEmailDraftField(draftId, "queue_status");
+          if (toRecord(draft)?.queue_status === "paused" || toRecord(draft)?.queue_status === "cancelled") break;
+          if (!completed) await new Promise((r) => setTimeout(r, 2000));
+        } catch (err) {
+          log.error("queue processing failed", { message: err instanceof Error ? err.message : String(err) });
+          toast.error("Errore nel processing della coda");
+          break;
+        }
       }
-    }
-    setProcessing(false);
-    qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
-  }, [qc]);
+      setProcessing(false);
+      qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
+    },
+    [qc],
+  );
 
-  const pauseProcessing = useCallback(async (draftId: string) => {
-    abortRef.current = true;
-    try { await invokeEdge("process-email-queue", { body: { draft_id: draftId, action: "pause" }, context: "useEmailCampaignQueue.pause" }); } catch (err) { log.warn("pause failed", { message: err instanceof Error ? err.message : String(err) }); }
-    qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
-    toast.info("Campagna in pausa");
-  }, [qc]);
+  const pauseProcessing = useCallback(
+    async (draftId: string) => {
+      abortRef.current = true;
+      try {
+        await invokeEdge("process-email-queue", {
+          body: { draft_id: draftId, action: "pause" },
+          context: "useEmailCampaignQueue.pause",
+        });
+      } catch (err) {
+        log.warn("pause failed", { message: err instanceof Error ? err.message : String(err) });
+      }
+      qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
+      toast.info("Campagna in pausa");
+    },
+    [qc],
+  );
 
-  const cancelProcessing = useCallback(async (draftId: string) => {
-    abortRef.current = true;
-    try { await invokeEdge("process-email-queue", { body: { draft_id: draftId, action: "cancel" }, context: "useEmailCampaignQueue.cancel" }); } catch (err) { log.warn("cancel failed", { message: err instanceof Error ? err.message : String(err) }); }
-    qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
-    qc.invalidateQueries({ queryKey: queryKeys.email.campaignQueue() });
-    toast.info("Campagna annullata");
-  }, [qc]);
+  const cancelProcessing = useCallback(
+    async (draftId: string) => {
+      abortRef.current = true;
+      try {
+        await invokeEdge("process-email-queue", {
+          body: { draft_id: draftId, action: "cancel" },
+          context: "useEmailCampaignQueue.cancel",
+        });
+      } catch (err) {
+        log.warn("cancel failed", { message: err instanceof Error ? err.message : String(err) });
+      }
+      qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
+      qc.invalidateQueries({ queryKey: queryKeys.email.campaignQueue() });
+      toast.info("Campagna annullata");
+    },
+    [qc],
+  );
 
   return { processing, startProcessing, pauseProcessing, cancelProcessing };
 }

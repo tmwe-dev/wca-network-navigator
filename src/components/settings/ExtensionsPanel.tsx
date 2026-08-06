@@ -39,7 +39,8 @@ const EXTENSIONS: ExtensionDef[] = [
   {
     id: "partner-connect",
     name: "Partner Connect",
-    description: "Bridge per Deep Search legacy (batch enrichment client-side, scraping Google/LinkedIn/Maps a costo zero).",
+    description:
+      "Bridge per Deep Search legacy (batch enrichment client-side, scraping Google/LinkedIn/Maps a costo zero).",
     filename: `partner-connect-extension-${PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: Search,
     badge: `v${PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}`,
@@ -47,7 +48,8 @@ const EXTENSIONS: ExtensionDef[] = [
   {
     id: "whatsapp",
     name: "WhatsApp Direct Send",
-    description: "Sync conversazioni WhatsApp Web con il CRM, invio messaggi multimodali e backfill cursor persistente.",
+    description:
+      "Sync conversazioni WhatsApp Web con il CRM, invio messaggi multimodali e backfill cursor persistente.",
     filename: `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: MessageSquare,
     badge: `v${WHATSAPP_EXTENSION_REQUIRED_VERSION}`,
@@ -119,8 +121,8 @@ export default function ExtensionsPanel() {
       <div>
         <h2 className="text-lg font-semibold mb-1">Estensioni Browser</h2>
         <p className="text-sm text-muted-foreground">
-          Scarica le estensioni Chrome/Edge/Brave necessarie per i flussi che operano lato browser
-          (Deep Search legacy, sync WhatsApp / LinkedIn, Email auto-discover).
+          Scarica le estensioni Chrome/Edge/Brave necessarie per i flussi che operano lato browser (Deep Search legacy,
+          sync WhatsApp / LinkedIn, Email auto-discover).
         </p>
       </div>
 
@@ -160,11 +162,17 @@ export default function ExtensionsPanel() {
                 className="shrink-0"
               >
                 {isDownloading ? (
-                  <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Download…</>
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Download…
+                  </>
                 ) : isCompleted ? (
-                  <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Scaricata</>
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Scaricata
+                  </>
                 ) : (
-                  <><Download className="w-3.5 h-3.5 mr-1.5" /> Scarica</>
+                  <>
+                    <Download className="w-3.5 h-3.5 mr-1.5" /> Scarica
+                  </>
                 )}
               </Button>
             </div>
@@ -176,9 +184,15 @@ export default function ExtensionsPanel() {
         <p className="font-semibold">Come installare (unpacked):</p>
         <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
           <li>Decomprimi il file ZIP in una cartella stabile (non temporanea).</li>
-          <li>Apri <code className="px-1 bg-background rounded">chrome://extensions</code> nel browser.</li>
-          <li>Attiva la <strong>Modalità sviluppatore</strong> in alto a destra.</li>
-          <li>Clicca <strong>Carica estensione non pacchettizzata</strong> e seleziona la cartella decompressa.</li>
+          <li>
+            Apri <code className="px-1 bg-background rounded">chrome://extensions</code> nel browser.
+          </li>
+          <li>
+            Attiva la <strong>Modalità sviluppatore</strong> in alto a destra.
+          </li>
+          <li>
+            Clicca <strong>Carica estensione non pacchettizzata</strong> e seleziona la cartella decompressa.
+          </li>
         </ol>
         <p className="text-muted-foreground pt-1">
           Compatibile con Chrome, Edge, Brave, Arc, Opera. Non installare da fonti diverse.

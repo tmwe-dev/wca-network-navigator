@@ -1,9 +1,27 @@
-import { Search, CheckCircle2, ImageOff, Linkedin, XCircle, Globe, LinkIcon, Filter, SortAsc, SortDesc } from "lucide-react";
+import {
+  Search,
+  CheckCircle2,
+  ImageOff,
+  Linkedin,
+  XCircle,
+  Globe,
+  LinkIcon,
+  Filter,
+  SortAsc,
+  SortDesc,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export type SourceFilter = "all" | "wca" | "contacts" | "email" | "cockpit";
-export type EnrichFilter = "all" | "with-logo" | "no-logo" | "with-linkedin" | "no-linkedin" | "with-domain" | "no-domain";
+export type EnrichFilter =
+  | "all"
+  | "with-logo"
+  | "no-logo"
+  | "with-linkedin"
+  | "no-linkedin"
+  | "with-domain"
+  | "no-domain";
 export type SortField = "name" | "domain" | "source";
 export type SortDir = "asc" | "desc";
 
@@ -30,9 +48,13 @@ interface Props {
 }
 
 export function EnrichmentFilters({
-  search, onSearchChange,
-  enrichFilter, onEnrichFilterChange,
-  sortField, sortDir, onToggleSort,
+  search,
+  onSearchChange,
+  enrichFilter,
+  onEnrichFilterChange,
+  sortField,
+  sortDir,
+  onToggleSort,
 }: Props) {
   return (
     <div className="space-y-3">
@@ -42,16 +64,18 @@ export function EnrichmentFilters({
         <Input
           placeholder="Cerca..."
           value={search}
-          onChange={e => onSearchChange(e.target.value)}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="pl-7 h-7 text-[11px] bg-muted/30 border-border/60"
         />
       </div>
 
       {/* Status */}
       <div>
-        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 px-1">Stato Dati</div>
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 px-1">
+          Stato Dati
+        </div>
         <div className="space-y-0.5">
-          {ENRICH_OPTIONS.map(opt => (
+          {ENRICH_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => onEnrichFilterChange(opt.value)}
@@ -59,7 +83,7 @@ export function EnrichmentFilters({
                 "w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] transition-colors",
                 enrichFilter === opt.value
                   ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
               )}
             >
               {opt.icon}
@@ -71,13 +95,15 @@ export function EnrichmentFilters({
 
       {/* Sort */}
       <div>
-        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 px-1">Ordina per</div>
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 px-1">
+          Ordina per
+        </div>
         <div className="space-y-0.5">
-          {([
+          {[
             { field: "name" as SortField, label: "Nome" },
             { field: "domain" as SortField, label: "Dominio" },
             { field: "source" as SortField, label: "Fonte" },
-          ]).map(opt => (
+          ].map((opt) => (
             <button
               key={opt.field}
               onClick={() => onToggleSort(opt.field)}
@@ -85,13 +111,12 @@ export function EnrichmentFilters({
                 "w-full flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors",
                 sortField === opt.field
                   ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
               )}
             >
               {opt.label}
-              {sortField === opt.field && (
-                sortDir === "asc" ? <SortAsc className="w-3 h-3" /> : <SortDesc className="w-3 h-3" />
-              )}
+              {sortField === opt.field &&
+                (sortDir === "asc" ? <SortAsc className="w-3 h-3" /> : <SortDesc className="w-3 h-3" />)}
             </button>
           ))}
         </div>

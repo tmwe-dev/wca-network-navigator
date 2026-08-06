@@ -16,20 +16,55 @@ export function RACompanyKPI({ prospect }: RACompanyKPIProps) {
   return (
     <div className="flex-shrink-0 px-6 py-4 border-b border-white/5 bg-white/1">
       <div className="grid grid-cols-4 gap-4">
-        <KPICard icon={TrendingUp} iconColor="text-amber-400" label="Fatturato" value={formatCurrency(prospect.fatturato)}
-          subtitle={prospect.fatturato && prospect.utile ? `Margine: ${((prospect.utile / prospect.fatturato) * 100).toFixed(1)}%` : undefined} />
-        <KPICard icon={DollarSign} iconColor="text-green-400" label="Utile" value={formatCurrency(prospect.utile)}
-          subtitle={prospect.anno_bilancio ? `Anno ${prospect.anno_bilancio}` : undefined} />
-        <KPICard icon={Users} iconColor="text-blue-400" label="Dipendenti" value={String(prospect.dipendenti ?? "—")} subtitle="Organico" />
-        <KPICard icon={Star} iconColor="text-yellow-400" label="Credit Score" value={String(prospect.credit_score ?? "—")}
-          subtitle={prospect.rating_affidabilita || "N/A"} />
+        <KPICard
+          icon={TrendingUp}
+          iconColor="text-amber-400"
+          label="Fatturato"
+          value={formatCurrency(prospect.fatturato)}
+          subtitle={
+            prospect.fatturato && prospect.utile
+              ? `Margine: ${((prospect.utile / prospect.fatturato) * 100).toFixed(1)}%`
+              : undefined
+          }
+        />
+        <KPICard
+          icon={DollarSign}
+          iconColor="text-green-400"
+          label="Utile"
+          value={formatCurrency(prospect.utile)}
+          subtitle={prospect.anno_bilancio ? `Anno ${prospect.anno_bilancio}` : undefined}
+        />
+        <KPICard
+          icon={Users}
+          iconColor="text-blue-400"
+          label="Dipendenti"
+          value={String(prospect.dipendenti ?? "—")}
+          subtitle="Organico"
+        />
+        <KPICard
+          icon={Star}
+          iconColor="text-yellow-400"
+          label="Credit Score"
+          value={String(prospect.credit_score ?? "—")}
+          subtitle={prospect.rating_affidabilita || "N/A"}
+        />
       </div>
     </div>
   );
 }
 
-function KPICard({ icon: Icon, iconColor, label, value, subtitle }: {
-  icon: React.ElementType; iconColor: string; label: string; value: string; subtitle?: string;
+function KPICard({
+  icon: Icon,
+  iconColor,
+  label,
+  value,
+  subtitle,
+}: {
+  icon: React.ElementType;
+  iconColor: string;
+  label: string;
+  value: string;
+  subtitle?: string;
 }) {
   return (
     <div className="p-4 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-xl hover:border-white/20 transition-colors">

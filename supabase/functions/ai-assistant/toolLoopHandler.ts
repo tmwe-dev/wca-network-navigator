@@ -22,9 +22,17 @@ export interface AssistantMessage {
   tool_calls?: AssistantToolCall[];
 }
 
-interface AiUsage { prompt_tokens?: number; completion_tokens?: number }
-interface AiChoice { message?: AssistantMessage }
-interface AiResponseData { choices?: AiChoice[]; usage?: AiUsage }
+interface AiUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+}
+interface AiChoice {
+  message?: AssistantMessage;
+}
+interface AiResponseData {
+  choices?: AiChoice[];
+  usage?: AiUsage;
+}
 
 export interface ToolLoopState {
   assistantMessage?: AssistantMessage;
@@ -43,11 +51,7 @@ export interface ToolLoopResult {
 /**
  * Detect if the AI is stuck calling the same tool with same arguments
  */
-function detectStuckToolLoop(
-  currentSignature: string,
-  lastSignature: string,
-  repeatedCount: number
-): boolean {
+function detectStuckToolLoop(currentSignature: string, lastSignature: string, repeatedCount: number): boolean {
   if (currentSignature !== lastSignature) return false;
   return repeatedCount >= 2;
 }
@@ -60,16 +64,12 @@ async function autoSaveToolMemory(
   userId: string,
   toolName: string,
   args: Record<string, unknown>,
-  result: Record<string, unknown>
+  result: Record<string, unknown>,
 ): Promise<void> {
   const log = createLogger("ai-assistant", { userId, scope: "autoSaveToolMemory", toolName });
-  const autoSaveTools: Record<
-    string,
-    (a: Record<string, unknown>, r: Record<string, unknown>) => string | null
-  > = {
+  const autoSaveTools: Record<string, (a: Record<string, unknown>, r: Record<string, unknown>) => string | null> = {
     send_email: (a) => `Email inviata a ${a.to_email} — oggetto: "${a.subject}"`,
-    deep_search_partner: (a) =>
-      `Deep search su "${a.company_name || a.partner_id}"`,
+    deep_search_partner: (a) => `Deep search su "${a.company_name || a.partner_id}"`,
     deep_search_contact: (a) => `Deep search contatto: "${a.contact_name || a.contact_id}"`,
     bulk_update_partners: (_a, r) =>
       `Aggiornamento bulk: ${r.updated_count} partner — ${Array.isArray(r.changes) ? (r.changes as string[]).join(", ") : ""}`,
@@ -91,10 +91,7 @@ async function autoSaveToolMemory(
       .eq("user_id", userId)
       .eq("source", "auto_tool")
       .ilike("content", `%${escapeLike(content.substring(0, 40))}%`)
-      .gte(
-        "created_at",
-        new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      )
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .limit(1);
 
     if (!existing?.length) {
@@ -111,9 +108,12 @@ async function autoSaveToolMemory(
           decay_rate: 0.02,
           source: "auto_tool",
         })
-        .then(() => {}, (e: unknown) => {
-          log.warn("auto_memory_insert_failed", { reason: extractErrorMessage(e) });
-        });
+        .then(
+          () => {},
+          (e: unknown) => {
+            log.warn("auto_memory_insert_failed", { reason: extractErrorMessage(e) });
+          },
+        );
     }
   } catch (e) {
     log.error("auto_memory_lookup_failed", e);
@@ -125,18 +125,12 @@ async function autoSaveToolMemory(
  */
 async function enrichPartnerResults(
   supabase: SupabaseClient,
-  partners: Record<string, unknown>[]
+  partners: Record<string, unknown>[],
 ): Promise<Record<string, unknown>[]> {
   const partnerIds = partners.map((p) => p.id as string);
   const [svcRes, certRes] = await Promise.all([
-    supabase
-      .from("partner_services")
-      .select("partner_id, service_category")
-      .in("partner_id", partnerIds),
-    supabase
-      .from("partner_certifications")
-      .select("partner_id, certification")
-      .in("partner_id", partnerIds),
+    supabase.from("partner_services").select("partner_id, service_category").in("partner_id", partnerIds),
+    supabase.from("partner_certifications").select("partner_id, certification").in("partner_id", partnerIds),
   ]);
 
   const svcMap: Record<string, string[]> = {};
@@ -155,10 +149,8 @@ async function enrichPartnerResults(
 
   return partners.map((p) => ({
     ...p,
-    country_code:
-      (p.country as string)?.match(/\(([A-Z]{2})\)/)?.[1] || "",
-    country_name:
-      (p.country as string)?.replace(/\s*\([A-Z]{2}\)/, "") || "",
+    country_code: (p.country as string)?.match(/\(([A-Z]{2})\)/)?.[1] || "",
+    country_name: (p.country as string)?.replace(/\s*\([A-Z]{2}\)/, "") || "",
     services: svcMap[p.id as string] || [],
     certifications: certMap[p.id as string] || [],
   }));
@@ -172,10 +164,8 @@ export async function executeToolLoop(
   toolDeps: ToolExecutorDeps,
   userId: string,
   authHeader: string,
-  callAiForLoop: (
-    messages: Record<string, unknown>[]
-  ) => Promise<{ ok: boolean; data?: Record<string, unknown> }>,
-  initialState: ToolLoopState
+  callAiForLoop: (messages: Record<string, unknown>[]) => Promise<{ ok: boolean; data?: Record<string, unknown> }>,
+  initialState: ToolLoopState,
 ): Promise<ToolLoopResult> {
   const MAX_ITERATIONS = 8;
   const state = initialState;
@@ -192,10 +182,7 @@ export async function executeToolLoop(
         function: { name: string; arguments: string };
       }>
     )
-      .map(
-        (tc) =>
-          `${tc.function.name}:${tc.function.arguments}`
-      )
+      .map((tc) => `${tc.function.name}:${tc.function.arguments}`)
       .join("|");
 
     if (currentSignature === lastToolSignature) {
@@ -227,21 +214,13 @@ export async function executeToolLoop(
             success: false,
             error: "INVALID_TOOL_ARGS",
             message: `Tool arguments were not valid JSON: ${errMsg}. Please retry with valid JSON.`,
-            raw_arguments_snippet: String(
-              tc.function.arguments || ""
-            ).substring(0, 200),
+            raw_arguments_snippet: String(tc.function.arguments || "").substring(0, 200),
           }),
         });
         continue;
       }
 
-      const toolResult = await executeTool(
-        tc.function.name,
-        args,
-        toolDeps,
-        userId,
-        authHeader
-      );
+      const toolResult = await executeTool(tc.function.name, args, toolDeps, userId, authHeader);
       toolResults.push({
         role: "tool",
         tool_call_id: tc.id,
@@ -257,18 +236,13 @@ export async function executeToolLoop(
         tr.partners.length > 0 &&
         tc.function.name === "search_partners"
       ) {
-        state.lastPartnerResult = await enrichPartnerResults(
-          supabase,
-          tr.partners as Record<string, unknown>[]
-        );
+        state.lastPartnerResult = await enrichPartnerResults(supabase, tr.partners as Record<string, unknown>[]);
       }
 
       // Track UI actions
       if (tr?.ui_action) state.uiActions.push(tr.ui_action as Record<string, unknown>);
       if ((tr?.step_result as Record<string, unknown> | undefined)?.ui_action) {
-        state.uiActions.push(
-          (tr.step_result as Record<string, unknown>).ui_action as Record<string, unknown>
-        );
+        state.uiActions.push((tr.step_result as Record<string, unknown>).ui_action as Record<string, unknown>);
       }
 
       // Auto-save significant tool calls

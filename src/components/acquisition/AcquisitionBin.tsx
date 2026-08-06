@@ -10,7 +10,13 @@ interface AcquisitionBinProps {
   incompleteCount?: number;
 }
 
-export function AcquisitionBin({ count, total, showComet, completeCount = 0, incompleteCount = 0 }: AcquisitionBinProps) {
+export function AcquisitionBin({
+  count,
+  total,
+  showComet,
+  completeCount = 0,
+  incompleteCount = 0,
+}: AcquisitionBinProps) {
   const [pulse, setPulse] = useState(false);
   const prevCount = useRef(count);
 
@@ -26,23 +32,18 @@ export function AcquisitionBin({ count, total, showComet, completeCount = 0, inc
   return (
     <div className="relative">
       {/* Comet animation */}
-      {showComet && (
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 comet-particle" />
-      )}
+      {showComet && <div className="absolute -top-20 left-1/2 -translate-x-1/2 comet-particle" />}
 
       <div
         className={cn(
           "flex items-center justify-center gap-4 px-8 py-3.5 rounded-2xl border transition-all duration-300",
           "bg-white/[0.04] dark:bg-white/[0.04] bg-white/60 backdrop-blur-xl shadow-lg shadow-black/[0.05]",
-           pulse
-             ? "border-primary/40 shadow-xl shadow-primary/[0.15] scale-105"
-            : "border-white/[0.08] dark:border-white/[0.08] border-slate-200/60"
+          pulse
+            ? "border-primary/40 shadow-xl shadow-primary/[0.15] scale-105"
+            : "border-white/[0.08] dark:border-white/[0.08] border-slate-200/60",
         )}
       >
-        <Archive className={cn(
-          "w-5 h-5 transition-colors",
-          pulse ? "text-primary" : "text-muted-foreground"
-        )} />
+        <Archive className={cn("w-5 h-5 transition-colors", pulse ? "text-primary" : "text-muted-foreground")} />
         <div className="text-sm">
           <span className="font-bold text-foreground">{count}</span>
           <span className="text-muted-foreground"> / {total} partner acquisiti</span>

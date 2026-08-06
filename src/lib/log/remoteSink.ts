@@ -57,8 +57,7 @@ export function installRemoteSink(options: RemoteSinkOptions = {}): InstalledSin
   if (installed.enabled) return installed;
 
   const endpoint =
-    options.endpoint ??
-    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_REMOTE_LOG_ENDPOINT : undefined);
+    options.endpoint ?? (typeof import.meta !== "undefined" ? import.meta.env?.VITE_REMOTE_LOG_ENDPOINT : undefined);
 
   if (!endpoint) {
     // env-gated: senza endpoint il sink resta disattivato
@@ -67,8 +66,7 @@ export function installRemoteSink(options: RemoteSinkOptions = {}): InstalledSin
   }
 
   const token =
-    options.token ??
-    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_REMOTE_LOG_TOKEN : undefined);
+    options.token ?? (typeof import.meta !== "undefined" ? import.meta.env?.VITE_REMOTE_LOG_TOKEN : undefined);
   const minLevel = options.minLevel ?? "warn";
   const flushAt = options.flushAt ?? 20;
   const flushIntervalMs = options.flushIntervalMs ?? 10_000;

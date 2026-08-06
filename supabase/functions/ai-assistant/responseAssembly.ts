@@ -19,7 +19,7 @@ export function appendStructuredData(
   text: string,
   lastPartnerResult?: Record<string, unknown>[],
   lastJobCreated?: Record<string, unknown>,
-  uiActions?: Record<string, unknown>[]
+  uiActions?: Record<string, unknown>[],
 ): string {
   let out = text;
 
@@ -53,10 +53,7 @@ export function formatFinalResponse(content: string): FinalResponsePayload {
 /**
  * Format error response
  */
-export function formatErrorResponse(
-  error: string,
-  code?: string
-): FinalResponsePayload {
+export function formatErrorResponse(error: string, code?: string): FinalResponsePayload {
   return {
     content: JSON.stringify({
       ok: false,

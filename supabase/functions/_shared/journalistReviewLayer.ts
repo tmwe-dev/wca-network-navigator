@@ -50,8 +50,7 @@ export async function journalistReview(
     touch_count: input.commercial_state.touch_count,
     last_outcome: input.commercial_state.last_outcome,
     daysSinceLastInbound: input.commercial_state.days_since_last_inbound,
-    hasActiveConversation:
-      input.commercial_state.has_active_conversation ?? !!input.history_summary,
+    hasActiveConversation: input.commercial_state.has_active_conversation ?? !!input.history_summary,
   });
 
   if (!autoSelection) {
@@ -83,11 +82,7 @@ export async function journalistReview(
   const overrideWarnings: JournalistWarning[] = [];
 
   if (options?.overrideRole && options.overrideRole !== autoSelection.role) {
-    const validation = validateOverride(
-      options.overrideRole,
-      input.commercial_state.lead_status,
-      autoSelection,
-    );
+    const validation = validateOverride(options.overrideRole, input.commercial_state.lead_status, autoSelection);
     if (validation.warning) {
       overrideWarnings.push({
         type: "phase_skip",
@@ -151,8 +146,8 @@ export async function journalistReview(
     mode === "review_only" || mode === "silent_audit"
       ? input.final_draft
       : parsed.verdict === "block"
-      ? input.final_draft // anche su block: non sovrascriviamo, l'UI mostra banner
-      : parsed.edited_text;
+        ? input.final_draft // anche su block: non sovrascriviamo, l'UI mostra banner
+        : parsed.edited_text;
 
   // === Step 5: Brand Voice Score (deterministico, non bloccante) ===
   const bv = scoreBrandVoice(editedText, input.channel);
@@ -209,21 +204,27 @@ function buildReviewSystemPrompt(
     input.resolved_brief?.email_description && `DESCRIZIONE: ${input.resolved_brief.email_description}`,
     input.resolved_brief?.objective && `OBIETTIVO: ${input.resolved_brief.objective}`,
     input.resolved_brief?.playbook_active && `PLAYBOOK ATTIVO: ${input.resolved_brief.playbook_active}`,
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const ctxBlock = [
-    input.is_reply ? `⚠️ CONTESTO REPLY: Questo è una RISPOSTA a un'email ricevuta.
+    input.is_reply
+      ? `⚠️ CONTESTO REPLY: Questo è una RISPOSTA a un'email ricevuta.
 Email originale: "${input.original_inbound?.subject || "N/A"}"
 Sommario: ${input.original_inbound?.summary || "N/A"}
 Classificazione: ${input.original_inbound?.classification || "N/A"}
 Tono mittente: ${input.original_inbound?.sentiment || "N/A"}
-→ Valuta coerenza con il messaggio ricevuto, non trattare come cold outreach.` : "",
+→ Valuta coerenza con il messaggio ricevuto, non trattare come cold outreach.`
+      : "",
     input.history_summary && `HISTORY: ${input.history_summary}`,
     input.kb_summary && `KB RILEVANTE: ${input.kb_summary}`,
     input.memory_summary && `MEMORY: ${input.memory_summary}`,
     input.enrichment_summary && `ENRICHMENT: ${input.enrichment_summary}`,
     input.constraints?.length && `VINCOLI: ${input.constraints.join("; ")}`,
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const senderCompanyName = companyProfile?.company_name || "(azienda mittente non configurata)";
   const languageDirective = input.language
@@ -261,12 +262,16 @@ SE TROVI UNA CONTRADDIZIONE FORTE (es. tipo="primo contatto" ma history=2 email)
 - Suggerisci correzione A MONTE in upstream_fix
 
 ## PROFILO AZIENDALE
-${companyProfile ? `AZIENDA: ${companyProfile.company_name}
+${
+  companyProfile
+    ? `AZIENDA: ${companyProfile.company_name}
 ${companyProfile.offering ? `OFFERTA: ${companyProfile.offering}` : ""}
 ${companyProfile.audience ? `AUDIENCE: ${companyProfile.audience}` : ""}
 ${companyProfile.competitive_difference ? `DIFFERENZA COMPETITIVA: ${companyProfile.competitive_difference}` : ""}
 ${companyProfile.values ? `VALORI: ${companyProfile.values}` : ""}
-${companyProfile.proof ? `PROVE/REFERENZE: ${companyProfile.proof}` : ""}` : "Profilo aziendale non configurato."}
+${companyProfile.proof ? `PROVE/REFERENZE: ${companyProfile.proof}` : ""}`
+    : "Profilo aziendale non configurato."
+}
 
 ## GIORNALISTA ATTIVO: ${config.label}
 PROMPT (variante ${input.channel}): ${selectPromptVariant(config, input.channel)}
@@ -332,10 +337,10 @@ function buildReviewUserPrompt(input: JournalistReviewInput): string {
     input.channel === "email"
       ? "email"
       : input.channel === "whatsapp"
-      ? "messaggio WhatsApp"
-      : input.channel === "linkedin"
-      ? "messaggio LinkedIn"
-      : "script vocale";
+        ? "messaggio WhatsApp"
+        : input.channel === "linkedin"
+          ? "messaggio LinkedIn"
+          : "script vocale";
 
   return `Rivedi questo ${channelLabel} per ${input.partner.company_name || "un partner"} (stato: ${input.commercial_state.lead_status}):
 
@@ -359,16 +364,18 @@ function parseReviewResponse(
 } {
   try {
     // Strip ```json fences se presenti
-    let cleaned = response.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    let cleaned = response
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```\s*$/, "");
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON in response");
     cleaned = jsonMatch[0];
     const parsed = JSON.parse(cleaned);
 
-    const verdict: ReviewVerdict =
-      ["pass", "pass_with_edits", "warn", "block"].includes(parsed.verdict)
-        ? parsed.verdict
-        : "pass";
+    const verdict: ReviewVerdict = ["pass", "pass_with_edits", "warn", "block"].includes(parsed.verdict)
+      ? parsed.verdict
+      : "pass";
 
     return {
       verdict,
@@ -378,12 +385,8 @@ function parseReviewResponse(
           : originalDraft,
       warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
       edits: Array.isArray(parsed.edits) ? parsed.edits : [],
-      reasoning_summary:
-        typeof parsed.reasoning_summary === "string" ? parsed.reasoning_summary : "",
-      quality_score:
-        typeof parsed.quality_score === "number"
-          ? Math.max(0, Math.min(100, parsed.quality_score))
-          : 50,
+      reasoning_summary: typeof parsed.reasoning_summary === "string" ? parsed.reasoning_summary : "",
+      quality_score: typeof parsed.quality_score === "number" ? Math.max(0, Math.min(100, parsed.quality_score)) : 50,
     };
   } catch (e) {
     console.error("[journalistReview] parse error:", e);

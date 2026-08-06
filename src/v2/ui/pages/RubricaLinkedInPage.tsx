@@ -48,20 +48,35 @@ export function RubricaLinkedInPage(): React.ReactElement {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">Caricamento…</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                    Caricamento…
+                  </td>
+                </tr>
               )}
               {!isLoading && data.length === 0 && (
-                <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">Nessun contatto.</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                    Nessun contatto.
+                  </td>
+                </tr>
               )}
               {data.map((r) => (
                 <tr key={r.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-3 py-2 font-medium">{r.display_name ?? "—"}</td>
                   <td className="px-3 py-2 text-muted-foreground">
                     {r.profile_url ? (
-                      <a href={r.profile_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                      <a
+                        href={r.profile_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
+                      >
                         {r.profile_slug} <ExternalLink className="h-3 w-3" />
                       </a>
-                    ) : r.profile_slug}
+                    ) : (
+                      r.profile_slug
+                    )}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground truncate max-w-xs">{r.headline ?? "—"}</td>
                   <td className="px-3 py-2 text-muted-foreground">

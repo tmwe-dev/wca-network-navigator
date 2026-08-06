@@ -29,13 +29,13 @@ export type HoldingFilterMode = "exclude" | "include" | "only";
 const HOLDING_LABEL: Record<HoldingFilterMode, string> = {
   exclude: "Senza circuito di attesa",
   include: "Tutti (inclusi attesa)",
-  only:    "Solo circuito di attesa",
+  only: "Solo circuito di attesa",
 };
 
 const HOLDING_TONE: Record<HoldingFilterMode, string> = {
   exclude: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40",
   include: "bg-amber-500/15 text-amber-400 border-amber-500/40",
-  only:    "bg-sky-500/15 text-sky-400 border-sky-500/40",
+  only: "bg-sky-500/15 text-sky-400 border-sky-500/40",
 };
 
 export interface SortOption<K extends string = string> {
@@ -95,8 +95,7 @@ export function ListToolbar<K extends string = string>({
   onHoldingFilterChange,
   className,
 }: ListToolbarProps<K>): React.ReactElement {
-  const currentSortLabel =
-    sortOptions.find((o) => o.key === sortKey)?.label ?? "Ordina";
+  const currentSortLabel = sortOptions.find((o) => o.key === sortKey)?.label ?? "Ordina";
 
   const handleSortKeyChange = (key: K) => {
     if (onSelectSortKey) onSelectSortKey(key);
@@ -109,18 +108,11 @@ export function ListToolbar<K extends string = string>({
   };
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-1.5 px-3 py-2 border-b border-border/40 bg-card/40",
-        className
-      )}
-    >
+    <div className={cn("flex flex-col gap-1.5 px-3 py-2 border-b border-border/40 bg-card/40", className)}>
       {/* Riga 1: count + holding badge + search + sort + actions */}
       <div className="flex items-center gap-2 min-w-0">
         {countLabel && (
-          <span className="text-[11px] text-muted-foreground font-medium shrink-0 hidden md:inline">
-            {countLabel}
-          </span>
+          <span className="text-[11px] text-muted-foreground font-medium shrink-0 hidden md:inline">{countLabel}</span>
         )}
 
         {holdingFilter && onHoldingFilterChange && (
@@ -130,7 +122,7 @@ export function ListToolbar<K extends string = string>({
                 type="button"
                 className={cn(
                   "h-6 px-2 rounded-full text-[10px] font-semibold border inline-flex items-center gap-1 transition-all",
-                  HOLDING_TONE[holdingFilter]
+                  HOLDING_TONE[holdingFilter],
                 )}
                 title="Filtro circuito di attesa"
               >
@@ -217,14 +209,14 @@ export function ListToolbar<K extends string = string>({
             type="button"
             onClick={handleDirToggle}
             className="h-7 w-7 rounded-md border bg-card/40 text-muted-foreground border-border/40 hover:text-foreground hover:border-border transition-all inline-flex items-center justify-center"
-            title={sortDir === "asc" ? "Ordine crescente (A→Z) — clicca per invertire" : "Ordine decrescente (Z→A) — clicca per invertire"}
+            title={
+              sortDir === "asc"
+                ? "Ordine crescente (A→Z) — clicca per invertire"
+                : "Ordine decrescente (Z→A) — clicca per invertire"
+            }
             aria-label="Inverti direzione ordinamento"
           >
-            {sortDir === "asc" ? (
-              <ArrowUpAZ className="w-3.5 h-3.5" />
-            ) : (
-              <ArrowDownAZ className="w-3.5 h-3.5" />
-            )}
+            {sortDir === "asc" ? <ArrowUpAZ className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
           </button>
 
           {rightSlot}

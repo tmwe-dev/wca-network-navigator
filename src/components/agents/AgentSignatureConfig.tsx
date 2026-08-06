@@ -61,7 +61,7 @@ export function AgentSignatureConfig({ agent }: Props) {
         signature_image_url: signatureImageUrl || null,
         voice_call_url: voiceCallUrl || null,
       } as Parameters<typeof updateAgent.mutate>[0],
-      { onSuccess: () => toast.success("Firma agente salvata") }
+      { onSuccess: () => toast.success("Firma agente salvata") },
     );
   };
 
@@ -106,15 +106,25 @@ export function AgentSignatureConfig({ agent }: Props) {
         <Label className="text-xs">Immagine Firma (avatar agente)</Label>
         <div className="flex items-center gap-3 mt-1">
           {signatureImageUrl ? (
-            <OptimizedImage src={signatureImageUrl} alt="Firma" className="w-12 h-12 rounded-full object-cover border border-border/50" />
-          ) : (() => {
-            const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
-            return avatarSrc ? (
-              <OptimizedImage src={avatarSrc} alt={agent.name} className="w-12 h-12 rounded-full object-cover border border-border/50" />
-            ) : (
-              <span className="text-3xl">{agent.avatar_emoji}</span>
-            );
-          })()}
+            <OptimizedImage
+              src={signatureImageUrl}
+              alt="Firma"
+              className="w-12 h-12 rounded-full object-cover border border-border/50"
+            />
+          ) : (
+            (() => {
+              const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
+              return avatarSrc ? (
+                <OptimizedImage
+                  src={avatarSrc}
+                  alt={agent.name}
+                  className="w-12 h-12 rounded-full object-cover border border-border/50"
+                />
+              ) : (
+                <span className="text-3xl">{agent.avatar_emoji}</span>
+              );
+            })()
+          )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
           <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
             <Upload className="w-3.5 h-3.5 mr-1" />

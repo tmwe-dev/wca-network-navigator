@@ -17,7 +17,9 @@ export interface ProspectAtecoRow {
 }
 
 export async function getAllProspectsForAtecoGroups(): Promise<ProspectAtecoRow[]> {
-  const { data, error } = await supabase.from("prospects").select("codice_ateco, descrizione_ateco, email, pec, phone, fatturato");
+  const { data, error } = await supabase
+    .from("prospects")
+    .select("codice_ateco, descrizione_ateco, email, pec, phone, fatturato");
   if (error) throw error;
   return data ?? [];
 }

@@ -15,21 +15,15 @@ import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
 import { StandardPageFrame } from "@/v2/ui/templates/StandardPageFrame";
 import type { SectionTab } from "@/v2/ui/templates/SectionTabs";
 
-const InreachPage = lazy(() =>
-  import("./InreachPage").then((m) => ({ default: m.InreachPage })),
-);
-const EmailComposerPage = lazy(() =>
-  import("./EmailComposerPage").then((m) => ({ default: m.EmailComposerPage })),
-);
+const InreachPage = lazy(() => import("./InreachPage").then((m) => ({ default: m.InreachPage })));
+const EmailComposerPage = lazy(() => import("./EmailComposerPage").then((m) => ({ default: m.EmailComposerPage })));
 const RubricaWhatsAppPage = lazy(() =>
   import("./RubricaWhatsAppPage").then((m) => ({ default: m.RubricaWhatsAppPage })),
 );
 const RubricaLinkedInPage = lazy(() =>
   import("./RubricaLinkedInPage").then((m) => ({ default: m.RubricaLinkedInPage })),
 );
-const FunnemailInboxPage = lazy(() =>
-  import("./FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })),
-);
+const FunnemailInboxPage = lazy(() => import("./FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })));
 
 type CommsTab = "inbox" | "email" | "whatsapp" | "linkedin" | "smistamento";
 const VALID_TABS: readonly CommsTab[] = ["inbox", "email", "whatsapp", "linkedin", "smistamento"];
@@ -39,10 +33,10 @@ function isValidTab(value: string | undefined): value is CommsTab {
 }
 
 const COMMS_TABS: readonly SectionTab[] = [
-  { key: "inbox",       label: "Inbox",       to: "/v2/comms/inbox" },
-  { key: "email",       label: "Email",       to: "/v2/comms/email" },
-  { key: "whatsapp",    label: "WhatsApp",    to: "/v2/comms/whatsapp" },
-  { key: "linkedin",    label: "LinkedIn",    to: "/v2/comms/linkedin" },
+  { key: "inbox", label: "Inbox", to: "/v2/comms/inbox" },
+  { key: "email", label: "Email", to: "/v2/comms/email" },
+  { key: "whatsapp", label: "WhatsApp", to: "/v2/comms/whatsapp" },
+  { key: "linkedin", label: "LinkedIn", to: "/v2/comms/linkedin" },
   { key: "smistamento", label: "Smistamento", to: "/v2/comms/smistamento" },
 ];
 
@@ -51,12 +45,7 @@ export function CommsPage(): JSX.Element {
   const active: CommsTab = isValidTab(tab) ? tab : "inbox";
 
   return (
-    <StandardPageFrame
-      title="Comunicazioni"
-      tabs={COMMS_TABS}
-      tabsRootPath="/v2/comms"
-      contentOverflow="auto"
-    >
+    <StandardPageFrame title="Comunicazioni" tabs={COMMS_TABS} tabsRootPath="/v2/comms" contentOverflow="auto">
       <FeatureErrorBoundary featureName={`Comms.${active}`}>
         <Suspense fallback={<PageSkeleton />}>
           {active === "inbox" && <InreachPage />}

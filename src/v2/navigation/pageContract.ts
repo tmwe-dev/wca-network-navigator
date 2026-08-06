@@ -56,8 +56,7 @@ export const FILTER_RULES: readonly FilterRule[] = [
     bannerKey: "bca",
   },
   {
-    match: (p) =>
-      p.startsWith("/v2/explore/network") || p === "/v2/network" || p.startsWith("/v2/partner-hub"),
+    match: (p) => p.startsWith("/v2/explore/network") || p === "/v2/network" || p.startsWith("/v2/partner-hub"),
     title: "Filtri WCA Partner",
     filterKey: "network",
     bannerKey: "network",
@@ -100,9 +99,7 @@ export const FILTER_RULES: readonly FilterRule[] = [
   },
   {
     match: (p) =>
-      p.startsWith("/v2/email/forge") ||
-      p.startsWith("/v2/email-forge") ||
-      p.startsWith("/v2/ai-staff/email-forge"),
+      p.startsWith("/v2/email/forge") || p.startsWith("/v2/email-forge") || p.startsWith("/v2/ai-staff/email-forge"),
     title: "Email Forge — Lab AI",
     filterKey: "email-forge",
     bannerKey: "email-forge",
@@ -140,10 +137,7 @@ export const FILTER_RULES: readonly FilterRule[] = [
 ];
 
 /** Risolve la regola filtri attiva per un pathname (o null se nessuna). */
-export function resolveFilterRule(
-  pathname: string,
-  networkView: "partners" | "bca",
-): FilterRule | null {
+export function resolveFilterRule(pathname: string, networkView: "partners" | "bca"): FilterRule | null {
   for (const rule of FILTER_RULES) {
     if (rule.match(pathname, { networkView })) return rule;
   }

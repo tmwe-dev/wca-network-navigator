@@ -139,7 +139,10 @@ export const TOOLS_PARTNERS_CONTACTS = [
           import_log_id: { type: "string" },
           date_from: { type: "string" },
           date_to: { type: "string" },
-          sort: { type: "string", enum: ["recent", "name_asc", "name_desc", "company_asc", "company_desc", "score_desc", "last_interaction"] },
+          sort: {
+            type: "string",
+            enum: ["recent", "name_asc", "name_desc", "company_asc", "company_desc", "score_desc", "last_interaction"],
+          },
           page: { type: "number" },
           limit: { type: "number" },
           count_only: { type: "boolean" },
@@ -201,5 +204,4 @@ export const TOOLS_PARTNERS_CONTACTS = [
       },
     },
   },
-
 ];

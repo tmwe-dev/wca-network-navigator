@@ -6,7 +6,10 @@
  * cosa l'AI ha a disposizione PRIMA di generare l'email.
  */
 import { useQuery } from "@tanstack/react-query";
-import { getPartnerEnrichmentData, getLatestCompletedSherlockInvestigation } from "@/data/unifiedEnrichmentSnapshotQueries";
+import {
+  getPartnerEnrichmentData,
+  getLatestCompletedSherlockInvestigation,
+} from "@/data/unifiedEnrichmentSnapshotQueries";
 
 export interface EnrichmentSnapshot {
   base: { available: boolean; age_days: number | null; fields: string[] };
@@ -43,7 +46,7 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null | undefine
       // ── Deep ──
       const deepFields: string[] = [];
       const cp = ed.contact_profiles;
-      const cpCount = Array.isArray(cp) ? cp.length : (cp && typeof cp === "object" ? Object.keys(cp).length : 0);
+      const cpCount = Array.isArray(cp) ? cp.length : cp && typeof cp === "object" ? Object.keys(cp).length : 0;
       if (cpCount) deepFields.push(`${cpCount} contatti`);
       if (typeof ed.website_quality_score === "number") deepFields.push(`Score ${ed.website_quality_score}/5`);
       if (ed.reputation) deepFields.push("Reputazione");
@@ -53,9 +56,12 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null | undefine
       // ── Sherlock ──
       const sherlock = await getLatestCompletedSherlockInvestigation(partnerId);
 
-      const baseEnrichedAt = typeof ed.base_enriched_at === "string"
-        ? ed.base_enriched_at
-        : (typeof ed.website_scraped_at === "string" ? ed.website_scraped_at : null);
+      const baseEnrichedAt =
+        typeof ed.base_enriched_at === "string"
+          ? ed.base_enriched_at
+          : typeof ed.website_scraped_at === "string"
+            ? ed.website_scraped_at
+            : null;
       const deepSearchAt = typeof ed.deep_search_at === "string" ? ed.deep_search_at : null;
 
       return {
@@ -72,9 +78,10 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null | undefine
         sherlock: {
           available: !!sherlock,
           age_days: daysSince(sherlock?.created_at ?? null),
-          level: (sherlock as { level?: string | number } | null)?.level != null
-            ? String((sherlock as { level: string | number }).level)
-            : null,
+          level:
+            (sherlock as { level?: string | number } | null)?.level != null
+              ? String((sherlock as { level: string | number }).level)
+              : null,
         },
       };
     },

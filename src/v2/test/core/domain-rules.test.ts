@@ -10,16 +10,8 @@ import {
   agentReadinessScore,
   findAgentForTerritory,
 } from "@/v2/core/domain/rules/agent-rules";
-import {
-  jobStatusCounts,
-  campaignCompletionPercent,
-  hasRemainingWork,
-} from "@/v2/core/domain/rules/campaign-rules";
-import {
-  isActionable,
-  isOverdue,
-  countOverdue,
-} from "@/v2/core/domain/rules/activity-rules";
+import { jobStatusCounts, campaignCompletionPercent, hasRemainingWork } from "@/v2/core/domain/rules/campaign-rules";
+import { isActionable, isOverdue, countOverdue } from "@/v2/core/domain/rules/activity-rules";
 import type { Agent, CampaignJob, Activity } from "@/v2/core/domain/entities";
 import { agentId, userId, campaignJobId, campaignId, partnerId, activityId } from "@/v2/core/domain/entities";
 
@@ -142,11 +134,7 @@ describe("Agent Rules", () => {
 
 describe("Campaign Rules", () => {
   it("jobStatusCounts counts correctly", () => {
-    const jobs = [
-      makeCampaignJob("pending"),
-      makeCampaignJob("pending"),
-      makeCampaignJob("completed"),
-    ];
+    const jobs = [makeCampaignJob("pending"), makeCampaignJob("pending"), makeCampaignJob("completed")];
     const counts = jobStatusCounts(jobs);
     expect(counts.pending).toBe(2);
     expect(counts.completed).toBe(1);
@@ -189,9 +177,7 @@ describe("Activity Rules", () => {
   });
 
   it("isOverdue false for completed activities", () => {
-    expect(
-      isOverdue(makeActivity({ dueDate: "2020-01-01", status: "completed" })),
-    ).toBe(false);
+    expect(isOverdue(makeActivity({ dueDate: "2020-01-01", status: "completed" }))).toBe(false);
   });
 
   it("countOverdue counts correctly", () => {

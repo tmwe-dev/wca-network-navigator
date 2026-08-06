@@ -4,8 +4,17 @@
  */
 import { motion } from "framer-motion";
 import {
-  Globe, Hash, Radio, Search, MessageSquareText, Paperclip, Palette,
-  Users, Clock, FileCheck, ChevronRight,
+  Globe,
+  Hash,
+  Radio,
+  Search,
+  MessageSquareText,
+  Paperclip,
+  Palette,
+  Users,
+  Clock,
+  FileCheck,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +22,13 @@ import { getStepComponent } from "./steps/stepRegistry";
 
 // Re-export types so existing imports keep working
 export type {
-  MissionStepData, DeepSearchConfig, CommunicationConfig,
-  AttachmentConfig, ToneConfig, CountryStat, AgentInfo,
+  MissionStepData,
+  DeepSearchConfig,
+  CommunicationConfig,
+  AttachmentConfig,
+  ToneConfig,
+  CountryStat,
+  AgentInfo,
 } from "./steps/types";
 
 export const STEP_CONFIG = [
@@ -62,7 +76,9 @@ export function MissionStepRenderer({ stepIndex, data, onChange, onComplete, sta
           <h3 className="font-semibold text-foreground">{cfg.title}</h3>
           <p className="text-xs text-muted-foreground">{cfg.desc}</p>
         </div>
-        <Badge variant="outline" className="ml-auto">Step {stepIndex + 1}/{TOTAL_STEPS}</Badge>
+        <Badge variant="outline" className="ml-auto">
+          Step {stepIndex + 1}/{TOTAL_STEPS}
+        </Badge>
       </div>
 
       <div className="min-h-[120px]">

@@ -17,19 +17,19 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Wrench, AlertTriangle, ArrowRight } from "lucide-react";
 import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { useLabAgent } from "../hooks/useLabAgent";
-import type {
-  ArchitectDiagnosticV2,
-  DiagnosticDestination,
-  DiagnosticSeverity,
-} from "../hooks/diagnostics";
+import type { ArchitectDiagnosticV2, DiagnosticDestination, DiagnosticSeverity } from "../hooks/diagnostics";
 import type { Block } from "../types";
 
 function severityClass(s: DiagnosticSeverity): string {
   switch (s) {
-    case "critical": return "bg-destructive/15 text-destructive border-destructive/40";
-    case "high": return "bg-warning/15 text-warning border-warning/40";
-    case "medium": return "bg-warning/15 text-warning dark:text-warning border-warning/40";
-    case "low": return "bg-muted text-muted-foreground border-border";
+    case "critical":
+      return "bg-destructive/15 text-destructive border-destructive/40";
+    case "high":
+      return "bg-warning/15 text-warning border-warning/40";
+    case "medium":
+      return "bg-warning/15 text-warning dark:text-warning border-warning/40";
+    case "low":
+      return "bg-muted text-muted-foreground border-border";
   }
 }
 
@@ -110,9 +110,7 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
           <h3 className="text-xs font-semibold">Architect Review</h3>
           <span
             className={`ml-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
-              lab.mode === "architect"
-                ? "bg-accent text-accent-foreground"
-                : "bg-muted text-muted-foreground"
+              lab.mode === "architect" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
             }`}
           >
             {lab.mode}
@@ -128,12 +126,7 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
           >
             Toggle
           </Button>
-          <Button
-            size="sm"
-            className="h-7 px-2 text-[11px]"
-            disabled={loading}
-            onClick={runAnalysis}
-          >
+          <Button size="sm" className="h-7 px-2 text-[11px]" disabled={loading} onClick={runAnalysis}>
             {loading ? (
               <>
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -152,8 +145,8 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
       <div className="space-y-2 px-3 py-2.5 text-[11px]">
         {!diagnostics && !error && !loading && (
           <p className="text-muted-foreground italic">
-            Premi <strong>Analizza con Architect</strong> per ricevere una diagnosi strutturata
-            (severity · why · destination · proposal · test) sui prompt e contratti di questo agente.
+            Premi <strong>Analizza con Architect</strong> per ricevere una diagnosi strutturata (severity · why ·
+            destination · proposal · test) sui prompt e contratti di questo agente.
           </p>
         )}
         {error && (
@@ -165,15 +158,11 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
         {diagnostics?.map((d, i) => (
           <article key={i} className={`rounded border p-2 ${severityClass(d.severity)}`}>
             <div className="mb-1 flex items-center gap-2">
-              <span className="text-[9px] font-bold uppercase tracking-wider">
-                {d.severity}
-              </span>
+              <span className="text-[9px] font-bold uppercase tracking-wider">{d.severity}</span>
               <span className="bg-background/50 rounded px-1 py-0.5 text-[9px] font-mono">
                 Impact: {d.impactScore}/10
               </span>
-              <span className="rounded bg-primary/10 px-1 py-0.5 text-[9px]">
-                {d.problemClass}
-              </span>
+              <span className="rounded bg-primary/10 px-1 py-0.5 text-[9px]">{d.problemClass}</span>
               <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium">
                 <ArrowRight className="h-3 w-3" />
                 {destinationLabel(d.destination)}
@@ -185,7 +174,9 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
             {d.affectedSurfaces.length > 0 && (
               <div className="mb-1 flex flex-wrap gap-1">
                 {d.affectedSurfaces.map((s) => (
-                  <span key={s} className="bg-muted rounded px-1 py-0.5 text-[9px]">{s}</span>
+                  <span key={s} className="bg-muted rounded px-1 py-0.5 text-[9px]">
+                    {s}
+                  </span>
                 ))}
               </div>
             )}
@@ -214,9 +205,7 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
 
             {d.proposedText && (
               <details className="mt-1">
-                <summary className="cursor-pointer text-[10px] font-medium opacity-80">
-                  Proposta
-                </summary>
+                <summary className="cursor-pointer text-[10px] font-medium opacity-80">Proposta</summary>
                 <pre className="bg-background/60 mt-1 overflow-auto rounded p-1.5 text-[10px] leading-snug">
                   {d.proposedText}
                 </pre>
@@ -229,7 +218,9 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
                 </summary>
                 <ul className="mt-1 space-y-0.5">
                   {d.testsRequired.map((t, j) => (
-                    <li key={j} className="text-[10px] leading-snug opacity-90">• {t}</li>
+                    <li key={j} className="text-[10px] leading-snug opacity-90">
+                      • {t}
+                    </li>
                   ))}
                 </ul>
               </details>

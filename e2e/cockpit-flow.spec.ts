@@ -11,7 +11,8 @@ test.describe("Cockpit Flow", () => {
   });
 
   test("cockpit shows queue or task board", async ({ page }) => {
-    const content = page.locator("[role='tablist'], table, [draggable]")
+    const content = page
+      .locator("[role='tablist'], table, [draggable]")
       .or(page.getByText(/cockpit|coda|queue|task|priorit/i));
     await expect(content.first()).toBeVisible({ timeout: 15000 });
   });
@@ -29,11 +30,15 @@ test.describe("Cockpit Flow", () => {
 
   test("cockpit no critical console errors", async ({ page }) => {
     const errors: string[] = [];
-    page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
     await page.goto("/v2/cockpit");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
-    const critical = errors.filter((e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"));
+    const critical = errors.filter(
+      (e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"),
+    );
     expect(critical.length).toBeLessThan(5);
   });
 });

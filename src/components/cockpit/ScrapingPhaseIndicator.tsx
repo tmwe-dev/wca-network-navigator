@@ -15,12 +15,18 @@ const scrapingPhaseConfig: Record<ScrapingPhase, { icon: React.ElementType; labe
 
 export { scrapingPhaseConfig };
 
-export function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: ScrapingPhase; linkedinProfile: DraftState["linkedinProfile"] }) {
+export function ScrapingPhaseIndicator({
+  phase,
+  linkedinProfile,
+}: {
+  phase: ScrapingPhase;
+  linkedinProfile: DraftState["linkedinProfile"];
+}) {
   const config = scrapingPhaseConfig[phase] || scrapingPhaseConfig.generating;
   const PhaseIcon = config.icon;
   const phases: ScrapingPhase[] = ["searching", "visiting", "extracting", "enriching", "generating"];
   const currentIndex = phases.indexOf(phase);
-  const showSteps = phase !== "idle" && phase !== "generating" || (phase === "generating" && linkedinProfile);
+  const showSteps = (phase !== "idle" && phase !== "generating") || (phase === "generating" && linkedinProfile);
 
   return (
     <div className="space-y-3">
@@ -38,8 +44,20 @@ export function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: Scra
             const isDone = i < currentIndex;
             const isCurrent = i === currentIndex;
             return (
-              <motion.div key={p} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.15 }}
-                className={cn("flex items-center gap-2 text-[11px] px-2 py-1 rounded", isDone ? "text-success bg-success/5" : isCurrent ? `${stepConfig.color} bg-muted/40` : "text-muted-foreground")}>
+              <motion.div
+                key={p}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.15 }}
+                className={cn(
+                  "flex items-center gap-2 text-[11px] px-2 py-1 rounded",
+                  isDone
+                    ? "text-success bg-success/5"
+                    : isCurrent
+                      ? `${stepConfig.color} bg-muted/40`
+                      : "text-muted-foreground",
+                )}
+              >
                 {isDone ? <CheckCircle2 className="w-3 h-3" /> : <StepIcon className="w-3 h-3" />}
                 <span>{stepConfig.label}</span>
               </motion.div>
@@ -48,14 +66,24 @@ export function ScrapingPhaseIndicator({ phase, linkedinProfile }: { phase: Scra
         </div>
       )}
       {linkedinProfile && (phase === "enriching" || phase === "generating") && (
-        <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="bg-[hsl(210,80%,55%)]/5 border border-[hsl(210,80%,55%)]/20 rounded-lg p-2.5 space-y-1">
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[hsl(210,80%,55%)]/5 border border-[hsl(210,80%,55%)]/20 rounded-lg p-2.5 space-y-1"
+        >
           <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(210,80%,55%)] uppercase tracking-wider">
             <Linkedin className="w-3 h-3" /> Profilo estratto
           </div>
           {linkedinProfile.name && <div className="text-xs font-medium text-foreground">{linkedinProfile.name}</div>}
-          {linkedinProfile.headline && <div className="text-[11px] text-muted-foreground">{linkedinProfile.headline}</div>}
-          {linkedinProfile.about && <div className="text-[10px] text-muted-foreground line-clamp-2">{linkedinProfile.about}</div>}
-          {linkedinProfile.location && <div className="text-[10px] text-muted-foreground">📍 {linkedinProfile.location}</div>}
+          {linkedinProfile.headline && (
+            <div className="text-[11px] text-muted-foreground">{linkedinProfile.headline}</div>
+          )}
+          {linkedinProfile.about && (
+            <div className="text-[10px] text-muted-foreground line-clamp-2">{linkedinProfile.about}</div>
+          )}
+          {linkedinProfile.location && (
+            <div className="text-[10px] text-muted-foreground">📍 {linkedinProfile.location}</div>
+          )}
         </motion.div>
       )}
     </div>

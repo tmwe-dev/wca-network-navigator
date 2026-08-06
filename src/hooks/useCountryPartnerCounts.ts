@@ -27,8 +27,8 @@ export function useCountryPartnerCounts() {
       }
 
       // Build full list: all WCA countries + any DB-only codes
-      const allCodes = new Set<string>(WCA_COUNTRIES.map(c => c.code));
-      Object.keys(countMap).forEach(cc => allCodes.add(cc));
+      const allCodes = new Set<string>(WCA_COUNTRIES.map((c) => c.code));
+      Object.keys(countMap).forEach((cc) => allCodes.add(cc));
 
       const countries: CountryPartnerCount[] = [];
       let totalPartners = 0;

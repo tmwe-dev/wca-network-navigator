@@ -5,7 +5,14 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Tool, ToolResult } from "./types";
 
 interface Resp {
-  results?: Array<{ name?: string; country?: string; city?: string; website?: string; summary?: string; score?: number }>;
+  results?: Array<{
+    name?: string;
+    country?: string;
+    city?: string;
+    website?: string;
+    summary?: string;
+    score?: number;
+  }>;
   message?: string;
   error?: string;
 }
@@ -14,7 +21,8 @@ export const deepSearchPartnerTool: Tool = {
   id: "deep-search-partner",
   label: "Deep search partner",
   description: "Ricerca approfondita su un partner (web + KB locale). Non scarica nulla da WCA.",
-  match: (p) => /\b(deep\s*search|approfondisci|investiga|sherlock)\b[^.]{0,40}\b(partner|azienda|company|fornitore)\b/i.test(p),
+  match: (p) =>
+    /\b(deep\s*search|approfondisci|investiga|sherlock)\b[^.]{0,40}\b(partner|azienda|company|fornitore)\b/i.test(p),
 
   execute: async (prompt): Promise<ToolResult> => {
     const q = prompt.replace(/^(deep\s*search|approfondisci|investiga|sherlock)\s*/i, "").trim();

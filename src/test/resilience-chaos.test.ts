@@ -117,7 +117,7 @@ describe("Retry idempotency safety", () => {
     ];
 
     // process-email-queue only processes status=pending
-    const toProcess = items.filter(i => i.status === "pending");
+    const toProcess = items.filter((i) => i.status === "pending");
     expect(toProcess).toHaveLength(1);
     expect(toProcess[0].id).toBe("3");
   });
@@ -134,9 +134,9 @@ describe("Concurrent cycle safety", () => {
       { id: "4", status: "pending" },
     ];
 
-    const selected = allItems.filter(i => i.status === "pending");
+    const selected = allItems.filter((i) => i.status === "pending");
     expect(selected).toHaveLength(2);
-    expect(selected.map(s => s.id)).toEqual(["1", "4"]);
+    expect(selected.map((s) => s.id)).toEqual(["1", "4"]);
   });
 
   it("pause check prevents processing during concurrent pause", () => {
@@ -157,13 +157,7 @@ describe("Concurrent cycle safety", () => {
 // ── Test 5: AI malformed response handling ──
 describe("AI malformed response handling", () => {
   it("should safely handle non-JSON AI response", () => {
-    const malformedResponses = [
-      "This is not JSON",
-      "",
-      "{ broken json",
-      "null",
-      undefined,
-    ];
+    const malformedResponses = ["This is not JSON", "", "{ broken json", "null", undefined];
 
     for (const response of malformedResponses) {
       let parsed: any = null;
@@ -184,7 +178,9 @@ describe("Broken settings resilience", () => {
   it("should use defaults when app_settings returns empty", () => {
     const settingsRows: any[] = []; // empty
     const cfg: Record<string, string> = {};
-    settingsRows.forEach((row: any) => { if (row.value) cfg[row.key] = row.value; });
+    settingsRows.forEach((row: any) => {
+      if (row.value) cfg[row.key] = row.value;
+    });
 
     const DEFAULT_BUDGET = 10;
     const DEFAULT_WORK_START = 6;

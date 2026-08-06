@@ -12,17 +12,27 @@ Deno.serve(async (req) => {
     const which = (body.mailbox as string) || "booking";
     const useSmtpPwd = !!body.use_smtp_pwd;
     const hostOverride = (body.host as string) || "";
-    const user = which === "booking" ? "booking@tmwe.it" : (Deno.env.get("IMAP_USER") || "luca@tmwe.it");
-    const pass = which === "booking"
-      ? (useSmtpPwd
-          ? (Deno.env.get("SMTP_PASSWORD_BOOKING") || "")
-          : (Deno.env.get("IMAP_PASSWORD_BOOKING") || ""))
-      : (Deno.env.get("IMAP_PASSWORD") || "");
+    const user = which === "booking" ? "booking@tmwe.it" : Deno.env.get("IMAP_USER") || "luca@tmwe.it";
+    const pass =
+      which === "booking"
+        ? useSmtpPwd
+          ? Deno.env.get("SMTP_PASSWORD_BOOKING") || ""
+          : Deno.env.get("IMAP_PASSWORD_BOOKING") || ""
+        : Deno.env.get("IMAP_PASSWORD") || "";
     const passLen = pass.length;
     const passHead = pass.slice(0, 2);
     const passTail = pass.slice(-2);
     const host = hostOverride || (which === "booking" ? "mx01.vmteca.net" : "imaps.aruba.it");
-    const debug = { user, hasPass: !!pass, passLen, passHead, passTail, secretUsed: which === "booking" ? (useSmtpPwd ? "SMTP_PASSWORD_BOOKING" : "IMAP_PASSWORD_BOOKING") : "IMAP_PASSWORD", host };
+    const debug = {
+      user,
+      hasPass: !!pass,
+      passLen,
+      passHead,
+      passTail,
+      secretUsed:
+        which === "booking" ? (useSmtpPwd ? "SMTP_PASSWORD_BOOKING" : "IMAP_PASSWORD_BOOKING") : "IMAP_PASSWORD",
+      host,
+    };
     if (!pass) {
       return edgeError("INTERNAL_ERROR", "no_password", undefined, corsHeaders, { debug });
     }
@@ -42,7 +52,11 @@ Deno.serve(async (req) => {
     await client.connect();
     await client.authenticate();
     const list = await client.listMailboxes();
-    try { await client.disconnect(); } catch { /* ignore */ }
+    try {
+      await client.disconnect();
+    } catch {
+      /* ignore */
+    }
     const folders = list;
     return new Response(JSON.stringify({ user, folders }, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

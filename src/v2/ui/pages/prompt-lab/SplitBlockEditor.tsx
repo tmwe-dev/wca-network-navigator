@@ -100,9 +100,7 @@ export function SplitBlockEditor({
                   )}
                   title={b.label}
                 >
-                  <span className="tabular-nums text-[10px] text-muted-foreground w-4 flex-shrink-0">
-                    {i + 1}
-                  </span>
+                  <span className="tabular-nums text-[10px] text-muted-foreground w-4 flex-shrink-0">{i + 1}</span>
                   <span className="truncate flex-1">{title}</span>
                   {b.improved && (
                     <span
@@ -128,102 +126,96 @@ export function SplitBlockEditor({
       {/* MAIN — editor full-width + diff inline */}
       <ResizablePanel defaultSize={78} minSize={40}>
         <div className="h-full flex flex-col min-h-0 gap-2 ml-1.5">
-        {/* Toolbar blocco selezionato */}
-        <div className="flex items-center justify-between gap-2 flex-shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            {blockTag && (
-              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary flex-shrink-0">
-                {blockTag}
-              </span>
-            )}
-            <h3 className="text-sm font-semibold truncate">{blockTitle}</h3>
-            {block.dirty && (
-              <span className="text-[10px] text-warning font-medium flex-shrink-0">non salvato</span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {block.improved && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-xs"
-                onClick={() => setShowDiff((v) => !v)}
-                title="Mostra/nascondi diff"
-              >
-                {showDiff ? "Nascondi diff" : "Mostra diff"}
-              </Button>
-            )}
-            {onImprove && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2.5 text-xs gap-1"
-                onClick={() => onImprove(block.id)}
-                disabled={saving === block.id}
-              >
-                <Sparkles className="h-3 w-3" />
-                {saving === block.id ? "..." : "Migliora con AI"}
-              </Button>
-            )}
-            {onSave && (
-              <Button
-                size="sm"
-                className="h-7 px-2.5 text-xs gap-1"
-                disabled={!block.dirty || saving === block.id}
-                onClick={() => onSave(block.id)}
-              >
-                <Save className="h-3 w-3" />
-                Salva
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {block.hint && (
-          <p className="text-[10px] text-muted-foreground flex-shrink-0">{block.hint}</p>
-        )}
-
-        {/* Editor full-width */}
-        <Textarea
-          value={block.content}
-          onChange={(e) => onChange(block.id, e.target.value)}
-          className={cn(
-            "font-mono text-[13px] leading-relaxed resize-none p-3 min-h-0",
-            block.improved && showDiff ? "flex-[1.2]" : "flex-1",
-          )}
-        />
-
-        {/* Diff inline + accept/discard */}
-        {block.improved && showDiff && (
-          <div className="flex flex-col min-h-0 flex-[1.5] border border-green-300 dark:border-green-800 rounded-md bg-green-50/50 dark:bg-success/20 overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-green-200 dark:border-green-900 bg-success/50 dark:bg-success/40 flex-shrink-0">
-              <span className="text-xs font-semibold text-success dark:text-success">
-                Proposta AI · diff inline
-              </span>
-              <div className="flex items-center gap-1">
+          {/* Toolbar blocco selezionato */}
+          <div className="flex items-center justify-between gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              {blockTag && (
+                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary flex-shrink-0">
+                  {blockTag}
+                </span>
+              )}
+              <h3 className="text-sm font-semibold truncate">{blockTitle}</h3>
+              {block.dirty && <span className="text-[10px] text-warning font-medium flex-shrink-0">non salvato</span>}
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {block.improved && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 px-2 text-xs gap-1 text-success dark:text-success hover:bg-success/50"
-                  onClick={() => onAccept(block.id)}
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setShowDiff((v) => !v)}
+                  title="Mostra/nascondi diff"
                 >
-                  <Check className="h-3 w-3" /> Accetta
+                  {showDiff ? "Nascondi diff" : "Mostra diff"}
                 </Button>
+              )}
+              {onImprove && (
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="h-6 px-2 text-xs gap-1 text-destructive hover:bg-destructive/10"
-                  onClick={() => onDiscard(block.id)}
+                  variant="outline"
+                  className="h-7 px-2.5 text-xs gap-1"
+                  onClick={() => onImprove(block.id)}
+                  disabled={saving === block.id}
                 >
-                  <X className="h-3 w-3" /> Scarta
+                  <Sparkles className="h-3 w-3" />
+                  {saving === block.id ? "..." : "Migliora con AI"}
                 </Button>
+              )}
+              {onSave && (
+                <Button
+                  size="sm"
+                  className="h-7 px-2.5 text-xs gap-1"
+                  disabled={!block.dirty || saving === block.id}
+                  onClick={() => onSave(block.id)}
+                >
+                  <Save className="h-3 w-3" />
+                  Salva
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {block.hint && <p className="text-[10px] text-muted-foreground flex-shrink-0">{block.hint}</p>}
+
+          {/* Editor full-width */}
+          <Textarea
+            value={block.content}
+            onChange={(e) => onChange(block.id, e.target.value)}
+            className={cn(
+              "font-mono text-[13px] leading-relaxed resize-none p-3 min-h-0",
+              block.improved && showDiff ? "flex-[1.2]" : "flex-1",
+            )}
+          />
+
+          {/* Diff inline + accept/discard */}
+          {block.improved && showDiff && (
+            <div className="flex flex-col min-h-0 flex-[1.5] border border-green-300 dark:border-green-800 rounded-md bg-green-50/50 dark:bg-success/20 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-1.5 border-b border-green-200 dark:border-green-900 bg-success/50 dark:bg-success/40 flex-shrink-0">
+                <span className="text-xs font-semibold text-success dark:text-success">Proposta AI · diff inline</span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-xs gap-1 text-success dark:text-success hover:bg-success/50"
+                    onClick={() => onAccept(block.id)}
+                  >
+                    <Check className="h-3 w-3" /> Accetta
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-xs gap-1 text-destructive hover:bg-destructive/10"
+                    onClick={() => onDiscard(block.id)}
+                  >
+                    <X className="h-3 w-3" /> Scarta
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 overflow-auto font-mono text-[12px] leading-relaxed">
+                <InlineDiff original={block.content} improved={block.improved} />
               </div>
             </div>
-            <div className="flex-1 min-h-0 overflow-auto font-mono text-[12px] leading-relaxed">
-              <InlineDiff original={block.content} improved={block.improved} />
-            </div>
-          </div>
-        )}
+          )}
         </div>
       </ResizablePanel>
     </PersistentResizablePanelGroup>

@@ -41,7 +41,9 @@ export function E2EStatusPage() {
     }
   };
 
-  useEffect(() => { void reload(); }, []);
+  useEffect(() => {
+    void reload();
+  }, []);
 
   const latest = runs[0];
 
@@ -51,8 +53,8 @@ export function E2EStatusPage() {
       <div className="flex-1 overflow-auto p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            La suite completa gira ogni notte alle 02:00 UTC tramite GitHub Actions.
-            La PR chain esegue solo le 8 spec smoke.
+            La suite completa gira ogni notte alle 02:00 UTC tramite GitHub Actions. La PR chain esegue solo le 8 spec
+            smoke.
           </div>
           <button
             onClick={reload}
@@ -76,9 +78,8 @@ export function E2EStatusPage() {
 
         {!loading && !err && !latest && (
           <div className="float-panel p-6 text-sm text-muted-foreground">
-            Nessun run registrato. Il primo nightly verrà eseguito alle 02:00 UTC,
-            oppure puoi scatenarlo manualmente da GitHub Actions →
-            <span className="font-mono"> e2e-nightly</span>.
+            Nessun run registrato. Il primo nightly verrà eseguito alle 02:00 UTC, oppure puoi scatenarlo manualmente da
+            GitHub Actions →<span className="font-mono"> e2e-nightly</span>.
           </div>
         )}
 
@@ -89,7 +90,9 @@ export function E2EStatusPage() {
                 <div className="text-xs text-muted-foreground">Ultimo run</div>
                 <div className="text-base font-semibold">
                   {new Date(latest.finished_at).toLocaleString()}
-                  {latest.branch && <span className="ml-2 text-xs text-muted-foreground font-mono">{latest.branch}</span>}
+                  {latest.branch && (
+                    <span className="ml-2 text-xs text-muted-foreground font-mono">{latest.branch}</span>
+                  )}
                 </div>
               </div>
               {latest.report_url && (
@@ -112,7 +115,12 @@ export function E2EStatusPage() {
             </div>
             <div className="text-xs text-muted-foreground">
               Durata totale: {fmtDuration(latest.duration_ms)}
-              {latest.commit_sha && <> · commit <span className="font-mono">{latest.commit_sha.slice(0, 7)}</span></>}
+              {latest.commit_sha && (
+                <>
+                  {" "}
+                  · commit <span className="font-mono">{latest.commit_sha.slice(0, 7)}</span>
+                </>
+              )}
             </div>
 
             <div className="border-t border-border pt-3">
@@ -124,7 +132,9 @@ export function E2EStatusPage() {
                   latest.spec_results.map((s, i) => (
                     <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-xs">
                       <StatusIcon status={s.status} />
-                      <span className="font-mono flex-1 truncate" title={s.file}>{s.file}</span>
+                      <span className="font-mono flex-1 truncate" title={s.file}>
+                        {s.file}
+                      </span>
                       {s.title && <span className="text-muted-foreground truncate hidden md:inline">{s.title}</span>}
                       <span className="text-muted-foreground tabular-nums">{fmtDuration(s.duration_ms)}</span>
                     </div>
@@ -141,7 +151,9 @@ export function E2EStatusPage() {
             <div className="text-xs">
               {runs.slice(1).map((r) => (
                 <div key={r.id} className="flex items-center gap-2 py-1 border-b border-border/40 last:border-0">
-                  <span className="text-muted-foreground tabular-nums w-36">{new Date(r.finished_at).toLocaleString()}</span>
+                  <span className="text-muted-foreground tabular-nums w-36">
+                    {new Date(r.finished_at).toLocaleString()}
+                  </span>
                   <span className="text-success">{r.passed}P</span>
                   <span className={r.failed > 0 ? "text-destructive" : "text-muted-foreground"}>{r.failed}F</span>
                   <span className="text-muted-foreground">{r.skipped}S</span>
@@ -156,7 +168,15 @@ export function E2EStatusPage() {
   );
 }
 
-function Stat({ label, value, tone = "default" }: { label: string; value: number; tone?: "green" | "red" | "amber" | "muted" | "default" }) {
+function Stat({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: number;
+  tone?: "green" | "red" | "amber" | "muted" | "default";
+}) {
   const colors = {
     green: "text-success",
     red: "text-destructive",

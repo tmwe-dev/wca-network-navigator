@@ -37,15 +37,15 @@ const COUNTRY_KEYWORDS: Record<string, string[]> = {
 };
 
 export const STAGE_TAG_MAP: Record<string, string[]> = {
-  new:          ["cold_outreach", "first_contact"],
+  new: ["cold_outreach", "first_contact"],
   first_touch_sent: ["cold_outreach", "followup"],
-  holding:      ["relationship_progression", "followup", "holding_pattern"],
-  engaged:      ["relationship_progression", "followup", "qualification"],
-  qualified:    ["qualification", "meeting", "proposal_readiness"],
-  negotiation:  ["negotiation_technique", "closing", "proposal"],
-  converted:    ["relationship_progression", "upselling"],
-  archived:     ["reactivation"],
-  blacklisted:  ["do_not_contact", "safety_guardrail"],
+  holding: ["relationship_progression", "followup", "holding_pattern"],
+  engaged: ["relationship_progression", "followup", "qualification"],
+  qualified: ["qualification", "meeting", "proposal_readiness"],
+  negotiation: ["negotiation_technique", "closing", "proposal"],
+  converted: ["relationship_progression", "upselling"],
+  archived: ["reactivation"],
+  blacklisted: ["do_not_contact", "safety_guardrail"],
 };
 
 export function extractContextTags(ctx: ConversationContext): ContextTags {

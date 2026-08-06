@@ -13,40 +13,42 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  User, Brain, Cog, Clock, ChevronDown, ShieldCheck, Search,
-  ExternalLink, Filter, LayoutGrid, Table2,
+  User,
+  Brain,
+  Cog,
+  Clock,
+  ChevronDown,
+  ShieldCheck,
+  Search,
+  ExternalLink,
+  Filter,
+  LayoutGrid,
+  Table2,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { it } from "date-fns/locale";
 import { queryKeys } from "@/lib/queryKeys";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // ── Types ──
 
 // ── Constants ──
 
 const ORIGIN_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  manual:         { bg: "bg-muted",           text: "text-muted-foreground", label: "Manuale" },
-  ai_auto:        { bg: "bg-primary/20",      text: "text-primary",          label: "AI Auto" },
-  ai_approved:    { bg: "bg-green-500/20",    text: "text-green-400",        label: "Approvata" },
-  ai_rejected:    { bg: "bg-destructive/20",  text: "text-destructive",      label: "Rifiutata" },
-  ai_modified:    { bg: "bg-yellow-500/20",   text: "text-yellow-400",       label: "Modificata" },
-  system_cron:    { bg: "bg-orange-500/20",   text: "text-orange-400",       label: "Cron" },
-  system_trigger: { bg: "bg-blue-500/20",     text: "text-blue-400",         label: "Sistema" },
+  manual: { bg: "bg-muted", text: "text-muted-foreground", label: "Manuale" },
+  ai_auto: { bg: "bg-primary/20", text: "text-primary", label: "AI Auto" },
+  ai_approved: { bg: "bg-green-500/20", text: "text-green-400", label: "Approvata" },
+  ai_rejected: { bg: "bg-destructive/20", text: "text-destructive", label: "Rifiutata" },
+  ai_modified: { bg: "bg-yellow-500/20", text: "text-yellow-400", label: "Modificata" },
+  system_cron: { bg: "bg-orange-500/20", text: "text-orange-400", label: "Cron" },
+  system_trigger: { bg: "bg-blue-500/20", text: "text-blue-400", label: "Sistema" },
 };
 
 const ACTOR_ICONS: Record<string, React.ReactNode> = {
-  user:     <User className="h-4 w-4 text-blue-400" />,
+  user: <User className="h-4 w-4 text-blue-400" />,
   ai_agent: <Brain className="h-4 w-4 text-primary" />,
-  system:   <Cog className="h-4 w-4 text-muted-foreground" />,
-  cron:     <Clock className="h-4 w-4 text-orange-400" />,
+  system: <Cog className="h-4 w-4 text-muted-foreground" />,
+  cron: <Clock className="h-4 w-4 text-orange-400" />,
 };
 
 const PAGE_SIZE = 50;
@@ -97,7 +99,9 @@ export function SupervisorFeedPanel(): React.ReactElement {
         <div className="flex flex-wrap items-center gap-2 bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-3">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={actorFilter} onValueChange={setActorFilter}>
-            <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[130px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti gli attori</SelectItem>
               <SelectItem value="user">Utente</SelectItem>
@@ -107,7 +111,9 @@ export function SupervisorFeedPanel(): React.ReactElement {
             </SelectContent>
           </Select>
           <Select value={originFilter} onValueChange={setOriginFilter}>
-            <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutte le origini</SelectItem>
               <SelectItem value="manual">Manuale</SelectItem>
@@ -124,7 +130,10 @@ export function SupervisorFeedPanel(): React.ReactElement {
             <Input
               placeholder="Cerca email o partner..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               className="h-8 pl-7 text-xs"
             />
           </div>
@@ -135,7 +144,10 @@ export function SupervisorFeedPanel(): React.ReactElement {
               variant={viewMode === "cards" ? "default" : "ghost"}
               size="sm"
               className="h-8 px-2"
-              onClick={() => { setViewMode("cards"); setPage(0); }}
+              onClick={() => {
+                setViewMode("cards");
+                setPage(0);
+              }}
               title="Visualizzazione a schede"
             >
               <LayoutGrid className="h-4 w-4" />
@@ -144,7 +156,10 @@ export function SupervisorFeedPanel(): React.ReactElement {
               variant={viewMode === "table" ? "default" : "ghost"}
               size="sm"
               className="h-8 px-2"
-              onClick={() => { setViewMode("table"); setPage(0); }}
+              onClick={() => {
+                setViewMode("table");
+                setPage(0);
+              }}
               title="Visualizzazione a tabella"
             >
               <Table2 className="h-4 w-4" />
@@ -169,7 +184,9 @@ export function SupervisorFeedPanel(): React.ReactElement {
                 <p className="text-xs">Il supervisore è in ascolto di tutte le operazioni.</p>
               </div>
             )}
-            {feed?.map((entry) => <AuditCard key={entry.id} entry={entry} />)}
+            {feed?.map((entry) => (
+              <AuditCard key={entry.id} entry={entry} />
+            ))}
             {feed && feed.length === PAGE_SIZE && (
               <Button variant="ghost" size="sm" className="w-full text-xs" onClick={loadMore}>
                 Carica altri…
@@ -179,7 +196,12 @@ export function SupervisorFeedPanel(): React.ReactElement {
         </ScrollArea>
       ) : (
         <ScrollArea className="h-[calc(100vh-430px)] border border-border/50 rounded-lg bg-card/40">
-          <AuditTableView feed={feed} isLoading={isLoading} onLoadMore={loadMore} canLoadMore={feed?.length === PAGE_SIZE} />
+          <AuditTableView
+            feed={feed}
+            isLoading={isLoading}
+            onLoadMore={loadMore}
+            canLoadMore={feed?.length === PAGE_SIZE}
+          />
         </ScrollArea>
       )}
     </div>
@@ -205,9 +227,7 @@ function AuditCard({ entry }: { entry: AuditRow }) {
       <div className="bg-card/60 backdrop-blur-sm border border-border/30 rounded-lg px-3 py-2.5 hover:border-border/60 transition-colors">
         <div className="flex items-start gap-3">
           {/* Actor icon */}
-          <div className="mt-0.5 shrink-0">
-            {ACTOR_ICONS[entry.actor_type] || <Cog className="h-4 w-4" />}
-          </div>
+          <div className="mt-0.5 shrink-0">{ACTOR_ICONS[entry.actor_type] || <Cog className="h-4 w-4" />}</div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
@@ -228,9 +248,7 @@ function AuditCard({ entry }: { entry: AuditRow }) {
 
           {/* Right side */}
           <div className="flex items-center gap-2 shrink-0">
-            <Badge className={`${originStyle.bg} ${originStyle.text} border-0 text-[10px]`}>
-              {originStyle.label}
-            </Badge>
+            <Badge className={`${originStyle.bg} ${originStyle.text} border-0 text-[10px]`}>{originStyle.label}</Badge>
             <span className="text-[10px] text-muted-foreground whitespace-nowrap">
               {entry.created_at
                 ? formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: it })
@@ -247,9 +265,17 @@ function AuditCard({ entry }: { entry: AuditRow }) {
         <CollapsibleContent>
           <div className="mt-3 pt-3 border-t border-border/30 space-y-2 text-xs">
             <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-              <span>Categoria: <span className="text-foreground">{entry.action_category}</span></span>
-              <span>Attore: <span className="text-foreground">{entry.actor_type}</span></span>
-              {entry.target_type && <span>Target: <span className="text-foreground">{entry.target_type}</span></span>}
+              <span>
+                Categoria: <span className="text-foreground">{entry.action_category}</span>
+              </span>
+              <span>
+                Attore: <span className="text-foreground">{entry.actor_type}</span>
+              </span>
+              {entry.target_type && (
+                <span>
+                  Target: <span className="text-foreground">{entry.target_type}</span>
+                </span>
+              )}
               {entry.partner_id && (
                 <span className="flex items-center gap-1">
                   Partner: <ExternalLink className="h-3 w-3 inline" />
@@ -312,10 +338,14 @@ function AuditTableView({ feed, isLoading, onLoadMore, canLoadMore }: AuditTable
             <TableBody>
               {feed.map((entry) => {
                 const originStyle = ORIGIN_COLORS[entry.decision_origin] || ORIGIN_COLORS.manual;
-                const actorColor = entry.actor_type === "ai_agent" ? "text-primary" :
-                                   entry.actor_type === "user" ? "text-blue-400" :
-                                   entry.actor_type === "system" ? "text-muted-foreground" :
-                                   "text-orange-400";
+                const actorColor =
+                  entry.actor_type === "ai_agent"
+                    ? "text-primary"
+                    : entry.actor_type === "user"
+                      ? "text-blue-400"
+                      : entry.actor_type === "system"
+                        ? "text-muted-foreground"
+                        : "text-orange-400";
 
                 return (
                   <Collapsible key={entry.id} asChild>
@@ -326,7 +356,9 @@ function AuditTableView({ feed, isLoading, onLoadMore, canLoadMore }: AuditTable
                         </TableCell>
                         <TableCell className="px-3 py-2">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs">{ACTOR_ICONS[entry.actor_type] || <Cog className="h-3 w-3" />}</span>
+                            <span className="text-xs">
+                              {ACTOR_ICONS[entry.actor_type] || <Cog className="h-3 w-3" />}
+                            </span>
                             <span className={`text-[10px] font-medium truncate ${actorColor}`}>
                               {entry.actor_name || entry.actor_type}
                             </span>
@@ -354,13 +386,22 @@ function AuditTableView({ feed, isLoading, onLoadMore, canLoadMore }: AuditTable
                             <div className="space-y-2 text-xs">
                               <div className="grid grid-cols-3 gap-3 text-muted-foreground">
                                 {entry.email_address && (
-                                  <div><span className="font-medium">Email:</span> <span className="text-foreground font-mono">{entry.email_address}</span></div>
+                                  <div>
+                                    <span className="font-medium">Email:</span>{" "}
+                                    <span className="text-foreground font-mono">{entry.email_address}</span>
+                                  </div>
                                 )}
                                 {entry.target_type && (
-                                  <div><span className="font-medium">Tipo Target:</span> <span className="text-foreground">{entry.target_type}</span></div>
+                                  <div>
+                                    <span className="font-medium">Tipo Target:</span>{" "}
+                                    <span className="text-foreground">{entry.target_type}</span>
+                                  </div>
                                 )}
                                 {entry.partner_id && (
-                                  <div><span className="font-medium">Partner ID:</span> <span className="text-foreground font-mono">{entry.partner_id.slice(0, 8)}…</span></div>
+                                  <div>
+                                    <span className="font-medium">Partner ID:</span>{" "}
+                                    <span className="text-foreground font-mono">{entry.partner_id.slice(0, 8)}…</span>
+                                  </div>
                                 )}
                               </div>
                               {entry.metadata && Object.keys(entry.metadata).length > 0 && (

@@ -37,18 +37,8 @@ import { shouldForceAiQuery } from "../lib/planFallback";
 import { buildPlanState, buildAiQueryFallbackPlan } from "../lib/buildPlanState";
 import { buildPlanPreview, labelForToolId } from "../lib/planPreview";
 import { withTimeout } from "../lib/withTimeout";
-import {
-  enterIdle,
-  enterThinking,
-  enterExecuting,
-  startChainAnimation,
-  type PhaseApi,
-} from "../lib/phaseTransitions";
-import {
-  contextHint as buildContextHint,
-  isContextFresh,
-  type QueryContext,
-} from "../lib/queryContext";
+import { enterIdle, enterThinking, enterExecuting, startChainAnimation, type PhaseApi } from "../lib/phaseTransitions";
+import { contextHint as buildContextHint, isContextFresh, type QueryContext } from "../lib/queryContext";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 import { startTrace, type TraceBuilder } from "../lib/toolTrace";
 import type { ConversationMessage } from "@/v2/io/supabase/queries/conversations";
@@ -102,11 +92,29 @@ interface CommandStateApi {
 
 export function useCommandSubmit(state: CommandStateApi) {
   const {
-    addMessage, setMessages, setCanvas, setFlowPhase, setShowTools, setToolPhase,
-    setChainHighlight, setExecSteps, setExecProgress, setLiveResult,
-    setPendingApproval, setPlanState, setActiveToolKey,
-    setVoiceSpeaking, resetForNewMessage, ts, governance, ttsSpeak, messages,
-    queryContext, setQueryContext, persistedMessages, persistMessage,
+    addMessage,
+    setMessages,
+    setCanvas,
+    setFlowPhase,
+    setShowTools,
+    setToolPhase,
+    setChainHighlight,
+    setExecSteps,
+    setExecProgress,
+    setLiveResult,
+    setPendingApproval,
+    setPlanState,
+    setActiveToolKey,
+    setVoiceSpeaking,
+    resetForNewMessage,
+    ts,
+    governance,
+    ttsSpeak,
+    messages,
+    queryContext,
+    setQueryContext,
+    persistedMessages,
+    persistMessage,
   } = state;
 
   // Initialize sub-hooks
@@ -132,19 +140,45 @@ export function useCommandSubmit(state: CommandStateApi) {
   // (We don't mutate `state` — we just override the local reference.)
   const _addMessage = addMessagePersisted;
   const { commentOnResult } = useResultCommentary({
-    addMessage: _addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
+    addMessage: _addMessage,
+    ts,
+    governance,
+    ttsSpeak,
+    setVoiceSpeaking,
+    buildHistory,
   });
   const { updateQueryContextFromLastPlan } = useQueryContext({
-    setQueryContext, queryContext,
+    setQueryContext,
+    queryContext,
   });
   const { renderPlanCompletion, canvasForResult } = usePlanCompletion({
-    addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
+    addMessage: _addMessage,
+    ts,
+    setFlowPhase,
+    setExecProgress,
+    setLiveResult,
+    setCanvas,
+    setShowTools,
   });
   const { runPlan, handleApproveStep: handleApproveStepFromExecution } = usePlanExecution({
-    addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setPlanState, setLiveResult, setCanvas, setShowTools, buildHistory,
+    addMessage: _addMessage,
+    ts,
+    setFlowPhase,
+    setExecProgress,
+    setPlanState,
+    setLiveResult,
+    setCanvas,
+    setShowTools,
+    buildHistory,
   });
   const { handleApprove } = useApprovalHandler({
-    addMessage: _addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
+    addMessage: _addMessage,
+    ts,
+    setFlowPhase,
+    setLiveResult,
+    setCanvas,
+    setPendingApproval,
+    canvasForResult,
   });
 
   // Bundle dei setter UI: un solo oggetto passato agli helper di transizione.
@@ -165,13 +199,7 @@ export function useCommandSubmit(state: CommandStateApi) {
   // Wrapper for runPlan that integrates with completion
   const runPlanWrapped = useCallback(
     async (planStateVal: PlanExecutionState, userPrompt: string, hint: string, trace?: TraceBuilder) => {
-      await runPlan(
-        planStateVal,
-        userPrompt,
-        hint,
-        (final) => renderPlanWithContext(userPrompt, final, trace),
-        trace,
-      );
+      await runPlan(planStateVal, userPrompt, hint, (final) => renderPlanWithContext(userPrompt, final, trace), trace);
     },
     [runPlan, renderPlanWithContext],
   );
@@ -179,7 +207,9 @@ export function useCommandSubmit(state: CommandStateApi) {
   // Wrapper for handleApproveStep that integrates completion rendering
   const handleApproveStepWrapped = useCallback(
     async (planStateVal: PlanExecutionState, userPrompt: string) => {
-      await handleApproveStepFromExecution(planStateVal, userPrompt, (final) => renderPlanWithContext(userPrompt, final));
+      await handleApproveStepFromExecution(planStateVal, userPrompt, (final) =>
+        renderPlanWithContext(userPrompt, final),
+      );
     },
     [handleApproveStepFromExecution, renderPlanWithContext],
   );
@@ -254,21 +284,45 @@ export function useCommandSubmit(state: CommandStateApi) {
         setExecProgress(100);
         setShowTools(false);
         const countLabel = result.meta && "count" in result.meta ? ` · ${result.meta.count}` : "";
-        _addMessage({ role: "assistant", content: `🔧 ${tool.label}${countLabel}`, agentName: "Automation", timestamp: ts() });
+        _addMessage({
+          role: "assistant",
+          content: `🔧 ${tool.label}${countLabel}`,
+          agentName: "Automation",
+          timestamp: ts(),
+        });
         if (result.kind !== "approval") await commentOnResult(userPrompt, tool.id, result, trace);
         else trace.finish();
       } catch (err: unknown) {
         trace.finish();
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";
         toast.error(msg);
-        _addMessage({ role: "assistant", content: `❌ Errore composer: ${msg}`, agentName: "Orchestratore", timestamp: ts() });
+        _addMessage({
+          role: "assistant",
+          content: `❌ Errore composer: ${msg}`,
+          agentName: "Orchestratore",
+          timestamp: ts(),
+        });
         enterIdle(phaseApi);
       } finally {
         unsubscribeProgress();
       }
       return true;
     },
-    [_addMessage, buildHistory, canvasForResult, commentOnResult, phaseApi, setActiveToolKey, setCanvas, setExecProgress, setExecSteps, setLiveResult, setShowTools, setFlowPhase, ts],
+    [
+      _addMessage,
+      buildHistory,
+      canvasForResult,
+      commentOnResult,
+      phaseApi,
+      setActiveToolKey,
+      setCanvas,
+      setExecProgress,
+      setExecSteps,
+      setLiveResult,
+      setShowTools,
+      setFlowPhase,
+      ts,
+    ],
   );
 
   /**
@@ -363,7 +417,9 @@ export function useCommandSubmit(state: CommandStateApi) {
           }
           _addMessage({
             role: "assistant",
-            content: plan.summary || "Non ho trovato un'azione adatta. Puoi essere più specifico? Ad esempio: \"cerca partner italiani con email\" oppure \"mostra dashboard\".",
+            content:
+              plan.summary ||
+              'Non ho trovato un\'azione adatta. Puoi essere più specifico? Ad esempio: "cerca partner italiani con email" oppure "mostra dashboard".',
             agentName: "Direttore",
             timestamp: ts(),
           });
@@ -415,11 +471,29 @@ export function useCommandSubmit(state: CommandStateApi) {
       }
     },
     [
-      _addMessage, addMessage, buildHistory, resetForNewMessage, runPlanWrapped, runSyntheticPlan,
-      setActiveToolKey, setChainHighlight, setExecSteps, setMessages, setPlanState, ts,
-      queryContext, looksLikeSimpleQuery, runDirectComposer, phaseApi,
+      _addMessage,
+      addMessage,
+      buildHistory,
+      resetForNewMessage,
+      runPlanWrapped,
+      runSyntheticPlan,
+      setActiveToolKey,
+      setChainHighlight,
+      setExecSteps,
+      setMessages,
+      setPlanState,
+      ts,
+      queryContext,
+      looksLikeSimpleQuery,
+      runDirectComposer,
+      phaseApi,
     ],
   );
 
-  return { sendMessage, handleApprove: handleApproveWrapped, handleCancel, handleApproveStep: handleApproveStepWrapped };
+  return {
+    sendMessage,
+    handleApprove: handleApproveWrapped,
+    handleCancel,
+    handleApproveStep: handleApproveStepWrapped,
+  };
 }

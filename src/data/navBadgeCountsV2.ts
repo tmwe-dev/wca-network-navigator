@@ -21,14 +21,8 @@ export async function fetchNavBadgeCountsRaw(): Promise<NavBadgeCountsRaw> {
   const COCKPIT: CampaignJobStatus[] = ["pending"];
 
   const [cestRes, cockpitRes, inboxRes, agendaRes] = await Promise.all([
-    supabase
-      .from("email_campaign_queue")
-      .select("id", { count: "exact", head: true })
-      .in("status", PENDING),
-    supabase
-      .from("campaign_jobs")
-      .select("id", { count: "exact", head: true })
-      .in("status", COCKPIT),
+    supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).in("status", PENDING),
+    supabase.from("campaign_jobs").select("id", { count: "exact", head: true }).in("status", COCKPIT),
     supabase
       .from("channel_messages")
       .select("id", { count: "exact", head: true })

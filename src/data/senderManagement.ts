@@ -29,11 +29,7 @@ export async function insertSenderGroups(rows: SenderGroupInsert[]): Promise<Ema
 
 /** Crea una singola categoria e ritorna la riga creata. Errori propagati. */
 export async function createSenderGroup(row: SenderGroupInsert): Promise<EmailSenderGroup> {
-  const { data, error } = await supabase
-    .from("email_sender_groups")
-    .insert(row)
-    .select()
-    .single();
+  const { data, error } = await supabase.from("email_sender_groups").insert(row).select().single();
   if (error) throw error;
   return data as EmailSenderGroup;
 }
@@ -66,10 +62,7 @@ export async function findAssignedSenderAddresses(userId: string): Promise<strin
 }
 
 /** Id della regola indirizzo esistente per (indirizzo, utente), se presente. */
-export async function findAddressRuleIdByAddressAndUser(
-  emailAddress: string,
-  userId: string,
-): Promise<string | null> {
+export async function findAddressRuleIdByAddressAndUser(emailAddress: string, userId: string): Promise<string | null> {
   const { data } = await supabase
     .from("email_address_rules")
     .select("id")
@@ -86,10 +79,7 @@ export interface SenderGroupAssignmentPatch {
 }
 
 /** Aggiorna il gruppo di una regola esistente (errori ignorati, come l'originale). */
-export async function updateAddressRuleSenderGroup(
-  ruleId: string,
-  patch: SenderGroupAssignmentPatch,
-): Promise<void> {
+export async function updateAddressRuleSenderGroup(ruleId: string, patch: SenderGroupAssignmentPatch): Promise<void> {
   await supabase.from("email_address_rules").update(patch).eq("id", ruleId);
 }
 

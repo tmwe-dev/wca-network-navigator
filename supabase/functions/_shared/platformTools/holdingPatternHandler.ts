@@ -17,22 +17,17 @@ interface HoldingItem {
   interactions?: number;
 }
 
-export async function handleGetHoldingPattern(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGetHoldingPattern(args: Record<string, unknown>): Promise<unknown> {
   const items: HoldingItem[] = [];
   const activeStatuses = ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"];
   const now = new Date();
   if (!args.source_type || args.source_type === "wca" || args.source_type === "all") {
     let pq = supabase
       .from("partners")
-      .select(
-        "id, company_name, country_code, city, email, lead_status, last_interaction_at, interaction_count"
-      )
+      .select("id, company_name, country_code, city, email, lead_status, last_interaction_at, interaction_count")
       .in("lead_status", activeStatuses)
       .order("last_interaction_at", { ascending: true, nullsFirst: true });
-    if (args.country_code)
-      pq = pq.eq("country_code", String(args.country_code).toUpperCase());
+    if (args.country_code) pq = pq.eq("country_code", String(args.country_code).toUpperCase());
     const { data: partners } = await pq.limit(Number(args.limit) || 50);
     (partners || []).forEach(
       (p: {
@@ -61,15 +56,13 @@ export async function handleGetHoldingPattern(
           days_waiting: days,
           interactions: p.interaction_count,
         });
-      }
+      },
     );
   }
   if (!args.source_type || args.source_type === "crm" || args.source_type === "all") {
     const cq = supabase
       .from("imported_contacts")
-      .select(
-        "id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count"
-      )
+      .select("id, name, company_name, country, city, email, lead_status, last_interaction_at, interaction_count")
       .in("lead_status", activeStatuses)
       .order("last_interaction_at", { ascending: true, nullsFirst: true });
     const { data: contacts } = await cq.limit(Number(args.limit) || 50);
@@ -99,7 +92,7 @@ export async function handleGetHoldingPattern(
           status: c.lead_status,
           days_waiting: days,
         });
-      }
+      },
     );
   }
   items.sort((a, b) => b.days_waiting - a.days_waiting);

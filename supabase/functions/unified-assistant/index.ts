@@ -11,8 +11,16 @@ import { forwardToFunction } from "../_shared/proxyUtils.ts";
 import { jsonrepair } from "https://esm.sh/jsonrepair@3.12.0";
 
 const VALID_SCOPES = new Set([
-  "partner_hub", "cockpit", "contacts", "import", "extension", "strategic",
-  "kb-supervisor", "deep-search", "chat", "mission-builder",
+  "partner_hub",
+  "cockpit",
+  "contacts",
+  "import",
+  "extension",
+  "strategic",
+  "kb-supervisor",
+  "deep-search",
+  "chat",
+  "mission-builder",
 ]);
 
 serve(async (req) => {
@@ -26,7 +34,8 @@ serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 401,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 

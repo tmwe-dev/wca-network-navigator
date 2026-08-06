@@ -1,6 +1,21 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Database, Mail, Search, Mic, Brain, Shield, FileText, Layers, GitMerge, CreditCard, Upload, BarChart3, Bell, BookOpen } from "lucide-react";
+import {
+  Database,
+  Mail,
+  Search,
+  Mic,
+  Brain,
+  Shield,
+  FileText,
+  Layers,
+  GitMerge,
+  CreditCard,
+  Upload,
+  BarChart3,
+  Bell,
+  BookOpen,
+} from "lucide-react";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -108,9 +123,7 @@ const toolMap: Record<string, { tools: ToolActivation[]; sources: SourceTag[] }>
       { icon: Brain, label: "TTS Engine", color: "270 60% 62%" },
       { icon: Database, label: "Load Context", color: "210 100% 66%" },
     ],
-    sources: [
-      { name: "CRM Core", color: "210 100% 66%" },
-    ],
+    sources: [{ name: "CRM Core", color: "210 100% 66%" }],
   },
   batch: {
     tools: [
@@ -132,9 +145,7 @@ const toolMap: Record<string, { tools: ToolActivation[]; sources: SourceTag[] }>
       { icon: Layers, label: "Save Template", color: "152 60% 45%" },
       { icon: Shield, label: "Audit Action", color: "210 100% 66%" },
     ],
-    sources: [
-      { name: "Template Library", color: "152 60% 45%" },
-    ],
+    sources: [{ name: "Template Library", color: "152 60% 45%" }],
   },
 };
 
@@ -196,7 +207,9 @@ const ToolActivationBar = ({ scenarioKey, visible, phase = "active", chainHighli
                     {step}
                   </motion.span>
                   {i < chainSteps.length - 1 && (
-                    <span className={`text-[8px] ${isActive ? "text-muted-foreground" : "text-muted-foreground"}`}>→</span>
+                    <span className={`text-[8px] ${isActive ? "text-muted-foreground" : "text-muted-foreground"}`}>
+                      →
+                    </span>
                   )}
                 </div>
               );
@@ -232,8 +245,17 @@ const ToolActivationBar = ({ scenarioKey, visible, phase = "active", chainHighli
                       transition={{ duration: 0.8 }}
                     />
                   )}
-                  <tool.icon className="w-2.5 h-2.5" style={{ color: `hsl(${tool.color} / ${revealed ? 0.55 : 0.2})` }} strokeWidth={1.5} />
-                  <span className="text-[8px] font-light" style={{ color: `hsl(${tool.color} / ${revealed ? 0.6 : 0.2})` }}>{tool.label}</span>
+                  <tool.icon
+                    className="w-2.5 h-2.5"
+                    style={{ color: `hsl(${tool.color} / ${revealed ? 0.55 : 0.2})` }}
+                    strokeWidth={1.5}
+                  />
+                  <span
+                    className="text-[8px] font-light"
+                    style={{ color: `hsl(${tool.color} / ${revealed ? 0.6 : 0.2})` }}
+                  >
+                    {tool.label}
+                  </span>
                 </motion.div>
               );
             })}
@@ -249,7 +271,11 @@ const ToolActivationBar = ({ scenarioKey, visible, phase = "active", chainHighli
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 + i * 0.08 }}
                   className="text-[8px] px-2 py-1 rounded-lg font-mono"
-                  style={{ color: `hsl(${src.color} / 0.94)`, background: `hsl(${src.color} / 0.34)`, border: `1px solid hsl(${src.color} / 0.34)` }}
+                  style={{
+                    color: `hsl(${src.color} / 0.94)`,
+                    background: `hsl(${src.color} / 0.34)`,
+                    border: `1px solid hsl(${src.color} / 0.34)`,
+                  }}
                 >
                   {src.name}
                 </motion.span>

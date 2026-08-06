@@ -24,16 +24,11 @@ const TABLE = "funnemail_scout_cache" as const;
 
 /** Narrowing runtime esplicito: converte il Json della colonna `evidence`. */
 function toRecord(json: unknown): Record<string, unknown> {
-  return typeof json === "object" && json !== null && !Array.isArray(json)
-    ? (json as Record<string, unknown>)
-    : {};
+  return typeof json === "object" && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>) : {};
 }
 
 export async function listFunnemailScoutCache(limit = 200): Promise<FunnemailScoutCacheRow[]> {
-  const { data, error } = await supabase.from(TABLE)
-    .select("*")
-    .order("cached_at", { ascending: false })
-    .limit(limit);
+  const { data, error } = await supabase.from(TABLE).select("*").order("cached_at", { ascending: false }).limit(limit);
   if (error) throw error;
   return (data ?? []).map((row) => ({ ...row, evidence: toRecord(row.evidence) }));
 }

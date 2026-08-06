@@ -15,9 +15,16 @@ import { countPendingCampaignEmails } from "@/data/emailCampaigns";
 import { getWcaCookie } from "@/lib/wcaCookieStore";
 import { createLogger } from "@/lib/log";
 import {
-  type TestResult, type TestStatus, type DiagnosticsSummary,
-  DB_TABLES, EDGE_FUNCTIONS, RPC_FUNCTIONS, STORAGE_BUCKETS, APP_ROUTES,
-  extractErrorMessage, timedRun,
+  type TestResult,
+  type TestStatus,
+  type DiagnosticsSummary,
+  DB_TABLES,
+  EDGE_FUNCTIONS,
+  RPC_FUNCTIONS,
+  STORAGE_BUCKETS,
+  APP_ROUTES,
+  extractErrorMessage,
+  timedRun,
 } from "./diagnostics/types";
 
 const log = createLogger("Diagnostics");
@@ -31,22 +38,52 @@ async function runAuthTests(upsert: Upsert) {
   upsert({ id: "auth-session", name: "Sessione autenticazione", category: "Auth", status: "running" });
   const sessionResult = await supabase.auth.getSession();
   if (sessionResult.error || !sessionResult.data.session) {
-    upsert({ id: "auth-session", name: "Sessione autenticazione", category: "Auth", status: "fail", message: sessionResult.error?.message ?? "Nessuna sessione attiva" });
+    upsert({
+      id: "auth-session",
+      name: "Sessione autenticazione",
+      category: "Auth",
+      status: "fail",
+      message: sessionResult.error?.message ?? "Nessuna sessione attiva",
+    });
   } else {
-    upsert({ id: "auth-session", name: "Sessione autenticazione", category: "Auth", status: "pass", message: "Sessione valida" });
+    upsert({
+      id: "auth-session",
+      name: "Sessione autenticazione",
+      category: "Auth",
+      status: "pass",
+      message: "Sessione valida",
+    });
   }
 
   // User ID
   const uid = sessionResult.data.session?.user?.id;
-  upsert({ id: "auth-user", name: "User ID disponibile", category: "Auth", status: uid ? "pass" : "fail", message: uid ? uid.slice(0, 8) + "…" : "User ID mancante" });
+  upsert({
+    id: "auth-user",
+    name: "User ID disponibile",
+    category: "Auth",
+    status: uid ? "pass" : "fail",
+    message: uid ? uid.slice(0, 8) + "…" : "User ID mancante",
+  });
 
   // Profile
   upsert({ id: "auth-profile", name: "Profilo utente", category: "Auth", status: "running" });
   try {
     const data = await getProfileSummary();
-    upsert({ id: "auth-profile", name: "Profilo utente", category: "Auth", status: "pass", message: `${data.display_name || "—"} | onboarding: ${data.onboarding_completed}` });
+    upsert({
+      id: "auth-profile",
+      name: "Profilo utente",
+      category: "Auth",
+      status: "pass",
+      message: `${data.display_name || "—"} | onboarding: ${data.onboarding_completed}`,
+    });
   } catch (e: unknown) {
-    upsert({ id: "auth-profile", name: "Profilo utente", category: "Auth", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "auth-profile",
+      name: "Profilo utente",
+      category: "Auth",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 }
 
@@ -74,11 +111,19 @@ async function runRPCTests(upsert: Upsert, abortRef: React.RefObject<boolean>) {
     const id = `rpc-${fn}`;
     upsert({ id, name: fn, category: "RPC Functions", status: "running" });
     if (fn === "deduct_credits" || fn === "increment_contact_interaction") {
-      upsert({ id, name: fn, category: "RPC Functions", status: "warn", message: "Richiede parametri — skip test distruttivo" });
+      upsert({
+        id,
+        name: fn,
+        category: "RPC Functions",
+        status: "warn",
+        message: "Richiede parametri — skip test distruttivo",
+      });
       continue;
     }
     try {
-      const ms = await timedRun(async () => { await rpcCall(fn); });
+      const ms = await timedRun(async () => {
+        await rpcCall(fn);
+      });
       upsert({ id, name: fn, category: "RPC Functions", status: "pass", durationMs: ms });
     } catch (e: unknown) {
       upsert({ id, name: fn, category: "RPC Functions", status: "fail", message: extractErrorMessage(e) });
@@ -105,10 +150,18 @@ async function runStorageTests(upsert: Upsert, abortRef: React.RefObject<boolean
 async function runEdgeFunctionTests(upsert: Upsert, abortRef: React.RefObject<boolean>) {
   const baseUrl = import.meta.env.VITE_SUPABASE_URL;
   if (!baseUrl) {
-    upsert({ id: "ef-url", name: "Supabase URL", category: "Edge Functions", status: "fail", message: "VITE_SUPABASE_URL mancante" });
+    upsert({
+      id: "ef-url",
+      name: "Supabase URL",
+      category: "Edge Functions",
+      status: "fail",
+      message: "VITE_SUPABASE_URL mancante",
+    });
     return;
   }
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   for (const fn of EDGE_FUNCTIONS) {
     if (abortRef.current) return;
     const id = `ef-${fn}`;
@@ -119,8 +172,8 @@ async function runEdgeFunctionTests(upsert: Upsert, abortRef: React.RefObject<bo
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token || ""}`,
-            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
+            Authorization: `Bearer ${session?.access_token || ""}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
           },
           body: JSON.stringify({ _diagnostic_ping: true }),
         });
@@ -139,71 +192,170 @@ async function runCreditsTests(upsert: Upsert) {
   upsert({ id: "credits-balance", name: "Saldo crediti", category: "Sistema Crediti", status: "running" });
   try {
     const data = await getUserCredits();
-    upsert({ id: "credits-balance", name: "Saldo crediti", category: "Sistema Crediti", status: "pass", message: `Saldo: ${data.balance} | Consumati: ${data.total_consumed}` });
+    upsert({
+      id: "credits-balance",
+      name: "Saldo crediti",
+      category: "Sistema Crediti",
+      status: "pass",
+      message: `Saldo: ${data.balance} | Consumati: ${data.total_consumed}`,
+    });
   } catch (e: unknown) {
-    upsert({ id: "credits-balance", name: "Saldo crediti", category: "Sistema Crediti", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "credits-balance",
+      name: "Saldo crediti",
+      category: "Sistema Crediti",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 
   upsert({ id: "credits-transactions", name: "Storico transazioni", category: "Sistema Crediti", status: "running" });
   try {
     const count = await countCreditTransactions();
-    upsert({ id: "credits-transactions", name: "Storico transazioni", category: "Sistema Crediti", status: "pass", message: `${count ?? 0} transazioni` });
+    upsert({
+      id: "credits-transactions",
+      name: "Storico transazioni",
+      category: "Sistema Crediti",
+      status: "pass",
+      message: `${count ?? 0} transazioni`,
+    });
   } catch (e: unknown) {
-    upsert({ id: "credits-transactions", name: "Storico transazioni", category: "Sistema Crediti", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "credits-transactions",
+      name: "Storico transazioni",
+      category: "Sistema Crediti",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 }
 
 async function runDataIntegrityTests(upsert: Upsert) {
   // Partner without country
-  upsert({ id: "integrity-partner-country", name: "Partner senza country_code", category: "Integrità Dati", status: "running" });
+  upsert({
+    id: "integrity-partner-country",
+    name: "Partner senza country_code",
+    category: "Integrità Dati",
+    status: "running",
+  });
   try {
     const count = await countPartnersWithoutCountry();
     const s: TestStatus = count === 0 ? "pass" : "warn";
-    upsert({ id: "integrity-partner-country", name: "Partner senza country_code", category: "Integrità Dati", status: s, message: `${count} trovati` });
+    upsert({
+      id: "integrity-partner-country",
+      name: "Partner senza country_code",
+      category: "Integrità Dati",
+      status: s,
+      message: `${count} trovati`,
+    });
   } catch (e: unknown) {
-    upsert({ id: "integrity-partner-country", name: "Partner senza country_code", category: "Integrità Dati", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "integrity-partner-country",
+      name: "Partner senza country_code",
+      category: "Integrità Dati",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 
   // Contacts coverage
-  upsert({ id: "integrity-contacts-coverage", name: "Copertura contatti partner", category: "Integrità Dati", status: "running" });
+  upsert({
+    id: "integrity-contacts-coverage",
+    name: "Copertura contatti partner",
+    category: "Integrità Dati",
+    status: "running",
+  });
   try {
     const totalPartners = await countActivePartners();
     const noContacts = await countViewRows("partners_no_contacts", { column: "resolved", value: false });
     const pct = totalPartners ? Math.round(((totalPartners - (noContacts ?? 0)) / totalPartners) * 100) : 0;
-    upsert({ id: "integrity-contacts-coverage", name: "Copertura contatti partner", category: "Integrità Dati", status: pct > 50 ? "pass" : "warn", message: `${pct}% con contatti (${noContacts ?? 0} senza)` });
+    upsert({
+      id: "integrity-contacts-coverage",
+      name: "Copertura contatti partner",
+      category: "Integrità Dati",
+      status: pct > 50 ? "pass" : "warn",
+      message: `${pct}% con contatti (${noContacts ?? 0} senza)`,
+    });
   } catch (e: unknown) {
-    upsert({ id: "integrity-contacts-coverage", name: "Copertura contatti partner", category: "Integrità Dati", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "integrity-contacts-coverage",
+      name: "Copertura contatti partner",
+      category: "Integrità Dati",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 
   // Orphan activities
-  upsert({ id: "integrity-orphan-activities", name: "Attività senza partner", category: "Integrità Dati", status: "running" });
+  upsert({
+    id: "integrity-orphan-activities",
+    name: "Attività senza partner",
+    category: "Integrità Dati",
+    status: "running",
+  });
   try {
     const count = await countActivitiesWithNullPartner();
-    upsert({ id: "integrity-orphan-activities", name: "Attività senza partner", category: "Integrità Dati", status: (count ?? 0) === 0 ? "pass" : "warn", message: `${count ?? 0} orfane` });
+    upsert({
+      id: "integrity-orphan-activities",
+      name: "Attività senza partner",
+      category: "Integrità Dati",
+      status: (count ?? 0) === 0 ? "pass" : "warn",
+      message: `${count ?? 0} orfane`,
+    });
   } catch (e: unknown) {
-    upsert({ id: "integrity-orphan-activities", name: "Attività senza partner", category: "Integrità Dati", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "integrity-orphan-activities",
+      name: "Attività senza partner",
+      category: "Integrità Dati",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 
   // Stuck jobs
   upsert({ id: "integrity-stuck-jobs", name: "Download jobs bloccati", category: "Integrità Dati", status: "running" });
   try {
     const data = await findJobsByStatusSelect(["running", "pending"], "id, status, updated_at");
-    const stuck = (data || []).filter(j => {
+    const stuck = (data || []).filter((j) => {
       const age = Date.now() - new Date(j.updated_at).getTime();
       return age > 30 * 60 * 1000;
     });
-    upsert({ id: "integrity-stuck-jobs", name: "Download jobs bloccati", category: "Integrità Dati", status: stuck.length === 0 ? "pass" : "warn", message: `${stuck.length} bloccati (>30min), ${(data || []).length} attivi` });
+    upsert({
+      id: "integrity-stuck-jobs",
+      name: "Download jobs bloccati",
+      category: "Integrità Dati",
+      status: stuck.length === 0 ? "pass" : "warn",
+      message: `${stuck.length} bloccati (>30min), ${(data || []).length} attivi`,
+    });
   } catch (e: unknown) {
-    upsert({ id: "integrity-stuck-jobs", name: "Download jobs bloccati", category: "Integrità Dati", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "integrity-stuck-jobs",
+      name: "Download jobs bloccati",
+      category: "Integrità Dati",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 
   // Email queue
   upsert({ id: "integrity-email-queue", name: "Coda email bloccata", category: "Integrità Dati", status: "running" });
   try {
     const count = await countPendingCampaignEmails();
-    upsert({ id: "integrity-email-queue", name: "Coda email", category: "Integrità Dati", status: "pass", message: `${count ?? 0} in coda` });
+    upsert({
+      id: "integrity-email-queue",
+      name: "Coda email",
+      category: "Integrità Dati",
+      status: "pass",
+      message: `${count ?? 0} in coda`,
+    });
   } catch (e: unknown) {
-    upsert({ id: "integrity-email-queue", name: "Coda email", category: "Integrità Dati", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "integrity-email-queue",
+      name: "Coda email",
+      category: "Integrità Dati",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 }
 
@@ -215,9 +367,22 @@ async function runBridgeTests(upsert: Upsert) {
       const res = await fetch("https://wca-app.vercel.app/api/login", { method: "OPTIONS" });
       if (!res.ok && res.status !== 405 && res.status !== 204) throw new Error(`HTTP ${res.status}`);
     });
-    upsert({ id: "bridge-wca-app", name: "wca-app Bridge", category: "Claude Engine V8", status: "pass", message: "Raggiungibile", durationMs: ms });
+    upsert({
+      id: "bridge-wca-app",
+      name: "wca-app Bridge",
+      category: "Claude Engine V8",
+      status: "pass",
+      message: "Raggiungibile",
+      durationMs: ms,
+    });
   } catch (e: unknown) {
-    upsert({ id: "bridge-wca-app", name: "wca-app Bridge", category: "Claude Engine V8", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "bridge-wca-app",
+      name: "wca-app Bridge",
+      category: "Claude Engine V8",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 
   // WCA login
@@ -232,22 +397,52 @@ async function runBridgeTests(upsert: Upsert) {
       const data: { success?: boolean; error?: string } = await res.json();
       if (!data.success) throw new Error(data.error || "Login fallito");
     });
-    upsert({ id: "bridge-wca-login", name: "Login WCA (server-side)", category: "Claude Engine V8", status: "pass", message: "Cookie ottenuto", durationMs: ms });
+    upsert({
+      id: "bridge-wca-login",
+      name: "Login WCA (server-side)",
+      category: "Claude Engine V8",
+      status: "pass",
+      message: "Cookie ottenuto",
+      durationMs: ms,
+    });
   } catch (e: unknown) {
-    upsert({ id: "bridge-wca-login", name: "Login WCA (server-side)", category: "Claude Engine V8", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "bridge-wca-login",
+      name: "Login WCA (server-side)",
+      category: "Claude Engine V8",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 
   // Local cookie
   upsert({ id: "bridge-local-cookie", name: "Cookie locale (cache)", category: "Claude Engine V8", status: "running" });
   try {
     const cookie = getWcaCookie();
-    upsert({ id: "bridge-local-cookie", name: "Cookie locale (cache)", category: "Claude Engine V8", status: cookie ? "pass" : "warn", message: cookie ? "Valido" : "Non presente o scaduto" });
+    upsert({
+      id: "bridge-local-cookie",
+      name: "Cookie locale (cache)",
+      category: "Claude Engine V8",
+      status: cookie ? "pass" : "warn",
+      message: cookie ? "Valido" : "Non presente o scaduto",
+    });
   } catch (e: unknown) {
-    upsert({ id: "bridge-local-cookie", name: "Cookie locale (cache)", category: "Claude Engine V8", status: "fail", message: extractErrorMessage(e) });
+    upsert({
+      id: "bridge-local-cookie",
+      name: "Cookie locale (cache)",
+      category: "Claude Engine V8",
+      status: "fail",
+      message: extractErrorMessage(e),
+    });
   }
 
   // Chrome extension
-  upsert({ id: "ext-wca-chrome", name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: "running" });
+  upsert({
+    id: "ext-wca-chrome",
+    name: "Estensione Chrome (opzionale)",
+    category: "Claude Engine V8",
+    status: "running",
+  });
   try {
     const ok = await new Promise<boolean>((resolve) => {
       const reqId = `diag_${Date.now()}`;
@@ -262,10 +457,22 @@ async function runBridgeTests(upsert: Upsert) {
       window.addEventListener("message", handler);
       window.postMessage({ direction: "from-webapp", action: "ping", requestId: reqId }, window.location.origin);
     });
-    upsert({ id: "ext-wca-chrome", name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: ok ? "pass" : "warn", message: ok ? "Connessa" : "Non installata (non necessaria)" });
+    upsert({
+      id: "ext-wca-chrome",
+      name: "Estensione Chrome (opzionale)",
+      category: "Claude Engine V8",
+      status: ok ? "pass" : "warn",
+      message: ok ? "Connessa" : "Non installata (non necessaria)",
+    });
   } catch (e: unknown) {
     log.warn("operation failed", { error: extractErrorMessage(e) });
-    upsert({ id: "ext-wca-chrome", name: "Estensione Chrome (opzionale)", category: "Claude Engine V8", status: "warn", message: "Non rilevata" });
+    upsert({
+      id: "ext-wca-chrome",
+      name: "Estensione Chrome (opzionale)",
+      category: "Claude Engine V8",
+      status: "warn",
+      message: "Non rilevata",
+    });
   }
 }
 
@@ -284,9 +491,13 @@ export function useDiagnosticsRunner() {
   const abortRef = useRef(false);
 
   const upsert = useCallback((r: TestResult) => {
-    setResults(prev => {
-      const idx = prev.findIndex(x => x.id === r.id);
-      if (idx >= 0) { const n = [...prev]; n[idx] = r; return n; }
+    setResults((prev) => {
+      const idx = prev.findIndex((x) => x.id === r.id);
+      if (idx >= 0) {
+        const n = [...prev];
+        n[idx] = r;
+        return n;
+      }
       return [...prev, r];
     });
   }, []);
@@ -310,25 +521,28 @@ export function useDiagnosticsRunner() {
     setRunning(false);
   }, [upsert]);
 
-  const abort = useCallback(() => { abortRef.current = true; }, []);
+  const abort = useCallback(() => {
+    abortRef.current = true;
+  }, []);
 
   const toggleCat = useCallback((cat: string) => {
-    setExpandedCats(prev => {
+    setExpandedCats((prev) => {
       const n = new Set(prev);
-      if (n.has(cat)) n.delete(cat); else n.add(cat);
+      if (n.has(cat)) n.delete(cat);
+      else n.add(cat);
       return n;
     });
   }, []);
 
-  const categories = [...new Set(results.map(r => r.category))];
-  const byCat = (cat: string) => results.filter(r => r.category === cat);
+  const categories = [...new Set(results.map((r) => r.category))];
+  const byCat = (cat: string) => results.filter((r) => r.category === cat);
 
   const summary: DiagnosticsSummary = {
     total: results.length,
-    pass: results.filter(r => r.status === "pass").length,
-    fail: results.filter(r => r.status === "fail").length,
-    warn: results.filter(r => r.status === "warn").length,
-    running: results.filter(r => r.status === "running").length,
+    pass: results.filter((r) => r.status === "pass").length,
+    fail: results.filter((r) => r.status === "fail").length,
+    warn: results.filter((r) => r.status === "warn").length,
+    running: results.filter((r) => r.status === "running").length,
   };
 
   return { results, running, expandedCats, categories, summary, runAll, abort, toggleCat, byCat };

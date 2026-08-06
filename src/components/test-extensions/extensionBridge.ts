@@ -7,7 +7,7 @@ export function sendToExtension(
   responseDirection: string,
   action: string,
   payload: Record<string, unknown> = {},
-  timeoutMs = 30000
+  timeoutMs = 30000,
 ): Promise<Record<string, unknown>> {
   return new Promise((resolve) => {
     const requestId = `test_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -43,16 +43,23 @@ function ensureLiConfig() {
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return;
   liConfigSent = true;
-  window.postMessage({
-    direction: "from-webapp-li",
-    action: "setConfig",
-    requestId: `li_setConfig_${Date.now()}`,
-    supabaseUrl: url,
-    supabaseAnonKey: key,
-  }, window.location.origin);
+  window.postMessage(
+    {
+      direction: "from-webapp-li",
+      action: "setConfig",
+      requestId: `li_setConfig_${Date.now()}`,
+      supabaseUrl: url,
+      supabaseAnonKey: key,
+    },
+    window.location.origin,
+  );
 }
 
-export const liMsg = (action: string, payload: Record<string, unknown> = {}, timeout = action === "sendMessage" ? 120000 : 30000) => {
+export const liMsg = (
+  action: string,
+  payload: Record<string, unknown> = {},
+  timeout = action === "sendMessage" ? 120000 : 30000,
+) => {
   ensureLiConfig();
   return sendToExtension("from-webapp-li", "from-extension-li", action, payload, timeout);
 };

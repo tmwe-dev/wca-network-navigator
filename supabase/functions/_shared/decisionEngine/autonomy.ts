@@ -17,10 +17,7 @@ import { AutonomyLevel, DecisionContext } from "./types.ts";
  * @param ctx - Decision context with user preference and error rate
  * @returns The effective autonomy level after applying constraints
  */
-export function resolveAutonomy(
-  ideal: AutonomyLevel,
-  ctx: DecisionContext,
-): AutonomyLevel {
+export function resolveAutonomy(ideal: AutonomyLevel, ctx: DecisionContext): AutonomyLevel {
   const levels: AutonomyLevel[] = ["suggest", "prepare", "execute", "autopilot"];
   const idealIdx = levels.indexOf(ideal);
   const userMaxIdx = levels.indexOf(ctx.userAutonomyPreference);

@@ -23,25 +23,15 @@ export async function ensureAliasesExist(
 
   if (!needsCompanyAlias && !needsContactAlias) return;
 
-  const generated = await generateAliasesInline(
-    partner.company_name,
-    contact?.name || null,
-    contact?.title || null,
-  );
+  const generated = await generateAliasesInline(partner.company_name, contact?.name || null, contact?.title || null);
 
   // Persist company alias
   if (generated.company_alias && needsCompanyAlias) {
     partner.company_alias = generated.company_alias;
     if (sourceType === "partner") {
-      await supabase
-        .from("partners")
-        .update({ company_alias: generated.company_alias })
-        .eq("id", partner.id!);
+      await supabase.from("partners").update({ company_alias: generated.company_alias }).eq("id", partner.id!);
     } else if (sourceType === "contact") {
-      await supabase
-        .from("imported_contacts")
-        .update({ company_alias: generated.company_alias })
-        .eq("id", partner.id!);
+      await supabase.from("imported_contacts").update({ company_alias: generated.company_alias }).eq("id", partner.id!);
     }
   }
 
@@ -49,15 +39,9 @@ export async function ensureAliasesExist(
   if (generated.contact_alias && needsContactAlias && contact) {
     contact.contact_alias = generated.contact_alias;
     if (sourceType === "partner") {
-      await supabase
-        .from("partner_contacts")
-        .update({ contact_alias: generated.contact_alias })
-        .eq("id", contact.id);
+      await supabase.from("partner_contacts").update({ contact_alias: generated.contact_alias }).eq("id", contact.id);
     } else if (sourceType === "contact") {
-      await supabase
-        .from("imported_contacts")
-        .update({ contact_alias: generated.contact_alias })
-        .eq("id", contact.id);
+      await supabase.from("imported_contacts").update({ contact_alias: generated.contact_alias }).eq("id", contact.id);
     }
   }
 }

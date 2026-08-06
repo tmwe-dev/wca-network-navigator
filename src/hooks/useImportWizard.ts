@@ -83,136 +83,158 @@ export function useImportWizard() {
   const [uploading, setUploading] = useState(false);
 
   // ── Re-import correction ──
-  const handleReimportCorrection = useCallback(async (rows: Record<string, unknown>[], headers: string[]) => {
-    setUploading(true);
-    try {
-      const idKey = headers.find(h => {
-        const n = normalizeKey(h);
-        return n === "_import_id" || n === "import_id";
-      });
-      if (!idKey) {
-        toast({ title: "Colonna _import_id non trovata", variant: "destructive" });
-        setUploading(false);
-        return;
-      }
-
-      const metaColumns = new Set(["_import_id", "import_id", "motivo_errore"]);
-      const dataHeaders = headers.filter(h => !metaColumns.has(normalizeKey(h)));
-      const columnKeyMap: Record<string, string> = {};
-      for (const col of TARGET_COLUMNS) {
-        const match = dataHeaders.find(h => normalizeKey(h) === col);
-        if (match) columnKeyMap[col] = match;
-      }
-
-      let updatedCount = 0;
-      let errorCount = 0;
-      const BATCH_SIZE = 50;
-
-      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-        const batch = rows.slice(i, i + BATCH_SIZE);
-        const promises = batch.map(async (row) => {
-          const importId = row[idKey];
-          if (!importId || !String(importId).trim()) return false;
-          const updateData: Record<string, string | null> = {};
-          for (const [col, rowKey] of Object.entries(columnKeyMap)) {
-            const val = row[rowKey];
-            if (val && String(val).trim()) updateData[col] = String(val).trim();
-          }
-          if (Object.keys(updateData).length === 0) return false;
-          const { updateContact } = await import("@/data/contacts");
-          try {
-            await updateContact(String(importId).trim(), updateData);
-            return true;
-          } catch { return false; }
+  const handleReimportCorrection = useCallback(
+    async (rows: Record<string, unknown>[], headers: string[]) => {
+      setUploading(true);
+      try {
+        const idKey = headers.find((h) => {
+          const n = normalizeKey(h);
+          return n === "_import_id" || n === "import_id";
         });
-        const results = await Promise.all(promises);
-        updatedCount += results.filter(Boolean).length;
-        errorCount += results.filter(r => r === false).length;
-      }
+        if (!idKey) {
+          toast({ title: "Colonna _import_id non trovata", variant: "destructive" });
+          setUploading(false);
+          return;
+        }
 
-      toast({ title: `${updatedCount} record aggiornati con successo${errorCount > 0 ? ` (${errorCount} saltati)` : ""}` });
-      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
-    } catch (err) {
-      toast({ title: "Errore aggiornamento", description: String(err), variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  }, [queryClient]);
+        const metaColumns = new Set(["_import_id", "import_id", "motivo_errore"]);
+        const dataHeaders = headers.filter((h) => !metaColumns.has(normalizeKey(h)));
+        const columnKeyMap: Record<string, string> = {};
+        for (const col of TARGET_COLUMNS) {
+          const match = dataHeaders.find((h) => normalizeKey(h) === col);
+          if (match) columnKeyMap[col] = match;
+        }
+
+        let updatedCount = 0;
+        let errorCount = 0;
+        const BATCH_SIZE = 50;
+
+        for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+          const batch = rows.slice(i, i + BATCH_SIZE);
+          const promises = batch.map(async (row) => {
+            const importId = row[idKey];
+            if (!importId || !String(importId).trim()) return false;
+            const updateData: Record<string, string | null> = {};
+            for (const [col, rowKey] of Object.entries(columnKeyMap)) {
+              const val = row[rowKey];
+              if (val && String(val).trim()) updateData[col] = String(val).trim();
+            }
+            if (Object.keys(updateData).length === 0) return false;
+            const { updateContact } = await import("@/data/contacts");
+            try {
+              await updateContact(String(importId).trim(), updateData);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+          const results = await Promise.all(promises);
+          updatedCount += results.filter(Boolean).length;
+          errorCount += results.filter((r) => r === false).length;
+        }
+
+        toast({
+          title: `${updatedCount} record aggiornati con successo${errorCount > 0 ? ` (${errorCount} saltati)` : ""}`,
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
+      } catch (err) {
+        toast({ title: "Errore aggiornamento", description: String(err), variant: "destructive" });
+      } finally {
+        setUploading(false);
+      }
+    },
+    [queryClient],
+  );
 
   // ── Delete import ──
-  const handleDeleteImport = useCallback(async (logId: string) => {
-    try {
-      await deleteImportErrors(logId);
-      await deleteImportedContactsByLogId(logId);
-      await deleteImportLog(logId);
-      if (activeLogId === logId) setActiveLogId(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
-      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
-      toast({ title: "Import eliminato" });
-    } catch (err) {
-      toast({ title: "Errore eliminazione", description: String(err), variant: "destructive" });
-    }
-  }, [activeLogId, queryClient]);
+  const handleDeleteImport = useCallback(
+    async (logId: string) => {
+      try {
+        await deleteImportErrors(logId);
+        await deleteImportedContactsByLogId(logId);
+        await deleteImportLog(logId);
+        if (activeLogId === logId) setActiveLogId(null);
+        queryClient.invalidateQueries({ queryKey: queryKeys.imports.logs });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.imported() });
+        toast({ title: "Import eliminato" });
+      } catch (err) {
+        toast({ title: "Errore eliminazione", description: String(err), variant: "destructive" });
+      }
+    },
+    [activeLogId, queryClient],
+  );
 
   // ── Process file ──
-  const processFile = useCallback(async (file: File) => {
-    if (!file.name.match(/\.(csv|xlsx?|txt|json)$/i)) {
-      toast({ title: "Formato non supportato", description: "Usa CSV, Excel (.xlsx), TXT o JSON", variant: "destructive" });
-      return;
-    }
-    setUploading(true);
-    setUploadDialogOpen(false);
-    setTab("upload");
-    try {
-      const { parsed } = await parseFile(file);
-      const { headers, rows: rawRows } = parsed;
-      if (rawRows.length === 0) {
-        toast({ title: "File vuoto", variant: "destructive" });
-        setUploading(false);
-        return;
-      }
-      const rowObjects = rawRows.map(row => {
-        const obj: Record<string, string> = {};
-        headers.forEach((h, idx) => { obj[h] = row[idx] || ""; });
-        return obj;
-      });
-      if (isReimportCorrection(headers)) {
-        await handleReimportCorrection(rowObjects, headers);
-        return;
-      }
-      setPendingFile(file);
-      setPendingRows(rowObjects);
-      const sampleSize = Math.min(50, rowObjects.length);
-      const step = rowObjects.length / sampleSize;
-      const sample: Array<Record<string, unknown>> = [];
-      for (let i = 0; i < sampleSize; i++) {
-        sample.push(rowObjects[Math.floor(i * step)]);
-      }
-      const result = await analyzeStructure.mutateAsync({
-        inputType: "file",
-        sampleRows: sample,
-      });
-      setAiMapping(result);
-      const mappedCount = Object.keys(result.column_mapping || {}).length;
-      if (mappedCount > 0) {
+  const processFile = useCallback(
+    async (file: File) => {
+      if (!file.name.match(/\.(csv|xlsx?|txt|json)$/i)) {
         toast({
-          title: `Analisi AI: ${mappedCount} colonne mappate (confidence ${Math.round(result.confidence * 100)}%) — ${rowObjects.length} righe totali`,
-        });
-      } else {
-        toast({
-          title: "L'AI non ha trovato colonne mappabili",
-          description: "Verifica che il file contenga dati di contatti (email, telefono, nomi aziende). Riprova.",
+          title: "Formato non supportato",
+          description: "Usa CSV, Excel (.xlsx), TXT o JSON",
           variant: "destructive",
         });
+        return;
       }
-    } catch (err) {
-      wizardLog.error("file analysis failed", { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
-      toast({ title: "Errore analisi file", description: String(err), variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  }, [analyzeStructure, handleReimportCorrection]);
+      setUploading(true);
+      setUploadDialogOpen(false);
+      setTab("upload");
+      try {
+        const { parsed } = await parseFile(file);
+        const { headers, rows: rawRows } = parsed;
+        if (rawRows.length === 0) {
+          toast({ title: "File vuoto", variant: "destructive" });
+          setUploading(false);
+          return;
+        }
+        const rowObjects = rawRows.map((row) => {
+          const obj: Record<string, string> = {};
+          headers.forEach((h, idx) => {
+            obj[h] = row[idx] || "";
+          });
+          return obj;
+        });
+        if (isReimportCorrection(headers)) {
+          await handleReimportCorrection(rowObjects, headers);
+          return;
+        }
+        setPendingFile(file);
+        setPendingRows(rowObjects);
+        const sampleSize = Math.min(50, rowObjects.length);
+        const step = rowObjects.length / sampleSize;
+        const sample: Array<Record<string, unknown>> = [];
+        for (let i = 0; i < sampleSize; i++) {
+          sample.push(rowObjects[Math.floor(i * step)]);
+        }
+        const result = await analyzeStructure.mutateAsync({
+          inputType: "file",
+          sampleRows: sample,
+        });
+        setAiMapping(result);
+        const mappedCount = Object.keys(result.column_mapping || {}).length;
+        if (mappedCount > 0) {
+          toast({
+            title: `Analisi AI: ${mappedCount} colonne mappate (confidence ${Math.round(result.confidence * 100)}%) — ${rowObjects.length} righe totali`,
+          });
+        } else {
+          toast({
+            title: "L'AI non ha trovato colonne mappabili",
+            description: "Verifica che il file contenga dati di contatti (email, telefono, nomi aziende). Riprova.",
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        wizardLog.error("file analysis failed", {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+        toast({ title: "Errore analisi file", description: String(err), variant: "destructive" });
+      } finally {
+        setUploading(false);
+      }
+    },
+    [analyzeStructure, handleReimportCorrection],
+  );
 
   // ── Paste analyze ──
   const handlePasteAnalyze = useCallback(async () => {
@@ -224,23 +246,41 @@ export function useImportWizard() {
         rawText: pasteText,
       });
       setAiMapping(result);
-      toast({ title: `${result.parsed_rows.length} righe estratte (confidence: ${Math.round(result.confidence * 100)}%)` });
-    } catch (e) { wizardLog.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+      toast({
+        title: `${result.parsed_rows.length} righe estratte (confidence: ${Math.round(result.confidence * 100)}%)`,
+      });
+    } catch (e) {
+      wizardLog.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* intentionally ignored: best-effort cleanup */
+    }
   }, [pasteText, analyzeStructure]);
 
   // ── Drag & Drop ──
-  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
-  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); }, []);
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) processFile(file);
-  }, [processFile]);
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) processFile(file);
-  }, [processFile]);
+  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file) processFile(file);
+    },
+    [processFile],
+  );
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) processFile(file);
+    },
+    [processFile],
+  );
 
   // ── Confirm mapping ──
   const handleConfirmMapping = useCallback(async () => {
@@ -252,13 +292,17 @@ export function useImportWizard() {
 
     setUploading(true);
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       const uploadMode = pendingFile ? "file" : "paste";
-      const fileName = uploadMode === "paste"
-        ? `testo_incollato_${new Date().toISOString().slice(0, 10)}`
-        : pendingFile?.name || "file_importato";
+      const fileName =
+        uploadMode === "paste"
+          ? `testo_incollato_${new Date().toISOString().slice(0, 10)}`
+          : pendingFile?.name || "file_importato";
 
       // P5.1 — Dedup detection (warn, non bloccante)
       try {
@@ -270,15 +314,17 @@ export function useImportWizard() {
         const companyCol = Object.entries(mapping).find(([, v]) => v === "company_name")?.[0];
         for (const r of sourceRows) {
           const e = emailCol ? (r as Record<string, unknown>)[emailCol] : (r as Record<string, unknown>).email;
-          const c = companyCol ? (r as Record<string, unknown>)[companyCol] : (r as Record<string, unknown>).company_name;
+          const c = companyCol
+            ? (r as Record<string, unknown>)[companyCol]
+            : (r as Record<string, unknown>).company_name;
           if (e && String(e).trim()) emails.push(String(e).trim());
           if (c && String(c).trim()) companies.push(String(c).trim());
         }
         if (emails.length || companies.length) {
           const dups = await findImportDuplicates(user.id, emails.slice(0, 500), companies.slice(0, 500));
           if (dups.length > 0) {
-            const byEmail = new Set(dups.filter(d => d.match_email).map(d => d.match_email));
-            const byCompany = new Set(dups.filter(d => d.source === "partner_company").map(d => d.match_company));
+            const byEmail = new Set(dups.filter((d) => d.match_email).map((d) => d.match_email));
+            const byCompany = new Set(dups.filter((d) => d.source === "partner_company").map((d) => d.match_company));
             toast({
               title: `Possibili duplicati: ${dups.length}`,
               description: `${byEmail.size} email + ${byCompany.size} aziende già presenti. Verificali nello staging dopo l'import.`,
@@ -286,7 +332,9 @@ export function useImportWizard() {
           }
         }
       } catch (dedupErr) {
-        wizardLog.debug("dedup check skipped", { error: dedupErr instanceof Error ? dedupErr.message : String(dedupErr) });
+        wizardLog.debug("dedup check skipped", {
+          error: dedupErr instanceof Error ? dedupErr.message : String(dedupErr),
+        });
       }
 
       let log: ImportLog;
@@ -301,11 +349,11 @@ export function useImportWizard() {
           const mapped = applyMapping(row, aiMapping.column_mapping);
           return { ...mapped, _raw: row };
         });
-        const nonEmptyCount = finalRows.filter(r =>
-          TARGET_COLUMNS.some(col => {
+        const nonEmptyCount = finalRows.filter((r) =>
+          TARGET_COLUMNS.some((col) => {
             const val = (r as Record<string, unknown>)[col];
             return val != null && String(val).trim();
-          })
+          }),
         ).length;
         const fillRate = nonEmptyCount / finalRows.length;
         if (fillRate < 0.1) {
@@ -341,7 +389,10 @@ export function useImportWizard() {
       setPendingFile(null);
       setPendingRows([]);
       setGroupName("");
-      toast({ title: "Importazione completata", description: `${pendingFile ? pendingRows.length : aiMapping.parsed_rows.length} righe nello staging` });
+      toast({
+        title: "Importazione completata",
+        description: `${pendingFile ? pendingRows.length : aiMapping.parsed_rows.length} righe nello staging`,
+      });
     } catch (err) {
       toast({ title: "Errore", description: String(err), variant: "destructive" });
     } finally {
@@ -350,28 +401,33 @@ export function useImportWizard() {
   }, [aiMapping, pendingFile, pendingRows, createFromParsed, groupName, importSource]);
 
   // ── Change mapping target ──
-  const handleMappingTargetChange = useCallback((srcKey: string, newTarget: string) => {
-    if (!aiMapping) return;
-    const newMapping = { ...aiMapping.column_mapping };
-    if (newTarget === "__unmapped__") {
-      delete newMapping[srcKey];
-      const newUnmapped = [...(aiMapping.unmapped_columns || []), srcKey];
-      setAiMapping({ ...aiMapping, column_mapping: newMapping, unmapped_columns: newUnmapped });
-      return;
-    }
-    const existingEntry = Object.entries(newMapping).find(
-      ([key, val]) => val === newTarget && key !== srcKey
-    );
-    if (existingEntry) {
-      delete newMapping[existingEntry[0]];
-      const newUnmapped = [...(aiMapping.unmapped_columns || []), existingEntry[0]];
-      toast({ title: `"${existingEntry[0]}" rimossa dal mapping (${newTarget} era già assegnata)` });
-      setAiMapping({ ...aiMapping, column_mapping: { ...newMapping, [srcKey]: newTarget }, unmapped_columns: newUnmapped });
-    } else {
-      newMapping[srcKey] = newTarget;
-      setAiMapping({ ...aiMapping, column_mapping: newMapping });
-    }
-  }, [aiMapping]);
+  const handleMappingTargetChange = useCallback(
+    (srcKey: string, newTarget: string) => {
+      if (!aiMapping) return;
+      const newMapping = { ...aiMapping.column_mapping };
+      if (newTarget === "__unmapped__") {
+        delete newMapping[srcKey];
+        const newUnmapped = [...(aiMapping.unmapped_columns || []), srcKey];
+        setAiMapping({ ...aiMapping, column_mapping: newMapping, unmapped_columns: newUnmapped });
+        return;
+      }
+      const existingEntry = Object.entries(newMapping).find(([key, val]) => val === newTarget && key !== srcKey);
+      if (existingEntry) {
+        delete newMapping[existingEntry[0]];
+        const newUnmapped = [...(aiMapping.unmapped_columns || []), existingEntry[0]];
+        toast({ title: `"${existingEntry[0]}" rimossa dal mapping (${newTarget} era già assegnata)` });
+        setAiMapping({
+          ...aiMapping,
+          column_mapping: { ...newMapping, [srcKey]: newTarget },
+          unmapped_columns: newUnmapped,
+        });
+      } else {
+        newMapping[srcKey] = newTarget;
+        setAiMapping({ ...aiMapping, column_mapping: newMapping });
+      }
+    },
+    [aiMapping],
+  );
 
   const handleProcess = useCallback(() => {
     if (!activeLogId) return;
@@ -390,7 +446,7 @@ export function useImportWizard() {
 
   // ── Export incomplete ──
   const handleExportIncomplete = useCallback(async () => {
-    const incomplete = contacts.filter(c => !c.company_name && !c.name);
+    const incomplete = contacts.filter((c) => !c.company_name && !c.name);
     if (incomplete.length === 0) return;
     const SEP = ";";
     const escapeCell = (val: string) => {
@@ -399,20 +455,19 @@ export function useImportWizard() {
       if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) return `"${s}"`;
       return s;
     };
-    const firstWithRaw = incomplete.find(c => c.raw_data && typeof c.raw_data === "object");
-    const originalHeaders = firstWithRaw ? Object.keys(firstWithRaw.raw_data as Record<string, unknown>) : [
-      "company_name", "name", "email", "phone", "mobile", "country", "city", "address", "zip_code"
-    ];
+    const firstWithRaw = incomplete.find((c) => c.raw_data && typeof c.raw_data === "object");
+    const originalHeaders = firstWithRaw
+      ? Object.keys(firstWithRaw.raw_data as Record<string, unknown>)
+      : ["company_name", "name", "email", "phone", "mobile", "country", "city", "address", "zip_code"];
     const headers = ["_import_id", ...originalHeaders, "motivo_errore"];
     const csvRows = [headers.map(escapeCell).join(SEP)];
     for (const c of incomplete) {
-      const motivo = !c.company_name && !c.name
-        ? "azienda e nome mancanti"
-        : !c.company_name ? "azienda mancante" : "nome mancante";
+      const motivo =
+        !c.company_name && !c.name ? "azienda e nome mancanti" : !c.company_name ? "azienda mancante" : "nome mancante";
       const raw = (c.raw_data && typeof c.raw_data === "object" ? c.raw_data : {}) as Record<string, unknown>;
       const row = [
         escapeCell(c.id),
-        ...originalHeaders.map(h => escapeCell(String(raw[h] ?? ""))),
+        ...originalHeaders.map((h) => escapeCell(String(raw[h] ?? ""))),
         escapeCell(motivo),
       ];
       csvRows.push(row.join(SEP));
@@ -430,30 +485,48 @@ export function useImportWizard() {
 
   return {
     // State
-    activeLogId, setActiveLogId,
-    tab, setTab,
-    uploadDialogOpen, setUploadDialogOpen,
-    dialogTab, setDialogTab,
-    importSource, setImportSource,
-    groupName, setGroupName,
-    pasteText, setPasteText,
-    pendingFile, pendingRows,
-    aiMapping, setAiMapping,
+    activeLogId,
+    setActiveLogId,
+    tab,
+    setTab,
+    uploadDialogOpen,
+    setUploadDialogOpen,
+    dialogTab,
+    setDialogTab,
+    importSource,
+    setImportSource,
+    groupName,
+    setGroupName,
+    pasteText,
+    setPasteText,
+    pendingFile,
+    pendingRows,
+    aiMapping,
+    setAiMapping,
     isDragging,
     fileInputRef,
     uploading,
     // Query data
-    logs, activeLog, contacts, errors,
+    logs,
+    activeLog,
+    contacts,
+    errors,
     // Derived
     progress,
-    pendingErrors, correctedErrors, dismissedErrors,
+    pendingErrors,
+    correctedErrors,
+    dismissedErrors,
     // Mutations
-    processImport, analyzeStructure, fixErrors,
+    processImport,
+    analyzeStructure,
+    fixErrors,
     // Handlers
     handleDeleteImport,
     processFile,
     handlePasteAnalyze,
-    handleDragOver, handleDragLeave, handleDrop,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
     handleFileInputChange,
     handleConfirmMapping,
     handleMappingTargetChange,

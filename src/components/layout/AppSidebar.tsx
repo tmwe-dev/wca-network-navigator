@@ -1,6 +1,29 @@
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, Mail, Globe, Home, Moon, Sun, Settings, Wifi, WifiOff, Users, Command, Rocket, MessageCircle, Send, Inbox, Target, LogOut, Activity, Crown, Gamepad2, Shield, Brain } from "lucide-react";
+import {
+  Calendar,
+  Mail,
+  Globe,
+  Home,
+  Moon,
+  Sun,
+  Settings,
+  Wifi,
+  WifiOff,
+  Users,
+  Command,
+  Rocket,
+  MessageCircle,
+  Send,
+  Inbox,
+  Target,
+  LogOut,
+  Activity,
+  Crown,
+  Gamepad2,
+  Shield,
+  Brain,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -43,9 +66,7 @@ function getNavSections(pathname: string) {
     },
     {
       label: "Legacy",
-      items: [
-        { title: "Campagne", url: "/v1/campaigns", icon: Send },
-      ],
+      items: [{ title: "Campagne", url: "/v1/campaigns", icon: Send }],
     },
     {
       label: "Sistema",
@@ -65,15 +86,10 @@ interface AppSidebarProps {
 export function AppSidebar({ collapsed: _collapsed, onToggle: _onToggle }: AppSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isDark, setIsDark] = useState(
-    () => document.documentElement.classList.contains("dark")
-  );
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
   const { isSessionActive } = useWcaSession();
   const pendingCount = usePendingTaskCount();
-  const wcaStatus =
-    isSessionActive === true ? "ok"
-    : isSessionActive === false ? "expired"
-    : "checking";
+  const wcaStatus = isSessionActive === true ? "ok" : isSessionActive === false ? "expired" : "checking";
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -129,7 +145,7 @@ export function AppSidebar({ collapsed: _collapsed, onToggle: _onToggle }: AppSi
                         "group relative flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium transition-all duration-150",
                         isActive
                           ? "bg-sidebar-accent text-sidebar-foreground"
-                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
                       )}
                     >
                       <item.icon
@@ -137,7 +153,7 @@ export function AppSidebar({ collapsed: _collapsed, onToggle: _onToggle }: AppSi
                           "w-4 h-4 flex-shrink-0 transition-all duration-150",
                           isActive
                             ? "text-sidebar-primary"
-                            : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80 group-hover:scale-110"
+                            : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80 group-hover:scale-110",
                         )}
                       />
                       <span className="truncate">{item.title}</span>
@@ -182,7 +198,7 @@ export function AppSidebar({ collapsed: _collapsed, onToggle: _onToggle }: AppSi
               <div
                 className={cn(
                   "flex items-center gap-2.5 px-2 py-[7px] rounded-md text-[13px] font-medium transition-colors",
-                  wcaStatus === "ok" ? "text-success" : "text-muted-foreground"
+                  wcaStatus === "ok" ? "text-success" : "text-muted-foreground",
                 )}
               >
                 <span className="relative flex-shrink-0">

@@ -39,12 +39,12 @@ const OPTIONAL_COLUMNS = ["address", "phone", "email", "website", "partner_type"
 
 // Parse CSV content
 function parseCSV(content: string): { headers: string[]; rows: string[][] } {
-  const lines = content.split(/\r?\n/).filter(line => line.trim());
+  const lines = content.split(/\r?\n/).filter((line) => line.trim());
   if (lines.length === 0) {
     throw new Error("Il file CSV è vuoto");
   }
 
-  const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
+  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/['"]/g, ""));
   const rows: string[][] = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -66,7 +66,7 @@ function parseCSV(content: string): { headers: string[]; rows: string[][] } {
     }
     row.push(current.trim());
 
-    if (row.some(cell => cell.length > 0)) {
+    if (row.some((cell) => cell.length > 0)) {
       rows.push(row);
     }
   }
@@ -137,7 +137,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
       const { headers, rows } = parseCSV(content);
 
       // Check for required columns
-      const missingColumns = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
+      const missingColumns = REQUIRED_COLUMNS.filter((col) => !headers.includes(col));
       if (missingColumns.length > 0) {
         toast({
           title: "Colonne mancanti",
@@ -215,26 +215,30 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
 
       for (let i = 0; i < partners.length; i += batchSize) {
         const batch = partners.slice(i, i + batchSize);
-        
+
         try {
-          const data = await insertPartnersBatch(batch.map(p => ({
-            company_name: p.company_name,
-            country_code: p.country_code,
-            country_name: p.country_name,
-            city: p.city,
-            address: p.address,
-            phone: p.phone,
-            email: p.email,
-            website: p.website,
-            partner_type: p.partner_type as string,
-            wca_id: p.wca_id,
-            is_active: true,
-          })));
+          const data = await insertPartnersBatch(
+            batch.map((p) => ({
+              company_name: p.company_name,
+              country_code: p.country_code,
+              country_name: p.country_name,
+              city: p.city,
+              address: p.address,
+              phone: p.phone,
+              email: p.email,
+              website: p.website,
+              partner_type: p.partner_type as string,
+              wca_id: p.wca_id,
+              is_active: true,
+            })),
+          );
           successCount += data?.length || 0;
         } catch (error) {
           log.error("batch insert error", { message: error instanceof Error ? error.message : String(error) });
           failedCount += batch.length;
-          errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error instanceof Error ? error.message : String(error)}`);
+          errors.push(
+            `Batch ${Math.floor(i / batchSize) + 1}: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
 
         setProgress(Math.round(((i + batch.length) / partners.length) * 100));
@@ -280,7 +284,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
       "freight_forwarder",
       "12345",
       "",
-      ""
+      "",
     ].join(",");
 
     const csv = `${headers}\n${exampleRow}`;
@@ -311,21 +315,13 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
             <FileText className="w-4 h-4 mr-2" />
             Scarica Template CSV
           </Button>
-          <span className="text-sm text-muted-foreground">
-            Usa questo template come riferimento
-          </span>
+          <span className="text-sm text-muted-foreground">Usa questo template come riferimento</span>
         </div>
 
         {/* File input */}
         <div className="space-y-2">
           <Label htmlFor="csv-file">File CSV</Label>
-          <Input
-            id="csv-file"
-            type="file"
-            accept=".csv"
-            onChange={handleFileChange}
-            disabled={importing}
-          />
+          <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} disabled={importing} />
         </div>
 
         {/* Preview */}
@@ -335,19 +331,14 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
             <ScrollArea className="h-48 border rounded-md">
               <div className="p-2 space-y-1">
                 {preview.map((partner, index) => (
-                  <div
-                    key={index}
-                    className="text-sm p-2 bg-muted/50 rounded flex items-center justify-between"
-                  >
+                  <div key={index} className="text-sm p-2 bg-muted/50 rounded flex items-center justify-between">
                     <div>
                       <span className="font-medium">{partner.company_name}</span>
                       <span className="text-muted-foreground ml-2">
                         {partner.city}, {partner.country_name} ({partner.country_code})
                       </span>
                     </div>
-                    {partner.email && (
-                      <span className="text-xs text-muted-foreground">{partner.email}</span>
-                    )}
+                    {partner.email && <span className="text-xs text-muted-foreground">{partner.email}</span>}
                   </div>
                 ))}
               </div>
@@ -369,14 +360,8 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
         {/* Result */}
         {result && (
           <Alert variant={result.failed > 0 ? "destructive" : "default"}>
-            {result.failed > 0 ? (
-              <AlertCircle className="h-4 w-4" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4" />
-            )}
-            <AlertTitle>
-              {result.failed > 0 ? "Importazione parziale" : "Importazione completata"}
-            </AlertTitle>
+            {result.failed > 0 ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+            <AlertTitle>{result.failed > 0 ? "Importazione parziale" : "Importazione completata"}</AlertTitle>
             <AlertDescription>
               <p>{result.success} partner importati con successo.</p>
               {result.failed > 0 && <p>{result.failed} partner non importati.</p>}
@@ -392,11 +377,7 @@ export const CSVImport = forwardRef<HTMLDivElement>(function CSVImport(_props, r
         )}
 
         {/* Import button */}
-        <Button
-          onClick={handleImport}
-          disabled={!file || importing || preview.length === 0}
-          className="w-full"
-        >
+        <Button onClick={handleImport} disabled={!file || importing || preview.length === 0} className="w-full">
           {importing ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

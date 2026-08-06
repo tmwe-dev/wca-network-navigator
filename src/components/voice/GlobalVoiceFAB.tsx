@@ -37,9 +37,7 @@ interface SpeechRecognitionInstance extends EventTarget {
 
 function getSpeechRecognition(): (new () => SpeechRecognitionInstance) | null {
   const w = toRecord(window);
-  return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as
-    | (new () => SpeechRecognitionInstance)
-    | null;
+  return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as (new () => SpeechRecognitionInstance) | null;
 }
 
 export default function GlobalVoiceFAB() {
@@ -67,9 +65,7 @@ export default function GlobalVoiceFAB() {
 
   // Resolve voice ID: custom > language map > default
   const resolvedVoiceId =
-    settings?.elevenlabs_default_voice_id ||
-    VOICE_LANGUAGE_MAP[voiceLang]?.voiceId ||
-    "JBFqnCBsd6RMkjVDRZzb";
+    settings?.elevenlabs_default_voice_id || VOICE_LANGUAGE_MAP[voiceLang]?.voiceId || "JBFqnCBsd6RMkjVDRZzb";
 
   const langConfig = VOICE_LANGUAGE_MAP[voiceLang] || VOICE_LANGUAGE_MAP.it;
 
@@ -107,22 +103,19 @@ export default function GlobalVoiceFAB() {
         } = await supabase.auth.getSession();
         const token = session?.access_token || "";
 
-        const resp = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              text: text.slice(0, 2000),
-              voiceId: resolvedVoiceId,
-              language: voiceLang,
-            }),
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${token}`,
           },
-        );
+          body: JSON.stringify({
+            text: text.slice(0, 2000),
+            voiceId: resolvedVoiceId,
+            language: voiceLang,
+          }),
+        });
 
         if (!resp.ok || abortRef.current) {
           if (!abortRef.current) startListening();
@@ -151,7 +144,7 @@ export default function GlobalVoiceFAB() {
         if (!abortRef.current) startListening();
       }
     },
-     
+
     [resolvedVoiceId, voiceLang],
   );
 
@@ -161,18 +154,15 @@ export default function GlobalVoiceFAB() {
       setState("speaking");
 
       try {
-        const result = await invokeAi<{ content?: string; message?: string; reply?: string }>(
-          "unified-assistant",
-          {
+        const result = await invokeAi<{ content?: string; message?: string; reply?: string }>("unified-assistant", {
+          scope: "strategic",
+          context: { source: "GlobalVoiceFAB.unified_assistant", mode: "conversational" },
+          body: {
+            message: transcript,
             scope: "strategic",
-            context: { source: "GlobalVoiceFAB.unified_assistant", mode: "conversational" },
-            body: {
-              message: transcript,
-              scope: "strategic",
-              mode: "conversational",
-            },
+            mode: "conversational",
           },
-        );
+        });
 
         const reply = result?.content || result?.reply || result?.message || "";
         if (reply && !abortRef.current) {
@@ -184,7 +174,7 @@ export default function GlobalVoiceFAB() {
         if (!abortRef.current) startListening();
       }
     },
-     
+
     [speak],
   );
 
@@ -257,7 +247,10 @@ export default function GlobalVoiceFAB() {
     const next = VOICE_LANG_KEYS[(idx + 1) % VOICE_LANG_KEYS.length];
     setVoiceLang(next);
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (user) {
         await upsertUserAppSetting(user.id, "elevenlabs_language", next);
       }

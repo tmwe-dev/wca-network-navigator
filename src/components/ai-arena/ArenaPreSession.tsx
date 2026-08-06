@@ -23,8 +23,15 @@ interface Props {
 }
 
 export function ArenaPreSession({
-  focus, setFocus, channel, setChannel, sendLanguage, setSendLanguage,
-  batchSize, setBatchSize, onStart,
+  focus,
+  setFocus,
+  channel,
+  setChannel,
+  sendLanguage,
+  setSendLanguage,
+  batchSize,
+  setBatchSize,
+  onStart,
 }: Props): React.ReactElement {
   return (
     <div className="h-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
@@ -47,7 +54,9 @@ export function ArenaPreSession({
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Focus</Label>
             <Select value={focus} onValueChange={setFocus}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="tutti">🌍 Tutti</SelectItem>
                 <SelectItem value="estero">✈️ Estero</SelectItem>
@@ -58,17 +67,47 @@ export function ArenaPreSession({
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Canale</Label>
             <RadioGroup value={channel} onValueChange={setChannel} className="flex gap-3">
-              <div className="flex items-center gap-1.5"><RadioGroupItem value="email" id="ch-email" /><Label htmlFor="ch-email" className="text-sm">Email</Label></div>
-              <div className="flex items-center gap-1.5"><RadioGroupItem value="whatsapp" id="ch-wa" /><Label htmlFor="ch-wa" className="text-sm">WhatsApp</Label></div>
-              <div className="flex items-center gap-1.5"><RadioGroupItem value="linkedin" id="ch-li" /><Label htmlFor="ch-li" className="text-sm">LinkedIn</Label></div>
+              <div className="flex items-center gap-1.5">
+                <RadioGroupItem value="email" id="ch-email" />
+                <Label htmlFor="ch-email" className="text-sm">
+                  Email
+                </Label>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <RadioGroupItem value="whatsapp" id="ch-wa" />
+                <Label htmlFor="ch-wa" className="text-sm">
+                  WhatsApp
+                </Label>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <RadioGroupItem value="linkedin" id="ch-li" />
+                <Label htmlFor="ch-li" className="text-sm">
+                  LinkedIn
+                </Label>
+              </div>
             </RadioGroup>
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Lingua invio</Label>
             <RadioGroup value={sendLanguage} onValueChange={setSendLanguage} className="flex gap-3">
-              <div className="flex items-center gap-1.5"><RadioGroupItem value="recipient" id="lang-r" /><Label htmlFor="lang-r" className="text-xs">Destinatario</Label></div>
-              <div className="flex items-center gap-1.5"><RadioGroupItem value="english" id="lang-en" /><Label htmlFor="lang-en" className="text-xs">Inglese</Label></div>
-              <div className="flex items-center gap-1.5"><RadioGroupItem value="italian" id="lang-it" /><Label htmlFor="lang-it" className="text-xs">Italiano</Label></div>
+              <div className="flex items-center gap-1.5">
+                <RadioGroupItem value="recipient" id="lang-r" />
+                <Label htmlFor="lang-r" className="text-xs">
+                  Destinatario
+                </Label>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <RadioGroupItem value="english" id="lang-en" />
+                <Label htmlFor="lang-en" className="text-xs">
+                  Inglese
+                </Label>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <RadioGroupItem value="italian" id="lang-it" />
+                <Label htmlFor="lang-it" className="text-xs">
+                  Italiano
+                </Label>
+              </div>
             </RadioGroup>
           </div>
           <div className="space-y-2">

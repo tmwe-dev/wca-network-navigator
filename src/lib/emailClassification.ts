@@ -17,8 +17,15 @@ export interface ClassificationResult {
 }
 
 const VALID_CATEGORIES = [
-  "interested", "not_interested", "request_info", "meeting_request",
-  "complaint", "follow_up", "auto_reply", "spam", "uncategorized",
+  "interested",
+  "not_interested",
+  "request_info",
+  "meeting_request",
+  "complaint",
+  "follow_up",
+  "auto_reply",
+  "spam",
+  "uncategorized",
 ];
 const VALID_URGENCY = ["critical", "high", "normal", "low"];
 const VALID_SENTIMENT = ["positive", "negative", "neutral", "mixed"];
@@ -46,7 +53,10 @@ export function parseClassificationResponse(raw: string | null): ClassificationR
   // Strip markdown fences if present
   let cleaned = raw.trim();
   if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+    cleaned = cleaned
+      .replace(/^```(?:json)?\n?/, "")
+      .replace(/\n?```$/, "")
+      .trim();
   }
 
   const parsed = JSON.parse(cleaned);

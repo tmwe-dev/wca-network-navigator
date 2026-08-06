@@ -26,16 +26,12 @@ export function ContactRecordAgent({ sourceId, sourceType = "partner" }: Props) 
     didAutoAssign.current = true;
 
     // Find first sales/outreach agent, fallback to first agent
-    const salesAgent = agents.find(a =>
-      a.is_active && ["sales", "outreach"].includes(a.role?.toLowerCase())
-    );
-    const agent = salesAgent || agents.find(a => a.is_active) || agents[0];
+    const salesAgent = agents.find((a) => a.is_active && ["sales", "outreach"].includes(a.role?.toLowerCase()));
+    const agent = salesAgent || agents.find((a) => a.is_active) || agents[0];
     if (!agent) return;
 
     // Find manager
-    const manager = agents.find(a =>
-      a.is_active && a.role?.toLowerCase().includes("manager") && a.id !== agent.id
-    );
+    const manager = agents.find((a) => a.is_active && a.role?.toLowerCase().includes("manager") && a.id !== agent.id);
 
     assignClient.mutate({
       sourceId,

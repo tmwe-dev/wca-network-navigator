@@ -117,7 +117,15 @@ export class AiGatewayError extends Error {
 // ---------------------------------------------------------------------------
 
 export function isRetryableStatus(status: number): boolean {
-  return status === 408 || status === 425 || status === 500 || status === 502 || status === 503 || status === 504 || status === 529;
+  return (
+    status === 408 ||
+    status === 425 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    status === 529
+  );
 }
 
 export function backoffMs(attempt: number): number {
@@ -149,11 +157,7 @@ export interface AnthropicBody {
   tools?: AiTool[];
 }
 
-export function buildAnthropicBody(
-  model: string,
-  messages: AiMessage[],
-  opts: AiChatOptions,
-): AnthropicBody {
+export function buildAnthropicBody(model: string, messages: AiMessage[], opts: AiChatOptions): AnthropicBody {
   let systemText: string | undefined;
   const filtered: Array<{ role: string; content: string }> = [];
   for (const m of messages) {
@@ -213,10 +217,10 @@ export function mapErrorToResponse(err: unknown, corsHeaders: Record<string, str
       no_api_key: 500,
       invalid_model: 400,
     };
-    return new Response(
-      JSON.stringify({ error: err.kind, message: err.message }),
-      { status: statusMap[err.kind] ?? 500, headers },
-    );
+    return new Response(JSON.stringify({ error: err.kind, message: err.message }), {
+      status: statusMap[err.kind] ?? 500,
+      headers,
+    });
   }
   const msg = err instanceof Error ? err.message : String(err);
   return new Response(JSON.stringify({ error: "internal", message: msg }), { status: 500, headers });

@@ -54,7 +54,10 @@ export function useHoldingPatternList() {
       const items: HoldingItem[] = [];
 
       // Partners
-      const partners = await getPartnersByLeadStatus(ACTIVE_STATUSES, "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count") as unknown[];
+      const partners = (await getPartnersByLeadStatus(
+        ACTIVE_STATUSES,
+        "id, company_name, country_name, country_code, city, email, lead_status, last_interaction_at, interaction_count",
+      )) as unknown[];
 
       ((partners || []) as Record<string, unknown>[]).forEach((p) =>
         items.push({
@@ -68,7 +71,7 @@ export function useHoldingPatternList() {
           leadStatus: String(p.lead_status || ""),
           lastInteractionAt: (p.last_interaction_at as string) || null,
           interactionCount: Number(p.interaction_count || 0),
-        })
+        }),
       );
 
       // Prospects
@@ -84,7 +87,7 @@ export function useHoldingPatternList() {
           leadStatus: p.lead_status,
           lastInteractionAt: p.last_interaction_at,
           interactionCount: p.interaction_count,
-        })
+        }),
       );
 
       // Imported contacts
@@ -101,7 +104,7 @@ export function useHoldingPatternList() {
           leadStatus: c.lead_status,
           lastInteractionAt: c.last_interaction_at,
           interactionCount: c.interaction_count,
-        })
+        }),
       );
 
       // ── Enrich with tutor + agent info from activities ──
@@ -168,7 +171,7 @@ export function useHoldingTimeline(item: HoldingItem | null) {
             title: a.title,
             description: a.description,
             status: a.status,
-          })
+          }),
         );
         ints.forEach((i) =>
           entries.push({
@@ -178,7 +181,7 @@ export function useHoldingTimeline(item: HoldingItem | null) {
             subType: i.interaction_type,
             title: i.subject,
             description: i.notes,
-          })
+          }),
         );
         emails.forEach((e) =>
           entries.push({
@@ -188,12 +191,13 @@ export function useHoldingTimeline(item: HoldingItem | null) {
             subType: "email_sent",
             title: e.subject,
             description: `→ ${e.recipient_email}`,
-          })
+          }),
         );
       } else {
-        const rows = item.source === "prospect"
-          ? await findProspectInteractionsTimeline(item.id)
-          : await findContactInteractionsTimeline(item.id);
+        const rows =
+          item.source === "prospect"
+            ? await findProspectInteractionsTimeline(item.id)
+            : await findContactInteractionsTimeline(item.id);
         rows.forEach((i) =>
           entries.push({
             id: i.id,
@@ -203,7 +207,7 @@ export function useHoldingTimeline(item: HoldingItem | null) {
             title: i.title,
             description: i.description,
             outcome: i.outcome,
-          })
+          }),
         );
       }
 

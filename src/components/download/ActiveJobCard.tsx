@@ -38,7 +38,13 @@ export function ActiveJobCard({ job }: { job: DownloadJob }) {
   const progress = job.total_count > 0 ? (job.current_index / job.total_count) * 100 : 0;
   const isActive = job.status === "running" || job.status === "pending";
   const isPaused = job.status === "paused";
-  const statusLabel: Record<string, string> = { pending: "In attesa", running: "In corso", paused: "In pausa", completed: "Completato", cancelled: "Cancellato" };
+  const statusLabel: Record<string, string> = {
+    pending: "In attesa",
+    running: "In corso",
+    paused: "In pausa",
+    completed: "Completato",
+    cancelled: "Cancellato",
+  };
 
   return (
     <div className={`${th.panel} border ${isActive ? th.panelAmber : th.panelSlate} rounded-2xl p-4 space-y-2.5`}>
@@ -46,33 +52,74 @@ export function ActiveJobCard({ job }: { job: DownloadJob }) {
         <div className="flex items-center gap-2">
           {isActive && <div className={`w-2 h-2 rounded-full animate-pulse ${th.pulse}`} />}
           <div>
-            <p className={`text-sm font-medium ${th.h2}`}>{getCountryFlag(job.country_code)} {job.country_name}</p>
-            <p className={`text-xs ${th.dim}`}>{statusLabel[job.status] || job.status} • {job.current_index}/{job.total_count}</p>
+            <p className={`text-sm font-medium ${th.h2}`}>
+              {getCountryFlag(job.country_code)} {job.country_name}
+            </p>
+            <p className={`text-xs ${th.dim}`}>
+              {statusLabel[job.status] || job.status} • {job.current_index}/{job.total_count}
+            </p>
           </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          <Button size="sm" variant="ghost" onClick={() => setShowTerminal(true)} className={`h-7 text-xs ${th.btnTest}`}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowTerminal(true)}
+            className={`h-7 text-xs ${th.btnTest}`}
+          >
             <Activity className="w-3 h-3 mr-1" /> Log
           </Button>
           {isActive && (
             <>
-              <Button size="sm" variant="ghost" onClick={() => setShowSpeed(!showSpeed)} className={`h-7 ${th.btnPause}`}><Settings2 className="w-3 h-3" /></Button>
-              <Button size="sm" variant="ghost" onClick={() => pauseResume.mutate({ jobId: job.id, action: "pause" })} className={`h-7 text-xs ${th.btnPause}`}><Pause className="w-3 h-3 mr-1" /> Pausa</Button>
-              <Button size="sm" variant="ghost" onClick={() => pauseResume.mutate({ jobId: job.id, action: "cancel" })} className={`h-7 text-xs ${th.btnStop}`}><Square className="w-3 h-3 mr-1" /> Stop</Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowSpeed(!showSpeed)}
+                className={`h-7 ${th.btnPause}`}
+              >
+                <Settings2 className="w-3 h-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => pauseResume.mutate({ jobId: job.id, action: "pause" })}
+                className={`h-7 text-xs ${th.btnPause}`}
+              >
+                <Pause className="w-3 h-3 mr-1" /> Pausa
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => pauseResume.mutate({ jobId: job.id, action: "cancel" })}
+                className={`h-7 text-xs ${th.btnStop}`}
+              >
+                <Square className="w-3 h-3 mr-1" /> Stop
+              </Button>
             </>
           )}
           {isPaused && (
-            <Button size="sm" onClick={() => pauseResume.mutate({ jobId: job.id, action: "resume" })} className={`h-7 text-xs ${th.btnResume}`}><Play className="w-3 h-3 mr-1" /> Riprendi</Button>
+            <Button
+              size="sm"
+              onClick={() => pauseResume.mutate({ jobId: job.id, action: "resume" })}
+              className={`h-7 text-xs ${th.btnResume}`}
+            >
+              <Play className="w-3 h-3 mr-1" /> Riprendi
+            </Button>
           )}
         </div>
       </div>
 
       <div className={`w-full h-1.5 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`}>
-        <div className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`} style={{ width: `${progress}%` }} />
+        <div
+          className={`h-full rounded-full transition-all ${isDark ? "bg-amber-500" : "bg-sky-500"}`}
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
       {job.last_processed_company && (
-        <p className={`text-xs ${th.dim}`}>Ultimo: <span className={th.logName}>{job.last_processed_company}</span></p>
+        <p className={`text-xs ${th.dim}`}>
+          Ultimo: <span className={th.logName}>{job.last_processed_company}</span>
+        </p>
       )}
 
       {showSpeed && (
@@ -80,14 +127,38 @@ export function ActiveJobCard({ job }: { job: DownloadJob }) {
           <label className={`text-xs flex items-center gap-1.5 mb-1.5 ${th.label}`}>
             <Timer className="w-3 h-3" /> Delay: <span className={`font-mono ${th.hi}`}>{localDelay}s</span>
           </label>
-          <Slider value={[localDelay]} onValueChange={([v]) => setLocalDelay(v)} onValueCommit={([v]) => updateSpeed.mutate({ jobId: job.id, delay_seconds: v })} min={10} max={60} step={1} />
+          <Slider
+            value={[localDelay]}
+            onValueChange={([v]) => setLocalDelay(v)}
+            onValueCommit={([v]) => updateSpeed.mutate({ jobId: job.id, delay_seconds: v })}
+            min={10}
+            max={60}
+            step={1}
+          />
         </div>
       )}
 
       {job.error_message && <p className={`text-xs ${th.logErr}`}>⚠️ {job.error_message}</p>}
 
-      <JobDataViewer open={showViewer} onOpenChange={setShowViewer} processedIds={(job.processed_ids as number[]) || []} failedIds={(job.failed_ids as number[]) || []} countryCode={job.country_code} countryName={job.country_name} networkName={job.network_name} isDark={isDark} jobStatus={job.status} />
-      <JobTerminalViewer open={showTerminal} onOpenChange={setShowTerminal} jobId={job.id} jobStatus={job.status} countryName={job.country_name} isDark={isDark} />
+      <JobDataViewer
+        open={showViewer}
+        onOpenChange={setShowViewer}
+        processedIds={(job.processed_ids as number[]) || []}
+        failedIds={(job.failed_ids as number[]) || []}
+        countryCode={job.country_code}
+        countryName={job.country_name}
+        networkName={job.network_name}
+        isDark={isDark}
+        jobStatus={job.status}
+      />
+      <JobTerminalViewer
+        open={showTerminal}
+        onOpenChange={setShowTerminal}
+        jobId={job.id}
+        jobStatus={job.status}
+        countryName={job.country_name}
+        isDark={isDark}
+      />
     </div>
   );
 }

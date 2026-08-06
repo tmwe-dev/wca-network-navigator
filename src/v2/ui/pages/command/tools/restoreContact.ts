@@ -29,9 +29,7 @@ export const restoreContactTool: Tool = {
       };
     }
     if (!ref) throw new Error("Riferimento contatto mancante");
-    const { error, count } = isUuid(ref)
-      ? await restoreContactById(ref)
-      : await restoreContactByTerm(ref);
+    const { error, count } = isUuid(ref) ? await restoreContactById(ref) : await restoreContactByTerm(ref);
     if (error) throw new Error(error.message);
     return {
       kind: "result",

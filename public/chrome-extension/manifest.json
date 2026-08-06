@@ -4,16 +4,18 @@
   "version": "3.0",
   "description": "Login automatico + sincronizzazione cookie + estrazione contatti WCA.",
   "permissions": ["cookies", "tabs", "activeTab", "scripting"],
-  "host_permissions": ["https://*.wcaworld.com/*", "https://wcaworld.com/*", "https://www.wcaworld.com/*", "https://zrbditqddhjkutzjycgi.supabase.co/*"],
+  "host_permissions": [
+    "https://*.wcaworld.com/*",
+    "https://wcaworld.com/*",
+    "https://www.wcaworld.com/*",
+    "https://zrbditqddhjkutzjycgi.supabase.co/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://*.lovable.app/*",
-        "https://*.lovableproject.com/*"
-      ],
+      "matches": ["https://*.lovable.app/*", "https://*.lovableproject.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true

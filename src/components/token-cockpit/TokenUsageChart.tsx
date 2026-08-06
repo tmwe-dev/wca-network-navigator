@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { useTokenCockpitUser, useTokenSeries } from "@/hooks/useTokenCockpitData";
 import { Skeleton } from "@/components/ui/skeleton";
 
-
 export function TokenUsageChart() {
   const { data: userData } = useTokenCockpitUser();
   const { data: chartData = [], isLoading } = useTokenSeries(userData?.id);
@@ -59,9 +58,7 @@ export function TokenUsageChart() {
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <div className="h-64 flex items-center justify-center text-muted-foreground">
-          Nessun dato disponibile
-        </div>
+        <div className="h-64 flex items-center justify-center text-muted-foreground">Nessun dato disponibile</div>
       )}
     </Card>
   );

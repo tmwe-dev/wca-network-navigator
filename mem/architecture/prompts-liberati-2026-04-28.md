@@ -3,6 +3,7 @@ name: Prompts Liberati 2026-04-28
 description: Refactor sistemico AI prompts — rimosse regole hardcoded da generate-outreach, classify-email-response, generate-aliases; tutto in Prompt Lab DB. Eliminato src/v2/agent/kb/dbSchema.ts, sostituito da liveSchemaClient + allowedTables.ts (solo whitelist).
 type: feature
 ---
+
 Refactor 2026-04-28 in 4 fasi:
 
 1. Eliminato `src/v2/agent/kb/dbSchema.ts`. Sostituito da `src/v2/ui/pages/command/lib/allowedTables.ts` (solo whitelist + defaultSort) + `liveSchemaClient.ts` (introspezione live via RPC `ai_introspect_schema`). `safeQueryExecutor` ora valida colonne contro lo schema reale, niente più array statico disallineato.
@@ -16,6 +17,7 @@ Refactor 2026-04-28 in 4 fasi:
 Doctrine attiva: `mem://architecture/ai-prompt-freedom-doctrine` — i prompt TS contengono SOLO identità+obiettivo+contesto. Tutte le regole business vivono nel Prompt Lab DB. Guardrail tecnici in `hardGuards.ts`.
 
 File rifattorizzati:
+
 - src/v2/ui/pages/command/lib/safeQueryExecutor.ts
 - src/v2/ui/pages/command/lib/allowedTables.ts (nuovo)
 - supabase/functions/generate-outreach/promptBuilder.ts

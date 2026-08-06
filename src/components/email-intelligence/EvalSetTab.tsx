@@ -22,7 +22,11 @@ const QK_RUNS = ["funnemail", "eval-runs"] as const;
 export default function EvalSetTab() {
   const qc = useQueryClient();
   const { data: cases = [] } = useQuery({ queryKey: QK_CASES, queryFn: listFunnemailEvalCases });
-  const { data: runs = [] } = useQuery({ queryKey: QK_RUNS, queryFn: () => listFunnemailEvalRuns(50), refetchInterval: 10000 });
+  const { data: runs = [] } = useQuery({
+    queryKey: QK_RUNS,
+    queryFn: () => listFunnemailEvalRuns(50),
+    refetchInterval: 10000,
+  });
 
   const [name, setName] = useState("");
   const [from, setFrom] = useState("");
@@ -43,7 +47,10 @@ export default function EvalSetTab() {
         expected_decision: { suggested_action: expectedAction, confidence_min: 0.6 },
       });
       toast.success("Caso creato");
-      setName(""); setFrom(""); setSubject(""); setBody("");
+      setName("");
+      setFrom("");
+      setSubject("");
+      setBody("");
       qc.invalidateQueries({ queryKey: QK_CASES });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
@@ -83,20 +90,40 @@ export default function EvalSetTab() {
         <Button onClick={handleRunAll} disabled={running || cases.length === 0}>
           <Play className="h-4 w-4 mr-1" /> Run all enabled
         </Button>
-        <Badge variant="outline">Pass-rate ultime {runs.length}: {passRate}%</Badge>
+        <Badge variant="outline">
+          Pass-rate ultime {runs.length}: {passRate}%
+        </Badge>
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Nuovo caso</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Nuovo caso</CardTitle>
+        </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <Input placeholder="Nome caso" value={name} onChange={(e) => setName(e.target.value)} />
           <Input placeholder="from_address" value={from} onChange={(e) => setFrom(e.target.value)} />
           <Input placeholder="oggetto" value={subject} onChange={(e) => setSubject(e.target.value)} />
-          <select className="h-9 rounded-md border bg-background px-2 text-sm" value={expectedAction} onChange={(e) => setExpectedAction(e.target.value)}>
-            {["reply","archive","escalate","ignore","deep_search","crm_update","autoresponder"].map((a) => <option key={a} value={a}>{a}</option>)}
+          <select
+            className="h-9 rounded-md border bg-background px-2 text-sm"
+            value={expectedAction}
+            onChange={(e) => setExpectedAction(e.target.value)}
+          >
+            {["reply", "archive", "escalate", "ignore", "deep_search", "crm_update", "autoresponder"].map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
           </select>
-          <Textarea placeholder="corpo email" value={body} onChange={(e) => setBody(e.target.value)} className="md:col-span-2" rows={3} />
-          <Button onClick={handleCreate} className="md:col-span-2 w-fit">Crea caso</Button>
+          <Textarea
+            placeholder="corpo email"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="md:col-span-2"
+            rows={3}
+          />
+          <Button onClick={handleCreate} className="md:col-span-2 w-fit">
+            Crea caso
+          </Button>
         </CardContent>
       </Card>
 
@@ -108,7 +135,9 @@ export default function EvalSetTab() {
               <CardContent className="flex items-center justify-between gap-3 py-3">
                 <div className="flex flex-col gap-1 min-w-0">
                   <span className="font-medium">{c.name}</span>
-                  <code className="text-xs text-muted-foreground truncate">expected: {JSON.stringify(c.expected_decision)}</code>
+                  <code className="text-xs text-muted-foreground truncate">
+                    expected: {JSON.stringify(c.expected_decision)}
+                  </code>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => handleRunOne(c.id)}>
                   <Play className="h-3 w-3 mr-1" /> Run

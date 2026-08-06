@@ -5,7 +5,9 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 function extractCountry(prompt: string): string | null {
-  const m = prompt.match(/\b(?:scheda|kb|paese|country)\s+(?:per\s+|di\s+|del\s+|della\s+)?([A-ZÀ-Ý][A-Za-zÀ-ÿ\s]{2,40})\b/);
+  const m = prompt.match(
+    /\b(?:scheda|kb|paese|country)\s+(?:per\s+|di\s+|del\s+|della\s+)?([A-ZÀ-Ý][A-Za-zÀ-ÿ\s]{2,40})\b/,
+  );
   return m ? m[1].trim() : null;
 }
 
@@ -22,9 +24,7 @@ export const countryKbGeneratorTool: Tool = {
         kind: "approval",
         title: "Generare scheda paese?",
         description: "L'AI compilerà una scheda KB strutturata e la salverà tra le entry KB.",
-        details: [
-          { label: "Paese", value: country ?? "(da specificare)" },
-        ],
+        details: [{ label: "Paese", value: country ?? "(da specificare)" }],
         governance: { role: "DIRETTORE", permission: "WRITE:KB_ENTRIES", policy: "POLICY v1.0 · KB-COUNTRY" },
         pendingPayload: { country },
         toolId: "country-kb-generator",
@@ -39,10 +39,10 @@ export const countryKbGeneratorTool: Tool = {
         meta: { count: 0, sourceLabel: "country-kb-generator" },
       };
     }
-    const res = await invokeEdge<{ kb_entry_id?: string; message?: string; error?: string }>(
-      "country-kb-generator",
-      { body: { country: String(p.country) }, context: "command:country-kb-generator" },
-    );
+    const res = await invokeEdge<{ kb_entry_id?: string; message?: string; error?: string }>("country-kb-generator", {
+      body: { country: String(p.country) },
+      context: "command:country-kb-generator",
+    });
     return {
       kind: "result",
       title: res?.error ? "Generazione fallita" : `Scheda generata: ${String(p.country)}`,

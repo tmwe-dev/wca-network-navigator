@@ -11,7 +11,8 @@ export async function markMessageRead(messageId: string): Promise<Result<void, A
       .from("channel_messages")
       .update({ read_at: new Date().toISOString() })
       .eq("id", messageId);
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "channel_messages", messageId }, "markMessageRead"));
+    if (error)
+      return err(ioError("DATABASE_ERROR", error.message, { table: "channel_messages", messageId }, "markMessageRead"));
     return ok(undefined);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "markMessageRead"));

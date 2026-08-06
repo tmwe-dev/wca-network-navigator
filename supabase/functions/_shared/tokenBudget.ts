@@ -36,7 +36,7 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
  */
 export function getContextBudget(model: string): number {
   const window = MODEL_CONTEXT_WINDOWS[model] || 128_000;
-  return Math.min(Math.floor(window * 0.30), 32_000);
+  return Math.min(Math.floor(window * 0.3), 32_000);
 }
 
 export interface ContextBlock {

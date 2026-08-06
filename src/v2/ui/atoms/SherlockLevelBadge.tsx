@@ -27,9 +27,7 @@ export function SherlockLevelBadge({ level, completedAt, size = "sm", className 
   const meta = META[level];
   const Icon = meta.Icon;
   const dim = size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4";
-  const dateLabel = completedAt
-    ? format(new Date(completedAt), "d MMM yyyy", { locale: it })
-    : null;
+  const dateLabel = completedAt ? format(new Date(completedAt), "d MMM yyyy", { locale: it }) : null;
   return (
     <Tooltip>
       <TooltipTrigger asChild>

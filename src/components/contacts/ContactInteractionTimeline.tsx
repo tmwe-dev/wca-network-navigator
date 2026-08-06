@@ -1,7 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Mail, Phone, MessageCircle, Users, Search, Megaphone, StickyNote, Bot, Linkedin, Filter as FilterIcon } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  MessageCircle,
+  Users,
+  Search,
+  Megaphone,
+  StickyNote,
+  Bot,
+  Linkedin,
+  Filter as FilterIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -57,88 +68,98 @@ export function ContactInteractionTimeline({ contactId, contactEmail }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [channelFilter, setChannelFilter] = useState("all");
 
-  const loadItems = useCallback(async (pageNum: number, append = false) => {
-    setLoading(true);
-    try {
-      const allItems: TimelineItem[] = append ? [...items] : [];
+  const loadItems = useCallback(
+    async (pageNum: number, append = false) => {
+      setLoading(true);
+      try {
+        const allItems: TimelineItem[] = append ? [...items] : [];
 
-      // 1. contact_interactions
-      const interactions = await findContactInteractionsRange(
-        contactId,
-        pageNum * PAGE_SIZE,
-        (pageNum + 1) * PAGE_SIZE - 1,
-      );
-
-      for (const i of interactions || []) {
-        allItems.push({
-          id: `ci-${i.id}`,
-          type: i.interaction_type,
-          title: i.title,
-          description: i.description,
-          outcome: i.outcome,
-          created_at: i.created_at,
-          source: "interaction",
-        });
-      }
-
-      // 2. channel_messages by email
-      if (contactEmail) {
-        const msgs = await findChannelMessagesForContactEmail(
-          contactEmail,
+        // 1. contact_interactions
+        const interactions = await findContactInteractionsRange(
+          contactId,
           pageNum * PAGE_SIZE,
           (pageNum + 1) * PAGE_SIZE - 1,
         );
 
-        for (const m of msgs || []) {
-          const isInbound = m.from_address?.toLowerCase().includes(contactEmail.toLowerCase());
+        for (const i of interactions || []) {
           allItems.push({
-            id: `cm-${m.id}`,
-            type: m.channel === "whatsapp" ? "whatsapp" : isInbound ? "email_received" : "email_sent",
-            title: m.subject || (isInbound ? "Email ricevuta" : "Email inviata"),
-            description: m.body_text?.substring(0, 200) || null,
-            outcome: null,
-            created_at: m.created_at,
-            source: "email",
+            id: `ci-${i.id}`,
+            type: i.interaction_type,
+            title: i.title,
+            description: i.description,
+            outcome: i.outcome,
+            created_at: i.created_at,
+            source: "interaction",
           });
         }
-      }
 
-      // 3. activities linked to this contact
-      const activities = await findActivitiesForSelectedContact(
-        contactId,
-        pageNum * PAGE_SIZE,
-        (pageNum + 1) * PAGE_SIZE - 1,
-      );
+        // 2. channel_messages by email
+        if (contactEmail) {
+          const msgs = await findChannelMessagesForContactEmail(
+            contactEmail,
+            pageNum * PAGE_SIZE,
+            (pageNum + 1) * PAGE_SIZE - 1,
+          );
 
-      for (const a of activities || []) {
-        allItems.push({
-          id: `act-${a.id}`,
-          type: a.activity_type || "note",
-          title: a.title,
-          description: a.description,
-          outcome: a.response_received ? "positive" : null,
-          created_at: a.created_at,
-          source: "activity",
+          for (const m of msgs || []) {
+            const isInbound = m.from_address?.toLowerCase().includes(contactEmail.toLowerCase());
+            allItems.push({
+              id: `cm-${m.id}`,
+              type: m.channel === "whatsapp" ? "whatsapp" : isInbound ? "email_received" : "email_sent",
+              title: m.subject || (isInbound ? "Email ricevuta" : "Email inviata"),
+              description: m.body_text?.substring(0, 200) || null,
+              outcome: null,
+              created_at: m.created_at,
+              source: "email",
+            });
+          }
+        }
+
+        // 3. activities linked to this contact
+        const activities = await findActivitiesForSelectedContact(
+          contactId,
+          pageNum * PAGE_SIZE,
+          (pageNum + 1) * PAGE_SIZE - 1,
+        );
+
+        for (const a of activities || []) {
+          allItems.push({
+            id: `act-${a.id}`,
+            type: a.activity_type || "note",
+            title: a.title,
+            description: a.description,
+            outcome: a.response_received ? "positive" : null,
+            created_at: a.created_at,
+            source: "activity",
+          });
+        }
+
+        // Sort all by date descending
+        allItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        // Deduplicate by id
+        const seen = new Set<string>();
+        const unique = allItems.filter((i) => {
+          if (seen.has(i.id)) return false;
+          seen.add(i.id);
+          return true;
         });
+
+        setItems(unique);
+        setHasMore((interactions?.length || 0) === PAGE_SIZE);
+      } catch {
+        // silent
+      } finally {
+        setLoading(false);
       }
+    },
+    [contactId, contactEmail, items],
+  );
 
-      // Sort all by date descending
-      allItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-      // Deduplicate by id
-      const seen = new Set<string>();
-      const unique = allItems.filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true; });
-
-      setItems(unique);
-      setHasMore((interactions?.length || 0) === PAGE_SIZE);
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [contactId, contactEmail, items]);
-
-  useEffect(() => { setPage(0); loadItems(0); }, [contactId]);
+  useEffect(() => {
+    setPage(0);
+    loadItems(0);
+  }, [contactId]);
 
   const loadMore = () => {
     const next = page + 1;
@@ -147,23 +168,18 @@ export function ContactInteractionTimeline({ contactId, contactEmail }: Props) {
   };
 
   const toggleExpand = (id: string) => {
-    setExpanded(prev => {
+    setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
-  const filtered = channelFilter === "all"
-    ? items
-    : items.filter(i => i.type.includes(channelFilter));
+  const filtered = channelFilter === "all" ? items : items.filter((i) => i.type.includes(channelFilter));
 
   if (!loading && items.length === 0) {
-    return (
-      <p className="text-xs text-muted-foreground py-4 text-center">
-        Nessuna interazione registrata
-      </p>
-    );
+    return <p className="text-xs text-muted-foreground py-4 text-center">Nessuna interazione registrata</p>;
   }
 
   return (
@@ -197,21 +213,35 @@ export function ContactInteractionTimeline({ contactId, contactEmail }: Props) {
 
           return (
             <div key={item.id} className="relative flex gap-2 group">
-              <div className={cn("absolute -left-5 top-0.5 w-4 h-4 rounded-full bg-card border border-border flex items-center justify-center")}>
+              <div
+                className={cn(
+                  "absolute -left-5 top-0.5 w-4 h-4 rounded-full bg-card border border-border flex items-center justify-center",
+                )}
+              >
                 <Icon className={cn("w-2.5 h-2.5", cfg.color)} />
               </div>
               <div className="flex-1 min-w-0 cursor-pointer" onClick={() => item.description && toggleExpand(item.id)}>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-xs font-medium truncate max-w-[180px]">{item.title}</span>
                   {item.outcome && (
-                    <Badge variant="outline" className={cn("text-[8px] px-1 py-0 h-3.5", OUTCOME_COLORS[item.outcome] ?? "")}>
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[8px] px-1 py-0 h-3.5", OUTCOME_COLORS[item.outcome] ?? "")}
+                    >
                       {item.outcome === "positive" ? "Positivo" : item.outcome === "negative" ? "Negativo" : "Neutro"}
                     </Badge>
                   )}
                   {item.source === "ai" && (
-                    <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 bg-cyan-500/10 text-cyan-400 border-cyan-500/20">AI</Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-[8px] px-1 py-0 h-3.5 bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+                    >
+                      AI
+                    </Badge>
                   )}
-                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5">{cfg.label}</Badge>
+                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5">
+                    {cfg.label}
+                  </Badge>
                 </div>
                 {item.description && (
                   <p className={cn("text-[11px] text-muted-foreground mt-0.5", isExpanded ? "" : "line-clamp-1")}>

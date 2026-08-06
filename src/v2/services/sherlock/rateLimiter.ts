@@ -62,7 +62,10 @@ export async function throttle(channel: Channel, url: string, signal?: AbortSign
   const slot = new Promise<void>((res) => {
     release = res;
   });
-  pendingByKey.set(key, prev.then(() => slot));
+  pendingByKey.set(
+    key,
+    prev.then(() => slot),
+  );
 
   await prev;
   try {

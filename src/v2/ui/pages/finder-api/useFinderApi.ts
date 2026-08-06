@@ -48,56 +48,59 @@ export function useFinderApi() {
     setMessages((prev) => [...prev, { ...m, id: ++idRef.current }]);
   }, []);
 
-  const sendMessage = useCallback(async (content: string) => {
-    if (busy) return;
-    setBusy(true);
-    pushMsg({ role: "user", content, timestamp: ts() });
-    pushMsg({ role: "assistant", content: "", timestamp: ts(), agentName: "Finder API", thinking: true });
-    historyRef.current.push({ role: "user", content });
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (busy) return;
+      setBusy(true);
+      pushMsg({ role: "user", content, timestamp: ts() });
+      pushMsg({ role: "assistant", content: "", timestamp: ts(), agentName: "Finder API", thinking: true });
+      historyRef.current.push({ role: "user", content });
 
-    try {
-      const res = await invokeAi<{
-        text: string;
-        spoken_summary?: string;
-        tool_results?: FinderToolResult[];
-        kb_proposal?: FinderKbProposal | null;
-        error?: string;
-      }>("finder-api-chat", {
-        scope: "finder_api",
-        context: { source: "FinderApiPage", route: "/v2/finder-api", mode: "query" },
-        body: { messages: historyRef.current },
-      });
+      try {
+        const res = await invokeAi<{
+          text: string;
+          spoken_summary?: string;
+          tool_results?: FinderToolResult[];
+          kb_proposal?: FinderKbProposal | null;
+          error?: string;
+        }>("finder-api-chat", {
+          scope: "finder_api",
+          context: { source: "FinderApiPage", route: "/v2/finder-api", mode: "query" },
+          body: { messages: historyRef.current },
+        });
 
-      setMessages((prev) => prev.filter((m) => !m.thinking));
+        setMessages((prev) => prev.filter((m) => !m.thinking));
 
-      if (res.error) {
-        toast.error(res.error);
-        pushMsg({ role: "assistant", content: `⚠️ ${res.error}`, timestamp: ts(), agentName: "Finder API" });
-        return;
+        if (res.error) {
+          toast.error(res.error);
+          pushMsg({ role: "assistant", content: `⚠️ ${res.error}`, timestamp: ts(), agentName: "Finder API" });
+          return;
+        }
+
+        const text = res.text || "Pronto.";
+        pushMsg({ role: "assistant", content: text, timestamp: ts(), agentName: "Finder API" });
+        historyRef.current.push({ role: "assistant", content: text });
+
+        const tr = res.tool_results ?? [];
+        if (tr.length > 0) {
+          setLastResults(tr);
+          setCanvasOpen(true);
+        }
+        if (res.kb_proposal) {
+          setLastKbProposal(res.kb_proposal);
+          setCanvasOpen(true);
+        }
+      } catch (err) {
+        setMessages((prev) => prev.filter((m) => !m.thinking));
+        const msg = err instanceof Error ? err.message : String(err);
+        toast.error(`Errore Finder API: ${msg}`);
+        pushMsg({ role: "assistant", content: `⚠️ Errore: ${msg}`, timestamp: ts(), agentName: "Finder API" });
+      } finally {
+        setBusy(false);
       }
-
-      const text = res.text || "Pronto.";
-      pushMsg({ role: "assistant", content: text, timestamp: ts(), agentName: "Finder API" });
-      historyRef.current.push({ role: "assistant", content: text });
-
-      const tr = res.tool_results ?? [];
-      if (tr.length > 0) {
-        setLastResults(tr);
-        setCanvasOpen(true);
-      }
-      if (res.kb_proposal) {
-        setLastKbProposal(res.kb_proposal);
-        setCanvasOpen(true);
-      }
-    } catch (err) {
-      setMessages((prev) => prev.filter((m) => !m.thinking));
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Errore Finder API: ${msg}`);
-      pushMsg({ role: "assistant", content: `⚠️ Errore: ${msg}`, timestamp: ts(), agentName: "Finder API" });
-    } finally {
-      setBusy(false);
-    }
-  }, [busy, pushMsg]);
+    },
+    [busy, pushMsg],
+  );
 
   const saveKbProposal = useCallback(async () => {
     if (!lastKbProposal) return;
@@ -118,8 +121,19 @@ export function useFinderApi() {
   }, []);
 
   return {
-    messages, input, setInput, inputFocused, setInputFocused, busy,
-    lastResults, lastKbProposal, canvasOpen,
-    chatEndRef, sendMessage, saveKbProposal, dismissKbProposal, closeCanvas,
+    messages,
+    input,
+    setInput,
+    inputFocused,
+    setInputFocused,
+    busy,
+    lastResults,
+    lastKbProposal,
+    canvasOpen,
+    chatEndRef,
+    sendMessage,
+    saveKbProposal,
+    dismissKbProposal,
+    closeCanvas,
   };
 }

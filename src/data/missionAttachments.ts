@@ -3,7 +3,10 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export interface MissionAttachmentImage { name: string; url: string }
+export interface MissionAttachmentImage {
+  name: string;
+  url: string;
+}
 
 /** Elenca le immagini disponibili (bucket email-images) per l'allegato missione. */
 export async function listMissionAttachmentImages(): Promise<MissionAttachmentImage[]> {

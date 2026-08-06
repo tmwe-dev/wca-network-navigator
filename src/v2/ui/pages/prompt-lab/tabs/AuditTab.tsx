@@ -102,9 +102,7 @@ function AgentAuditCard({ entry }: { entry: AgentAuditEntry }) {
 
         {/* Capabilities diff */}
         <section>
-          <h3 className="text-sm font-semibold mb-2">
-            Capabilities — DB vs Code default
-          </h3>
+          <h3 className="text-sm font-semibold mb-2">Capabilities — DB vs Code default</h3>
           <div className="rounded-md border overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs uppercase">
@@ -122,7 +120,9 @@ function AgentAuditCard({ entry }: { entry: AgentAuditEntry }) {
                     <td className="px-3 py-2 text-muted-foreground text-xs max-w-[240px] truncate">
                       {fmt(row.hardcoded_default)}
                     </td>
-                    <td className={`px-3 py-2 text-xs max-w-[240px] truncate ${row.overridden ? "font-medium text-primary" : "text-muted-foreground"}`}>
+                    <td
+                      className={`px-3 py-2 text-xs max-w-[240px] truncate ${row.overridden ? "font-medium text-primary" : "text-muted-foreground"}`}
+                    >
                       {fmt(row.db_value)}
                     </td>
                     <td className="px-3 py-2">
@@ -145,9 +145,7 @@ function AgentAuditCard({ entry }: { entry: AgentAuditEntry }) {
 
         {/* Tool registry */}
         <section>
-          <h3 className="text-sm font-semibold mb-2">
-            Tool registry — registro hardcoded, filtri DB
-          </h3>
+          <h3 className="text-sm font-semibold mb-2">Tool registry — registro hardcoded, filtri DB</h3>
           <p className="text-xs text-muted-foreground mb-2">
             Sorgente registro: <code>{entry.tools.registry_source}</code> · execution_mode:{" "}
             <code>{entry.tools.execution_mode}</code>
@@ -184,9 +182,13 @@ function AgentAuditCard({ entry }: { entry: AgentAuditEntry }) {
                     </td>
                     <td className="px-3 py-2 text-center">
                       {t.effective ? (
-                        <Badge variant="default" className="text-[10px]">attivo</Badge>
+                        <Badge variant="default" className="text-[10px]">
+                          attivo
+                        </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[10px]">filtrato</Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          filtrato
+                        </Badge>
                       )}
                     </td>
                     <td className="px-3 py-2 text-center text-xs">
@@ -218,17 +220,19 @@ function AgentAuditCard({ entry }: { entry: AgentAuditEntry }) {
           {entry.operative_prompts.loaded_count === 0 ? (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                {entry.operative_prompts.hardcoded_fallback}
-              </AlertDescription>
+              <AlertDescription className="text-xs">{entry.operative_prompts.hardcoded_fallback}</AlertDescription>
             </Alert>
           ) : (
             <div className="flex flex-wrap gap-1">
               {entry.operative_prompts.applied.map((name) => (
-                <Badge key={name} variant="outline" className="text-[11px]">{name}</Badge>
+                <Badge key={name} variant="outline" className="text-[11px]">
+                  {name}
+                </Badge>
               ))}
               {entry.operative_prompts.has_mandatory && (
-                <Badge variant="default" className="text-[11px]">obbligatori presenti</Badge>
+                <Badge variant="default" className="text-[11px]">
+                  obbligatori presenti
+                </Badge>
               )}
             </div>
           )}
@@ -261,16 +265,12 @@ export function AuditTab() {
         <div>
           <h2 className="text-lg font-semibold">Audit — Prompt Lab vs Code</h2>
           <p className="text-sm text-muted-foreground">
-            Mappa per ogni agente cosa è governato dal DB (editabile da Prompt Lab) e cosa è
-            hardcoded nel codice. Le hard-guards di sicurezza sono sempre nel codice.
+            Mappa per ogni agente cosa è governato dal DB (editabile da Prompt Lab) e cosa è hardcoded nel codice. Le
+            hard-guards di sicurezza sono sempre nel codice.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant={filter === "all" ? "default" : "outline"}
-            onClick={() => setFilter("all")}
-          >
+          <Button size="sm" variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>
             Tutti
           </Button>
           <Button
@@ -304,7 +304,9 @@ export function AuditTab() {
                 <div className="font-medium mb-1">Tabelle vietate</div>
                 <div className="flex flex-wrap gap-1">
                   {data.hard_guards.forbidden_tables.map((t) => (
-                    <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
+                    <Badge key={t} variant="outline" className="text-[10px]">
+                      {t}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -312,7 +314,9 @@ export function AuditTab() {
                 <div className="font-medium mb-1">Operazioni distruttive bloccate</div>
                 <div className="flex flex-wrap gap-1">
                   {data.hard_guards.destructive_blocked.map((t) => (
-                    <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
+                    <Badge key={t} variant="outline" className="text-[10px]">
+                      {t}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -320,15 +324,16 @@ export function AuditTab() {
                 <div className="font-medium mb-1">Approvazione sempre richiesta</div>
                 <div className="flex flex-wrap gap-1">
                   {data.hard_guards.approval_always_required.map((t) => (
-                    <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>
+                    <Badge key={t} variant="secondary" className="text-[10px]">
+                      {t}
+                    </Badge>
                   ))}
                 </div>
               </div>
               <div>
                 <div className="font-medium mb-1">Bulk caps</div>
                 <div className="text-muted-foreground">
-                  default: {data.hard_guards.bulk_caps.default} · hard max:{" "}
-                  {data.hard_guards.bulk_caps.hard_max}
+                  default: {data.hard_guards.bulk_caps.default} · hard max: {data.hard_guards.bulk_caps.hard_max}
                 </div>
               </div>
             </div>

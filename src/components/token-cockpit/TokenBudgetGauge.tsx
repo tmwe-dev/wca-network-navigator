@@ -8,7 +8,17 @@ import { useTokenCockpitUser, useTokenGauge } from "@/hooks/useTokenCockpitData"
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTokenCount } from "@/lib/tokenFormat";
 
-function GaugeBar({ percentage, label, used, limit }: { percentage: number; label: string; used: number; limit: number }) {
+function GaugeBar({
+  percentage,
+  label,
+  used,
+  limit,
+}: {
+  percentage: number;
+  label: string;
+  used: number;
+  limit: number;
+}) {
   const getColor = () => {
     if (percentage >= 100) return "bg-red-500";
     if (percentage >= 85) return "bg-amber-500";
@@ -25,9 +35,7 @@ function GaugeBar({ percentage, label, used, limit }: { percentage: number; labe
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-foreground">{label}</span>
-        <Badge variant={getStatusColor()}>
-          {percentage.toFixed(1)}%
-        </Badge>
+        <Badge variant={getStatusColor()}>{percentage.toFixed(1)}%</Badge>
       </div>
       <div className="w-full h-4 bg-muted rounded-full overflow-hidden">
         <div

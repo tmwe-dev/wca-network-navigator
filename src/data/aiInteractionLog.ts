@@ -10,12 +10,7 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("aiInteractionLog");
 
-export type AiInteractionType =
-  | "chat_text"
-  | "voice_tts"
-  | "voice_conversation"
-  | "voice_stt"
-  | "edge_ai";
+export type AiInteractionType = "chat_text" | "voice_tts" | "voice_conversation" | "voice_stt" | "edge_ai";
 
 export type AiInteractionRole = "user" | "assistant" | "system" | "tool";
 
@@ -86,11 +81,7 @@ export async function logAiInteraction(input: AiInteractionLogInput): Promise<st
       page_context: input.page_context ?? (typeof window !== "undefined" ? window.location.pathname : null),
     };
 
-    const { data, error } = await supabase
-      .from("ai_interaction_log")
-      .insert(payload)
-      .select("id")
-      .maybeSingle();
+    const { data, error } = await supabase.from("ai_interaction_log").insert(payload).select("id").maybeSingle();
     if (error) {
       log.warn("[aiInteractionLog] insert failed", { detail: error.message });
       return null;
@@ -114,11 +105,7 @@ export interface AiLogFilters {
 
 export async function listAiInteractions(filters: AiLogFilters = {}): Promise<AiInteractionLogRow[]> {
   const limit = Math.min(filters.limit ?? 1000, 5000);
-  let q = supabase
-    .from("ai_interaction_log")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  let q = supabase.from("ai_interaction_log").select("*").order("created_at", { ascending: false }).limit(limit);
 
   if (filters.from) q = q.gte("created_at", filters.from);
   if (filters.to) q = q.lte("created_at", filters.to);
@@ -140,34 +127,25 @@ export type AiFeedbackRow = Database["public"]["Tables"]["ai_message_feedback"][
 
 export async function listFeedbackForInteractions(ids: string[]): Promise<AiFeedbackRow[]> {
   if (ids.length === 0) return [];
-  const { data, error } = await supabase
-    .from("ai_message_feedback")
-    .select("*")
-    .in("interaction_id", ids);
+  const { data, error } = await supabase.from("ai_message_feedback").select("*").in("interaction_id", ids);
   if (error) throw error;
   return data ?? [];
 }
 
-export async function upsertFeedback(params: {
-  interaction_id: string;
-  rating: -1 | 1;
-  note?: string;
-}): Promise<void> {
+export async function upsertFeedback(params: { interaction_id: string; rating: -1 | 1; note?: string }): Promise<void> {
   const { data: userData } = await supabase.auth.getSession();
   const userId = userData.session?.user?.id;
   if (!userId) throw new Error("not authenticated");
 
-  const { error } = await supabase
-    .from("ai_message_feedback")
-    .upsert(
-      {
-        interaction_id: params.interaction_id,
-        user_id: userId,
-        rating: params.rating,
-        note: params.note ?? null,
-      },
-      { onConflict: "interaction_id,user_id" },
-    );
+  const { error } = await supabase.from("ai_message_feedback").upsert(
+    {
+      interaction_id: params.interaction_id,
+      user_id: userId,
+      rating: params.rating,
+      note: params.note ?? null,
+    },
+    { onConflict: "interaction_id,user_id" },
+  );
   if (error) throw error;
 }
 

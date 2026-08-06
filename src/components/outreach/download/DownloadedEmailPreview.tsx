@@ -2,10 +2,7 @@ import { useMemo } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
-import {
-  normalizeEmailContent,
-  renderEmailTextAsHtml,
-} from "@/components/outreach/email/emailContentNormalization";
+import { normalizeEmailContent, renderEmailTextAsHtml } from "@/components/outreach/email/emailContentNormalization";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
@@ -24,10 +21,7 @@ export function DownloadedEmailPreview({ email }: { email: DownloadedEmail }) {
     bodyText: email.bodyText,
   });
 
-  const content = useMemo(
-    () => normalizeEmailContent({ bodyHtml, bodyText }),
-    [bodyHtml, bodyText],
-  );
+  const content = useMemo(() => normalizeEmailContent({ bodyHtml, bodyText }), [bodyHtml, bodyText]);
   const hasContent = Boolean(content.bodyHtml || content.bodyText);
   const htmlContent = content.bodyHtml ?? renderEmailTextAsHtml(content.bodyText);
 

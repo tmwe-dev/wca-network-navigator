@@ -16,7 +16,7 @@ test.describe("smoke: agent chat", () => {
     await page.waitForTimeout(3000);
     // Should have a textarea or input for chat
     const chatInput = page.locator('textarea, input[type="text"]').last();
-    if (await chatInput.count() > 0) {
+    if ((await chatInput.count()) > 0) {
       await expect(chatInput).toBeVisible();
       // Can type in the input
       await chatInput.fill("Test message");

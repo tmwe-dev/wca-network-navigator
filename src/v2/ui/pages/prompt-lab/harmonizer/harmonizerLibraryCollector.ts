@@ -26,9 +26,7 @@ export interface LibraryCollectorInput {
   session: HarmonizerSession;
 }
 
-export async function runLibraryChunkCollector(
-  input: LibraryCollectorInput,
-): Promise<CollectorOutput> {
+export async function runLibraryChunkCollector(input: LibraryCollectorInput): Promise<CollectorOutput> {
   const { userId, sourceText, chunkDef, session } = input;
 
   // 1. Slice: estrai SOLO le righe del chunk corrente.
@@ -54,12 +52,8 @@ export async function runLibraryChunkCollector(
   const { items: desired, diagnostics } = parseDesiredInventoryDetailed(chunkText, []);
 
   // 5. Skip preloadedDuplicates.
-  const dupTitles = new Set(
-    chunkDef.preloadedDuplicates.map((d) => d.title.toLowerCase().trim()),
-  );
-  const desiredFiltered = desired.filter(
-    (d) => !dupTitles.has(d.title.toLowerCase().trim()),
-  );
+  const dupTitles = new Set(chunkDef.preloadedDuplicates.map((d) => d.title.toLowerCase().trim()));
+  const desiredFiltered = desired.filter((d) => !dupTitles.has(d.title.toLowerCase().trim()));
 
   // 6. Classifica gap su realWithSession.
   const gaps = classifyGaps(realWithSession, desiredFiltered);

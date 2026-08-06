@@ -43,7 +43,9 @@ function useCurrentTheme(): [ThemeId, (id: ThemeId) => void] {
     window.addEventListener(THEME_EVENT, handler);
     return () => window.removeEventListener(THEME_EVENT, handler);
   }, []);
-  const change = React.useCallback((id: ThemeId) => { applyTheme(id); }, []);
+  const change = React.useCallback((id: ThemeId) => {
+    applyTheme(id);
+  }, []);
   return [current, change];
 }
 
@@ -57,7 +59,9 @@ function useCurrentMode(): [ThemeMode, (m: ThemeMode) => void] {
     window.addEventListener(MODE_EVENT, handler);
     return () => window.removeEventListener(MODE_EVENT, handler);
   }, []);
-  const change = React.useCallback((m: ThemeMode) => { applyMode(m); }, []);
+  const change = React.useCallback((m: ThemeMode) => {
+    applyMode(m);
+  }, []);
   return [mode, change];
 }
 
@@ -98,19 +102,35 @@ export function ThemePicker({ variant = "icon" }: ThemePickerProps): React.React
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {mode === "dark" ? <Moon className="h-4 w-4 text-muted-foreground shrink-0" /> : <Sun className="h-4 w-4 text-muted-foreground shrink-0" />}
+          {mode === "dark" ? (
+            <Moon className="h-4 w-4 text-muted-foreground shrink-0" />
+          ) : (
+            <Sun className="h-4 w-4 text-muted-foreground shrink-0" />
+          )}
           <span className="text-xs text-muted-foreground mr-1">Modalità</span>
           <div className="flex items-center gap-1 ml-auto rounded-md border border-border/60 p-0.5">
             <button
               type="button"
               onClick={() => setMode("light")}
-              className={"px-2 py-0.5 text-[11px] rounded-sm transition-colors " + (mode === "light" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
-            >Chiaro</button>
+              className={
+                "px-2 py-0.5 text-[11px] rounded-sm transition-colors " +
+                (mode === "light"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              Chiaro
+            </button>
             <button
               type="button"
               onClick={() => setMode("dark")}
-              className={"px-2 py-0.5 text-[11px] rounded-sm transition-colors " + (mode === "dark" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
-            >Scuro</button>
+              className={
+                "px-2 py-0.5 text-[11px] rounded-sm transition-colors " +
+                (mode === "dark" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              Scuro
+            </button>
           </div>
         </div>
         <TextIntensityRow />
@@ -126,7 +146,12 @@ function ThemePickerIcon({
   onChange,
   mode,
   onModeChange,
-}: { current: ThemeId; onChange: (id: ThemeId) => void; mode: ThemeMode; onModeChange: (m: ThemeMode) => void }): React.ReactElement {
+}: {
+  current: ThemeId;
+  onChange: (id: ThemeId) => void;
+  mode: ThemeMode;
+  onModeChange: (m: ThemeMode) => void;
+}): React.ReactElement {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -135,7 +160,9 @@ function ThemePickerIcon({
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -162,9 +189,7 @@ function ThemePickerIcon({
           role="menu"
           className="absolute right-0 mt-2 w-56 z-[100] rounded-md border border-border/60 bg-popover/95 backdrop-blur-xl shadow-xl p-1"
         >
-          <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-            Tema visivo
-          </div>
+          <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Tema visivo</div>
           <div className="h-px bg-border/60 my-1" />
           {THEMES.map((t) => {
             const active = t.id === current;
@@ -173,7 +198,10 @@ function ThemePickerIcon({
                 key={t.id}
                 type="button"
                 role="menuitem"
-                onClick={() => { onChange(t.id); setOpen(false); }}
+                onClick={() => {
+                  onChange(t.id);
+                  setOpen(false);
+                }}
                 className="w-full flex items-center gap-2 px-2 py-2 rounded-sm text-left hover:bg-accent/40 transition-colors"
               >
                 <span
@@ -190,25 +218,31 @@ function ThemePickerIcon({
             );
           })}
           <div className="h-px bg-border/60 my-1" />
-          <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-            Modalità
-          </div>
+          <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Modalità</div>
           <div className="flex items-center gap-1 px-2 pb-2">
             <button
               type="button"
               onClick={() => onModeChange("light")}
-              className={"flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-sm transition-colors " + (mode === "light" ? "bg-primary text-primary-foreground" : "hover:bg-accent/40")}
-            ><Sun className="h-3.5 w-3.5" /> Chiaro</button>
+              className={
+                "flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-sm transition-colors " +
+                (mode === "light" ? "bg-primary text-primary-foreground" : "hover:bg-accent/40")
+              }
+            >
+              <Sun className="h-3.5 w-3.5" /> Chiaro
+            </button>
             <button
               type="button"
               onClick={() => onModeChange("dark")}
-              className={"flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-sm transition-colors " + (mode === "dark" ? "bg-primary text-primary-foreground" : "hover:bg-accent/40")}
-            ><Moon className="h-3.5 w-3.5" /> Scuro</button>
+              className={
+                "flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-sm transition-colors " +
+                (mode === "dark" ? "bg-primary text-primary-foreground" : "hover:bg-accent/40")
+              }
+            >
+              <Moon className="h-3.5 w-3.5" /> Scuro
+            </button>
           </div>
           <div className="h-px bg-border/60 my-1" />
-          <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-            Intensità testo
-          </div>
+          <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Intensità testo</div>
           <div className="px-2 pb-2">
             <TextIntensityRow inline />
           </div>
@@ -243,9 +277,7 @@ function TextIntensityRow({ inline = false }: { inline?: boolean }): React.React
               "px-1.5 py-0.5 leading-none rounded-sm transition-colors min-w-[22px] " +
               s.size +
               " " +
-              (active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground")
+              (active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")
             }
           >
             Aa

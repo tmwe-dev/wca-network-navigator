@@ -8,11 +8,7 @@
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
-import {
-  serviceClient,
-  getSystemToken,
-  tmweBaseUrl,
-} from "../_shared/tmweClient.ts";
+import { serviceClient, getSystemToken, tmweBaseUrl } from "../_shared/tmweClient.ts";
 
 type RiskLevel = "read" | "write" | "destructive" | "admin";
 
@@ -161,14 +157,16 @@ Deno.serve(async (req) => {
       );
     }
     let docs: unknown;
-    try { docs = JSON.parse(text); } catch {
+    try {
+      docs = JSON.parse(text);
+    } catch {
       return new Response(JSON.stringify({ error: "DOCS_NOT_JSON" }), { status: 502, headers });
     }
 
     const eps = flattenDocs(docs);
     if (!eps.length) {
       return new Response(
-        JSON.stringify({ error: "NO_ENDPOINTS_PARSED", raw_keys: Object.keys(docs as object ?? {}) }),
+        JSON.stringify({ error: "NO_ENDPOINTS_PARSED", raw_keys: Object.keys((docs as object) ?? {}) }),
         { status: 502, headers },
       );
     }
@@ -228,14 +226,18 @@ Deno.serve(async (req) => {
     // e Postgres rifiuta ON CONFLICT se lo stesso op compare due volte nello stesso batch.
     // Strategia: l'ultima occorrenza vince, ma le entry NON-alias hanno priorità sugli alias
     // se collidono per nome.
-    const dedup = new Map<string, typeof rows[number]>();
+    const dedup = new Map<string, (typeof rows)[number]>();
     for (const r of rows) {
       const existing = dedup.get(r.op);
-      if (!existing) { dedup.set(r.op, r); continue; }
+      if (!existing) {
+        dedup.set(r.op, r);
+        continue;
+      }
       // se l'esistente è alias e il nuovo no, sostituisci; altrimenti mantieni il più recente
       if (existing.is_alias && !r.is_alias) dedup.set(r.op, r);
-      else if (!existing.is_alias && r.is_alias) { /* keep existing */ }
-      else dedup.set(r.op, r);
+      else if (!existing.is_alias && r.is_alias) {
+        /* keep existing */
+      } else dedup.set(r.op, r);
     }
     const dedupedRows = Array.from(dedup.values());
 
@@ -244,14 +246,12 @@ Deno.serve(async (req) => {
     let upserted = 0;
     for (let i = 0; i < dedupedRows.length; i += CHUNK) {
       const slice = dedupedRows.slice(i, i + CHUNK);
-      const { error } = await svc
-        .from("tmwe_api_catalog")
-        .upsert(slice, { onConflict: "op", ignoreDuplicates: false });
+      const { error } = await svc.from("tmwe_api_catalog").upsert(slice, { onConflict: "op", ignoreDuplicates: false });
       if (error) {
-        return new Response(
-          JSON.stringify({ error: "UPSERT_FAILED", detail: error.message, at_index: i }),
-          { status: 500, headers },
-        );
+        return new Response(JSON.stringify({ error: "UPSERT_FAILED", detail: error.message, at_index: i }), {
+          status: 500,
+          headers,
+        });
       }
       upserted += slice.length;
     }

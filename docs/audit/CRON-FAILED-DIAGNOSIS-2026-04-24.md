@@ -15,6 +15,7 @@ SELECT current_setting('app.settings.service_role_key', true) AS srk_value,
        length(coalesce(current_setting('app.settings.service_role_key', true),'')) AS srk_len,
        current_setting('app.settings.supabase_url', true) AS url_value;
 ```
+
 Risultato: `srk_value=NULL, srk_len=0, url_value=NULL`.
 
 ### 2. Funzione coinvolta
@@ -28,21 +29,22 @@ AS $$
   );
 $$;
 ```
+
 Con GUC NULL → header diventa `'Bearer '` (Bearer + stringa vuota).
 
 ### 3. Edge functions sane
 
 Test diretti (auth user via `supabase--curl_edge_functions`):
 
-| Function | HTTP | Body |
-|---|---|---|
-| `cadence-engine` | 200 | `{processed:0, executed:0, ...}` |
-| `email-sync-worker` | 200 | `{message:"No running jobs"}` |
-| `smart-scheduler` | 200 | `{success:true, totalProposals:0}` |
-| `kb-promoter` | 200 | `{success:true, stats:{...}}` |
-| `memory-promoter` | 200 | `{success:true, stats:{decayed:1, ...}}` |
-| `ai-backup` | 200 | `{success:true, stats:{kb_entries:215, users:5, ...}}` |
-| `ai-learning-feedback` | 200 | `{processed:1, ...}` |
+| Function               | HTTP | Body                                                   |
+| ---------------------- | ---- | ------------------------------------------------------ |
+| `cadence-engine`       | 200  | `{processed:0, executed:0, ...}`                       |
+| `email-sync-worker`    | 200  | `{message:"No running jobs"}`                          |
+| `smart-scheduler`      | 200  | `{success:true, totalProposals:0}`                     |
+| `kb-promoter`          | 200  | `{success:true, stats:{...}}`                          |
+| `memory-promoter`      | 200  | `{success:true, stats:{decayed:1, ...}}`               |
+| `ai-backup`            | 200  | `{success:true, stats:{kb_entries:215, users:5, ...}}` |
+| `ai-learning-feedback` | 200  | `{processed:1, ...}`                                   |
 
 Tutte le 7 functions **funzionano correttamente**. Il problema è solo nell'header del cron.
 
@@ -94,17 +96,18 @@ SELECT cron.schedule(
 
 Schedule originali da preservare:
 
-| Job | Schedule | Function |
-|---|---|---|
-| cadence-engine | `0 * * * *` | cadence-engine |
-| email-sync-worker | `*/3 * * * *` | email-sync-worker |
-| smart-scheduler | `0 5 * * *` | smart-scheduler |
-| kb-promoter | `30 3 * * *` | kb-promoter |
-| memory-promoter | `0 3 * * *` | memory-promoter |
-| ai-backup | `0 4 * * 0` | ai-backup |
-| ai-learning-feedback | `0 5 * * 0` | ai-learning-feedback |
+| Job                  | Schedule      | Function             |
+| -------------------- | ------------- | -------------------- |
+| cadence-engine       | `0 * * * *`   | cadence-engine       |
+| email-sync-worker    | `*/3 * * * *` | email-sync-worker    |
+| smart-scheduler      | `0 5 * * *`   | smart-scheduler      |
+| kb-promoter          | `30 3 * * *`  | kb-promoter          |
+| memory-promoter      | `0 3 * * *`   | memory-promoter      |
+| ai-backup            | `0 4 * * 0`   | ai-backup            |
+| ai-learning-feedback | `0 5 * * 0`   | ai-learning-feedback |
 
 **Alternative scartate**:
+
 - `ALTER DATABASE postgres SET app.settings.service_role_key = '...'` → vietato dalle policy Lovable (proibita modifica DB-level settings).
 - Modificare `cron_service_headers()` per leggere da una tabella settings → richiederebbe nuovo storage e segrega comunque i valori sensibili in un altro punto.
 - Lasciare `cron_service_headers()` rotta → 7 job continuano a fallire ricorrentemente, perdita di funzionalità (cadence engine, email sync, smart scheduler, kb/memory promoter, weekly backup, learning feedback).
@@ -127,8 +130,10 @@ Procedere con **P2.D — Riparazione 7 cron job** in batch unico (7 unschedule +
 Applicato batch `unschedule` + `schedule` per tutti i 7 job. Header sostituito con anon key inline (publishable, conforme `secret-management-standard`). Schedule originali preservati.
 
 Verifica post-fix:
+
 ```sql
 SELECT jobname, active, command ~ 'cron_service_headers' AS still_broken
 FROM cron.job WHERE jobname IN (...);
 ```
+
 Risultato: tutti i 7 job → `active=true, still_broken=false`. Prossima esecuzione `email-sync-worker` (ogni 3 min) sarà la prima validazione live.

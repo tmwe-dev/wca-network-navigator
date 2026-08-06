@@ -5,10 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function fetchUserSettingsMap(userId: string): Promise<Record<string, string>> {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("key, value")
-    .eq("user_id", userId);
+  const { data, error } = await supabase.from("app_settings").select("key, value").eq("user_id", userId);
   if (error) throw error;
   const map: Record<string, string> = {};
   data?.forEach((row) => {

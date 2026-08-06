@@ -104,7 +104,9 @@ export async function searchWaRecipients(query: string, limit = 20): Promise<WaT
     const { data } = await supabase
       .from("business_cards")
       .select("id, contact_name, company_name, email, phone, mobile")
-      .or(`contact_name.ilike.${like},company_name.ilike.${like},email.ilike.${like},phone.ilike.${like},mobile.ilike.${like}`)
+      .or(
+        `contact_name.ilike.${like},company_name.ilike.${like},email.ilike.${like},phone.ilike.${like},mobile.ilike.${like}`,
+      )
       .limit(limit);
     for (const r of data || []) {
       out.push({

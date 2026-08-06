@@ -78,11 +78,7 @@ export async function loadRoutingRules(
 ): Promise<RoutingRule[]> {
   if (!userId) return [];
   try {
-    let q = supabase
-      .from("agent_routing_rules")
-      .select("*")
-      .eq("enabled", true)
-      .order("priority", { ascending: true });
+    let q = supabase.from("agent_routing_rules").select("*").eq("enabled", true).order("priority", { ascending: true });
     if (agentId) {
       // persona-specific OR global
       q = q.or(`agent_id.eq.${agentId},agent_id.is.null`);
@@ -106,17 +102,16 @@ export async function loadRoutingRules(
  * Aggregates UP TO 3 most relevant rules (highest priority) so the prompt
  * stays compact. Returns "" when no bias is configured.
  */
-export function renderRoutingBiasBlock(
-  rules: RoutingRule[],
-  ctx: RoutingMatchContext,
-): string {
+export function renderRoutingBiasBlock(rules: RoutingRule[], ctx: RoutingMatchContext): string {
   // Pre-class we don't yet know the AI's output, so we surface ALL rules
   // whose match_lead_status is either null or matches current lead state.
-  const candidates = rules.filter((r) => {
-    if (r.match_lead_status && ctx.leadStatus && r.match_lead_status !== ctx.leadStatus) return false;
-    const hasBias = r.bias_domain_hint || r.bias_category_hint || r.bias_tone_hint || r.bias_extra_instructions;
-    return !!hasBias;
-  }).slice(0, 3);
+  const candidates = rules
+    .filter((r) => {
+      if (r.match_lead_status && ctx.leadStatus && r.match_lead_status !== ctx.leadStatus) return false;
+      const hasBias = r.bias_domain_hint || r.bias_category_hint || r.bias_tone_hint || r.bias_extra_instructions;
+      return !!hasBias;
+    })
+    .slice(0, 3);
 
   if (candidates.length === 0) return "";
 
@@ -188,10 +183,7 @@ export function buildOverride(rule: RoutingRule): AppliedOverride {
 /**
  * Increment the match counter (best-effort, non-blocking).
  */
-export async function recordRuleMatch(
-  supabase: SupabaseClient,
-  ruleId: string,
-): Promise<void> {
+export async function recordRuleMatch(supabase: SupabaseClient, ruleId: string): Promise<void> {
   try {
     await supabase.rpc("increment_routing_rule_match", { _rule_id: ruleId });
   } catch (e) {

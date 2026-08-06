@@ -14,7 +14,11 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { insertPendingAction } from "@/data/aiPendingActions";
-import { sendLinkedIn as sendLinkedInUnified, type SendResult, type LinkedInBridgeSender } from "@/lib/inbox/sendMessage";
+import {
+  sendLinkedIn as sendLinkedInUnified,
+  type SendResult,
+  type LinkedInBridgeSender,
+} from "@/lib/inbox/sendMessage";
 import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { createLogger } from "@/lib/log";
 
@@ -78,7 +82,9 @@ export interface QueueLinkedInArgs {
  * via `pending-action-executor` → edge `send-linkedin`.
  */
 export async function queueLinkedInForApproval(args: QueueLinkedInArgs): Promise<{ queued: number; failed: number }> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   if (!userId) return { queued: 0, failed: args.targets.length };
 
@@ -87,7 +93,10 @@ export async function queueLinkedInForApproval(args: QueueLinkedInArgs): Promise
 
   for (const t of args.targets) {
     const url = normalizeLinkedInProfileUrl(t.profileUrl);
-    if (!url || !isLinkedInProfileUrl(url)) { failed++; continue; }
+    if (!url || !isLinkedInProfileUrl(url)) {
+      failed++;
+      continue;
+    }
 
     const personalized = args.messageOrTemplate
       .replace(/\{\{name\}\}/gi, t.contactName || "")
@@ -112,8 +121,10 @@ export async function queueLinkedInForApproval(args: QueueLinkedInArgs): Promise
       source: args.source,
       status: "pending",
     });
-    if (error) { log.warn("queue.insert_failed", { error: error.message, source: args.source }); failed++; }
-    else queued++;
+    if (error) {
+      log.warn("queue.insert_failed", { error: error.message, source: args.source });
+      failed++;
+    } else queued++;
   }
 
   log.info("queue.batch", { source: args.source, queued, failed });

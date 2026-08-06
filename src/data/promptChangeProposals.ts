@@ -55,7 +55,9 @@ export async function listPromptChangeProposals(opts: { status?: string } = {}):
   return (data || []) as PromptChangeProposal[];
 }
 
-export async function createPromptChangeProposal(input: CreatePromptChangeProposalInput): Promise<PromptChangeProposal> {
+export async function createPromptChangeProposal(
+  input: CreatePromptChangeProposalInput,
+): Promise<PromptChangeProposal> {
   const { data, error } = await supabase
     .from("prompt_change_proposals")
     .insert({
@@ -94,10 +96,7 @@ export async function reviewPromptChangeProposal(
 }
 /** Marca una proposta come "applied" dopo che il patch è stato scritto sul prompt sorgente. */
 export async function markPromptChangeProposalApplied(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("prompt_change_proposals")
-    .update({ status: "applied" })
-    .eq("id", id);
+  const { error } = await supabase.from("prompt_change_proposals").update({ status: "applied" }).eq("id", id);
   if (error) throw error;
 }
 
@@ -106,9 +105,6 @@ export async function updateOperativePromptBlockPatch(
   promptId: string,
   patch: Database["public"]["Tables"]["operative_prompts"]["Update"],
 ): Promise<void> {
-  const { error } = await supabase
-    .from("operative_prompts")
-    .update(patch)
-    .eq("id", promptId);
+  const { error } = await supabase.from("operative_prompts").update(patch).eq("id", promptId);
   if (error) throw error;
 }

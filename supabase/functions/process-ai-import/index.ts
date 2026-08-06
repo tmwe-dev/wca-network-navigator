@@ -38,10 +38,10 @@ serve(async (req) => {
     const rl = checkRateLimit(`ai-import:${userId}`, { maxTokens: 10, refillRate: 0.1 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const lovableApiKey =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -63,10 +63,7 @@ serve(async (req) => {
     if (logError || !importLog) throw new Error("Import log not found");
 
     // Update status to processing
-    await supabase
-      .from("import_logs")
-      .update({ status: "processing" })
-      .eq("id", import_log_id);
+    await supabase.from("import_logs").update({ status: "processing" }).eq("id", import_log_id);
 
     // Get all contacts for this import that haven't been processed yet
     const { data: contacts, error: contactsError } = await supabase
@@ -78,10 +75,7 @@ serve(async (req) => {
     if (contactsError) throw new Error(`Failed to fetch contacts: ${contactsError.message}`);
 
     const totalBatches = Math.ceil((contacts?.length || 0) / BATCH_SIZE);
-    await supabase
-      .from("import_logs")
-      .update({ total_batches: totalBatches })
-      .eq("id", import_log_id);
+    await supabase.from("import_logs").update({ total_batches: totalBatches }).eq("id", import_log_id);
 
     let importedCount = 0;
     let errorCount = 0;
@@ -92,15 +86,12 @@ serve(async (req) => {
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
 
       // Update progress
-      await supabase
-        .from("import_logs")
-        .update({ processing_batch: batchNumber })
-        .eq("id", import_log_id);
+      await supabase.from("import_logs").update({ processing_batch: batchNumber }).eq("id", import_log_id);
 
       if (lovableApiKey) {
         try {
           const normalized = await normalizeWithAI(batch, lovableApiKey);
-          
+
           for (let j = 0; j < batch.length; j++) {
             const contact = batch[j];
             const norm = normalized[j];
@@ -125,14 +116,28 @@ serve(async (req) => {
 
               if (updateError) {
                 errorCount++;
-                await logImportError(supabase, import_log_id, contact.row_number, "update_failed", updateError.message, contact.raw_data);
+                await logImportError(
+                  supabase,
+                  import_log_id,
+                  contact.row_number,
+                  "update_failed",
+                  updateError.message,
+                  contact.raw_data,
+                );
               } else {
                 importedCount++;
               }
             } else {
               // AI couldn't normalize — log as error
               errorCount++;
-              await logImportError(supabase, import_log_id, contact.row_number, "normalization_failed", "AI non ha potuto normalizzare questo record", contact.raw_data);
+              await logImportError(
+                supabase,
+                import_log_id,
+                contact.row_number,
+                "normalization_failed",
+                "AI non ha potuto normalizzare questo record",
+                contact.raw_data,
+              );
             }
           }
         } catch (aiError) {
@@ -140,7 +145,14 @@ serve(async (req) => {
           console.error("AI batch error:", aiError);
           for (const contact of batch) {
             errorCount++;
-            await logImportError(supabase, import_log_id, contact.row_number, "ai_error", String(aiError), contact.raw_data);
+            await logImportError(
+              supabase,
+              import_log_id,
+              contact.row_number,
+              "ai_error",
+              String(aiError),
+              contact.raw_data,
+            );
           }
         }
       } else {
@@ -148,7 +160,14 @@ serve(async (req) => {
         for (const contact of batch) {
           if (!contact.company_name?.trim()) {
             errorCount++;
-            await logImportError(supabase, import_log_id, contact.row_number, "missing_field", "company_name mancante", contact.raw_data);
+            await logImportError(
+              supabase,
+              import_log_id,
+              contact.row_number,
+              "missing_field",
+              "company_name mancante",
+              contact.raw_data,
+            );
           } else {
             importedCount++;
           }
@@ -167,20 +186,22 @@ serve(async (req) => {
       })
       .eq("id", import_log_id);
 
-    return new Response(
-      JSON.stringify({ success: true, imported: importedCount, errors: errorCount }),
-      { headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, imported: importedCount, errors: errorCount }), {
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("process-ai-import error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });
 
-async function normalizeWithAI(batch: Array<Record<string, unknown>>, _apiKey: string): Promise<Array<Record<string, unknown>>> {
+async function normalizeWithAI(
+  batch: Array<Record<string, unknown>>,
+  _apiKey: string,
+): Promise<Array<Record<string, unknown>>> {
   const prompt = `Sei un assistente specializzato nella normalizzazione di dati aziendali per un CRM di spedizionieri e freight forwarder.
 
 Per ogni record nel seguente array JSON, normalizza i campi:
@@ -198,61 +219,64 @@ Per ogni record nel seguente array JSON, normalizza i campi:
 
 Rispondi SOLO con un array JSON valido, stesso numero di elementi dell'input. Se un campo non è recuperabile, usa null.`;
 
-  const records = batch.map((c) => c.raw_data || {
-    company_name: c.company_name,
-    name: c.name,
-    email: c.email,
-    phone: c.phone,
-    mobile: c.mobile,
-    country: c.country,
-    city: c.city,
-    address: c.address,
-    zip_code: c.zip_code,
-  });
+  const records = batch.map(
+    (c) =>
+      c.raw_data || {
+        company_name: c.company_name,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        mobile: c.mobile,
+        country: c.country,
+        city: c.city,
+        address: c.address,
+        zip_code: c.zip_code,
+      },
+  );
 
   const response = await aiFetch({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: JSON.stringify(records) },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "return_normalized_contacts",
-            description: "Returns the array of normalized contact records",
-            parameters: {
-              type: "object",
-              properties: {
-                contacts: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      company_name: { type: "string" },
-                      company_alias: { type: "string" },
-                      name: { type: "string" },
-                      contact_alias: { type: "string" },
-                      email: { type: "string" },
-                      phone: { type: "string" },
-                      mobile: { type: "string" },
-                      country: { type: "string" },
-                      city: { type: "string" },
-                      address: { type: "string" },
-                      zip_code: { type: "string" },
-                    },
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: prompt },
+      { role: "user", content: JSON.stringify(records) },
+    ],
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "return_normalized_contacts",
+          description: "Returns the array of normalized contact records",
+          parameters: {
+            type: "object",
+            properties: {
+              contacts: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    company_name: { type: "string" },
+                    company_alias: { type: "string" },
+                    name: { type: "string" },
+                    contact_alias: { type: "string" },
+                    email: { type: "string" },
+                    phone: { type: "string" },
+                    mobile: { type: "string" },
+                    country: { type: "string" },
+                    city: { type: "string" },
+                    address: { type: "string" },
+                    zip_code: { type: "string" },
                   },
                 },
               },
-              required: ["contacts"],
-              additionalProperties: false,
             },
+            required: ["contacts"],
+            additionalProperties: false,
           },
         },
-      ],
-      tool_choice: { type: "function", function: { name: "return_normalized_contacts" } },
-    });
+      },
+    ],
+    tool_choice: { type: "function", function: { name: "return_normalized_contacts" } },
+  });
 
   if (!response.ok) {
     const text = await response.text();
@@ -273,7 +297,7 @@ async function logImportError(
   rowNumber: number,
   errorType: string,
   errorMessage: string,
-  rawData: unknown
+  rawData: unknown,
 ) {
   await supabase.from("import_errors").insert({
     import_log_id: importLogId,
@@ -284,10 +308,18 @@ async function logImportError(
   });
 }
 
-async function handleFixErrors(supabase: SupabaseClient, importLogId: string, lovableApiKey: string | undefined, dynCors: Record<string, string>, customPrompt?: string, batchOffset: number = 0) {
+async function handleFixErrors(
+  supabase: SupabaseClient,
+  importLogId: string,
+  lovableApiKey: string | undefined,
+  dynCors: Record<string, string>,
+  customPrompt?: string,
+  batchOffset: number = 0,
+) {
   if (!lovableApiKey) {
     return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
-      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -326,7 +358,7 @@ Rispondi con un array dove ogni elemento ha:
 - data: oggetto con i campi corretti (company_name, name, email, phone, mobile, country, city, address, zip_code)
   Se non riesci a correggere, data può essere null.`;
 
-  const prompt = customPrompt 
+  const prompt = customPrompt
     ? `${customPrompt}\n\nRispondi con un array dove ogni elemento ha:\n- corrected: true/false\n- data: oggetto con i campi corretti (company_name, name, email, phone, mobile, country, city, address, zip_code). Se non riesci, data = null.`
     : defaultPrompt;
 
@@ -338,12 +370,13 @@ Rispondi con un array dove ogni elemento ha:
   }));
 
   const response = await aiFetch({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: JSON.stringify(records) },
-      ],
-      tools: [{
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: prompt },
+      { role: "user", content: JSON.stringify(records) },
+    ],
+    tools: [
+      {
         type: "function",
         function: {
           name: "return_corrections",
@@ -380,9 +413,10 @@ Rispondi con un array dove ogni elemento ha:
             additionalProperties: false,
           },
         },
-      }],
-      tool_choice: { type: "function", function: { name: "return_corrections" } },
-    });
+      },
+    ],
+    tool_choice: { type: "function", function: { name: "return_corrections" } },
+  });
 
   if (!response.ok) {
     const text = await response.text();
@@ -419,19 +453,25 @@ Rispondi con un array dove ogni elemento ha:
         raw_data: err.raw_data,
       });
 
-      await supabase.from("import_errors").update({
-        status: "corrected",
-        corrected_data: result.data,
-        ai_suggestions: customPrompt ? { custom_prompt: customPrompt } : null,
-        attempted_corrections: (err.attempted_corrections || 0) + 1,
-      }).eq("id", err.id);
+      await supabase
+        .from("import_errors")
+        .update({
+          status: "corrected",
+          corrected_data: result.data,
+          ai_suggestions: customPrompt ? { custom_prompt: customPrompt } : null,
+          attempted_corrections: (err.attempted_corrections || 0) + 1,
+        })
+        .eq("id", err.id);
 
       correctedCount++;
     } else {
-      await supabase.from("import_errors").update({
-        status: "dismissed",
-        attempted_corrections: (err.attempted_corrections || 0) + 1,
-      }).eq("id", err.id);
+      await supabase
+        .from("import_errors")
+        .update({
+          status: "dismissed",
+          attempted_corrections: (err.attempted_corrections || 0) + 1,
+        })
+        .eq("id", err.id);
 
       dismissedCount++;
     }
@@ -440,14 +480,17 @@ Rispondi con un array dove ogni elemento ha:
   const remainingAfter = (totalPending || 0) - errors.length;
   const hasMore = remainingAfter > 0;
 
-  return new Response(JSON.stringify({ 
-    corrected: correctedCount, 
-    dismissed: dismissedCount, 
-    has_more: hasMore,
-    remaining: remainingAfter,
-    next_offset: 0, // Always 0 since we process "pending" status and they change after processing
-    total_pending_before: totalPending || 0,
-  }), {
-    headers: { ...dynCors, "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({
+      corrected: correctedCount,
+      dismissed: dismissedCount,
+      has_more: hasMore,
+      remaining: remainingAfter,
+      next_offset: 0, // Always 0 since we process "pending" status and they change after processing
+      total_pending_before: totalPending || 0,
+    }),
+    {
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    },
+  );
 }

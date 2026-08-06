@@ -29,21 +29,20 @@ export type CronGuardResult =
   | { skip: false }
   | { skip: true; reason: "disabled_by_user" | "throttled" | "cron_paused"; nextInMin?: number };
 
-export async function cronGuardCheck(
-  supabase: SupabaseLike,
-  config: CronGuardConfig
-): Promise<CronGuardResult> {
+export async function cronGuardCheck(supabase: SupabaseLike, config: CronGuardConfig): Promise<CronGuardResult> {
   // 0. Global kill-switch (system_flags.cron_paused) — implementazione unica in cronGate
   const cronPaused = await isCronPausedWith(() =>
-    cronTable(supabase, "system_flags").select("value").eq("key", "cron_paused").maybeSingle()
+    cronTable(supabase, "system_flags").select("value").eq("key", "cron_paused").maybeSingle(),
   );
   if (cronPaused) {
-    console.warn(JSON.stringify({
-      level: "warn",
-      event: "cron_paused_skip",
-      function: config.jobName,
-      timestamp: new Date().toISOString(),
-    }));
+    console.warn(
+      JSON.stringify({
+        level: "warn",
+        event: "cron_paused_skip",
+        function: config.jobName,
+        timestamp: new Date().toISOString(),
+      }),
+    );
     return { skip: true, reason: "cron_paused" };
   }
 
@@ -98,7 +97,7 @@ export async function cronGuardLogRun(
   supabase: SupabaseLike,
   jobName: string,
   result: Record<string, unknown> = {},
-  error?: string | null
+  error?: string | null,
 ): Promise<void> {
   try {
     await cronTable(supabase, "cron_run_log").insert({

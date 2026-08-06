@@ -14,14 +14,14 @@ esclusi `*.test.*`, `*.spec.*`, `*.d.ts`, `src/test/**`, `**/__tests__/**`,
 
 ## Baseline (prima del batch)
 
-| Metrica | Valore |
-|---|---|
-| `untypedFrom(` | 149 |
-| `as never` | 135 |
-| `as unknown as` | 313 |
-| any esplicito (`: any`, `<any>`, `as any`, `any[]`) | 20 |
-| `@ts-ignore` / `@ts-expect-error` / `@ts-nocheck` | 0 |
-| `eslint-disable` | 71 |
+| Metrica                                             | Valore |
+| --------------------------------------------------- | ------ |
+| `untypedFrom(`                                      | 149    |
+| `as never`                                          | 135    |
+| `as unknown as`                                     | 313    |
+| any esplicito (`: any`, `<any>`, `as any`, `any[]`) | 20     |
+| `@ts-ignore` / `@ts-expect-error` / `@ts-nocheck`   | 0      |
+| `eslint-disable`                                    | 71     |
 
 Nota: la misura precedente di 157 `untypedFrom` includeva anche i file di test
 (`src/test/calendar.test.ts`, `src/test/rbac.test.ts`), qui esclusi dal perimetro.

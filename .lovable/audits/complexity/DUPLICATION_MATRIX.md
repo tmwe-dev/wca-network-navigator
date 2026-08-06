@@ -73,7 +73,7 @@
 
 ## Gruppi Edge Functions con prefisso condiviso (>=3)
 
-- **** (4): `_shared`, `_shared`, `_shared`, `_shared`
+- \*\*\*\* (4): `_shared`, `_shared`, `_shared`, `_shared`
 - **agent** (9): `agent-audit`, `agent-autonomous-cycle`, `agent-autopilot-worker`, `agent-execute`, `agent-execute`, `agent-loop`, `agent-prompt-refiner`, `agent-simulate`, `agent-task-drainer`
 - **ai** (11): `ai-arena-suggest`, `ai-assistant`, `ai-backup`, `ai-deep-search-helper`, `ai-gateway-micro`, `ai-match-business-cards`, `ai-monitor`, `ai-query-planner`, `ai-test-runner`, `ai-tracking-healthcheck`, `ai-utility`
 - **analyze** (3): `analyze-email-edit`, `analyze-import-structure`, `analyze-partner`

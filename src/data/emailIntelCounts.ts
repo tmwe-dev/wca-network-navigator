@@ -6,10 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /** Indirizzi senza gruppo (solo `email_address`, intersecati client-side con l'allowlist). */
 export async function findUncategorizedAddresses(): Promise<Array<{ email_address: string }>> {
-  const { data } = await supabase
-    .from("email_address_rules")
-    .select("email_address")
-    .is("group_id", null);
+  const { data } = await supabase.from("email_address_rules").select("email_address").is("group_id", null);
   return (data ?? []) as Array<{ email_address: string }>;
 }
 
@@ -27,14 +24,8 @@ export async function findPendingAiSuggestionAddresses(): Promise<Array<{ email_
 /** Classificazioni odierne: pipeline legacy + Funnemail. */
 export async function countClassificationsSince(isoDate: string): Promise<number> {
   const [legacy, funnemail] = await Promise.all([
-    supabase
-      .from("email_classifications")
-      .select("id", { count: "exact", head: true })
-      .gte("classified_at", isoDate),
-    supabase
-      .from("funnemail_decisions")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", isoDate),
+    supabase.from("email_classifications").select("id", { count: "exact", head: true }).gte("classified_at", isoDate),
+    supabase.from("funnemail_decisions").select("id", { count: "exact", head: true }).gte("created_at", isoDate),
   ]);
   return (legacy.count ?? 0) + (funnemail.count ?? 0);
 }

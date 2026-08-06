@@ -17,9 +17,7 @@ import type { Database } from "@/integrations/supabase/types";
 type PartnerInsert = Database["public"]["Tables"]["partners"]["Insert"];
 type PartnerUpdate = Database["public"]["Tables"]["partners"]["Update"];
 
-export async function createPartner(
-  input: PartnerInsert,
-): Promise<Result<PartnerV2, AppError>> {
+export async function createPartner(input: PartnerInsert): Promise<Result<PartnerV2, AppError>> {
   try {
     const row = await dalCreatePartner(input);
     return mapPartnerRow(row);
@@ -28,17 +26,23 @@ export async function createPartner(
   }
 }
 
-export async function updatePartner(
-  partnerId: string,
-  updates: PartnerUpdate,
-): Promise<Result<PartnerV2, AppError>> {
+export async function updatePartner(partnerId: string, updates: PartnerUpdate): Promise<Result<PartnerV2, AppError>> {
   try {
     await dalUpdatePartner(partnerId, updates);
     const row = await getPartner(partnerId);
     if (!row) {
-      return err(ioError("NOT_FOUND", `Partner ${partnerId} non trovato`, {
-        table: "partners", partnerId, operation: "update",
-      }, "updatePartner"));
+      return err(
+        ioError(
+          "NOT_FOUND",
+          `Partner ${partnerId} non trovato`,
+          {
+            table: "partners",
+            partnerId,
+            operation: "update",
+          },
+          "updatePartner",
+        ),
+      );
     }
     return mapPartnerRow(row);
   } catch (caught: unknown) {
@@ -46,9 +50,7 @@ export async function updatePartner(
   }
 }
 
-export async function deletePartner(
-  partnerId: string,
-): Promise<Result<void, AppError>> {
+export async function deletePartner(partnerId: string): Promise<Result<void, AppError>> {
   try {
     await deletePartnersByIds([partnerId]);
     return ok(undefined);

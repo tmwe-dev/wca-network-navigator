@@ -15,7 +15,9 @@ export const STATUS_COLORS: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
 };
 export const STATUS_LABELS: Record<string, string> = {
-  matched: "Match", unmatched: "No match", pending: "Attesa",
+  matched: "Match",
+  unmatched: "No match",
+  pending: "Attesa",
 };
 
 /* ═══ Origin accent border ═══ */
@@ -30,8 +32,11 @@ export function getCardOriginClasses(card: BusinessCardWithPartner): { border: s
 export function countryFlag(code: string | null | undefined): string {
   if (!code) return "";
   try {
-    return String.fromCodePoint(...[...code.toUpperCase()].map((c: string) => 0x1F1E6 + c.charCodeAt(0) - 65));
-  } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return ""; }
+    return String.fromCodePoint(...[...code.toUpperCase()].map((c: string) => 0x1f1e6 + c.charCodeAt(0) - 65));
+  } catch (e) {
+    log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) });
+    return "";
+  }
 }
 
 /* ═══ Resolve country from card data ═══ */
@@ -46,7 +51,7 @@ export function getCardCountryCode(card: BusinessCardWithPartner): string | null
   if (card.location) {
     const resolved = resolveCountryCode(card.location);
     if (resolved) return resolved;
-    const parts = card.location.split(",").map(s => s.trim());
+    const parts = card.location.split(",").map((s) => s.trim());
     for (let i = parts.length - 1; i >= 0; i--) {
       const r = resolveCountryCode(parts[i]);
       if (r) return r;
@@ -92,7 +97,7 @@ export function BCAQuickActions({ card }: { card: BusinessCardWithPartner }) {
     if (phone) window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
   };
   return (
-    <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+    <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
       {card.email && (
         <button onClick={handleEmail} className="p-0.5 rounded hover:bg-primary/10" title="Email">
           <Mail className="w-3 h-3 text-primary" />

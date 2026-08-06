@@ -89,7 +89,13 @@ export function InlineGroupAssigner({
   const effectiveGroup = ruleHit?.groupName ?? currentGroupName;
 
   return (
-    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) setPrompt(currentPrompt ?? ""); }}>
+    <Popover
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (v) setPrompt(currentPrompt ?? "");
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           size="sm"
@@ -123,9 +129,7 @@ export function InlineGroupAssigner({
                     disabled={assignMut.isPending}
                     className={cn(
                       "flex items-center gap-2 px-2.5 py-2 text-left text-xs transition-colors",
-                      active
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "hover:bg-muted/60 text-foreground",
+                      active ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted/60 text-foreground",
                     )}
                   >
                     {g.icon ? (

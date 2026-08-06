@@ -10,10 +10,25 @@ export function CircuitFiltersSection() {
   return (
     <>
       <FilterSection icon={Search} label="Cerca">
-        <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        <Input
+          value={g.filters.search}
+          onChange={(e) => g.setSearch(e.target.value)}
+          placeholder="Cerca..."
+          className="h-8 text-xs bg-muted/30 border-border/40"
+        />
       </FilterSection>
       <FilterSection icon={Plane} label="Fase">
-        <ChipGroup>{COCKPIT_STATUS.map(o => <Chip key={o.value} active={g.filters.cockpitStatus === o.value} onClick={() => g.setCockpitStatus(o.value)}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>
+          {COCKPIT_STATUS.map((o) => (
+            <Chip
+              key={o.value}
+              active={g.filters.cockpitStatus === o.value}
+              onClick={() => g.setCockpitStatus(o.value)}
+            >
+              {o.label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
     </>
   );

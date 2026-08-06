@@ -5,9 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { Loader2, AlertTriangle, TrendingUp, Zap } from "lucide-react";
-import {
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid,
-} from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -22,15 +20,41 @@ interface PeriodTotal {
   tokens_out: number;
   call_count: number;
 }
-interface GroupRow { group_category: string; cost_usd: number; call_count: number }
-interface DailyRow { day: string; cost_usd: number; call_count: number; tokens_total: number }
-interface TopFn { function_name: string; call_count: number; cost_usd: number; tokens_total: number; avg_latency_ms: number }
-interface SizeRow { size_bucket: string; call_count: number; avg_chars: number }
-interface CronRow { source: string; cost_usd: number; call_count: number }
+interface GroupRow {
+  group_category: string;
+  cost_usd: number;
+  call_count: number;
+}
+interface DailyRow {
+  day: string;
+  cost_usd: number;
+  call_count: number;
+  tokens_total: number;
+}
+interface TopFn {
+  function_name: string;
+  call_count: number;
+  cost_usd: number;
+  tokens_total: number;
+  avg_latency_ms: number;
+}
+interface SizeRow {
+  size_bucket: string;
+  call_count: number;
+  avg_chars: number;
+}
+interface CronRow {
+  source: string;
+  cost_usd: number;
+  call_count: number;
+}
 interface BudgetInfo {
-  monthlyBudgetUsd: number; alertThresholdPercent: number;
-  monthSpentUsd: number; budgetPercentage: number;
-  subscriptionStart: string | null; subscriptionEnd: string | null;
+  monthlyBudgetUsd: number;
+  alertThresholdPercent: number;
+  monthSpentUsd: number;
+  budgetPercentage: number;
+  subscriptionStart: string | null;
+  subscriptionEnd: string | null;
 }
 interface MonitorData {
   todayTotal: PeriodTotal | null;
@@ -76,7 +100,9 @@ export function AiMonitorPanel() {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -139,7 +165,9 @@ export function AiMonitorPanel() {
           { label: "Mese corrente", t: data.monthTotal },
         ].map((k) => (
           <Card key={k.label}>
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{k.label}</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">{k.label}</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-1">
               <div className="text-2xl font-bold">{fmtUsd(k.t?.cost_usd)}</div>
               <div className="text-xs text-muted-foreground">
@@ -164,10 +192,17 @@ export function AiMonitorPanel() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.dailyHistory}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11}
-                  tickFormatter={(v) => String(v).slice(5)} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11}
-                  tickFormatter={(v) => "$" + Number(v).toFixed(2)} />
+                <XAxis
+                  dataKey="day"
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={11}
+                  tickFormatter={(v) => String(v).slice(5)}
+                />
+                <YAxis
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={11}
+                  tickFormatter={(v) => "$" + Number(v).toFixed(2)}
+                />
                 <Tooltip
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
                   formatter={(v: number) => fmtUsd(v)}
@@ -195,7 +230,9 @@ export function AiMonitorPanel() {
                 {data.cronVsUser.map((r) => (
                   <li key={r.source} className="flex items-center justify-between text-sm">
                     <span className="capitalize">{r.source}</span>
-                    <span className="font-mono">{fmtUsd(r.cost_usd)} · {fmtNum(r.call_count)}</span>
+                    <span className="font-mono">
+                      {fmtUsd(r.cost_usd)} · {fmtNum(r.call_count)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -203,7 +240,9 @@ export function AiMonitorPanel() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Oggi per categoria</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Oggi per categoria</CardTitle>
+          </CardHeader>
           <CardContent>
             {data.todayByGroup.length === 0 ? (
               <div className="text-sm text-muted-foreground">Nessuna chiamata oggi.</div>
@@ -212,7 +251,9 @@ export function AiMonitorPanel() {
                 {data.todayByGroup.map((r) => (
                   <li key={r.group_category} className="flex items-center justify-between text-sm">
                     <span>{r.group_category}</span>
-                    <span className="font-mono">{fmtUsd(r.cost_usd)} · {fmtNum(r.call_count)}</span>
+                    <span className="font-mono">
+                      {fmtUsd(r.cost_usd)} · {fmtNum(r.call_count)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -223,7 +264,9 @@ export function AiMonitorPanel() {
 
       {/* Top functions */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Top funzioni (7 gg)</CardTitle></CardHeader>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Top funzioni (7 gg)</CardTitle>
+        </CardHeader>
         <CardContent>
           {data.topFunctions.length === 0 ? (
             <div className="text-sm text-muted-foreground">Nessun dato.</div>
@@ -258,7 +301,9 @@ export function AiMonitorPanel() {
 
       {/* Size distribution */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Distribuzione dimensione prompt (7 gg)</CardTitle></CardHeader>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Distribuzione dimensione prompt (7 gg)</CardTitle>
+        </CardHeader>
         <CardContent className="h-48">
           {data.sizeDistribution.length === 0 ? (
             <div className="text-sm text-muted-foreground">Nessun dato.</div>
@@ -268,9 +313,7 @@ export function AiMonitorPanel() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="size_bucket" stroke="hsl(var(--muted-foreground))" fontSize={11} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
                 <Bar dataKey="call_count" fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>

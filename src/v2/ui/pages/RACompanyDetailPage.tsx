@@ -7,14 +7,23 @@ import { ArrowLeft, Loader2, AlertCircle, Mail, Phone, Briefcase, Copy } from "l
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useRAProspect, useRAProspectContacts, useRAProspectInteractions, useUpdateRALeadStatus } from "@/hooks/useRAProspects";
+import {
+  useRAProspect,
+  useRAProspectContacts,
+  useRAProspectInteractions,
+  useUpdateRALeadStatus,
+} from "@/hooks/useRAProspects";
 import { RACompanyHeader } from "@/components/ra/RACompanyHeader";
 import { RACompanyKPI, formatCurrency } from "@/components/ra/RACompanyKPI";
 import { RACompanySidebar } from "@/components/ra/RACompanySidebar";
 
 function CopyButton({ text }: { text: string }) {
   const [_copied, setCopied] = useState(false);
-  const handleCopy = () => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   return (
     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-primary/10" onClick={handleCopy}>
       <Copy className="w-4 h-4" />
@@ -35,12 +44,20 @@ export function RACompanyDetailPage() {
     return (
       <div className="h-full flex flex-col overflow-hidden bg-gradient-to-b from-[hsl(240_6%_3%)] via-[hsl(240_6%_5%)] to-[hsl(240_6%_3%)]">
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6">
-          <div className="p-3 rounded-full bg-destructive/10 border border-destructive/30"><AlertCircle className="w-6 h-6 text-destructive" /></div>
+          <div className="p-3 rounded-full bg-destructive/10 border border-destructive/30">
+            <AlertCircle className="w-6 h-6 text-destructive" />
+          </div>
           <div className="text-center">
             <h2 className="text-lg font-semibold text-foreground">Azienda non trovata</h2>
-            <p className="text-sm text-muted-foreground mt-1">L'azienda che stai cercando non esiste o è stata eliminata</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              L'azienda che stai cercando non esiste o è stata eliminata
+            </p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/v2/research/explorer")} className="border-border hover:bg-muted/50">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/v2/research/explorer")}
+            className="border-border hover:bg-muted/50"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" /> Torna a Explorer
           </Button>
         </div>
@@ -67,14 +84,28 @@ export function RACompanyDetailPage() {
           <ScrollArea className="flex-1">
             <div className="p-6 space-y-8">
               <section>
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Informazioni Anagrafiche</h2>
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+                  Informazioni Anagrafiche
+                </h2>
                 <div className="grid grid-cols-2 gap-6">
                   {prospect.partita_iva && <InfoField label="P.IVA" value={prospect.partita_iva} mono />}
                   {prospect.codice_fiscale && <InfoField label="Codice Fiscale" value={prospect.codice_fiscale} mono />}
-                  {prospect.address && <InfoField label="Indirizzo" value={`${prospect.address}${prospect.cap ? `, ${prospect.cap}` : ""}`} />}
-                  {prospect.city && <InfoField label="Città" value={`${prospect.city}${prospect.province ? ` (${prospect.province})` : ""}`} />}
+                  {prospect.address && (
+                    <InfoField
+                      label="Indirizzo"
+                      value={`${prospect.address}${prospect.cap ? `, ${prospect.cap}` : ""}`}
+                    />
+                  )}
+                  {prospect.city && (
+                    <InfoField
+                      label="Città"
+                      value={`${prospect.city}${prospect.province ? ` (${prospect.province})` : ""}`}
+                    />
+                  )}
                   {prospect.region && <InfoField label="Regione" value={prospect.region} />}
-                  {prospect.data_costituzione && <InfoField label="Fondazione" value={String(new Date(prospect.data_costituzione).getFullYear())} />}
+                  {prospect.data_costituzione && (
+                    <InfoField label="Fondazione" value={String(new Date(prospect.data_costituzione).getFullYear())} />
+                  )}
                   {prospect.forma_giuridica && <InfoField label="Forma Giuridica" value={prospect.forma_giuridica} />}
                 </div>
               </section>
@@ -84,7 +115,9 @@ export function RACompanyDetailPage() {
               {prospect.codice_ateco && (
                 <>
                   <section>
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Settore Economico</h2>
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+                      Settore Economico
+                    </h2>
                     <div className="p-4 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border backdrop-blur-xl">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -117,19 +150,32 @@ export function RACompanyDetailPage() {
               <Separator className="bg-border/30" />
 
               <section>
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Dati Finanziari</h2>
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+                  Dati Finanziari
+                </h2>
                 <div className="grid grid-cols-3 gap-4">
                   <FinCard label="Fatturato Medio" value={formatCurrency(prospect.fatturato)} />
                   <FinCard label="Utile Netto" value={formatCurrency(prospect.utile)} />
-                  <FinCard label="Margine Netto" value={prospect.fatturato && prospect.utile ? `${((prospect.utile / prospect.fatturato) * 100).toFixed(1)}%` : "—"} />
+                  <FinCard
+                    label="Margine Netto"
+                    value={
+                      prospect.fatturato && prospect.utile
+                        ? `${((prospect.utile / prospect.fatturato) * 100).toFixed(1)}%`
+                        : "—"
+                    }
+                  />
                 </div>
               </section>
             </div>
           </ScrollArea>
         </div>
 
-        <RACompanySidebar prospect={prospect} contacts={contacts} interactions={interactions}
-          onLeadStatusChange={(s) => updateLeadStatus.mutate({ id: prospect.id, status: s })} />
+        <RACompanySidebar
+          prospect={prospect}
+          contacts={contacts}
+          interactions={interactions}
+          onLeadStatusChange={(s) => updateLeadStatus.mutate({ id: prospect.id, status: s })}
+        />
       </div>
     </div>
   );
@@ -144,7 +190,17 @@ function InfoField({ label, value, mono }: { label: string; value: string; mono?
   );
 }
 
-function ContactRow({ icon: Icon, label, value, iconColor }: { icon: React.ElementType; label: string; value: string; iconColor?: string }) {
+function ContactRow({
+  icon: Icon,
+  label,
+  value,
+  iconColor,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  iconColor?: string;
+}) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-muted/30 to-muted/10 border border-border backdrop-blur-sm hover:border-foreground/20 transition-colors">
       <Icon className={`w-4 h-4 flex-shrink-0 ${iconColor || "text-muted-foreground"}`} />

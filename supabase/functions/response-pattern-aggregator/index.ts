@@ -40,7 +40,9 @@ Deno.serve(async (req) => {
     // Fetch all email activities from last 90 days with partner info
     const { data: activities, error: actErr } = await supabase
       .from("activities")
-      .select("user_id, partner_id, activity_type, response_received, response_time_hours, sent_at, email_subject, source_meta")
+      .select(
+        "user_id, partner_id, activity_type, response_received, response_time_hours, sent_at, email_subject, source_meta",
+      )
       .eq("activity_type", "send_email")
       .gte("sent_at", ninetyDaysAgo)
       .not("user_id", "is", null)
@@ -49,7 +51,8 @@ Deno.serve(async (req) => {
     if (actErr) {
       console.error("Failed to fetch activities:", actErr.message);
       return new Response(JSON.stringify({ error: actErr.message }), {
-        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -60,7 +63,7 @@ Deno.serve(async (req) => {
     }
 
     // Get partner country codes for grouping
-    const partnerIds = [...new Set(activities.filter(a => a.partner_id).map(a => a.partner_id as string))];
+    const partnerIds = [...new Set(activities.filter((a) => a.partner_id).map((a) => a.partner_id as string))];
     const partnerCountryMap: Record<string, string> = {};
     if (partnerIds.length > 0) {
       const { data: partners } = await supabase
@@ -79,9 +82,9 @@ Deno.serve(async (req) => {
 
     for (const act of activities) {
       const userId = act.user_id as string;
-      const countryCode = act.partner_id ? (partnerCountryMap[act.partner_id as string] || null) : null;
+      const countryCode = act.partner_id ? partnerCountryMap[act.partner_id as string] || null : null;
       const channel = "email";
-      const emailType = (act.source_meta as Record<string, unknown>)?.email_type as string | null || null;
+      const emailType = ((act.source_meta as Record<string, unknown>)?.email_type as string | null) || null;
 
       const key = `${userId}|${countryCode || ""}|${channel}|${emailType || ""}`;
 
@@ -113,13 +116,12 @@ Deno.serve(async (req) => {
     for (const pattern of patternMap.values()) {
       if (pattern.total_sent < 2) continue;
 
-      const avgResponseTime = pattern.response_times.length > 0
-        ? Math.round((pattern.response_times.reduce((a, b) => a + b, 0) / pattern.response_times.length) * 10) / 10
-        : null;
+      const avgResponseTime =
+        pattern.response_times.length > 0
+          ? Math.round((pattern.response_times.reduce((a, b) => a + b, 0) / pattern.response_times.length) * 10) / 10
+          : null;
 
-      const responseRate = pattern.total_sent > 0
-        ? (pattern.total_responses / pattern.total_sent) * 100
-        : 0;
+      const responseRate = pattern.total_sent > 0 ? (pattern.total_responses / pattern.total_sent) * 100 : 0;
 
       // Calculate confidence
       let confidence = 0.3 + Math.min(pattern.total_sent / 100, 0.2);
@@ -133,7 +135,7 @@ Deno.serve(async (req) => {
         .select("id")
         .eq("user_id", pattern.user_id)
         .eq("channel", pattern.channel)
-        .is("country_code", pattern.country_code === null ? null : undefined as unknown as null)
+        .is("country_code", pattern.country_code === null ? null : (undefined as unknown as null))
         .limit(1);
 
       // More precise query for non-null country_code
@@ -165,20 +167,18 @@ Deno.serve(async (req) => {
           })
           .eq("id", matchId);
       } else {
-        await supabase
-          .from("response_patterns")
-          .insert({
-            user_id: pattern.user_id,
-            country_code: pattern.country_code,
-            channel: pattern.channel,
-            email_type: pattern.email_type,
-            total_sent: pattern.total_sent,
-            total_responses: pattern.total_responses,
-            avg_response_time_hours: avgResponseTime,
-            pattern_confidence: confidence,
-            last_success_at: pattern.total_responses > 0 ? new Date().toISOString() : null,
-            tags: [pattern.country_code, pattern.channel, pattern.email_type].filter(Boolean) as string[],
-          });
+        await supabase.from("response_patterns").insert({
+          user_id: pattern.user_id,
+          country_code: pattern.country_code,
+          channel: pattern.channel,
+          email_type: pattern.email_type,
+          total_sent: pattern.total_sent,
+          total_responses: pattern.total_responses,
+          avg_response_time_hours: avgResponseTime,
+          pattern_confidence: confidence,
+          last_success_at: pattern.total_responses > 0 ? new Date().toISOString() : null,
+          tags: [pattern.country_code, pattern.channel, pattern.email_type].filter(Boolean) as string[],
+        });
       }
       patternsUpdated++;
 
@@ -197,7 +197,13 @@ Deno.serve(async (req) => {
           `- Confidence: ${Math.round(confidence * 100)}%`,
         ].join("\n");
 
-        const tags = ["response_pattern", pattern.country_code, pattern.channel, pattern.email_type, "auto_generated"].filter(Boolean) as string[];
+        const tags = [
+          "response_pattern",
+          pattern.country_code,
+          pattern.channel,
+          pattern.email_type,
+          "auto_generated",
+        ].filter(Boolean) as string[];
         const priority = confidence > 0.7 ? 7 : 5;
 
         // Check for existing kb_entry
@@ -214,36 +220,35 @@ Deno.serve(async (req) => {
             .update({ content, priority, tags, updated_at: new Date().toISOString() })
             .eq("id", existingKb[0].id);
         } else {
-          await supabase
-            .from("kb_entries")
-            .insert({
-              user_id: pattern.user_id,
-              category: "communication_pattern",
-              title,
-              content,
-              tags,
-              priority,
-              is_active: true,
-            });
+          await supabase.from("kb_entries").insert({
+            user_id: pattern.user_id,
+            category: "communication_pattern",
+            title,
+            content,
+            tags,
+            priority,
+            is_active: true,
+          });
           kbEntriesCreated++;
         }
       }
     }
 
-    
-
-    return new Response(JSON.stringify({
-      patterns_updated: patternsUpdated,
-      kb_entries_created: kbEntriesCreated,
-      total_analyzed: activities.length,
-    }), {
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        patterns_updated: patternsUpdated,
+        kb_entries_created: kbEntriesCreated,
+        total_analyzed: activities.length,
+      }),
+      {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      },
+    );
   } catch (e: unknown) {
     console.error("response-pattern-aggregator error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

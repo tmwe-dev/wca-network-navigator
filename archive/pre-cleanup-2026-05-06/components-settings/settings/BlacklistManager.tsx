@@ -3,12 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, Loader2, ShieldAlert, RefreshCw, CheckCircle2, AlertTriangle, FileSpreadsheet, Calendar, MapPin, DollarSign } from "lucide-react";
+import {
+  Upload,
+  Loader2,
+  ShieldAlert,
+  RefreshCw,
+  CheckCircle2,
+  AlertTriangle,
+  FileSpreadsheet,
+  Calendar,
+  MapPin,
+  DollarSign,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 // ExcelJS loaded lazily to reduce bundle size
-const getExcelJS = () => import("exceljs").then(m => m.default);
+const getExcelJS = () => import("exceljs").then((m) => m.default);
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("BlacklistManager");
@@ -106,7 +117,9 @@ export default function BlacklistManager() {
   const handleScrape = async () => {
     setScraping(true);
     try {
-      const data = await invokeEdge<Record<string, unknown>>("scrape-wca-blacklist", { context: "BlacklistManager.scrape_wca_blacklist" });
+      const data = await invokeEdge<Record<string, unknown>>("scrape-wca-blacklist", {
+        context: "BlacklistManager.scrape_wca_blacklist",
+      });
       if (data?.success) {
         toast.success(`Scraping completato: ${data.entries_count || 0} record, ${data.matched_count || 0} match`);
       } else {
@@ -160,7 +173,9 @@ export default function BlacklistManager() {
               </p>
               <p className="text-xs text-muted-foreground">Ultimo aggiornamento</p>
               {daysSinceUpdate !== null && daysSinceUpdate > 7 && (
-                <Badge variant="destructive" className="mt-1 text-[10px]">⚠️ Aggiornamento richiesto</Badge>
+                <Badge variant="destructive" className="mt-1 text-[10px]">
+                  ⚠️ Aggiornamento richiesto
+                </Badge>
               )}
             </div>
           </CardContent>
@@ -182,19 +197,11 @@ export default function BlacklistManager() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xls,.xlsx,.csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+            <input ref={fileRef} type="file" accept=".xls,.xlsx,.csv" onChange={handleFileChange} className="hidden" />
             <Button variant="outline" onClick={() => fileRef.current?.click()}>
               <Upload className="w-4 h-4 mr-2" /> Seleziona File
             </Button>
-            {allParsed.length > 0 && (
-              <Badge variant="secondary">{allParsed.length} record pronti</Badge>
-            )}
+            {allParsed.length > 0 && <Badge variant="secondary">{allParsed.length} record pronti</Badge>}
           </div>
 
           {preview && preview.length > 0 && (
@@ -204,17 +211,26 @@ export default function BlacklistManager() {
                 <div className="p-3 space-y-2">
                   {preview.map((entry, i) => (
                     <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-muted/50 text-sm">
-                      <span className="text-xs font-mono text-muted-foreground w-6 shrink-0">#{entry.blacklist_no}</span>
+                      <span className="text-xs font-mono text-muted-foreground w-6 shrink-0">
+                        #{entry.blacklist_no}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{entry.company_name}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{entry.city}, {entry.country}</span>
-                          <Badge variant={entry.status?.toLowerCase() === "active" ? "default" : "destructive"} className="text-[10px]">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {entry.city}, {entry.country}
+                          </span>
+                          <Badge
+                            variant={entry.status?.toLowerCase() === "active" ? "default" : "destructive"}
+                            className="text-[10px]"
+                          >
                             {entry.status}
                           </Badge>
                           {entry.total_owed_amount && (
                             <span className="flex items-center gap-0.5 text-destructive font-medium">
-                              <DollarSign className="w-3 h-3" />{Number(entry.total_owed_amount).toLocaleString()}
+                              <DollarSign className="w-3 h-3" />
+                              {Number(entry.total_owed_amount).toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -225,9 +241,13 @@ export default function BlacklistManager() {
               </ScrollArea>
               <Button onClick={handleImport} disabled={importMutation.isPending} className="w-full">
                 {importMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Importazione...</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Importazione...
+                  </>
                 ) : (
-                  <><CheckCircle2 className="w-4 h-4 mr-2" /> Importa {allParsed.length} record</>
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" /> Importa {allParsed.length} record
+                  </>
                 )}
               </Button>
             </div>
@@ -251,9 +271,13 @@ export default function BlacklistManager() {
         <CardContent className="space-y-3">
           <Button onClick={handleScrape} disabled={scraping} className="w-full" size="lg">
             {scraping ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Scraping in corso...</>
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Scraping in corso...
+              </>
             ) : (
-              <><RefreshCw className="w-4 h-4 mr-2" /> Scrape Blacklist Ora</>
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" /> Scrape Blacklist Ora
+              </>
             )}
           </Button>
           <p className="text-xs text-muted-foreground text-center">

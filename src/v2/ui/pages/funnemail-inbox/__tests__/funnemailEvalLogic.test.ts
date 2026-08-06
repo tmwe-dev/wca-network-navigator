@@ -37,9 +37,7 @@ function accuracyBarColor(value: number): string {
 }
 
 function sortRuns(runs: EvalBatchRun[]): EvalBatchRun[] {
-  return [...runs].sort(
-    (a, b) => new Date(b.run_at).getTime() - new Date(a.run_at).getTime()
-  );
+  return [...runs].sort((a, b) => new Date(b.run_at).getTime() - new Date(a.run_at).getTime());
 }
 
 function avgAccuracy(runs: EvalBatchRun[]): number {
@@ -97,19 +95,12 @@ describe("avgAccuracy", () => {
   });
 
   it("should compute correct average", () => {
-    const runs = [
-      makeRun({ accuracy: 80 }),
-      makeRun({ accuracy: 90 }),
-      makeRun({ accuracy: 85 }),
-    ];
+    const runs = [makeRun({ accuracy: 80 }), makeRun({ accuracy: 90 }), makeRun({ accuracy: 85 })];
     expect(avgAccuracy(runs)).toBeCloseTo(85, 1);
   });
 
   it("should handle null accuracy as 0", () => {
-    const runs = [
-      makeRun({ accuracy: 90 }),
-      makeRun({ accuracy: null }),
-    ];
+    const runs = [makeRun({ accuracy: 90 }), makeRun({ accuracy: null })];
     expect(avgAccuracy(runs)).toBeCloseTo(45, 1);
   });
 });

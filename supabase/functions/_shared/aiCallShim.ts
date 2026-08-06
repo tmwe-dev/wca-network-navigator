@@ -61,16 +61,16 @@ function sanitizeBody(provider: ProviderKey, body: Record<string, unknown>): Rec
  */
 export async function aiFetch(
   body: Record<string, unknown>,
-  init?: { signal?: AbortSignal; headers?: Record<string, string> }
+  init?: { signal?: AbortSignal; headers?: Record<string, string> },
 ): Promise<Response> {
   const provider = resolveProvider();
   const cfg = PROVIDER_CONFIG[provider];
   const apiKey = Deno.env.get(cfg.envKey);
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: `${cfg.envKey} non configurata` }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: `${cfg.envKey} non configurata` }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const patched = sanitizeBody(provider, body);

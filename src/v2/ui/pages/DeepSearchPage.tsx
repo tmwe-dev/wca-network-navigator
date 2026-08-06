@@ -13,8 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Loader2, CheckCircle2, AlertCircle, Square, FileText,
-  Sparkles, SkipForward, Globe, ListChecks,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Square,
+  FileText,
+  Sparkles,
+  SkipForward,
+  Globe,
+  ListChecks,
 } from "lucide-react";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
 import { useSherlock } from "@/v2/hooks/useSherlock";
@@ -23,17 +30,17 @@ import type { SherlockLevel, SherlockStepResult } from "@/v2/services/sherlock/s
 import { cn } from "@/lib/utils";
 
 const LEVEL_META: Record<SherlockLevel, { label: string; icon: string; eta: string; desc: string }> = {
-  1: { label: "Scout",     icon: "🔍", eta: "~30s",  desc: "Quick pass: sito + LinkedIn base" },
+  1: { label: "Scout", icon: "🔍", eta: "~30s", desc: "Quick pass: sito + LinkedIn base" },
   2: { label: "Detective", icon: "🕵️", eta: "~2min", desc: "Cross-reference + decisori" },
-  3: { label: "Sherlock",  icon: "🎩", eta: "~5min", desc: "Indagine approfondita multi-fonte" },
+  3: { label: "Sherlock", icon: "🎩", eta: "~5min", desc: "Indagine approfondita multi-fonte" },
 };
 
 function StatusIcon({ status }: { status: SherlockStepResult["status"] }) {
   if (status === "running") return <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />;
-  if (status === "done")    return <CheckCircle2 className="w-3.5 h-3.5 text-success" />;
-  if (status === "error")   return <AlertCircle className="w-3.5 h-3.5 text-destructive" />;
+  if (status === "done") return <CheckCircle2 className="w-3.5 h-3.5 text-success" />;
+  if (status === "error") return <AlertCircle className="w-3.5 h-3.5 text-destructive" />;
   if (status === "skipped") return <SkipForward className="w-3.5 h-3.5 text-muted-foreground" />;
-  if (status === "cached")  return <CheckCircle2 className="w-3.5 h-3.5 text-warning" />;
+  if (status === "cached") return <CheckCircle2 className="w-3.5 h-3.5 text-warning" />;
   return <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/40" />;
 }
 
@@ -43,13 +50,16 @@ export function DeepSearchPage(): React.ReactElement {
   const [city, setCity] = React.useState("");
   const [selectedOrder, setSelectedOrder] = React.useState<number | null>(null);
 
-  const vars = React.useMemo<Record<string, string>>(() => ({
-    companyName: companyName.trim(),
-    city: city.trim(),
-    websiteUrl: website.trim(),
-    query: `${companyName} ${city}`.trim(),
-    linkedinCompanySlug: "",
-  }), [companyName, city, website]);
+  const vars = React.useMemo<Record<string, string>>(
+    () => ({
+      companyName: companyName.trim(),
+      city: city.trim(),
+      websiteUrl: website.trim(),
+      query: `${companyName} ${city}`.trim(),
+      linkedinCompanySlug: "",
+    }),
+    [companyName, city, website],
+  );
 
   const sherlock = useSherlock({
     partnerId: null,
@@ -66,7 +76,10 @@ export function DeepSearchPage(): React.ReactElement {
 
   // Listener evento "sherlock-new" dal MissionDrawer
   React.useEffect(() => {
-    const onNew = () => { sherlock.reset(); setSelectedOrder(null); };
+    const onNew = () => {
+      sherlock.reset();
+      setSelectedOrder(null);
+    };
     window.addEventListener("sherlock-new", onNew);
     return () => window.removeEventListener("sherlock-new", onNew);
   }, [sherlock]);
@@ -90,15 +103,30 @@ export function DeepSearchPage(): React.ReactElement {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div>
             <Label className="text-[10px] uppercase text-muted-foreground">Company *</Label>
-            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Es. Acme Logistics" disabled={!!sherlock.running} />
+            <Input
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Es. Acme Logistics"
+              disabled={!!sherlock.running}
+            />
           </div>
           <div>
             <Label className="text-[10px] uppercase text-muted-foreground">Website (opzionale)</Label>
-            <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://acme.com" disabled={!!sherlock.running} />
+            <Input
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://acme.com"
+              disabled={!!sherlock.running}
+            />
           </div>
           <div>
             <Label className="text-[10px] uppercase text-muted-foreground">Città / Country</Label>
-            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Milano" disabled={!!sherlock.running} />
+            <Input
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Milano"
+              disabled={!!sherlock.running}
+            />
           </div>
         </div>
 
@@ -126,7 +154,15 @@ export function DeepSearchPage(): React.ReactElement {
               <Square className="w-3.5 h-3.5" /> Stop
             </Button>
           ) : sherlock.stepResults.length > 0 ? (
-            <Button size="sm" variant="ghost" onClick={() => { sherlock.reset(); setSelectedOrder(null); }} className="ml-auto">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                sherlock.reset();
+                setSelectedOrder(null);
+              }}
+              className="ml-auto"
+            >
               Reset
             </Button>
           ) : null}
@@ -140,8 +176,8 @@ export function DeepSearchPage(): React.ReactElement {
             <Sparkles className="w-10 h-10 text-primary mx-auto mb-3" />
             <h3 className="text-sm font-semibold mb-2">Indaga su qualsiasi azienda</h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Inserisci almeno il nome company e scegli un livello: Scout (rapido),
-              Detective (medio) o Sherlock (profondo).
+              Inserisci almeno il nome company e scegli un livello: Scout (rapido), Detective (medio) o Sherlock
+              (profondo).
             </p>
             <div className="grid grid-cols-3 gap-2 text-left">
               {([1, 2, 3] as const).map((lvl) => (
@@ -191,9 +227,18 @@ export function DeepSearchPage(): React.ReactElement {
           <div className="col-span-8 lg:col-span-9 overflow-hidden flex flex-col">
             <Tabs defaultValue="findings" className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="rounded-none border-b border-border/50 bg-transparent h-9 px-3 justify-start gap-2">
-                <TabsTrigger value="findings" className="text-xs"><Sparkles className="w-3 h-3 mr-1" />Findings AI</TabsTrigger>
-                <TabsTrigger value="markdown" className="text-xs"><FileText className="w-3 h-3 mr-1" />Markdown</TabsTrigger>
-                <TabsTrigger value="summary" className="text-xs"><Globe className="w-3 h-3 mr-1" />Sintesi</TabsTrigger>
+                <TabsTrigger value="findings" className="text-xs">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Findings AI
+                </TabsTrigger>
+                <TabsTrigger value="markdown" className="text-xs">
+                  <FileText className="w-3 h-3 mr-1" />
+                  Markdown
+                </TabsTrigger>
+                <TabsTrigger value="summary" className="text-xs">
+                  <Globe className="w-3 h-3 mr-1" />
+                  Sintesi
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="findings" className="flex-1 overflow-auto p-4 m-0">

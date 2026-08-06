@@ -3,31 +3,19 @@ import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 
 function supabaseForUser(ctx: ToolContext) {
-  return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    },
-  );
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export default defineTool({
   name: "list_agents",
   title: "Elenca agenti AI",
-  description:
-    "Elenca gli agenti AI configurati nel CRM (nome, ruolo, stato attivo, tools assegnati).",
+  description: "Elenca gli agenti AI configurati nel CRM (nome, ruolo, stato attivo, tools assegnati).",
   inputSchema: {
-    only_active: z
-      .boolean()
-      .optional()
-      .describe("Se true, restituisce solo gli agenti attivi."),
-    limit: z
-      .number()
-      .int()
-      .optional()
-      .describe("Numero massimo di agenti da restituire (default 50)."),
+    only_active: z.boolean().optional().describe("Se true, restituisce solo gli agenti attivi."),
+    limit: z.number().int().optional().describe("Numero massimo di agenti da restituire (default 50)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ only_active, limit }, ctx) => {

@@ -14,7 +14,11 @@ export type WhatsAppToolbarProps = {
 };
 
 export function WhatsAppToolbar({
-  isReading, isAvailable, isAuthenticated, readNow, syncProgress,
+  isReading,
+  isAvailable,
+  isAuthenticated,
+  readNow,
+  syncProgress,
 }: WhatsAppToolbarProps) {
   const badgeState = !isAvailable
     ? { variant: "destructive" as const, label: "Ext Off", color: "" }
@@ -43,18 +47,26 @@ export function WhatsAppToolbar({
           {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
           Sincronizza
         </Button>
-        <Badge variant={badgeState.variant} className={cn("text-[9px] gap-0.5 h-5 px-1.5 cursor-default", badgeState.color)}>
-          {isAvailable ? (isAuthenticated ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />) : <WifiOff className="w-2.5 h-2.5" />}
+        <Badge
+          variant={badgeState.variant}
+          className={cn("text-[9px] gap-0.5 h-5 px-1.5 cursor-default", badgeState.color)}
+        >
+          {isAvailable ? (
+            isAuthenticated ? (
+              <Wifi className="w-2.5 h-2.5" />
+            ) : (
+              <WifiOff className="w-2.5 h-2.5" />
+            )
+          ) : (
+            <WifiOff className="w-2.5 h-2.5" />
+          )}
           {badgeState.label}
         </Badge>
         <OptimusBadge channel="whatsapp" pageType="sidebar" />
       </div>
       {syncProgress && syncProgress.total > 0 && (
         <div className="flex items-center gap-2 mt-1">
-          <Progress
-            value={(syncProgress.current / syncProgress.total) * 100}
-            className="h-1 flex-1 max-w-[120px]"
-          />
+          <Progress value={(syncProgress.current / syncProgress.total) * 100} className="h-1 flex-1 max-w-[120px]" />
           <span className="text-[9px] text-muted-foreground whitespace-nowrap">
             {syncProgress.current}/{syncProgress.total} chat • {syncProgress.newMessages} nuovi
           </span>

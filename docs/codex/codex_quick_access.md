@@ -1,4 +1,5 @@
 # CODEX COBRA — GUIDA DI ACCESSO RAPIDO
+
 ## Routing operativo per agenti AI
 
 > **Scopo del documento.** Questo file è la mappa autostradale della Knowledge Base del Codex Cobra. Non contiene le regole: contiene **come arrivare alle regole nel minor numero di salti possibile**, dato un intento dell'utente.
@@ -11,18 +12,18 @@
 
 ## §1 — INDICE DELLE SCORCIATOIE
 
-| Scorciatoia | Significato | Quando usarla |
-|---|---|---|
-| `SC:CLASSIFY` | Classifica l'intervento (Trim/Standard/Critical) | Sempre, primo passo |
-| `SC:VERB` | Esegui le 9 domande del Verbo Cobra | Prima di ogni consegna |
-| `SC:DEFENSE` | Lista difensiva: validazione + sicurezza + log | Quando si scrive codice |
-| `SC:ROLLBACK` | Piano di reversibilità | Prima di ogni modifica Standard/Critical |
-| `SC:CHANGELOG` | Template del changelog di consegna | Alla chiusura |
-| `SC:DOUBT` | Routing per gestione incertezza | Quando emerge dubbio |
-| `SC:DATA` | Sequenza per modifiche a dati persistenti | Su DB/cache/storage |
-| `SC:ANTI` | Scan rapido degli anti-pattern | Prima della consegna |
-| `SC:DEPLOY` | Sequenza pre-deploy → post-deploy | Su rilasci |
-| `SC:TEST` | Selezione tassonomia test in base alla classe | In fase di verifica |
+| Scorciatoia    | Significato                                      | Quando usarla                            |
+| -------------- | ------------------------------------------------ | ---------------------------------------- |
+| `SC:CLASSIFY`  | Classifica l'intervento (Trim/Standard/Critical) | Sempre, primo passo                      |
+| `SC:VERB`      | Esegui le 9 domande del Verbo Cobra              | Prima di ogni consegna                   |
+| `SC:DEFENSE`   | Lista difensiva: validazione + sicurezza + log   | Quando si scrive codice                  |
+| `SC:ROLLBACK`  | Piano di reversibilità                           | Prima di ogni modifica Standard/Critical |
+| `SC:CHANGELOG` | Template del changelog di consegna               | Alla chiusura                            |
+| `SC:DOUBT`     | Routing per gestione incertezza                  | Quando emerge dubbio                     |
+| `SC:DATA`      | Sequenza per modifiche a dati persistenti        | Su DB/cache/storage                      |
+| `SC:ANTI`      | Scan rapido degli anti-pattern                   | Prima della consegna                     |
+| `SC:DEPLOY`    | Sequenza pre-deploy → post-deploy                | Su rilasci                               |
+| `SC:TEST`      | Selezione tassonomia test in base alla classe    | In fase di verifica                      |
 
 Ciascuna scorciatoia è dettagliata in §3.
 
@@ -37,6 +38,7 @@ L'agente fa pattern matching tra il messaggio dell'utente e i trigger qui sotto.
 **Trigger:** `bug`, `errore`, `non funziona`, `crash`, `eccezione`, `comportamento sbagliato`
 
 **Rotta obbligatoria:**
+
 ```
 SC:CLASSIFY
 → PILLAR.III.1   (riproduzione prima della soluzione)
@@ -50,7 +52,7 @@ SC:CLASSIFY
 → SC:CHANGELOG
 ```
 
-**Domanda di blocco da porsi:** *"Ho riprodotto il bug o sto operando solo sulla descrizione dell'utente?"* Se la seconda → leggi codice causa prima di proporre fix.
+**Domanda di blocco da porsi:** _"Ho riprodotto il bug o sto operando solo sulla descrizione dell'utente?"_ Se la seconda → leggi codice causa prima di proporre fix.
 
 ---
 
@@ -59,6 +61,7 @@ SC:CLASSIFY
 **Trigger:** `aggiungi`, `implementa`, `crea`, `nuova feature`, `nuovo endpoint`
 
 **Rotta obbligatoria:**
+
 ```
 SC:CLASSIFY
 → PILLAR.I.1     (obiettivo in una frase)
@@ -83,6 +86,7 @@ SC:CLASSIFY
 **Trigger:** `refactor`, `pulisci`, `rinomina`, `riorganizza`, `sistema`
 
 **Rotta obbligatoria:**
+
 ```
 SC:CLASSIFY                         [tipicamente STANDARD]
 → PILLAR.I.4     (convenzioni esistenti — NON imporre stile personale)
@@ -104,6 +108,7 @@ SC:CLASSIFY                         [tipicamente STANDARD]
 **Trigger:** `schema`, `migrazione`, `tabella`, `campo`, `colonna`, `alter`, `database`, `cache`, `storage`
 
 **Rotta obbligatoria — CRITICAL per default:**
+
 ```
 COMM.I.a         (incertezze CRITICHE → ferma e chiedi)
 → SC:CLASSIFY    [→ CRITICAL salvo prova contraria]
@@ -117,7 +122,7 @@ COMM.I.a         (incertezze CRITICHE → ferma e chiedi)
 → SC:CHANGELOG
 ```
 
-**Domande non opzionali** (PILLAR.IV.2): *Cosa accade ai dati esistenti? Serve migrazione idempotente e reversibile? Cosa accade se il campo nuovo manca nei record vecchi?*
+**Domande non opzionali** (PILLAR.IV.2): _Cosa accade ai dati esistenti? Serve migrazione idempotente e reversibile? Cosa accade se il campo nuovo manca nei record vecchi?_
 
 ---
 
@@ -126,6 +131,7 @@ COMM.I.a         (incertezze CRITICHE → ferma e chiedi)
 **Trigger:** `integrazione`, `API esterna`, `webhook`, `connetti`, `chiama servizio`
 
 **Rotta obbligatoria:**
+
 ```
 SC:CLASSIFY                         [tipicamente CRITICAL]
 → PILLAR.II.4    (credenziali e secret)
@@ -145,6 +151,7 @@ SC:CLASSIFY                         [tipicamente CRITICAL]
 **Trigger:** `lento`, `ottimizza`, `performance`, `latenza`, `scala`
 
 **Rotta obbligatoria:**
+
 ```
 PILLAR.III.1     (RIPRODUCI il problema di performance, misura prima)
 → PILLAR.III.2   (sintomo: lentezza dove? Causa: query? rete? CPU?)
@@ -163,6 +170,7 @@ PILLAR.III.1     (RIPRODUCI il problema di performance, misura prima)
 **Trigger:** `deploy`, `rilascia`, `produzione`, `pubblica`, `release`
 
 **Rotta obbligatoria:**
+
 ```
 SC:DEPLOY        (sequenza completa pre/durante/post)
 ```
@@ -176,6 +184,7 @@ Vedi §3.10 per il dettaglio.
 **Trigger:** `non sono sicuro`, `forse`, `penso`, `credo`, `dovrebbe`, `non so se`
 
 **Rotta obbligatoria:**
+
 ```
 SC:DOUBT
 ```
@@ -189,6 +198,7 @@ Vedi §3.6.
 **Trigger:** `ho finito`, `pronto`, `consegna`, `done`, `dimmi se va bene`
 
 **Rotta obbligatoria — gate di consegna:**
+
 ```
 SC:VERB          (le 9 domande del Verbo: tutte risposte?)
 → SC:ANTI        (scan anti-pattern)
@@ -204,6 +214,7 @@ Se anche UNO dei controlli è insoddisfatto → NON dichiarare consegnato. Ripor
 ### 2.10 — Nessun match esplicito / Richiesta ambigua
 
 **Default safe path:**
+
 ```
 SC:CLASSIFY      (classifica l'intervento)
 → PILLAR.I.1     (chiedi/scrivi l'obiettivo)
@@ -222,6 +233,7 @@ Se anche dopo I.1 e I.2 l'intervento non è chiaro → applicare `COMM.I.a` (fer
 **Quando:** primo passo di ogni rotta.
 
 **Sequenza:**
+
 1. Leggi `intervention_classes` nella KB.
 2. Match dei criteri:
    - Tocca solo testo/commenti/rinomine locali → `TRIM`
@@ -238,6 +250,7 @@ Se anche dopo I.1 e I.2 l'intervento non è chiaro → applicare `COMM.I.a` (fer
 **Quando:** prima della consegna; come autocontrollo a metà lavoro su task lunghi.
 
 **Sequenza (ordinata):**
+
 ```
 1. Obiettivo       → KB: VERB.questions.Obiettivo       → ref: PILLAR.I.1
 2. Successo        → KB: VERB.questions.Successo        → ref: PILLAR.I.2
@@ -259,6 +272,7 @@ Se anche dopo I.1 e I.2 l'intervento non è chiaro → applicare `COMM.I.a` (fer
 **Quando:** ogni volta che si scrive codice di Classe Standard o Critical.
 
 **Sequenza:**
+
 ```
 PILLAR.II.3.a    → Validazione input (null, tipo, range, vuoto)
 PILLAR.II.3.b    → Fail safely (no try/catch generici)
@@ -277,6 +291,7 @@ ANTI.7.1         → Verifica: nessun fallback silenzioso
 **Quando:** interventi Standard e Critical; obbligatorio scritto per i Critical.
 
 **Sequenza:**
+
 1. `PILLAR.II.7` → enumera file modificati.
 2. Stato precedente ripristinabile? Sì → indica come (revert commit / feature flag off / rollback DB). No → escala a Critical.
 3. Effetti irreversibili in atto? (email inviate, pagamenti, dati cancellati, chiamate esterne effettuate) → elenca e prepara mitigazione **prima** del deploy.
@@ -291,6 +306,7 @@ ANTI.7.1         → Verifica: nessun fallback silenzioso
 **Quando:** chiusura di ogni intervento (anche Trim, in forma minima).
 
 **Template (KB: PILLAR.VI.3.template):**
+
 ```
 COSA MODIFICATO:
   - [file/funzione]: [cosa è cambiato]
@@ -331,6 +347,7 @@ STATO TEST:
 **Quando:** ogni volta che l'agente sente "non sono sicuro", "forse", "penso", o l'utente lo dice.
 
 **Sequenza decisionale:**
+
 ```
 Classifica l'incertezza con COMM.I:
 
@@ -357,6 +374,7 @@ Classifica l'incertezza con COMM.I:
 **Quando:** intervento tocca DB, schema, cache, storage, file persistenti.
 
 **Sequenza:**
+
 ```
 1. PILLAR.IV.2 → rispondi alle 3 domande:
    - Cosa accade ai dati esistenti? Retrocompatibile?
@@ -382,6 +400,7 @@ Classifica l'incertezza con COMM.I:
 **Quando:** prima della consegna su ogni intervento Standard/Critical.
 
 **Sequenza (8 controlli rapidi):**
+
 ```
 ANTI.7.1 — try/catch generico che inghiotte errori?     → SE SÌ, correggi.
 ANTI.7.2 — modifiche "già che c'ero" non richieste?     → SE SÌ, sposta in altro intervento.
@@ -403,13 +422,14 @@ ANTI.7.8 — formule indeterminate ("dovrebbe…")?         → SE SÌ, riclassi
 
 **Mapping classe → categorie obbligatorie (KB: APPENDIX.B):**
 
-| Classe | Test obbligatori | Test consigliati |
-|---|---|---|
-| `TRIM` | Smoke (B.2.5) | — |
-| `STANDARD` | Unit (B.2.1) + Integration (B.2.2) + Smoke (B.2.5) | E2E sui flussi critici toccati (B.2.4) |
-| `CRITICAL` | Tutti i pertinenti tra B.2.1–B.2.7 | Test manuali strutturati (B.2.7), dati reali anonimizzati (B.2.6) |
+| Classe     | Test obbligatori                                   | Test consigliati                                                  |
+| ---------- | -------------------------------------------------- | ----------------------------------------------------------------- |
+| `TRIM`     | Smoke (B.2.5)                                      | —                                                                 |
+| `STANDARD` | Unit (B.2.1) + Integration (B.2.2) + Smoke (B.2.5) | E2E sui flussi critici toccati (B.2.4)                            |
+| `CRITICAL` | Tutti i pertinenti tra B.2.1–B.2.7                 | Test manuali strutturati (B.2.7), dati reali anonimizzati (B.2.6) |
 
 **Vincoli universali (sempre):**
+
 - `B.5.1`: nessuna categoria sostituisce un'altra.
 - `B.5.3`: i test definiscono il comportamento ATTESO, non lo certificano dopo.
 - `PILLAR.V.2`: i test automatici non esimono dalla verifica manuale dei flussi critici.
@@ -421,6 +441,7 @@ ANTI.7.8 — formule indeterminate ("dovrebbe…")?         → SE SÌ, riclassi
 **Quando:** ogni rilascio in ambiente condiviso (staging o produzione).
 
 **Pre-deploy:**
+
 ```
 APPENDIX.C.1.1 → changelog completo e veritiero?
 APPENDIX.C.1.2 → piano di rollback letto dal responsabile dell'ambiente?
@@ -429,6 +450,7 @@ APPENDIX.C.1.4 → finestra temporale compatibile con disponibilità del persona
 ```
 
 **Durante:**
+
 ```
 APPENDIX.C.2.1 → deploy tracciato (chi, quando, cosa, dove)
 APPENDIX.C.2.2 → modalità graduale / feature flag / sottoinsieme utenti dove possibile
@@ -436,6 +458,7 @@ APPENDIX.C.2.3 → atto unico, niente lavori paralleli
 ```
 
 **Post-deploy immediato:**
+
 ```
 APPENDIX.C.3.1 → smoke test sull'ambiente di destinazione
 APPENDIX.C.3.2 → osservazione attiva (log errori, latenza, tassi di errore, code, risorse)
@@ -443,6 +466,7 @@ APPENDIX.C.3.3 → soglia di rollback DEFINITA PRIMA, non durante
 ```
 
 **Post-deploy esteso:**
+
 ```
 APPENDIX.C.4.1 → verifica del criterio di successo a 24h e 7gg (proporzionato alla criticità)
 APPENDIX.C.4.2 → in caso di incidente: revisione retrospettiva (cause, non colpe)
@@ -455,33 +479,40 @@ APPENDIX.C.4.2 → in caso di incidente: revisione retrospettiva (cause, non col
 L'agente deve fermarsi e applicare il checkpoint ogni volta che si trova in una delle situazioni seguenti, indipendentemente da dove sia nel flusso.
 
 ### CK1 — Ingresso del task
+
 > **Trigger:** primo messaggio dell'utente che richiede modifica al codice.
 > **Azione:** `SC:CLASSIFY` + `PILLAR.I.1` + `PILLAR.I.2` prima di qualsiasi altra cosa.
 > **Output:** stampa esplicita della classe e dell'obiettivo.
 
 ### CK2 — Prima di scrivere codice
+
 > **Trigger:** sto per produrre la prima riga di codice della soluzione.
 > **Azione:** `PILLAR.I.3` (architettura) + `PILLAR.II.1` (flusso) + `PILLAR.II.2` (blast radius).
 > **Output:** dichiara cosa modificherò e cosa potrebbe rompersi.
 
 ### CK3 — Emerge un'incertezza
+
 > **Trigger:** uso (anche solo pensato) di "forse", "credo", "non sono sicuro".
 > **Azione:** `SC:DOUBT`. Classifica e tratta secondo COMM.I.
 
 ### CK4 — Vedo un secondo problema durante il lavoro
+
 > **Trigger:** noto un bug/refactor utile mentre lavoro su un altro task.
 > **Azione:** `PILLAR.II.5` (atomicità). NON correggere ora. Registra in `DEBITO RESIDUO` del changelog.
 
 ### CK5 — Sto per dichiarare "fatto"
+
 > **Trigger:** la modifica è completata mentalmente.
 > **Azione:** `SC:VERB` + `SC:ANTI` + `PILLAR.VI.4`.
 > **Blocco:** se uno qualsiasi fallisce, NON dichiarare consegnato.
 
 ### CK6 — Modifica tocca dati persistenti
+
 > **Trigger:** la rotta porta a `SC:DATA`.
 > **Azione:** non avanzare oltre senza aver risposto alle 3 domande di `PILLAR.IV.2`.
 
 ### CK7 — Modifica è irreversibile
+
 > **Trigger:** effetto include invio email, pagamento, eliminazione dati, chiamata esterna effettiva.
 > **Azione:** `COMM.I.a` (CRITICA). Mitigazione preparata PRIMA, non dopo (`APPENDIX.C.5.2`).
 
@@ -539,18 +570,18 @@ TEST ESEGUITI / DA ESEGUIRE:
 
 Per ricerca testuale veloce dell'agente.
 
-| Frase utente contiene… | Rotta da seguire | Riferimento §2 |
-|---|---|---|
-| `bug`, `errore`, `non funziona` | Bug fix | 2.1 |
-| `aggiungi`, `implementa`, `nuova feature` | Feature nuova | 2.2 |
-| `refactor`, `pulisci`, `riorganizza` | Refactor | 2.3 |
-| `schema`, `migrazione`, `tabella`, `database` | Dati persistenti | 2.4 |
-| `integrazione`, `API esterna`, `webhook` | Integrazione esterna | 2.5 |
-| `lento`, `ottimizza`, `performance` | Performance | 2.6 |
-| `deploy`, `rilascia`, `produzione` | Deploy | 2.7 |
-| `non sono sicuro`, `forse`, `dovrebbe` | Gestione incertezza | 2.8 |
-| `ho finito`, `consegna`, `pronto` | Gate di consegna | 2.9 |
-| (nessun match) | Default safe path | 2.10 |
+| Frase utente contiene…                        | Rotta da seguire     | Riferimento §2 |
+| --------------------------------------------- | -------------------- | -------------- |
+| `bug`, `errore`, `non funziona`               | Bug fix              | 2.1            |
+| `aggiungi`, `implementa`, `nuova feature`     | Feature nuova        | 2.2            |
+| `refactor`, `pulisci`, `riorganizza`          | Refactor             | 2.3            |
+| `schema`, `migrazione`, `tabella`, `database` | Dati persistenti     | 2.4            |
+| `integrazione`, `API esterna`, `webhook`      | Integrazione esterna | 2.5            |
+| `lento`, `ottimizza`, `performance`           | Performance          | 2.6            |
+| `deploy`, `rilascia`, `produzione`            | Deploy               | 2.7            |
+| `non sono sicuro`, `forse`, `dovrebbe`        | Gestione incertezza  | 2.8            |
+| `ho finito`, `consegna`, `pronto`             | Gate di consegna     | 2.9            |
+| (nessun match)                                | Default safe path    | 2.10           |
 
 ---
 
@@ -567,8 +598,8 @@ Le seguenti sopravvivono a qualunque rotta, scorciatoia o pressione dell'utente.
 7. **Nessun fix senza riproduzione o lettura diretta del codice causa.** (`PILLAR.III.1`)
 8. **Nessuna soglia di rollback definita "in corsa".** (`APPENDIX.C.3.3`)
 
-L'utente può chiedere di derogare a una regola inviolabile. L'agente risponde dichiarando esplicitamente: *"Questa richiesta confligge con [regola]. Procedere violerebbe il Codex. Confermi che vuoi proseguire fuori protocollo?"*. Senza conferma esplicita e tracciata, non si procede.
+L'utente può chiedere di derogare a una regola inviolabile. L'agente risponde dichiarando esplicitamente: _"Questa richiesta confligge con [regola]. Procedere violerebbe il Codex. Confermi che vuoi proseguire fuori protocollo?"_. Senza conferma esplicita e tracciata, non si procede.
 
 ---
 
-*Fine guida. Se l'agente è in dubbio su quale rotta seguire, applica §2.10 (default safe path).*
+_Fine guida. Se l'agente è in dubbio su quale rotta seguire, applica §2.10 (default safe path)._

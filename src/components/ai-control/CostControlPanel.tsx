@@ -62,11 +62,7 @@ export function CostControlPanel() {
       { key: DEEP_KEY, value: checked ? "true" : "false" },
       {
         onSuccess: () =>
-          toast.success(
-            checked
-              ? "Analisi profonda mail ATTIVATA"
-              : "Analisi profonda mail DISATTIVATA",
-          ),
+          toast.success(checked ? "Analisi profonda mail ATTIVATA" : "Analisi profonda mail DISATTIVATA"),
         onError: () => toast.error("Impossibile salvare l'impostazione"),
       },
     );
@@ -80,9 +76,8 @@ export function CostControlPanel() {
             <Search className="h-5 w-5 text-primary" /> Analisi profonda mail in arrivo
           </CardTitle>
           <CardDescription>
-            Quando attiva, l'AI fa ricerca web sul mittente e arricchimento su ogni
-            mail da indirizzi sconosciuti. È il principale consumo di crediti non
-            controllato: tienila spenta e attivala solo quando ti serve.
+            Quando attiva, l'AI fa ricerca web sul mittente e arricchimento su ogni mail da indirizzi sconosciuti. È il
+            principale consumo di crediti non controllato: tienila spenta e attivala solo quando ti serve.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -97,9 +92,7 @@ export function CostControlPanel() {
                 <p className="font-medium">
                   {deepEnabled ? "Attiva — consuma crediti su ogni mail" : "Disattivata — risparmio attivo"}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  La classificazione base delle mail resta sempre attiva.
-                </p>
+                <p className="text-sm text-muted-foreground">La classificazione base delle mail resta sempre attiva.</p>
               </div>
             </div>
             <Switch
@@ -117,9 +110,7 @@ export function CostControlPanel() {
             <TrendingUp className="h-5 w-5 text-primary" /> Consumo di oggi
           </CardTitle>
           <CardDescription>
-            {today
-              ? `${today.totalCalls} chiamate AI · costo stimato $${today.totalCost.toFixed(2)}`
-              : "Caricamento…"}
+            {today ? `${today.totalCalls} chiamate AI · costo stimato $${today.totalCost.toFixed(2)}` : "Caricamento…"}
           </CardDescription>
         </CardHeader>
         <CardContent>

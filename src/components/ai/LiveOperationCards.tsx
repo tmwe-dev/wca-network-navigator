@@ -16,9 +16,7 @@ export function LiveOperationCards({ operations }: { operations: AiOperation[] }
       const liveJob = jobs.find((j) => j.id === op.job_id);
       if (!liveJob) return op;
 
-      const progress = liveJob.total_count > 0
-        ? Math.round((liveJob.current_index / liveJob.total_count) * 100)
-        : 0;
+      const progress = liveJob.total_count > 0 ? Math.round((liveJob.current_index / liveJob.total_count) * 100) : 0;
 
       const statusMap: Record<string, AiOperation["status"]> = {
         running: "running",

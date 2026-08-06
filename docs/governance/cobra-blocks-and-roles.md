@@ -4,16 +4,16 @@ Sintesi del documento "GUIDA COMPLETA Sistema COBRA Prompt Lab" adattata al nost
 
 ## Blocchi prompt — mapping con il nostro standard 5-sezioni
 
-| Blocco COBRA       | Nostra sezione (`docs/prompt-standard.md`)         | Tabella DB            |
-|--------------------|----------------------------------------------------|-----------------------|
-| `role.md`          | Identità                                            | `operative_prompts.context` |
-| `mission.md`       | Obiettivo                                           | `operative_prompts.objective` |
-| `constraints.md`   | Guardrail                                           | `operative_prompts.criteria` |
-| `tools.md`         | (capabilities)                                      | `agent_capabilities` |
-| `workflow.md`      | Metodo                                              | `operative_prompts.procedure` |
-| `output_format.md` | Output                                              | `operative_prompts.criteria` (sez. output) |
-| `examples.md`      | Esempi                                              | `operative_prompts.examples` |
-| `refusal_policy.md`| Guardrail (sez. rifiuti)                            | `operative_prompts.criteria` |
+| Blocco COBRA        | Nostra sezione (`docs/prompt-standard.md`) | Tabella DB                                 |
+| ------------------- | ------------------------------------------ | ------------------------------------------ |
+| `role.md`           | Identità                                   | `operative_prompts.context`                |
+| `mission.md`        | Obiettivo                                  | `operative_prompts.objective`              |
+| `constraints.md`    | Guardrail                                  | `operative_prompts.criteria`               |
+| `tools.md`          | (capabilities)                             | `agent_capabilities`                       |
+| `workflow.md`       | Metodo                                     | `operative_prompts.procedure`              |
+| `output_format.md`  | Output                                     | `operative_prompts.criteria` (sez. output) |
+| `examples.md`       | Esempi                                     | `operative_prompts.examples`               |
+| `refusal_policy.md` | Guardrail (sez. rifiuti)                   | `operative_prompts.criteria`               |
 
 I blocchi vivono in **DB**, non su filesystem. Il versionamento avviene tramite `prompt_versions` (snapshot immutabile).
 

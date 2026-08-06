@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  parseBusinessCardFile,
-  isImageFile,
-  isDataFile,
-} from "@/lib/businessCardFileParser";
+import { parseBusinessCardFile, isImageFile, isDataFile } from "@/lib/businessCardFileParser";
 
 function makeFile(name: string, content: string, type = "text/plain"): File {
   return new File([content], name, { type });
@@ -140,9 +136,7 @@ END:VCARD`;
 
   describe("parseBusinessCardFile - estensioni", () => {
     it("throw su estensione non supportata", async () => {
-      await expect(
-        parseBusinessCardFile(makeFile("c.pdf", "x"))
-      ).rejects.toThrow(/non supportato/);
+      await expect(parseBusinessCardFile(makeFile("c.pdf", "x"))).rejects.toThrow(/non supportato/);
     });
   });
 });

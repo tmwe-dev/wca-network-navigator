@@ -24,10 +24,8 @@ type AuthFixtures = {
   authedPage: Page;
 };
 
-const SESSION_JSON =
-  process.env.E2E_SUPABASE_SESSION_JSON ?? process.env.LOVABLE_BROWSER_SUPABASE_SESSION_JSON ?? "";
-const STORAGE_KEY =
-  process.env.E2E_SUPABASE_STORAGE_KEY ?? process.env.LOVABLE_BROWSER_SUPABASE_STORAGE_KEY ?? "";
+const SESSION_JSON = process.env.E2E_SUPABASE_SESSION_JSON ?? process.env.LOVABLE_BROWSER_SUPABASE_SESSION_JSON ?? "";
+const STORAGE_KEY = process.env.E2E_SUPABASE_STORAGE_KEY ?? process.env.LOVABLE_BROWSER_SUPABASE_STORAGE_KEY ?? "";
 
 export const hasTestSession = SESSION_JSON.length > 0 && STORAGE_KEY.length > 0;
 
@@ -38,10 +36,7 @@ export const AUTH_BLOCKED_REASON =
 
 async function restoreSession(page: Page): Promise<void> {
   await page.goto("/");
-  await page.evaluate(
-    ([key, value]) => window.localStorage.setItem(key, value),
-    [STORAGE_KEY, SESSION_JSON] as const,
-  );
+  await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, SESSION_JSON] as const);
 }
 
 export const test = base.extend<AuthFixtures>({

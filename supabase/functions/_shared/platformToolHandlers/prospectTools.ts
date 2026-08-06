@@ -12,7 +12,9 @@ export async function executeProspectToolHandler(
 ): Promise<unknown> {
   switch (name) {
     case "search_prospects": {
-      let query = supabase.from("prospects").select("id, company_name, city, province, codice_ateco, fatturato, email, lead_status");
+      let query = supabase
+        .from("prospects")
+        .select("id, company_name, city, province, codice_ateco, fatturato, email, lead_status");
       if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
       if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
       if (args.province) query = query.ilike("province", `%${escapeLike(String(args.province))}%`);

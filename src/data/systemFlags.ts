@@ -9,25 +9,19 @@ type SystemFlagRow = Database["public"]["Tables"]["system_flags"]["Row"];
 export type FlagRow = Pick<SystemFlagRow, "key" | "value" | "updated_at">;
 
 export async function getCronPaused(): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("system_flags")
-    .select("value")
-    .eq("key", "cron_paused")
-    .maybeSingle();
+  const { data, error } = await supabase.from("system_flags").select("value").eq("key", "cron_paused").maybeSingle();
   if (error) return false;
   const raw: Json | undefined = data?.value;
   return raw === true || raw === "true";
 }
 
 export async function setCronPaused(paused: boolean, userId: string | null): Promise<void> {
-  const { error } = await supabase
-    .from("system_flags")
-    .upsert({
-      key: "cron_paused",
-      value: toJsonValue(paused),
-      updated_at: new Date().toISOString(),
-      updated_by: userId,
-    });
+  const { error } = await supabase.from("system_flags").upsert({
+    key: "cron_paused",
+    value: toJsonValue(paused),
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  });
   if (error) throw error;
 }
 

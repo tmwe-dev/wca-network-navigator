@@ -141,7 +141,7 @@ export function useInboundNotifications() {
           // Invalidate unread count queries
           queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
           queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unread("email") });
-        }
+        },
       )
       .subscribe((status) => {
         if (status === "CLOSED") {

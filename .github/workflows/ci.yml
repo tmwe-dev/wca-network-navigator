@@ -66,7 +66,9 @@ jobs:
       - name: Bundle size guard (blocking)
         env:
           BUNDLE_GUARD_WARN_ONLY: "0"
-          BUNDLE_MAX_KB: "3500"
+          # Nessun override: il budget autorevole (ratchet) vive in
+          # scripts/bundle-size-guard.mjs. Un override irrealistico qui
+          # rendeva il gate sempre rosso e quindi ignorato.
         run: npm run bundle:check
       - uses: actions/upload-artifact@v4
         with:

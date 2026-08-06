@@ -3,12 +3,7 @@
  * Handles download_single_partner tool with company name lookup.
  */
 
-import {
-  resolveWcaId,
-  resolveWcaIdFromCache,
-  resolveCountry,
-  resolveCountryName,
-} from "./partnerLookup.ts";
+import { resolveWcaId, resolveWcaIdFromCache, resolveCountry, resolveCountryName } from "./partnerLookup.ts";
 import { escapeLike } from "../../_shared/sqlEscape.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -20,9 +15,7 @@ export async function executeDownloadSinglePartner(
 ): Promise<unknown> {
   const companyName = String(args.company_name || "").trim();
   const city = args.city ? String(args.city).trim() : null;
-  const countryCode = args.country_code
-    ? String(args.country_code).toUpperCase()
-    : null;
+  const countryCode = args.country_code ? String(args.country_code).toUpperCase() : null;
   let wcaId = args.wca_id ? Number(args.wca_id) : null;
 
   if (!companyName && !wcaId) {
@@ -64,13 +57,8 @@ export async function executeDownloadSinglePartner(
     };
   }
 
-  const { data: deadRows } = await supabase
-    .from("partners_no_contacts")
-    .select("wca_id")
-    .eq("resolved", false);
-  const deadIdSet = new Set(
-    (deadRows || []).map((r: Record<string, unknown>) => Number(r.wca_id)),
-  );
+  const { data: deadRows } = await supabase.from("partners_no_contacts").select("wca_id").eq("resolved", false);
+  const deadIdSet = new Set((deadRows || []).map((r: Record<string, unknown>) => Number(r.wca_id)));
   if (deadIdSet.has(Number(wcaId))) {
     return {
       error: `"${companyName}" (WCA ID: ${wcaId}) è nella lista "senza contatti". Probabilmente non ha dati utili.`,

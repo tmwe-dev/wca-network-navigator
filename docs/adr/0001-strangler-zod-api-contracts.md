@@ -60,8 +60,8 @@ Per ogni modulo `src/lib/api/<name>.ts` esiste un fratello
 
 ## Stato di adozione
 
-| Modulo | Schema | safeParse adottato in call-site |
-|---|---|---|
-| `wcaAppApi` (discover/scrape/checkIds/jobStart) | ✅ | ✅ |
-| `checkInbox` | ✅ | ✅ |
-| `wcaScraper` | facade su wcaAppApi | indiretto |
+| Modulo                                          | Schema              | safeParse adottato in call-site |
+| ----------------------------------------------- | ------------------- | ------------------------------- |
+| `wcaAppApi` (discover/scrape/checkIds/jobStart) | ✅                  | ✅                              |
+| `checkInbox`                                    | ✅                  | ✅                              |
+| `wcaScraper`                                    | facade su wcaAppApi | indiretto                       |

@@ -84,8 +84,7 @@ export function domainError(
   context?: Record<string, unknown>,
   source?: string,
 ): AppError {
-  const strategy: RecoveryStrategy =
-    code === "ENTITY_NOT_FOUND" ? "fallback" : "escalate";
+  const strategy: RecoveryStrategy = code === "ENTITY_NOT_FOUND" ? "fallback" : "escalate";
   return createError("domain", code, message, strategy, context, source);
 }
 
@@ -137,19 +136,10 @@ export function isAppError(value: unknown): value is AppError {
  * Converte un unknown catturato in AppError.
  * Usato come adapter per try/catch legacy.
  */
-export function fromUnknown(
-  caught: unknown,
-  fallbackCode: AppErrorCode = "DATABASE_ERROR",
-  source?: string,
-): AppError {
+export function fromUnknown(caught: unknown, fallbackCode: AppErrorCode = "DATABASE_ERROR", source?: string): AppError {
   if (isAppError(caught)) return caught;
 
-  const message =
-    caught instanceof Error
-      ? caught.message
-      : typeof caught === "string"
-        ? caught
-        : "Errore sconosciuto";
+  const message = caught instanceof Error ? caught.message : typeof caught === "string" ? caught : "Errore sconosciuto";
 
   const category: ErrorCategory =
     fallbackCode.includes("VALIDATION") || fallbackCode.includes("BUSINESS")

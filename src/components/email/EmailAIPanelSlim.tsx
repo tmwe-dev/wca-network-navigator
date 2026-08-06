@@ -28,11 +28,21 @@ interface Props {
 }
 
 export function EmailAIPanelSlim({
-  aiGenerating, aiImproving, hasBody,
-  learningDialogOpen, editAnalysis,
-  onGenerate, onImprove, onLoadTemplate, onInsertImage,
-  onCloseLearningDialog, onSendAndSave, onSendWithoutSaving,
-  recipientPartnerId = null, recipientCount = 0, contextSummary = null,
+  aiGenerating,
+  aiImproving,
+  hasBody,
+  learningDialogOpen,
+  editAnalysis,
+  onGenerate,
+  onImprove,
+  onLoadTemplate,
+  onInsertImage,
+  onCloseLearningDialog,
+  onSendAndSave,
+  onSendWithoutSaving,
+  recipientPartnerId = null,
+  recipientCount = 0,
+  contextSummary = null,
 }: Props): React.ReactElement {
   return (
     <div className="w-full h-full min-w-[240px]">

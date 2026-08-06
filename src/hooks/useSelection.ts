@@ -24,7 +24,7 @@ export function useSelection<T extends { id: string }>(items: T[]) {
     (predicate: (item: T) => boolean) => {
       setSelectedIds(new Set(items.filter(predicate).map((i) => i.id)));
     },
-    [items]
+    [items],
   );
 
   const clear = useCallback(() => {
@@ -51,7 +51,7 @@ export function useSelection<T extends { id: string }>(items: T[]) {
 
   const isAllSelected = useMemo(
     () => items.length > 0 && selectedIds.size === items.length,
-    [items.length, selectedIds.size]
+    [items.length, selectedIds.size],
   );
 
   const toggleAll = useCallback(
@@ -59,7 +59,7 @@ export function useSelection<T extends { id: string }>(items: T[]) {
       if (checked) selectAll();
       else clear();
     },
-    [selectAll, clear]
+    [selectAll, clear],
   );
 
   return {

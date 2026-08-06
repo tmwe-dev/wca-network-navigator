@@ -20,9 +20,16 @@ interface Props {
 }
 
 export function EnrichmentStatusHeader({
-  totalCount, completeCount, partialCount, missingCount,
-  isRunning, progressDone, progressTotal, selectedCount,
-  onStart, onStop,
+  totalCount,
+  completeCount,
+  partialCount,
+  missingCount,
+  isRunning,
+  progressDone,
+  progressTotal,
+  selectedCount,
+  onStart,
+  onStop,
 }: Props): React.ReactElement {
   const pct = totalCount > 0 ? Math.round((completeCount / totalCount) * 100) : 0;
   const partialPct = totalCount > 0 ? Math.round((partialCount / totalCount) * 100) : 0;
@@ -35,9 +42,7 @@ export function EnrichmentStatusHeader({
           <h3 className="text-base font-semibold text-foreground">Stato Arricchimento</h3>
           <p className="text-sm text-foreground mt-0.5">
             <span className="font-semibold text-foreground">{completeCount}</span> su {totalCount} completi ({pct}%)
-            {partialCount > 0 && (
-              <span className="text-foreground"> · {partialCount} parziali</span>
-            )}
+            {partialCount > 0 && <span className="text-foreground"> · {partialCount} parziali</span>}
           </p>
         </div>
 
@@ -80,8 +85,8 @@ export function EnrichmentStatusHeader({
               {selectedCount > 0
                 ? `Arricchisci ${selectedCount} selezionati`
                 : missingCount > 0
-                ? `Seleziona per arricchire i ${missingCount} mancanti`
-                : "Tutti arricchiti"}
+                  ? `Seleziona per arricchire i ${missingCount} mancanti`
+                  : "Tutti arricchiti"}
             </Button>
           )}
         </div>
@@ -90,7 +95,9 @@ export function EnrichmentStatusHeader({
       {isRunning && progressTotal > 0 && (
         <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-2 text-xs text-foreground">
           <Loader2 className="w-3 h-3 animate-spin text-primary" />
-          <span>Arricchimento in corso: {progressDone} di {progressTotal}</span>
+          <span>
+            Arricchimento in corso: {progressDone} di {progressTotal}
+          </span>
         </div>
       )}
     </div>

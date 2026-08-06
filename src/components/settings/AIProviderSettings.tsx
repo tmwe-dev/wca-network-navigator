@@ -4,13 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Brain, Sliders, Eye, EyeOff } from "lucide-react";
 import type { useUpdateSetting } from "@/hooks/useAppSettings";
 
@@ -81,10 +75,7 @@ export function AIProviderSettings({ settings, updateSetting }: AIProviderSettin
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Provider</Label>
-            <Select
-              value={currentProvider}
-              onValueChange={(v) => handleSave("ai_provider", v)}
-            >
+            <Select value={currentProvider} onValueChange={(v) => handleSave("ai_provider", v)}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -118,7 +109,8 @@ export function AIProviderSettings({ settings, updateSetting }: AIProviderSettin
               </button>
             </div>
             <p className="text-[10px] text-muted-foreground leading-tight">
-              Lascia vuoto per usare la chiave di default del sistema (Lovable). Inserisci la tua chiave per usare il provider selezionato direttamente.
+              Lascia vuoto per usare la chiave di default del sistema (Lovable). Inserisci la tua chiave per usare il
+              provider selezionato direttamente.
             </p>
           </div>
         </CardContent>
@@ -136,10 +128,7 @@ export function AIProviderSettings({ settings, updateSetting }: AIProviderSettin
           {/* TTS Model */}
           <div className="space-y-1.5">
             <Label className="text-xs">Modello TTS</Label>
-            <Select
-              value={currentTtsModel}
-              onValueChange={(v) => handleSave("elevenlabs_tts_model", v)}
-            >
+            <Select value={currentTtsModel} onValueChange={(v) => handleSave("elevenlabs_tts_model", v)}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -213,10 +202,7 @@ export function AIProviderSettings({ settings, updateSetting }: AIProviderSettin
           {/* Output Format */}
           <div className="space-y-1.5">
             <Label className="text-xs">Output Format</Label>
-            <Select
-              value={currentOutputFormat}
-              onValueChange={(v) => handleSave("elevenlabs_output_format", v)}
-            >
+            <Select value={currentOutputFormat} onValueChange={(v) => handleSave("elevenlabs_output_format", v)}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>

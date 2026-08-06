@@ -4,13 +4,17 @@
  */
 
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import { sha256hex,
-  sanitizeMessageId, decodeRfc2047,
-} from "./mimeDecoder.ts";
+import { sha256hex, sanitizeMessageId, decodeRfc2047 } from "./mimeDecoder.ts";
 import {
-  envelopeAddr, envelopeAddrName, envelopeAddrList,
-  extractLiteralBytesFromResponse, extractLiteralTextFromResponse,
-  parseRawHeaders, parseEmailFromHeader, computeThreadId, MAX_RAW_FETCH_BYTES,
+  envelopeAddr,
+  envelopeAddrName,
+  envelopeAddrList,
+  extractLiteralBytesFromResponse,
+  extractLiteralTextFromResponse,
+  parseRawHeaders,
+  parseEmailFromHeader,
+  computeThreadId,
+  MAX_RAW_FETCH_BYTES,
 } from "./imapParser.ts";
 import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperations.ts";
 import { detectBounce, handleBounce } from "./bounceDetector.ts";
@@ -68,20 +72,28 @@ export async function processMessage(
         if (!rfc822Size) rfc822Size = rawBytes.length;
         if (rawBytes.length > 0) {
           rawHash = await sha256hex(rawBytes);
-          const { data: existing } = await supabase.from("channel_messages").select("id").eq("raw_sha256", rawHash).eq("user_id", userId).maybeSingle();
+          const { data: existing } = await supabase
+            .from("channel_messages")
+            .select("id")
+            .eq("raw_sha256", rawHash)
+            .eq("user_id", userId)
+            .maybeSingle();
           if (existing) {
             return { msgData: null, error: "duplicate_by_hash" };
           }
           rawStoragePath = `raw-emails/${userId}/${uid}.eml`;
-          const { error: rawUpErr } = await supabaseAdmin.storage.from("import-files").upload(rawStoragePath, rawBytes, { contentType: "message/rfc822", upsert: true });
+          const { error: rawUpErr } = await supabaseAdmin.storage
+            .from("import-files")
+            .upload(rawStoragePath, rawBytes, { contentType: "message/rfc822", upsert: true });
           if (rawUpErr) {
             parseWarnings.push(`raw upload failed: ${rawUpErr.message}`);
             rawStoragePath = "";
           }
         }
       } else if (rfc822Size > MAX_RAW_FETCH_BYTES) {
-        parseWarnings.push(`raw too large (${rfc822Size}B > ${MAX_RAW_FETCH_BYTES}B), skipping raw fetch to stay within CPU limits`);
-        
+        parseWarnings.push(
+          `raw too large (${rfc822Size}B > ${MAX_RAW_FETCH_BYTES}B), skipping raw fetch to stay within CPU limits`,
+        );
       } else {
         try {
           const rawResponse = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[])`);
@@ -92,12 +104,19 @@ export async function processMessage(
             rawBytes = new Uint8Array(0);
           } else if (rawBytes.length > 0) {
             rawHash = await sha256hex(rawBytes);
-            const { data: existing } = await supabase.from("channel_messages").select("id").eq("raw_sha256", rawHash).eq("user_id", userId).maybeSingle();
+            const { data: existing } = await supabase
+              .from("channel_messages")
+              .select("id")
+              .eq("raw_sha256", rawHash)
+              .eq("user_id", userId)
+              .maybeSingle();
             if (existing) {
               return { msgData: null, error: "duplicate_by_hash" };
             }
             rawStoragePath = `raw-emails/${userId}/${uid}.eml`;
-            const { error: rawUpErr } = await supabaseAdmin.storage.from("import-files").upload(rawStoragePath, rawBytes, { contentType: "message/rfc822", upsert: true });
+            const { error: rawUpErr } = await supabaseAdmin.storage
+              .from("import-files")
+              .upload(rawStoragePath, rawBytes, { contentType: "message/rfc822", upsert: true });
             if (rawUpErr) {
               parseWarnings.push(`raw upload failed: ${rawUpErr.message}`);
               rawStoragePath = "";
@@ -158,7 +177,7 @@ export async function processMessage(
     if (!fromAddr || fromAddr === "@" || fromAddr === "sconosciuto@unknown") {
       try {
         const hdrResponse = await imapExec.executeCommand(
-          `UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID IN-REPLY-TO REFERENCES)])`
+          `UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID IN-REPLY-TO REFERENCES)])`,
         );
         const rawHeaders = extractLiteralTextFromResponse(hdrResponse);
         if (rawHeaders) {
@@ -220,13 +239,11 @@ export async function processMessage(
     if (bodyHtml) {
       for (const att of attachmentRecords) {
         if (att.isInline && att.cid && att.publicUrl) {
-          const escapedCid = att.cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          bodyHtml = bodyHtml.replace(new RegExp(`cid:${escapedCid}`, 'gi'), att.publicUrl);
+          const escapedCid = att.cid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          bodyHtml = bodyHtml.replace(new RegExp(`cid:${escapedCid}`, "gi"), att.publicUrl);
         }
       }
     }
-
-    
 
     /* ─── Phase 5: Match sender ─── */
     const match = await matchSender(supabase, fromAddr, userId);
@@ -315,7 +332,7 @@ export async function matchResponseActivity(
   savedMsgId: string,
   inReplyTo: string | null,
   threadId: string,
-  match: { partnerId?: string } | null
+  match: { partnerId?: string } | null,
 ): Promise<void> {
   try {
     if (!inReplyTo && !threadId) return;
@@ -352,9 +369,8 @@ export async function matchResponseActivity(
     }
 
     if (activityMatch) {
-      const responseTimeHours = Math.round(
-        ((Date.now() - new Date(activityMatch.sent_at).getTime()) / (1000 * 60 * 60)) * 10
-      ) / 10;
+      const responseTimeHours =
+        Math.round(((Date.now() - new Date(activityMatch.sent_at).getTime()) / (1000 * 60 * 60)) * 10) / 10;
       await supabase.rpc("link_response_to_activity", {
         p_channel_message_id: savedMsgId,
         p_activity_id: activityMatch.id,

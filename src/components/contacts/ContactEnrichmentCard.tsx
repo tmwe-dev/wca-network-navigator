@@ -46,20 +46,20 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
   const confidence = e?.confidence ?? null;
   const websiteQuality = e?.website_quality_score ?? null;
 
-  const hasCompanyData = companyProfile && (
-    (companyProfile.awards?.length ?? 0) > 0 ||
-    (companyProfile.specialties?.length ?? 0) > 0 ||
-    companyProfile.recent_news ||
-    companyProfile.founded_year ||
-    companyProfile.employee_count_estimate
-  );
+  const hasCompanyData =
+    companyProfile &&
+    ((companyProfile.awards?.length ?? 0) > 0 ||
+      (companyProfile.specialties?.length ?? 0) > 0 ||
+      companyProfile.recent_news ||
+      companyProfile.founded_year ||
+      companyProfile.employee_count_estimate);
 
-  const hasContactProfile = contactProfile && (
-    contactProfile.background ||
-    (contactProfile.languages?.length ?? 0) > 0 ||
-    (contactProfile.interests?.length ?? 0) > 0 ||
-    contactProfile.seniority
-  );
+  const hasContactProfile =
+    contactProfile &&
+    (contactProfile.background ||
+      (contactProfile.languages?.length ?? 0) > 0 ||
+      (contactProfile.interests?.length ?? 0) > 0 ||
+      contactProfile.seniority);
 
   const socialLinks = [
     e?.linkedin_url && { url: e.linkedin_url, label: "LinkedIn", icon: "🔗" },
@@ -96,15 +96,19 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
       {(e?.logo_url || websiteQuality) && (
         <div className="flex items-center gap-3">
           {e?.logo_url && (
-            <OptimizedImage src={e.logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-background border border-border/50" />
+            <OptimizedImage
+              src={e.logo_url}
+              alt="Logo"
+              className="w-8 h-8 rounded-lg object-contain bg-background border border-border/50"
+            />
           )}
           {websiteQuality && (
             <div className="flex items-center gap-1">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className={cn(
-                  "w-2 h-2 rounded-full",
-                  i < websiteQuality ? "bg-primary" : "bg-muted-foreground/20"
-                )} />
+                <div
+                  key={i}
+                  className={cn("w-2 h-2 rounded-full", i < websiteQuality ? "bg-primary" : "bg-muted-foreground/20")}
+                />
               ))}
               <span className="text-[10px] text-muted-foreground ml-1">Sito web</span>
             </div>
@@ -129,10 +133,12 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
               <Briefcase className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-medium text-foreground">Profilo Professionale</span>
               {contactProfile.seniority && (
-                <span className={cn(
-                  "text-[9px] px-1.5 py-0.5 rounded-full border font-medium uppercase ml-1",
-                  seniorityColors[contactProfile.seniority] || "bg-secondary text-secondary-foreground"
-                )}>
+                <span
+                  className={cn(
+                    "text-[9px] px-1.5 py-0.5 rounded-full border font-medium uppercase ml-1",
+                    seniorityColors[contactProfile.seniority] || "bg-secondary text-secondary-foreground",
+                  )}
+                >
                   {contactProfile.seniority}
                 </span>
               )}
@@ -148,11 +154,15 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
                 <p className="text-[11px] text-foreground leading-relaxed">{contactProfile.background}</p>
               )}
               <div className="flex flex-wrap gap-1">
-              {contactProfile.languages?.map((l: string, i: number) => (
-                  <span key={i} className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground">{l}</span>
+                {contactProfile.languages?.map((l: string, i: number) => (
+                  <span key={i} className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground">
+                    {l}
+                  </span>
                 ))}
                 {contactProfile.interests?.map((int: string, i: number) => (
-                  <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 text-success">{int}</span>
+                  <span key={i} className="text-[9px] px-1 py-0 rounded bg-emerald-500/20 text-success">
+                    {int}
+                  </span>
                 ))}
               </div>
               {(contactProfile.other_companies?.length ?? 0) > 0 && (
@@ -194,7 +204,10 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
               {(companyProfile.specialties?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {companyProfile.specialties?.map((s: string, i: number) => (
-                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
+                    <span
+                      key={i}
+                      className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30"
+                    >
                       {s}
                     </span>
                   ))}
@@ -203,7 +216,7 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
               {(companyProfile.awards?.length ?? 0) > 0 && (
                 <div className="space-y-1">
                   {companyProfile.awards?.map((a: string | Record<string, unknown>, i: number) => {
-                    const label = typeof a === "string" ? a : ((a as Record<string, unknown>)?.name || JSON.stringify(a));
+                    const label = typeof a === "string" ? a : (a as Record<string, unknown>)?.name || JSON.stringify(a);
                     return (
                       <div key={i} className="flex items-center gap-1.5 text-xs text-foreground">
                         <Award className="w-3 h-3 text-primary" />
@@ -224,13 +237,17 @@ export function ContactEnrichmentCard({ enrichmentData, deepSearchAt }: ContactE
       {/* Token consumption */}
       {tokensUsed && tokensUsed.credits_consumed > 0 && (
         <div className="flex items-center gap-2 pt-1 border-t border-primary/10">
-          <Coins className={cn("w-3.5 h-3.5",
-            tokensUsed.credits_consumed > 50 ? "text-destructive" :
-            tokensUsed.credits_consumed > 20 ? "text-primary" : "text-emerald-500"
-          )} />
-          <span className="text-[10px] text-muted-foreground">
-            {tokensUsed.credits_consumed} crediti AI
-          </span>
+          <Coins
+            className={cn(
+              "w-3.5 h-3.5",
+              tokensUsed.credits_consumed > 50
+                ? "text-destructive"
+                : tokensUsed.credits_consumed > 20
+                  ? "text-primary"
+                  : "text-emerald-500",
+            )}
+          />
+          <span className="text-[10px] text-muted-foreground">{tokensUsed.credits_consumed} crediti AI</span>
           <span className="text-[9px] text-muted-foreground ml-auto">
             {tokensUsed.prompt?.toLocaleString()}↑ {tokensUsed.completion?.toLocaleString()}↓
           </span>

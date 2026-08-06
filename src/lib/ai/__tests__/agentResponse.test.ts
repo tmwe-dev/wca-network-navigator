@@ -7,12 +7,12 @@ vi.mock("@/lib/log", () => ({
 
 describe("sanitizeVisibleAiText", () => {
   it("removes hidden marker delimiters and content after them", () => {
-    const input = "Hello user!---STRUCTURED_DATA---{\"type\":\"partners\"}";
+    const input = 'Hello user!---STRUCTURED_DATA---{"type":"partners"}';
     expect(sanitizeVisibleAiText(input)).toBe("Hello user!");
   });
 
   it("removes code blocks", () => {
-    const input = "Here is info\n```json\n{\"x\":1}\n```\nDone";
+    const input = 'Here is info\n```json\n{"x":1}\n```\nDone';
     expect(sanitizeVisibleAiText(input)).toBe("Here is info\n\nDone");
   });
 

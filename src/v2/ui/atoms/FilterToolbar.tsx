@@ -23,14 +23,6 @@ interface FilterToolbarProps {
   readonly className?: string;
 }
 
-export function FilterToolbar({
-  children,
-  compact = false,
-  className,
-}: FilterToolbarProps): React.ReactElement {
-  return (
-    <div className={cn(compact ? UI_TOKENS.TOOLBAR_COMPACT : UI_TOKENS.TOOLBAR, className)}>
-      {children}
-    </div>
-  );
+export function FilterToolbar({ children, compact = false, className }: FilterToolbarProps): React.ReactElement {
+  return <div className={cn(compact ? UI_TOKENS.TOOLBAR_COMPACT : UI_TOKENS.TOOLBAR, className)}>{children}</div>;
 }

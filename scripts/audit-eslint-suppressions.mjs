@@ -8,7 +8,11 @@ function walk(dir, out = []) {
     const p = join(dir, e);
     const s = statSync(p);
     if (s.isDirectory()) {
-      if (["node_modules","__tests__","test","dist","coverage",".git",".lovable"].includes(e) || e.startsWith(".")) continue;
+      if (
+        ["node_modules", "__tests__", "test", "dist", "coverage", ".git", ".lovable"].includes(e) ||
+        e.startsWith(".")
+      )
+        continue;
       walk(p, out);
     } else if (/\.(ts|tsx|js|mjs)$/.test(e) && !/\.(test|spec)\.tsx?$/.test(e)) out.push(p);
   }
@@ -21,10 +25,15 @@ let total = 0;
 for (const f of files) {
   const src = readFileSync(f, "utf8");
   const re = /eslint-disable(?:-next-line|-line)?\s+([^\n*/]+)/g;
-  let m; let count = 0;
+  let m;
+  let count = 0;
   while ((m = re.exec(src))) {
-    total++; count++;
-    for (const rule of m[1].split(",").map((s) => s.trim()).filter(Boolean)) {
+    total++;
+    count++;
+    for (const rule of m[1]
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)) {
       byRule.set(rule, (byRule.get(rule) || 0) + 1);
     }
   }

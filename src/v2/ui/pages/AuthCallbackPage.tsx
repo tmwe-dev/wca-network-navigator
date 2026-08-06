@@ -21,9 +21,7 @@ export function AuthCallbackPage(): React.ReactElement {
 
     async function consumeHashAndGo(): Promise<void> {
       try {
-        const hash = window.location.hash.startsWith("#")
-          ? window.location.hash.slice(1)
-          : "";
+        const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
         const params = new URLSearchParams(hash);
         const accessToken = params.get("access_token");
         const refreshToken = params.get("refresh_token");

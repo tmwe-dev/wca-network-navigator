@@ -2,23 +2,31 @@
 // Fix: retryAfter non più cappato a 60s, domain matching case-insensitive
 
 const RateLimiter = {
-
   // ============================================================
   // 1. LIMITI PER DOMINIO
   // ============================================================
   limits: {
-    'linkedin.com': {
-      perHour: 20, perDay: 80, minInterval: 8000,
-      cooldownAfterBurst: 300000, burstThreshold: 10,
+    "linkedin.com": {
+      perHour: 20,
+      perDay: 80,
+      minInterval: 8000,
+      cooldownAfterBurst: 300000,
+      burstThreshold: 10,
     },
-    'google.com': {
-      perHour: 30, perDay: 150, minInterval: 3000,
-      cooldownAfterBurst: 120000, burstThreshold: 15,
+    "google.com": {
+      perHour: 30,
+      perDay: 150,
+      minInterval: 3000,
+      cooldownAfterBurst: 120000,
+      burstThreshold: 15,
     },
-    'default': {
-      perHour: 60, perDay: 300, minInterval: 1500,
-      cooldownAfterBurst: 60000, burstThreshold: 20,
-    }
+    default: {
+      perHour: 60,
+      perDay: 300,
+      minInterval: 1500,
+      cooldownAfterBurst: 60000,
+      burstThreshold: 20,
+    },
   },
 
   // ============================================================
@@ -29,9 +37,11 @@ const RateLimiter = {
   _getTracking(domain) {
     if (!this._tracking[domain]) {
       this._tracking[domain] = {
-        timestamps: [], dailyCount: 0,
+        timestamps: [],
+        dailyCount: 0,
         dailyReset: this._endOfDay(),
-        consecutive: 0, lastRequest: 0,
+        consecutive: 0,
+        lastRequest: 0,
       };
     }
     const t = this._tracking[domain];
@@ -40,7 +50,7 @@ const RateLimiter = {
       t.dailyReset = this._endOfDay();
     }
     const oneHourAgo = Date.now() - 3600000;
-    t.timestamps = t.timestamps.filter(ts => ts > oneHourAgo);
+    t.timestamps = t.timestamps.filter((ts) => ts > oneHourAgo);
     return t;
   },
 
@@ -52,17 +62,17 @@ const RateLimiter = {
 
   _getDomain(url) {
     try {
-      return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+      return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
     } catch {
-      return 'unknown';
+      return "unknown";
     }
   },
 
   _getLimits(domain) {
     const d = domain.toLowerCase();
     for (const [key, limits] of Object.entries(this.limits)) {
-      if (key === 'default') continue;
-      if (d === key || d.endsWith('.' + key)) return limits;
+      if (key === "default") continue;
+      if (d === key || d.endsWith("." + key)) return limits;
     }
     return this.limits.default;
   },
@@ -96,7 +106,7 @@ const RateLimiter = {
     if (timeSinceLast < limits.minInterval) {
       return {
         allowed: false,
-        reason: 'Troppo veloce',
+        reason: "Troppo veloce",
         retryAfter: Math.max(0, limits.minInterval - timeSinceLast),
       };
     }
@@ -143,18 +153,18 @@ const RateLimiter = {
     try {
       await chrome.storage.local.set({ rate_limiter_tracking: this._tracking });
     } catch (err) {
-      console.error('Failed to save rate limiter state:', err);
+      console.error("Failed to save rate limiter state:", err);
     }
   },
 
   async restoreState() {
     try {
-      const stored = await chrome.storage.local.get('rate_limiter_tracking');
+      const stored = await chrome.storage.local.get("rate_limiter_tracking");
       if (stored.rate_limiter_tracking) {
         this._tracking = stored.rate_limiter_tracking;
       }
     } catch (err) {
-      console.error('Failed to restore rate limiter state:', err);
+      console.error("Failed to restore rate limiter state:", err);
     }
   },
 
@@ -184,7 +194,7 @@ const RateLimiter = {
       // Queue starvation check: reject if item waited too long
       if (now - item.addedAt > maxWaitTime) {
         this._queue.shift();
-        item.reject(new Error('Queue timeout: item waited over 5 minutes'));
+        item.reject(new Error("Queue timeout: item waited over 5 minutes"));
         continue;
       }
 
@@ -195,7 +205,7 @@ const RateLimiter = {
           this.resetBurst(item.url);
         }
         // Rispetta il retryAfter reale, max 2 min per non bloccare troppo
-        await new Promise(r => setTimeout(r, Math.min(check.retryAfter, 120000)));
+        await new Promise((r) => setTimeout(r, Math.min(check.retryAfter, 120000)));
         continue;
       }
 
@@ -208,7 +218,7 @@ const RateLimiter = {
           const result = await item.options.action();
           item.resolve(result);
         } else {
-          item.resolve({ url: item.url, status: 'queued' });
+          item.resolve({ url: item.url, status: "queued" });
         }
       } catch (err) {
         item.reject(err);
@@ -217,7 +227,7 @@ const RateLimiter = {
       const domain = this._getDomain(item.url);
       const limits = this._getLimits(domain);
       const delay = limits.minInterval + Math.random() * limits.minInterval;
-      await new Promise(r => setTimeout(r, delay));
+      await new Promise((r) => setTimeout(r, delay));
     }
 
     this._processing = false;
@@ -234,7 +244,7 @@ const RateLimiter = {
         hourly: `${tracking.timestamps.length}/${limits.perHour}`,
         daily: `${tracking.dailyCount}/${limits.perDay}`,
         consecutive: tracking.consecutive,
-        queueLength: this._queue.filter(i => this._getDomain(i.url) === domain).length,
+        queueLength: this._queue.filter((i) => this._getDomain(i.url) === domain).length,
       };
     }
     stats._queue = { total: this._queue.length, processing: this._processing };
@@ -252,6 +262,6 @@ const RateLimiter = {
   },
 };
 
-if (typeof globalThis !== 'undefined') {
+if (typeof globalThis !== "undefined") {
   globalThis.RateLimiter = RateLimiter;
 }

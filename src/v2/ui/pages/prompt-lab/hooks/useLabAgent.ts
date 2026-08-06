@@ -40,16 +40,10 @@ export function useLabAgent() {
   const callAgent = useCallAgent();
 
   const appendMessage = useCallback((m: Omit<LabChatMessage, "id" | "timestamp">) => {
-    setMessages((prev) => [
-      ...prev,
-      { ...m, id: crypto.randomUUID(), timestamp: Date.now() },
-    ]);
+    setMessages((prev) => [...prev, { ...m, id: crypto.randomUUID(), timestamp: Date.now() }]);
   }, []);
 
-  const improveBlock = useCallback(
-    (opts: ImproveOptions) => improveBlockImpl(callAgent, opts),
-    [callAgent],
-  );
+  const improveBlock = useCallback((opts: ImproveOptions) => improveBlockImpl(callAgent, opts), [callAgent]);
 
   const improveBlockGlobal = useCallback(
     (params: ImproveBlockGlobalParams) => improveBlockGlobalImpl(callAgent, params),
@@ -81,9 +75,7 @@ export function useLabAgent() {
       try {
         const lower = content.toLowerCase();
         const target = ctx.blocks.find(
-          (b) =>
-            lower.includes(b.label.toLowerCase()) ||
-            lower.includes(b.id.toLowerCase()),
+          (b) => lower.includes(b.label.toLowerCase()) || lower.includes(b.id.toLowerCase()),
         );
 
         if (target) {

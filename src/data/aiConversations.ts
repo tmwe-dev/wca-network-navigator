@@ -56,7 +56,12 @@ export async function getConversation(id: string) {
   return data;
 }
 
-export async function createConversation(params: { user_id: string; page_context: string; title: string; messages: unknown[] }) {
+export async function createConversation(params: {
+  user_id: string;
+  page_context: string;
+  title: string;
+  messages: unknown[];
+}) {
   const { data, error } = await supabase
     .from("ai_conversations")
     .insert([{ ...params, messages: toJsonValue(params.messages) as Json }])

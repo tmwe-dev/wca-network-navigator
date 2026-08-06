@@ -58,17 +58,20 @@ export function useNavBadgeCountsV2() {
 }
 
 /** Mappa path → conteggio (per look-up rapido nel menu). */
-export function badgeForPath(
-  counts: NavBadgeCounts | undefined,
-  path: string,
-): number {
+export function badgeForPath(counts: NavBadgeCounts | undefined, path: string): number {
   if (!counts) return 0;
   switch (path) {
-    case "/v2/cestinone": return counts.cestinone;
-    case "/v2/cockpit": return counts.cockpit;
-    case "/v2/inbox": return counts.inbox;
-    case "/v2/funnemail-inbox": return counts.funnemailInbox;
-    case "/v2/agenda": return counts.agenda;
-    default: return 0;
+    case "/v2/cestinone":
+      return counts.cestinone;
+    case "/v2/cockpit":
+      return counts.cockpit;
+    case "/v2/inbox":
+      return counts.inbox;
+    case "/v2/funnemail-inbox":
+      return counts.funnemailInbox;
+    case "/v2/agenda":
+      return counts.agenda;
+    default:
+      return 0;
   }
 }

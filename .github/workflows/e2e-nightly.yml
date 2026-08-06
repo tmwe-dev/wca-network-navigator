@@ -2,7 +2,7 @@ name: E2E Nightly (full suite)
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # ogni notte alle 02:00 UTC
+    - cron: "0 2 * * *" # ogni notte alle 02:00 UTC
   workflow_dispatch:
 
 env:

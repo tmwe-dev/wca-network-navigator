@@ -24,7 +24,7 @@ function count(pattern) {
   try {
     const out = execSync(
       `grep -rE ${JSON.stringify(pattern)} src --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx" --exclude="*.d.ts" --exclude-dir="__tests__" --exclude-dir="test" --exclude-dir="tests" | wc -l`,
-      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
     );
     return parseInt(out.trim(), 10) || 0;
   } catch {

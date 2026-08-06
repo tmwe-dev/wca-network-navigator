@@ -37,11 +37,7 @@ export async function executePlatformTool(
   }
 
   // ── Contacts ──
-  if (
-    name === "search_contacts" ||
-    name === "get_contact_detail" ||
-    name === "update_lead_status"
-  ) {
+  if (name === "search_contacts" || name === "get_contact_detail" || name === "update_lead_status") {
     return executeContactToolHandler(name, args, userId, authHeader);
   }
 
@@ -67,12 +63,7 @@ export async function executePlatformTool(
   }
 
   // ── Outreach & Email ──
-  if (
-    name === "generate_outreach" ||
-    name === "send_email" ||
-    name === "schedule_email" ||
-    name === "queue_outreach"
-  ) {
+  if (name === "generate_outreach" || name === "send_email" || name === "schedule_email" || name === "queue_outreach") {
     return executeOutreachToolHandler(name, args, userId, authHeader);
   }
 
@@ -87,11 +78,7 @@ export async function executePlatformTool(
   }
 
   // ── Directory & Deep Search ──
-  if (
-    name === "get_directory_status" ||
-    name === "deep_search_partner" ||
-    name === "deep_search_contact"
-  ) {
+  if (name === "get_directory_status" || name === "deep_search_partner" || name === "deep_search_contact") {
     return executeSearchToolHandler(name, args, userId, authHeader);
   }
 

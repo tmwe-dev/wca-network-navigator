@@ -60,7 +60,7 @@ export function useDownloadedEmailsFeed() {
           });
           queryClient.setQueryData<DownloadedEmail[]>(["downloaded-emails-feed"], (old) => {
             if (!old) return [newEmail];
-            if (old.some(e => e.id === newEmail.id)) return old;
+            if (old.some((e) => e.id === newEmail.id)) return old;
             return [newEmail, ...old].slice(0, FEED_LIMIT);
           });
           queryClient.invalidateQueries({ queryKey: queryKeys.email.count });

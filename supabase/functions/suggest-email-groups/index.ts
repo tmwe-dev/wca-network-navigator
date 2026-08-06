@@ -30,7 +30,10 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -43,7 +46,10 @@ serve(async (req) => {
     });
     const { data: userData, error: userError } = await anonClient.auth.getUser();
     if (userError || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
     const user = { id: userData.user.id };
 
@@ -73,7 +79,10 @@ serve(async (req) => {
     }
 
     if (!groups || groups.length === 0) {
-      return new Response(JSON.stringify({ error: "No groups configured" }), { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "No groups configured" }), {
+        status: 400,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // 2. Load addresses to analyze.
@@ -92,11 +101,7 @@ serve(async (req) => {
       } else {
         // Esclude sia i mittenti col group_id moderno sia quelli con il
         // group_name legacy: mai riproporre un mittente già categorizzato.
-        q = q
-          .is("group_id", null)
-          .is("group_name", null)
-          .gte("email_count", minEmailCount)
-          .limit(batchSize);
+        q = q.is("group_id", null).is("group_name", null).gte("email_count", minEmailCount).limit(batchSize);
       }
       return q;
     };
@@ -110,7 +115,9 @@ serve(async (req) => {
     }
 
     if (!addresses || addresses.length === 0) {
-      return new Response(JSON.stringify({ processed: 0, suggestions: [] }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ processed: 0, suggestions: [] }), {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     let { data: learningRules } = await supabase
@@ -144,11 +151,13 @@ serve(async (req) => {
 
     // Pre-carica i domini già classificati (una sola query) per non interrogare
     // il DB per ogni address.
-    const domainsToCheck = Array.from(new Set(
-      addresses
-        .map((a: { email_address: string }) => (a.email_address.split("@")[1] || "").toLowerCase())
-        .filter(Boolean),
-    ));
+    const domainsToCheck = Array.from(
+      new Set(
+        addresses
+          .map((a: { email_address: string }) => (a.email_address.split("@")[1] || "").toLowerCase())
+          .filter(Boolean),
+      ),
+    );
     const domainGroupMap = new Map<string, string>();
     if (domainsToCheck.length > 0) {
       let { data: domainRules } = await supabase
@@ -185,7 +194,7 @@ serve(async (req) => {
 
       const emailCount = addr.email_count ?? 0;
       const dom = (addr.email_address.split("@")[1] || "").toLowerCase();
-      const knownGroup = dom ? domainGroupMap.get(dom) ?? null : null;
+      const knownGroup = dom ? (domainGroupMap.get(dom) ?? null) : null;
 
       addressData.push({
         email: addr.email_address,
@@ -206,50 +215,71 @@ serve(async (req) => {
       const bucket = groupedExamples.get(groupName) ?? [];
       if (bucket.length >= 3) continue;
       const sampleParts = [
-        typeof rule.company_name === "string" && rule.company_name.trim() ? `azienda: ${rule.company_name.trim()}` : null,
+        typeof rule.company_name === "string" && rule.company_name.trim()
+          ? `azienda: ${rule.company_name.trim()}`
+          : null,
         typeof rule.display_name === "string" && rule.display_name.trim() ? `nome: ${rule.display_name.trim()}` : null,
-        typeof rule.email_address === "string" && rule.email_address.trim() ? `email: ${rule.email_address.trim()}` : null,
+        typeof rule.email_address === "string" && rule.email_address.trim()
+          ? `email: ${rule.email_address.trim()}`
+          : null,
         typeof rule.domain === "string" && rule.domain.trim() ? `dominio: ${rule.domain.trim()}` : null,
-        typeof rule.custom_prompt === "string" && rule.custom_prompt.trim() ? `nota: ${rule.custom_prompt.trim().slice(0, 140)}` : null,
+        typeof rule.custom_prompt === "string" && rule.custom_prompt.trim()
+          ? `nota: ${rule.custom_prompt.trim().slice(0, 140)}`
+          : null,
       ].filter((value): value is string => value !== null);
       bucket.push(`- ${sampleParts.join(" · ")}`);
       groupedExamples.set(groupName, bucket);
     }
 
     // 4. Call AI
-    const groupsList = groups.map((g: Record<string, unknown>) => {
-      const parts = [
-        `- ${String(g.nome_gruppo)}`,
-        typeof g.descrizione === "string" && g.descrizione.trim() ? `descrizione: ${g.descrizione.trim()}` : null,
-        typeof g.classification_hint === "string" && g.classification_hint.trim() ? `hint: ${g.classification_hint.trim()}` : null,
-        typeof g.response_style_hint === "string" && g.response_style_hint.trim() ? `stile: ${g.response_style_hint.trim()}` : null,
-      ].filter((value): value is string => value !== null);
-      return parts.join(" | ");
-    }).join("\n");
-    const addressList = addressData.map((a) => {
-      const domHint = a.domain_known === "yes" && a.domain_known_group
-        ? `dominio noto → già classificato come "${a.domain_known_group}"`
-        : "dominio sconosciuto";
-      const firstHint = a.is_first_contact ? "PRIMO CONTATTO" : `relazione esistente (${a.email_count} email)`;
-      return [
-        `Email: ${a.email}`,
-        `Nome: ${a.display_name || "N/A"}`,
-        `Volume: ${a.email_count}`,
-        firstHint,
-        domHint,
-        `Ultimi oggetti: ${a.subjects.slice(0, 5).join(" | ") || "N/A"}`,
-      ].join(", ");
-    }).join("\n");
-    const examplesList = groups.map((g: Record<string, unknown>) => {
-      const groupName = String(g.nome_gruppo);
-      const samples = groupedExamples.get(groupName) ?? [];
-      if (samples.length === 0) return `## ${groupName}\n- nessun esempio ancora disponibile`;
-      return `## ${groupName}\n${samples.join("\n")}`;
-    }).join("\n\n");
+    const groupsList = groups
+      .map((g: Record<string, unknown>) => {
+        const parts = [
+          `- ${String(g.nome_gruppo)}`,
+          typeof g.descrizione === "string" && g.descrizione.trim() ? `descrizione: ${g.descrizione.trim()}` : null,
+          typeof g.classification_hint === "string" && g.classification_hint.trim()
+            ? `hint: ${g.classification_hint.trim()}`
+            : null,
+          typeof g.response_style_hint === "string" && g.response_style_hint.trim()
+            ? `stile: ${g.response_style_hint.trim()}`
+            : null,
+        ].filter((value): value is string => value !== null);
+        return parts.join(" | ");
+      })
+      .join("\n");
+    const addressList = addressData
+      .map((a) => {
+        const domHint =
+          a.domain_known === "yes" && a.domain_known_group
+            ? `dominio noto → già classificato come "${a.domain_known_group}"`
+            : "dominio sconosciuto";
+        const firstHint = a.is_first_contact ? "PRIMO CONTATTO" : `relazione esistente (${a.email_count} email)`;
+        return [
+          `Email: ${a.email}`,
+          `Nome: ${a.display_name || "N/A"}`,
+          `Volume: ${a.email_count}`,
+          firstHint,
+          domHint,
+          `Ultimi oggetti: ${a.subjects.slice(0, 5).join(" | ") || "N/A"}`,
+        ].join(", ");
+      })
+      .join("\n");
+    const examplesList = groups
+      .map((g: Record<string, unknown>) => {
+        const groupName = String(g.nome_gruppo);
+        const samples = groupedExamples.get(groupName) ?? [];
+        if (samples.length === 0) return `## ${groupName}\n- nessun esempio ancora disponibile`;
+        return `## ${groupName}\n${samples.join("\n")}`;
+      })
+      .join("\n\n");
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI not configured" }), {
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // Carica i prompt operativi dal Prompt Lab (scope: classification).
@@ -274,21 +304,24 @@ serve(async (req) => {
       "Devi assegnare ogni address a UNO dei gruppi esistenti dell'operatore (mai inventarne di nuovi).",
       "Distingui sempre i mittenti REALI con cui abbiamo rapporto operativo dai COLD OUTREACH / pitch commerciali non richiesti.",
       operativeBlock || "",
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const aiResponse = await aiFetch({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: `Gruppi disponibili:\n${groupsList}\n\nEsempi reali già classificati dall'operatore (usali come mini-guida di stile e perimetro, senza copiarli meccanicamente):\n${examplesList}\n\nPer ogni address email qui sotto, suggerisci il gruppo più appropriato.\n\nREGOLE:\n- Usa SOLO gruppi esistenti dalla lista sopra: l'obiettivo è RIDURRE i gruppi, non moltiplicarli\n- Preferisci sempre gruppi ampi e operativi (es. amministrativo, commerciale, banca, fornitori, clienti, spam, social) invece di micro-segmenti geografici o troppo specifici\n- Per mittenti LinkedIn/social automatici (inviti, notifiche, newsletter, noreply) scegli il gruppo social esistente più vicino: Social_Notification per notifiche/inviti, Social_News per newsletter/news, Social Spam solo se chiaramente indesiderato\n- Non creare sottogruppi tipo "clienti Francia" o "clienti Germania" se esiste già un gruppo più generale adeguato\n- Usa gli esempi già classificati per capire come l'azienda raggruppa davvero i mittenti\n- Basa la decisione su DOMINIO email, struttura del dominio, display name, OGGETTI ricorrenti, pattern del sender E sul CONTESTO RELAZIONALE (PRIMO CONTATTO vs relazione esistente, dominio noto vs sconosciuto)\n- **Cold_Outreach guardrail**: se è PRIMO CONTATTO + dominio sconosciuto + tono pitch/sales (growth manager, "we help", demo, lead gen) → suggerisci "Cold_Outreach" anche se il testo parla di logistica. Operativo richiede SEMPRE riferimento esplicito a spedizione/AWB/MAWB/B/L/booking/fattura/dogana o thread esistente.\n- Se il dominio è già stato classificato in un gruppo (vedi "dominio noto"), usa di norma lo stesso gruppo a meno che il pattern oggetti dica chiaramente l'opposto.\n- Se non sei sicuro (confidence < 0.4), suggerisci "uncategorized"\n- Rispondi SOLO con i dati del tool, niente testo extra\n\nFormato risposta: [{"email":"...","suggested_group":"nome_gruppo","confidence":0.0-1.0,"reasoning":"breve spiegazione"}]\n\nAddress da classificare (con feature relazionali):\n${addressList}`
-          }
-        ],
-        tools: [{
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        {
+          role: "user",
+          content: `Gruppi disponibili:\n${groupsList}\n\nEsempi reali già classificati dall'operatore (usali come mini-guida di stile e perimetro, senza copiarli meccanicamente):\n${examplesList}\n\nPer ogni address email qui sotto, suggerisci il gruppo più appropriato.\n\nREGOLE:\n- Usa SOLO gruppi esistenti dalla lista sopra: l'obiettivo è RIDURRE i gruppi, non moltiplicarli\n- Preferisci sempre gruppi ampi e operativi (es. amministrativo, commerciale, banca, fornitori, clienti, spam, social) invece di micro-segmenti geografici o troppo specifici\n- Per mittenti LinkedIn/social automatici (inviti, notifiche, newsletter, noreply) scegli il gruppo social esistente più vicino: Social_Notification per notifiche/inviti, Social_News per newsletter/news, Social Spam solo se chiaramente indesiderato\n- Non creare sottogruppi tipo "clienti Francia" o "clienti Germania" se esiste già un gruppo più generale adeguato\n- Usa gli esempi già classificati per capire come l'azienda raggruppa davvero i mittenti\n- Basa la decisione su DOMINIO email, struttura del dominio, display name, OGGETTI ricorrenti, pattern del sender E sul CONTESTO RELAZIONALE (PRIMO CONTATTO vs relazione esistente, dominio noto vs sconosciuto)\n- **Cold_Outreach guardrail**: se è PRIMO CONTATTO + dominio sconosciuto + tono pitch/sales (growth manager, "we help", demo, lead gen) → suggerisci "Cold_Outreach" anche se il testo parla di logistica. Operativo richiede SEMPRE riferimento esplicito a spedizione/AWB/MAWB/B/L/booking/fattura/dogana o thread esistente.\n- Se il dominio è già stato classificato in un gruppo (vedi "dominio noto"), usa di norma lo stesso gruppo a meno che il pattern oggetti dica chiaramente l'opposto.\n- Se non sei sicuro (confidence < 0.4), suggerisci "uncategorized"\n- Rispondi SOLO con i dati del tool, niente testo extra\n\nFormato risposta: [{"email":"...","suggested_group":"nome_gruppo","confidence":0.0-1.0,"reasoning":"breve spiegazione"}]\n\nAddress da classificare (con feature relazionali):\n${addressList}`,
+        },
+      ],
+      tools: [
+        {
           type: "function",
           function: {
             name: "classify_email_addresses",
@@ -304,25 +337,29 @@ serve(async (req) => {
                       email: { type: "string" },
                       suggested_group: { type: "string" },
                       confidence: { type: "number" },
-                      reasoning: { type: "string" }
+                      reasoning: { type: "string" },
                     },
                     required: ["email", "suggested_group", "confidence", "reasoning"],
-                    additionalProperties: false
-                  }
-                }
+                    additionalProperties: false,
+                  },
+                },
               },
               required: ["classifications"],
-              additionalProperties: false
-            }
-          }
-        }],
-        tool_choice: { type: "function", function: { name: "classify_email_addresses" } },
-      });
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "classify_email_addresses" } },
+    });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const aiData = await aiResponse.json();
@@ -366,13 +403,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ processed, suggestions: classifications, applied_prompts: appliedPromptNames }),
-      { headers: { ...dynCors, "Content-Type": "application/json" } }
+      { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error("suggest-email-groups error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

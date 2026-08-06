@@ -60,10 +60,7 @@ export interface ActivityTimelineItem {
 /**
  * Get email metrics within a date range
  */
-export async function getEmailMetrics(
-  userId: string,
-  dateRange: { from: Date; to: Date }
-): Promise<EmailMetricsData> {
+export async function getEmailMetrics(userId: string, dateRange: { from: Date; to: Date }): Promise<EmailMetricsData> {
   try {
     const { data: _activities } = await supabase
       .from("activities")
@@ -91,14 +88,11 @@ export async function getEmailMetrics(
       totalReceived = channels.filter((c) => c.direction === "inbound").length;
 
       // Calculate response rate (inbound after outbound from same contact)
-      const outboundDates = channels
-        .filter((c) => c.direction === "outbound")
-        .map((c) => c.created_at ?? "");
+      const outboundDates = channels.filter((c) => c.direction === "outbound").map((c) => c.created_at ?? "");
 
       if (outboundDates.length > 0) {
         responded = channels.filter(
-          (c) => c.direction === "inbound" &&
-                  outboundDates.some(od => new Date(od) < new Date(c.created_at ?? ""))
+          (c) => c.direction === "inbound" && outboundDates.some((od) => new Date(od) < new Date(c.created_at ?? "")),
         ).length;
         totalWithResponse = outboundDates.length;
       }
@@ -160,8 +154,7 @@ export async function getPartnerMetrics(_userId: string): Promise<PartnerMetrics
     }
 
     const totalPartners = rows.length;
-    const activePartners =
-      (byLeadStatus["qualified"] || 0) + (byLeadStatus["negotiation"] || 0);
+    const activePartners = (byLeadStatus["qualified"] || 0) + (byLeadStatus["negotiation"] || 0);
 
     return {
       totalPartners,
@@ -187,7 +180,7 @@ export async function getPartnerMetrics(_userId: string): Promise<PartnerMetrics
  */
 export async function getOutreachMetrics(
   userId: string,
-  dateRange: { from: Date; to: Date }
+  dateRange: { from: Date; to: Date },
 ): Promise<OutreachMetricsData> {
   try {
     const { data: channels } = await supabase
@@ -250,10 +243,11 @@ export async function getOutreachMetrics(
  */
 export async function getAIUsageMetrics(
   userId: string,
-  dateRange: { from: Date; to: Date }
+  dateRange: { from: Date; to: Date },
 ): Promise<AIUsageMetricsData> {
   try {
-    const { data: logs } = await supabase.from("supervisor_audit_log")
+    const { data: logs } = await supabase
+      .from("supervisor_audit_log")
       .select("created_at, action_category")
       .eq("user_id", userId)
       .gte("created_at", dateRange.from.toISOString())
@@ -300,9 +294,7 @@ export async function getAIUsageMetrics(
  */
 export async function getPipelineMetrics(userId: string): Promise<PipelineMetricsData> {
   try {
-    const { data: deals } = await supabase.from("deals")
-      .select("stage, amount")
-      .eq("user_id", userId);
+    const { data: deals } = await supabase.from("deals").select("stage, amount").eq("user_id", userId);
 
     if (!deals || deals.length === 0) {
       return {
@@ -321,12 +313,12 @@ export async function getPipelineMetrics(userId: string): Promise<PipelineMetric
     let lost = 0;
 
     const stageWeights: Record<string, number> = {
-      "lead": 0.1,
-      "prospect": 0.25,
-      "qualified": 0.5,
-      "negotiation": 0.75,
-      "won": 1.0,
-      "lost": 0.0,
+      lead: 0.1,
+      prospect: 0.25,
+      qualified: 0.5,
+      negotiation: 0.75,
+      won: 1.0,
+      lost: 0.0,
     };
 
     for (const deal of deals) {
@@ -372,10 +364,7 @@ export async function getPipelineMetrics(userId: string): Promise<PipelineMetric
 /**
  * Get activity timeline
  */
-export async function getActivityTimeline(
-  userId: string,
-  days: number = 30
-): Promise<ActivityTimelineItem[]> {
+export async function getActivityTimeline(userId: string, days: number = 30): Promise<ActivityTimelineItem[]> {
   try {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
@@ -426,7 +415,7 @@ export async function getActivityTimeline(
 export async function getMetricsComparison(
   userId: string,
   current: { from: Date; to: Date },
-  previous: { from: Date; to: Date }
+  previous: { from: Date; to: Date },
 ) {
   try {
     const [currentMetrics, previousMetrics] = await Promise.all([

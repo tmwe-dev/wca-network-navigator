@@ -176,18 +176,20 @@ function applyOcrFixes(text: string): string {
 }
 
 function collapseWhitespace(text: string): string {
-  return text
-    // CRLF → LF
-    .replace(/\r\n?/g, "\n")
-    // tab → spazio
-    .replace(/\t/g, " ")
-    // spazi multipli su stessa riga
-    .replace(/[ \u00A0]{2,}/g, " ")
-    // più di 2 newline → 2
-    .replace(/\n{3,}/g, "\n\n")
-    // trailing spaces per riga
-    .replace(/[ \u00A0]+$/gm, "")
-    .trim();
+  return (
+    text
+      // CRLF → LF
+      .replace(/\r\n?/g, "\n")
+      // tab → spazio
+      .replace(/\t/g, " ")
+      // spazi multipli su stessa riga
+      .replace(/[ \u00A0]{2,}/g, " ")
+      // più di 2 newline → 2
+      .replace(/\n{3,}/g, "\n\n")
+      // trailing spaces per riga
+      .replace(/[ \u00A0]+$/gm, "")
+      .trim()
+  );
 }
 
 function unicodeNormalize(text: string): string {
@@ -226,10 +228,7 @@ function defaultFor(source: ContentSource): Required<Omit<NormalizeOptions, "sou
  *   6. collapse whitespace
  *   7. truncate a maxChars
  */
-export function normalizeContent(
-  input: string | null | undefined,
-  options: NormalizeOptions,
-): NormalizeResult {
+export function normalizeContent(input: string | null | undefined, options: NormalizeOptions): NormalizeResult {
   const defaults = defaultFor(options.source);
   const opts = { ...defaults, ...options };
   const steps: string[] = [];
@@ -342,15 +341,24 @@ export async function normalizeSanitizeAndWrap(
 
 function mapToUntrustedSource(source: ContentSource): import("./promptSanitizer.ts").UntrustedSource {
   switch (source) {
-    case "email-inbound": return "email-inbound";
-    case "email-history": return "email-history";
-    case "email-html": return "email-inbound";
-    case "web-scrape": return "web-scrape";
+    case "email-inbound":
+      return "email-inbound";
+    case "email-history":
+      return "email-history";
+    case "email-html":
+      return "email-inbound";
+    case "web-scrape":
+      return "web-scrape";
     case "ocr-business-card":
-    case "ocr-document": return "business-card-ocr";
-    case "linkedin-message": return "linkedin-message";
-    case "whatsapp-message": return "whatsapp-message";
-    case "user-chat": return "user-chat";
-    default: return "unknown";
+    case "ocr-document":
+      return "business-card-ocr";
+    case "linkedin-message":
+      return "linkedin-message";
+    case "whatsapp-message":
+      return "whatsapp-message";
+    case "user-chat":
+      return "user-chat";
+    default:
+      return "unknown";
   }
 }

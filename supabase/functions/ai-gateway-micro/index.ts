@@ -43,18 +43,17 @@ const ALLOWED_MODELS = new Set([
 const RequestSchema = z.object({
   system: z.string().min(1).max(8000),
   user: z.string().min(1).max(20000),
-  model: z.string().refine((m) => ALLOWED_MODELS.has(m), {
-    message: "model not in allowlist",
-  }).default("google/gemini-2.5-flash"),
+  model: z
+    .string()
+    .refine((m) => ALLOWED_MODELS.has(m), {
+      message: "model not in allowlist",
+    })
+    .default("google/gemini-2.5-flash"),
   max_tokens: z.number().int().min(64).max(8192).default(1024),
   temperature: z.number().min(0).max(2).default(0.1),
 });
 
-function jsonResponse(
-  body: unknown,
-  status: number,
-  origin: string | null,
-): Response {
+function jsonResponse(body: unknown, status: number, origin: string | null): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -86,11 +85,7 @@ Deno.serve(async (req) => {
     const raw = await req.json();
     const result = RequestSchema.safeParse(raw);
     if (!result.success) {
-      return jsonResponse(
-        { error: "invalid_input", details: result.error.flatten() },
-        400,
-        origin,
-      );
+      return jsonResponse({ error: "invalid_input", details: result.error.flatten() }, 400, origin);
     }
     parsed = result.data;
   } catch {

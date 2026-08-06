@@ -30,16 +30,33 @@ interface Body {
 }
 
 const FAMILY_MAP: Record<string, string> = {
-  doctrine: "doctrine", system_doctrine: "doctrine", agent_doctrine: "doctrine",
-  sales_doctrine: "doctrine", filosofia: "doctrine", regole_sistema: "doctrine",
-  procedures: "procedures", lab_architect_procedure: "procedures",
-  command_tools: "procedures", email_management: "procedures",
-  voice_rules: "personas", tono: "personas", calligrafia: "personas", chris_voss: "personas",
-  cold_outreach: "playbooks", followup: "playbooks", negoziazione: "playbooks",
-  obiezioni: "playbooks", chiusura: "playbooks", hook: "playbooks",
-  frasi_modello: "playbooks", struttura_email: "playbooks", prompt_template: "playbooks",
-  arsenale: "playbooks", persuasione: "playbooks",
-  errori: "glossary", dati_partner: "data-schema",
+  doctrine: "doctrine",
+  system_doctrine: "doctrine",
+  agent_doctrine: "doctrine",
+  sales_doctrine: "doctrine",
+  filosofia: "doctrine",
+  regole_sistema: "doctrine",
+  procedures: "procedures",
+  lab_architect_procedure: "procedures",
+  command_tools: "procedures",
+  email_management: "procedures",
+  voice_rules: "personas",
+  tono: "personas",
+  calligrafia: "personas",
+  chris_voss: "personas",
+  cold_outreach: "playbooks",
+  followup: "playbooks",
+  negoziazione: "playbooks",
+  obiezioni: "playbooks",
+  chiusura: "playbooks",
+  hook: "playbooks",
+  frasi_modello: "playbooks",
+  struttura_email: "playbooks",
+  prompt_template: "playbooks",
+  arsenale: "playbooks",
+  persuasione: "playbooks",
+  errori: "glossary",
+  dati_partner: "data-schema",
 };
 
 const INTENT_TO_FAMILIES: Record<string, string[]> = {
@@ -53,11 +70,15 @@ const INTENT_TO_FAMILIES: Record<string, string[]> = {
 };
 
 const BLOCK_TO_INTENT: Record<string, string> = {
-  context: "validate_identity", identity: "validate_identity",
+  context: "validate_identity",
+  identity: "validate_identity",
   objective: "validate_objective",
-  procedure: "validate_method", method: "validate_method",
-  criteria: "validate_guardrail", guardrail: "validate_guardrail",
-  examples: "validate_output", output: "validate_output",
+  procedure: "validate_method",
+  method: "validate_method",
+  criteria: "validate_guardrail",
+  guardrail: "validate_guardrail",
+  examples: "validate_output",
+  output: "validate_output",
 };
 
 function fallbackSystemPrompt(mode: "diagnose" | "edit" | "global", blockName?: string): string {
@@ -129,14 +150,24 @@ Deno.serve(async (req) => {
     const intent = body.intent ?? (body.block_name ? BLOCK_TO_INTENT[body.block_name] : "generic") ?? "generic";
     const families = INTENT_TO_FAMILIES[intent] ?? INTENT_TO_FAMILIES.generic;
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // ── Costruzione contesto in base alla modalità ────────────────────
-    let kb: Array<{ id: string; category: string; chapter: string | null; title: string; content: string; priority: number }> = [];
-    const occurrences: Array<{ kind: "operative_prompt" | "kb_entry"; id: string; label: string; field: string; excerpt: string }> = [];
+    let kb: Array<{
+      id: string;
+      category: string;
+      chapter: string | null;
+      title: string;
+      content: string;
+      priority: number;
+    }> = [];
+    const occurrences: Array<{
+      kind: "operative_prompt" | "kb_entry";
+      id: string;
+      label: string;
+      field: string;
+      excerpt: string;
+    }> = [];
 
     if (mode === "global") {
       // Cerca termine in operative_prompts (objective/procedure/criteria/examples) e kb_entries (title/content)
@@ -182,7 +213,8 @@ Deno.serve(async (req) => {
             id: e.id as unknown as string,
             label: `[${e.category ?? ""}/${e.chapter ?? "-"}] ${e.title ?? ""}`,
             field: "content",
-            excerpt: idx >= 0 ? (start > 0 ? "…" : "") + v.slice(start, end) + (end < v.length ? "…" : "") : (e.title ?? ""),
+            excerpt:
+              idx >= 0 ? (start > 0 ? "…" : "") + v.slice(start, end) + (end < v.length ? "…" : "") : (e.title ?? ""),
           });
         }
       }
@@ -218,18 +250,18 @@ Deno.serve(async (req) => {
     if (mode === "global") {
       userParts.push(`\nMODALITÀ: GLOBALE — ricerca-sostituzione su prompt + KB`);
       if (body.search_term) userParts.push(`TERMINE CERCATO: "${body.search_term}"`);
-      const occBlock = occurrences.length === 0
-        ? "(nessuna occorrenza trovata)"
-        : occurrences.map((o) =>
-            `- [${o.kind}] ${o.label}\n  id: ${o.id} · campo: ${o.field}\n  estratto: ${o.excerpt}`,
-          ).join("\n\n");
+      const occBlock =
+        occurrences.length === 0
+          ? "(nessuna occorrenza trovata)"
+          : occurrences
+              .map((o) => `- [${o.kind}] ${o.label}\n  id: ${o.id} · campo: ${o.field}\n  estratto: ${o.excerpt}`)
+              .join("\n\n");
       userParts.push(`\nOCCORRENZE TROVATE (${occurrences.length}):\n${occBlock}`);
     } else {
-      const kbBlock = kb.length === 0
-        ? "(nessuna entry KB pertinente trovata)"
-        : kb.map((e) =>
-            `### [${e.category}/${e.chapter ?? "-"}] ${e.title} (id:${e.id})\n${e.content}`,
-          ).join("\n\n");
+      const kbBlock =
+        kb.length === 0
+          ? "(nessuna entry KB pertinente trovata)"
+          : kb.map((e) => `### [${e.category}/${e.chapter ?? "-"}] ${e.title} (id:${e.id})\n${e.content}`).join("\n\n");
       userParts.push(`\nKNOWLEDGE BASE PERTINENTE (${kb.length} entry):\n${kbBlock}`);
     }
     userParts.push(`\nRICHIESTA UTENTE:\n${body.user_message}`);
@@ -241,23 +273,30 @@ Deno.serve(async (req) => {
     ];
 
     // 3. Chiamata Lovable AI Gateway
-    const aiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const aiKey =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!aiKey) throw new Error("LOVABLE_API_KEY non configurata");
 
     const aiResp = await aiFetch({ model: "google/gemini-3-flash-preview", messages });
 
     if (!aiResp.ok) {
       if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit raggiunto, riprova tra poco." }),
-          { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Rate limit raggiunto, riprova tra poco." }), {
+          status: 429,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
       }
       if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Crediti AI esauriti." }),
-          { status: 402, headers: { ...cors, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
+          status: 402,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
       }
       const t = await aiResp.text();
-      return new Response(JSON.stringify({ error: "AI gateway error", detail: t }),
-        { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI gateway error", detail: t }), {
+        status: 500,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
 
     const aiJson = await aiResp.json();
@@ -271,17 +310,33 @@ Deno.serve(async (req) => {
       const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
       if (fence?.[1]) return fence[1].trim();
       // ultimo blocco {...} bilanciato
-      let depth = 0, start = -1, last: { s: number; e: number } | null = null;
+      let depth = 0,
+        start = -1,
+        last: { s: number; e: number } | null = null;
       for (let i = 0; i < text.length; i++) {
         const c = text[i];
-        if (c === "{") { if (depth === 0) start = i; depth++; }
-        else if (c === "}") { depth--; if (depth === 0 && start >= 0) { last = { s: start, e: i + 1 }; start = -1; } }
+        if (c === "{") {
+          if (depth === 0) start = i;
+          depth++;
+        } else if (c === "}") {
+          depth--;
+          if (depth === 0 && start >= 0) {
+            last = { s: start, e: i + 1 };
+            start = -1;
+          }
+        }
       }
       return last ? text.slice(last.s, last.e) : null;
     }
     const candidate = extractJsonCandidate(reply);
     const parsed: Record<string, unknown> | null = candidate
-      ? (() => { try { return JSON.parse(candidate); } catch { return null; } })()
+      ? (() => {
+          try {
+            return JSON.parse(candidate);
+          } catch {
+            return null;
+          }
+        })()
       : null;
     if (parsed) {
       if (mode === "edit" && typeof parsed.proposed_content === "string") {
@@ -291,20 +346,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      reply,
-      proposal,
-      global_proposal: globalProposal,
-      occurrences,
-      kb_consulted: kb.map((e) => ({ id: e.id, category: e.category, chapter: e.chapter, title: e.title })),
-      families_used: families,
-      intent,
-      mode,
-    }), { headers: { ...cors, "Content-Type": "application/json" } });
-  } catch (err) {
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
+      JSON.stringify({
+        reply,
+        proposal,
+        global_proposal: globalProposal,
+        occurrences,
+        kb_consulted: kb.map((e) => ({ id: e.id, category: e.category, chapter: e.chapter, title: e.title })),
+        families_used: families,
+        intent,
+        mode,
+      }),
+      { headers: { ...cors, "Content-Type": "application/json" } },
     );
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 });

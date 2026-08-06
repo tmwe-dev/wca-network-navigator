@@ -101,18 +101,15 @@ export async function listOperatorMailboxAccess(operatorId: string): Promise<str
   return (data ?? []).map((r) => r.shared_mailbox_id);
 }
 
-export async function setOperatorMailboxAccess(
-  operatorId: string,
-  mailboxIds: string[],
-): Promise<void> {
+export async function setOperatorMailboxAccess(operatorId: string, mailboxIds: string[]): Promise<void> {
   const current = await listOperatorMailboxAccess(operatorId);
   const toAdd = mailboxIds.filter((id) => !current.includes(id));
   const toRemove = current.filter((id) => !mailboxIds.includes(id));
 
   if (toAdd.length) {
-    const { error } = await supabase.from("operator_mailbox_access").insert(
-      toAdd.map((id) => ({ operator_id: operatorId, shared_mailbox_id: id })),
-    );
+    const { error } = await supabase
+      .from("operator_mailbox_access")
+      .insert(toAdd.map((id) => ({ operator_id: operatorId, shared_mailbox_id: id })));
     if (error) throw error;
   }
   if (toRemove.length) {
@@ -148,22 +145,13 @@ export async function upsertSharedMailbox(input: SharedMailboxUpsert): Promise<S
   const updated_at = new Date().toISOString();
   if (id) {
     const patch: SharedMailboxUpdate = { ...fields, updated_at };
-    const { data, error } = await supabase
-      .from("shared_mailboxes")
-      .update(patch)
-      .eq("id", id)
-      .select()
-      .maybeSingle();
+    const { data, error } = await supabase.from("shared_mailboxes").update(patch).eq("id", id).select().maybeSingle();
     if (error) throw error;
     if (!data) throw new Error("Mailbox non trovata");
     return mapSharedMailbox(data);
   }
   const row: SharedMailboxInsert = { ...fields, updated_at };
-  const { data, error } = await supabase
-    .from("shared_mailboxes")
-    .insert(row)
-    .select()
-    .maybeSingle();
+  const { data, error } = await supabase.from("shared_mailboxes").insert(row).select().maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("Inserimento mailbox fallito");
   return mapSharedMailbox(data);

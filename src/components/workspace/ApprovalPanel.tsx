@@ -20,7 +20,16 @@ interface ApprovalPanelProps {
   onCancel: () => void;
 }
 
-const ApprovalPanel = ({ visible, title, description, details, governance, onApprove, onModify, onCancel }: ApprovalPanelProps) => (
+const ApprovalPanel = ({
+  visible,
+  title,
+  description,
+  details,
+  governance,
+  onApprove,
+  onModify,
+  onCancel,
+}: ApprovalPanelProps) => (
   <AnimatePresence>
     {visible && (
       <motion.div

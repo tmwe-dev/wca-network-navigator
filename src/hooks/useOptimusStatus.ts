@@ -3,11 +3,7 @@
  * Usato dai badge inline e dal pannello Optimus.
  */
 import { useQuery } from "@tanstack/react-query";
-import {
-  findOptimusMemory,
-  findOptimusMemoryOverview,
-  findOptimusLogs,
-} from "@/data/optimusAgent";
+import { findOptimusMemory, findOptimusMemoryOverview, findOptimusLogs } from "@/data/optimusAgent";
 
 export type OptimusChannel = "whatsapp" | "linkedin";
 export type OptimusPageType = "sidebar" | "thread" | "inbox" | "messaging";

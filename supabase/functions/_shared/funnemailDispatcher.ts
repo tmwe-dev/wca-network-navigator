@@ -47,13 +47,7 @@ export interface FunnemailPolicy {
   imap_action?: { type?: string; params?: Record<string, unknown> };
 }
 
-const VALID_ACTIONS = new Set([
-  "tag_only",
-  "deep_search",
-  "draft_reply",
-  "crm_update",
-  "imap_action",
-]);
+const VALID_ACTIONS = new Set(["tag_only", "deep_search", "draft_reply", "crm_update", "imap_action"]);
 
 function lc(s: string | null | undefined): string {
   return (s || "").trim().toLowerCase();
@@ -90,9 +84,7 @@ async function tryClaimAction(
     action_type: row.action,
     idempotency_key: row.idempotency_key ?? row.action,
   };
-  const { error } = await supabase
-    .from("funnemail_actions_log")
-    .insert(enriched);
+  const { error } = await supabase.from("funnemail_actions_log").insert(enriched);
   if (error) {
     // Codice 23505 = unique violation → già eseguita: non è un errore.
     if ((error as { code?: string }).code === "23505") return false;
@@ -105,8 +97,7 @@ async function tryClaimAction(
 async function loadGroupPolicyForSender(
   supabase: AnySupabase,
   fromAddress: string,
-): Promise<{ groupId: string | null; policy: FunnemailPolicy | null; enabled: boolean }>
-{
+): Promise<{ groupId: string | null; policy: FunnemailPolicy | null; enabled: boolean }> {
   const addr = lc(fromAddress);
   const dom = domainOf(addr);
   if (!addr) return { groupId: null, policy: null, enabled: false };
@@ -154,8 +145,7 @@ async function shouldRunDeepSearch(
   supabase: AnySupabase,
   partnerId: string | null,
   policy: FunnemailPolicy,
-): Promise<{ run: boolean; reason: string }>
-{
+): Promise<{ run: boolean; reason: string }> {
   const cfg = policy.deep_search ?? {};
   const trigger = cfg.trigger ?? "if_unknown_or_stale";
   if (trigger === "always") return { run: true, reason: "always" };
@@ -180,8 +170,7 @@ async function invokeEdgeIfPresent(
   supabase: AnySupabase,
   fnName: string,
   body: Record<string, unknown>,
-): Promise<{ ok: boolean; data?: unknown; error?: string }>
-{
+): Promise<{ ok: boolean; data?: unknown; error?: string }> {
   try {
     const { data, error } = await supabase.functions.invoke(fnName, { body });
     if (error) return { ok: false, error: error.message ?? String(error) };
@@ -195,9 +184,7 @@ async function invokeEdgeIfPresent(
  * Entry point: applica policy del gruppo del mittente all'email inbound.
  * NON throwa mai. Restituisce un riassunto.
  */
-export async function dispatchFunnemail(
-  input: FunnemailDispatchInput,
-): Promise<{
+export async function dispatchFunnemail(input: FunnemailDispatchInput): Promise<{
   ran: boolean;
   reason: string;
   groupId: string | null;
@@ -211,10 +198,7 @@ export async function dispatchFunnemail(
   }
 
   try {
-    const { groupId, policy, enabled } = await loadGroupPolicyForSender(
-      input.supabase,
-      input.fromAddress,
-    );
+    const { groupId, policy, enabled } = await loadGroupPolicyForSender(input.supabase, input.fromAddress);
 
     if (!groupId || !policy || !enabled) {
       return {
@@ -283,11 +267,7 @@ export async function dispatchFunnemail(
 
     // ── deep_search ──
     if (enabledActions.includes("deep_search")) {
-      const verdict = await shouldRunDeepSearch(
-        input.supabase,
-        input.partnerId,
-        policy,
-      );
+      const verdict = await shouldRunDeepSearch(input.supabase, input.partnerId, policy);
       if (verdict.run) {
         const claimed = await tryClaimAction(input.supabase, {
           ...baseLog,

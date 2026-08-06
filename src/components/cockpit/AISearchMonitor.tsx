@@ -3,9 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, CheckCircle2, XCircle, Clock, Linkedin, ChevronDown, ChevronUp, Radar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SearchLogEntry } from "@/hooks/useLinkedInLookup";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface AISearchMonitorProps {
   searchLog: SearchLogEntry[];
@@ -15,7 +13,7 @@ interface AISearchMonitorProps {
 export function AISearchMonitorButton({ searchLog, isSearching }: AISearchMonitorProps) {
   const [open, setOpen] = useState(false);
   const hasLog = searchLog.length > 0;
-  const lastMatch = searchLog.find(e => e.match);
+  const lastMatch = searchLog.find((e) => e.match);
 
   if (!hasLog && !isSearching) return null;
 
@@ -29,7 +27,7 @@ export function AISearchMonitorButton({ searchLog, isSearching }: AISearchMonito
               ? "border-primary/30 bg-primary/5 text-primary animate-pulse"
               : lastMatch
                 ? "border-success/30 bg-success/5 text-success"
-                : "border-destructive/30 bg-destructive/5 text-destructive"
+                : "border-destructive/30 bg-destructive/5 text-destructive",
           )}
         >
           <Radar className="w-3.5 h-3.5" />
@@ -46,9 +44,7 @@ export function AISearchMonitorButton({ searchLog, isSearching }: AISearchMonito
         </DialogHeader>
         <div className="space-y-2 mt-2">
           {searchLog.length === 0 && isSearching && (
-            <div className="text-xs text-muted-foreground text-center py-4">
-              Avvio ricerca...
-            </div>
+            <div className="text-xs text-muted-foreground text-center py-4">Avvio ricerca...</div>
           )}
           {searchLog.map((entry, i) => (
             <SearchStepCard key={i} entry={entry} />
@@ -85,7 +81,7 @@ function SearchStepCard({ entry }: { entry: SearchLogEntry }) {
       animate={{ opacity: 1, y: 0 }}
       className={cn(
         "border rounded-lg p-2.5 text-xs space-y-1.5",
-        hasMatch ? "border-success/30 bg-success/5" : "border-border/50 bg-card/50"
+        hasMatch ? "border-success/30 bg-success/5" : "border-border/50 bg-card/50",
       )}
     >
       <div className="flex items-center justify-between">
@@ -109,9 +105,7 @@ function SearchStepCard({ entry }: { entry: SearchLogEntry }) {
         </div>
       </div>
 
-      <div className="text-[11px] text-muted-foreground font-mono truncate">
-        🔍 "{entry.query}"
-      </div>
+      <div className="text-[11px] text-muted-foreground font-mono truncate">🔍 "{entry.query}"</div>
 
       {hasMatch && entry.match && (
         <div className="flex items-center gap-1.5 text-[11px] text-success">

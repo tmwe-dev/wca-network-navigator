@@ -40,12 +40,14 @@ export function RAExplorer() {
   }, []);
 
   const sections = useMemo(() => {
-    return Object.keys(atecoBySection.sections).filter(s => s >= "A" && s <= "U").sort();
+    return Object.keys(atecoBySection.sections)
+      .filter((s) => s >= "A" && s <= "U")
+      .sort();
   }, [atecoBySection]);
 
   const expandedCodes = useMemo(() => {
     if (!expandedSection) return [];
-    return atecoBySection.sections[expandedSection]?.filter(c => c.codice.length <= 3) || [];
+    return atecoBySection.sections[expandedSection]?.filter((c) => c.codice.length <= 3) || [];
   }, [expandedSection, atecoBySection]);
 
   const { data: prospectsData, isLoading: prospectsLoading } = useRAProspects({
@@ -54,14 +56,10 @@ export function RAExplorer() {
     pageSize: 100,
   });
 
-  const { data: contacts = [], isLoading: contactsLoading } = useRAProspectContacts(
-    selectedProspect?.id
-  );
+  const { data: contacts = [], isLoading: contactsLoading } = useRAProspectContacts(selectedProspect?.id);
 
   const handleToggleAteco = (code: string) => {
-    setSelectedAtecoCodes(prev =>
-      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
-    );
+    setSelectedAtecoCodes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
   };
 
   return (
@@ -70,14 +68,12 @@ export function RAExplorer() {
       <div className="w-[280px] flex flex-col border-r border-border/40 bg-card/60 backdrop-blur-lg overflow-hidden">
         <div className="flex-shrink-0 p-4 border-b border-border/40">
           <h2 className="text-sm font-semibold text-primary">Sezioni ATECO</h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            {selectedAtecoCodes.length} selezionati
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">{selectedAtecoCodes.length} selezionati</p>
         </div>
 
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1">
-            {sections.map(section => (
+            {sections.map((section) => (
               <div key={section}>
                 <button
                   onClick={() => setExpandedSection(expandedSection === section ? null : section)}
@@ -89,7 +85,11 @@ export function RAExplorer() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {expandedSection === section ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      {expandedSection === section ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
                       <strong>{section}</strong>
                       <span className="text-xs opacity-70">{atecoBySection.sectionInfo[section]}</span>
                     </div>
@@ -98,7 +98,7 @@ export function RAExplorer() {
 
                 {expandedSection === section && expandedCodes.length > 0 && (
                   <div className="ml-3 mt-1 space-y-1 border-l border-border/40">
-                    {expandedCodes.map(code => (
+                    {expandedCodes.map((code) => (
                       <button
                         key={code.codice}
                         onClick={() => handleToggleAteco(code.codice)}
@@ -136,7 +136,7 @@ export function RAExplorer() {
               <Input
                 placeholder="Cerca nome, P.IVA, città..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-muted/30 border-border"
               />
             </div>
@@ -154,13 +154,11 @@ export function RAExplorer() {
                 <div>
                   <Building2 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">Nessuna azienda trovata</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Seleziona un'ATECO o modifica la ricerca
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Seleziona un'ATECO o modifica la ricerca</p>
                 </div>
               </div>
             ) : (
-              prospectsData.items.map(prospect => (
+              prospectsData.items.map((prospect) => (
                 <button
                   key={prospect.id}
                   onClick={() => setSelectedProspect(prospect)}
@@ -171,21 +169,20 @@ export function RAExplorer() {
                   }`}
                 >
                   <div className="space-y-1.5">
-                    <div className="font-medium text-foreground text-sm line-clamp-1">
-                      {prospect.company_name}
-                    </div>
+                    <div className="font-medium text-foreground text-sm line-clamp-1">{prospect.company_name}</div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <MapPin className="w-3 h-3" />
-                      <span>{prospect.city}{prospect.province ? `, ${prospect.province}` : ""}</span>
+                      <span>
+                        {prospect.city}
+                        {prospect.province ? `, ${prospect.province}` : ""}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Briefcase className="w-3 h-3" />
                       <span className="font-mono">{prospect.partita_iva || "—"}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        Fatturato: {formatCurrency(prospect.fatturato)}
-                      </span>
+                      <span className="text-muted-foreground">Fatturato: {formatCurrency(prospect.fatturato)}</span>
                       {prospect.dipendenti && (
                         <Badge variant="secondary" className="text-xs">
                           {prospect.dipendenti} dipendenti
@@ -206,9 +203,7 @@ export function RAExplorer() {
           <>
             <div className="flex-shrink-0 p-4 border-b border-border/40 space-y-3">
               <div>
-                <h2 className="text-base font-semibold text-primary line-clamp-2">
-                  {selectedProspect.company_name}
-                </h2>
+                <h2 className="text-base font-semibold text-primary line-clamp-2">{selectedProspect.company_name}</h2>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <Badge variant="outline" className="text-xs border-primary/20 text-primary">
                     {selectedProspect.codice_ateco || "—"}
@@ -230,11 +225,12 @@ export function RAExplorer() {
                     { label: "Dipendenti", value: selectedProspect.dipendenti?.toString() || "—" },
                     {
                       label: "Margine",
-                      value: selectedProspect.fatturato && selectedProspect.utile
-                        ? `${((selectedProspect.utile / selectedProspect.fatturato) * 100).toFixed(1)}%`
-                        : "—"
+                      value:
+                        selectedProspect.fatturato && selectedProspect.utile
+                          ? `${((selectedProspect.utile / selectedProspect.fatturato) * 100).toFixed(1)}%`
+                          : "—",
                     },
-                  ].map(kpi => (
+                  ].map((kpi) => (
                     <div key={kpi.label} className="p-3 rounded-lg border border-primary/15 bg-primary/5">
                       <div className="text-xs text-muted-foreground font-medium">{kpi.label}</div>
                       <div className="text-lg font-bold text-foreground mt-1 font-mono">{kpi.value}</div>
@@ -248,17 +244,25 @@ export function RAExplorer() {
                   <div className="space-y-2">
                     {[
                       { label: "P.IVA", value: selectedProspect.partita_iva || "—" },
-                      { label: "Indirizzo", value: [selectedProspect.address, selectedProspect.cap, selectedProspect.city].filter(Boolean).join(" ") || "—" },
+                      {
+                        label: "Indirizzo",
+                        value:
+                          [selectedProspect.address, selectedProspect.cap, selectedProspect.city]
+                            .filter(Boolean)
+                            .join(" ") || "—",
+                      },
                       { label: "Provincia", value: selectedProspect.province || "—" },
                       { label: "ATECO", value: selectedProspect.codice_ateco || "—" },
                       { label: "Email", value: selectedProspect.email || "—" },
                       { label: "PEC", value: selectedProspect.pec || "—" },
                       { label: "Telefono", value: selectedProspect.phone || "—" },
                       { label: "Website", value: selectedProspect.website || "—" },
-                    ].map(item => (
+                    ].map((item) => (
                       <div key={item.label}>
                         <p className="text-xs text-muted-foreground font-medium">{item.label}</p>
-                        <p className={`text-sm text-foreground mt-0.5 break-all ${item.label.includes("IVA") || item.label === "ATECO" ? "font-mono" : ""}`}>
+                        <p
+                          className={`text-sm text-foreground mt-0.5 break-all ${item.label.includes("IVA") || item.label === "ATECO" ? "font-mono" : ""}`}
+                        >
                           {item.value}
                         </p>
                       </div>
@@ -277,7 +281,7 @@ export function RAExplorer() {
                       Contatti ({contacts.length})
                     </h3>
                     <div className="space-y-2">
-                      {(contacts as RAContact[]).map(contact => (
+                      {(contacts as RAContact[]).map((contact) => (
                         <div key={contact.id} className="p-3 rounded-lg border border-primary/15 bg-primary/5">
                           <p className="text-sm font-medium text-foreground">{contact.name}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -286,9 +290,7 @@ export function RAExplorer() {
                           {contact.email && (
                             <p className="text-xs text-muted-foreground mt-1 break-all font-mono">{contact.email}</p>
                           )}
-                          {contact.phone && (
-                            <p className="text-xs text-muted-foreground font-mono">{contact.phone}</p>
-                          )}
+                          {contact.phone && <p className="text-xs text-muted-foreground font-mono">{contact.phone}</p>}
                         </div>
                       ))}
                     </div>
@@ -299,10 +301,7 @@ export function RAExplorer() {
 
             {/* Action Buttons */}
             <div className="flex-shrink-0 p-4 border-t border-border/40 space-y-2">
-              <Button
-                onClick={() => navigate(`/ra/company/${selectedProspect.id}`)}
-                className="w-full text-sm"
-              >
+              <Button onClick={() => navigate(`/ra/company/${selectedProspect.id}`)} className="w-full text-sm">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Vedi Dettaglio
               </Button>

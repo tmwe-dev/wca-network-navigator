@@ -34,12 +34,18 @@ function loadState(): SeqState {
         return parsed;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { intervalIndex: 0, cyclePauseIndex: 0 };
 }
 
 function saveState(s: SeqState) {
-  try { sessionStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+  try {
+    sessionStorage.setItem(STATE_KEY, JSON.stringify(s));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function useWhatsAppAutoSync(opts: { paused: boolean }) {
@@ -51,7 +57,9 @@ export function useWhatsAppAutoSync(opts: { paused: boolean }) {
   const readingRef = useRef(false);
   const enabledRef = useRef(false);
 
-  useEffect(() => { readingRef.current = isReading; }, [isReading]);
+  useEffect(() => {
+    readingRef.current = isReading;
+  }, [isReading]);
 
   const enabled = isAvailable && isAuthenticated && !paused;
   enabledRef.current = enabled;
@@ -120,7 +128,11 @@ export function useWhatsAppAutoSync(opts: { paused: boolean }) {
       // ma riprogramma il prossimo tick partendo dal valore corrente.
       if (readingRef.current) return;
       void (async () => {
-        try { await readNow(); } finally { scheduleNext(); }
+        try {
+          await readNow();
+        } finally {
+          scheduleNext();
+        }
       })();
     }
 

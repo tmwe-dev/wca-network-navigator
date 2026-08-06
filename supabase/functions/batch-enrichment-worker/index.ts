@@ -67,10 +67,9 @@ Deno.serve(async (req: Request) => {
       .eq("key", "ai_automations_paused")
       .maybeSingle();
     if (pauseSetting?.value === "true") {
-      return new Response(
-        JSON.stringify({ paused: true, message: "AI automations paused" }),
-        { headers: { ...dynCors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ paused: true, message: "AI automations paused" }), {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // Pick N partner senza enrichment_data, ordinati per rating DESC
@@ -86,10 +85,9 @@ Deno.serve(async (req: Request) => {
 
     if (pickErr) throw pickErr;
     if (!partners || partners.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No partners to enrich", ...log }),
-        { headers: { ...dynCors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ message: "No partners to enrich", ...log }), {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     log.selected = partners.length;
@@ -134,10 +132,7 @@ Deno.serve(async (req: Request) => {
       // la finestra è di fatto rispettata → skip sleep. Cap globale wall-clock invariato.
       const callElapsed = Date.now() - callStart;
       const remainingWindow = RATE_LIMIT_MS - callElapsed;
-      if (
-        remainingWindow > 0 &&
-        Date.now() - startedAt + remainingWindow < WALL_CLOCK_CAP_MS
-      ) {
+      if (remainingWindow > 0 && Date.now() - startedAt + remainingWindow < WALL_CLOCK_CAP_MS) {
         await sleep(remainingWindow);
       }
     }
@@ -153,9 +148,9 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[batch-enrichment] fatal:", msg);
-    return new Response(
-      JSON.stringify({ error: msg, ...log }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: msg, ...log }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

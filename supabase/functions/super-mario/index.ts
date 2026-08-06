@@ -21,10 +21,7 @@ import { loadIdentity } from "./identityLoader.ts";
 import { loadToolCatalog, renderToolCatalog } from "./toolCatalog.ts";
 import { assembleKb } from "./kbAssembler.ts";
 import { assembleMemory, type ConversationTurn } from "./memoryAssembler.ts";
-import {
-  HARD_GUARDS_DESCRIPTION,
-  RESPONSE_SCHEMA_DESCRIPTION,
-} from "./runtimeContract.ts";
+import { HARD_GUARDS_DESCRIPTION, RESPONSE_SCHEMA_DESCRIPTION } from "./runtimeContract.ts";
 import { preflightAudit } from "./preflightAudit.ts";
 import { postflightAudit } from "./postflightAudit.ts";
 import { applyHardGuards } from "./hardGuards.ts";
@@ -148,44 +145,72 @@ Deno.serve(async (req) => {
   let completionTokens = 0;
   try {
     const aiResp = await aiFetch({
-        model,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-      });
+      model,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+    });
     if (!aiResp.ok) {
       const errBody = await aiResp.text();
       // Graceful degradation su rate limit / credits / auth (aligned con ai-assistant)
       if (aiResp.status === 429 || aiResp.status === 402 || aiResp.status === 401) {
-        const code = aiResp.status === 401 ? "AI_UNAUTHORIZED"
-          : aiResp.status === 402 ? "AI_CREDITS_EXHAUSTED"
-          : "AI_RATE_LIMITED";
-        const msg = aiResp.status === 401 ? "Chiave AI non valida o scaduta."
-          : aiResp.status === 402 ? "Crediti AI esauriti. Ricarica il saldo o aggiorna la chiave."
-          : "Troppe richieste AI. Attendi qualche secondo e riprova.";
+        const code =
+          aiResp.status === 401
+            ? "AI_UNAUTHORIZED"
+            : aiResp.status === 402
+              ? "AI_CREDITS_EXHAUSTED"
+              : "AI_RATE_LIMITED";
+        const msg =
+          aiResp.status === 401
+            ? "Chiave AI non valida o scaduta."
+            : aiResp.status === 402
+              ? "Crediti AI esauriti. Ricarica il saldo o aggiorna la chiave."
+              : "Troppe richieste AI. Attendi qualche secondo e riprova.";
         await logInvocation(supabase, {
-          trace_id: traceId, conversation_id: conversationId, operator_id: null,
-          scope, domain: kb.domain, system_prompt: systemPrompt, user_message: userMessage,
-          response_text: "", tool_calls: [], loaded_kb_cards: kb.loaded_cards,
-          violations: [], preflight_warnings: pre.warnings, latency_ms: Date.now() - t0,
-          model, ok: false, failure_reason: `ai_gateway_${aiResp.status}`,
-        });
-        return jsonResp({
           trace_id: traceId,
+          conversation_id: conversationId,
+          operator_id: null,
+          scope,
           domain: kb.domain,
-          response: {
-            message: msg, tool_calls: [], reasoning_summary: "",
-            needs_user_confirmation: false, warnings: [code],
+          system_prompt: systemPrompt,
+          user_message: userMessage,
+          response_text: "",
+          tool_calls: [],
+          loaded_kb_cards: kb.loaded_cards,
+          violations: [],
+          preflight_warnings: pre.warnings,
+          latency_ms: Date.now() - t0,
+          model,
+          ok: false,
+          failure_reason: `ai_gateway_${aiResp.status}`,
+        });
+        return jsonResp(
+          {
+            trace_id: traceId,
+            domain: kb.domain,
+            response: {
+              message: msg,
+              tool_calls: [],
+              reasoning_summary: "",
+              needs_user_confirmation: false,
+              warnings: [code],
+            },
+            meta: {
+              latency_ms: Date.now() - t0,
+              kb_cards: kb.loaded_cards.length,
+              violations: [{ code, message: msg, severity: "warning" }],
+              prompt_tokens: 0,
+              completion_tokens: 0,
+            },
+            error_code: code,
+            fallback: true,
+            user_action_required: true,
           },
-          meta: { latency_ms: Date.now() - t0, kb_cards: kb.loaded_cards.length,
-            violations: [{ code, message: msg, severity: "warning" }],
-            prompt_tokens: 0, completion_tokens: 0 },
-          error_code: code,
-          fallback: true,
-          user_action_required: true,
-        }, 200, corsHeaders);
+          200,
+          corsHeaders,
+        );
       }
       throw new Error(`ai_gateway_${aiResp.status}: ${errBody.slice(0, 300)}`);
     }

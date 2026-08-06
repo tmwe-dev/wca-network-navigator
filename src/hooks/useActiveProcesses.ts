@@ -40,12 +40,12 @@ export function useActiveProcesses() {
           const rowPayload = row.payload as Record<string, unknown> | null;
           const secs = (rowPayload?.seconds as number) || 0;
           const type = (rowPayload?.type as string) || "delay";
-          
+
           setCountdowns((prev) => ({ ...prev, [jobId]: { seconds: secs, type, at: Date.now() } }));
-          
+
           // Clear previous timer
           if (countdownTimers.current[jobId]) clearInterval(countdownTimers.current[jobId]);
-          
+
           // Tick down every second
           let remaining = secs;
           countdownTimers.current[jobId] = setInterval(() => {
@@ -65,7 +65,7 @@ export function useActiveProcesses() {
               }));
             }
           }, 1000);
-        }
+        },
       )
       .subscribe();
 

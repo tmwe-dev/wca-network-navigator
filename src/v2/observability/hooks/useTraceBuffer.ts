@@ -6,7 +6,9 @@ export function useTraceBuffer(): TraceEvent[] {
   const [events, setEvents] = useState<TraceEvent[]>(() => traceCollector.getBuffer());
   useEffect(() => {
     const unsub = traceCollector.subscribe((evs) => setEvents([...evs]));
-    return () => { unsub(); };
+    return () => {
+      unsub();
+    };
   }, []);
   return events;
 }

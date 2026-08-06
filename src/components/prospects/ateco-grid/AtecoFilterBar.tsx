@@ -12,7 +12,14 @@ interface FilterMultiSelectProps {
   onClear: () => void;
 }
 
-export function FilterMultiSelect({ label, placeholder, options, selected, onToggle, onClear }: FilterMultiSelectProps) {
+export function FilterMultiSelect({
+  label,
+  placeholder,
+  options,
+  selected,
+  onToggle,
+  onClear,
+}: FilterMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const selectedSet = new Set(selected);
   return (
@@ -40,11 +47,18 @@ export function FilterMultiSelect({ label, placeholder, options, selected, onTog
                 </CommandGroup>
               )}
               <CommandGroup>
-                {options.map(opt => (
-                  <CommandItem key={opt.value} value={`${opt.value} ${opt.label}`} onSelect={() => onToggle(opt.value)} className="text-xs">
-                    <div className={`w-3.5 h-3.5 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
-                      selectedSet.has(opt.value) ? "bg-primary border-primary" : "border-border"
-                    }`}>
+                {options.map((opt) => (
+                  <CommandItem
+                    key={opt.value}
+                    value={`${opt.value} ${opt.label}`}
+                    onSelect={() => onToggle(opt.value)}
+                    className="text-xs"
+                  >
+                    <div
+                      className={`w-3.5 h-3.5 mr-2 rounded border flex items-center justify-center flex-shrink-0 ${
+                        selectedSet.has(opt.value) ? "bg-primary border-primary" : "border-border"
+                      }`}
+                    >
                       {selectedSet.has(opt.value) && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
                     </div>
                     <span>{opt.label}</span>
@@ -58,9 +72,12 @@ export function FilterMultiSelect({ label, placeholder, options, selected, onTog
       </Popover>
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
-          {selected.map(v => (
-            <button key={v} onClick={() => onToggle(v)}
-              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+          {selected.map((v) => (
+            <button
+              key={v}
+              onClick={() => onToggle(v)}
+              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20"
+            >
               {v} <X className="w-2.5 h-2.5 opacity-60" />
             </button>
           ))}

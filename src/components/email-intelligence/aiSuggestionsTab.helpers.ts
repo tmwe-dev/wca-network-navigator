@@ -23,9 +23,13 @@ export function sortRows(rows: AddressRow[], mode: SortMode): AddressRow[] {
   const sorted = [...rows];
   switch (mode) {
     case "name-asc":
-      return sorted.sort((a, b) => rowDisplayName(a).localeCompare(rowDisplayName(b), "it", { sensitivity: "base", numeric: true }));
+      return sorted.sort((a, b) =>
+        rowDisplayName(a).localeCompare(rowDisplayName(b), "it", { sensitivity: "base", numeric: true }),
+      );
     case "name-desc":
-      return sorted.sort((a, b) => rowDisplayName(b).localeCompare(rowDisplayName(a), "it", { sensitivity: "base", numeric: true }));
+      return sorted.sort((a, b) =>
+        rowDisplayName(b).localeCompare(rowDisplayName(a), "it", { sensitivity: "base", numeric: true }),
+      );
     case "count-desc":
       return sorted.sort((a, b) => b.email_count - a.email_count);
     case "count-asc":

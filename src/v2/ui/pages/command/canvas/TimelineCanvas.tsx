@@ -69,7 +69,9 @@ const TimelineCanvas = ({ events, kpis }: TimelineCanvasProps) => (
             className="relative flex items-start gap-3 py-2.5"
           >
             {/* Dot on the line */}
-            <div className={`absolute -left-6 top-3.5 w-2 h-2 rounded-full ${statusDot[event.status]} ring-2 ring-background`} />
+            <div
+              className={`absolute -left-6 top-3.5 w-2 h-2 rounded-full ${statusDot[event.status]} ring-2 ring-background`}
+            />
 
             <div className="flex-shrink-0 mt-0.5">{statusIcon[event.status]}</div>
 

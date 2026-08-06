@@ -9,10 +9,7 @@ import { mapBusinessCardRow } from "../../../core/mappers/business-card-mapper";
 
 export async function fetchBusinessCards(): Promise<Result<BusinessCard[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("business_cards")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("business_cards").select("*").order("created_at", { ascending: false });
     if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "business_cards" }, "fetchBusinessCards"));
     if (!data) return ok([]);
     const cards: BusinessCard[] = [];
@@ -34,7 +31,10 @@ export async function fetchBusinessCardsByPartner(partnerId: string): Promise<Re
       .select("*")
       .eq("matched_partner_id", partnerId)
       .order("created_at", { ascending: false });
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "business_cards", partnerId }, "fetchBusinessCardsByPartner"));
+    if (error)
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "business_cards", partnerId }, "fetchBusinessCardsByPartner"),
+      );
     if (!data) return ok([]);
     const cards: BusinessCard[] = [];
     for (const row of data) {
@@ -53,9 +53,7 @@ export async function fetchBusinessCardsCountRaw(): Promise<{
   count: number | null;
   error: { message: string } | null;
 }> {
-  return supabase
-    .from("business_cards")
-    .select("*", { count: "exact", head: true });
+  return supabase.from("business_cards").select("*", { count: "exact", head: true });
 }
 
 export interface BusinessCardListRow {
@@ -72,10 +70,14 @@ export interface BusinessCardListRow {
 }
 
 /** Elenco business card dell'utente per la vista Network V2 (raw, no mapping). */
-export async function fetchBusinessCardsForUser(userId: string): Promise<{ data: BusinessCardListRow[]; error: { message: string } | null }> {
+export async function fetchBusinessCardsForUser(
+  userId: string,
+): Promise<{ data: BusinessCardListRow[]; error: { message: string } | null }> {
   const { data, error } = await supabase
     .from("business_cards")
-    .select("id, company_name, contact_name, email, phone, match_status, match_confidence, lead_status, event_name, created_at")
+    .select(
+      "id, company_name, contact_name, email, phone, match_status, match_confidence, lead_status, event_name, created_at",
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(100);

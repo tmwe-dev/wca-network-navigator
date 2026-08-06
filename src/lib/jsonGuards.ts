@@ -73,10 +73,7 @@ export function readStringArray(source: Record<string, unknown>, key: string): s
  * applicando `mapper` a ogni elemento che sia un record. Elementi non-record
  * vengono scartati. Nessun cast opaco: ogni oggetto viene ispezionato.
  */
-export function readJsonArray<T>(
-  value: Json | null | undefined,
-  mapper: (item: Record<string, unknown>) => T,
-): T[] {
+export function readJsonArray<T>(value: Json | null | undefined, mapper: (item: Record<string, unknown>) => T): T[] {
   if (!Array.isArray(value)) return [];
   const out: T[] = [];
   for (const item of value) {

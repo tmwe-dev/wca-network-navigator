@@ -38,12 +38,31 @@ export interface AiGuardResultErr {
 }
 
 const VALID_SCOPES = new Set([
-  "home", "partners", "missions", "outreach", "crm", "staff",
-  "strategic", "command", "email", "classify", "agent",
-  "sherlock", "lab", "diagnostics", "briefing",
+  "home",
+  "partners",
+  "missions",
+  "outreach",
+  "crm",
+  "staff",
+  "strategic",
+  "command",
+  "email",
+  "classify",
+  "agent",
+  "sherlock",
+  "lab",
+  "diagnostics",
+  "briefing",
   // Specialized scopes (unified-assistant routes)
-  "kb-supervisor", "deep-search", "chat", "mission-builder",
-  "partner_hub", "cockpit", "contacts", "import", "extension",
+  "kb-supervisor",
+  "deep-search",
+  "chat",
+  "mission-builder",
+  "partner_hub",
+  "cockpit",
+  "contacts",
+  "import",
+  "extension",
 ]);
 
 function jsonError(status: number, code: string, message: string): Response {
@@ -111,7 +130,9 @@ export async function aiGuard(
       const payload = JSON.parse(atob(token.split(".")[1] ?? ""));
       if (typeof payload?.sub === "string") user_id = payload.sub;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return {
     ok: true,
@@ -120,7 +141,11 @@ export async function aiGuard(
 }
 
 /** R4 — verifica grounding dopo la risposta del modello. */
-export function checkGrounding(spec: AiGuardSpec, toolCallsCount: number, hasEntityHint: boolean): {
+export function checkGrounding(
+  spec: AiGuardSpec,
+  toolCallsCount: number,
+  hasEntityHint: boolean,
+): {
   blocked: boolean;
   reason?: string;
 } {
@@ -138,7 +163,9 @@ export function checkGrounding(spec: AiGuardSpec, toolCallsCount: number, hasEnt
 export function hasEntityMention(text: string): boolean {
   if (!text) return false;
   const t = text.toLowerCase();
-  return /(partner|partners|paese|paesi|country|countries|lead|mission|campagn|contatt|email|hq|branch|filial|sede)/i.test(t);
+  return /(partner|partners|paese|paesi|country|countries|lead|mission|campagn|contatt|email|hq|branch|filial|sede)/i.test(
+    t,
+  );
 }
 
 /** R6 — log invocazione. Best-effort, non blocca. */

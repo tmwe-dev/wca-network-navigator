@@ -7,15 +7,7 @@ import { Card } from "@/components/ui/card";
 import { useTokenCockpitUser, useTokenByFunction } from "@/hooks/useTokenCockpitData";
 import { Skeleton } from "@/components/ui/skeleton";
 
-
-const COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--secondary))",
-  "hsl(var(--accent))",
-  "#8b5cf6",
-  "#ec4899",
-  "#f59e0b",
-];
+const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "#8b5cf6", "#ec4899", "#f59e0b"];
 
 export function TokenByFunctionPie() {
   const { data: userData } = useTokenCockpitUser();
@@ -68,9 +60,7 @@ export function TokenByFunctionPie() {
           </PieChart>
         </ResponsiveContainer>
       ) : (
-        <div className="h-64 flex items-center justify-center text-muted-foreground">
-          Nessun dato disponibile
-        </div>
+        <div className="h-64 flex items-center justify-center text-muted-foreground">Nessun dato disponibile</div>
       )}
     </Card>
   );

@@ -1,18 +1,27 @@
 /**
  * GroupDropZone — Drop zone for sender groups (ported from tmwengine, adapted to WCA)
  */
-import { memo, useCallback, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trash2, List, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAddressRulesRepo } from '@/hooks/emailIntelligence/useAddressRulesRepo';
-import { useEmailGroupingRepo } from '@/hooks/emailIntelligence/useEmailGroupingRepo';
-import { toast } from 'sonner';
-import type { EmailSenderGroup, SenderAnalysis } from '@/types/email-management';
-import { BackfillButton } from './BackfillButton';
+import { memo, useCallback, useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Trash2, List, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAddressRulesRepo } from "@/hooks/emailIntelligence/useAddressRulesRepo";
+import { useEmailGroupingRepo } from "@/hooks/emailIntelligence/useEmailGroupingRepo";
+import { toast } from "sonner";
+import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
+import { BackfillButton } from "./BackfillButton";
 
 interface GroupDropZoneProps {
   group: EmailSenderGroup;
@@ -65,34 +74,36 @@ function GroupDropZoneInner({
   const partnerToSender = (rule: AssignedRule): SenderAnalysis => ({
     email: rule.email_address,
     companyName: rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name),
-    domain: rule.domain ?? rule.email_address.split('@')[1] ?? '',
+    domain: rule.domain ?? rule.email_address.split("@")[1] ?? "",
     emailCount: 0,
-    firstSeen: '',
-    lastSeen: '',
+    firstSeen: "",
+    lastSeen: "",
     isClassified: true,
   });
-
 
   // Estrae il dominio "root" (penultimo segmento prima del TLD) da un'email.
   // Per "info@mail.everok.eu" → "Everok" (non "Mail" come faceva la vecchia regex).
   const extractCompany = (email: string, domain?: string | null, companyName?: string | null): string => {
     if (companyName && companyName.trim()) return companyName.trim();
-    const host = (domain || email.split('@')[1] || '').toLowerCase();
-    const parts = host.split('.').filter(Boolean);
+    const host = (domain || email.split("@")[1] || "").toLowerCase();
+    const parts = host.split(".").filter(Boolean);
     if (parts.length === 0) return email;
     const root = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
     return root.charAt(0).toUpperCase() + root.slice(1);
   };
 
-  const handleRemoveRule = useCallback(async (ruleId: string, email: string) => {
-    const { error } = await clearAddressRuleGroupAssignment(ruleId);
-    if (!error) {
-      toast.success(`${extractCompany(email)} rimosso da ${group.nome_gruppo}`);
-      onRulesChanged?.();
-    } else {
-      toast.error('Errore rimozione');
-    }
-  }, [group.nome_gruppo, onRulesChanged]);
+  const handleRemoveRule = useCallback(
+    async (ruleId: string, email: string) => {
+      const { error } = await clearAddressRuleGroupAssignment(ruleId);
+      if (!error) {
+        toast.success(`${extractCompany(email)} rimosso da ${group.nome_gruppo}`);
+        onRulesChanged?.();
+      } else {
+        toast.error("Errore rimozione");
+      }
+    },
+    [group.nome_gruppo, onRulesChanged],
+  );
 
   const handleDeleteGroup = useCallback(async () => {
     // Sgancia tutti i mittenti dal gruppo: vengono riportati a
@@ -109,7 +120,7 @@ function GroupDropZoneInner({
       );
       onRefresh();
     } else {
-      toast.error('Errore eliminazione gruppo');
+      toast.error("Errore eliminazione gruppo");
     }
   }, [group.id, group.nome_gruppo, onRefresh]);
 
@@ -138,7 +149,7 @@ function GroupDropZoneInner({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">{group.icon || '📁'}</span>
+              <span className="text-2xl">{group.icon || "📁"}</span>
               <div>
                 <CardTitle className="text-base">
                   {group.nome_gruppo} <span className="text-muted-foreground ml-1.5 font-normal">({rules.length})</span>
@@ -164,12 +175,7 @@ function GroupDropZoneInner({
                 </Button>
               )}
               {/* Backfill IMAP del gruppo: applica le regole agli storici sequenzialmente per address */}
-              <BackfillButton
-                scope="group"
-                target={group.nome_gruppo}
-                addressCount={rules.length}
-                variant="icon"
-              />
+              <BackfillButton scope="group" target={group.nome_gruppo} addressCount={rules.length} variant="icon" />
               <Button
                 variant="ghost"
                 size="icon"
@@ -207,7 +213,9 @@ function GroupDropZoneInner({
             <div className="text-left w-full px-2 space-y-0.5 overflow-hidden">
               {rules.slice(0, 3).map((r) => (
                 <div key={r.id} className="leading-tight truncate">
-                  <span className="font-semibold text-xs">{r.display_name || extractCompany(r.email_address, r.domain, r.company_name)}</span>
+                  <span className="font-semibold text-xs">
+                    {r.display_name || extractCompany(r.email_address, r.domain, r.company_name)}
+                  </span>
                   <span className="text-[10px] text-muted-foreground ml-1 truncate">{r.email_address}</span>
                 </div>
               ))}
@@ -229,14 +237,15 @@ function GroupDropZoneInner({
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <span className="text-2xl">{group.icon || '📁'}</span>{group.nome_gruppo}
+                <span className="text-2xl">{group.icon || "📁"}</span>
+                {group.nome_gruppo}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-2 mt-4">
               {rules.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">Nessun mittente classificato</p>
               ) : (
-                rules.map(rule => (
+                rules.map((rule) => (
                   <div
                     key={rule.id}
                     className={cn(
@@ -247,7 +256,9 @@ function GroupDropZoneInner({
                     title={onPartnerClick ? "Clicca per modificare azioni e regole" : undefined}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-base">{rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name)}</div>
+                      <div className="font-medium text-base">
+                        {rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name)}
+                      </div>
                       <div className="text-sm text-muted-foreground">{rule.email_address}</div>
                     </div>
                     <Button
@@ -286,7 +297,9 @@ function GroupDropZoneInner({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annulla</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive hover:bg-destructive/90">Elimina</AlertDialogAction>
+              <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive hover:bg-destructive/90">
+                Elimina
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -300,14 +313,16 @@ function GroupDropZoneInner({
  * aggiorna selectedCount, hover su un altro gruppo o highlight su un altro
  * gruppo. Solo dipendenze che la riguardano realmente la fanno aggiornare.
  */
-export const GroupDropZone = memo(GroupDropZoneInner, (a, b) =>
-  a.group === b.group &&
-  a.rules === b.rules &&
-  a.isHovered === b.isHovered &&
-  a.isHighlighted === b.isHighlighted &&
-  a.selectedCount === b.selectedCount &&
-  a.onRefresh === b.onRefresh &&
-  a.onRulesChanged === b.onRulesChanged &&
-  a.onBulkAssign === b.onBulkAssign &&
-  a.onPartnerClick === b.onPartnerClick,
+export const GroupDropZone = memo(
+  GroupDropZoneInner,
+  (a, b) =>
+    a.group === b.group &&
+    a.rules === b.rules &&
+    a.isHovered === b.isHovered &&
+    a.isHighlighted === b.isHighlighted &&
+    a.selectedCount === b.selectedCount &&
+    a.onRefresh === b.onRefresh &&
+    a.onRulesChanged === b.onRulesChanged &&
+    a.onBulkAssign === b.onBulkAssign &&
+    a.onPartnerClick === b.onPartnerClick,
 );

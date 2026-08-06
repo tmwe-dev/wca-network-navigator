@@ -42,10 +42,7 @@ export async function fetchPartnersPaginated(
     const limit = filters?.limit ?? PAGE_SIZE;
     const offset = filters?.offset ?? 0;
 
-    let query = supabase
-      .from("partners")
-      .select(LIGHTWEIGHT_SELECT, { count: "exact" })
-      .eq("is_active", true);
+    let query = supabase.from("partners").select(LIGHTWEIGHT_SELECT, { count: "exact" }).eq("is_active", true);
 
     // ── Text search ──
     if (filters?.search) {
@@ -64,7 +61,10 @@ export async function fetchPartnersPaginated(
 
     // ── Partner type ──
     if (filters?.partnerType) {
-      query = query.eq("partner_type", filters.partnerType as "3pl" | "carrier" | "courier" | "customs_broker" | "freight_forwarder" | "nvocc");
+      query = query.eq(
+        "partner_type",
+        filters.partnerType as "3pl" | "carrier" | "courier" | "customs_broker" | "freight_forwarder" | "nvocc",
+      );
     }
 
     // ── Favorites ──
@@ -95,9 +95,17 @@ export async function fetchPartnersPaginated(
     const { data, error, count } = await query.range(offset, offset + limit - 1);
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "partners", code: error.code,
-      }, "fetchPartnersPaginated"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "partners",
+            code: error.code,
+          },
+          "fetchPartnersPaginated",
+        ),
+      );
     }
 
     if (!data) return ok({ partners: [], total: 0, hasMore: false });
@@ -116,34 +124,41 @@ export async function fetchPartnersPaginated(
 }
 
 /** Legacy simple fetch — delegates to paginated */
-export async function fetchPartners(
-  filters?: PartnerQueryFilters,
-): Promise<Result<PartnerV2[], AppError>> {
+export async function fetchPartners(filters?: PartnerQueryFilters): Promise<Result<PartnerV2[], AppError>> {
   const result = await fetchPartnersPaginated(filters);
   if (result._tag === "Err") return result;
   return ok([...result.value.partners]);
 }
 
-export async function fetchPartnerById(
-  partnerId: string,
-): Promise<Result<PartnerV2, AppError>> {
+export async function fetchPartnerById(partnerId: string): Promise<Result<PartnerV2, AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("partners")
-      .select("*")
-      .eq("id", partnerId)
-      .maybeSingle();
+    const { data, error } = await supabase.from("partners").select("*").eq("id", partnerId).maybeSingle();
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "partners", partnerId,
-      }, "fetchPartnerById"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "partners",
+            partnerId,
+          },
+          "fetchPartnerById",
+        ),
+      );
     }
 
     if (!data) {
-      return err(ioError("NOT_FOUND", `Partner ${partnerId} not found`, {
-        partnerId,
-      }, "fetchPartnerById"));
+      return err(
+        ioError(
+          "NOT_FOUND",
+          `Partner ${partnerId} not found`,
+          {
+            partnerId,
+          },
+          "fetchPartnerById",
+        ),
+      );
     }
 
     return mapPartnerRow(data);
@@ -152,24 +167,26 @@ export async function fetchPartnerById(
   }
 }
 
-export async function fetchPartnersByCountry(
-  countryCode: string,
-): Promise<Result<PartnerV2[], AppError>> {
+export async function fetchPartnersByCountry(countryCode: string): Promise<Result<PartnerV2[], AppError>> {
   return fetchPartners({ countryCode });
 }
 
 /* ── Raw country_code list (stats aggregation) ─────────── */
 export async function fetchPartnerCountryCodesRaw(): Promise<Result<readonly string[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("partners")
-      .select("country_code")
-      .not("country_code", "is", null);
+    const { data, error } = await supabase.from("partners").select("country_code").not("country_code", "is", null);
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "partners",
-      }, "fetchPartnerCountryCodesRaw"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "partners",
+          },
+          "fetchPartnerCountryCodesRaw",
+        ),
+      );
     }
 
     return ok((data ?? []).map((row) => row.country_code as string));

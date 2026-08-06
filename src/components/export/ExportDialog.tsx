@@ -12,13 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Download, FileText, Sheet } from "lucide-react";
 import { toast } from "sonner";
-
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("ExportDialog");
@@ -98,7 +91,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
   const [entity, setEntity] = useState<EntityType>("contacts");
   const [format, setFormat] = useState<ExportFormat>("csv");
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
-    new Set(ENTITY_COLUMNS.contacts.slice(0, 7).map((c) => c.key))
+    new Set(ENTITY_COLUMNS.contacts.slice(0, 7).map((c) => c.key)),
   );
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -176,9 +169,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Esporta Dati</DialogTitle>
-          <DialogDescription>
-            Seleziona il formato, l'entità, i filtri e le colonne da esportare.
-          </DialogDescription>
+          <DialogDescription>Seleziona il formato, l'entità, i filtri e le colonne da esportare.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -226,10 +217,13 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
             <Label htmlFor="entity-select" className="text-base font-semibold">
               Tipo di dato
             </Label>
-            <Select value={entity} onValueChange={(v) => {
-              setEntity(v as EntityType);
-              setSelectedColumns(new Set(ENTITY_COLUMNS[v as EntityType].slice(0, 7).map((c) => c.key)));
-            }}>
+            <Select
+              value={entity}
+              onValueChange={(v) => {
+                setEntity(v as EntityType);
+                setSelectedColumns(new Set(ENTITY_COLUMNS[v as EntityType].slice(0, 7).map((c) => c.key)));
+              }}
+            >
               <SelectTrigger id="entity-select">
                 <SelectValue />
               </SelectTrigger>
@@ -254,23 +248,13 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                 <Label htmlFor="date-from" className="text-xs">
                   Dal
                 </Label>
-                <Input
-                  id="date-from"
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                />
+                <Input id="date-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="date-to" className="text-xs">
                   Al
                 </Label>
-                <Input
-                  id="date-to"
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                />
+                <Input id="date-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
               </div>
             </div>
 
@@ -319,9 +303,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
               ))}
             </div>
 
-            <div className="text-xs text-muted-foreground">
-              {selectedColumns.size} colonne selezionate
-            </div>
+            <div className="text-xs text-muted-foreground">{selectedColumns.size} colonne selezionate</div>
           </div>
         </div>
 

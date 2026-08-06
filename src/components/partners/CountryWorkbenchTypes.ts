@@ -14,7 +14,15 @@ export interface PartnerRowData {
   partner_type: string | null;
   partner_services?: { service_category: string }[];
   partner_networks?: { id: string; network_name: string; expires?: string }[];
-  partner_contacts?: { id: string; name: string; contact_alias?: string; is_primary?: boolean; email?: string; direct_phone?: string; mobile?: string }[];
+  partner_contacts?: {
+    id: string;
+    name: string;
+    contact_alias?: string;
+    is_primary?: boolean;
+    email?: string;
+    direct_phone?: string;
+    mobile?: string;
+  }[];
   branch_cities?: unknown[];
   enrichment_data?: Record<string, unknown> | null;
   [key: string]: unknown;

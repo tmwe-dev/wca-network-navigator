@@ -9,7 +9,7 @@ export interface FlowStep {
   label: string;
   /** match function: ritorna true se l'evento soddisfa lo step */
   match: (e: TraceEvent) => boolean;
-  required?: boolean;            // default true
+  required?: boolean; // default true
 }
 
 export interface FlowDefinition {
@@ -22,8 +22,7 @@ export interface FlowDefinition {
 }
 
 const _eq = (s?: string) => (e: TraceEvent) => e.source === s || e.scope === s;
-const sourceContains = (sub: string) => (e: TraceEvent) =>
-  (e.source ?? "").toLowerCase().includes(sub.toLowerCase());
+const sourceContains = (sub: string) => (e: TraceEvent) => (e.source ?? "").toLowerCase().includes(sub.toLowerCase());
 
 export const FLOW_DEFINITIONS: FlowDefinition[] = [
   {
@@ -31,10 +30,19 @@ export const FLOW_DEFINITIONS: FlowDefinition[] = [
     label: "Invio email diretto",
     description: "Pipeline per email inviate dal frontend (SendEmailDialog, useSendEmail).",
     trigger: (e) =>
-      e.type === "edge.invoke" && (sourceContains("send-email")(e) || (e.payload_summary?.functionName as string) === "send-email"),
+      e.type === "edge.invoke" &&
+      (sourceContains("send-email")(e) || (e.payload_summary?.functionName as string) === "send-email"),
     steps: [
-      { id: "edge-send-email", label: "edge.invoke send-email", match: (e) => e.type === "edge.invoke" && sourceContains("send-email")(e) },
-      { id: "post-send-activity", label: "DB insert activities (post-send)", match: (e) => e.type === "db.query" && (e.source ?? "").includes("activities") },
+      {
+        id: "edge-send-email",
+        label: "edge.invoke send-email",
+        match: (e) => e.type === "edge.invoke" && sourceContains("send-email")(e),
+      },
+      {
+        id: "post-send-activity",
+        label: "DB insert activities (post-send)",
+        match: (e) => e.type === "db.query" && (e.source ?? "").includes("activities"),
+      },
     ],
   },
   {
@@ -43,9 +51,22 @@ export const FLOW_DEFINITIONS: FlowDefinition[] = [
     description: "Pipeline ricerca AI dalla pagina Command.",
     trigger: (e) => e.type === "ai.invoke" && (e.scope === "command" || sourceContains("ai-query-planner")(e)),
     steps: [
-      { id: "planner", label: "ai-query-planner", match: (e) => e.type === "ai.invoke" && sourceContains("planner")(e) },
-      { id: "executor", label: "executeQueryPlan (DB select)", match: (e) => e.type === "db.query" && e.status === "success" },
-      { id: "comment", label: "ai-comment (opzionale)", match: (e) => e.type === "ai.invoke" && sourceContains("comment")(e), required: false },
+      {
+        id: "planner",
+        label: "ai-query-planner",
+        match: (e) => e.type === "ai.invoke" && sourceContains("planner")(e),
+      },
+      {
+        id: "executor",
+        label: "executeQueryPlan (DB select)",
+        match: (e) => e.type === "db.query" && e.status === "success",
+      },
+      {
+        id: "comment",
+        label: "ai-comment (opzionale)",
+        match: (e) => e.type === "ai.invoke" && sourceContains("comment")(e),
+        required: false,
+      },
     ],
   },
   {
@@ -54,8 +75,17 @@ export const FLOW_DEFINITIONS: FlowDefinition[] = [
     description: "Esecuzione agente AI con persona+capabilities+prompt.",
     trigger: (e) => e.type === "ai.invoke" && (sourceContains("agent-loop")(e) || sourceContains("agent-execute")(e)),
     steps: [
-      { id: "agent-call", label: "edge AI agent-loop", match: (e) => e.type === "ai.invoke" && (sourceContains("agent-loop")(e) || sourceContains("agent-execute")(e)) },
-      { id: "tool-exec", label: "tool execution (db.query o edge)", match: (e) => e.type === "db.query" || e.type === "edge.invoke", required: false },
+      {
+        id: "agent-call",
+        label: "edge AI agent-loop",
+        match: (e) => e.type === "ai.invoke" && (sourceContains("agent-loop")(e) || sourceContains("agent-execute")(e)),
+      },
+      {
+        id: "tool-exec",
+        label: "tool execution (db.query o edge)",
+        match: (e) => e.type === "db.query" || e.type === "edge.invoke",
+        required: false,
+      },
     ],
   },
   {
@@ -63,9 +93,7 @@ export const FLOW_DEFINITIONS: FlowDefinition[] = [
     label: "Deep Search (Sherlock)",
     description: "Ricerca strutturata con preset di qualità.",
     trigger: (e) => e.type === "ai.invoke" && (e.scope === "sherlock" || sourceContains("sherlock")(e)),
-    steps: [
-      { id: "sherlock", label: "sherlock-extract", match: (e) => sourceContains("sherlock")(e) },
-    ],
+    steps: [{ id: "sherlock", label: "sherlock-extract", match: (e) => sourceContains("sherlock")(e) }],
   },
 ];
 

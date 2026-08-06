@@ -39,15 +39,8 @@ export async function fetchPromptLabHealth(): Promise<PromptLabHealth> {
       "prompt_lab_health_prompts",
     ).catch(() => ({ data: null, error: null })),
     supabase.from("agent_personas").select("custom_tone_prompt"),
-    supabase
-      .from("prompt_test_runs")
-      .select("status, created_at")
-      .order("created_at", { ascending: false })
-      .limit(500),
-    supabase
-      .from("prompt_change_proposals")
-      .select("status")
-      .eq("status", "pending"),
+    supabase.from("prompt_test_runs").select("status, created_at").order("created_at", { ascending: false }).limit(500),
+    supabase.from("prompt_change_proposals").select("status").eq("status", "pending"),
   ]);
 
   // Fallback: se la RPC non esiste, calcola lato client
@@ -62,10 +55,7 @@ export async function fetchPromptLabHealth(): Promise<PromptLabHealth> {
     dupGroups = num(r, "dup_name_groups");
     dupExtra = num(r, "dup_extra_rows");
   } else {
-    const { data: opRows } = await supabase
-      .from("operative_prompts")
-      .select("name")
-      .eq("is_active", true);
+    const { data: opRows } = await supabase.from("operative_prompts").select("name").eq("is_active", true);
     const names = (opRows ?? []).map((r) => (r as { name: string }).name);
     promptsActive = names.length;
     const counts = new Map<string, number>();
@@ -80,9 +70,7 @@ export async function fetchPromptLabHealth(): Promise<PromptLabHealth> {
   }
 
   const personas = (personasRes.data ?? []) as Array<{ custom_tone_prompt: string | null }>;
-  const personasThin = personas.filter(
-    (p) => (p.custom_tone_prompt ?? "").length < 300,
-  ).length;
+  const personasThin = personas.filter((p) => (p.custom_tone_prompt ?? "").length < 300).length;
 
   const runs = (testsRes.data ?? []) as Array<{ status: string; created_at: string }>;
   const now = Date.now();

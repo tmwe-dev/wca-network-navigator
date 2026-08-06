@@ -21,65 +21,51 @@ export function EmailComposerWizard({ onConfirm }: { onConfirm?: () => void }): 
     <div className="flex flex-col h-full min-h-[640px]" style={{ perspective: "1400px" }}>
       <div className="relative flex-1 min-h-0">
         {step === "recipients" && (
-        <div
-          key="recipients-step"
-          className="absolute inset-0 flex flex-col gap-3 animate-in fade-in duration-200"
-        >
-          <SidebarBanner
-            icon={recipientsBanner.icon}
-            title={recipientsBanner.title}
-            description={recipientsBanner.description}
-            tone={recipientsBanner.tone}
-          />
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <EmailComposerContactPicker onConfirm={onConfirm} />
+          <div key="recipients-step" className="absolute inset-0 flex flex-col gap-3 animate-in fade-in duration-200">
+            <SidebarBanner
+              icon={recipientsBanner.icon}
+              title={recipientsBanner.title}
+              description={recipientsBanner.description}
+              tone={recipientsBanner.tone}
+            />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <EmailComposerContactPicker onConfirm={onConfirm} />
+            </div>
+            <Button size="sm" className="h-10 gap-2 text-xs font-semibold w-full" onClick={() => setStep("config")}>
+              <Mail className="w-3.5 h-3.5" />
+              Avanti: configura tipo di email
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
           </div>
-          <Button
-            size="sm"
-            className="h-10 gap-2 text-xs font-semibold w-full"
-            onClick={() => setStep("config")}
-          >
-            <Mail className="w-3.5 h-3.5" />
-            Avanti: configura tipo di email
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Button>
-        </div>
         )}
         {step === "config" && (
-        <div
-          key="config-step"
-          className="absolute inset-0 flex flex-col gap-3 animate-in fade-in duration-200"
-        >
-          <SidebarBanner
-            icon={configBanner.icon}
-            title={configBanner.title}
-            description={configBanner.description}
-            tone={configBanner.tone}
-          />
-          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-            <EmailComposeFiltersSection />
+          <div key="config-step" className="absolute inset-0 flex flex-col gap-3 animate-in fade-in duration-200">
+            <SidebarBanner
+              icon={configBanner.icon}
+              title={configBanner.title}
+              description={configBanner.description}
+              tone={configBanner.tone}
+            />
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+              <EmailComposeFiltersSection />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-10 gap-2 text-xs flex-1"
+                onClick={() => setStep("recipients")}
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <Users className="w-3.5 h-3.5" />
+                Destinatari
+              </Button>
+              <Button size="sm" className="h-10 gap-2 text-xs flex-1 font-semibold" onClick={() => onConfirm?.()}>
+                <Check className="w-3.5 h-3.5" />
+                Conferma
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-10 gap-2 text-xs flex-1"
-              onClick={() => setStep("recipients")}
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <Users className="w-3.5 h-3.5" />
-              Destinatari
-            </Button>
-            <Button
-              size="sm"
-              className="h-10 gap-2 text-xs flex-1 font-semibold"
-              onClick={() => onConfirm?.()}
-            >
-              <Check className="w-3.5 h-3.5" />
-              Conferma
-            </Button>
-          </div>
-        </div>
         )}
       </div>
     </div>

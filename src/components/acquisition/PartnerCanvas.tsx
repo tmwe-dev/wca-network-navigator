@@ -60,8 +60,24 @@ function PhaseIndicator({ phase }: { phase: CanvasPhase }) {
     <div className="flex items-center gap-1 text-[10px]">
       {phases.map((p, i) => (
         <div key={p.key} className="flex items-center gap-1">
-          <div className={cn("w-2 h-2 rounded-full transition-colors", i < currentIdx ? "bg-emerald-500" : i === currentIdx ? "bg-primary animate-pulse" : "bg-muted-foreground/20")} />
-          <span className={cn("hidden sm:inline", i === currentIdx ? "text-foreground font-medium" : "text-muted-foreground")}>{p.label}</span>
+          <div
+            className={cn(
+              "w-2 h-2 rounded-full transition-colors",
+              i < currentIdx
+                ? "bg-emerald-500"
+                : i === currentIdx
+                  ? "bg-primary animate-pulse"
+                  : "bg-muted-foreground/20",
+            )}
+          />
+          <span
+            className={cn(
+              "hidden sm:inline",
+              i === currentIdx ? "text-foreground font-medium" : "text-muted-foreground",
+            )}
+          >
+            {p.label}
+          </span>
           {i < phases.length - 1 && <span className="text-muted-foreground mx-0.5">→</span>}
         </div>
       ))}
@@ -86,22 +102,35 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
 
   return (
     <div className={cn("flex-1 p-4 overflow-auto transition-all duration-500", isAnimatingOut && "scale-90 opacity-0")}>
-      <div className={cn(
-        "rounded-2xl border p-5 space-y-4 transition-all duration-500",
-        phase === "complete" ? "border-emerald-500/30 bg-emerald-500/[0.06] shadow-lg shadow-emerald-500/[0.08]"
-          : phase !== "idle" ? "border-primary/40 bg-primary/[0.04] shadow-lg shadow-primary/[0.08]"
-          : "border-border bg-card/40"
-      )}>
+      <div
+        className={cn(
+          "rounded-2xl border p-5 space-y-4 transition-all duration-500",
+          phase === "complete"
+            ? "border-emerald-500/30 bg-emerald-500/[0.06] shadow-lg shadow-emerald-500/[0.08]"
+            : phase !== "idle"
+              ? "border-primary/40 bg-primary/[0.04] shadow-lg shadow-primary/[0.08]"
+              : "border-border bg-card/40",
+        )}
+      >
         <div className="flex items-center justify-between">
           <PhaseIndicator phase={phase} />
           {phase !== "idle" && phase !== "complete" && <Loader2 className="w-4 h-4 text-primary animate-spin" />}
         </div>
 
         {/* Header */}
-        <div className={cn("transition-all duration-500", show("header") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
+        <div
+          className={cn(
+            "transition-all duration-500",
+            show("header") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+          )}
+        >
           <div className="grid grid-cols-[minmax(80px,1fr)_2fr] gap-4">
             <div className="flex items-center justify-center min-h-[64px]">
-              {data.logo_url ? <OptimizedImage src={data.logo_url} alt="" className="max-h-16 max-w-full object-contain" /> : <Building2 className="w-10 h-10 text-muted-foreground" />}
+              {data.logo_url ? (
+                <OptimizedImage src={data.logo_url} alt="" className="max-h-16 max-w-full object-contain" />
+              ) : (
+                <Building2 className="w-10 h-10 text-muted-foreground" />
+              )}
             </div>
             <div className="min-w-0">
               <div className="flex items-start justify-between gap-2">
@@ -115,24 +144,50 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                 <span className="text-xl">{getCountryFlag(data.country_code)}</span>
-                <MapPin className="w-3.5 h-3.5" /><span className="font-medium">{data.city}</span><span>• {data.country_name}</span>
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="font-medium">{data.city}</span>
+                <span>• {data.country_name}</span>
               </div>
-              {data.website && <div className="flex items-center gap-1.5 mt-1 text-xs text-primary"><Globe className="w-3 h-3" /><span className="truncate">{data.website}</span></div>}
+              {data.website && (
+                <div className="flex items-center gap-1.5 mt-1 text-xs text-primary">
+                  <Globe className="w-3 h-3" />
+                  <span className="truncate">{data.website}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <CanvasContactList contacts={data.contacts} phase={phase} contactSource={data.contactSource} visible={show("contacts")} />
+        <CanvasContactList
+          contacts={data.contacts}
+          phase={phase}
+          contactSource={data.contactSource}
+          visible={show("contacts")}
+        />
         <CanvasServiceGrid services={data.services} visible={show("services")} />
 
         {/* Markets & Routes */}
         {(data.key_markets.length > 0 || data.key_routes.length > 0) && (
-          <div className={cn("transition-all duration-500", show("markets") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
+          <div
+            className={cn(
+              "transition-all duration-500",
+              show("markets") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+            )}
+          >
             {data.key_markets.length > 0 && (
               <>
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mercati Principali</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Mercati Principali
+                </h3>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {data.key_markets.map((m, i) => { const code = resolveCountryCode(m); return <span key={i} className="text-lg" title={m}>{code ? getCountryFlag(code) : "🌍"}</span>; })}
+                  {data.key_markets.map((m, i) => {
+                    const code = resolveCountryCode(m);
+                    return (
+                      <span key={i} className="text-lg" title={m}>
+                        {code ? getCountryFlag(code) : "🌍"}
+                      </span>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -140,7 +195,17 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
               <>
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Routing</h3>
                 <div className="flex flex-wrap gap-2">
-                  {data.key_routes.map((r, i) => { const fromCode = resolveCountryCode(r.from); const toCode = resolveCountryCode(r.to); return <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted text-xs">{fromCode ? getCountryFlag(fromCode) : r.from}<span className="text-muted-foreground">➔</span>{toCode ? getCountryFlag(toCode) : r.to}</span>; })}
+                  {data.key_routes.map((r, i) => {
+                    const fromCode = resolveCountryCode(r.from);
+                    const toCode = resolveCountryCode(r.to);
+                    return (
+                      <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted text-xs">
+                        {fromCode ? getCountryFlag(fromCode) : r.from}
+                        <span className="text-muted-foreground">➔</span>
+                        {toCode ? getCountryFlag(toCode) : r.to}
+                      </span>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -149,18 +214,62 @@ export function PartnerCanvas({ data, phase, isAnimatingOut }: PartnerCanvasProp
 
         {/* Corporate */}
         {(data.warehouse_sqm || data.employees || data.founded || data.fleet) && (
-          <div className={cn("transition-all duration-500", show("corporate") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Dati Aziendali</h3>
+          <div
+            className={cn(
+              "transition-all duration-500",
+              show("corporate") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+            )}
+          >
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Dati Aziendali
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {data.warehouse_sqm && <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs"><Warehouse className="w-4 h-4 text-primary" /><div><div className="font-bold">{data.warehouse_sqm.toLocaleString()} mq</div><div className="text-muted-foreground">Magazzini</div></div></div>}
-              {data.employees && <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs"><Users className="w-4 h-4 text-primary" /><div><div className="font-bold">{data.employees.toLocaleString()}</div><div className="text-muted-foreground">Dipendenti</div></div></div>}
-              {data.founded && <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs"><Calendar className="w-4 h-4 text-primary" /><div><div className="font-bold">{data.founded}</div><div className="text-muted-foreground">Fondazione</div></div></div>}
-              {data.fleet && <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs"><Truck className="w-4 h-4 text-primary" /><div><div className="font-bold">{data.fleet}</div><div className="text-muted-foreground">Flotta</div></div></div>}
+              {data.warehouse_sqm && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs">
+                  <Warehouse className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="font-bold">{data.warehouse_sqm.toLocaleString()} mq</div>
+                    <div className="text-muted-foreground">Magazzini</div>
+                  </div>
+                </div>
+              )}
+              {data.employees && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs">
+                  <Users className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="font-bold">{data.employees.toLocaleString()}</div>
+                    <div className="text-muted-foreground">Dipendenti</div>
+                  </div>
+                </div>
+              )}
+              {data.founded && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="font-bold">{data.founded}</div>
+                    <div className="text-muted-foreground">Fondazione</div>
+                  </div>
+                </div>
+              )}
+              {data.fleet && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs">
+                  <Truck className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="font-bold">{data.fleet}</div>
+                    <div className="text-muted-foreground">Flotta</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        <CanvasNetworkBadges networks={data.networks} linkedinLinks={data.linkedin_links} showNetworks={show("networks")} showLinkedin={show("linkedin")} />
+        <CanvasNetworkBadges
+          networks={data.networks}
+          linkedinLinks={data.linkedin_links}
+          showNetworks={show("networks")}
+          showLinkedin={show("linkedin")}
+        />
       </div>
     </div>
   );

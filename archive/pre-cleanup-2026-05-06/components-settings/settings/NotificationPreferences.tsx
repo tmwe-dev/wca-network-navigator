@@ -12,7 +12,6 @@ import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("NotificationPreferences");
 interface NotificationSetting {
@@ -76,10 +75,7 @@ export function NotificationPreferences() {
     const loadSettings = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("app_settings")
-          .select("*")
-          .eq("user_id", user.id);
+        const { data, error } = await supabase.from("app_settings").select("*").eq("user_id", user.id);
 
         if (error) throw error;
 
@@ -90,14 +86,14 @@ export function NotificationPreferences() {
               acc[row.key] = value === "true" || value === "1" || value === "True";
               return acc;
             },
-            {} as Record<string, boolean>
+            {} as Record<string, boolean>,
           );
 
           setSettings((prev) =>
             prev.map((setting) => ({
               ...setting,
               value: settingsMap[setting.key] ?? setting.value,
-            }))
+            })),
           );
         }
       } catch (err) {
@@ -113,9 +109,7 @@ export function NotificationPreferences() {
 
   const handleToggle = (key: string) => {
     setSettings((prev) =>
-      prev.map((setting) =>
-        setting.key === key ? { ...setting, value: !setting.value } : setting
-      )
+      prev.map((setting) => (setting.key === key ? { ...setting, value: !setting.value } : setting)),
     );
     setSaved(false);
   };
@@ -139,8 +133,8 @@ export function NotificationPreferences() {
             value: String(setting.value),
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "user_id,key" }
-        )
+          { onConflict: "user_id,key" },
+        ),
       );
 
       const results = await Promise.all(promises);
@@ -180,9 +174,7 @@ export function NotificationPreferences() {
         <Card className="p-4 bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 flex gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <div className="font-semibold text-sm text-red-900 dark:text-red-100">
-              Errore
-            </div>
+            <div className="font-semibold text-sm text-red-900 dark:text-red-100">Errore</div>
             <div className="text-sm text-red-800 dark:text-red-200 mt-1">{error}</div>
           </div>
         </Card>
@@ -204,9 +196,7 @@ export function NotificationPreferences() {
               className="flex items-start justify-between p-3 rounded-lg hover:bg-muted/50 transition"
             >
               <div className="space-y-1 flex-1">
-                <Label className="text-sm font-semibold cursor-pointer">
-                  {setting.label}
-                </Label>
+                <Label className="text-sm font-semibold cursor-pointer">{setting.label}</Label>
                 <p className="text-xs text-muted-foreground">{setting.description}</p>
               </div>
               <Switch
@@ -225,19 +215,14 @@ export function NotificationPreferences() {
         <Card className="p-4 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 flex gap-3">
           <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           <div>
-            <div className="text-sm text-green-900 dark:text-green-100">
-              Preferenze salvate con successo
-            </div>
+            <div className="text-sm text-green-900 dark:text-green-100">Preferenze salvate con successo</div>
           </div>
         </Card>
       )}
 
       {/* Save Button */}
       <div className="flex justify-end gap-2">
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-        >
+        <Button onClick={handleSave} disabled={saving}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Salva preferenze
         </Button>

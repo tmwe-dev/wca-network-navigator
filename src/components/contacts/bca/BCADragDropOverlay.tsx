@@ -38,7 +38,9 @@ function useBcaDragActive(): boolean {
     };
     const onEnd = () => setActive(false);
     const onDrop = () => setActive(false);
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setActive(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActive(false);
+    };
 
     window.addEventListener("dragstart", onStart);
     window.addEventListener("dragend", onEnd);
@@ -63,21 +65,35 @@ export function BCADragDropOverlay({ resolveCard }: Props) {
     async (kind: ActionKind, target: BusinessCardWithPartner) => {
       try {
         if (kind === "cockpit") {
-          const { data: { session } } = await supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
           const user = session?.user ?? null;
-          if (!user) { toast({ title: "Sessione assente", variant: "destructive" }); return; }
-          await insertCockpitQueueItems([{
-            source_id: target.id,
-            source_type: "business_card",
-            user_id: user.id,
-            partner_id: target.matched_partner_id || null,
-          }]);
-          toast({ title: "✅ Inviato al Cockpit", description: target.contact_name || target.company_name || undefined });
+          if (!user) {
+            toast({ title: "Sessione assente", variant: "destructive" });
+            return;
+          }
+          await insertCockpitQueueItems([
+            {
+              source_id: target.id,
+              source_type: "business_card",
+              user_id: user.id,
+              partner_id: target.matched_partner_id || null,
+            },
+          ]);
+          toast({
+            title: "✅ Inviato al Cockpit",
+            description: target.contact_name || target.company_name || undefined,
+          });
           return;
         }
         if (kind === "deep_search") {
           if (!target.matched_partner_id) {
-            toast({ title: "Nessun partner WCA associato", description: "Associa prima un partner per la Deep Search.", variant: "destructive" });
+            toast({
+              title: "Nessun partner WCA associato",
+              description: "Associa prima un partner per la Deep Search.",
+              variant: "destructive",
+            });
             return;
           }
           await invokeEdge("ai-utility", {
@@ -89,12 +105,18 @@ export function BCADragDropOverlay({ resolveCard }: Props) {
         }
         if (kind === "linkedin") {
           const query = [target.contact_name, target.company_name].filter(Boolean).join(" ");
-          if (!query) { toast({ title: "Dati insufficienti per LinkedIn", variant: "destructive" }); return; }
+          if (!query) {
+            toast({ title: "Dati insufficienti per LinkedIn", variant: "destructive" });
+            return;
+          }
           window.open(`https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(query)}`, "_blank");
           return;
         }
         if (kind === "campaign") {
-          if (!target.email) { toast({ title: "Email mancante", variant: "destructive" }); return; }
+          if (!target.email) {
+            toast({ title: "Email mancante", variant: "destructive" });
+            return;
+          }
           navigate("/v2/email-composer", {
             state: {
               prefilledRecipient: {
@@ -120,7 +142,9 @@ export function BCADragDropOverlay({ resolveCard }: Props) {
     <div
       className="fixed inset-0 z-[200] bg-background/80 backdrop-blur-md flex flex-col items-center justify-center gap-6 p-8 animate-in fade-in duration-150"
       // Prevent default so 'drop' fires on children correctly
-      onDragOver={(e) => { e.preventDefault(); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+      }}
     >
       <div className="text-center space-y-1">
         <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-400 font-semibold [text-shadow:0_0_8px_hsl(190_100%_60%/0.6)]">
@@ -136,28 +160,40 @@ export function BCADragDropOverlay({ resolveCard }: Props) {
           sublabel="Aggiungi alla coda operativa"
           icon={<ArrowRight className="w-10 h-10" />}
           color="primary"
-          onDropCard={(id) => { const r = resolveCard(id); if (r) runAction("cockpit", r); }}
+          onDropCard={(id) => {
+            const r = resolveCard(id);
+            if (r) runAction("cockpit", r);
+          }}
         />
         <BigDropTile
           label="Deep Search"
           sublabel="Arricchimento AI partner"
           icon={<Search className="w-10 h-10" />}
           color="primary"
-          onDropCard={(id) => { const r = resolveCard(id); if (r) runAction("deep_search", r); }}
+          onDropCard={(id) => {
+            const r = resolveCard(id);
+            if (r) runAction("deep_search", r);
+          }}
         />
         <BigDropTile
           label="LinkedIn"
           sublabel="Apri ricerca contatto"
           icon={<Linkedin className="w-10 h-10" />}
           color="blue"
-          onDropCard={(id) => { const r = resolveCard(id); if (r) runAction("linkedin", r); }}
+          onDropCard={(id) => {
+            const r = resolveCard(id);
+            if (r) runAction("linkedin", r);
+          }}
         />
         <BigDropTile
           label="Campagna"
           sublabel="Apri Email Composer"
           icon={<Megaphone className="w-10 h-10" />}
           color="amber"
-          onDropCard={(id) => { const r = resolveCard(id); if (r) runAction("campaign", r); }}
+          onDropCard={(id) => {
+            const r = resolveCard(id);
+            if (r) runAction("campaign", r);
+          }}
         />
       </div>
     </div>,
@@ -182,9 +218,21 @@ function BigDropTile({ label, sublabel, icon, color, onDropCard }: TileProps) {
   const accepts = (e: React.DragEvent) => e.dataTransfer.types.includes(BCA_DRAG_MIME);
 
   const colorClasses = {
-    primary: { idle: "border-primary/30 bg-primary/[0.04]", hot: "border-primary bg-primary/15 [box-shadow:0_0_40px_hsl(var(--primary)/0.4)]", text: "text-primary" },
-    blue: { idle: "border-blue-500/30 bg-blue-500/[0.04]", hot: "border-blue-400 bg-blue-500/15 [box-shadow:0_0_40px_rgb(59_130_246/0.4)]", text: "text-blue-400" },
-    amber: { idle: "border-amber-500/30 bg-amber-500/[0.04]", hot: "border-amber-400 bg-amber-500/15 [box-shadow:0_0_40px_rgb(251_191_36/0.4)]", text: "text-amber-400" },
+    primary: {
+      idle: "border-primary/30 bg-primary/[0.04]",
+      hot: "border-primary bg-primary/15 [box-shadow:0_0_40px_hsl(var(--primary)/0.4)]",
+      text: "text-primary",
+    },
+    blue: {
+      idle: "border-blue-500/30 bg-blue-500/[0.04]",
+      hot: "border-blue-400 bg-blue-500/15 [box-shadow:0_0_40px_rgb(59_130_246/0.4)]",
+      text: "text-blue-400",
+    },
+    amber: {
+      idle: "border-amber-500/30 bg-amber-500/[0.04]",
+      hot: "border-amber-400 bg-amber-500/15 [box-shadow:0_0_40px_rgb(251_191_36/0.4)]",
+      text: "text-amber-400",
+    },
   }[color];
 
   return (

@@ -8,14 +8,14 @@ Ogni decisione tecnica, ogni modulo, ogni flusso della v2.0 **deve** essere coer
 
 ## v1.0 vs v2.0
 
-| | v1.0 (attuale) | v2.0 (target) |
-|---|---|---|
-| **Stato** | 🔒 FREEZE — nessuna modifica | 🏗️ Da costruire da zero |
-| **Architettura** | Organica, debito tecnico accumulato | Atomic Design: `/core`, `/io`, `/bridge` |
-| **Qualità** | 4.150/10.000 (audit aprile 2026) | Standard Enterprise (5 criteri oggettivi) |
-| **AI** | Prompt ad hoc, logica sparsa | Sistema multi-agente con consenso e Perfection Matrix |
-| **Testing** | 44 test (guardrails minimi) | Validazione preventiva + contract + regression |
-| **Osservabilità** | Parziale | Logging strutturato, metriche, audit trail completo |
+|                   | v1.0 (attuale)                      | v2.0 (target)                                         |
+| ----------------- | ----------------------------------- | ----------------------------------------------------- |
+| **Stato**         | 🔒 FREEZE — nessuna modifica        | 🏗️ Da costruire da zero                               |
+| **Architettura**  | Organica, debito tecnico accumulato | Atomic Design: `/core`, `/io`, `/bridge`              |
+| **Qualità**       | 4.150/10.000 (audit aprile 2026)    | Standard Enterprise (5 criteri oggettivi)             |
+| **AI**            | Prompt ad hoc, logica sparsa        | Sistema multi-agente con consenso e Perfection Matrix |
+| **Testing**       | 44 test (guardrails minimi)         | Validazione preventiva + contract + regression        |
+| **Osservabilità** | Parziale                            | Logging strutturato, metriche, audit trail completo   |
 
 **Il codice v1.0 resta dov'è. La v2.0 sarà ricostruita seguendo i 4 volumi.**
 
@@ -24,36 +24,44 @@ Ogni decisione tecnica, ogni modulo, ogni flusso della v2.0 **deve** essere coer
 ## I quattro volumi
 
 ### 📕 Volume I — Il Protocollo del Recupero (2ª edizione)
-*Manuale operativo per il ripristino di sistemi software complessi.*
+
+_Manuale operativo per il ripristino di sistemi software complessi._
 
 File:
+
 - [`Volume_I_Il_Protocollo_del_Recupero.md`](./Volume_I_Il_Protocollo_del_Recupero.md)
 - `Volume_I_Il_Protocollo_del_Recupero-2.docx` (originale)
 
 **Struttura**: 13 capitoli — dalla Fase 0 (Fotografia) alla Fase 10 (Hardening), più le 7 leggi del recupero e i 6 criteri di uscita dal protocollo.
 
 ### 📘 Volume II — Il Metodo Enterprise (2ª edizione)
-*Come costruire da zero un software perfetto con intelligenza artificiale.*
+
+_Come costruire da zero un software perfetto con intelligenza artificiale._
 
 File:
+
 - [`Volume_II_Il_Metodo_Enterprise.md`](./Volume_II_Il_Metodo_Enterprise.md)
 - `Volume_II_Il_Metodo_Enterprise-2.docx` (originale)
 
 **Struttura**: 17 capitoli — dalla Fase Zero (Validazione) al Go-to-Market, i 5 criteri dello standard enterprise, gli errori da evitare.
 
 ### 📗 Volume III — Software Perfetto (1ª edizione)
-*Manuale avanzato per il sistema multi-agente e la generazione di codice perfetto.*
+
+_Manuale avanzato per il sistema multi-agente e la generazione di codice perfetto._
 
 File:
+
 - [`Volume_III_Software_Perfetto.md`](./Volume_III_Software_Perfetto.md)
 - `Volume_3_-_software_perfect.docx` (originale)
 
 **Struttura**: 5 sezioni — Classificazione TACO, best practices, Perfection Matrix, Glossario SSOT, pattern Atomic Design (`/core`, `/io`, `/bridge`), flusso di disaccoppiamento.
 
 ### 📙 Volume IV — Manuale Avanzato Multi-Agente (2ª edizione)
-*Sistema multi-agente e generazione di codice perfetto — edizione integrata e completa.*
+
+_Sistema multi-agente e generazione di codice perfetto — edizione integrata e completa._
 
 File:
+
 - [`Volume_IV_Manuale_Avanzato_Multi_Agente.md`](./Volume_IV_Manuale_Avanzato_Multi_Agente.md)
 - `volume_4_-_Manuale_Avanzato_Multi_Agente.docx` (originale)
 
@@ -91,20 +99,20 @@ File:
 
 ### Perfection Matrix (Vol. III)
 
-| Fase | Output richiesto | Criterio di accettazione |
-|------|-----------------|-------------------------|
-| Definizione | JSON Schema dei dati | Nessun campo opzionale senza default |
-| Architettura | Grafo delle dipendenze | Nessun ciclo; percorso lineare |
-| Logica | Pseudocodice in Markdown | Nessun ciclo infinito; preferire map/filter |
+| Fase           | Output richiesto          | Criterio di accettazione                                 |
+| -------------- | ------------------------- | -------------------------------------------------------- |
+| Definizione    | JSON Schema dei dati      | Nessun campo opzionale senza default                     |
+| Architettura   | Grafo delle dipendenze    | Nessun ciclo; percorso lineare                           |
+| Logica         | Pseudocodice in Markdown  | Nessun ciclo infinito; preferire map/filter              |
 | Output Lovable | Prompt di implementazione | Deve includere: "Se vedi un'ambiguità, fermati e chiedi" |
 
 ### Convergenza del Consenso (Vol. IV)
 
-| Livello | Criterio | Azione |
-|---------|----------|--------|
-| **L1** | Consenso unanime (5/5) | Procede |
-| **L2** | Maggioranza qualificata (4/5, obiezioni solo minor) | Procede con annotation |
-| **L3** | Dopo 5 iterazioni senza L1/L2 | Escalation umana |
+| Livello | Criterio                                            | Azione                 |
+| ------- | --------------------------------------------------- | ---------------------- |
+| **L1**  | Consenso unanime (5/5)                              | Procede                |
+| **L2**  | Maggioranza qualificata (4/5, obiezioni solo minor) | Procede con annotation |
+| **L3**  | Dopo 5 iterazioni senza L1/L2                       | Escalation umana       |
 
 ### Circuit Breaker (Vol. IV)
 

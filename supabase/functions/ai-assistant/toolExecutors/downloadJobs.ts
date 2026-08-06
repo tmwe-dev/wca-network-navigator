@@ -28,9 +28,7 @@ export async function executeCreateDownloadJob(
     .in("status", ["pending", "running"])
     .limit(5);
   if (activeJobs && activeJobs.length > 0) {
-    const sameCountry = (activeJobs as Record<string, unknown>[]).find(
-      (j) => j.country_code === countryCode,
-    );
+    const sameCountry = (activeJobs as Record<string, unknown>[]).find((j) => j.country_code === countryCode);
     if (sameCountry) {
       return {
         error: `Esiste già un job attivo per ${countryName} (${countryCode}).`,
@@ -47,13 +45,8 @@ export async function executeCreateDownloadJob(
     }
   }
 
-  const { data: deadRows } = await supabase
-    .from("partners_no_contacts")
-    .select("wca_id")
-    .eq("resolved", false);
-  const deadIdSet = new Set(
-    (deadRows || []).map((r: Record<string, unknown>) => Number(r.wca_id)),
-  );
+  const { data: deadRows } = await supabase.from("partners_no_contacts").select("wca_id").eq("resolved", false);
+  const deadIdSet = new Set((deadRows || []).map((r: Record<string, unknown>) => Number(r.wca_id)));
 
   const wcaIds = await loadWcaIds(supabase, countryCode, mode, deadIdSet);
 
@@ -65,9 +58,7 @@ export async function executeCreateDownloadJob(
     };
     return {
       success: false,
-      message: `Nessun partner da scaricare in modalità "${
-        modeLabels[mode] || mode
-      }" per ${countryName}.`,
+      message: `Nessun partner da scaricare in modalità "${modeLabels[mode] || mode}" per ${countryName}.`,
     };
   }
 
@@ -94,9 +85,7 @@ export async function executeCreateDownloadJob(
     status: "pending",
   }));
   for (let i = 0; i < jobItems.length; i += 500) {
-    await supabase
-      .from("download_job_items")
-      .insert(jobItems.slice(i, i + 500));
+    await supabase.from("download_job_items").insert(jobItems.slice(i, i + 500));
   }
 
   const modeLabels: Record<string, string> = {
@@ -111,7 +100,7 @@ export async function executeCreateDownloadJob(
     mode: modeLabels[mode] || mode,
     total_partners: wcaIds.length,
     delay_seconds: delaySec,
-    estimated_time_minutes: Math.ceil(wcaIds.length * (delaySec + 5) / 60),
+    estimated_time_minutes: Math.ceil((wcaIds.length * (delaySec + 5)) / 60),
     message: `Job creato! ${wcaIds.length} partner da scaricare per ${countryName}. Il download partirà automaticamente.`,
   };
 }

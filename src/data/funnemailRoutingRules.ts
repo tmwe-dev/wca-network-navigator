@@ -66,9 +66,7 @@ function mapRow(row: {
 }
 
 export async function listFunnemailRoutingRules(): Promise<FunnemailRoutingRuleRow[]> {
-  const { data, error } = await supabase.from(TABLE)
-    .select("*")
-    .order("priority", { ascending: true });
+  const { data, error } = await supabase.from(TABLE).select("*").order("priority", { ascending: true });
   if (error) throw error;
   return (data ?? []).map(mapRow);
 }
@@ -79,10 +77,9 @@ export async function upsertFunnemailRoutingRule(
   const { conditions, ...rest } = payload;
   // Serializzazione JSON-safe esplicita (niente cast alla cieca): le
   // condizioni sono già plain object literals (field/op/value string|string[]).
-  const conditionsJson = conditions
-    ? (JSON.parse(JSON.stringify(conditions)) as Json[])
-    : undefined;
-  const { data, error } = await supabase.from(TABLE)
+  const conditionsJson = conditions ? (JSON.parse(JSON.stringify(conditions)) as Json[]) : undefined;
+  const { data, error } = await supabase
+    .from(TABLE)
     .upsert({
       ...rest,
       ...(conditionsJson ? { conditions: conditionsJson } : {}),

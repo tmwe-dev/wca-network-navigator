@@ -13,17 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { toJsonValue, readJsonArray, readString, readNumber, isRecord } from "@/lib/jsonGuards";
 
-export type HarmonizerSessionStatus =
-  | "pending"
-  | "in_progress"
-  | "completed"
-  | "error"
-  | "cancelled";
+export type HarmonizerSessionStatus = "pending" | "in_progress" | "completed" | "error" | "cancelled";
 
-export type HarmonizerSourceKind =
-  | "library"
-  | "mission_output"
-  | "email_attachment";
+export type HarmonizerSourceKind = "library" | "mission_output" | "email_attachment";
 
 /** Singolo fatto canonico estratto dal documento (numerico o dichiarativo). */
 export interface FactEntry {
@@ -97,14 +89,10 @@ function compactFacts(reg: Record<string, FactEntry>): Record<string, FactEntry>
   const json = JSON.stringify(reg);
   if (json.length <= MAX_FACTS_BYTES) return reg;
   // Strategy: rimuovi ~30% dei fatti più vecchi (chunk index più basso).
-  const entries = Object.entries(reg).sort(
-    (a, b) => (b[1].source_chunk ?? 0) - (a[1].source_chunk ?? 0),
-  );
+  const entries = Object.entries(reg).sort((a, b) => (b[1].source_chunk ?? 0) - (a[1].source_chunk ?? 0));
   const keep = Math.ceil(entries.length * 0.7);
   return Object.fromEntries(entries.slice(0, keep));
 }
-
-
 
 function mapConflictEntry(o: Record<string, unknown>): ConflictEntry {
   const a = isRecord(o.source_a) ? o.source_a : {};
@@ -231,11 +219,7 @@ export async function createHarmonizerSession(input: {
 }
 
 export async function loadHarmonizerSession(id: string): Promise<HarmonizerSession | null> {
-  const { data, error } = await supabase
-    .from("harmonizer_sessions")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await supabase.from("harmonizer_sessions").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data ? toHarmonizerSession(data) : null;
 }
@@ -253,10 +237,7 @@ export async function findActiveHarmonizerSession(userId: string): Promise<Harmo
 }
 
 /** Append/merge facts (chiave deduplicata). */
-export async function appendFacts(
-  sessionId: string,
-  newFacts: FactEntry[],
-): Promise<void> {
+export async function appendFacts(sessionId: string, newFacts: FactEntry[]): Promise<void> {
   const session = await loadHarmonizerSession(sessionId);
   if (!session) throw new Error("session not found");
   const reg = { ...session.facts_registry };
@@ -271,10 +252,7 @@ export async function appendFacts(
   if (error) throw error;
 }
 
-export async function appendConflicts(
-  sessionId: string,
-  newConflicts: ConflictEntry[],
-): Promise<void> {
+export async function appendConflicts(sessionId: string, newConflicts: ConflictEntry[]): Promise<void> {
   if (newConflicts.length === 0) return;
   const session = await loadHarmonizerSession(sessionId);
   if (!session) throw new Error("session not found");
@@ -286,10 +264,7 @@ export async function appendConflicts(
   if (error) throw error;
 }
 
-export async function appendCrossReferences(
-  sessionId: string,
-  refs: CrossRefEntry[],
-): Promise<void> {
+export async function appendCrossReferences(sessionId: string, refs: CrossRefEntry[]): Promise<void> {
   if (refs.length === 0) return;
   const session = await loadHarmonizerSession(sessionId);
   if (!session) throw new Error("session not found");
@@ -301,10 +276,7 @@ export async function appendCrossReferences(
   if (error) throw error;
 }
 
-export async function appendEntities(
-  sessionId: string,
-  entities: EntityCreatedEntry[],
-): Promise<void> {
+export async function appendEntities(sessionId: string, entities: EntityCreatedEntry[]): Promise<void> {
   if (entities.length === 0) return;
   const session = await loadHarmonizerSession(sessionId);
   if (!session) throw new Error("session not found");
@@ -329,10 +301,7 @@ export async function advanceChunk(sessionId: string, nextChunkIndex: number): P
   if (error) throw error;
 }
 
-export async function markSessionError(
-  sessionId: string,
-  err: ChunkErrorEntry,
-): Promise<void> {
+export async function markSessionError(sessionId: string, err: ChunkErrorEntry): Promise<void> {
   const session = await loadHarmonizerSession(sessionId);
   if (!session) throw new Error("session not found");
   const merged = [...session.errors, err];

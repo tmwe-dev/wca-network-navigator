@@ -13,25 +13,9 @@ import * as React from "react";
 import { Globe, Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  LANGUAGES,
-  type LanguageMode,
-  type ResolvedLanguage,
-  resolveLanguage,
-} from "@/lib/languages";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { LANGUAGES, type LanguageMode, type ResolvedLanguage, resolveLanguage } from "@/lib/languages";
 
 interface Props {
   value: LanguageMode;
@@ -47,8 +31,8 @@ interface Props {
 
 const QUICK_OPTIONS: Array<{ kind: LanguageMode["kind"]; flag: string; label: string }> = [
   { kind: "italiano", flag: "🇮🇹", label: "Italiano" },
-  { kind: "inglese",  flag: "🇬🇧", label: "Inglese" },
-  { kind: "auto",     flag: "🌍",  label: "Auto" },
+  { kind: "inglese", flag: "🇬🇧", label: "Inglese" },
+  { kind: "auto", flag: "🌍", label: "Auto" },
 ];
 
 export function EmailLanguagePicker({
@@ -67,18 +51,12 @@ export function EmailLanguagePicker({
   );
 
   const isSpecific = value.kind === "specific";
-  const specificLabel = isSpecific
-    ? LANGUAGES.find((l) => l.key === value.key)?.labelIt ?? value.key
-    : "Specifica…";
+  const specificLabel = isSpecific ? (LANGUAGES.find((l) => l.key === value.key)?.labelIt ?? value.key) : "Specifica…";
 
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
       <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
-      {!compact && (
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground shrink-0">
-          Lingua
-        </span>
-      )}
+      {!compact && <span className="text-[11px] uppercase tracking-wide text-muted-foreground shrink-0">Lingua</span>}
       <div className="inline-flex items-center rounded-md border border-border/60 bg-muted/30 p-0.5">
         {QUICK_OPTIONS.map((opt) => {
           const active = value.kind === opt.kind;
@@ -126,9 +104,7 @@ export function EmailLanguagePicker({
             <Command>
               <CommandInput placeholder="Cerca lingua…" className="h-8 text-xs" />
               <CommandList>
-                <CommandEmpty className="py-3 text-xs text-muted-foreground">
-                  Nessuna lingua trovata.
-                </CommandEmpty>
+                <CommandEmpty className="py-3 text-xs text-muted-foreground">Nessuna lingua trovata.</CommandEmpty>
                 <CommandGroup>
                   {LANGUAGES.map((lang) => {
                     const selected = isSpecific && value.key === lang.key;
@@ -142,7 +118,9 @@ export function EmailLanguagePicker({
                         }}
                         className="text-xs gap-2"
                       >
-                        <span aria-hidden className="text-base leading-none">{lang.flag}</span>
+                        <span aria-hidden className="text-base leading-none">
+                          {lang.flag}
+                        </span>
                         <span className="flex-1">
                           {lang.labelIt}
                           <span className="ml-1 text-muted-foreground">· {lang.native}</span>

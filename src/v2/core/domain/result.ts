@@ -43,24 +43,15 @@ export function isErr<T, E>(result: Result<T, E>): result is ErrResult<E> {
 
 // ── Combinators ──────────────────────────────────────────────────────
 
-export function map<T, U, E>(
-  result: Result<T, E>,
-  fn: (value: T) => U,
-): Result<U, E> {
+export function map<T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> {
   return isOk(result) ? ok(fn(result.value)) : result;
 }
 
-export function flatMap<T, U, E>(
-  result: Result<T, E>,
-  fn: (value: T) => Result<U, E>,
-): Result<U, E> {
+export function flatMap<T, U, E>(result: Result<T, E>, fn: (value: T) => Result<U, E>): Result<U, E> {
   return isOk(result) ? fn(result.value) : result;
 }
 
-export function mapErr<T, E, F>(
-  result: Result<T, E>,
-  fn: (error: E) => F,
-): Result<T, F> {
+export function mapErr<T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F> {
   return isErr(result) ? err(fn(result.error)) : result;
 }
 
@@ -71,11 +62,7 @@ export function unwrapOr<T, E>(result: Result<T, E>, fallback: T): T {
 export function unwrap<T, E>(result: Result<T, E>): T {
   if (isOk(result)) return result.value;
   throw new Error(
-    `Called unwrap on Err: ${
-      result.error instanceof Error
-        ? result.error.message
-        : String(result.error)
-    }`,
+    `Called unwrap on Err: ${result.error instanceof Error ? result.error.message : String(result.error)}`,
   );
 }
 

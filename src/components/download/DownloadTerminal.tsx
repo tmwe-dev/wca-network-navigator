@@ -2,12 +2,7 @@ import { useEffect, useRef, useState, useContext } from "react";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { ThemeCtx } from "@/components/download/theme";
 import { Terminal } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toRecord } from "@/lib/records";
 
 interface LogEntry {
@@ -35,14 +30,12 @@ interface DownloadTerminalDialogProps {
 
 function useTerminalData() {
   const { data: jobs } = useDownloadJobs();
-  const activeJob = (jobs || []).find(j => j.status === "running" || j.status === "pending");
+  const activeJob = (jobs || []).find((j) => j.status === "running" || j.status === "pending");
   const fallbackJob = !activeJob
-    ? (jobs || []).find(j => j.status === "completed" || j.status === "cancelled" || j.status === "paused")
+    ? (jobs || []).find((j) => j.status === "completed" || j.status === "cancelled" || j.status === "paused")
     : null;
   const targetJob = activeJob || fallbackJob;
-  const entries: LogEntry[] = targetJob
-    ? ((toRecord(targetJob)).terminal_log as LogEntry[] || [])
-    : [];
+  const entries: LogEntry[] = targetJob ? (toRecord(targetJob).terminal_log as LogEntry[]) || [] : [];
   return { activeJob, entries };
 }
 
@@ -84,7 +77,7 @@ export function DownloadTerminalEmbed() {
         className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent bg-card/50"
       >
         {entries.length === 0 ? (
-           <div className="h-full flex items-center justify-center text-muted-foreground text-xs text-center px-4">
+          <div className="h-full flex items-center justify-center text-muted-foreground text-xs text-center px-4">
             {activeJob ? "In attesa di log..." : "Nessun job attivo."}
           </div>
         ) : (
@@ -152,7 +145,7 @@ export function DownloadTerminalDialog({ open, onOpenChange }: DownloadTerminalD
           className="h-[400px] overflow-y-auto px-3 pb-3 font-mono text-[11px] leading-[1.6] scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
         >
           {entries.length === 0 ? (
-           <div className="h-full flex items-center justify-center text-muted-foreground text-xs text-center px-4">
+            <div className="h-full flex items-center justify-center text-muted-foreground text-xs text-center px-4">
               {activeJob ? "In attesa di log..." : "Nessun job attivo. Seleziona un paese e avvia un download."}
             </div>
           ) : (
@@ -162,8 +155,8 @@ export function DownloadTerminalDialog({ open, onOpenChange }: DownloadTerminalD
                 const color = isDark ? colors.dark : colors.light;
                 return (
                   <div key={idx} className="flex gap-2 hover:bg-white/[0.03] px-1 rounded">
-                  <span className="text-muted-foreground select-none shrink-0">{entry.ts}</span>
-                   <span className={`${color} font-semibold w-[72px] shrink-0 text-right`}>{entry.type}</span>
+                    <span className="text-muted-foreground select-none shrink-0">{entry.ts}</span>
+                    <span className={`${color} font-semibold w-[72px] shrink-0 text-right`}>{entry.type}</span>
                     <span className="text-foreground">{entry.msg}</span>
                   </div>
                 );

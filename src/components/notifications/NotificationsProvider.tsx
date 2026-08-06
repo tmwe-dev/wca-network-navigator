@@ -18,14 +18,11 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const { subscribeToPush } = usePushNotifications({ enabled: false });
 
   // Handle incoming notifications
-  const handleNewNotification = useCallback(
-    (notification: ToastNotification) => {
-      // Add unique toast ID
-      const toastId = `${notification.id}_${Date.now()}`;
-      setToasts((prev) => [{ ...notification, toastId }, ...prev.slice(0, 4)]);
-    },
-    []
-  );
+  const handleNewNotification = useCallback((notification: ToastNotification) => {
+    // Add unique toast ID
+    const toastId = `${notification.id}_${Date.now()}`;
+    setToasts((prev) => [{ ...notification, toastId }, ...prev.slice(0, 4)]);
+  }, []);
 
   // Subscribe to realtime notifications
   useEffect(() => {
@@ -43,7 +40,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         },
         (payload) => {
           handleNewNotification(payload.new as ToastNotification);
-        }
+        },
       )
       .subscribe();
 
@@ -84,10 +81,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
         {toasts.map((toast) => (
           <div key={toast.toastId} className="pointer-events-auto">
-            <NotificationToast
-              notification={toast}
-              onDismiss={dismissToast}
-            />
+            <NotificationToast notification={toast} onDismiss={dismissToast} />
           </div>
         ))}
       </div>

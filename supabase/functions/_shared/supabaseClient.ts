@@ -26,16 +26,11 @@ type DenoRuntime = typeof globalThis & {
 const env = (name: string): string => (globalThis as DenoRuntime).Deno.env.get(name)!;
 
 export function createServiceClient(): AnySupabaseClient {
-  return createClient(
-    env("SUPABASE_URL"),
-    env("SUPABASE_SERVICE_ROLE_KEY"),
-  );
+  return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
 export function createUserClient(authHeader: string): AnySupabaseClient {
-  return createClient(
-    env("SUPABASE_URL"),
-    env("SUPABASE_ANON_KEY"),
-    { global: { headers: { Authorization: authHeader } } },
-  );
+  return createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), {
+    global: { headers: { Authorization: authHeader } },
+  });
 }

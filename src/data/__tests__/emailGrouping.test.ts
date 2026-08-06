@@ -80,7 +80,10 @@ describe("DAL — emailGrouping", () => {
       ]);
       mockFrom.mockReturnValue(c);
       const res = await fetchAssignedAddressRules();
-      expect(calls.range).toEqual([[0, 999], [1000, 1999]]);
+      expect(calls.range).toEqual([
+        [0, 999],
+        [1000, 1999],
+      ]);
       expect(res).toHaveLength(1001);
     });
 
@@ -101,7 +104,10 @@ describe("DAL — emailGrouping", () => {
       const res = await fetchUncategorizedAddressRules();
       expect(mockFrom).toHaveBeenCalledWith("email_address_rules");
       expect(calls.select[0]).toEqual([UNCATEGORIZED_COLS]);
-      expect(calls.is).toEqual([["group_id", null], ["group_name", null]]);
+      expect(calls.is).toEqual([
+        ["group_id", null],
+        ["group_name", null],
+      ]);
       expect(calls.order[0]).toEqual(["email_count", { ascending: false }]);
       expect(calls.range[0]).toEqual([0, 999]);
       expect(res).toEqual([{ id: "u1" }]);
@@ -136,7 +142,10 @@ describe("DAL — emailGrouping", () => {
       ]);
       mockFrom.mockReturnValue(c);
       const res = await fetchClassifiedAddressRules();
-      expect(calls.range).toEqual([[0, 999], [1000, 1999]]);
+      expect(calls.range).toEqual([
+        [0, 999],
+        [1000, 1999],
+      ]);
       expect(res).toHaveLength(1001);
     });
 
@@ -205,16 +214,19 @@ describe("DAL — fetchInboundEmailSenderAddresses", () => {
       userId: "u1",
       mailbox: { kind: "personal" },
     });
-    expect(calls.range).toEqual([[0, 999], [1000, 1999]]);
+    expect(calls.range).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
     expect(res).toHaveLength(1001);
   });
 
   it("throws on query error", async () => {
     const { c } = chain([{ data: null, error: { message: "boom-m" } }]);
     mockFrom.mockReturnValue(c);
-    await expect(
-      fetchInboundEmailSenderAddresses({ userId: "u1", mailbox: null }),
-    ).rejects.toEqual({ message: "boom-m" });
+    await expect(fetchInboundEmailSenderAddresses({ userId: "u1", mailbox: null })).rejects.toEqual({
+      message: "boom-m",
+    });
   });
 });
 
@@ -262,7 +274,10 @@ describe("fetchAddressRuleCounts", () => {
     ]);
     mockFrom.mockReturnValue(c);
     const res = await fetchAddressRuleCounts();
-    expect(calls.range).toEqual([[0, 999], [1000, 1999]]);
+    expect(calls.range).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
     expect(res).toHaveLength(1001);
   });
 
@@ -358,5 +373,4 @@ describe("fetchAddressRuleCounts", () => {
       });
     });
   });
-
 });

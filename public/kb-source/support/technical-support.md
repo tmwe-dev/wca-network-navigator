@@ -6,6 +6,7 @@ tags: [support, procedures, email, technical-support, troubleshooting, diagnosis
 # Richieste assistenza tecnica
 
 ## Obiettivo
+
 Raccogliere informazioni complete su problemi tecnici, diagnosticare la causa e guidare il cliente verso soluzione o escalation.
 
 ## Procedura diagnostica
@@ -15,12 +16,14 @@ Raccogliere informazioni complete su problemi tecnici, diagnosticare la causa e 
 Quando cliente segnala problema tecnico, raccogli:
 
 #### Informazioni essenziali
+
 - **Descrizione**: "Cosa non funziona?" (dettagliato, non "non funziona")
 - **Quando è successo**: data e ora esatta
 - **Frequenza**: sempre, a volte, una volta sola?
 - **Impatto**: cosa non può fare il cliente?
 
 #### Informazioni tecniche
+
 - **Sistema**: Windows/Mac/Linux? Quale versione?
 - **Browser**: Chrome/Firefox/Safari? Quale versione?
 - **Dispositivo**: Desktop/Laptop/Mobile? Quale modello?
@@ -28,6 +31,7 @@ Quando cliente segnala problema tecnico, raccogli:
 - **Azioni fatte**: cosa ha provato il cliente? (es. "Ho riavviato", "Ho cancellato i cookie")
 
 #### Errori visualizzati
+
 - **Messaggio di errore esatto**: copincolla del testo
 - **Screenshot**: specialmente se c'è messaggio d'errore
 - **Video**: se comportamento è intermittente/complesso
@@ -58,15 +62,18 @@ Grazie!
 Sulla base delle info, determina:
 
 **È un problema noto?**
+
 - Sì → go to Step 3a (Soluzione rapida)
 - No → go to Step 3b (Troubleshooting)
 
 **È correlato al sistema del cliente?**
+
 - Browser cache corrotta → pulizia cache
 - Versione browser obsoleta → aggiornamento
 - Connessione lenta → test velocità
 
 **È un nostro bug/problema?**
+
 - Segni: "Accade a tutti gli utenti", "Errore di database", "Timeout"
 - Azione: escalation immediata a team tecnico
 
@@ -86,6 +93,7 @@ Fatemi sapere se funziona. Se no, vi aiuto ulteriormente!
 ```
 
 Problemi noti comuni:
+
 - **Cache**: "Svuotate cache e cookie del browser, riavviate"
 - **Connessione**: "Cambiate da WiFi a Ethernet", "Riavviate il router"
 - **Versione**: "Aggiornate il browser all'ultima versione"
@@ -124,6 +132,7 @@ Se ancora non funziona, il problema potrebbe essere dal nostro lato. Vi faccio p
 ### Step 4: Escalation tecnica (se necessario)
 
 Se il cliente ha provato tutto:
+
 - Crea ticket con team tecnico
 - Includi tutte le info raccolte
 - Dagli una ETA ("Vi farò sapere entro 24 ore")
@@ -146,17 +155,18 @@ Grazie della pazienza!
 
 ## Soluzioni comuni rapide
 
-| Problema | Soluzione |
-|----------|-----------|
-| "Pagina non carica" | Svuotate cache, cambiate browser, verificate connessione |
-| "Timeout/lentezza" | Verificate velocità internet, provate orario diverso (server potrebbe essere sovraccarionico) |
-| "Login non funziona" | Verificate CAPS LOCK, reset password, prova incognito/anonimo |
-| "Download fallito" | Riavviate download, verificate spazio disco, prova browser diverso |
-| "Errore di sincronizzazione" | Logout totale + login, svuota cache, riavvia device |
+| Problema                     | Soluzione                                                                                     |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| "Pagina non carica"          | Svuotate cache, cambiate browser, verificate connessione                                      |
+| "Timeout/lentezza"           | Verificate velocità internet, provate orario diverso (server potrebbe essere sovraccarionico) |
+| "Login non funziona"         | Verificate CAPS LOCK, reset password, prova incognito/anonimo                                 |
+| "Download fallito"           | Riavviate download, verificate spazio disco, prova browser diverso                            |
+| "Errore di sincronizzazione" | Logout totale + login, svuota cache, riavvia device                                           |
 
 ## Quando dire "Non è supportato"
 
 Se cliente chiede assistenza per:
+
 - Software/tool di terze parti (non nostri)
 - Problema del suo sistema/network
 - Personalizzazione che va oltre scope
@@ -176,6 +186,7 @@ Rimango qui se il problema è dal nostro lato e preferite che vi supporti io.
 ## Documentazione
 
 Dopo ogni caso tecnico:
+
 - Crea knowledge base article se è ripetibile
 - Classifica: Bug / Feature Request / User Error / External Issue
 - Se bug confermato: comunica timeline fix al cliente

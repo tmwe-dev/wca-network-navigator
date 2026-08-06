@@ -113,14 +113,18 @@ export function DesignSystemPreviewPage() {
                 {["Alpha Logistics Co.", "Beta Freight GmbH", "Gamma Shipping Ltd."].map((name) => (
                   <div key={name} className="flex items-center justify-between py-2 border-b border-border/20">
                     <span className="text-[13px] font-light text-foreground">{name}</span>
-                    <span className="text-[11px] text-muted-foreground font-mono">Score: {Math.floor(Math.random() * 40 + 60)}</span>
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      Score: {Math.floor(Math.random() * 40 + 60)}
+                    </span>
                   </div>
                 ))}
               </div>
             </CanvasShell>
           </div>
         ) : (
-          <button onClick={() => setCanvasOpen(true)} className="pill">Riapri Canvas</button>
+          <button onClick={() => setCanvasOpen(true)} className="pill">
+            Riapri Canvas
+          </button>
         )}
       </section>
 
@@ -128,13 +132,7 @@ export function DesignSystemPreviewPage() {
       <section>
         <h2 className="section-label mb-4">TOOL ACTIVATION BAR</h2>
         <div className="float-panel-subtle p-4">
-          <ToolActivationBar
-            tools={mockTools}
-            sources={mockSources}
-            visible
-            phase="active"
-            chainHighlight={3}
-          />
+          <ToolActivationBar tools={mockTools} sources={mockSources} visible phase="active" chainHighlight={3} />
         </div>
       </section>
 

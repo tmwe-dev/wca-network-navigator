@@ -11,8 +11,5 @@ export async function fetchAuthorizedUsersRaw(): Promise<{
   data: AuthorizedUserRow[] | null;
   error: PostgrestError | null;
 }> {
-  return supabase
-    .from("authorized_users")
-    .select("*")
-    .order("created_at", { ascending: false });
+  return supabase.from("authorized_users").select("*").order("created_at", { ascending: false });
 }

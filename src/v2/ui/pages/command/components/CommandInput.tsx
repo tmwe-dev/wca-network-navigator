@@ -58,11 +58,7 @@ export function CommandInput({
             }`}
             title="Lettura vocale"
           >
-            {voiceSpeaking ? (
-              <VolumeX className="w-4 h-4" />
-            ) : (
-              <Volume2 className="w-4 h-4" />
-            )}
+            {voiceSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </motion.button>
           <motion.button
             onClick={onVoiceToggle}
@@ -81,11 +77,7 @@ export function CommandInput({
                 : "Voce non supportata da questo browser"
             }
           >
-            {voiceListening ? (
-              <MicOff className="w-4 h-4" />
-            ) : (
-              <Mic className="w-4 h-4" />
-            )}
+            {voiceListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </motion.button>
           <RealtimeVoiceToggle compact />
           <input

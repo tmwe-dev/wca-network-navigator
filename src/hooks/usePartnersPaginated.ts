@@ -1,7 +1,7 @@
 /**
  * usePartnersPaginated — Paginated partner loading for Network page
  * Uses useInfiniteQuery to load 50 partners at a time with infinite scroll
- * 
+ *
  * Performance strategy:
  * - NO joins (partner_contacts/partner_networks) — loaded on demand in detail
  * - Always count:exact (fast without joins)
@@ -37,8 +37,7 @@ export function usePartnersPaginated(filters?: PaginatedFilters) {
       };
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.page + 1 : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: 30_000,
   });
 }

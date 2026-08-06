@@ -40,8 +40,20 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
 
   const icons = [
     { key: "Email", Icon: Mail, active: hasEmail, activeClass: "text-primary bg-primary/10", value: contact.email },
-    { key: "LinkedIn", Icon: Linkedin, active: hasLinkedin, activeClass: "text-chart-3 bg-chart-3/10", value: contact.linkedinUrl },
-    { key: "WhatsApp", Icon: MessageCircle, active: hasPhone, activeClass: "text-success bg-success/10", value: contact.phone },
+    {
+      key: "LinkedIn",
+      Icon: Linkedin,
+      active: hasLinkedin,
+      activeClass: "text-chart-3 bg-chart-3/10",
+      value: contact.linkedinUrl,
+    },
+    {
+      key: "WhatsApp",
+      Icon: MessageCircle,
+      active: hasPhone,
+      activeClass: "text-success bg-success/10",
+      value: contact.phone,
+    },
     { key: "SMS", Icon: Smartphone, active: hasPhone, activeClass: "text-chart-3 bg-chart-3/10", value: contact.phone },
   ];
 
@@ -49,7 +61,12 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
     <div className="flex items-center gap-1">
       {icons.map(({ key, Icon, active, activeClass, value }) => (
         <InfoTooltip key={key} content={active ? `${key}: ${value}` : `${key} non disponibile`}>
-          <span className={cn("p-1 rounded-md transition-colors", active ? activeClass : "bg-muted/30 text-muted-foreground")}>
+          <span
+            className={cn(
+              "p-1 rounded-md transition-colors",
+              active ? activeClass : "bg-muted/30 text-muted-foreground",
+            )}
+          >
             <Icon className="w-3.5 h-3.5" />
           </span>
         </InfoTooltip>
@@ -61,10 +78,12 @@ function SmartChannelIcons({ contact }: { contact: Contact }) {
 function EnrichBadge({ icon, label, done }: { icon: React.ReactNode; label: string; done: boolean }) {
   return (
     <InfoTooltip content={`${label}: ${done ? "completato" : "mancante"}`}>
-      <span className={cn(
-        "flex items-center gap-0.5 text-[8px] font-medium px-1 py-0.5 rounded border",
-        done ? "bg-success/10 text-success border-success/20" : "bg-muted/30 text-muted-foreground border-border/20"
-      )}>
+      <span
+        className={cn(
+          "flex items-center gap-0.5 text-[8px] font-medium px-1 py-0.5 rounded border",
+          done ? "bg-success/10 text-success border-success/20" : "bg-muted/30 text-muted-foreground border-border/20",
+        )}
+      >
         {icon}
         {done ? <Check className="w-2 h-2" /> : <X className="w-2 h-2" />}
       </span>
@@ -80,11 +99,16 @@ interface CockpitContactMetricsProps {
   scrapingPhase?: string;
 }
 
-export function CockpitContactMetrics({ contact, assignment, hasLiveLinkedin, enrichmentState: _enrichmentState }: CockpitContactMetricsProps) {
+export function CockpitContactMetrics({
+  contact,
+  assignment,
+  hasLiveLinkedin,
+  enrichmentState: _enrichmentState,
+}: CockpitContactMetricsProps) {
   const oc = originConfig[contact.origin];
   const e = contact.enrichmentData;
   const hasLinkedin = hasLiveLinkedin || !!(e?.linkedin_url || e?.linkedin_profile_url || contact.linkedinUrl);
-  const hasWebsite = !!(e?.company_website);
+  const hasWebsite = !!e?.company_website;
   const hasAI = !!contact.deepSearchAt;
   const websiteDomain = (e?.company_website as string | undefined)?.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
 
@@ -106,7 +130,11 @@ export function CockpitContactMetrics({ contact, assignment, hasLiveLinkedin, en
                 const avatarSrc = resolveAgentAvatar(assignment.agentName, assignment.agentAvatar);
                 return avatarSrc ? (
                   <InfoTooltip content={`Agente: ${assignment.agentName}`}>
-                    <OptimizedImage src={avatarSrc} alt={assignment.agentName} className="w-4 h-4 rounded-full ring-1 ring-primary/30" />
+                    <OptimizedImage
+                      src={avatarSrc}
+                      alt={assignment.agentName}
+                      className="w-4 h-4 rounded-full ring-1 ring-primary/30"
+                    />
                   </InfoTooltip>
                 ) : (
                   <InfoTooltip content={`Agente: ${assignment.agentName}`}>
@@ -140,7 +168,9 @@ export function CockpitContactMetrics({ contact, assignment, hasLiveLinkedin, en
                 src={`https://www.google.com/s2/favicons?domain=${websiteDomain}&sz=32`}
                 alt="logo"
                 className="w-4 h-4 rounded-sm"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
               />
             </InfoTooltip>
           )}

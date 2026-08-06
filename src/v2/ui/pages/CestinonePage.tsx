@@ -35,7 +35,7 @@ export function CestinonePage(): React.ReactElement {
           onChange={(v) => s.setStatus(v as "pending" | "queued")}
           options={[
             { value: "pending", label: `Da approvare (${s.counts.byStatus.pending})` },
-            { value: "queued",  label: `In coda (${s.inCodaTotal})` },
+            { value: "queued", label: `In coda (${s.inCodaTotal})` },
           ]}
         />
         <div className="ml-auto flex items-center gap-2">
@@ -65,13 +65,20 @@ export function CestinonePage(): React.ReactElement {
             <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => s.handleBulkSnooze(60)}>
               <Clock className="h-3 w-3" /> Rinvia 1h
             </Button>
-            <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => s.handleBulkSnooze(60 * 24)}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1.5 text-xs"
+              onClick={() => s.handleBulkSnooze(60 * 24)}
+            >
               <Clock className="h-3 w-3" /> Rinvia 24h
             </Button>
             <Button size="sm" variant="destructive" className="h-7 gap-1.5 text-xs" onClick={s.handleBulkCancel}>
               <Trash2 className="h-3 w-3" /> Annulla {s.bulkIds.size}
             </Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={s.clearBulk}>Deseleziona</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={s.clearBulk}>
+              Deseleziona
+            </Button>
           </div>
         </div>
       )}

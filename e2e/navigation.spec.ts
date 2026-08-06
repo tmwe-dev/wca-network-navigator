@@ -6,7 +6,7 @@ test.describe("Navigation Smoke Tests", () => {
     page.on("pageerror", (err) => errors.push(err.message));
     await page.goto("/");
     await page.waitForTimeout(2000);
-    expect(errors.filter(e => !e.includes("net::ERR"))).toHaveLength(0);
+    expect(errors.filter((e) => !e.includes("net::ERR"))).toHaveLength(0);
   });
 
   test("/auth is accessible and renders form", async ({ page }) => {

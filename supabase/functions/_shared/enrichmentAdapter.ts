@@ -69,10 +69,7 @@ function daysSince(iso: string | null | undefined): number | null {
  * Carica una vista unificata dell'arricchimento per un partner.
  * Non lancia: ritorna struttura vuota se il partner manca o la query fallisce.
  */
-export async function readUnifiedEnrichment(
-  partnerId: string,
-  supabase: SupabaseClient,
-): Promise<UnifiedEnrichment> {
+export async function readUnifiedEnrichment(partnerId: string, supabase: SupabaseClient): Promise<UnifiedEnrichment> {
   let ed: Record<string, unknown> = {};
   try {
     const { data: partner } = await supabase
@@ -80,7 +77,10 @@ export async function readUnifiedEnrichment(
       .select("enrichment_data")
       .eq("id", partnerId)
       .maybeSingle();
-    ed = ((partner as { enrichment_data?: Record<string, unknown> } | null)?.enrichment_data || {}) as Record<string, unknown>;
+    ed = ((partner as { enrichment_data?: Record<string, unknown> } | null)?.enrichment_data || {}) as Record<
+      string,
+      unknown
+    >;
   } catch (e) {
     console.warn("[enrichmentAdapter] partner read failed:", e instanceof Error ? e.message : e);
   }
@@ -101,9 +101,8 @@ export async function readUnifiedEnrichment(
     // Sherlock optional — silently ignore
   }
 
-  const websiteExcerpt = (ed.website_excerpt && typeof ed.website_excerpt === "object")
-    ? (ed.website_excerpt as WebsiteExcerpt)
-    : null;
+  const websiteExcerpt =
+    ed.website_excerpt && typeof ed.website_excerpt === "object" ? (ed.website_excerpt as WebsiteExcerpt) : null;
   const contactProfilesRaw = ed.contact_profiles;
   const contactProfiles: ContactProfileLite[] | null = Array.isArray(contactProfilesRaw)
     ? (contactProfilesRaw as ContactProfileLite[])
@@ -120,14 +119,21 @@ export async function readUnifiedEnrichment(
   const deepSearchAt = typeof ed.deep_search_at === "string" ? ed.deep_search_at : null;
   const deepSearchEngine = typeof ed.deep_search_engine === "string" ? ed.deep_search_engine : null;
   const websiteQualityScore = typeof ed.website_quality_score === "number" ? ed.website_quality_score : null;
-  const baseEnrichedAt = typeof ed.base_enriched_at === "string"
-    ? ed.base_enriched_at
-    : (typeof ed.website_scraped_at === "string" ? ed.website_scraped_at : null);
+  const baseEnrichedAt =
+    typeof ed.base_enriched_at === "string"
+      ? ed.base_enriched_at
+      : typeof ed.website_scraped_at === "string"
+        ? ed.website_scraped_at
+        : null;
 
   const sr: SherlockRow | null = sherlockRow;
   const has_any = !!(
-    baseLinkedinUrl || websiteExcerpt || contactProfiles?.length ||
-    websiteSummary || linkedinSummary || deepSearchSummary ||
+    baseLinkedinUrl ||
+    websiteExcerpt ||
+    contactProfiles?.length ||
+    websiteSummary ||
+    linkedinSummary ||
+    deepSearchSummary ||
     sr?.summary
   );
 
@@ -176,11 +182,12 @@ export function formatEnrichmentForPrompt(
   e: UnifiedEnrichment,
   quality: "fast" | "standard" | "premium" = "standard",
 ): string {
-  const limits = quality === "premium"
-    ? { site: 2500, linkedin: 1500, sherlock: 3000, reputation: 1200, legacy: 1500, contacts: 15 }
-    : quality === "fast"
-      ? { site: 600, linkedin: 400, sherlock: 600, reputation: 300, legacy: 400, contacts: 5 }
-      : { site: 1500, linkedin: 800, sherlock: 1500, reputation: 700, legacy: 800, contacts: 8 };
+  const limits =
+    quality === "premium"
+      ? { site: 2500, linkedin: 1500, sherlock: 3000, reputation: 1200, legacy: 1500, contacts: 15 }
+      : quality === "fast"
+        ? { site: 600, linkedin: 400, sherlock: 600, reputation: 300, legacy: 400, contacts: 5 }
+        : { site: 1500, linkedin: 800, sherlock: 1500, reputation: 700, legacy: 800, contacts: 8 };
 
   const blocks: string[] = [];
 
@@ -202,7 +209,9 @@ export function formatEnrichmentForPrompt(
   // 2. LinkedIn (legacy summary ha priorità su URL nudo)
   const linkedinInfo = e.legacy.linkedin_summary
     ? String(e.legacy.linkedin_summary).slice(0, limits.linkedin)
-    : (e.base.linkedin_url ? `LinkedIn azienda: ${e.base.linkedin_url}` : null);
+    : e.base.linkedin_url
+      ? `LinkedIn azienda: ${e.base.linkedin_url}`
+      : null;
   if (linkedinInfo) blocks.push(`PROFILO LINKEDIN:\n${linkedinInfo}`);
 
   // 3. Contatti chiave
@@ -221,9 +230,7 @@ export function formatEnrichmentForPrompt(
 
   // 4. Reputazione
   if (e.deep.reputation) {
-    const rep = typeof e.deep.reputation === "string"
-      ? e.deep.reputation
-      : JSON.stringify(e.deep.reputation);
+    const rep = typeof e.deep.reputation === "string" ? e.deep.reputation : JSON.stringify(e.deep.reputation);
     blocks.push(`REPUTAZIONE ONLINE:\n${rep.slice(0, limits.reputation)}`);
   }
 
@@ -234,7 +241,9 @@ export function formatEnrichmentForPrompt(
 
   // 6. Sherlock summary
   if (e.sherlock.summary) {
-    blocks.push(`INDAGINE SHERLOCK (riassunto investigativo):\n${String(e.sherlock.summary).slice(0, limits.sherlock)}`);
+    blocks.push(
+      `INDAGINE SHERLOCK (riassunto investigativo):\n${String(e.sherlock.summary).slice(0, limits.sherlock)}`,
+    );
   }
 
   // 7. Legacy deep search summary (solo se non c'è nulla di meglio)
@@ -250,17 +259,11 @@ export function formatEnrichmentForPrompt(
  * Invocato da enrich-partner-website, deep-search-partner, sherlock investigation.
  * Non lancia in caso di errore: log warning e continua.
  */
-export async function triggerQualityScoreRecalculation(
-  supabase: SupabaseClient,
-  partnerId: string,
-): Promise<void> {
+export async function triggerQualityScoreRecalculation(supabase: SupabaseClient, partnerId: string): Promise<void> {
   try {
     const { calculateAndSavePartnerQuality } = await import("./partnerQualityScore.ts");
     await calculateAndSavePartnerQuality(supabase, partnerId);
   } catch (e) {
-    console.warn(
-      "[enrichment] Quality score calculation failed:",
-      e instanceof Error ? e.message : String(e),
-    );
+    console.warn("[enrichment] Quality score calculation failed:", e instanceof Error ? e.message : String(e));
   }
 }

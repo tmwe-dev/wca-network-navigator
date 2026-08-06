@@ -21,9 +21,7 @@ const PAGE = 1000;
 
 export function useMailboxSenderAllowlist() {
   const { activeMailbox } = useActiveMailbox();
-  const mailboxKey = activeMailbox
-    ? `${activeMailbox.kind}:${activeMailbox.mailbox_id}`
-    : "none";
+  const mailboxKey = activeMailbox ? `${activeMailbox.kind}:${activeMailbox.mailbox_id}` : "none";
 
   const query = useQuery({
     queryKey: ["mailbox-sender-allowlist", mailboxKey],
@@ -34,10 +32,11 @@ export function useMailboxSenderAllowlist() {
       let offset = 0;
       // Loop paginato per superare il limite di 1000 di Supabase.
       // Eseguiamo SELECT ridotto a from_address e dedupliamo client-side.
-       
+
       while (true) {
         const batch = await findInboundEmailFromAddressesPage({
-          mailboxFilter: activeMailbox?.kind === "personal" ? "personal" : activeMailbox?.kind === "shared" ? "shared" : null,
+          mailboxFilter:
+            activeMailbox?.kind === "personal" ? "personal" : activeMailbox?.kind === "shared" ? "shared" : null,
           mailboxId: activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null,
           offset,
           pageSize: PAGE,

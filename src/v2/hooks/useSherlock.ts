@@ -14,12 +14,7 @@ import {
 } from "@/data/sherlockPlaybooks";
 import { runAgenticSherlock } from "@/v2/services/sherlock/agenticEngine";
 import { invalidateEnrichmentCaches } from "@/lib/enrichmentCacheInvalidation";
-import type {
-  SherlockLevel,
-  SherlockStepResult,
-  SherlockPlaybook,
-} from "@/v2/services/sherlock/sherlockTypes";
-
+import type { SherlockLevel, SherlockStepResult, SherlockPlaybook } from "@/v2/services/sherlock/sherlockTypes";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("useSherlock");
@@ -75,7 +70,9 @@ export function useSherlock(args: UseSherlockArgs) {
     async (level: SherlockLevel) => {
       if (running) return;
 
-      const { data: userData } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+      const { data: userData } = await supabase.auth
+        .getSession()
+        .then((r) => ({ data: { user: r.data.session?.user ?? null } }));
       const userId = userData.user?.id;
       if (!userId) {
         toast.error("Sessione utente non disponibile");

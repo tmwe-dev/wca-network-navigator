@@ -36,10 +36,7 @@ export interface TokenByFunctionRow {
 }
 
 export async function findTokenTotalsSince(sinceIso: string): Promise<TokenTotalRow[]> {
-  const { data } = await supabase
-    .from("ai_prompt_log")
-    .select("tokens_total")
-    .gte("created_at", sinceIso);
+  const { data } = await supabase.from("ai_prompt_log").select("tokens_total").gte("created_at", sinceIso);
   return data ?? [];
 }
 
@@ -52,7 +49,9 @@ export async function findTokenLimitSettings(userId: string): Promise<TokenLimit
   return data ?? [];
 }
 
-export async function findRecentTokenUsageRows(limit: number): Promise<{ data: TokenUsageLogRow[] | null; error: { message: string } | null }> {
+export async function findRecentTokenUsageRows(
+  limit: number,
+): Promise<{ data: TokenUsageLogRow[] | null; error: { message: string } | null }> {
   const { data, error } = await supabase
     .from("ai_prompt_log")
     .select("id, function_name, model, tokens_in, tokens_out, tokens_total, cost_usd, created_at")
@@ -61,7 +60,9 @@ export async function findRecentTokenUsageRows(limit: number): Promise<{ data: T
   return { data, error };
 }
 
-export async function findTokenSeriesSince(sinceIso: string): Promise<{ data: TokenSeriesRow[] | null; error: { message: string } | null }> {
+export async function findTokenSeriesSince(
+  sinceIso: string,
+): Promise<{ data: TokenSeriesRow[] | null; error: { message: string } | null }> {
   const { data, error } = await supabase
     .from("ai_prompt_log")
     .select("tokens_total, created_at")
@@ -70,7 +71,9 @@ export async function findTokenSeriesSince(sinceIso: string): Promise<{ data: To
   return { data, error };
 }
 
-export async function findTokensByFunctionSince(sinceIso: string): Promise<{ data: TokenByFunctionRow[] | null; error: { message: string } | null }> {
+export async function findTokensByFunctionSince(
+  sinceIso: string,
+): Promise<{ data: TokenByFunctionRow[] | null; error: { message: string } | null }> {
   const { data, error } = await supabase
     .from("ai_prompt_log")
     .select("function_name, tokens_total")

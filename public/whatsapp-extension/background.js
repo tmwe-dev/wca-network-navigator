@@ -13,7 +13,7 @@ try {
     "ai-bridge.js",
     "ai-extract.js",
     "optimus-client.js",
-    "actions.js"
+    "actions.js",
   );
 } catch (e) {
   console.error("[WA-EXT] Module import failed:", e);
@@ -36,19 +36,30 @@ function _checkModules() {
 var _modulesLoaded = _checkModules();
 
 if (!_modulesLoaded) {
-  console.error("[WA-EXT] One or more modules failed to load.",
-    "Config:", !!globalThis.Config,
-    "TabManager:", !!globalThis.TabManager,
-    "Discovery:", !!globalThis.Discovery,
-    "AiBridge:", !!globalThis.AiBridge,
-    "AiExtract:", !!globalThis.AiExtract,
-    "Actions:", !!globalThis.Actions);
+  console.error(
+    "[WA-EXT] One or more modules failed to load.",
+    "Config:",
+    !!globalThis.Config,
+    "TabManager:",
+    !!globalThis.TabManager,
+    "Discovery:",
+    !!globalThis.Discovery,
+    "AiBridge:",
+    !!globalThis.AiBridge,
+    "AiExtract:",
+    !!globalThis.AiExtract,
+    "Actions:",
+    !!globalThis.Actions,
+  );
 }
 
 // ── Action registry ──
 var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    var w = (typeof TabManager !== "undefined" && TabManager.getWorkerInfo) ? TabManager.getWorkerInfo() : { id: null, ready: false };
+    var w =
+      typeof TabManager !== "undefined" && TabManager.getWorkerInfo
+        ? TabManager.getWorkerInfo()
+        : { id: null, ready: false };
     sendResponse({
       success: true,
       version: chrome.runtime.getManifest().version,
@@ -72,8 +83,11 @@ var ACTION_HANDLERS = {
 
   verifySession: function (msg, sendResponse) {
     TabManager.enqueueSession(async function () {
-      try { sendResponse(await Actions.verifySession()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.SESSION_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.verifySession());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.SESSION_FAILED, err.message));
+      }
     });
     return true;
   },
@@ -84,32 +98,44 @@ var ACTION_HANDLERS = {
       return false;
     }
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.sendWhatsAppMessage(msg.phone, msg.text)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.SEND_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.sendWhatsAppMessage(msg.phone, msg.text));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.SEND_FAILED, err.message));
+      }
     });
     return true;
   },
 
   readUnread: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.readUnreadMessages()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.READ_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.readUnreadMessages());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.READ_FAILED, err.message));
+      }
     });
     return true;
   },
 
   learnDom: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await AiExtract.learnDomSelectors()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.LEARN_FAILED, err.message)); }
+      try {
+        sendResponse(await AiExtract.learnDomSelectors());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.LEARN_FAILED, err.message));
+      }
     });
     return true;
   },
 
   diagnosticDom: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.diagnostic()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.DIAGNOSTIC_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.diagnostic());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.DIAGNOSTIC_FAILED, err.message));
+      }
     });
     return true;
   },
@@ -120,8 +146,11 @@ var ACTION_HANDLERS = {
       return false;
     }
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.readThread(msg.contact, msg.maxMessages || 50)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.THREAD_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.readThread(msg.contact, msg.maxMessages || 50));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.THREAD_FAILED, err.message));
+      }
     });
     return true;
   },
@@ -132,26 +161,35 @@ var ACTION_HANDLERS = {
       return false;
     }
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.backfillChat(msg.contact, msg.lastKnownText || "", msg.maxScrolls || 30)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.BACKFILL_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.backfillChat(msg.contact, msg.lastKnownText || "", msg.maxScrolls || 30));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.BACKFILL_FAILED, err.message));
+      }
     });
     return true;
   },
 
   remapSendDom: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.remapSendDom()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message)); }
+      try {
+        sendResponse(await Actions.remapSendDom());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message));
+      }
     });
     return true;
   },
 
   getSendPlan: function (msg, sendResponse) {
-    chrome.storage.local.get("wa_send_plan").then(function (r) {
-      sendResponse({ success: true, plan: r.wa_send_plan || null });
-    }).catch(function (err) {
-      sendResponse({ success: false, error: err.message });
-    });
+    chrome.storage.local
+      .get("wa_send_plan")
+      .then(function (r) {
+        sendResponse({ success: true, plan: r.wa_send_plan || null });
+      })
+      .catch(function (err) {
+        sendResponse({ success: false, error: err.message });
+      });
     return true;
   },
 
@@ -205,7 +243,11 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.source !== "wa-content-bridge") return false;
 
   if (!_modulesLoaded) {
-    sendResponse({ success: false, error: "Extension modules not loaded — reinstall extension", errorCode: "ERR_MODULES" });
+    sendResponse({
+      success: false,
+      error: "Extension modules not loaded — reinstall extension",
+      errorCode: "ERR_MODULES",
+    });
     return false;
   }
 

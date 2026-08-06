@@ -12,6 +12,9 @@ export async function countUnreadInboundEmails(): Promise<{ count: number; error
 }
 
 export async function markChannelMessageAsRead(messageId: string): Promise<void> {
-  const { error } = await supabase.from("channel_messages").update({ read_at: new Date().toISOString() }).eq("id", messageId);
+  const { error } = await supabase
+    .from("channel_messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", messageId);
   if (error) throw error;
 }

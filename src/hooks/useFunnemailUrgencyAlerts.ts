@@ -27,32 +27,34 @@ export function useFunnemailUrgencyAlerts(): void {
 
   useEffect(() => {
     let optedOut = false;
-    try { optedOut = localStorage.getItem("funnemail_urgency_alerts") === "off"; } catch { /* ignore */ }
+    try {
+      optedOut = localStorage.getItem("funnemail_urgency_alerts") === "off";
+    } catch {
+      /* ignore */
+    }
     if (optedOut) return;
 
     const channel = supabase
       .channel("funnemail_urgency_alerts")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "funnemail_decisions" },
-        (payload) => {
-          const row = payload.new as DecisionInsert;
-          if (!row?.id || seenRef.current.has(row.id)) return;
-          if (row.urgency !== "critical" && row.urgency !== "high") return;
-          seenRef.current.add(row.id);
-          const sender = row.from_address?.replace(/<[^>]+>/g, "").trim() || row.from_address || "Mittente sconosciuto";
-          const isCritical = row.urgency === "critical";
-          toast(isCritical ? `🔴 Email critica` : `🟠 Email ad alta priorità`, {
-            description: `${sender}${row.reasoning ? ` — ${row.reasoning.slice(0, 120)}` : ""}`,
-            duration: isCritical ? 15000 : 8000,
-            action: {
-              label: "Apri",
-              onClick: () => { window.location.href = "/v2/funnemail-inbox"; },
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "funnemail_decisions" }, (payload) => {
+        const row = payload.new as DecisionInsert;
+        if (!row?.id || seenRef.current.has(row.id)) return;
+        if (row.urgency !== "critical" && row.urgency !== "high") return;
+        seenRef.current.add(row.id);
+        const sender = row.from_address?.replace(/<[^>]+>/g, "").trim() || row.from_address || "Mittente sconosciuto";
+        const isCritical = row.urgency === "critical";
+        toast(isCritical ? `🔴 Email critica` : `🟠 Email ad alta priorità`, {
+          description: `${sender}${row.reasoning ? ` — ${row.reasoning.slice(0, 120)}` : ""}`,
+          duration: isCritical ? 15000 : 8000,
+          action: {
+            label: "Apri",
+            onClick: () => {
+              window.location.href = "/v2/funnemail-inbox";
             },
-          });
-          qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
-        },
-      )
+          },
+        });
+        qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
+      })
       .subscribe();
     subRef.current = channel;
 

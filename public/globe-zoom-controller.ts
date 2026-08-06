@@ -1,28 +1,28 @@
 /**
  * Globe Zoom Controller - Standalone hook for React Three Fiber
- * 
+ *
  * Gestisce zoom cinematografico, auto-rotazione e reset fluido per un globo 3D.
- * 
+ *
  * Dipendenze: three (>=0.133), @react-three/fiber (^8.18)
- * 
+ *
  * Uso:
  *   import { useGlobeZoom } from './globe-zoom-controller';
- * 
+ *
  *   function Earth() {
  *     const earthRef = useRef<THREE.Group>(null);
  *     const { camera } = useThree();
  *     const { zoomTo, resetZoom, applyFrame, onUserInteract } = useGlobeZoom();
- * 
+ *
  *     useFrame((state, delta) => {
  *       applyFrame(earthRef, camera, state.clock.elapsedTime, delta);
  *     });
- * 
+ *
  *     // Zoom verso Roma
  *     zoomTo({ lat: 41.9, lng: 12.5 });
- * 
+ *
  *     // Reset allo stato iniziale
  *     resetZoom();
- * 
+ *
  *     // Chiamare quando l'utente interagisce (drag/scroll)
  *     <OrbitControls onStart={onUserInteract} />
  *   }
@@ -65,7 +65,7 @@ export interface GlobeZoomController {
     groupRef: React.RefObject<THREE.Group>,
     camera: THREE.Camera,
     elapsedTime: number,
-    delta: number
+    delta: number,
   ) => void;
   /** Da passare a OrbitControls onStart per tracciare l'interazione utente */
   onUserInteract: () => void;
@@ -135,15 +135,18 @@ export function useGlobeZoom(options: GlobeZoomOptions = {}): GlobeZoomControlle
   const resetStartRotation = useRef({ x: 0, y: 0 });
 
   /** Zooma verso una coordinata */
-  const zoomTo = useCallback((target: LatLng) => {
-    userInteracting.current = false;
-    isResetting.current = false;
-    hasTarget.current = true;
+  const zoomTo = useCallback(
+    (target: LatLng) => {
+      userInteracting.current = false;
+      isResetting.current = false;
+      hasTarget.current = true;
 
-    const rot = latLngToRotation(target.lat, target.lng);
-    targetRotation.current = rot;
-    targetZoom.current = zoomedIn;
-  }, [zoomedIn]);
+      const rot = latLngToRotation(target.lat, target.lng);
+      targetRotation.current = rot;
+      targetZoom.current = zoomedIn;
+    },
+    [zoomedIn],
+  );
 
   /** Reset fluido allo stato iniziale */
   const resetZoom = useCallback(() => {
@@ -162,70 +165,68 @@ export function useGlobeZoom(options: GlobeZoomOptions = {}): GlobeZoomControlle
   }, []);
 
   /** Da chiamare ogni frame in useFrame() */
-  const applyFrame = useCallback((
-    groupRef: React.RefObject<THREE.Group>,
-    camera: THREE.Camera,
-    elapsedTime: number,
-    delta: number
-  ) => {
-    const group = groupRef.current;
-    if (!group) return;
+  const applyFrame = useCallback(
+    (groupRef: React.RefObject<THREE.Group>, camera: THREE.Camera, elapsedTime: number, delta: number) => {
+      const group = groupRef.current;
+      if (!group) return;
 
-    // --- Reset cinematografico ---
-    if (isResetting.current) {
-      if (resetStartTime.current === 0) {
-        resetStartTime.current = elapsedTime;
+      // --- Reset cinematografico ---
+      if (isResetting.current) {
+        if (resetStartTime.current === 0) {
+          resetStartTime.current = elapsedTime;
+        }
+
+        const elapsed = elapsedTime - resetStartTime.current;
+        const progress = Math.min(elapsed / resetDuration, 1);
+        const eased = easeInOutCubic(progress);
+
+        // Rotazione: torna a neutro + riprendi auto-rotazione gradualmente
+        currentRotation.current.x = resetStartRotation.current.x * (1 - eased);
+        currentRotation.current.y = resetStartRotation.current.y + delta * rotationSpeed * eased;
+
+        // Zoom: interpola verso defaultZoom
+        const z = resetStartZoom.current + (defaultZoom - resetStartZoom.current) * eased;
+        camera.position.z = z;
+
+        if (progress >= 1) {
+          isResetting.current = false;
+          userInteracting.current = false;
+          resetStartTime.current = 0;
+        }
+      }
+      // --- Auto-rotazione (idle) ---
+      else if (!hasTarget.current && !userInteracting.current) {
+        currentRotation.current.y += delta * rotationSpeed;
+
+        // Zoom fluido verso default
+        const diff = defaultZoom - camera.position.z;
+        camera.position.z += diff * zoomLerpFactor;
+      }
+      // --- Zoom verso target ---
+      else if (hasTarget.current && !userInteracting.current) {
+        // Rotazione smooth verso target
+        currentRotation.current.x = THREE.MathUtils.lerp(
+          currentRotation.current.x,
+          targetRotation.current.x,
+          lerpFactor,
+        );
+        currentRotation.current.y = THREE.MathUtils.lerp(
+          currentRotation.current.y,
+          targetRotation.current.y,
+          lerpFactor,
+        );
+
+        // Zoom smooth
+        const diff = targetZoom.current - camera.position.z;
+        camera.position.z += diff * zoomLerpFactor;
       }
 
-      const elapsed = elapsedTime - resetStartTime.current;
-      const progress = Math.min(elapsed / resetDuration, 1);
-      const eased = easeInOutCubic(progress);
-
-      // Rotazione: torna a neutro + riprendi auto-rotazione gradualmente
-      currentRotation.current.x = resetStartRotation.current.x * (1 - eased);
-      currentRotation.current.y = resetStartRotation.current.y + delta * rotationSpeed * eased;
-
-      // Zoom: interpola verso defaultZoom
-      const z = resetStartZoom.current + (defaultZoom - resetStartZoom.current) * eased;
-      camera.position.z = z;
-
-      if (progress >= 1) {
-        isResetting.current = false;
-        userInteracting.current = false;
-        resetStartTime.current = 0;
-      }
-    }
-    // --- Auto-rotazione (idle) ---
-    else if (!hasTarget.current && !userInteracting.current) {
-      currentRotation.current.y += delta * rotationSpeed;
-
-      // Zoom fluido verso default
-      const diff = defaultZoom - camera.position.z;
-      camera.position.z += diff * zoomLerpFactor;
-    }
-    // --- Zoom verso target ---
-    else if (hasTarget.current && !userInteracting.current) {
-      // Rotazione smooth verso target
-      currentRotation.current.x = THREE.MathUtils.lerp(
-        currentRotation.current.x,
-        targetRotation.current.x,
-        lerpFactor
-      );
-      currentRotation.current.y = THREE.MathUtils.lerp(
-        currentRotation.current.y,
-        targetRotation.current.y,
-        lerpFactor
-      );
-
-      // Zoom smooth
-      const diff = targetZoom.current - camera.position.z;
-      camera.position.z += diff * zoomLerpFactor;
-    }
-
-    // Applica rotazione al gruppo
-    group.rotation.x = currentRotation.current.x;
-    group.rotation.y = currentRotation.current.y;
-  }, [defaultZoom, rotationSpeed, lerpFactor, zoomLerpFactor, resetDuration]);
+      // Applica rotazione al gruppo
+      group.rotation.x = currentRotation.current.x;
+      group.rotation.y = currentRotation.current.y;
+    },
+    [defaultZoom, rotationSpeed, lerpFactor, zoomLerpFactor, resetDuration],
+  );
 
   return {
     zoomTo,

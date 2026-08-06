@@ -3,6 +3,7 @@ name: AI Query Planner Multi-Entity
 description: Il fast-lane query planner ritorna 1..N piani per gestire prompt multi-entità (es. "quanti partner E contatti"). Output sempre {plans:[...]}, executor in parallelo via Promise.allSettled, ToolResult kind:"multi" con parts[]. Audit mostra N step paralleli.
 type: feature
 ---
+
 ## Cosa cambia
 
 `supabase/functions/ai-query-planner` ora produce SEMPRE `{ plans: [...] }` (1..N, cap 4). Singola entità → 1 piano (retro-compatibile, comportamento UI identico). Multi entità → N piani eseguiti in parallelo.

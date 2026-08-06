@@ -39,7 +39,6 @@ export function useMissionDrawerEvents(config: MissionEventConfig) {
     return () => {
       wrapped.forEach(([name, fn]) => window.removeEventListener(name, fn));
     };
-     
   }, []);
 
   // navigate disponibile per consumer

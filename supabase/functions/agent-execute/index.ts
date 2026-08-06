@@ -84,7 +84,7 @@ serve(async (req) => {
       contextBlock,
       learningBlock,
       missionBlock,
-      userId
+      userId,
     );
 
     // ━━━ TOOL FILTERING ━━━
@@ -106,7 +106,7 @@ serve(async (req) => {
         agent.name as string,
         userId,
         authHeader,
-        (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY")) || ""
+        Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY") || "",
       );
       endMetrics(metrics, true, 200);
       return new Response(response.body, {
@@ -140,8 +140,8 @@ serve(async (req) => {
       try {
         // Handle special task types
         if (task.task_type === "state_transition") {
-           const result = await handleStateTransition(supabase, task, task_id, agent_id, agent.name as string, userId);
-           endMetrics(metrics, true, 200);
+          const result = await handleStateTransition(supabase, task, task_id, agent_id, agent.name as string, userId);
+          endMetrics(metrics, true, 200);
           return new Response(JSON.stringify(result), {
             headers: { ...dynCors, "Content-Type": "application/json" },
           });
@@ -158,7 +158,7 @@ serve(async (req) => {
           agent.name as string,
           userId,
           authHeader,
-          (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY")) || ""
+          Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY") || "",
         );
 
         endMetrics(metrics, true, 200);
@@ -169,11 +169,13 @@ serve(async (req) => {
         console.error("Task execution error:", taskErr);
         endMetrics(metrics, false, 500);
         return new Response(
-          JSON.stringify({ error: taskErr instanceof Error ? taskErr.message : "Errore durante l'esecuzione del task" }),
+          JSON.stringify({
+            error: taskErr instanceof Error ? taskErr.message : "Errore durante l'esecuzione del task",
+          }),
           {
             status: 500,
             headers: { ...dynCors, "Content-Type": "application/json" },
-          }
+          },
         );
       }
     }

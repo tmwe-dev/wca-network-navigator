@@ -29,7 +29,7 @@ describe("PermissionGate Component", () => {
       render(
         <PermissionGate permission="create_user">
           <div>Protected Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText("Protected Content")).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe("PermissionGate Component", () => {
       render(
         <PermissionGate permission="create_user">
           <div>Protected Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
@@ -61,7 +61,7 @@ describe("PermissionGate Component", () => {
       render(
         <PermissionGate permission="delete_user">
           <div>Protected Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText(/Non hai il permesso/i)).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("PermissionGate Component", () => {
       render(
         <PermissionGate permission="delete_user" fallback={<div>Access Denied</div>}>
           <div>Protected Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText("Access Denied")).toBeInTheDocument();
@@ -94,7 +94,7 @@ describe("PermissionGate Component", () => {
       const { container } = render(
         <PermissionGate permission="create_user">
           <div>Protected Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       const spinner = container.querySelector(".animate-spin");
@@ -112,7 +112,7 @@ describe("PermissionGate Component", () => {
       render(
         <PermissionGate permission="specific_permission">
           <div>Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(useHasPermission).toHaveBeenCalledWith("specific_permission");
@@ -130,7 +130,7 @@ describe("PermissionGate Component", () => {
           <div>Component A</div>
           <div>Component B</div>
           <div>Component C</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText("Component A")).toBeInTheDocument();
@@ -150,7 +150,7 @@ describe("PermissionGate Component", () => {
       render(
         <PermissionGate permission="admin_panel" fallback={<CustomFallback />}>
           <div>Admin Panel</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText("Custom Fallback Message")).toBeInTheDocument();
@@ -176,7 +176,7 @@ describe("PermissionGate Component", () => {
           <PermissionGate permission="perm2" fallback={<div>No Level 2</div>}>
             <div>Level 2</div>
           </PermissionGate>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText("Level 1")).toBeInTheDocument();
@@ -185,7 +185,6 @@ describe("PermissionGate Component", () => {
     });
 
     it("should update when permission changes", () => {
-
       vi.mocked(useHasPermission).mockReturnValue({
         hasPermission: false,
         isLoading: false,
@@ -195,7 +194,7 @@ describe("PermissionGate Component", () => {
       const { rerender: rerenderComponent } = render(
         <PermissionGate permission="test_perm">
           <div>Protected</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.queryByText("Protected")).not.toBeInTheDocument();
@@ -209,7 +208,7 @@ describe("PermissionGate Component", () => {
       rerenderComponent(
         <PermissionGate permission="test_perm">
           <div>Protected</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText("Protected")).toBeInTheDocument();
@@ -225,7 +224,7 @@ describe("PermissionGate Component", () => {
       const { container } = render(
         <PermissionGate permission="create_user">
           <div>Protected Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       const spinner = container.querySelector(".animate-spin");
@@ -242,7 +241,7 @@ describe("PermissionGate Component", () => {
       const { container } = render(
         <PermissionGate permission="sensitive_action">
           <div>Sensitive Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       const alertElement = container.querySelector('[class*="destructive"]');
@@ -261,7 +260,7 @@ describe("PermissionGate Component", () => {
       render(
         <RequirePermission permission="edit_users">
           <div>Edit Users Form</div>
-        </RequirePermission>
+        </RequirePermission>,
       );
 
       expect(screen.getByText("Edit Users Form")).toBeInTheDocument();
@@ -277,7 +276,7 @@ describe("PermissionGate Component", () => {
       render(
         <RequirePermission permission="edit_users">
           <div>Edit Users Form</div>
-        </RequirePermission>
+        </RequirePermission>,
       );
 
       expect(screen.queryByText("Edit Users Form")).not.toBeInTheDocument();
@@ -293,7 +292,7 @@ describe("PermissionGate Component", () => {
       const { container } = render(
         <RequirePermission permission="edit_users">
           <div>Edit Users Form</div>
-        </RequirePermission>
+        </RequirePermission>,
       );
 
       const spinner = container.querySelector(".animate-spin");
@@ -310,7 +309,7 @@ describe("PermissionGate Component", () => {
       render(
         <RequirePermission permission="test_permission">
           <div>Test Content</div>
-        </RequirePermission>
+        </RequirePermission>,
       );
 
       expect(useHasPermission).toHaveBeenCalledWith("test_permission");
@@ -329,7 +328,7 @@ describe("PermissionGate Component", () => {
       render(
         <RequirePermission permission="perm">
           <TestComponent />
-        </RequirePermission>
+        </RequirePermission>,
       );
 
       expect(screen.getByText("Rendered")).toBeInTheDocument();
@@ -347,7 +346,7 @@ describe("PermissionGate Component", () => {
       render(
         <PermissionGate permission="perm:scope/action">
           <div>Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(useHasPermission).toHaveBeenCalledWith("perm:scope/action");
@@ -364,7 +363,7 @@ describe("PermissionGate Component", () => {
       render(
         <PermissionGate permission="test" fallback="">
           <div>Protected</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.queryByText("Protected")).not.toBeInTheDocument();
@@ -377,11 +376,7 @@ describe("PermissionGate Component", () => {
         error: null,
       } as any);
 
-      const { container } = render(
-        <PermissionGate permission="test">
-          {null}
-        </PermissionGate>
-      );
+      const { container } = render(<PermissionGate permission="test">{null}</PermissionGate>);
 
       expect(container.innerHTML).toContain("");
     });
@@ -396,7 +391,7 @@ describe("PermissionGate Component", () => {
       const { rerender } = render(
         <PermissionGate permission="test_perm">
           <div>Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText("Content")).toBeInTheDocument();
@@ -404,7 +399,7 @@ describe("PermissionGate Component", () => {
       rerender(
         <PermissionGate permission="test_perm">
           <div>Updated Content</div>
-        </PermissionGate>
+        </PermissionGate>,
       );
 
       expect(screen.getByText("Updated Content")).toBeInTheDocument();

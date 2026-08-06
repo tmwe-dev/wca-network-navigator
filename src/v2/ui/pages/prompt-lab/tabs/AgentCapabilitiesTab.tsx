@@ -14,23 +14,37 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
-} from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Loader2, Save, Shield, ListChecks, Ban } from "lucide-react";
 import { useAgentCapabilities } from "../hooks/useAgentCapabilities";
 import { listAgentsForCapabilities } from "@/data/agentsForPromptLab";
 import { queryKeys } from "@/lib/queryKeys";
 
 const TOOL_REGISTRY = [
-  "navigate", "read_page", "read_dom", "read_table",
-  "click", "type_text", "wait_for", "scroll_to",
-  "select_option", "upload_file", "submit_form", "take_snapshot",
-  "list_kb", "read_kb", "scrape_url",
-  "send_email", "send_whatsapp", "send_linkedin",
-  "execute_bulk_outreach", "schedule_campaign",
-  "update_partner_status_bulk", "update_contact_status_bulk",
-  "ask_user", "finish",
+  "navigate",
+  "read_page",
+  "read_dom",
+  "read_table",
+  "click",
+  "type_text",
+  "wait_for",
+  "scroll_to",
+  "select_option",
+  "upload_file",
+  "submit_form",
+  "take_snapshot",
+  "list_kb",
+  "read_kb",
+  "scrape_url",
+  "send_email",
+  "send_whatsapp",
+  "send_linkedin",
+  "execute_bulk_outreach",
+  "schedule_campaign",
+  "update_partner_status_bulk",
+  "update_contact_status_bulk",
+  "ask_user",
+  "finish",
 ] as const;
 
 const EXEC_MODES = [
@@ -62,8 +76,7 @@ export function AgentCapabilitiesTab() {
     }
   }, [agentsQuery.data, selectedAgentId]);
 
-  const { capabilities, loading, saving, save, draft, setDraft, dirty } =
-    useAgentCapabilities(selectedAgentId);
+  const { capabilities, loading, saving, save, draft, setDraft, dirty } = useAgentCapabilities(selectedAgentId);
 
   const selectedAgent = useMemo(
     () => agentsQuery.data?.find((a) => a.id === selectedAgentId) ?? null,
@@ -86,7 +99,9 @@ export function AgentCapabilitiesTab() {
       <Card className="p-3">
         <Label className="text-xs">Agente</Label>
         <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-          <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 mt-1">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             {agentsQuery.data.map((a) => (
               <SelectItem key={a.id} value={a.id}>
@@ -97,8 +112,8 @@ export function AgentCapabilitiesTab() {
         </Select>
         {selectedAgent && (
           <p className="text-[11px] text-muted-foreground mt-2">
-            Modifica le capacità di esecuzione di <strong>{selectedAgent.name}</strong>.
-            I guardrail di sicurezza (azioni distruttive, tabelle vietate, cap bulk) restano sempre attivi.
+            Modifica le capacità di esecuzione di <strong>{selectedAgent.name}</strong>. I guardrail di sicurezza
+            (azioni distruttive, tabelle vietate, cap bulk) restano sempre attivi.
           </p>
         )}
       </Card>
@@ -118,10 +133,14 @@ export function AgentCapabilitiesTab() {
               value={draft.execution_mode}
               onValueChange={(v) => setDraft({ ...draft, execution_mode: v as typeof draft.execution_mode })}
             >
-              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {EXEC_MODES.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -133,10 +152,14 @@ export function AgentCapabilitiesTab() {
                   value={draft.preferred_model ?? "__default__"}
                   onValueChange={(v) => setDraft({ ...draft, preferred_model: v === "__default__" ? null : v })}
                 >
-                  <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {MODELS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -144,7 +167,10 @@ export function AgentCapabilitiesTab() {
               <div>
                 <Label className="text-xs">Temperatura ({draft.temperature.toFixed(2)})</Label>
                 <Input
-                  type="number" min={0} max={2} step={0.05}
+                  type="number"
+                  min={0}
+                  max={2}
+                  step={0.05}
                   className="h-8 mt-1"
                   value={draft.temperature}
                   onChange={(e) => setDraft({ ...draft, temperature: Number(e.target.value) })}
@@ -153,14 +179,36 @@ export function AgentCapabilitiesTab() {
             </div>
 
             <div className="grid grid-cols-4 gap-3">
-              <NumField label="Concorrenza max" value={draft.max_concurrent_tools} min={1} max={25}
-                onChange={(v) => setDraft({ ...draft, max_concurrent_tools: v })} />
-              <NumField label="Timeout step (ms)" value={draft.step_timeout_ms} min={1000} max={120000} step={500}
-                onChange={(v) => setDraft({ ...draft, step_timeout_ms: v })} />
-              <NumField label="Iterazioni max" value={draft.max_iterations} min={1} max={50}
-                onChange={(v) => setDraft({ ...draft, max_iterations: v })} />
-              <NumField label="Token max/call" value={draft.max_tokens_per_call} min={100} max={16000} step={100}
-                onChange={(v) => setDraft({ ...draft, max_tokens_per_call: v })} />
+              <NumField
+                label="Concorrenza max"
+                value={draft.max_concurrent_tools}
+                min={1}
+                max={25}
+                onChange={(v) => setDraft({ ...draft, max_concurrent_tools: v })}
+              />
+              <NumField
+                label="Timeout step (ms)"
+                value={draft.step_timeout_ms}
+                min={1000}
+                max={120000}
+                step={500}
+                onChange={(v) => setDraft({ ...draft, step_timeout_ms: v })}
+              />
+              <NumField
+                label="Iterazioni max"
+                value={draft.max_iterations}
+                min={1}
+                max={50}
+                onChange={(v) => setDraft({ ...draft, max_iterations: v })}
+              />
+              <NumField
+                label="Token max/call"
+                value={draft.max_tokens_per_call}
+                min={100}
+                max={16000}
+                step={100}
+                onChange={(v) => setDraft({ ...draft, max_tokens_per_call: v })}
+              />
             </div>
           </Card>
 
@@ -174,10 +222,12 @@ export function AgentCapabilitiesTab() {
             </div>
             <ToolGrid
               selected={draft.allowed_tools}
-              onToggle={(name) => setDraft({
-                ...draft,
-                allowed_tools: toggle(draft.allowed_tools, name),
-              })}
+              onToggle={(name) =>
+                setDraft({
+                  ...draft,
+                  allowed_tools: toggle(draft.allowed_tools, name),
+                })
+              }
             />
 
             <div className="flex items-center gap-2 pt-2 border-t">
@@ -187,26 +237,28 @@ export function AgentCapabilitiesTab() {
             <ToolGrid
               selected={draft.blocked_tools}
               variant="danger"
-              onToggle={(name) => setDraft({
-                ...draft,
-                blocked_tools: toggle(draft.blocked_tools, name),
-              })}
+              onToggle={(name) =>
+                setDraft({
+                  ...draft,
+                  blocked_tools: toggle(draft.blocked_tools, name),
+                })
+              }
             />
 
             <div className="flex items-center gap-2 pt-2 border-t">
               <Shield className="h-4 w-4 text-warning" />
               <h3 className="text-sm font-semibold">Tool che richiedono approvazione</h3>
-              <span className="text-[11px] text-muted-foreground">
-                In aggiunta agli hard guards di sicurezza.
-              </span>
+              <span className="text-[11px] text-muted-foreground">In aggiunta agli hard guards di sicurezza.</span>
             </div>
             <ToolGrid
               selected={draft.approval_required_tools}
               variant="warning"
-              onToggle={(name) => setDraft({
-                ...draft,
-                approval_required_tools: toggle(draft.approval_required_tools, name),
-              })}
+              onToggle={(name) =>
+                setDraft({
+                  ...draft,
+                  approval_required_tools: toggle(draft.approval_required_tools, name),
+                })
+              }
             />
           </Card>
 
@@ -225,7 +277,11 @@ export function AgentCapabilitiesTab() {
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               Salva capacità
             </Button>
-            {dirty && <Badge variant="outline" className="text-[10px]">Modifiche non salvate</Badge>}
+            {dirty && (
+              <Badge variant="outline" className="text-[10px]">
+                Modifiche non salvate
+              </Badge>
+            )}
             {capabilities && !dirty && (
               <span className="text-[11px] text-muted-foreground">
                 Aggiornato {new Date(capabilities.updated_at).toLocaleString("it-IT")}
@@ -239,13 +295,28 @@ export function AgentCapabilitiesTab() {
 }
 
 function NumField({
-  label, value, onChange, min, max, step = 1,
-}: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; step?: number }) {
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+}) {
   return (
     <div>
       <Label className="text-xs">{label}</Label>
       <Input
-        type="number" min={min} max={max} step={step}
+        type="number"
+        min={min}
+        max={max}
+        step={step}
         className="h-8 mt-1"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
@@ -255,7 +326,9 @@ function NumField({
 }
 
 function ToolGrid({
-  selected, onToggle, variant = "default",
+  selected,
+  onToggle,
+  variant = "default",
 }: {
   selected: string[];
   onToggle: (name: string) => void;
@@ -270,8 +343,8 @@ function ToolGrid({
           ? variant === "danger"
             ? "border-destructive bg-destructive/10"
             : variant === "warning"
-            ? "border-warning bg-warning/10"
-            : "border-primary bg-primary/10"
+              ? "border-warning bg-warning/10"
+              : "border-primary bg-primary/10"
           : "border-border";
         return (
           <label

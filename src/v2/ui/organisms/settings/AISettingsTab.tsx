@@ -51,7 +51,9 @@ export function AISettingsTab(): React.ReactElement {
       <div className="flex items-center justify-between p-3 rounded-md border bg-muted/20">
         <div>
           <p className="text-sm font-medium text-foreground">Automazioni AI</p>
-          <p className="text-xs text-muted-foreground">Pausa globale di tutte le automazioni AI (spostato dalla top bar).</p>
+          <p className="text-xs text-muted-foreground">
+            Pausa globale di tutte le automazioni AI (spostato dalla top bar).
+          </p>
         </div>
         <AIAutomationToggle />
       </div>
@@ -92,7 +94,9 @@ export function AISettingsTab(): React.ReactElement {
           <p className="text-xs text-muted-foreground">Memorie episodiche</p>
         </div>
       </div>
-      <Button onClick={handleSave} isLoading={updateSetting.isPending}>Salva</Button>
+      <Button onClick={handleSave} isLoading={updateSetting.isPending}>
+        Salva
+      </Button>
     </div>
   );
 }

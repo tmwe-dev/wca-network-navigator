@@ -17,7 +17,8 @@ serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 401,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -37,14 +38,16 @@ serve(async (req) => {
         return forwardToFunction("analyze-email-edit", body, req.headers);
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
-          status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
+          status: 400,
+          headers: { ...dynCors, "Content-Type": "application/json" },
         });
     }
   } catch (e: unknown) {
     console.error("generate-content error:", e);
     const message = e instanceof Error ? e.message : String(e);
     return new Response(JSON.stringify({ error: message || "Unknown error" }), {
-      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

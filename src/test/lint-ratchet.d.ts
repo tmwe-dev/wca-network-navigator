@@ -1,7 +1,10 @@
 declare module "*/scripts/lint-ratchet.mjs" {
   export const BUDGET: Record<string, number>;
   export function evaluateRatchet(
-    results: Array<{ filePath: string; messages: Array<{ ruleId: string | null; severity: number; line: number; message: string }> }>,
+    results: Array<{
+      filePath: string;
+      messages: Array<{ ruleId: string | null; severity: number; line: number; message: string }>;
+    }>,
     budget?: Record<string, number>,
   ): {
     errors: string[];

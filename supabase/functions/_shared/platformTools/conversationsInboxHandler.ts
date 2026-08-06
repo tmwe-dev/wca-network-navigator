@@ -20,14 +20,11 @@ interface ChannelMessageRow {
   category: string | null;
 }
 
-export async function handleGetInbox(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleGetInbox(args: Record<string, unknown>, userId: string): Promise<unknown> {
   let query = supabase
     .from("channel_messages")
     .select(
-      "id, channel, direction, from_address, to_address, subject, body_text, email_date, read_at, partner_id, category, created_at"
+      "id, channel, direction, from_address, to_address, subject, body_text, email_date, read_at, partner_id, category, created_at",
     )
     .eq("user_id", userId)
     .eq("direction", "inbound")
@@ -56,10 +53,7 @@ export async function handleGetInbox(
   };
 }
 
-export async function handleGetEmailThread(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleGetEmailThread(args: Record<string, unknown>, userId: string): Promise<unknown> {
   let messages: ChannelMessageRow[] = [];
   if (args.thread_id) {
     const { data } = await supabase

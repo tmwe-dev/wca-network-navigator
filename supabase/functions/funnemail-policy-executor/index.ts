@@ -16,8 +16,14 @@ import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 const KNOWN_ACTIONS = new Set([
-  "tag_only", "deep_search", "draft_reply", "crm_update",
-  "imap_action", "escalate", "autoresponder", "snooze",
+  "tag_only",
+  "deep_search",
+  "draft_reply",
+  "crm_update",
+  "imap_action",
+  "escalate",
+  "autoresponder",
+  "snooze",
 ]);
 
 interface ExecBody {
@@ -80,18 +86,22 @@ Deno.serve(async (req) => {
 
     if (!body.message_id || !body.action_type || !body.from_address) {
       endMetrics(metrics, false, 400);
-      return new Response(JSON.stringify({ error: "missing message_id, from_address or action_type" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "missing message_id, from_address or action_type" }), {
+        status: 400,
+        headers,
+      });
     }
     if (!KNOWN_ACTIONS.has(body.action_type)) {
       endMetrics(metrics, false, 400);
-      return new Response(JSON.stringify({ error: `unknown action_type: ${body.action_type}` }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: `unknown action_type: ${body.action_type}` }), {
+        status: 400,
+        headers,
+      });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // Hard guard: draft_reply NON parte mai da qui (richiede journalistReview).
     if (body.action_type === "draft_reply") {

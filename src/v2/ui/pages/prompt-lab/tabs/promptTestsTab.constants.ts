@@ -13,10 +13,8 @@ export interface PromptOption {
 }
 
 export const QK_PROMPTS = ["prompt-tests", "prompts-list"] as const;
-export const qkCases = (promptId: string) =>
-  ["prompt-tests", "cases", promptId] as const;
-export const qkRuns = (promptId: string) =>
-  ["prompt-tests", "runs", promptId] as const;
+export const qkCases = (promptId: string) => ["prompt-tests", "cases", promptId] as const;
+export const qkRuns = (promptId: string) => ["prompt-tests", "runs", promptId] as const;
 
 export const SEVERITY_COLORS: Record<string, string> = {
   critical: "bg-destructive/15 text-destructive border-destructive/30",

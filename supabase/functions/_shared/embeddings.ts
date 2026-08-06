@@ -81,7 +81,11 @@ export async function embedBatch(texts: string[], opts: EmbedOptions = {}): Prom
 
       if (!resp.ok) {
         const errText = await resp.text().catch(() => "");
-        const err = new EmbeddingError("http", `Embedding HTTP ${resp.status} via ${p.name}: ${errText.slice(0, 200)}`, resp.status);
+        const err = new EmbeddingError(
+          "http",
+          `Embedding HTTP ${resp.status} via ${p.name}: ${errText.slice(0, 200)}`,
+          resp.status,
+        );
         throw err;
       }
       const data = await resp.json();

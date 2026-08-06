@@ -17,21 +17,39 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import {
-  MailCheck, Archive, FolderInput, ShieldAlert, Download, Sparkles,
-  Loader2, Wand2, ChevronsUpDown, FileText, Users,
+  MailCheck,
+  Archive,
+  FolderInput,
+  ShieldAlert,
+  Download,
+  Sparkles,
+  Loader2,
+  Wand2,
+  ChevronsUpDown,
+  FileText,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -41,7 +59,6 @@ import { useEmailPromptsRepo } from "@/hooks/emailIntelligence/useEmailPromptsRe
 import { useAddressRulesRepo } from "@/hooks/emailIntelligence/useAddressRulesRepo";
 import { useChannelMessagesRepo } from "@/hooks/emailIntelligence/useChannelMessagesRepo";
 import type { SenderAnalysis } from "@/types/email-management";
-
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("SenderActionsDialog");
@@ -62,9 +79,7 @@ interface SenderActionsDialogProps {
   onActionDone?: () => void;
 }
 
-export function SenderActionsDialog({
-  sender, open, onOpenChange, onActionDone,
-}: SenderActionsDialogProps) {
+export function SenderActionsDialog({ sender, open, onOpenChange, onActionDone }: SenderActionsDialogProps) {
   const { findActiveEmailPromptTemplates } = useEmailPromptsRepo();
   const {
     findReusablePromptRules,
@@ -90,7 +105,10 @@ export function SenderActionsDialog({
     (async () => {
       setTemplatesLoading(true);
       try {
-        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+        const {
+          data: { session: __s },
+        } = await supabase.auth.getSession();
+        const user = __s?.user ?? null;
         if (!user) return;
 
         // 1) Template ufficiali da email_prompts
@@ -107,15 +125,20 @@ export function SenderActionsDialog({
             id: `ep:${p.id}`,
             source: "email_prompts",
             title: (p as { title: string }).title || "(senza titolo)",
-            subtitle: (p as { scope?: string | null; scope_value?: string | null }).scope_value
-              ?? (p as { scope?: string | null }).scope ?? undefined,
+            subtitle:
+              (p as { scope?: string | null; scope_value?: string | null }).scope_value ??
+              (p as { scope?: string | null }).scope ??
+              undefined,
             instructions: instr,
           });
         }
 
         const seenText = new Set<string>();
         for (const r of (rules ?? []) as Array<{
-          id: string; email_address: string; display_name: string | null; custom_prompt: string | null;
+          id: string;
+          email_address: string;
+          display_name: string | null;
+          custom_prompt: string | null;
         }>) {
           const txt = r.custom_prompt?.trim();
           if (!txt) continue;
@@ -140,17 +163,13 @@ export function SenderActionsDialog({
         if (!cancelled) setTemplatesLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open, sender]);
 
-  const officialTemplates = useMemo(
-    () => templates.filter((t) => t.source === "email_prompts"),
-    [templates],
-  );
-  const reusedTemplates = useMemo(
-    () => templates.filter((t) => t.source === "email_address_rules"),
-    [templates],
-  );
+  const officialTemplates = useMemo(() => templates.filter((t) => t.source === "email_prompts"), [templates]);
+  const reusedTemplates = useMemo(() => templates.filter((t) => t.source === "email_address_rules"), [templates]);
   const selectedTemplate = useMemo(
     () => templates.find((t) => t.id === selectedTemplateId) ?? null,
     [templates, selectedTemplateId],
@@ -172,11 +191,7 @@ export function SenderActionsDialog({
     onOpenChange(false);
   };
 
-  const applyRule = async (
-    auto_action: string,
-    target_folder?: string,
-    label = "Regola applicata",
-  ) => {
+  const applyRule = async (auto_action: string, target_folder?: string, label = "Regola applicata") => {
     setBusy(auto_action + (target_folder ? `:${target_folder}` : ""));
     try {
       await createRule.mutateAsync({
@@ -204,12 +219,11 @@ export function SenderActionsDialog({
       const rows = await findChannelMessagesForExport(sender.email);
       const csv = [
         "data,oggetto,from,to",
-        ...rows.map((r) => [
-          r.email_date ?? "",
-          (r.subject ?? "").replace(/"/g, '""'),
-          r.from_address ?? "",
-          r.to_address ?? "",
-        ].map((c) => `"${c}"`).join(",")),
+        ...rows.map((r) =>
+          [r.email_date ?? "", (r.subject ?? "").replace(/"/g, '""'), r.from_address ?? "", r.to_address ?? ""]
+            .map((c) => `"${c}"`)
+            .join(","),
+        ),
       ].join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -234,7 +248,10 @@ export function SenderActionsDialog({
     }
     setBusy("prompt");
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Sessione scaduta");
       const existingId = await findAddressRuleIdForUserEmail(sender.email, user.id);
       if (existingId) {
@@ -269,8 +286,8 @@ export function SenderActionsDialog({
             Azioni e regole
           </DialogTitle>
           <DialogDescription>
-            Per <strong>{sender.companyName}</strong> ({sender.email}) — {sender.emailCount} email
-            in archivio. Le regole vengono salvate e applicate retroattivamente alla cronologia.
+            Per <strong>{sender.companyName}</strong> ({sender.email}) — {sender.emailCount} email in archivio. Le
+            regole vengono salvate e applicate retroattivamente alla cronologia.
           </DialogDescription>
         </DialogHeader>
 
@@ -404,9 +421,7 @@ export function SenderActionsDialog({
                         )}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">
-                        Scegli un prompt esistente come template…
-                      </span>
+                      <span className="text-muted-foreground">Scegli un prompt esistente come template…</span>
                     )}
                   </span>
                   <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -430,21 +445,15 @@ export function SenderActionsDialog({
                               <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                               <span className="font-medium text-sm truncate flex-1">{t.title}</span>
                               {t.subtitle && (
-                                <span className="text-[10px] text-muted-foreground shrink-0">
-                                  {t.subtitle}
-                                </span>
+                                <span className="text-[10px] text-muted-foreground shrink-0">{t.subtitle}</span>
                               )}
                             </div>
-                            <span className="text-xs text-muted-foreground line-clamp-2 pl-5">
-                              {t.instructions}
-                            </span>
+                            <span className="text-xs text-muted-foreground line-clamp-2 pl-5">{t.instructions}</span>
                           </CommandItem>
                         ))}
                       </CommandGroup>
                     )}
-                    {officialTemplates.length > 0 && reusedTemplates.length > 0 && (
-                      <CommandSeparator />
-                    )}
+                    {officialTemplates.length > 0 && reusedTemplates.length > 0 && <CommandSeparator />}
                     {reusedTemplates.length > 0 && (
                       <CommandGroup heading="Riusa da altri mittenti">
                         {reusedTemplates.map((t) => (
@@ -463,9 +472,7 @@ export function SenderActionsDialog({
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs text-muted-foreground line-clamp-2 pl-5">
-                              {t.instructions}
-                            </span>
+                            <span className="text-xs text-muted-foreground line-clamp-2 pl-5">{t.instructions}</span>
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -490,20 +497,18 @@ export function SenderActionsDialog({
               disabled={busy != null}
             />
             <p className="text-xs text-muted-foreground">
-              Scegli un template per partire veloce, oppure scrivi liberamente. Le modifiche al
-              testo vengono salvate sulla regola di questo mittente — il template originale non
-              viene toccato.
+              Scegli un template per partire veloce, oppure scrivi liberamente. Le modifiche al testo vengono salvate
+              sulla regola di questo mittente — il template originale non viene toccato.
             </p>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={close} disabled={busy != null}>Chiudi</Button>
+          <Button variant="ghost" onClick={close} disabled={busy != null}>
+            Chiudi
+          </Button>
           {!showFolders && (
-            <Button
-              onClick={savePrompt}
-              disabled={busy != null || !prompt.trim()}
-            >
+            <Button onClick={savePrompt} disabled={busy != null || !prompt.trim()}>
               {busy === "prompt" && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salva prompt regola
             </Button>
@@ -515,7 +520,13 @@ export function SenderActionsDialog({
 }
 
 function BigActionButton({
-  icon, label, hint, onClick, busy, disabled, tone = "default",
+  icon,
+  label,
+  hint,
+  onClick,
+  busy,
+  disabled,
+  tone = "default",
 }: {
   icon: React.ReactNode;
   label: string;
@@ -539,13 +550,15 @@ function BigActionButton({
         tone === "default" && "border-border hover:border-primary/50 hover:bg-muted",
       )}
     >
-      <div className={cn(
-        "rounded-full p-2",
-        tone === "info" && "text-primary bg-primary/10",
-        tone === "warn" && "text-destructive bg-destructive/10",
-        tone === "ai" && "text-primary bg-primary/15",
-        tone === "default" && "text-foreground",
-      )}>
+      <div
+        className={cn(
+          "rounded-full p-2",
+          tone === "info" && "text-primary bg-primary/10",
+          tone === "warn" && "text-destructive bg-destructive/10",
+          tone === "ai" && "text-primary bg-primary/15",
+          tone === "default" && "text-foreground",
+        )}
+      >
         {busy ? <Loader2 className="h-7 w-7 animate-spin" /> : icon}
       </div>
       <div className="font-semibold text-sm text-foreground">{label}</div>

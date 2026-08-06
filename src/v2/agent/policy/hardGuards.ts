@@ -97,11 +97,9 @@ export function assertBulkCap(count: number, max: number = DEFAULT_BULK_CAP): vo
 export function assertWhitelistedTable(tableName: string): void {
   const t = tableName.toLowerCase();
   if (FORBIDDEN_TABLES.has(t)) {
-    throw new HardGuardError(
-      "TABLE_FORBIDDEN",
-      `Tabella "${tableName}" vietata per scritture AI.`,
-      { table: tableName },
-    );
+    throw new HardGuardError("TABLE_FORBIDDEN", `Tabella "${tableName}" vietata per scritture AI.`, {
+      table: tableName,
+    });
   }
   if (!AI_WRITABLE_TABLES.has(t)) {
     throw new HardGuardError(
@@ -115,11 +113,9 @@ export function assertWhitelistedTable(tableName: string): void {
 export function assertNotAuthTable(tableName: string): void {
   const t = tableName.toLowerCase();
   if (t.startsWith("auth.") || t === "user_roles" || t === "authorized_users") {
-    throw new HardGuardError(
-      "AUTH_TABLE_FORBIDDEN",
-      `Tabella di auth "${tableName}" intoccabile da AI.`,
-      { table: tableName },
-    );
+    throw new HardGuardError("AUTH_TABLE_FORBIDDEN", `Tabella di auth "${tableName}" intoccabile da AI.`, {
+      table: tableName,
+    });
   }
 }
 
@@ -134,11 +130,10 @@ export function assertSchemaValid<T>(
 ): T {
   const result = parser.safeParse(input);
   if (!result.success) {
-    throw new HardGuardError(
-      "SCHEMA_VALIDATION_FAILED",
-      `Validazione schema fallita per ${context}.`,
-      { context, error: result.error },
-    );
+    throw new HardGuardError("SCHEMA_VALIDATION_FAILED", `Validazione schema fallita per ${context}.`, {
+      context,
+      error: result.error,
+    });
   }
   return result.data;
 }

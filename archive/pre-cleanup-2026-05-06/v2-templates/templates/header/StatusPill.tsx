@@ -7,9 +7,7 @@ import * as React from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Activity, WifiOff, Wifi, Pause, Play, Bot, Mail, Moon,
-} from "lucide-react";
+import { Activity, WifiOff, Wifi, Pause, Play, Bot, Mail, Moon } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
@@ -61,12 +59,7 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2 text-xs"
-          aria-label={`Stato sistema: ${summary}`}
-        >
+        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" aria-label={`Stato sistema: ${summary}`}>
           <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
           {outreachQueue.pendingCount > 0 && (
             <Badge variant="outline" className="h-4 px-1 text-[10px] tabular-nums">
@@ -107,9 +100,13 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
             onClick={() => outreachQueue.setPaused(!outreachQueue.paused)}
           >
             {outreachQueue.paused ? (
-              <><Play className="h-3 w-3 mr-1" /> Riprendi</>
+              <>
+                <Play className="h-3 w-3 mr-1" /> Riprendi
+              </>
             ) : (
-              <><Pause className="h-3 w-3 mr-1" /> Pausa</>
+              <>
+                <Pause className="h-3 w-3 mr-1" /> Pausa
+              </>
             )}
           </Button>
         </div>
@@ -119,14 +116,13 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
           <div className="flex items-center gap-2">
             <Moon className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Pausa notturna</span>
-            {globalSync.isNightTime && <Badge variant="outline" className="h-4 px-1 text-[10px]">notte</Badge>}
+            {globalSync.isNightTime && (
+              <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                notte
+              </Badge>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            onClick={globalSync.toggleNightPause}
-          >
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={globalSync.toggleNightPause}>
             {globalSync.nightPause ? "Disattiva" : "Attiva"}
           </Button>
         </div>

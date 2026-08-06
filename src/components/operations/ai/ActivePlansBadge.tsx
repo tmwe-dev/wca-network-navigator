@@ -27,11 +27,15 @@ export function ActivePlansBadge({ plans, isDark }: Props) {
           ? "bg-amber-500/15 text-warning border border-amber-500/20"
           : "bg-amber-50 text-amber-700 border border-amber-200"
       }`}
-      title={plans.map(p => `${p.title} (${p.current_step}/${p.steps.length})`).join("\n")}
+      title={plans.map((p) => `${p.title} (${p.current_step}/${p.steps.length})`).join("\n")}
     >
       <ListChecks className="w-3 h-3" />
-      <span>{plans.length} piano{plans.length > 1 ? "i" : ""}</span>
-      <span className="opacity-60">{completedSteps}/{totalSteps}</span>
+      <span>
+        {plans.length} piano{plans.length > 1 ? "i" : ""}
+      </span>
+      <span className="opacity-60">
+        {completedSteps}/{totalSteps}
+      </span>
     </div>
   );
 }

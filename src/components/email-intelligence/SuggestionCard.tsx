@@ -7,12 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger,
-} from "@/components/ui/select";
-import {
-  Sparkles, Check, X, Loader2, Mail, Wand2, ArrowRight,
-} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { Sparkles, Check, X, Loader2, Mail, Wand2, ArrowRight } from "lucide-react";
 import { Settings2 } from "lucide-react";
 import { getFlagFromDomain, getDomainFaviconUrl } from "@/lib/domainUtils";
 import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
@@ -64,7 +60,19 @@ interface CardProps {
 }
 
 export const SuggestionCard = memo(function SuggestionCard({
-  row, groups, isSelected, isFocused, isRemoving, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, onOpenActions, busy,
+  row,
+  groups,
+  isSelected,
+  isFocused,
+  isRemoving,
+  onToggleSelect,
+  onFocus,
+  onAnalyzeOne,
+  onAccept,
+  onIgnore,
+  onAssign,
+  onOpenActions,
+  busy,
 }: CardProps) {
   const [faviconError, setFaviconError] = useState(false);
   const domain = row.domain || getDomain(row.email_address);
@@ -77,14 +85,12 @@ export const SuggestionCard = memo(function SuggestionCard({
     () => groups.find((g) => g.nome_gruppo === row.ai_suggested_group),
     [groups, row.ai_suggested_group],
   );
-  const currentGroup = useMemo(
-    () => groups.find((g) => g.id === row.group_id),
-    [groups, row.group_id],
-  );
+  const currentGroup = useMemo(() => groups.find((g) => g.id === row.group_id), [groups, row.group_id]);
 
-  const accent = currentGroup?.colore
-    || suggestedGroup?.colore
-    || (row.email_count > 100 ? "hsl(var(--destructive))" : "hsl(var(--primary))");
+  const accent =
+    currentGroup?.colore ||
+    suggestedGroup?.colore ||
+    (row.email_count > 100 ? "hsl(var(--destructive))" : "hsl(var(--primary))");
 
   return (
     <Card
@@ -133,15 +139,15 @@ export const SuggestionCard = memo(function SuggestionCard({
                   {flag}
                 </span>
               )}
-              <span className="truncate" title={row.email_address}>{row.email_address}</span>
+              <span className="truncate" title={row.email_address}>
+                {row.email_address}
+              </span>
             </div>
           </div>
 
           <div className="flex items-baseline gap-1 flex-shrink-0">
             <Mail className="h-3 w-3 text-muted-foreground self-center" />
-            <span className="text-base font-bold text-primary leading-none">
-              {row.email_count}
-            </span>
+            <span className="text-base font-bold text-primary leading-none">{row.email_count}</span>
           </div>
         </div>
 
@@ -156,9 +162,7 @@ export const SuggestionCard = memo(function SuggestionCard({
           >
             <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-primary leading-none">
-                Suggerimento AI
-              </div>
+              <div className="text-[10px] uppercase tracking-wide text-primary leading-none">Suggerimento AI</div>
               <div className="flex items-center gap-1 mt-0.5">
                 {suggestedGroup?.icon && <span>{suggestedGroup.icon}</span>}
                 <span className="text-xs font-semibold text-foreground truncate leading-tight">
@@ -209,7 +213,8 @@ export const SuggestionCard = memo(function SuggestionCard({
             <SelectContent>
               {groups.map((g) => (
                 <SelectItem key={g.id} value={g.id}>
-                  <span className="mr-1.5">{g.icon}</span>{g.nome_gruppo}
+                  <span className="mr-1.5">{g.icon}</span>
+                  {g.nome_gruppo}
                 </SelectItem>
               ))}
             </SelectContent>

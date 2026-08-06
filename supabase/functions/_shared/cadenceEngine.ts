@@ -184,7 +184,7 @@ export function checkCadence(
   // 5. Evitare ripetizione canale consecutiva (se possibile)
   let suggestedChannel: "email" | "linkedin" | "whatsapp" | undefined = channel;
   if (lastChannel === channel && rule.allowedChannels.length > 1) {
-    const alternatives = rule.allowedChannels.filter(c => c !== channel && (c !== "whatsapp" || hasWhatsAppConsent));
+    const alternatives = rule.allowedChannels.filter((c) => c !== channel && (c !== "whatsapp" || hasWhatsAppConsent));
     if (alternatives.length > 0) {
       suggestedChannel = alternatives[0];
     }

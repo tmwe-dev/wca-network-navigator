@@ -9,7 +9,11 @@ interface PartnerMiniGlobeProps {
   branchCities: Array<Record<string, unknown>> | null;
 }
 
-export function PartnerMiniGlobe({ partnerCountryCode, partnerCity: _partnerCity, branchCities }: PartnerMiniGlobeProps) {
+export function PartnerMiniGlobe({
+  partnerCountryCode,
+  partnerCity: _partnerCity,
+  branchCities,
+}: PartnerMiniGlobeProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
   const countries: CountryWithPartners[] = useMemo(() => {
@@ -22,18 +26,20 @@ export function PartnerMiniGlobe({ partnerCountryCode, partnerCity: _partnerCity
       if (code) codes.add(String(code));
     });
 
-    return Array.from(codes).map((code) => {
-      const wca = WCA_COUNTRIES.find((c) => c.code === code);
-      if (!wca) return null;
-      return {
-        code: wca.code,
-        name: wca.name,
-        count: code === partnerCountryCode ? 1 : 1,
-        lat: wca.lat,
-        lng: wca.lng,
-        region: wca.region,
-      };
-    }).filter(Boolean) as CountryWithPartners[];
+    return Array.from(codes)
+      .map((code) => {
+        const wca = WCA_COUNTRIES.find((c) => c.code === code);
+        if (!wca) return null;
+        return {
+          code: wca.code,
+          name: wca.name,
+          count: code === partnerCountryCode ? 1 : 1,
+          lat: wca.lat,
+          lng: wca.lng,
+          region: wca.region,
+        };
+      })
+      .filter(Boolean) as CountryWithPartners[];
   }, [partnerCountryCode, branchCities]);
 
   const handleSelect = useCallback((code: string | null) => {

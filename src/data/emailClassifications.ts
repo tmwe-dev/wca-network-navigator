@@ -6,15 +6,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-export type EmailClassificationRow =
-  Database["public"]["Tables"]["email_classifications"]["Row"] & {
-    partners: { company_name: string } | null;
-  };
+export type EmailClassificationRow = Database["public"]["Tables"]["email_classifications"]["Row"] & {
+  partners: { company_name: string } | null;
+};
 
 /** Ultime 100 classificazioni, opzionalmente filtrate per categoria. */
-export async function findEmailClassifications(
-  categoryFilter: string,
-): Promise<EmailClassificationRow[]> {
+export async function findEmailClassifications(categoryFilter: string): Promise<EmailClassificationRow[]> {
   let q = supabase
     .from("email_classifications")
     .select("*, partners(company_name)")
@@ -70,10 +67,7 @@ export async function updateClassificationCategory(
   id: string,
   category: string,
 ): Promise<{ error: { message: string } | null }> {
-  const { error } = await supabase
-    .from("email_classifications")
-    .update({ category })
-    .eq("id", id);
+  const { error } = await supabase.from("email_classifications").update({ category }).eq("id", id);
   return { error: error ? { message: error.message } : null };
 }
 
@@ -98,11 +92,7 @@ export async function findConversationContextsOrdered(
 export async function findEmailClassificationsPlain(
   categoryFilter: string,
 ): Promise<Database["public"]["Tables"]["email_classifications"]["Row"][]> {
-  let q = supabase
-    .from("email_classifications")
-    .select("*")
-    .order("classified_at", { ascending: false })
-    .limit(100);
+  let q = supabase.from("email_classifications").select("*").order("classified_at", { ascending: false }).limit(100);
   if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
   const { data, error } = await q;
   if (error) throw error;

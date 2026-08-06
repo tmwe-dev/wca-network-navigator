@@ -114,9 +114,7 @@ describe("queueWhatsAppForApproval", () => {
 
   it("queues valid targets into ai_pending_actions", async () => {
     const result = await queueWhatsAppForApproval({
-      targets: [
-        { phone: "393331234567", contactId: "c-1", partnerId: "p-1" },
-      ],
+      targets: [{ phone: "393331234567", contactId: "c-1", partnerId: "p-1" }],
       messageOrTemplate: "Hello there",
       source: "bulk-dialog",
     });
@@ -135,10 +133,7 @@ describe("queueWhatsAppForApproval", () => {
 
   it("skips targets with invalid phone", async () => {
     const result = await queueWhatsAppForApproval({
-      targets: [
-        { phone: "" },
-        { phone: "393331234567" },
-      ],
+      targets: [{ phone: "" }, { phone: "393331234567" }],
       messageOrTemplate: "Hi",
       source: "test",
     });
@@ -149,9 +144,7 @@ describe("queueWhatsAppForApproval", () => {
 
   it("personalizes template with contact name and company", async () => {
     await queueWhatsAppForApproval({
-      targets: [
-        { phone: "393331234567", contactName: "Marco", companyName: "Acme" },
-      ],
+      targets: [{ phone: "393331234567", contactName: "Marco", companyName: "Acme" }],
       messageOrTemplate: "Hi {{name}} from {{company}}!",
       source: "cadence",
     });

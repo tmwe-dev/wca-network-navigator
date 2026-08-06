@@ -21,9 +21,7 @@ type ActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
 export interface CockpitContactActions {
   readonly insertActivity: (activity: ActivityInsert) => Promise<void>;
   readonly deleteCockpitQueueItem: (id: string) => Promise<void>;
-  readonly createCampaignDraftQueue: (
-    input: CreateCampaignDraftQueueInput,
-  ) => Promise<CreateCampaignDraftQueueResult>;
+  readonly createCampaignDraftQueue: (input: CreateCampaignDraftQueueInput) => Promise<CreateCampaignDraftQueueResult>;
 }
 
 export function useCockpitContactActions(): CockpitContactActions {

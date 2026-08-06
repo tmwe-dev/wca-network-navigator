@@ -12,7 +12,8 @@ import type { ToolResult, MultiResultPart } from "../tools/types";
 import type { QueryPlan } from "./safeQueryExecutor";
 import type { SuggestedAction } from "../aiBridge";
 
-const ANALYSIS_KEYWORDS = /\b(analizza|analisi|spiegami|spiega|perch[éè]|perche|come mai|valuta|consiglia|suggerisci|approfond|opinione|raccomanda)\b/i;
+const ANALYSIS_KEYWORDS =
+  /\b(analizza|analisi|spiegami|spiega|perch[éè]|perche|come mai|valuta|consiglia|suggerisci|approfond|opinione|raccomanda)\b/i;
 
 export const COUNTRY_LABELS: Record<string, string> = {
   US: "Stati Uniti",
@@ -120,11 +121,13 @@ function suggestedActionsFor(table: string, filters: readonly FilterShape[]): Su
     return [
       {
         label: `📧 Email di presentazione`,
-        prompt: `prepara in batch una email di presentazione per TUTTI i partner ${filtersDesc} (una bozza per ciascuno)`.trim(),
+        prompt:
+          `prepara in batch una email di presentazione per TUTTI i partner ${filtersDesc} (una bozza per ciascuno)`.trim(),
       },
       {
         label: `🤝 Email di collaborazione`,
-        prompt: `prepara in batch una email di collaborazione per TUTTI i partner ${filtersDesc} (una bozza per ciascuno)`.trim(),
+        prompt:
+          `prepara in batch una email di collaborazione per TUTTI i partner ${filtersDesc} (una bozza per ciascuno)`.trim(),
       },
       {
         label: `🏢 Arricchisci dati mancanti`,
@@ -168,7 +171,10 @@ export interface LocalComment {
 
 /** Strip basic markdown so the spoken version sounds natural. */
 function stripMarkdown(s: string): string {
-  return s.replace(/[*_`#>]/g, "").replace(/\s+/g, " ").trim();
+  return s
+    .replace(/[*_`#>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
@@ -194,11 +200,7 @@ function buildProposalSentence(actions: SuggestedAction[]): string {
  * Decide if a result can be commented locally (skip LLM).
  * Returns the comment, or null if AI is needed.
  */
-export function tryLocalComment(
-  userPrompt: string,
-  result: ToolResult,
-  plan: QueryPlan | null,
-): LocalComment | null {
+export function tryLocalComment(userPrompt: string, result: ToolResult, plan: QueryPlan | null): LocalComment | null {
   // User explicitly asked for analysis/explanation → use AI
   if (ANALYSIS_KEYWORDS.test(userPrompt)) return null;
 
@@ -213,7 +215,8 @@ export function tryLocalComment(
   // The user explicitly asked for an ENUMERATION (list/elenco/mostra/dammi/vedi).
   // In that case we MUST render the table, never collapse to a count message —
   // even if the planner reduced the columns to ["id"].
-  const isListMode = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(userPrompt);
+  const isListMode =
+    /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(userPrompt);
 
   // ── COUNT MODE ──
   // Only when the user really asked "how many" — never auto-trigger from the
@@ -226,9 +229,7 @@ export function tryLocalComment(
   // così il Direttore risponde "Abbiamo X partner in …" invece di cadere sul
   // commento AI generico ("Risultato disponibile nel canvas").
   const planIsCount = /^\s*conteggio\b/i.test(plan.title ?? "");
-  const isCountMode =
-    !isListMode &&
-    (/\b(quanti|quante|conteggio|totale|numero)\b/i.test(userPrompt) || planIsCount);
+  const isCountMode = !isListMode && (/\b(quanti|quante|conteggio|totale|numero)\b/i.test(userPrompt) || planIsCount);
 
   // ── ZERO RESULTS (any mode) ──
   // Handle this BEFORE falling through to AI commentary, otherwise the LLM
@@ -236,11 +237,12 @@ export function tryLocalComment(
   if (count === 0) {
     const filtersDesc = describeFilters(filters);
     const word = noun(table, true);
-    const base = table === "campaign_jobs" && filters.some((f) => f.column === "status")
-      ? `Non ci sono ${word} ${filtersDesc}.`
-      : filtersDesc
-        ? `Non ho trovato ${word} ${filtersDesc}.`
-        : `Non ho trovato ${word} che corrispondano alla richiesta.`;
+    const base =
+      table === "campaign_jobs" && filters.some((f) => f.column === "status")
+        ? `Non ci sono ${word} ${filtersDesc}.`
+        : filtersDesc
+          ? `Non ho trovato ${word} ${filtersDesc}.`
+          : `Non ho trovato ${word} che corrispondano alla richiesta.`;
     // Build alternative actions: drop the most specific filter (last one) and
     // offer the broader query, plus a "show all" fallback.
     const altActions: SuggestedAction[] = [];
@@ -275,9 +277,7 @@ export function tryLocalComment(
         ? `Non risultano ${word} ${filtersDesc}.`.trim().replace(/\s+/g, " ")
         : `Abbiamo **${countFmt}** ${word}${filtersDesc ? " " + filtersDesc : ""}.`;
     const baseSpoken =
-      count === 0
-        ? `Nessun ${word} ${filtersDesc}`
-        : `Abbiamo ${countFmt} ${word} ${filtersDesc}`.trim();
+      count === 0 ? `Nessun ${word} ${filtersDesc}` : `Abbiamo ${countFmt} ${word} ${filtersDesc}`.trim();
     return {
       message: proposal ? `${base} ${proposal}` : base,
       spokenSummary: proposal ? `${baseSpoken}. ${stripMarkdown(proposal)}` : baseSpoken,
@@ -339,10 +339,7 @@ export function tryLocalComment(
  * (es. "25.103 partner e 11.414 contatti"). Funziona solo se NESSUNA parte
  * richiede analisi (l'utente non ha chiesto "spiegami/analizza").
  */
-export function tryLocalCommentMulti(
-  userPrompt: string,
-  parts: readonly MultiResultPart[],
-): LocalComment | null {
+export function tryLocalCommentMulti(userPrompt: string, parts: readonly MultiResultPart[]): LocalComment | null {
   if (ANALYSIS_KEYWORDS.test(userPrompt)) return null;
   if (parts.length === 0) return null;
 

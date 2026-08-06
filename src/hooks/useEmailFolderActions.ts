@@ -49,7 +49,7 @@ export function useImapFolders() {
         body: { action: "list_folders" },
         context: "useImapFolders",
       });
-      return (result?.folders ?? []).map(f => f.name);
+      return (result?.folders ?? []).map((f) => f.name);
     },
     staleTime: 5 * 60_000,
   });
@@ -74,21 +74,24 @@ export function useBulkEmailAction() {
     mutationFn: async ({ messages, action, targetFolder }: BulkActionInput) => {
       // HIDE: solo DB
       if (action === "hide") {
-        const ids = messages.map(m => m.id);
+        const ids = messages.map((m) => m.id);
         await hideChannelMessagesByIds(ids);
         return { hidden: ids.length };
       }
 
-      const uids = messages.map(m => m.imap_uid).filter((u): u is number => u != null);
+      const uids = messages.map((m) => m.imap_uid).filter((u): u is number => u != null);
       if (uids.length === 0) {
         // Nessun UID IMAP — solo update folder DB
         const folder =
-          action === "archive" ? "Archive" :
-          action === "spam" ? "Junk" :
-          action === "delete" ? "Trash" :
-          (targetFolder || "Archive");
+          action === "archive"
+            ? "Archive"
+            : action === "spam"
+              ? "Junk"
+              : action === "delete"
+                ? "Trash"
+                : targetFolder || "Archive";
         await setChannelMessagesFolderByIds(
-          messages.map(m => m.id),
+          messages.map((m) => m.id),
           folder,
           action === "delete",
         );
@@ -107,18 +110,20 @@ export function useBulkEmailAction() {
       });
 
       // Sync folder lato DB
-      const folder = result?.folder ||
-        (action === "archive" ? "Archive" :
-         action === "spam" ? "Junk" :
-         action === "delete" ? "Trash" :
-         targetFolder!);
+      const folder =
+        result?.folder ||
+        (action === "archive" ? "Archive" : action === "spam" ? "Junk" : action === "delete" ? "Trash" : targetFolder!);
       await setChannelMessagesFolderByUids(uids, folder, action === "delete");
 
       return { moved: result?.moved ?? 0, folder };
     },
     onSuccess: (res, vars) => {
       const labels: Record<EmailAction, string> = {
-        archive: "Archiviate", spam: "Spostate in spam", move: "Spostate", delete: "Cestinate", hide: "Nascoste",
+        archive: "Archiviate",
+        spam: "Spostate in spam",
+        move: "Spostate",
+        delete: "Cestinate",
+        hide: "Nascoste",
       };
       toast.success(`${labels[vars.action]} (${vars.messages.length})`);
       qc.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
@@ -144,16 +149,16 @@ export function useCreateRuleFromSender() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateRuleFromMessageInput) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       const operator_id = await fetchOperatorIdForUser(user.id);
 
       // Upsert regola (per email_address univoca per operator)
       const params = input.target_folder ? { target_folder: input.target_folder } : {};
-      const existingId = await findAddressRuleIdByAddressAndOperator(
-        input.email_address,
-        operator_id ?? "",
-      );
+      const existingId = await findAddressRuleIdByAddressAndOperator(input.email_address, operator_id ?? "");
 
       let ruleId: string;
       if (existingId) {

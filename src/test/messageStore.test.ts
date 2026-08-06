@@ -1,16 +1,9 @@
- 
 /**
  * Test message store dedup/merge.
  * Vol. II §10.1 (idempotenza).
  */
 import { describe, it, expect } from "vitest";
-import {
-  mergeMessages,
-  prependMessage,
-  filterByThread,
-  countUnread,
-  groupByThread,
-} from "@/lib/inbox/messageStore";
+import { mergeMessages, prependMessage, filterByThread, countUnread, groupByThread } from "@/lib/inbox/messageStore";
 import type { ChannelMessage } from "@/lib/inbox/types";
 
 function mk(over: Partial<ChannelMessage>): ChannelMessage {
@@ -64,7 +57,7 @@ describe("mergeMessages", () => {
     const b = mk({ id: "2", created_at: "2026-01-01T10:00:00Z" });
     const c = mk({ id: "3", created_at: "2026-01-01T09:00:00Z" });
     const merged = mergeMessages([a], [b, c]);
-    expect(merged.map(m => m.id)).toEqual(["2", "3", "1"]);
+    expect(merged.map((m) => m.id)).toEqual(["2", "3", "1"]);
   });
 });
 
@@ -105,11 +98,7 @@ describe("countUnread", () => {
 
 describe("filterByThread", () => {
   it("returns only matching thread_id", () => {
-    const msgs = [
-      mk({ id: "1", thread_id: "t1" }),
-      mk({ id: "2", thread_id: "t2" }),
-      mk({ id: "3", thread_id: "t1" }),
-    ];
+    const msgs = [mk({ id: "1", thread_id: "t1" }), mk({ id: "2", thread_id: "t2" }), mk({ id: "3", thread_id: "t1" })];
     expect(filterByThread(msgs, "t1")).toHaveLength(2);
   });
 });

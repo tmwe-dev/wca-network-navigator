@@ -12,16 +12,43 @@ const MultichannelSection = () => (
       <div className="grid md:grid-cols-3 gap-6">
         {[
           {
-            icon: Mail, name: "Email", color: "from-blue-500/20 to-blue-500/5", border: "border-blue-500/20",
-            features: ["SMTP/IMAP bidirezionale", "Sync automatico ogni 2 min", "Cron server-side 24/7", "Tracking aperture", "Allegati e template"]
+            icon: Mail,
+            name: "Email",
+            color: "from-blue-500/20 to-blue-500/5",
+            border: "border-blue-500/20",
+            features: [
+              "SMTP/IMAP bidirezionale",
+              "Sync automatico ogni 2 min",
+              "Cron server-side 24/7",
+              "Tracking aperture",
+              "Allegati e template",
+            ],
           },
           {
-            icon: MessageCircle, name: "WhatsApp", color: "from-emerald-500/20 to-emerald-500/5", border: "border-emerald-500/20",
-            features: ["Scansione ogni 75 secondi", "Backfill intelligente", "Max 10 chat/sessione", "Delay 15-20s tra chat", "Pausa notturna automatica"]
+            icon: MessageCircle,
+            name: "WhatsApp",
+            color: "from-emerald-500/20 to-emerald-500/5",
+            border: "border-emerald-500/20",
+            features: [
+              "Scansione ogni 75 secondi",
+              "Backfill intelligente",
+              "Max 10 chat/sessione",
+              "Delay 15-20s tra chat",
+              "Pausa notturna automatica",
+            ],
           },
           {
-            icon: Linkedin, name: "LinkedIn", color: "from-blue-600/20 to-blue-600/5", border: "border-blue-600/20",
-            features: ["Inbox reading automatico", "Navigazione a /messaging/", "Selettori aggiornati 2026", "Cookie sync li_at", "Diagnostica DOM integrata"]
+            icon: Linkedin,
+            name: "LinkedIn",
+            color: "from-blue-600/20 to-blue-600/5",
+            border: "border-blue-600/20",
+            features: [
+              "Inbox reading automatico",
+              "Navigazione a /messaging/",
+              "Selettori aggiornati 2026",
+              "Cookie sync li_at",
+              "Diagnostica DOM integrata",
+            ],
           },
         ].map(({ icon: Icon, name, color, border, features }) => (
           <div key={name} className={`p-6 rounded-2xl bg-gradient-to-b ${color} border ${border} space-y-4`}>

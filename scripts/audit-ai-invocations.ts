@@ -10,12 +10,24 @@
 import { walk } from "https://deno.land/std@0.224.0/fs/walk.ts";
 
 const AI_FUNCTIONS = new Set<string>([
-  "ai-assistant", "agent-execute", "agent-loop", "agent-simulate",
-  "agent-prompt-refiner", "agent-task-drainer", "unified-assistant",
-  "generate-email", "generate-outreach", "improve-email",
+  "ai-assistant",
+  "agent-execute",
+  "agent-loop",
+  "agent-simulate",
+  "agent-prompt-refiner",
+  "agent-task-drainer",
+  "unified-assistant",
+  "generate-email",
+  "generate-outreach",
+  "improve-email",
   "classify-inbound-message",
-  "categorize-content", "suggest-email-groups", "parse-business-card",
-  "agentic-decide", "sherlock-extract", "prompt-test-runner", "daily-briefing",
+  "categorize-content",
+  "suggest-email-groups",
+  "parse-business-card",
+  "agentic-decide",
+  "sherlock-extract",
+  "prompt-test-runner",
+  "daily-briefing",
 ]);
 
 const ALLOWED_FILES = new Set<string>([
@@ -24,8 +36,7 @@ const ALLOWED_FILES = new Set<string>([
   "src/test/invoke-edge.test.ts",
 ]);
 
-const DIRECT_INVOKE_RE =
-  /(?:supabase\.functions\.invoke|invokeEdge)\(\s*["']([^"']+)["']/g;
+const DIRECT_INVOKE_RE = /(?:supabase\.functions\.invoke|invokeEdge)\(\s*["']([^"']+)["']/g;
 
 const violations: { file: string; line: number; fn: string }[] = [];
 

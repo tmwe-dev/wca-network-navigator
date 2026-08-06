@@ -70,9 +70,13 @@ Deno.serve(async (req) => {
   if (token) {
     try {
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY") ?? "");
-      const { data: { user } } = await sb.auth.getUser(token);
+      const {
+        data: { user },
+      } = await sb.auth.getUser(token);
       if (user) userId = user.id;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   const rl = checkRateLimit(`scrape-website:${userId}`, { maxTokens: 60, refillRate: 1 });
   if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
@@ -84,7 +88,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const url = body.url as string | undefined;
     const mode = (body.mode as string) ?? "static";
-    const selectors = Array.isArray(body.selectors) ? body.selectors as string[] : [];
+    const selectors = Array.isArray(body.selectors) ? (body.selectors as string[]) : [];
     // E (audit Sez.1): payload modulare per ridurre token AI a valle (opt-in).
     // Default = tutti i blocchi (backward-compat). Se `include` arriva, restringe.
     const includeRaw = Array.isArray(body.include) ? (body.include as string[]) : null;
@@ -95,9 +99,10 @@ Deno.serve(async (req) => {
       includeFiltered && includeFiltered.length > 0 ? includeFiltered : DEFAULT_INCLUDE,
     );
     const rawTextCapRaw = Number(body.rawTextCap);
-    const rawTextCap = Number.isFinite(rawTextCapRaw) && rawTextCapRaw > 500 && rawTextCapRaw <= MAX_RAW_TEXT
-      ? Math.floor(rawTextCapRaw)
-      : MAX_RAW_TEXT;
+    const rawTextCap =
+      Number.isFinite(rawTextCapRaw) && rawTextCapRaw > 500 && rawTextCapRaw <= MAX_RAW_TEXT
+        ? Math.floor(rawTextCapRaw)
+        : MAX_RAW_TEXT;
 
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "url required" }), { status: 400, headers });
@@ -117,10 +122,7 @@ Deno.serve(async (req) => {
     }
 
     /* ── cache lookup ── */
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: cached } = await supabaseAdmin
       .from("scrape_cache")
@@ -211,17 +213,14 @@ Deno.serve(async (req) => {
     // emails
     const emails = Array.from(
       new Set(
-        (html.match(/[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]{2,}/g) ?? [])
-          .filter((e: string) => !e.endsWith(".png") && !e.endsWith(".jpg") && !e.endsWith(".gif")),
+        (html.match(/[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]{2,}/g) ?? []).filter(
+          (e: string) => !e.endsWith(".png") && !e.endsWith(".jpg") && !e.endsWith(".gif"),
+        ),
       ),
     );
 
     // phones
-    const phones = Array.from(
-      new Set(
-        (html.match(/(\+?\d[\d\s().-]{7,}\d)/g) ?? []).map((p: string) => p.trim()),
-      ),
-    );
+    const phones = Array.from(new Set((html.match(/(\+?\d[\d\s().-]{7,}\d)/g) ?? []).map((p: string) => p.trim())));
 
     // custom selectors
     const selectorResults: Record<string, string[]> = {};

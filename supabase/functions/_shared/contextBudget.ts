@@ -8,12 +8,7 @@
  * compat with the existing `assembleContext` callers.
  */
 
-export {
-  estimateTokens,
-  getContextBudget,
-  assembleContext,
-  type ContextBlock,
-} from "./tokenBudget.ts";
+export { estimateTokens, getContextBudget, assembleContext, type ContextBlock } from "./tokenBudget.ts";
 
 import { assembleContext, getContextBudget, type ContextBlock } from "./tokenBudget.ts";
 
@@ -21,9 +16,6 @@ import { assembleContext, getContextBudget, type ContextBlock } from "./tokenBud
  * Convenience wrapper: takes blocks + model name, picks the budget
  * automatically, returns assembled text + stats.
  */
-export function assembleContextWithBudget(
-  blocks: ContextBlock[],
-  model: string,
-): ReturnType<typeof assembleContext> {
+export function assembleContextWithBudget(blocks: ContextBlock[], model: string): ReturnType<typeof assembleContext> {
   return assembleContext(blocks, getContextBudget(model));
 }

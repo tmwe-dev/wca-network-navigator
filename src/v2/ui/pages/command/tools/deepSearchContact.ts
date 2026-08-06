@@ -9,7 +9,8 @@ import type { Tool, ToolResult } from "./types";
 export const deepSearchContactTool: Tool = {
   id: "deep-search-contact",
   label: "Stato deep search contatto",
-  description: "Mostra lo stato del Deep Search per un contatto (read-only). L'esecuzione avviene client-side da Email Forge / Partner Connect.",
+  description:
+    "Mostra lo stato del Deep Search per un contatto (read-only). L'esecuzione avviene client-side da Email Forge / Partner Connect.",
   match: (p) => /trova contatto|deep.?search.*contatt/i.test(p),
 
   execute: async (prompt): Promise<ToolResult> => {
@@ -35,9 +36,7 @@ export const deepSearchContactTool: Tool = {
         name: r.name ?? "—",
         company: r.company_name ?? "—",
         email: r.email ?? "—",
-        status: r.deep_search_at
-          ? `✓ ${new Date(r.deep_search_at).toLocaleDateString("it-IT")}`
-          : "○ mai eseguito",
+        status: r.deep_search_at ? `✓ ${new Date(r.deep_search_at).toLocaleDateString("it-IT")}` : "○ mai eseguito",
       })),
     };
   },

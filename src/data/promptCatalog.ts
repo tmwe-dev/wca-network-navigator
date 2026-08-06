@@ -63,7 +63,9 @@ export interface PromptCatalogItem {
 export async function listPromptCatalog(userId: string): Promise<PromptCatalogItem[]> {
   const { data: prompts, error } = await supabase
     .from("operative_prompts")
-    .select("id, name, context, tags, priority, is_active, user_id, operator_id, objective, procedure, criteria, examples")
+    .select(
+      "id, name, context, tags, priority, is_active, user_id, operator_id, objective, procedure, criteria, examples",
+    )
     .eq("user_id", userId)
     .order("priority", { ascending: false });
   if (error) throw error;
@@ -86,9 +88,7 @@ export async function listPromptCatalog(userId: string): Promise<PromptCatalogIt
   if (rows.length === 0) return [];
 
   const promptIds = rows.map((r) => r.id);
-  const operatorIds = Array.from(
-    new Set(rows.map((r) => r.operator_id).filter((v): v is string => Boolean(v))),
-  );
+  const operatorIds = Array.from(new Set(rows.map((r) => r.operator_id).filter((v): v is string => Boolean(v))));
 
   // Versioni — fetch in batch e aggregato lato client (più semplice e sicuro di una RPC).
   const { data: versionsData, error: vErr } = await supabase
@@ -109,10 +109,7 @@ export async function listPromptCatalog(userId: string): Promise<PromptCatalogIt
   // Profili operatori (display_name) — best effort.
   const operatorNameById = new Map<string, string>();
   if (operatorIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, display_name")
-      .in("id", operatorIds);
+    const { data: profiles } = await supabase.from("profiles").select("id, display_name").in("id", operatorIds);
     for (const p of (profiles ?? []) as Array<{ id: string; display_name: string | null }>) {
       operatorNameById.set(p.id, p.display_name || "");
     }
@@ -129,7 +126,7 @@ export async function listPromptCatalog(userId: string): Promise<PromptCatalogIt
       is_active: Boolean(r.is_active),
       user_id: r.user_id,
       operator_id: r.operator_id,
-      operator_name: r.operator_id ? operatorNameById.get(r.operator_id) ?? null : null,
+      operator_name: r.operator_id ? (operatorNameById.get(r.operator_id) ?? null) : null,
       fields_filled: {
         objective: (r.objective ?? "").length,
         procedure: (r.procedure ?? "").length,

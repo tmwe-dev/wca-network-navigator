@@ -31,11 +31,15 @@ test.describe("Dashboard Widgets Flow", () => {
 
   test("dashboard does not produce critical console errors", async ({ page }) => {
     const errors: string[] = [];
-    page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
     await page.goto("/v2");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
-    const critical = errors.filter((e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"));
+    const critical = errors.filter(
+      (e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"),
+    );
     expect(critical.length).toBeLessThan(5);
   });
 });

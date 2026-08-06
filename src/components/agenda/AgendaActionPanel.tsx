@@ -18,13 +18,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Mail, MessageCircle, Linkedin, Phone, StickyNote,
-  Reply, Send, PhoneCall, HelpCircle, Clock, Archive,
-  ArrowUpRight, MailX, CalendarPlus, Plane,
+  Mail,
+  MessageCircle,
+  Linkedin,
+  Phone,
+  StickyNote,
+  Reply,
+  Send,
+  PhoneCall,
+  HelpCircle,
+  Clock,
+  Archive,
+  ArrowUpRight,
+  MailX,
+  CalendarPlus,
+  Plane,
 } from "lucide-react";
 import { useUpdateActivity } from "@/hooks/useActivities";
 import { insertActivity, activityKeys } from "@/data/activities";
@@ -78,12 +88,14 @@ function urgencyOf(iso: string): { label: string; cls: string } {
 
 function cleanTitle(title: string | null): string {
   if (!title) return "—";
-  return title
-    .replace(/^reply received\s*\([^)]+\)\s*:?\s*/i, "")
-    .replace(/^risposta\s+(email|whatsapp|linkedin|sms)\s*:?\s*/i, "")
-    .replace(/^re:\s*/i, "")
-    .replace(/^fwd:\s*/i, "")
-    .trim() || "—";
+  return (
+    title
+      .replace(/^reply received\s*\([^)]+\)\s*:?\s*/i, "")
+      .replace(/^risposta\s+(email|whatsapp|linkedin|sms)\s*:?\s*/i, "")
+      .replace(/^re:\s*/i, "")
+      .replace(/^fwd:\s*/i, "")
+      .trim() || "—"
+  );
 }
 
 /** Estrae il dominio del mittente da una description tipo "Messaggio in arrivo da x@y.com (...)". */
@@ -113,8 +125,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
 
   // Hooks devono stare PRIMA di qualsiasi early return per rispettare le rules-of-hooks.
   const isEmailActivity =
-    !!activity &&
-    (activity.activity_type === "send_email" || activity.activity_type === "follow_up");
+    !!activity && (activity.activity_type === "send_email" || activity.activity_type === "follow_up");
   const senderForQuery = senderFromDescription(activity?.description);
   const senderEmailForQuery = senderForQuery?.email ?? null;
   const previewQuery = useQuery({
@@ -138,19 +149,14 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
       <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
         <MailX className="w-10 h-10 mb-3 opacity-30" />
         <p className="text-sm">Seleziona un'attività a sinistra</p>
-        <p className="text-[11px] mt-1 opacity-70">
-          Qui appariranno il contesto e le azioni rapide per gestirla.
-        </p>
+        <p className="text-[11px] mt-1 opacity-70">Qui appariranno il contesto e le azioni rapide per gestirla.</p>
       </div>
     );
   }
 
   const ChannelIcon = channelIcon[activity.activity_type] || Mail;
   const sender = senderFromDescription(activity.description);
-  const partnerName =
-    activity.partners?.company_name ||
-    sender?.domain ||
-    "Mittente sconosciuto";
+  const partnerName = activity.partners?.company_name || sender?.domain || "Mittente sconosciuto";
   const senderEmail = sender?.email ?? null;
   const flag = activity.partners?.country_code ? getCountryFlag(activity.partners.country_code) : null;
   const city = activity.partners?.city;
@@ -175,9 +181,13 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
 
   const partnerHref = activity.partner_id ? `/v2/network?partnerId=${activity.partner_id}` : null;
   const PrimaryIcon =
-    primaryVerb === "Rispondi" ? Reply :
-    primaryVerb === "Chiama" ? PhoneCall :
-    primaryVerb === "Invia" ? Send : HelpCircle;
+    primaryVerb === "Rispondi"
+      ? Reply
+      : primaryVerb === "Chiama"
+        ? PhoneCall
+        : primaryVerb === "Invia"
+          ? Send
+          : HelpCircle;
 
   const handleScheduleFuture = async () => {
     if (!futureDate || !activity.partner_id) return;
@@ -225,7 +235,10 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
                   {urgency.label}
                 </Badge>
                 {inHolding && (
-                  <Badge variant="outline" className="text-[10px] gap-1 border-sky-500/40 text-sky-500 bg-sky-500/10 animate-pulse">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] gap-1 border-sky-500/40 text-sky-500 bg-sky-500/10 animate-pulse"
+                  >
                     <Plane className="w-3 h-3" /> In attesa
                   </Badge>
                 )}
@@ -254,9 +267,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
       <ScrollArea className="flex-1">
         <div className="p-5 space-y-4">
           <section>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-              Oggetto
-            </p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Oggetto</p>
             <p className="text-sm font-medium leading-snug">{subject}</p>
           </section>
 
@@ -282,9 +293,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
                   {inboundPreview.length > 1200 && "…"}
                 </p>
               ) : description ? (
-                <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">
-                  {description}
-                </p>
+                <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">{description}</p>
               ) : (
                 <p className="text-xs text-muted-foreground italic">
                   Anteprima non disponibile. Apri il partner per il messaggio completo.
@@ -293,12 +302,8 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
             </section>
           ) : description ? (
             <section>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-                Contesto
-              </p>
-              <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">
-                {description}
-              </p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Contesto</p>
+              <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">{description}</p>
             </section>
           ) : null}
 
@@ -360,7 +365,12 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setPopoverOpen(false)}>
                   Annulla
                 </Button>
-                <Button size="sm" className="h-7 text-xs" disabled={!futureDate || scheduling} onClick={handleScheduleFuture}>
+                <Button
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={!futureDate || scheduling}
+                  onClick={handleScheduleFuture}
+                >
                   Programma
                 </Button>
               </div>

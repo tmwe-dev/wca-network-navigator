@@ -10,18 +10,18 @@ Le chiamate dirette `supabase.from()` fuori da `src/data/**` sono **vietate** e 
 
 Ogni modulo DAL copre un dominio:
 
-| Modulo | Tabella(e) |
-|--------|-----------|
-| `contacts.ts` | `imported_contacts`, `contact_interactions` |
-| `partners.ts` | `partners` |
-| `partnerRelations.ts` | `partner_contacts`, `partner_social_links` |
-| `businessCards.ts` | `business_cards` |
-| `prospects.ts` | `prospects`, `prospect_contacts` |
-| `activities.ts` | `activities` |
-| `importLogs.ts` | `import_logs` |
-| `cockpitQueue.ts` | `cockpit_queue` |
-| `credits.ts` | `user_credits`, `credit_transactions` |
-| ... | (vedi `index.ts` per elenco completo) |
+| Modulo                | Tabella(e)                                  |
+| --------------------- | ------------------------------------------- |
+| `contacts.ts`         | `imported_contacts`, `contact_interactions` |
+| `partners.ts`         | `partners`                                  |
+| `partnerRelations.ts` | `partner_contacts`, `partner_social_links`  |
+| `businessCards.ts`    | `business_cards`                            |
+| `prospects.ts`        | `prospects`, `prospect_contacts`            |
+| `activities.ts`       | `activities`                                |
+| `importLogs.ts`       | `import_logs`                               |
+| `cockpitQueue.ts`     | `cockpit_queue`                             |
+| `credits.ts`          | `user_credits`, `credit_transactions`       |
+| ...                   | (vedi `index.ts` per elenco completo)       |
 
 ## Come aggiungere una nuova query
 

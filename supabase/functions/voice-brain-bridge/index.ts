@@ -76,14 +76,11 @@ function makeSafeReply(partial: Partial<VoiceReply>, fallbackSay: string): Voice
  */
 async function validateBridgeToken(
   supabase: ReturnType<typeof createClient>,
-  rawToken: string
+  rawToken: string,
 ): Promise<string | null> {
   if (!rawToken) return null;
   try {
-    const hashBuffer = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(rawToken)
-    );
+    const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawToken));
     const tokenHash = Array.from(new Uint8Array(hashBuffer))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
@@ -99,10 +96,7 @@ async function validateBridgeToken(
     if (new Date(data.expires_at as string) < new Date()) return null;
 
     // Mark as used
-    await supabase
-      .from("bridge_tokens")
-      .update({ used: true })
-      .eq("id", data.id);
+    await supabase.from("bridge_tokens").update({ used: true }).eq("id", data.id);
 
     return data.created_by as string;
   } catch {
@@ -146,14 +140,16 @@ async function loadPartnerSnippet(supabase: ReturnType<typeof createClient>, par
   try {
     const { data } = await supabase
       .from("partners")
-      .select("id, company_name, country_code, country_name, city, profile_description, lead_status, rating, partner_type, email, phone, last_interaction_at, interaction_count")
+      .select(
+        "id, company_name, country_code, country_name, city, profile_description, lead_status, rating, partner_type, email, phone, last_interaction_at, interaction_count",
+      )
       .eq("id", partnerId)
       .maybeSingle();
     if (!data) return "";
     return [
       "# PARTNER IN LINEA",
       `Nome: ${data.company_name}`,
-      data.country_name ? `Paese: ${data.country_name}` : (data.country_code ? `Paese: ${data.country_code}` : ""),
+      data.country_name ? `Paese: ${data.country_name}` : data.country_code ? `Paese: ${data.country_code}` : "",
       data.city ? `Città: ${data.city}` : "",
       data.partner_type ? `Tipo: ${data.partner_type}` : "",
       data.lead_status ? `Lead status: ${data.lead_status}` : "",
@@ -163,8 +159,12 @@ async function loadPartnerSnippet(supabase: ReturnType<typeof createClient>, par
       typeof data.interaction_count === "number" ? `Interazioni: ${data.interaction_count}` : "",
       data.last_interaction_at ? `Ultima interazione: ${data.last_interaction_at}` : "",
       data.profile_description ? `Profilo: ${String(data.profile_description).slice(0, 240)}` : "",
-    ].filter(Boolean).join("\n");
-  } catch { return ""; }
+    ]
+      .filter(Boolean)
+      .join("\n");
+  } catch {
+    return "";
+  }
 }
 
 function buildSystemPrompt(voiceContext: string, partnerSnippet: string): string {
@@ -184,7 +184,9 @@ function buildSystemPrompt(voiceContext: string, partnerSnippet: string): string
     "",
     voiceContext,
     partnerSnippet,
-  ].filter(Boolean).join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function buildUserPrompt(turn: IncomingTurn): string {
@@ -199,25 +201,49 @@ function buildUserPrompt(turn: IncomingTurn): string {
     turn.utterance ? `ULTIMO TURNO PARTNER: "${turn.utterance}"` : "",
     "",
     "Decidi il prossimo turno rispettando il contratto JSON. Una sola domanda. ≤40 parole nel campo say.",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function safeJsonParse(raw: string): Record<string, unknown> | null {
   if (!raw) return null;
-  const cleaned = raw.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
-  try { return JSON.parse(cleaned); } catch {
+  const cleaned = raw
+    .replace(/```json\s*/gi, "")
+    .replace(/```/g, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
     const m = cleaned.match(/\{[\s\S]*\}/);
-    if (m) { try { return JSON.parse(m[0]); } catch { return null; } }
+    if (m) {
+      try {
+        return JSON.parse(m[0]);
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }
 
 async function logRequest(supabase: ReturnType<typeof createClient>, payload: Record<string, unknown>): Promise<void> {
-  try { await supabase.from("request_logs").insert(payload); } catch (e) { console.warn("request_logs insert failed:", (e as Error).message); }
+  try {
+    await supabase.from("request_logs").insert(payload);
+  } catch (e) {
+    console.warn("request_logs insert failed:", (e as Error).message);
+  }
 }
 
-async function logAiRequest(supabase: ReturnType<typeof createClient>, payload: Record<string, unknown>): Promise<void> {
-  try { await supabase.from("ai_request_log").insert(payload); } catch (e) { console.warn("ai_request_log insert failed:", (e as Error).message); }
+async function logAiRequest(
+  supabase: ReturnType<typeof createClient>,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await supabase.from("ai_request_log").insert(payload);
+  } catch (e) {
+    console.warn("ai_request_log insert failed:", (e as Error).message);
+  }
 }
 
 serve(async (req) => {
@@ -299,10 +325,7 @@ serve(async (req) => {
         .maybeSingle();
       if (existing?.id) {
         sessionId = existing.id as string;
-        const newTranscript = [
-          ...((existing.transcript as unknown[]) || []),
-          ...(turn.transcript || []),
-        ].slice(-200);
+        const newTranscript = [...((existing.transcript as unknown[]) || []), ...(turn.transcript || [])].slice(-200);
         await supabase.from("voice_call_sessions").update({ transcript: newTranscript }).eq("id", sessionId);
       } else {
         const { data: created } = await supabase
@@ -352,8 +375,8 @@ serve(async (req) => {
       signal: ctrl.signal,
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${SERVICE_ROLE}`,
-        "apikey": SERVICE_ROLE,
+        Authorization: `Bearer ${SERVICE_ROLE}`,
+        apikey: SERVICE_ROLE,
       },
       body: JSON.stringify({
         scope: "extension",

@@ -10,11 +10,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Layers, LogOut } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { navItemsDef } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
@@ -109,11 +105,7 @@ interface NavMenuPopoverProps {
   align?: "start" | "center" | "end";
 }
 
-export function NavMenuPopover({
-  children,
-  currentPath,
-  align = "start",
-}: NavMenuPopoverProps): React.ReactElement {
+export function NavMenuPopover({ children, currentPath, align = "start" }: NavMenuPopoverProps): React.ReactElement {
   const nav = useNavigate();
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -149,30 +141,28 @@ export function NavMenuPopover({
       >
         <div className="flex flex-col">
           {navItemsDef.map((item) => {
-              const isActive = sectionRoot(item.path) === activeRoot;
-              const translated = t(item.labelKey);
-              const label =
-                translated === item.labelKey
-                  ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
-                  : translated;
-              return (
-                <button
-                  key={item.path}
-                  role="menuitem"
-                  aria-current={isActive ? "page" : undefined}
-                  onClick={() => handleSelect(item.path)}
-                  className={
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left capitalize " +
-                    (isActive
-                      ? "bg-primary/15 text-primary font-semibold"
-                      : "text-foreground/90 hover:bg-white/5 hover:text-foreground")
-                  }
-                >
-                  <span className="text-muted-foreground">{item.icon}</span>
-                  <span>{label}</span>
-                </button>
-              );
-            })}
+            const isActive = sectionRoot(item.path) === activeRoot;
+            const translated = t(item.labelKey);
+            const label =
+              translated === item.labelKey ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ") : translated;
+            return (
+              <button
+                key={item.path}
+                role="menuitem"
+                aria-current={isActive ? "page" : undefined}
+                onClick={() => handleSelect(item.path)}
+                className={
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left capitalize " +
+                  (isActive
+                    ? "bg-primary/15 text-primary font-semibold"
+                    : "text-foreground/90 hover:bg-white/5 hover:text-foreground")
+                }
+              >
+                <span className="text-muted-foreground">{item.icon}</span>
+                <span>{label}</span>
+              </button>
+            );
+          })}
           <div className="my-1 border-t border-white/10" />
           <button
             type="button"
@@ -185,7 +175,9 @@ export function NavMenuPopover({
                 : "text-foreground/90 hover:bg-white/5 hover:text-foreground")
             }
           >
-            <span className="text-muted-foreground"><Layers className="h-4 w-4" /></span>
+            <span className="text-muted-foreground">
+              <Layers className="h-4 w-4" />
+            </span>
             <span className="flex-1">Development</span>
             {devOpen ? <ChevronDown className="h-4 w-4 opacity-60" /> : <ChevronRight className="h-4 w-4 opacity-60" />}
           </button>
@@ -207,7 +199,11 @@ export function NavMenuPopover({
                           : "text-foreground/85 hover:bg-white/5 hover:text-foreground")
                       }
                     >
-                      {isGroupOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-60" /> : <ChevronRight className="h-3.5 w-3.5 opacity-60" />}
+                      {isGroupOpen ? (
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+                      )}
                       <span className="flex-1">{group.title}</span>
                     </button>
                     {isGroupOpen && (
@@ -252,7 +248,9 @@ export function NavMenuPopover({
             }}
             className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left text-destructive hover:bg-destructive/10"
           >
-            <span><LogOut className="h-4 w-4" /></span>
+            <span>
+              <LogOut className="h-4 w-4" />
+            </span>
             <span>Logout</span>
           </button>
         </div>

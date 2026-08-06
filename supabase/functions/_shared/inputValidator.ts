@@ -51,7 +51,7 @@ const PRIVATE_IPV4_RANGES: Array<[number, number, number, number, number]> = [
   [192, 0, 0, 0, 24],
   [192, 168, 0, 0, 16],
   [198, 18, 0, 0, 15],
-  [0, 0, 0, 0, 8],     // 0.0.0.0/8
+  [0, 0, 0, 0, 8], // 0.0.0.0/8
   [100, 64, 0, 0, 10], // CGNAT
 ];
 
@@ -86,12 +86,7 @@ function isPrivateIPv6(host: string): boolean {
   return false;
 }
 
-const BLOCKED_HOSTNAMES = new Set([
-  "localhost",
-  "metadata.google.internal",
-  "metadata",
-  "instance-data",
-]);
+const BLOCKED_HOSTNAMES = new Set(["localhost", "metadata.google.internal", "metadata", "instance-data"]);
 
 export interface AssertSafeUrlOptions {
   /** Allowed protocols (default: http, https). */
@@ -104,10 +99,7 @@ export interface AssertSafeUrlOptions {
  * Validate that the given URL string is safe to fetch from server-side context.
  * Throws Error("ssrf_blocked: ...") on any violation.
  */
-export function assertSafePublicUrl(
-  rawUrl: string,
-  opts: AssertSafeUrlOptions = {},
-): URL {
+export function assertSafePublicUrl(rawUrl: string, opts: AssertSafeUrlOptions = {}): URL {
   const { protocols = ["http:", "https:"], allowHostSuffixes } = opts;
   let parsed: URL;
   try {
@@ -139,10 +131,7 @@ export function assertSafePublicUrl(
 }
 
 /** Non-throwing variant: returns null if blocked. */
-export function safePublicUrlOrNull(
-  rawUrl: string,
-  opts: AssertSafeUrlOptions = {},
-): URL | null {
+export function safePublicUrlOrNull(rawUrl: string, opts: AssertSafeUrlOptions = {}): URL | null {
   try {
     return assertSafePublicUrl(rawUrl, opts);
   } catch {

@@ -8,11 +8,12 @@
 
 ## §1 — PRINCIPIO MADRE
 
-> *La priorità non è aggiungere la feature. La priorità è aggiungerla senza rompere il comportamento esistente.*
+> _La priorità non è aggiungere la feature. La priorità è aggiungerla senza rompere il comportamento esistente._
 
 Eco esatto del workspace knowledge. Tutto il resto del Codex è la disciplina che rende vero questo principio.
 
 **Regola operativa.** Prima di modificare codice:
+
 1. leggo il file completo,
 2. capisco il flusso esistente,
 3. identifico se tocco un nodo critico (§7),
@@ -26,17 +27,20 @@ Eco esatto del workspace knowledge. Tutto il resto del Codex è la disciplina ch
 Tre classi, escluse e ordinate per gravità.
 
 ### TRIM
+
 - Tocca solo testo, commenti, rinomine locali, copy UI, classi Tailwind locali.
 - Nessuna logica osservabile cambia.
 - Output: 1 riga di chiusura.
 
 ### STANDARD
+
 - Tocca logica osservabile in **un solo modulo**.
 - Niente schema dati, niente edge function AI, niente nodo critico.
 - Esempi: hook V2, componente UI con stato locale, DAL non critico, nuova pagina V2 isolata, fix di rendering.
 - Output: §6 versione mini.
 
 ### CRITICAL
+
 - Tocca **almeno uno** tra:
   - schema DB / migration / RLS / trigger / soft-delete,
   - edge function AI (`agent-loop`, `agent-execute`, `generate-email`, `generate-outreach`, `improve-email`, `classify-*`, `suggest-email-groups`, `ai-assistant`, `agent-prompt-refiner`),
@@ -60,6 +64,7 @@ Tre classi, escluse e ordinate per gravità.
 Pattern matching sul messaggio utente. Primo match attiva la rotta.
 
 ### 3.1 Bug fix — "non funziona X" / "errore" / "crash"
+
 1. Riproduzione PRIMA della soluzione (lettura logs, network, console, file causa).
 2. Sintomo vs causa: formulo entrambi.
 3. Mappa la catena dove si manifesta.
@@ -68,9 +73,10 @@ Pattern matching sul messaggio utente. Primo match attiva la rotta.
 6. Test/verifica del comportamento osservabile post-fix.
 7. Changelog.
 
-**Domanda di blocco.** *"Ho riprodotto il bug o sto operando solo sulla descrizione?"* Se la seconda → leggo il codice causa prima di proporre il fix.
+**Domanda di blocco.** _"Ho riprodotto il bug o sto operando solo sulla descrizione?"_ Se la seconda → leggo il codice causa prima di proporre il fix.
 
 ### 3.2 Nuova feature — "aggiungi X" / "implementa Y"
+
 1. Obiettivo in una frase.
 2. Criterio di successo misurabile.
 3. Dove si innesta (mappa architettura: pagina V2 → hook → DAL → tabella o edge function).
@@ -84,6 +90,7 @@ Pattern matching sul messaggio utente. Primo match attiva la rotta.
 11. Changelog.
 
 ### 3.3 Refactor — "pulisci" / "riorganizza"
+
 1. Convenzioni esistenti (NON impongo stile personale).
 2. Chi consuma il codice da rifattorizzare.
 3. Blast radius.
@@ -94,7 +101,9 @@ Pattern matching sul messaggio utente. Primo match attiva la rotta.
 8. Changelog.
 
 ### 3.4 Schema dati — "tabella" / "campo" / "migration"
+
 **CRITICAL per default.**
+
 1. STOP se incertezza critica → chiedo.
 2. Tre domande dei dati persistenti (§7.6):
    - Cosa accade ai dati esistenti? Retrocompatibile?
@@ -110,7 +119,9 @@ Pattern matching sul messaggio utente. Primo match attiva la rotta.
 10. Changelog.
 
 ### 3.5 Integrazione esterna — "API" / "webhook" / "extension"
+
 **CRITICAL per default.**
+
 1. Credenziali e secret via env (`Deno.env.get` / `VITE_*`), mai hardcoded.
 2. Fail safely se servizio esterno giù (timeout, retry, dead-letter).
 3. Logging strategico ai confini (structured logger).
@@ -121,6 +132,7 @@ Pattern matching sul messaggio utente. Primo match attiva la rotta.
 8. Changelog.
 
 ### 3.6 Performance — "lento" / "ottimizza"
+
 1. **Riproduco e misuro PRIMA**. Senza misura, non ottimizzo.
 2. Sintomo: lentezza dove? Causa: query / rete / CPU / render?
 3. Blast radius: l'ottimizzazione introduce race? cache stale? RLS bypass?
@@ -129,12 +141,15 @@ Pattern matching sul messaggio utente. Primo match attiva la rotta.
 6. Regressione: i risultati non cambiano.
 
 ### 3.7 Deploy — "rilascia" / "produzione"
+
 Vedi §10.
 
 ### 3.8 Incertezza — "forse" / "credo" / "non sono sicuro"
+
 Vedi §9 (gestione dubbio).
 
 ### 3.9 Gate di consegna — "ho finito" / "pronto"
+
 1. Verbo Lovable (§4): tutte le 9 risposte hanno registro?
 2. Scan anti-pattern (§8).
 3. Criterio di successo: conforme / non conforme / parziale?
@@ -143,6 +158,7 @@ Vedi §9 (gestione dubbio).
 6. Se anche UNO fallisce → NON dichiaro consegnato. Riporto cosa manca.
 
 ### 3.10 Default safe path
+
 Se nessun match: classifico, dichiaro obiettivo + criterio di successo, poi instrado in base a cosa emerge. Se ancora ambiguo → fermo e chiedo.
 
 ---
@@ -191,6 +207,7 @@ Output di controllo: prima di consegnare, conferma esplicitamente che ognuno dei
 ## §6 — FORMATO OUTPUT
 
 ### STANDARD (mini)
+
 ```
 CLASSE: STANDARD — [motivo]
 OBIETTIVO: [una frase]
@@ -205,6 +222,7 @@ CHANGELOG:
 ```
 
 ### CRITICAL (completo)
+
 ```
 CLASSE: CRITICAL — [motivo specifico, nodo toccato]
 OBIETTIVO: [una frase su cosa cambia per l'utente]
@@ -249,6 +267,7 @@ CHANGELOG:
 ```
 
 ### TRIM
+
 Una riga di chiusura. Niente formato.
 
 ---
@@ -257,30 +276,31 @@ Una riga di chiusura. Niente formato.
 
 Toccare uno di questi → CRITICAL automatico.
 
-| Nodo | Vincolo principale |
-|---|---|
-| `_shared/cors.ts` | Whitelist, mai wildcard |
-| `src/data/**` | Unico accesso DB. ESLint blocca `supabase.from()` fuori |
-| `invokeAi()` + `ai_scope_registry` | Unico canale AI. ESLint `no-direct-ai-invoke` |
-| `journalistReview` | Obbligatorio email/WA/LI. Mai bypass né duplicazione |
-| `hardGuards.ts` | No DELETE, bulk cap, FORBIDDEN_TABLES. Immutabile |
-| Soft-delete trigger DB (15 tabelle business) | Mai DELETE fisico |
-| `applyLeadStatusChange` | Tutte le transizioni `lead_status` qui. `status_reason` obbligatoria per `archived/blacklisted` |
-| `check-inbox`, `email-imap-proxy`, `mark-imap-seen` | Non modificare senza autorizzazione esplicita |
-| `AuthProvider` | Single `onAuthStateChange`, JWT locale, no `getUser()` rete |
-| `operative_prompts` + `operativePromptsLoader` | Modifica via Prompt Lab (DB), no hardcoded |
-| `agent_personas`, `agent_capabilities` | DB layer, modifiche via Prompt Lab |
-| `queryKeys.ts` | Centralizzati, niente array inline |
-| V2 vs V1 | V2 non importa V1. `/v1/*` → `/v2/*` |
-| Migration | Idempotente, reversibile, separata dal deploy |
-| `promptSanitizer`, `injectionGuard`, `aiActionRiskGate` | Layer di sicurezza, immutabili senza review |
-| WCA bridge (`wcaCookieStore`, `gateAndMark`) | Checkpoint gate su discover/scrape/enrich |
-| Editorial review pipeline | Intoccabile |
-| Soft-link partner (`transferred_to_partner_id`) | Mai eliminare record business |
-| `_shared/cors.ts` whitelist | Mai aprire a wildcard |
-| `securityHeaders.ts` | nosniff/DENY/HSTS sempre |
+| Nodo                                                    | Vincolo principale                                                                              |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `_shared/cors.ts`                                       | Whitelist, mai wildcard                                                                         |
+| `src/data/**`                                           | Unico accesso DB. ESLint blocca `supabase.from()` fuori                                         |
+| `invokeAi()` + `ai_scope_registry`                      | Unico canale AI. ESLint `no-direct-ai-invoke`                                                   |
+| `journalistReview`                                      | Obbligatorio email/WA/LI. Mai bypass né duplicazione                                            |
+| `hardGuards.ts`                                         | No DELETE, bulk cap, FORBIDDEN_TABLES. Immutabile                                               |
+| Soft-delete trigger DB (15 tabelle business)            | Mai DELETE fisico                                                                               |
+| `applyLeadStatusChange`                                 | Tutte le transizioni `lead_status` qui. `status_reason` obbligatoria per `archived/blacklisted` |
+| `check-inbox`, `email-imap-proxy`, `mark-imap-seen`     | Non modificare senza autorizzazione esplicita                                                   |
+| `AuthProvider`                                          | Single `onAuthStateChange`, JWT locale, no `getUser()` rete                                     |
+| `operative_prompts` + `operativePromptsLoader`          | Modifica via Prompt Lab (DB), no hardcoded                                                      |
+| `agent_personas`, `agent_capabilities`                  | DB layer, modifiche via Prompt Lab                                                              |
+| `queryKeys.ts`                                          | Centralizzati, niente array inline                                                              |
+| V2 vs V1                                                | V2 non importa V1. `/v1/*` → `/v2/*`                                                            |
+| Migration                                               | Idempotente, reversibile, separata dal deploy                                                   |
+| `promptSanitizer`, `injectionGuard`, `aiActionRiskGate` | Layer di sicurezza, immutabili senza review                                                     |
+| WCA bridge (`wcaCookieStore`, `gateAndMark`)            | Checkpoint gate su discover/scrape/enrich                                                       |
+| Editorial review pipeline                               | Intoccabile                                                                                     |
+| Soft-link partner (`transferred_to_partner_id`)         | Mai eliminare record business                                                                   |
+| `_shared/cors.ts` whitelist                             | Mai aprire a wildcard                                                                           |
+| `securityHeaders.ts`                                    | nosniff/DENY/HSTS sempre                                                                        |
 
 ### §7.6 — Tre domande dati persistenti
+
 1. Cosa accade ai dati esistenti? Retrocompatibile?
 2. Serve migrazione? È idempotente? È reversibile?
 3. Cosa accade se il campo nuovo manca nei record vecchi?
@@ -317,12 +337,15 @@ Se UNA risposta è "non lo so" → STOP, chiedo.
 ## §9 — CHECKPOINT (CK1-CK7) E GESTIONE DUBBIO
 
 ### CK1 — Ingresso del task
+
 Primo messaggio utente che richiede modifica. Azione: classifica + obiettivo + criterio di successo. Output: dichiarazione esplicita.
 
 ### CK2 — Prima di scrivere codice
+
 Sto per produrre la prima riga. Azione: dichiaro architettura + flusso + blast radius. Consulta §7 (nodi critici).
 
 ### CK3 — Emerge un'incertezza
+
 Uso (anche solo pensato) di "forse"/"credo"/"non sono sicuro". Azione: classifica.
 
 - **(a) CRITICA**: dati / auth / pagamenti / esterno effettivo / irreversibile → **STOP**, formulo domanda specifica, non procedo.
@@ -330,15 +353,19 @@ Uso (anche solo pensato) di "forse"/"credo"/"non sono sicuro". Azione: classific
 - **(c) NON BLOCCANTE**: marginale → dichiaro brevemente l'assunzione e procedo.
 
 ### CK4 — Vedo un secondo problema durante il lavoro
+
 Noto un bug/refactor utile mentre lavoro su altro. Azione: **non correggo ora**. Registro in `DEBITO RESIDUO`.
 
 ### CK5 — Sto per dichiarare "fatto"
+
 Modifica completata mentalmente. Azione: Verbo Lovable (§4) + scan anti-pattern (§8) + criterio di successo. Se uno fallisce → NON dichiaro consegnato.
 
 ### CK6 — Modifica tocca dati persistenti
+
 Azione: tre domande §7.6 prima di scrivere SQL.
 
 ### CK7 — Modifica è irreversibile
+
 Effetto include invio email/WA/LI, pagamento, eliminazione dati, chiamata esterna effettiva. Azione: incertezza CRITICA per default, mitigazione preparata PRIMA, non dopo.
 
 ---
@@ -346,22 +373,26 @@ Effetto include invio email/WA/LI, pagamento, eliminazione dati, chiamata estern
 ## §10 — DEPLOY
 
 ### Pre-deploy
+
 - Changelog completo e veritiero?
 - Piano di rollback letto?
 - Migrazioni dati separate e ordinate?
 - Finestra temporale compatibile con disponibilità del personale?
 
 ### Durante
+
 - Deploy tracciato (chi, quando, cosa, dove).
 - Modalità graduale / feature flag dove possibile.
 - Atto unico, niente lavori paralleli.
 
 ### Post-deploy immediato
+
 - Smoke test sull'ambiente di destinazione.
 - Osservazione attiva (log errori, latenza, tassi di errore, code, risorse).
 - Soglia di rollback definita PRIMA, non durante (es. "errore > 5% in 10 min → rollback").
 
 ### Post-deploy esteso
+
 - Verifica criterio di successo a 24h e 7gg.
 - In caso di incidente: revisione retrospettiva (cause, non colpe).
 
@@ -392,7 +423,7 @@ Sopravvivono a qualunque rotta, scorciatoia o pressione utente. Unione delle 14 
 19. Mai modifica a `check-inbox`/`email-imap-proxy`/`mark-imap-seen` senza autorizzazione esplicita.
 20. Mai inline query keys.
 
-L'utente può chiedere deroga: rispondo *"Questa richiesta confligge con [regola]. Procedere violerebbe il Codex. Confermi che vuoi proseguire fuori protocollo?"*. Senza conferma esplicita e tracciata, non procedo.
+L'utente può chiedere deroga: rispondo _"Questa richiesta confligge con [regola]. Procedere violerebbe il Codex. Confermi che vuoi proseguire fuori protocollo?"_. Senza conferma esplicita e tracciata, non procedo.
 
 ---
 
@@ -408,4 +439,4 @@ Senza tutti e 5 → non dichiaro consegnato. Dico cosa manca.
 
 ---
 
-*Fine Codex. Per la versione operativa quotidiana: `lovable-quick-codex.md`.*
+_Fine Codex. Per la versione operativa quotidiana: `lovable-quick-codex.md`._

@@ -12,12 +12,64 @@ interface HtmlEmailEditorProps {
   className?: string;
 }
 
-const ALLOWED_TAGS = ['p', 'br', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'img', 'hr', 'blockquote', 'pre', 'code', 'sup', 'sub', 'u', 's'];
-const ALLOWED_ATTR = ['href', 'target', 'rel', 'style', 'class', 'src', 'alt', 'width', 'height', 'border', 'cellpadding', 'cellspacing', 'align', 'valign', 'colspan', 'rowspan'];
+const ALLOWED_TAGS = [
+  "p",
+  "br",
+  "b",
+  "i",
+  "strong",
+  "em",
+  "a",
+  "ul",
+  "ol",
+  "li",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "span",
+  "div",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "td",
+  "th",
+  "img",
+  "hr",
+  "blockquote",
+  "pre",
+  "code",
+  "sup",
+  "sub",
+  "u",
+  "s",
+];
+const ALLOWED_ATTR = [
+  "href",
+  "target",
+  "rel",
+  "style",
+  "class",
+  "src",
+  "alt",
+  "width",
+  "height",
+  "border",
+  "cellpadding",
+  "cellspacing",
+  "align",
+  "valign",
+  "colspan",
+  "rowspan",
+];
 
 function normalizeEditorHtml(raw: string): string {
   return (raw || "")
-    .replace(/&lt;(\/?(?:p|br|strong|em|ul|ol|li|a)\b[^&]*)&gt;/gi, (_match, tag: string) => `<${tag.replace(/&quot;/g, '"')}>`)
+    .replace(
+      /&lt;(\/?(?:p|br|strong|em|ul|ol|li|a)\b[^&]*)&gt;/gi,
+      (_match, tag: string) => `<${tag.replace(/&quot;/g, '"')}>`,
+    )
     .replace(/<br\s*\/?\s*>/gi, "<br>")
     .replace(/(?:<br>\s*){2,}/gi, "<br>")
     .replace(/<\/p>\s*([,.;:])/gi, "$1</p>")
@@ -53,12 +105,15 @@ export default function HtmlEmailEditor({ value, onChange, placeholder, classNam
     }
   }, [onChange]);
 
-  const handleSourceChange = useCallback((raw: string) => {
-    onChange(raw);
-  }, [onChange]);
+  const handleSourceChange = useCallback(
+    (raw: string) => {
+      onChange(raw);
+    },
+    [onChange],
+  );
 
   const toggleMode = useCallback(() => {
-    setSourceMode(prev => !prev);
+    setSourceMode((prev) => !prev);
   }, []);
 
   const isEmpty = !value || value === "<br>" || value === "<p><br></p>";
@@ -100,7 +155,7 @@ export default function HtmlEmailEditor({ value, onChange, placeholder, classNam
               "prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5",
               "prose-a:text-primary prose-strong:text-foreground",
               "[&_*]:text-foreground",
-              isEmpty && "empty-editor"
+              isEmpty && "empty-editor",
             )}
             style={{ minHeight: 200 }}
             data-placeholder={placeholder}

@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import {
-  Search, Filter, CheckCircle2, Linkedin, Globe, ImageOff, XCircle, Loader2,
-} from "lucide-react";
+import { Search, Filter, CheckCircle2, Linkedin, Globe, ImageOff, XCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EnrichFilter } from "@/hooks/useEnrichmentData";
 import type { BaseEnrichmentProgress } from "@/hooks/useBaseEnrichment";
@@ -37,8 +38,13 @@ interface Props {
   search: string;
   enrichFilter: EnrichFilter;
   stats: {
-    total: number; withDomain: number; withLinkedin: number; withLogo: number;
-    completeCount: number; partialCount: number; missingCount: number;
+    total: number;
+    withDomain: number;
+    withLinkedin: number;
+    withLogo: number;
+    completeCount: number;
+    partialCount: number;
+    missingCount: number;
   };
   onSearchChange: (v: string) => void;
   onFilterChange: (v: EnrichFilter) => void;
@@ -50,12 +56,21 @@ interface Props {
   };
 }
 
-export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange, onFilterChange, baseEnrichment }: Props) {
+export function EnrichmentToolbar({
+  search,
+  enrichFilter,
+  stats,
+  onSearchChange,
+  onFilterChange,
+  baseEnrichment,
+}: Props) {
   const isRunning = baseEnrichment?.progress.status === "running";
-  const showProgressBar = baseEnrichment && baseEnrichment.progress.status !== "idle" && baseEnrichment.progress.total > 0;
-  const pct = baseEnrichment && baseEnrichment.progress.total > 0
-    ? (baseEnrichment.progress.done / baseEnrichment.progress.total) * 100
-    : 0;
+  const showProgressBar =
+    baseEnrichment && baseEnrichment.progress.status !== "idle" && baseEnrichment.progress.total > 0;
+  const pct =
+    baseEnrichment && baseEnrichment.progress.total > 0
+      ? (baseEnrichment.progress.done / baseEnrichment.progress.total) * 100
+      : 0;
 
   return (
     <div className="space-y-2">
@@ -125,9 +140,15 @@ export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange,
           ) : (
             <>
               <span>{stats.total} totali</span>
-              <span className="flex items-center gap-0.5"><Globe className="w-3 h-3" /> {stats.withDomain}</span>
-              <span className="flex items-center gap-0.5"><Linkedin className="w-3 h-3" /> {stats.withLinkedin}</span>
-              <span className="flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" /> {stats.withLogo}</span>
+              <span className="flex items-center gap-0.5">
+                <Globe className="w-3 h-3" /> {stats.withDomain}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <Linkedin className="w-3 h-3" /> {stats.withLinkedin}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <CheckCircle2 className="w-3 h-3" /> {stats.withLogo}
+              </span>
             </>
           )}
         </div>
@@ -141,16 +162,24 @@ export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange,
               {isRunning && baseEnrichment.progress.currentName
                 ? `· ${baseEnrichment.progress.currentName}`
                 : baseEnrichment.progress.status === "done"
-                ? "✅ Completato"
-                : baseEnrichment.progress.status === "paused"
-                ? "In pausa"
-                : ""}
+                  ? "✅ Completato"
+                  : baseEnrichment.progress.status === "paused"
+                    ? "In pausa"
+                    : ""}
             </span>
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-0.5"><Linkedin className="w-2.5 h-2.5 text-primary" /> {baseEnrichment.progress.slugFound}</span>
-              <span className="flex items-center gap-0.5"><CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" /> {baseEnrichment.progress.logoFound}</span>
-              <span className="flex items-center gap-0.5"><Globe className="w-2.5 h-2.5 text-primary" /> {baseEnrichment.progress.siteScraped}</span>
-              {baseEnrichment.progress.errors > 0 && <span className="text-destructive">⚠ {baseEnrichment.progress.errors}</span>}
+              <span className="flex items-center gap-0.5">
+                <Linkedin className="w-2.5 h-2.5 text-primary" /> {baseEnrichment.progress.slugFound}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" /> {baseEnrichment.progress.logoFound}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <Globe className="w-2.5 h-2.5 text-primary" /> {baseEnrichment.progress.siteScraped}
+              </span>
+              {baseEnrichment.progress.errors > 0 && (
+                <span className="text-destructive">⚠ {baseEnrichment.progress.errors}</span>
+              )}
             </div>
           </div>
         </div>
@@ -160,7 +189,10 @@ export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange,
 }
 
 function FilterChip({
-  label, active, onClick, variant,
+  label,
+  active,
+  onClick,
+  variant,
 }: {
   label: string;
   active: boolean;
@@ -171,10 +203,10 @@ function FilterChip({
     variant === "missing"
       ? "bg-destructive text-destructive-foreground border-destructive"
       : variant === "partial"
-      ? "bg-amber-500 text-white border-amber-500"
-      : variant === "complete"
-      ? "bg-emerald-500 text-white border-emerald-500"
-      : "bg-primary text-primary-foreground border-primary";
+        ? "bg-amber-500 text-white border-amber-500"
+        : variant === "complete"
+          ? "bg-emerald-500 text-white border-emerald-500"
+          : "bg-primary text-primary-foreground border-primary";
   return (
     <button
       type="button"

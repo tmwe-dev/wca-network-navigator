@@ -27,30 +27,28 @@ Deno.serve(async (req) => {
     const { partnerId, batch } = await req.json();
 
     if (!partnerId && !batch) {
-      return new Response(
-        JSON.stringify({ error: "Either partnerId or batch array is required" }),
-        { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Either partnerId or batch array is required" }), {
+        status: 400,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(
-        JSON.stringify({ error: "Supabase credentials not configured" }),
-        { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Supabase credentials not configured" }), {
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Single partner calculation
     if (partnerId) {
-
       const result = await calculatePartnerQuality(supabase, partnerId);
       await savePartnerQuality(supabase, partnerId, result);
-
 
       return new Response(
         JSON.stringify({
@@ -68,7 +66,6 @@ Deno.serve(async (req) => {
 
     // Batch calculation
     if (batch && Array.isArray(batch)) {
-
       const results: Record<
         string,
         {
@@ -101,7 +98,6 @@ Deno.serve(async (req) => {
         }
       }
 
-
       return new Response(
         JSON.stringify({
           success: true,
@@ -114,10 +110,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: "Invalid request parameters" }),
-      { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Invalid request parameters" }), {
+      status: 400,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (error) {
     return new Response(
       JSON.stringify({

@@ -3,13 +3,43 @@ import { waitFor, act } from "@testing-library/react";
 import { renderHookWithProviders } from "@/test/hookTestUtils";
 
 const MOCK_DRAFTS = [
-  { id: "d1", subject: "Test Draft", html_body: "<p>Hello</p>", category: null, recipient_type: "all", recipient_filter: {}, attachment_ids: [], link_urls: [], status: "draft", sent_count: 0, total_count: 0, created_at: "2024-01-01", sent_at: null },
-  { id: "d2", subject: "Second", html_body: null, category: "promo", recipient_type: "country", recipient_filter: { country: "IT" }, attachment_ids: [], link_urls: [], status: "sent", sent_count: 50, total_count: 100, created_at: "2024-01-02", sent_at: "2024-01-03" },
+  {
+    id: "d1",
+    subject: "Test Draft",
+    html_body: "<p>Hello</p>",
+    category: null,
+    recipient_type: "all",
+    recipient_filter: {},
+    attachment_ids: [],
+    link_urls: [],
+    status: "draft",
+    sent_count: 0,
+    total_count: 0,
+    created_at: "2024-01-01",
+    sent_at: null,
+  },
+  {
+    id: "d2",
+    subject: "Second",
+    html_body: null,
+    category: "promo",
+    recipient_type: "country",
+    recipient_filter: { country: "IT" },
+    attachment_ids: [],
+    link_urls: [],
+    status: "sent",
+    sent_count: 50,
+    total_count: 100,
+    created_at: "2024-01-02",
+    sent_at: "2024-01-03",
+  },
 ];
 
 const mockOrder = vi.fn().mockReturnValue({ data: MOCK_DRAFTS, error: null });
 const mockSelect = vi.fn().mockReturnValue({ order: mockOrder });
-const mockInsertSelect = vi.fn().mockReturnValue({ single: vi.fn().mockReturnValue({ data: { id: "new-1" }, error: null }) });
+const mockInsertSelect = vi
+  .fn()
+  .mockReturnValue({ single: vi.fn().mockReturnValue({ data: { id: "new-1" }, error: null }) });
 const mockInsert = vi.fn().mockReturnValue({ select: () => mockInsertSelect() });
 const mockUpdateEq = vi.fn().mockReturnValue({ error: null });
 const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq });

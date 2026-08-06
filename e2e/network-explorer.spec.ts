@@ -11,7 +11,8 @@ test.describe("Network Explorer Flow", () => {
   });
 
   test("network shows country list, map, or search", async ({ page }) => {
-    const content = page.locator("table, input[type='search'], input[type='text'], [role='search']")
+    const content = page
+      .locator("table, input[type='search'], input[type='text'], [role='search']")
       .or(page.getByText(/network|rete|paesi|countries/i));
     await expect(content.first()).toBeVisible({ timeout: 15000 });
   });
@@ -31,11 +32,15 @@ test.describe("Network Explorer Flow", () => {
 
   test("no critical console errors on network", async ({ page }) => {
     const errors: string[] = [];
-    page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
     await page.goto("/v2/network");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
-    const critical = errors.filter((e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"));
+    const critical = errors.filter(
+      (e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"),
+    );
     expect(critical.length).toBeLessThan(5);
   });
 });

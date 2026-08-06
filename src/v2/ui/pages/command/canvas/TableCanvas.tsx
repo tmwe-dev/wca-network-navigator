@@ -28,10 +28,19 @@ interface TableCanvasProps {
 }
 
 const TableCanvas = ({
-  columns, rows, kpis, isLive, meta,
-  selectable = false, idField = "id",
-  selectedIds, onToggleId, onSelectAll, onClearSelection,
-  bulkActions, onBulkAction,
+  columns,
+  rows,
+  kpis,
+  isLive,
+  meta,
+  selectable = false,
+  idField = "id",
+  selectedIds,
+  onToggleId,
+  onSelectAll,
+  onClearSelection,
+  bulkActions,
+  onBulkAction,
 }: TableCanvasProps) => {
   const allIds = rows.map((r) => String(r[idField] ?? "")).filter(Boolean);
   const selectedCount = selectedIds?.size ?? 0;
@@ -41,9 +50,11 @@ const TableCanvas = ({
     <div className="space-y-4">
       {/* Badge row */}
       <div className="flex items-center gap-2">
-        <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider ${
-          isLive ? "bg-success/20 text-success" : "bg-warning/20 text-warning"
-        }`}>
+        <span
+          className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider ${
+            isLive ? "bg-success/20 text-success" : "bg-warning/20 text-warning"
+          }`}
+        >
           {isLive ? "LIVE" : "DEMO"}
         </span>
         {meta && (
@@ -65,7 +76,9 @@ const TableCanvas = ({
               className="float-panel-subtle p-3 rounded-xl text-center"
             >
               <div className="text-lg font-extralight tracking-tight text-gradient-primary">{kpi.value}</div>
-              <div className="text-[8px] text-muted-foreground mt-1 tracking-wider uppercase font-mono">{kpi.label}</div>
+              <div className="text-[8px] text-muted-foreground mt-1 tracking-wider uppercase font-mono">
+                {kpi.label}
+              </div>
             </motion.div>
           ))}
         </div>
@@ -131,7 +144,9 @@ const TableCanvas = ({
                   </th>
                 )}
                 {columns.map((col) => (
-                  <th key={col.key} className="text-left pb-3 font-normal">{col.label}</th>
+                  <th key={col.key} className="text-left pb-3 font-normal">
+                    {col.label}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -158,7 +173,10 @@ const TableCanvas = ({
                       </td>
                     )}
                     {columns.map((col, j) => (
-                      <td key={col.key} className={`py-2 text-[11px] ${j === 0 ? "font-light text-foreground" : "text-muted-foreground"}`}>
+                      <td
+                        key={col.key}
+                        className={`py-2 text-[11px] ${j === 0 ? "font-light text-foreground" : "text-muted-foreground"}`}
+                      >
                         {row[col.key] != null ? String(row[col.key]) : "—"}
                       </td>
                     ))}

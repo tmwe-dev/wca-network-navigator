@@ -11,6 +11,5 @@ export function useTrackPage(pageName: string, props?: Record<string, unknown>) 
   useEffect(() => {
     trackPage(pageName, props);
     trackNavigation(pageName);
-     
   }, [pageName]);
 }

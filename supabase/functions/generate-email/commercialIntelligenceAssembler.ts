@@ -36,9 +36,7 @@ export async function checkDuplicateContact(
   contactEmail: string | null,
   userId: string,
 ): Promise<void> {
-  const {
-    checkSameLocationContacts,
-  } = await import("../_shared/sameLocationGuard.ts");
+  const { checkSameLocationContacts } = await import("../_shared/sameLocationGuard.ts");
 
   const guardResult = await checkSameLocationContacts(supabase, partnerId, contactEmail, userId);
   if (!guardResult.allowed) {
@@ -82,8 +80,7 @@ export async function assembleCommercialIntelligence(
       : typeof m.touch_count === "number"
         ? m.touch_count
         : undefined;
-  const daysSinceLastContact =
-    typeof m.days_since_last_contact === "number" ? m.days_since_last_contact : undefined;
+  const daysSinceLastContact = typeof m.days_since_last_contact === "number" ? m.days_since_last_contact : undefined;
   const warmthScore = typeof m.warmth_score === "number" ? m.warmth_score : undefined;
   const lastChannel = m.last_channel as string | undefined;
   const lastOutcome = m.last_outcome as string | undefined;

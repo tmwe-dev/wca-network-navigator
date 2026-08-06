@@ -1,5 +1,6 @@
 const SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
 
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
@@ -20,7 +21,9 @@ function log(text, cls) {
 }
 
 function sleep(ms) {
-  return new Promise(function (r) { setTimeout(r, ms); });
+  return new Promise(function (r) {
+    setTimeout(r, ms);
+  });
 }
 
 // ── Get ALL wcaworld cookies ──
@@ -33,7 +36,9 @@ async function getAllWcaCookies() {
   let aspxAuth = null;
   try {
     aspxAuth = await chrome.cookies.get({ url: "https://www.wcaworld.com/", name: ".ASPXAUTH" });
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 
   const map = new Map();
   [byUrl, byDomain1, byDomain2, byDomain3].forEach(function (list) {
@@ -93,13 +98,19 @@ async function sendCookiesAndFinish(cookieStr, tabId) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
       },
       body: JSON.stringify({ cookie: cookieStr }),
     });
     const saveData = await saveRes.json();
-    if (tabId) { try { chrome.tabs.remove(tabId); } catch (e) { /* ignore */ } }
+    if (tabId) {
+      try {
+        chrome.tabs.remove(tabId);
+      } catch (e) {
+        /* ignore */
+      }
+    }
 
     if (saveData.hasAspxAuth || saveData.authenticated) {
       setStatus("✅ Connesso! Tutto OK.", "ok");
@@ -121,25 +132,38 @@ function analyzeLoginPage() {
     const forms = document.querySelectorAll("form");
     const allInputs = document.querySelectorAll("input");
     const inputDetails = Array.from(allInputs)
-      .filter(function (i) { return i.type !== "hidden"; })
-      .map(function (i) { return (i.name || i.id || "?") + "(" + i.type + ")"; })
+      .filter(function (i) {
+        return i.type !== "hidden";
+      })
+      .map(function (i) {
+        return (i.name || i.id || "?") + "(" + i.type + ")";
+      })
       .join(", ");
-    return { url: window.location.href, formCount: forms.length, inputDetails: inputDetails, pageTitle: document.title };
-  } catch (e) { return { error: e.message }; }
+    return {
+      url: window.location.href,
+      formCount: forms.length,
+      inputDetails: inputDetails,
+      pageTitle: document.title,
+    };
+  } catch (e) {
+    return { error: e.message };
+  }
 }
 
 function fillAndSubmitLogin(username, password) {
   try {
-    const userInput = document.querySelector("#UserName")
-      || document.querySelector("input[name='UserName']")
-      || document.querySelector("input[name='usr']")
-      || document.querySelector("input[type='text']")
-      || document.querySelector("input[type='email']");
+    const userInput =
+      document.querySelector("#UserName") ||
+      document.querySelector("input[name='UserName']") ||
+      document.querySelector("input[name='usr']") ||
+      document.querySelector("input[type='text']") ||
+      document.querySelector("input[type='email']");
 
-    const passInput = document.querySelector("#Password")
-      || document.querySelector("input[name='Password']")
-      || document.querySelector("input[name='pwd']")
-      || document.querySelector("input[type='password']");
+    const passInput =
+      document.querySelector("#Password") ||
+      document.querySelector("input[name='Password']") ||
+      document.querySelector("input[name='pwd']") ||
+      document.querySelector("input[type='password']");
 
     if (!userInput || !passInput) {
       return { success: false, error: "Campi non trovati. User:" + !!userInput + " Pass:" + !!passInput };
@@ -156,19 +180,28 @@ function fillAndSubmitLogin(username, password) {
     passInput.dispatchEvent(new Event("input", { bubbles: true }));
     passInput.dispatchEvent(new Event("change", { bubbles: true }));
 
-    const submitBtn = document.querySelector("input[type='submit']")
-      || document.querySelector("button[type='submit']")
-      || document.querySelector(".btn-login")
-      || document.querySelector("button.btn-primary");
+    const submitBtn =
+      document.querySelector("input[type='submit']") ||
+      document.querySelector("button[type='submit']") ||
+      document.querySelector(".btn-login") ||
+      document.querySelector("button.btn-primary");
     const form = userInput.closest("form") || document.querySelector("form");
 
     let method = "unknown";
-    if (submitBtn) { submitBtn.click(); method = "button"; }
-    else if (form) { form.submit(); method = "form"; }
-    else { return { success: false, error: "Nessun submit trovato" }; }
+    if (submitBtn) {
+      submitBtn.click();
+      method = "button";
+    } else if (form) {
+      form.submit();
+      method = "form";
+    } else {
+      return { success: false, error: "Nessun submit trovato" };
+    }
 
     return { success: true, method: method };
-  } catch (e) { return { success: false, error: e.message }; }
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 }
 
 function diagnoseAfterLogin() {
@@ -181,7 +214,9 @@ function diagnoseAfterLogin() {
       isLoggedIn: !!document.querySelector("a[href*='Logout'], a[href*='logout'], a[href*='SignOut']"),
       stillOnLoginPage: !!document.querySelector("input[type='password']"),
     };
-  } catch (e) { return { error: e.message }; }
+  } catch (e) {
+    return { error: e.message };
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -196,7 +231,11 @@ mainBtn.addEventListener("click", async function () {
     log("① Recupero credenziali...", "wait");
     const credRes = await fetch(SUPABASE_URL + "/functions/v1/get-wca-credentials", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY },
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      },
       body: JSON.stringify({}),
     });
     const creds = await credRes.json();
@@ -219,7 +258,9 @@ mainBtn.addEventListener("click", async function () {
     log("⑤ Login automatico...", "wait");
     setStatus("⏳ Login in corso...", "working");
     const injRes = await chrome.scripting.executeScript({
-      target: { tabId: tab.id }, func: fillAndSubmitLogin, args: [creds.username, creds.password],
+      target: { tabId: tab.id },
+      func: fillAndSubmitLogin,
+      args: [creds.username, creds.password],
     });
     const formResult = injRes[0] && injRes[0].result;
     if (!formResult || !formResult.success) throw new Error((formResult && formResult.error) || "Form non trovato");
@@ -240,14 +281,18 @@ mainBtn.addEventListener("click", async function () {
 
     log("⑧ Leggo cookie...", "wait");
     let allCookies = await getAllWcaCookies();
-    let hasAuth = allCookies.some(function (c) { return c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie"; });
+    let hasAuth = allCookies.some(function (c) {
+      return c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie";
+    });
     log("   " + allCookies.length + " cookie, .ASPXAUTH: " + (hasAuth ? "✅" : "❌"), hasAuth ? "done" : "fail");
 
     if (!hasAuth) {
       log("   Riprovo tra 5s...", "wait");
       await sleep(5000);
       allCookies = await getAllWcaCookies();
-      hasAuth = allCookies.some(function (c) { return c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie"; });
+      hasAuth = allCookies.some(function (c) {
+        return c.name === ".ASPXAUTH" || c.name === ".AspNet.ApplicationCookie";
+      });
     }
 
     if (!hasAuth && diag && diag.isLoggedIn) {
@@ -255,14 +300,22 @@ mainBtn.addEventListener("click", async function () {
     }
 
     if (!hasAuth && (!diag || !diag.isLoggedIn)) {
-      if (tab.id) { try { chrome.tabs.remove(tab.id); } catch (e) {} }
+      if (tab.id) {
+        try {
+          chrome.tabs.remove(tab.id);
+        } catch (e) {}
+      }
       setStatus("❌ Login fallito", "error");
       log("Login non riuscito e .ASPXAUTH assente.", "fail");
       mainBtn.disabled = false;
       return;
     }
 
-    const cookieStr = allCookies.map(function (c) { return c.name + "=" + c.value; }).join("; ");
+    const cookieStr = allCookies
+      .map(function (c) {
+        return c.name + "=" + c.value;
+      })
+      .join("; ");
     await sendCookiesAndFinish(cookieStr, tab.id);
   } catch (err) {
     setStatus("❌ " + err.message, "error");

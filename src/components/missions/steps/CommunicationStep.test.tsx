@@ -28,7 +28,7 @@ describe("CommunicationStep", () => {
     renderWithProviders(React.createElement(CommunicationStep, { data: baseData, onChange }));
     fireEvent.click(screen.getByText(/Scrivi tu il modello/));
     expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ communication: expect.objectContaining({ templateMode: "custom" }) })
+      expect.objectContaining({ communication: expect.objectContaining({ templateMode: "custom" }) }),
     );
   });
 
@@ -43,9 +43,11 @@ describe("CommunicationStep", () => {
     const onChange = vi.fn();
     const customData = { communication: { templateMode: "custom" as const, customSubject: "" } };
     renderWithProviders(React.createElement(CommunicationStep, { data: customData, onChange }));
-    fireEvent.change(screen.getByPlaceholderText(/Partnership opportunity/), { target: { value: "Hello {{company}}" } });
+    fireEvent.change(screen.getByPlaceholderText(/Partnership opportunity/), {
+      target: { value: "Hello {{company}}" },
+    });
     expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ communication: expect.objectContaining({ customSubject: "Hello {{company}}" }) })
+      expect.objectContaining({ communication: expect.objectContaining({ customSubject: "Hello {{company}}" }) }),
     );
   });
 });

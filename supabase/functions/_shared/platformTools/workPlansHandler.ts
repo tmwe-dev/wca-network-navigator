@@ -11,11 +11,8 @@ interface WorkPlanStep {
   status?: string;
 }
 
-export async function handleCreateWorkPlan(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
-  const rawSteps = (args.steps as WorkPlanStep[] || []).map((s: WorkPlanStep, i: number) => ({
+export async function handleCreateWorkPlan(args: Record<string, unknown>, userId: string): Promise<unknown> {
+  const rawSteps = ((args.steps as WorkPlanStep[]) || []).map((s: WorkPlanStep, i: number) => ({
     index: i,
     title: s.title || `Step ${i + 1}`,
     description: s.description || "",
@@ -37,10 +34,7 @@ export async function handleCreateWorkPlan(
   return { success: true, plan_id: data.id, title: data.title, total_steps: rawSteps.length };
 }
 
-export async function handleListWorkPlans(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleListWorkPlans(args: Record<string, unknown>, userId: string): Promise<unknown> {
   let query = supabase
     .from("ai_work_plans")
     .select("id, title, description, status, current_step, steps, tags, created_at")
@@ -66,7 +60,7 @@ export async function handleListWorkPlans(
       completed_steps: Array.isArray(p.steps)
         ? (p.steps as WorkPlanStep[]).filter((s) => s.status === "completed").length
         : 0,
-    })
+    }),
   );
   return { count: plans.length, plans };
 }

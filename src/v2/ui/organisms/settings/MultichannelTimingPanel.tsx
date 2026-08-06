@@ -15,7 +15,13 @@ interface ChannelFormState {
 }
 
 function ChannelSection({
-  title, color, channel, state, setState, onSave, saving,
+  title,
+  color,
+  channel,
+  state,
+  setState,
+  onSave,
+  saving,
 }: {
   title: string;
   color: string;
@@ -47,7 +53,9 @@ function ChannelSection({
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Inizio invii (ora)</label>
           <input
-            type="number" min={0} max={23}
+            type="number"
+            min={0}
+            max={23}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             value={state.startHour}
             onChange={(e) => setState({ ...state, startHour: e.target.value })}
@@ -56,7 +64,9 @@ function ChannelSection({
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Fine invii (ora)</label>
           <input
-            type="number" min={1} max={23}
+            type="number"
+            min={1}
+            max={23}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             value={state.endHour}
             onChange={(e) => setState({ ...state, endHour: e.target.value })}
@@ -65,7 +75,8 @@ function ChannelSection({
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Delay min (sec)</label>
           <input
-            type="number" min={1}
+            type="number"
+            min={1}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             value={state.minDelay}
             onChange={(e) => setState({ ...state, minDelay: e.target.value })}
@@ -74,7 +85,8 @@ function ChannelSection({
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Delay max (sec)</label>
           <input
-            type="number" min={1}
+            type="number"
+            min={1}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             value={state.maxDelay}
             onChange={(e) => setState({ ...state, maxDelay: e.target.value })}
@@ -82,10 +94,18 @@ function ChannelSection({
         </div>
       </div>
       <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2 space-y-0.5">
-        <div>📊 Preview 10 messaggi → ultimo invio: <span className="font-medium text-foreground">{preview10.humanLabel}</span></div>
-        <div>📊 Preview 50 messaggi → ultimo invio: <span className="font-medium text-foreground">{preview50.humanLabel}</span></div>
+        <div>
+          📊 Preview 10 messaggi → ultimo invio:{" "}
+          <span className="font-medium text-foreground">{preview10.humanLabel}</span>
+        </div>
+        <div>
+          📊 Preview 50 messaggi → ultimo invio:{" "}
+          <span className="font-medium text-foreground">{preview50.humanLabel}</span>
+        </div>
       </div>
-      <Button onClick={onSave} isLoading={saving}>Salva timing {title}</Button>
+      <Button onClick={onSave} isLoading={saving}>
+        Salva timing {title}
+      </Button>
     </div>
   );
 }
@@ -94,8 +114,18 @@ export function MultichannelTimingPanel(): React.ReactElement {
   const { data: settings } = useSettingsV2();
   const updateSetting = useUpdateSettingV2();
 
-  const [li, setLi] = React.useState<ChannelFormState>({ startHour: "9", endHour: "19", minDelay: "45", maxDelay: "180" });
-  const [wa, setWa] = React.useState<ChannelFormState>({ startHour: "8", endHour: "21", minDelay: "4", maxDelay: "12" });
+  const [li, setLi] = React.useState<ChannelFormState>({
+    startHour: "9",
+    endHour: "19",
+    minDelay: "45",
+    maxDelay: "180",
+  });
+  const [wa, setWa] = React.useState<ChannelFormState>({
+    startHour: "8",
+    endHour: "21",
+    minDelay: "4",
+    maxDelay: "12",
+  });
 
   React.useEffect(() => {
     if (!settings) return;
@@ -132,8 +162,8 @@ export function MultichannelTimingPanel(): React.ReactElement {
       <div>
         <h3 className="text-lg font-semibold text-foreground">Timing invii multichannel</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Configura finestra oraria e delay random tra invii bulk. Default conservativi per ridurre rischio TOS.
-          I messaggi fuori finestra vengono spostati automaticamente al giorno successivo.
+          Configura finestra oraria e delay random tra invii bulk. Default conservativi per ridurre rischio TOS. I
+          messaggi fuori finestra vengono spostati automaticamente al giorno successivo.
         </p>
       </div>
       <ChannelSection

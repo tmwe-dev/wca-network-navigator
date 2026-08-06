@@ -3,7 +3,18 @@
  * Estratto da PendingActionsPanel per alleggerire il componente principale.
  */
 import {
-  Mail, Reply, Archive, ListTodo, Forward, Clock, Zap, Bot, User, Workflow, Sparkles, CheckCircle,
+  Mail,
+  Reply,
+  Archive,
+  ListTodo,
+  Forward,
+  Clock,
+  Zap,
+  Bot,
+  User,
+  Workflow,
+  Sparkles,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHasSiblingRisk } from "@/components/ai-control/SiblingRiskBadge";
@@ -43,7 +54,13 @@ export const confidenceColor = (c: number) =>
  * data conferma esplicita tramite il SiblingRiskBadge.
  */
 export function ApproveGuardedButton({
-  partnerId, contactId, confirmed, label, className, onApprove, isSendAction,
+  partnerId,
+  contactId,
+  confirmed,
+  label,
+  className,
+  onApprove,
+  isSendAction,
 }: {
   readonly partnerId: string | null;
   readonly contactId: string | null;
@@ -64,7 +81,8 @@ export function ApproveGuardedButton({
       title={blocked ? "Spunta la conferma rischio sibling per approvare" : undefined}
       onClick={onApprove}
     >
-      <CheckCircle className="h-3.5 w-3.5" />{label}
+      <CheckCircle className="h-3.5 w-3.5" />
+      {label}
     </Button>
   );
 }

@@ -11,8 +11,10 @@ export const AGENT_TOOLS: Record<string, unknown> = {
       parameters: {
         type: "object",
         properties: {
-          agent_name: { type: "string" }, agent_role: { type: "string" },
-          task_type: { type: "string" }, description: { type: "string" },
+          agent_name: { type: "string" },
+          agent_role: { type: "string" },
+          task_type: { type: "string" },
+          description: { type: "string" },
           target_filters: { type: "object" },
         },
         required: ["description", "task_type"],
@@ -24,7 +26,10 @@ export const AGENT_TOOLS: Record<string, unknown> = {
     function: {
       name: "list_agent_tasks",
       description: "List tasks across all agents.",
-      parameters: { type: "object", properties: { status: { type: "string" }, agent_name: { type: "string" }, limit: { type: "number" } } },
+      parameters: {
+        type: "object",
+        properties: { status: { type: "string" }, agent_name: { type: "string" }, limit: { type: "number" } },
+      },
     },
   },
   get_team_status: {
@@ -42,7 +47,11 @@ export const AGENT_TOOLS: Record<string, unknown> = {
       description: "Update the system prompt of a subordinate agent.",
       parameters: {
         type: "object",
-        properties: { agent_name: { type: "string" }, prompt_addition: { type: "string" }, replace_prompt: { type: "string" } },
+        properties: {
+          agent_name: { type: "string" },
+          prompt_addition: { type: "string" },
+          replace_prompt: { type: "string" },
+        },
         required: ["agent_name"],
       },
     },
@@ -67,8 +76,10 @@ export const AGENT_TOOLS: Record<string, unknown> = {
       parameters: {
         type: "object",
         properties: {
-          agent_name: { type: "string" }, country_code: { type: "string" },
-          lead_status: { type: "string" }, source_type: { type: "string", enum: ["partner", "contact", "prospect"] },
+          agent_name: { type: "string" },
+          country_code: { type: "string" },
+          lead_status: { type: "string" },
+          source_type: { type: "string", enum: ["partner", "contact", "prospect"] },
           limit: { type: "number" },
         },
         required: ["agent_name"],

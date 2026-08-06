@@ -3,12 +3,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { setDynCors, jsonResponse } from "./response.ts";
 import { resolveMailbox } from "../_shared/resolveMailbox.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
-import {
-  handleVerify,
-  handleTest,
-  handleFetch,
-  handleSendEmail,
-} from "./handlers.ts";
+import { handleVerify, handleTest, handleFetch, handleSendEmail } from "./handlers.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -41,10 +36,7 @@ Deno.serve(async (req) => {
     const mailboxIdHeader = req.headers.get("x-mailbox-id");
     const mailboxId = mailboxIdHeader && mailboxIdHeader.trim() !== "" ? mailboxIdHeader.trim() : null;
     if (mailboxId && (path === "test" || path === "fetch" || path === "send")) {
-      const serviceClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      );
+      const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const resolved = await resolveMailbox(serviceClient, mailboxId);
       if (path === "send") {
         body.email = resolved.smtp_user;
@@ -74,9 +66,6 @@ Deno.serve(async (req) => {
     }
   } catch (err: unknown) {
     console.error("[email-imap-proxy] Error:", err);
-    return jsonResponse(
-      { error: err instanceof Error ? err.message : "Errore interno" },
-      500
-    );
+    return jsonResponse({ error: err instanceof Error ? err.message : "Errore interno" }, 500);
   }
 });

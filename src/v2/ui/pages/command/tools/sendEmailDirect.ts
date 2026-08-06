@@ -24,7 +24,8 @@ function fallbackFromPrompt(prompt: string): Record<string, unknown> {
 export const sendEmailDirectTool: Tool = {
   id: "send-email-direct",
   label: "Invia email (diretta)",
-  description: "Invia un'email ESISTENTE (oggetto+testo già pronti) tramite l'infra SMTP. Per scrivere usa compose-email.",
+  description:
+    "Invia un'email ESISTENTE (oggetto+testo già pronti) tramite l'infra SMTP. Per scrivere usa compose-email.",
   match: (p) =>
     /\b(invia|spedisci|manda)\s+(?:subito\s+)?(?:la\s+|questa\s+)?email\b(?!.*\bcompon)/i.test(p) &&
     /@/.test(p) &&
@@ -62,7 +63,12 @@ export const sendEmailDirectTool: Tool = {
     const { data: sess } = await supabase.auth.getSession();
     const userId = sess?.session?.user?.id;
     if (!userId) {
-      return { kind: "result", title: "Sessione non valida", message: "Effettua nuovamente il login.", meta: { count: 0, sourceLabel: "command" } };
+      return {
+        kind: "result",
+        title: "Sessione non valida",
+        message: "Effettua nuovamente il login.",
+        meta: { count: 0, sourceLabel: "command" },
+      };
     }
     const html = String(p.body).replace(/\n/g, "<br/>");
     const { id: pendingId, error } = await insertPendingActionReturningId({
@@ -86,7 +92,12 @@ export const sendEmailDirectTool: Tool = {
       status: "pending",
     });
     if (error) {
-      return { kind: "result", title: "Errore in coda", message: error.message, meta: { count: 0, sourceLabel: "command" } };
+      return {
+        kind: "result",
+        title: "Errore in coda",
+        message: error.message,
+        meta: { count: 0, sourceLabel: "command" },
+      };
     }
     return {
       kind: "result",

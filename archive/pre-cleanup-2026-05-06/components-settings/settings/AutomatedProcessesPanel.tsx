@@ -131,7 +131,7 @@ export default function AutomatedProcessesPanel() {
         .is("user_id", null)
         .in(
           "key",
-          CRON_CONFIGS.flatMap((c) => [c.enabledKey, c.intervalKey])
+          CRON_CONFIGS.flatMap((c) => [c.enabledKey, c.intervalKey]),
         );
 
       const settingsMap: Record<string, string> = {};
@@ -143,7 +143,10 @@ export default function AutomatedProcessesPanel() {
       const { data: logs } = await supabase
         .from("cron_run_log")
         .select("job_name, ran_at, error")
-        .in("job_name", CRON_CONFIGS.map((c) => c.jobName))
+        .in(
+          "job_name",
+          CRON_CONFIGS.map((c) => c.jobName),
+        )
         .gte("ran_at", since24h)
         .order("ran_at", { ascending: false });
 
@@ -154,11 +157,8 @@ export default function AutomatedProcessesPanel() {
         const errors24h = jobLogs.filter((l) => l.error).length;
         next[cfg.key] = {
           enabled:
-            settingsMap[cfg.enabledKey] !== undefined
-              ? settingsMap[cfg.enabledKey] !== "false"
-              : cfg.defaultEnabled,
-          intervalMin:
-            parseInt(settingsMap[cfg.intervalKey] || "", 10) || cfg.defaultIntervalMin,
+            settingsMap[cfg.enabledKey] !== undefined ? settingsMap[cfg.enabledKey] !== "false" : cfg.defaultEnabled,
+          intervalMin: parseInt(settingsMap[cfg.intervalKey] || "", 10) || cfg.defaultIntervalMin,
           lastRun: lastRunRow ? new Date(lastRunRow.ran_at) : null,
           lastError: jobLogs.find((l) => l.error)?.error ?? null,
           errors24h,
@@ -233,9 +233,7 @@ export default function AutomatedProcessesPanel() {
         if (!st) return null;
         const monthlyCost = estimateMonthlyCost(st.intervalMin, cfg.avgTokensPerRun, cfg.costPer1MTokens);
         const runsPerDay = Math.round((24 * 60) / st.intervalMin);
-        const nextRunDate = st.lastRun
-          ? new Date(st.lastRun.getTime() + st.intervalMin * 60000)
-          : null;
+        const nextRunDate = st.lastRun ? new Date(st.lastRun.getTime() + st.intervalMin * 60000) : null;
         const nextInMin = nextRunDate ? Math.max(0, (nextRunDate.getTime() - Date.now()) / 60000) : null;
 
         return (
@@ -305,9 +303,7 @@ export default function AutomatedProcessesPanel() {
               <div className="flex items-center gap-1">
                 <AlertCircle className={`w-3 h-3 ${st.errors24h > 0 ? "text-destructive" : "text-muted-foreground"}`} />
                 <span className="text-muted-foreground">Errori 24h:</span>
-                <span className={`font-medium ${st.errors24h > 0 ? "text-destructive" : ""}`}>
-                  {st.errors24h}
-                </span>
+                <span className={`font-medium ${st.errors24h > 0 ? "text-destructive" : ""}`}>{st.errors24h}</span>
               </div>
             </div>
           </Card>
@@ -317,9 +313,7 @@ export default function AutomatedProcessesPanel() {
       <Card className="p-5 bg-muted/30 border-primary/20">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-muted-foreground">
-              💰 Costo totale stimato processi automatici
-            </div>
+            <div className="text-sm font-medium text-muted-foreground">💰 Costo totale stimato processi automatici</div>
             <div className="text-2xl font-bold mt-1 text-foreground">~${totalCost.toFixed(2)}/mese</div>
             <div className="text-xs text-muted-foreground mt-1">
               Modello: Gemini 2.5 Flash · Non include azioni manuali (chat, email composte, ecc.)

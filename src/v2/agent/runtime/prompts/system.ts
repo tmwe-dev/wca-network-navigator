@@ -11,13 +11,11 @@ export interface AutopilotContext {
   approvalOnlyFor: string[];
 }
 
-export function buildSystemPrompt(
-  kbSummaries: string[] = [],
-  autopilot?: AutopilotContext
-): string {
-  const kbSection = kbSummaries.length > 0
-    ? `\n\n## Knowledge Base disponibile\nHai accesso a queste schede KB. Usa list_kb e read_kb per consultarle:\n${kbSummaries.map((s) => `- ${s}`).join("\n")}`
-    : "";
+export function buildSystemPrompt(kbSummaries: string[] = [], autopilot?: AutopilotContext): string {
+  const kbSection =
+    kbSummaries.length > 0
+      ? `\n\n## Knowledge Base disponibile\nHai accesso a queste schede KB. Usa list_kb e read_kb per consultarle:\n${kbSummaries.map((s) => `- ${s}`).join("\n")}`
+      : "";
 
   const autopilotSection = autopilot
     ? `\n\n## ⚡ Modalità Autopilot ATTIVA

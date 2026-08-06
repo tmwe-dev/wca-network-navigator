@@ -2,9 +2,9 @@
  * ClassificationList — Adapted from tmwengine SmartEmailListIntelligent.
  * ScrollArea card list pattern.
  */
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ClassificationCard } from './ClassificationCard';
-import { Inbox } from 'lucide-react';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ClassificationCard } from "./ClassificationCard";
+import { Inbox } from "lucide-react";
 
 interface Classification {
   id: string;
@@ -29,7 +29,13 @@ interface ClassificationListProps {
   onSelectionChange: (selected: Set<string>) => void;
 }
 
-export function ClassificationList({ classifications, onItemClick, isLoading, selectedIds, onSelectionChange }: ClassificationListProps) {
+export function ClassificationList({
+  classifications,
+  onItemClick,
+  isLoading,
+  selectedIds,
+  onSelectionChange,
+}: ClassificationListProps) {
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
@@ -57,7 +63,8 @@ export function ClassificationList({ classifications, onItemClick, isLoading, se
 
   const handleToggle = (id: string) => {
     const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     onSelectionChange(next);
   };
 

@@ -14,10 +14,7 @@ const log = createLogger("lazyRetry");
  * to constrain props to Record<string, unknown>.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function lazyRetry<T extends ComponentType<any>>(
-  factory: () => Promise<{ default: T }>,
-  retryDelay = 1500
-) {
+export function lazyRetry<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>, retryDelay = 1500) {
   return lazy(() =>
     factory().catch((err) => {
       log.warn("dynamic import failed, retrying", { retryDelayMs: retryDelay, error: err });
@@ -31,6 +28,6 @@ export function lazyRetry<T extends ComponentType<any>>(
             });
         }, retryDelay);
       });
-    })
+    }),
   );
 }

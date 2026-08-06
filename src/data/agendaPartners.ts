@@ -44,7 +44,7 @@ export async function findAgendaPartnerCards(limit: number): Promise<AgendaPartn
   const { data } = await supabase
     .from("partners")
     .select(
-      "id, company_name, city, country_code, country_name, email, phone, website, wca_id, lead_status, partner_networks(network_name), partner_contacts(name, email, mobile, title)"
+      "id, company_name, city, country_code, country_name, email, phone, website, wca_id, lead_status, partner_networks(network_name), partner_contacts(name, email, mobile, title)",
     )
     .order("updated_at", { ascending: false })
     .limit(limit);

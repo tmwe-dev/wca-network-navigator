@@ -6,8 +6,19 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Save, Loader2, MessageCircle, Phone, CheckCircle2, Shield,
-  Mail, Send, AlertCircle, Eye, EyeOff, FileText, Bot,
+  Save,
+  Loader2,
+  MessageCircle,
+  Phone,
+  CheckCircle2,
+  Shield,
+  Mail,
+  Send,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  FileText,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -60,23 +71,28 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
       await updateSetting.mutateAsync({ key: "default_sender_email", value: emailSender.trim() });
       await updateSetting.mutateAsync({ key: "default_sender_name", value: emailName.trim() });
       toast.success("Impostazioni email SMTP salvate!");
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
-    finally { setSavingEmail(false); }
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setSavingEmail(false);
+    }
   };
 
   const handleTestEmail = async () => {
     if (!testEmailTo.trim()) return;
     setSendingTest(true);
     try {
-      const fromField = emailName.trim()
-        ? `${emailName.trim()} <${emailSender.trim()}>`
-        : emailSender.trim();
-      await invokeEdge("send-email", { body: {
+      const fromField = emailName.trim() ? `${emailName.trim()} <${emailSender.trim()}>` : emailSender.trim();
+      await invokeEdge("send-email", {
+        body: {
           to: testEmailTo.trim(),
           subject: "✅ Test Email da WCA Network Navigator",
           html: `<p>Ciao! Questa è un'email di test inviata da <strong>WCA Network Navigator</strong>.</p><p>Se la ricevi, la configurazione del mittente <strong>${fromField}</strong> è corretta.</p>`,
           from: fromField,
-        }, context: "GeneralSettings.send_email" });
+        },
+        context: "GeneralSettings.send_email",
+      });
       toast.success("Email di test inviata con successo!");
     } catch (err: unknown) {
       toast.error("Errore invio: " + ((err instanceof Error ? err.message : String(err)) || "Sconosciuto"));
@@ -131,10 +147,18 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input id="whatsapp-number" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="+39 333 1234567" className="pl-10" />
+                  <Input
+                    id="whatsapp-number"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="+39 333 1234567"
+                    className="pl-10"
+                  />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Inserisci il numero completo con prefisso internazionale (es. +39 per l'Italia).</p>
+              <p className="text-xs text-muted-foreground">
+                Inserisci il numero completo con prefisso internazionale (es. +39 per l'Italia).
+              </p>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -144,9 +168,15 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
                 onClick={async () => {
                   if (!whatsappNumber.trim()) return;
                   setSavingWA(true);
-                  try { await updateSetting.mutateAsync({ key: "whatsapp_number", value: whatsappNumber.trim() }); toast.success("Numero WhatsApp salvato"); }
-                  catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
-                  finally { setSavingWA(false); }
+                  try {
+                    await updateSetting.mutateAsync({ key: "whatsapp_number", value: whatsappNumber.trim() });
+                    toast.success("Numero WhatsApp salvato");
+                  } catch (e) {
+                    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                    toast.error("Errore nel salvataggio");
+                  } finally {
+                    setSavingWA(false);
+                  }
                 }}
                 disabled={savingWA || !whatsappNumber.trim()}
                 variant="outline"
@@ -173,8 +203,17 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
                   <CardDescription>Server e credenziali per l'invio email diretto</CardDescription>
                 </div>
               </div>
-              <Badge variant={smtpHost && smtpUser ? "default" : "secondary"} className={smtpHost && smtpUser ? "bg-primary text-primary-foreground" : ""}>
-                {smtpHost && smtpUser ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+              <Badge
+                variant={smtpHost && smtpUser ? "default" : "secondary"}
+                className={smtpHost && smtpUser ? "bg-primary text-primary-foreground" : ""}
+              >
+                {smtpHost && smtpUser ? (
+                  <>
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> Configurato
+                  </>
+                ) : (
+                  "Non configurato"
+                )}
               </Badge>
             </div>
           </CardHeader>
@@ -196,8 +235,19 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
             <div className="space-y-2">
               <Label>Password SMTP</Label>
               <div className="relative">
-                <Input type={showSmtpPass ? "text" : "password"} value={smtpPass} onChange={(e) => setSmtpPass(e.target.value)} placeholder="••••••••" />
-                <Button type="button" variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0" onClick={() => setShowSmtpPass(!showSmtpPass)}>
+                <Input
+                  type={showSmtpPass ? "text" : "password"}
+                  value={smtpPass}
+                  onChange={(e) => setSmtpPass(e.target.value)}
+                  placeholder="••••••••"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setShowSmtpPass(!showSmtpPass)}
+                >
                   {showSmtpPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </Button>
               </div>
@@ -205,13 +255,21 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
             <hr className="border-border" />
             <div className="space-y-2">
               <Label>Email mittente</Label>
-              <Input type="email" value={emailSender} onChange={(e) => setEmailSender(e.target.value)} placeholder="luca@tmwe.it" />
+              <Input
+                type="email"
+                value={emailSender}
+                onChange={(e) => setEmailSender(e.target.value)}
+                placeholder="luca@tmwe.it"
+              />
             </div>
             <div className="space-y-2">
               <Label>Nome mittente (opzionale)</Label>
               <Input value={emailName} onChange={(e) => setEmailName(e.target.value)} placeholder="Luca - TMWE" />
             </div>
-            <Button onClick={handleSaveEmail} disabled={savingEmail || !smtpHost.trim() || !smtpUser.trim() || !smtpPass.trim() || !emailSender.trim()}>
+            <Button
+              onClick={handleSaveEmail}
+              disabled={savingEmail || !smtpHost.trim() || !smtpUser.trim() || !smtpPass.trim() || !emailSender.trim()}
+            >
               {savingEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salva Impostazioni Email
             </Button>
@@ -223,8 +281,10 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
           <div className="space-y-1">
             <p className="text-sm font-medium">Server SMTP comuni</p>
             <p className="text-sm text-muted-foreground">
-              <strong>Aruba:</strong> smtps.aruba.it, porta 465 (SSL)<br />
-              <strong>Gmail:</strong> smtp.gmail.com, porta 587 (TLS) — richiede App Password<br />
+              <strong>Aruba:</strong> smtps.aruba.it, porta 465 (SSL)
+              <br />
+              <strong>Gmail:</strong> smtp.gmail.com, porta 587 (TLS) — richiede App Password
+              <br />
               <strong>Outlook:</strong> smtp.office365.com, porta 587 (TLS)
             </p>
           </div>
@@ -245,9 +305,18 @@ export function GeneralSettings({ settings, updateSetting }: GeneralSettingsProp
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Invia email di test a:</Label>
-              <Input type="email" value={testEmailTo} onChange={(e) => setTestEmailTo(e.target.value)} placeholder="luca@tmwe.it" />
+              <Input
+                type="email"
+                value={testEmailTo}
+                onChange={(e) => setTestEmailTo(e.target.value)}
+                placeholder="luca@tmwe.it"
+              />
             </div>
-            <Button onClick={handleTestEmail} disabled={sendingTest || !testEmailTo.trim() || !emailSender.trim()} variant="outline">
+            <Button
+              onClick={handleTestEmail}
+              disabled={sendingTest || !testEmailTo.trim() || !emailSender.trim()}
+              variant="outline"
+            >
               {sendingTest ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
               {sendingTest ? "Invio in corso..." : "Invia Email di Test"}
             </Button>

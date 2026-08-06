@@ -29,9 +29,7 @@ export function AIBackupPanel({ userId }: { userId: string }) {
   };
 
   const downloadBackup = async (fileName: string) => {
-    const { data } = await supabase.storage
-      .from("ai-backups")
-      .download(`${userId}/${fileName}`);
+    const { data } = await supabase.storage.from("ai-backups").download(`${userId}/${fileName}`);
     if (data) {
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
@@ -76,22 +74,13 @@ export function AIBackupPanel({ userId }: { userId: string }) {
         {backups.length > 0 ? (
           <div className="space-y-2">
             {backups.map((b) => (
-              <div
-                key={b.name}
-                className="flex items-center justify-between p-2 rounded bg-muted/50"
-              >
+              <div key={b.name} className="flex items-center justify-between p-2 rounded bg-muted/50">
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-3 w-3 text-muted-foreground" />
                   <span className="font-mono">{b.name}</span>
-                  <span className="text-muted-foreground">
-                    {new Date(b.created_at).toLocaleDateString("it-IT")}
-                  </span>
+                  <span className="text-muted-foreground">{new Date(b.created_at).toLocaleDateString("it-IT")}</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => downloadBackup(b.name)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => downloadBackup(b.name)}>
                   <Download className="h-3 w-3" />
                 </Button>
               </div>

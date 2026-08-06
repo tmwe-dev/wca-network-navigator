@@ -3,7 +3,13 @@ import { waitFor } from "@testing-library/react";
 import { renderHookWithProviders } from "@/test/hookTestUtils";
 
 const MOCK_ROWS = [
-  { id: "e1", subject: "Re: Partnership", from_address: "john@acme.com", email_date: "2024-06-01T10:00:00Z", created_at: "2024-06-01T10:01:00Z" },
+  {
+    id: "e1",
+    subject: "Re: Partnership",
+    from_address: "john@acme.com",
+    email_date: "2024-06-01T10:00:00Z",
+    created_at: "2024-06-01T10:01:00Z",
+  },
   { id: "e2", subject: null, from_address: null, email_date: null, created_at: "2024-06-02T08:00:00Z" },
 ];
 

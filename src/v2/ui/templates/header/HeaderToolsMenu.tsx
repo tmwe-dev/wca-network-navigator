@@ -4,13 +4,24 @@
  */
 import * as React from "react";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import {
-  MoreHorizontal, Activity, DatabaseZap, FlaskConical, Stethoscope,
-  Sun, Moon, Plus, LogOut,
+  MoreHorizontal,
+  Activity,
+  DatabaseZap,
+  FlaskConical,
+  Stethoscope,
+  Sun,
+  Moon,
+  Plus,
+  LogOut,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
@@ -24,7 +35,11 @@ interface Props {
 }
 
 export function HeaderToolsMenu({
-  onAddContact, onAgentDash, onTestExt, isDark, onToggleTheme,
+  onAddContact,
+  onAgentDash,
+  onTestExt,
+  isDark,
+  onToggleTheme,
 }: Props): React.ReactElement {
   const navigate = useNavigate();
 

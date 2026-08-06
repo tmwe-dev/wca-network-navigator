@@ -1,7 +1,19 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA, ROUTE_EMAIL_COMPOSER, ROUTE_INREACH } from "@/constants/routes";
-import { useGlobalFilters, type CockpitChannelFilter, type CockpitQualityFilter, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
+import {
+  ROUTE_OUTREACH,
+  ROUTE_NETWORK,
+  ROUTE_CRM,
+  ROUTE_AGENDA,
+  ROUTE_EMAIL_COMPOSER,
+  ROUTE_INREACH,
+} from "@/constants/routes";
+import {
+  useGlobalFilters,
+  type CockpitChannelFilter,
+  type CockpitQualityFilter,
+  type WorkspaceFilterKey,
+} from "@/contexts/GlobalFiltersContext";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { FLAG } from "./constants";
 import { toRecord } from "@/lib/records";
@@ -16,8 +28,20 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const seg = route.replace(/^\/v2/, "");
   const isOutreach = seg === `/${ROUTE_OUTREACH}`;
   const isNetwork = seg === `/${ROUTE_NETWORK}` || seg.startsWith("/explore/network");
-  const isCrmContactsRoute = seg === `/${ROUTE_CRM}` || seg === "/contacts" || seg.startsWith("/crm/contacts") || seg.startsWith("/pipeline/contacts") || seg.startsWith("/pipeline/kanban") || seg.startsWith("/explore/contacts");
-  const isBcaRoute = seg === "/biglietti" || seg === "/business-cards" || seg.startsWith("/crm/biglietti") || seg.startsWith("/crm/business-cards") || seg.startsWith("/pipeline/biglietti") || seg.startsWith("/explore/biglietti");
+  const isCrmContactsRoute =
+    seg === `/${ROUTE_CRM}` ||
+    seg === "/contacts" ||
+    seg.startsWith("/crm/contacts") ||
+    seg.startsWith("/pipeline/contacts") ||
+    seg.startsWith("/pipeline/kanban") ||
+    seg.startsWith("/explore/contacts");
+  const isBcaRoute =
+    seg === "/biglietti" ||
+    seg === "/business-cards" ||
+    seg.startsWith("/crm/biglietti") ||
+    seg.startsWith("/crm/business-cards") ||
+    seg.startsWith("/pipeline/biglietti") ||
+    seg.startsWith("/explore/biglietti");
   const isCRM = isCrmContactsRoute || isBcaRoute;
   const crmDrawerTab = isBcaRoute ? "biglietti" : "contatti";
   const isAgenda = seg === `/${ROUTE_AGENDA}` || seg.startsWith("/pipeline/agenda");
@@ -50,8 +74,8 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const countryStats = useMemo(() => {
     if (!isCockpit || !contacts.length) return [];
     const counts: Record<string, number> = {};
-    contacts.forEach(c => {
-      const cc = ((toRecord(c)).country as string)?.toUpperCase() || "??";
+    contacts.forEach((c) => {
+      const cc = (toRecord(c).country as string)?.toUpperCase() || "??";
       counts[cc] = (counts[cc] || 0) + 1;
     });
     return Object.entries(counts)
@@ -59,7 +83,51 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       .map(([code, count]) => ({ code, count, flag: FLAG[code] || "🌍" }));
   }, [contacts, isCockpit]);
 
-  const sectionTitle = isFunnemailInbox ? "Funnemail Inbox" : isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isSorting ? "Approvazioni" : isCodaAI ? "Coda AI" : isABTest ? "A/B Test" : isArena ? "AI Arena" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "WCA Partner" : isCRM ? (crmDrawerTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : isEmailForge ? "Email Forge — Lab AI" : isEmailIntelligence ? "Email Intelligence — Mittenti" : "Globale";
+  const sectionTitle = isFunnemailInbox
+    ? "Funnemail Inbox"
+    : isCockpit
+      ? "Cockpit"
+      : isWorkspace
+        ? "Workspace"
+        : isInUscita
+          ? "In Uscita"
+          : isCircuito
+            ? "Circuito"
+            : isAttivita
+              ? "Attività"
+              : isSorting
+                ? "Approvazioni"
+                : isCodaAI
+                  ? "Coda AI"
+                  : isABTest
+                    ? "A/B Test"
+                    : isArena
+                      ? "AI Arena"
+                      : isInreach
+                        ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}`
+                        : isEmail
+                          ? "Email"
+                          : isWhatsApp
+                            ? "WhatsApp"
+                            : isLinkedIn
+                              ? "LinkedIn"
+                              : isNetwork
+                                ? "WCA Partner"
+                                : isCRM
+                                  ? crmDrawerTab === "biglietti"
+                                    ? "Biglietti da visita"
+                                    : "CRM Contatti"
+                                  : isAgenda
+                                    ? "Agenda"
+                                    : isEmailComposer
+                                      ? "Email Composer"
+                                      : isCampaigns
+                                        ? "Filtri Campagne"
+                                        : isEmailForge
+                                          ? "Email Forge — Lab AI"
+                                          : isEmailIntelligence
+                                            ? "Email Intelligence — Mittenti"
+                                            : "Globale";
 
   useEffect(() => {
     const handler = () => onOpenChange(false);
@@ -134,18 +202,54 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.groupBy !== "country") n++;
     }
     return n;
-  }, [g.filters, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isNetwork, isCRM, isEmailIntelligence, isFunnemailInbox]);
+  }, [
+    g.filters,
+    isCockpit,
+    isAttivita,
+    isSorting,
+    isCodaAI,
+    isABTest,
+    isArena,
+    isAgenda,
+    isEmail,
+    isNetwork,
+    isCRM,
+    isEmailIntelligence,
+    isFunnemailInbox,
+  ]);
 
   const handleResetAll = useCallback(() => {
     if (isCockpit) {
-      g.setCockpitCountries(new Set()); g.setCockpitChannels(new Set()); g.setCockpitQuality(new Set());
-      g.setCockpitStatus("all"); g.setSortBy("name"); g.setOrigin(new Set(["wca", "import", "report_aziende", "bca"])); g.setSearch("");
+      g.setCockpitCountries(new Set());
+      g.setCockpitChannels(new Set());
+      g.setCockpitQuality(new Set());
+      g.setCockpitStatus("all");
+      g.setSortBy("name");
+      g.setOrigin(new Set(["wca", "import", "report_aziende", "bca"]));
+      g.setSearch("");
     }
-    if (isAttivita) { g.setAttivitaStatus("all"); g.setAttivitaPriority("all"); g.setSearch(""); }
-    if (isSorting) { g.setSortingFilter("all"); g.setSortingSearch(""); g.setSortBy("name"); }
-    if (isCodaAI) { g.setAttivitaPriority("all"); g.setSearch(""); }
-    if (isABTest) { g.setSortingFilter("all"); g.setSearch(""); }
-    if (isArena) { g.setSearch("all"); g.setInreachChannel("email"); }
+    if (isAttivita) {
+      g.setAttivitaStatus("all");
+      g.setAttivitaPriority("all");
+      g.setSearch("");
+    }
+    if (isSorting) {
+      g.setSortingFilter("all");
+      g.setSortingSearch("");
+      g.setSortBy("name");
+    }
+    if (isCodaAI) {
+      g.setAttivitaPriority("all");
+      g.setSearch("");
+    }
+    if (isABTest) {
+      g.setSortingFilter("all");
+      g.setSearch("");
+    }
+    if (isArena) {
+      g.setSearch("all");
+      g.setInreachChannel("email");
+    }
     if (isAgenda) {
       g.setAgendaType("all");
       g.setAgendaPriority("all");
@@ -154,11 +258,41 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       g.setFilter("agendaResponse", "all");
       g.setFilter("agendaDays", []);
     }
-    if (isEmail || isWhatsApp || isLinkedIn) { g.setSortingFilter("all"); g.setEmailCategory("all"); g.setEmailSort("date_desc"); g.setSortBy("date_desc"); g.setSortingSearch(""); }
-    if (isWorkspace) { g.setWorkspaceFilters(new Set()); g.setEmailGenFilter("all"); g.setSearch(""); }
-    if (isInUscita) { g.setSortingFilter("all"); g.setSortingSearch(""); }
-    if (isNetwork) { g.setNetworkSearch(""); g.setNetworkQuality("all"); g.setNetworkSort("name"); g.setNetworkSelectedCountries(new Set()); g.setNetworkDirectoryOnly(false); }
-    if (isCRM) { g.setSearch(""); g.setLeadStatus("all"); g.setHoldingPattern("out"); g.setCrmQuality("all"); g.setCrmChannel("all"); g.setCrmOrigin(new Set()); g.setCrmSelectedCountries(new Set()); g.setCrmWcaMatch("all"); g.setGroupBy("country"); g.setSortBy("name"); }
+    if (isEmail || isWhatsApp || isLinkedIn) {
+      g.setSortingFilter("all");
+      g.setEmailCategory("all");
+      g.setEmailSort("date_desc");
+      g.setSortBy("date_desc");
+      g.setSortingSearch("");
+    }
+    if (isWorkspace) {
+      g.setWorkspaceFilters(new Set());
+      g.setEmailGenFilter("all");
+      g.setSearch("");
+    }
+    if (isInUscita) {
+      g.setSortingFilter("all");
+      g.setSortingSearch("");
+    }
+    if (isNetwork) {
+      g.setNetworkSearch("");
+      g.setNetworkQuality("all");
+      g.setNetworkSort("name");
+      g.setNetworkSelectedCountries(new Set());
+      g.setNetworkDirectoryOnly(false);
+    }
+    if (isCRM) {
+      g.setSearch("");
+      g.setLeadStatus("all");
+      g.setHoldingPattern("out");
+      g.setCrmQuality("all");
+      g.setCrmChannel("all");
+      g.setCrmOrigin(new Set());
+      g.setCrmSelectedCountries(new Set());
+      g.setCrmWcaMatch("all");
+      g.setGroupBy("country");
+      g.setSortBy("name");
+    }
     if (isEmailIntelligence) {
       g.setFilter("emailIntelSearch", "");
       g.setFilter("emailIntelVolume", "all");
@@ -170,37 +304,76 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       g.setFilter("funnemailView", "all");
       g.setFilter("funnemailFolder", "all");
     }
-  }, [g, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isWhatsApp, isLinkedIn, isWorkspace, isInUscita, isNetwork, isCRM, isEmailIntelligence, isFunnemailInbox]);
+  }, [
+    g,
+    isCockpit,
+    isAttivita,
+    isSorting,
+    isCodaAI,
+    isABTest,
+    isArena,
+    isAgenda,
+    isEmail,
+    isWhatsApp,
+    isLinkedIn,
+    isWorkspace,
+    isInUscita,
+    isNetwork,
+    isCRM,
+    isEmailIntelligence,
+    isFunnemailInbox,
+  ]);
 
-  const toggleOrigin = useCallback((val: string) => {
-    const next = new Set(g.filters.origin);
-    if (next.has(val)) { if (next.size > 1) next.delete(val); } else next.add(val);
-    g.setOrigin(next);
-  }, [g]);
+  const toggleOrigin = useCallback(
+    (val: string) => {
+      const next = new Set(g.filters.origin);
+      if (next.has(val)) {
+        if (next.size > 1) next.delete(val);
+      } else next.add(val);
+      g.setOrigin(next);
+    },
+    [g],
+  );
 
-  const toggleCockpitCountry = useCallback((code: string) => {
-    const next = new Set(g.filters.cockpitCountries);
-    if (next.has(code)) next.delete(code); else next.add(code);
-    g.setCockpitCountries(next);
-  }, [g]);
+  const toggleCockpitCountry = useCallback(
+    (code: string) => {
+      const next = new Set(g.filters.cockpitCountries);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      g.setCockpitCountries(next);
+    },
+    [g],
+  );
 
-  const toggleCockpitChannel = useCallback((key: CockpitChannelFilter) => {
-    const next = new Set(g.filters.cockpitChannels);
-    if (next.has(key)) next.delete(key); else next.add(key);
-    g.setCockpitChannels(next);
-  }, [g]);
+  const toggleCockpitChannel = useCallback(
+    (key: CockpitChannelFilter) => {
+      const next = new Set(g.filters.cockpitChannels);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      g.setCockpitChannels(next);
+    },
+    [g],
+  );
 
-  const toggleCockpitQuality = useCallback((key: CockpitQualityFilter) => {
-    const next = new Set(g.filters.cockpitQuality);
-    if (next.has(key)) next.delete(key); else next.add(key);
-    g.setCockpitQuality(next);
-  }, [g]);
+  const toggleCockpitQuality = useCallback(
+    (key: CockpitQualityFilter) => {
+      const next = new Set(g.filters.cockpitQuality);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      g.setCockpitQuality(next);
+    },
+    [g],
+  );
 
-  const toggleWs = useCallback((key: WorkspaceFilterKey) => {
-    const next = new Set(g.filters.workspaceFilters);
-    if (next.has(key)) next.delete(key); else next.add(key);
-    g.setWorkspaceFilters(next);
-  }, [g]);
+  const toggleWs = useCallback(
+    (key: WorkspaceFilterKey) => {
+      const next = new Set(g.filters.workspaceFilters);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      g.setWorkspaceFilters(next);
+    },
+    [g],
+  );
 
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -220,13 +393,41 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   }, []);
 
   return {
-    g, drawerWidth, sectionTitle, activeCount, countryStats,
-    isCockpit, isWorkspace, isInUscita, isCircuito, isAttivita,
-    isSorting, isCodaAI, isABTest, isArena,
-    isEmail, isWhatsApp, isLinkedIn, isInbox,
-    isOutreach, isNetwork, isCRM, crmDrawerTab, isAgenda, isEmailComposer, isCampaigns,
-    isInreach, isEmailForge, isEmailIntelligence, isFunnemailInbox,
-    handleResetAll, toggleOrigin, toggleCockpitCountry,
-    toggleCockpitChannel, toggleCockpitQuality, toggleWs, startResize,
+    g,
+    drawerWidth,
+    sectionTitle,
+    activeCount,
+    countryStats,
+    isCockpit,
+    isWorkspace,
+    isInUscita,
+    isCircuito,
+    isAttivita,
+    isSorting,
+    isCodaAI,
+    isABTest,
+    isArena,
+    isEmail,
+    isWhatsApp,
+    isLinkedIn,
+    isInbox,
+    isOutreach,
+    isNetwork,
+    isCRM,
+    crmDrawerTab,
+    isAgenda,
+    isEmailComposer,
+    isCampaigns,
+    isInreach,
+    isEmailForge,
+    isEmailIntelligence,
+    isFunnemailInbox,
+    handleResetAll,
+    toggleOrigin,
+    toggleCockpitCountry,
+    toggleCockpitChannel,
+    toggleCockpitQuality,
+    toggleWs,
+    startResize,
   };
 }

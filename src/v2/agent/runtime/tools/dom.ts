@@ -4,13 +4,7 @@
  */
 import type { AgentTool } from "./index";
 
-const FORBIDDEN_SELECTORS = [
-  /logout/i,
-  /delete.*account/i,
-  /drop.*table/i,
-  /signout/i,
-  /sign-out/i,
-];
+const FORBIDDEN_SELECTORS = [/logout/i, /delete.*account/i, /drop.*table/i, /signout/i, /sign-out/i];
 
 function isSelectorForbidden(selector: string): boolean {
   return FORBIDDEN_SELECTORS.some((r) => r.test(selector));
@@ -236,9 +230,7 @@ export const selectOptionTool: AgentTool = {
       // Native <select>
       if (el.tagName === "SELECT") {
         const selectEl = el as HTMLSelectElement;
-        const option = Array.from(selectEl.options).find(
-          (o) => o.value === value || o.textContent?.trim() === value,
-        );
+        const option = Array.from(selectEl.options).find((o) => o.value === value || o.textContent?.trim() === value);
         if (!option) return { success: false, error: `Opzione "${value}" non trovata` };
         selectEl.value = option.value;
         selectEl.dispatchEvent(new Event("change", { bubbles: true }));
@@ -399,14 +391,12 @@ export const readTableTool: AgentTool = {
       // Try <table> first
       const table = el.tagName === "TABLE" ? el : el.querySelector("table");
       if (table) {
-        const headers = Array.from(table.querySelectorAll("thead th, thead td")).map(
-          (th) => (th.textContent ?? "").trim(),
+        const headers = Array.from(table.querySelectorAll("thead th, thead td")).map((th) =>
+          (th.textContent ?? "").trim(),
         );
         const rows = Array.from(table.querySelectorAll("tbody tr"))
           .slice(0, 50)
-          .map((tr) =>
-            Array.from(tr.querySelectorAll("td")).map((td) => (td.textContent ?? "").trim().slice(0, 200)),
-          );
+          .map((tr) => Array.from(tr.querySelectorAll("td")).map((td) => (td.textContent ?? "").trim().slice(0, 200)));
         return { success: true, data: { headers, rows, rowCount: rows.length } };
       }
 

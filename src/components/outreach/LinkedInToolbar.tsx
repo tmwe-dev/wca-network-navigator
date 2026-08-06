@@ -41,11 +41,19 @@ export function LinkedInToolbar() {
           {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
           Leggi
         </Button>
-        <Badge variant={liBadge.variant} className={cn("text-[9px] gap-0.5 h-5 px-1.5 cursor-default", liBadge.color)} title="Estensione LinkedIn">
+        <Badge
+          variant={liBadge.variant}
+          className={cn("text-[9px] gap-0.5 h-5 px-1.5 cursor-default", liBadge.color)}
+          title="Estensione LinkedIn"
+        >
           {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
           LI
         </Badge>
-        <Badge variant={fsBadge.variant} className={cn("text-[9px] gap-0.5 h-5 px-1.5 cursor-default", fsBadge.color)} title="FireScrape extension">
+        <Badge
+          variant={fsBadge.variant}
+          className={cn("text-[9px] gap-0.5 h-5 px-1.5 cursor-default", fsBadge.color)}
+          title="FireScrape extension"
+        >
           {isFireScrapeAvailable ? "🔥" : "⭕"} FS
         </Badge>
         {isBackfilling ? (
@@ -74,7 +82,9 @@ export function LinkedInToolbar() {
       </div>
       {isBackfilling && (
         <div className="text-[9px] text-muted-foreground mt-1 truncate max-w-[260px]">
-          {progress.phase === "discovery" ? "Discovery…" : `${progress.threadsProcessed}/${progress.threadsTotal} thread`}
+          {progress.phase === "discovery"
+            ? "Discovery…"
+            : `${progress.threadsProcessed}/${progress.threadsTotal} thread`}
           {progress.recoveredMessages > 0 && ` · ${progress.recoveredMessages} msg`}
         </div>
       )}

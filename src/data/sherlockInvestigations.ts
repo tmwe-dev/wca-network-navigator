@@ -11,10 +11,7 @@ export type SherlockLevelInfo = { level: 1 | 2 | 3; completed_at: string | null 
 
 export type SherlockLevelMap = Record<string, SherlockLevelInfo>;
 
-async function fetchMaxLevel(
-  column: "partner_id" | "contact_id",
-  ids: readonly string[],
-): Promise<SherlockLevelMap> {
+async function fetchMaxLevel(column: "partner_id" | "contact_id", ids: readonly string[]): Promise<SherlockLevelMap> {
   const out: SherlockLevelMap = {};
   if (!ids.length) return out;
   try {

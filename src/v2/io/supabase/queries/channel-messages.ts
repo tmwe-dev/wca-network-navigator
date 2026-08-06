@@ -15,14 +15,11 @@ export async function fetchChannelMessages(
   direction?: string,
 ): Promise<Result<ChannelMessage[], AppError>> {
   try {
-    let query = supabase
-      .from("channel_messages")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    let query = supabase.from("channel_messages").select("*").order("created_at", { ascending: false }).limit(limit);
     if (direction) query = query.eq("direction", direction);
     const { data, error } = await query;
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "fetchChannelMessages"));
+    if (error)
+      return err(ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "fetchChannelMessages"));
     if (!data) return ok([]);
     const msgs: ChannelMessage[] = [];
     for (const row of data) {
@@ -60,12 +57,7 @@ export async function fetchChannelMessagesFromView(
     const { data, error } = await query;
     if (error) {
       return err(
-        ioError(
-          "DATABASE_ERROR",
-          error.message,
-          { table: "message_intelligence_v" },
-          "fetchChannelMessagesFromView",
-        ),
+        ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "fetchChannelMessagesFromView"),
       );
     }
     if (!data) return ok([]);
@@ -161,9 +153,7 @@ async function queryRecipientHistoryFromLegacy(
     else if (email) q = q.or(`from_address.ilike.${email},to_address.ilike.${email}`);
     const { data, error } = await q;
     if (error) {
-      return err(
-        ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "recipientHistory:legacy"),
-      );
+      return err(ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "recipientHistory:legacy"));
     }
     return ok((data ?? []) as RecipientHistoryRow[]);
   } catch (caught: unknown) {
@@ -202,10 +192,8 @@ export interface SenderMessageRow {
   readonly body_text: string | null;
 }
 
-const SENDER_MSGS_COLS_VIEW =
-  "id:message_id, email_date, direction, from_address, to_address, subject, body_text";
-const SENDER_MSGS_COLS_LEGACY =
-  "id, email_date, direction, from_address, to_address, subject, body_text";
+const SENDER_MSGS_COLS_VIEW = "id:message_id, email_date, direction, from_address, to_address, subject, body_text";
+const SENDER_MSGS_COLS_LEGACY = "id, email_date, direction, from_address, to_address, subject, body_text";
 
 async function querySenderMessagesFromView(
   senders: readonly string[],
@@ -220,9 +208,7 @@ async function querySenderMessagesFromView(
       .order("email_date", { ascending: false })
       .limit(limit);
     if (error) {
-      return err(
-        ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "senderMessages:view"),
-      );
+      return err(ioError("DATABASE_ERROR", error.message, { table: "message_intelligence_v" }, "senderMessages:view"));
     }
     return ok((data ?? []) as SenderMessageRow[]);
   } catch (caught: unknown) {
@@ -243,9 +229,7 @@ async function querySenderMessagesFromLegacy(
       .order("email_date", { ascending: false })
       .limit(limit);
     if (error) {
-      return err(
-        ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "senderMessages:legacy"),
-      );
+      return err(ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "senderMessages:legacy"));
     }
     return ok((data ?? []) as SenderMessageRow[]);
   } catch (caught: unknown) {
@@ -326,9 +310,7 @@ async function querySenderConversationFromLegacy(
       .order("email_date", { ascending: false })
       .limit(limit);
     if (error) {
-      return err(
-        ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "senderConversation:legacy"),
-      );
+      return err(ioError("DATABASE_ERROR", error.message, { table: "channel_messages" }, "senderConversation:legacy"));
     }
     return ok((data ?? []) as SenderConversationRow[]);
   } catch (caught: unknown) {

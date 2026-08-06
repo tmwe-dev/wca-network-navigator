@@ -62,7 +62,9 @@ function mapRow(row: ContentIntelligenceRow): EmailContentIntelligenceRow {
     continuity: (row.continuity ?? {}) as Record<string, unknown>,
     reasoning: row.reasoning,
     confidence: row.confidence,
-    suggested_actions: (Array.isArray(row.suggested_actions) ? row.suggested_actions : []) as unknown as SuggestedAction[],
+    suggested_actions: (Array.isArray(row.suggested_actions)
+      ? row.suggested_actions
+      : []) as unknown as SuggestedAction[],
     model: row.model,
     context_summary: (row.context_summary ?? {}) as Record<string, unknown>,
     pending_action_ids: row.pending_action_ids ?? [],
@@ -72,9 +74,7 @@ function mapRow(row: ContentIntelligenceRow): EmailContentIntelligenceRow {
 }
 
 /** Lettura singola per message_id (può non esistere se non ancora classificata). */
-export async function fetchContentIntelligence(
-  messageId: string,
-): Promise<EmailContentIntelligenceRow | null> {
+export async function fetchContentIntelligence(messageId: string): Promise<EmailContentIntelligenceRow | null> {
   const { data, error } = await supabase
     .from("email_content_intelligence")
     .select("*")
@@ -92,10 +92,7 @@ export async function fetchContentIntelligenceBulk(
   messageIds: string[],
 ): Promise<Record<string, EmailContentIntelligenceRow>> {
   if (messageIds.length === 0) return {};
-  const { data, error } = await supabase
-    .from("email_content_intelligence")
-    .select("*")
-    .in("message_id", messageIds);
+  const { data, error } = await supabase.from("email_content_intelligence").select("*").in("message_id", messageIds);
   if (error) {
     log.warn("fetchContentIntelligenceBulk error", { error: error.message });
     return {};

@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import {
-  findReminders,
-  findPendingReminders,
-  completeReminder,
-  type ReminderRow,
-} from "@/data/reminders";
+import { findReminders, findPendingReminders, completeReminder, type ReminderRow } from "@/data/reminders";
 
 export type Reminder = ReminderRow;
 

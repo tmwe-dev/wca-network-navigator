@@ -30,10 +30,9 @@ export function UnifiedContactList({ contacts, selected, onSelect, compact, clas
   const filtered = useMemo(() => {
     if (!search) return contacts;
     const q = search.toLowerCase();
-    return contacts.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.company.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q)
+    return contacts.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) || c.company.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q),
     );
   }, [contacts, search]);
 
@@ -44,7 +43,7 @@ export function UnifiedContactList({ contacts, selected, onSelect, compact, clas
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Cerca contatto..."
             className="pl-8 h-8 text-xs bg-muted/30"
           />
@@ -55,18 +54,20 @@ export function UnifiedContactList({ contacts, selected, onSelect, compact, clas
       </div>
       <ScrollArea className="flex-1">
         <div className="divide-y divide-border/30">
-          {filtered.map(c => (
+          {filtered.map((c) => (
             <button
               key={c.id}
               onClick={() => onSelect(c)}
               className={cn(
                 "w-full text-left px-3 py-2.5 transition-colors hover:bg-muted/40",
-                selected === c.id && "bg-primary/5 border-l-2 border-primary"
+                selected === c.id && "bg-primary/5 border-l-2 border-primary",
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium text-foreground truncate">{c.name}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{c.origin}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                  {c.origin}
+                </span>
               </div>
               {!compact && (
                 <div className="flex items-center gap-2 mt-1">
@@ -78,9 +79,7 @@ export function UnifiedContactList({ contacts, selected, onSelect, compact, clas
                 {c.email && <Mail className="h-3 w-3 text-muted-foreground" />}
                 {c.phone && <Phone className="h-3 w-3 text-muted-foreground" />}
                 {c.linkedinUrl && <Linkedin className="h-3 w-3 text-muted-foreground" />}
-                {c.country && (
-                  <span className="text-[10px] text-muted-foreground ml-auto">{c.country}</span>
-                )}
+                {c.country && <span className="text-[10px] text-muted-foreground ml-auto">{c.country}</span>}
               </div>
             </button>
           ))}

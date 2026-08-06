@@ -25,7 +25,6 @@ import {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C1 — normalizePhone", () => {
-
   it("C1.P1 — Italian mobile (3xx) gets +39 prefix", () => {
     expect(normalizePhone("3401234567")).toBe("+393401234567");
   });
@@ -72,7 +71,6 @@ describe("Collaudo C1 — normalizePhone", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C1 — extractEmail", () => {
-
   it("C1.E1 — plain email returned lowercase", () => {
     expect(extractEmail("USER@Example.COM")).toBe("user@example.com");
   });
@@ -107,7 +105,6 @@ describe("Collaudo C1 — extractEmail", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C1 — parseCountry", () => {
-
   it("C1.C1 — Italian name → English", () => {
     expect(parseCountry("Italia")).toBe("Italy");
     expect(parseCountry("Germania")).toBe("Germany");
@@ -170,7 +167,6 @@ describe("Collaudo C1 — parseCountry", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C1 — applyTransformation", () => {
-
   it("C1.T1 — trim removes whitespace", () => {
     expect(applyTransformation("  hello  ", "trim")).toBe("hello");
   });
@@ -218,7 +214,6 @@ describe("Collaudo C1 — applyTransformation", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C1 — validateAndTransform Philosophy", () => {
-
   const makeMappings = (targets: string[]) =>
     targets.map((t, i) => ({
       sourceColumn: `col${i}`,
@@ -311,35 +306,46 @@ describe("Collaudo C1 — validateAndTransform Philosophy", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C1 — Import Edge Cases", () => {
-
   it("C1.X1 — very long company name is accepted (no truncation at import)", () => {
     const longName = "A".repeat(500);
-    const mappings = [{
-      sourceColumn: "col0", sourceIndex: 0,
-      targetColumn: "company_name", confidence: 100,
-      transformation: "trim" as const,
-    }];
+    const mappings = [
+      {
+        sourceColumn: "col0",
+        sourceIndex: 0,
+        targetColumn: "company_name",
+        confidence: 100,
+        transformation: "trim" as const,
+      },
+    ];
     const result = validateAndTransform([[longName]], mappings);
     expect(result.stats.importedCount).toBe(1);
     expect(result.validRows[0].company_name).toBe(longName);
   });
 
   it("C1.X2 — special characters in company name preserved", () => {
-    const mappings = [{
-      sourceColumn: "col0", sourceIndex: 0,
-      targetColumn: "company_name", confidence: 100,
-      transformation: "trim" as const,
-    }];
+    const mappings = [
+      {
+        sourceColumn: "col0",
+        sourceIndex: 0,
+        targetColumn: "company_name",
+        confidence: 100,
+        transformation: "trim" as const,
+      },
+    ];
     const result = validateAndTransform([["O'Brien & Co. (Italia) S.r.l."]], mappings);
     expect(result.validRows[0].company_name).toBe("O'Brien & Co. (Italia) S.r.l.");
   });
 
   it("C1.X3 — email extraction fixes bad format", () => {
-    const mappings = [{
-      sourceColumn: "col0", sourceIndex: 0,
-      targetColumn: "email", confidence: 100,
-      transformation: "extract_email" as const,
-    }];
+    const mappings = [
+      {
+        sourceColumn: "col0",
+        sourceIndex: 0,
+        targetColumn: "email",
+        confidence: 100,
+        transformation: "extract_email" as const,
+      },
+    ];
     const result = validateAndTransform([["Email: john@acme.it (commerciale)"]], mappings);
     expect(result.validRows[0].email).toBe("john@acme.it");
   });

@@ -27,7 +27,10 @@ export async function loadDoctrineSnippet(maxEntries = 5): Promise<string> {
       .slice(0, maxEntries);
     if (doctrine.length === 0) return "(nessuna voce doctrine disponibile)";
     return doctrine
-      .map((d) => `• [${d.category}] ${d.title}: ${(d.content ?? "").slice(0, 220).replace(/\s+/g, " ").trim()}${(d.content ?? "").length > 220 ? "…" : ""}`)
+      .map(
+        (d) =>
+          `• [${d.category}] ${d.title}: ${(d.content ?? "").slice(0, 220).replace(/\s+/g, " ").trim()}${(d.content ?? "").length > 220 ? "…" : ""}`,
+      )
       .join("\n");
   } catch {
     return "(impossibile caricare KB doctrine)";
@@ -42,19 +45,11 @@ export async function loadVoiceTemplatesFewShot(): Promise<string> {
   try {
     const all = await findKbEntries();
     const templates = all
-      .filter(
-        (e) =>
-          e.category === "prompt_template" &&
-          Array.isArray(e.tags) &&
-          e.tags.includes("voice_template"),
-      )
+      .filter((e) => e.category === "prompt_template" && Array.isArray(e.tags) && e.tags.includes("voice_template"))
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     if (templates.length === 0) return "(nessun template voce disponibile in KB)";
     return templates
-      .map(
-        (t) =>
-          `### ESEMPIO ${t.title}\n${(t.content ?? "").trim()}\n--- FINE ESEMPIO ---`,
-      )
+      .map((t) => `### ESEMPIO ${t.title}\n${(t.content ?? "").trim()}\n--- FINE ESEMPIO ---`)
       .join("\n\n");
   } catch {
     return "(impossibile caricare i template voce)";

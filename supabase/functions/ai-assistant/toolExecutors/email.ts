@@ -32,10 +32,7 @@ export async function executeGetConversationContext(
   args: Record<string, unknown>,
   userId?: string,
 ): Promise<unknown> {
-  let q = supabase
-    .from("contact_conversation_context")
-    .select("*")
-    .eq("email_address", String(args.email_address));
+  let q = supabase.from("contact_conversation_context").select("*").eq("email_address", String(args.email_address));
   if (userId) q = q.eq("user_id", userId);
   const { data, error } = await q.maybeSingle();
   if (error) return { error: error.message };

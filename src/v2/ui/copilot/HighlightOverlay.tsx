@@ -12,18 +12,27 @@ export interface HighlightTarget {
   durationMs?: number;
 }
 
-interface Rect { top: number; left: number; width: number; height: number; }
+interface Rect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
 
 function findElement(t: HighlightTarget): Element | null {
   if (t.selector) {
     try {
       const el = document.querySelector(t.selector);
       if (el) return el;
-    } catch { /* invalid selector */ }
+    } catch {
+      /* invalid selector */
+    }
   }
   if (t.text) {
     const needle = t.text.toLowerCase().trim();
-    const candidates = Array.from(document.querySelectorAll<HTMLElement>("button, a, [role='button'], [data-copilot-id]"));
+    const candidates = Array.from(
+      document.querySelectorAll<HTMLElement>("button, a, [role='button'], [data-copilot-id]"),
+    );
     for (const c of candidates) {
       const txt = (c.innerText || c.textContent || "").toLowerCase().trim();
       if (txt && (txt === needle || txt.includes(needle))) return c;
@@ -39,14 +48,25 @@ export function HighlightOverlay({ target, onDone }: { target: HighlightTarget; 
     let cancelled = false;
     const recompute = () => {
       const el = findElement(target);
-      if (!el || cancelled) { setRect(null); return; }
+      if (!el || cancelled) {
+        setRect(null);
+        return;
+      }
       const r = el.getBoundingClientRect();
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-      try { (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" }); } catch { /* noop */ }
+      try {
+        (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch {
+        /* noop */
+      }
     };
     recompute();
     const t = window.setInterval(recompute, 250);
-    const timeout = window.setTimeout(() => { cancelled = true; window.clearInterval(t); onDone(); }, target.durationMs ?? 4000);
+    const timeout = window.setTimeout(() => {
+      cancelled = true;
+      window.clearInterval(t);
+      onDone();
+    }, target.durationMs ?? 4000);
     window.addEventListener("resize", recompute);
     return () => {
       cancelled = true;

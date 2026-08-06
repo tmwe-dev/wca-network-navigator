@@ -7,7 +7,7 @@ async function seedWithRetry(maxRetries = 3) {
     } catch (error) {
       console.warn(`[e2e] Seed attempt ${i + 1}/${maxRetries} failed:`, (error as Error).message);
       if (i === maxRetries - 1) throw error;
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
 }

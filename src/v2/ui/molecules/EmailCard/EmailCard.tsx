@@ -73,12 +73,8 @@ export function EmailCard({
 
   const titleSlot = (
     <>
-      {email.unread && (
-        <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" title="Non letta" />
-      )}
-      <span className="truncate uppercase tracking-wide text-foreground">
-        {email.company || "—"}
-      </span>
+      {email.unread && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" title="Non letta" />}
+      <span className="truncate uppercase tracking-wide text-foreground">{email.company || "—"}</span>
       {email.folderLabel && (
         <Badge
           variant="outline"
@@ -100,17 +96,26 @@ export function EmailCard({
         </Badge>
       )}
       {email.urgency === "critical" && (
-        <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-destructive/15 text-destructive border-destructive/30">
+        <Badge
+          variant="outline"
+          className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-destructive/15 text-destructive border-destructive/30"
+        >
           Urgente
         </Badge>
       )}
       {email.urgency === "high" && (
-        <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-amber-500/15 text-amber-500 border-amber-500/30">
+        <Badge
+          variant="outline"
+          className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-amber-500/15 text-amber-500 border-amber-500/30"
+        >
           Alta
         </Badge>
       )}
       {email.goesToAgenda && (
-        <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-chart-3/15 text-chart-3 border-chart-3/30 gap-0.5">
+        <Badge
+          variant="outline"
+          className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-chart-3/15 text-chart-3 border-chart-3/30 gap-0.5"
+        >
           <CalendarClock className="w-2.5 h-2.5" />
           Agenda
         </Badge>
@@ -154,12 +159,8 @@ export function EmailCard({
 
   const previewSlot = email.subject ? (
     <>
-      <span className={cn("font-medium", email.unread ? "text-foreground" : "text-foreground")}>
-        {email.subject}
-      </span>
-      {email.preview && (
-        <span className="text-muted-foreground"> — {email.preview}</span>
-      )}
+      <span className={cn("font-medium", email.unread ? "text-foreground" : "text-foreground")}>{email.subject}</span>
+      {email.preview && <span className="text-muted-foreground"> — {email.preview}</span>}
     </>
   ) : null;
 
@@ -170,7 +171,7 @@ export function EmailCard({
         recency.tone === "ok" && "text-emerald-500",
         recency.tone === "warn" && "text-amber-500",
         recency.tone === "alert" && "text-destructive",
-        recency.tone === "muted" && "text-muted-foreground"
+        recency.tone === "muted" && "text-muted-foreground",
       )}
       title={email.dateIso ? new Date(email.dateIso).toLocaleString() : undefined}
     >
@@ -182,7 +183,7 @@ export function EmailCard({
     <div
       className={cn(
         "rounded-xl overflow-hidden transition-all",
-        selected && "ring-1 ring-primary/60 bg-primary/[0.05]"
+        selected && "ring-1 ring-primary/60 bg-primary/[0.05]",
       )}
     >
       <EntityRow

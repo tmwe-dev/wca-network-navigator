@@ -89,10 +89,7 @@ function MailAvatar({
           onError={() => setLogoFailed(true)}
         />
         {flag && (
-          <span
-            className="absolute -bottom-1 -right-1 leading-none"
-            style={{ fontSize: flagSize }}
-          >
+          <span className="absolute -bottom-1 -right-1 leading-none" style={{ fontSize: flagSize }}>
             {flag}
           </span>
         )}
@@ -110,10 +107,7 @@ function MailAvatar({
         className="rounded-md border border-border/50"
       />
       {flag && (
-        <span
-          className="absolute -bottom-1 -right-1 leading-none"
-          style={{ fontSize: flagSize }}
-        >
+        <span className="absolute -bottom-1 -right-1 leading-none" style={{ fontSize: flagSize }}>
           {flag}
         </span>
       )}
@@ -153,11 +147,7 @@ export function MailRowChrome({
         !isSelected && !isUnread && "hover:bg-muted/50",
         inHolding && "border-l-2 border-l-primary",
       )}
-      style={
-        groupColor && !inHolding
-          ? { boxShadow: `inset 4px 0 0 0 ${groupColor}` }
-          : undefined
-      }
+      style={groupColor && !inHolding ? { boxShadow: `inset 4px 0 0 0 ${groupColor}` } : undefined}
     >
       <div className="flex w-full items-start gap-2.5">
         <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-start gap-3 text-left">
@@ -206,11 +196,7 @@ export function MailRowChrome({
             </p>
 
             {/* Riga 4: anteprima corpo. */}
-            {previewText && (
-              <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
-                {previewText}
-              </p>
-            )}
+            {previewText && <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">{previewText}</p>}
 
             {/* Riga 5: classificazione (gruppo/suggerito) + chip di stato,
                 tutti sulla stessa riga con tipografia uniforme. */}
@@ -226,10 +212,7 @@ export function MailRowChrome({
       </div>
 
       {actions && (
-        <div
-          className="mt-2 flex flex-wrap items-center justify-end gap-1.5"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
           {actions}
         </div>
       )}

@@ -3,23 +3,9 @@
  * Detailed view of a calendar event in a sheet
  */
 import React, { useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import {
-  Clock,
-  MapPin,
-  Users,
-  Edit,
-  Trash2,
-  Link as LinkIcon,
-  AlertCircle,
-} from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { useEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/useCalendar";
 import { usePartners } from "@/hooks/usePartners";
 import { useContacts } from "@/hooks/useContacts";
@@ -41,12 +27,7 @@ interface EventDetailSheetProps {
   onEdit?: (event: CalendarEvent) => void;
 }
 
-export function EventDetailSheet({
-  eventId,
-  open,
-  onOpenChange,
-  onEdit,
-}: EventDetailSheetProps) {
+export function EventDetailSheet({ eventId, open, onOpenChange, onEdit }: EventDetailSheetProps) {
   const { data: event } = useEvent(eventId || "");
   const updateEvent = useUpdateEvent();
   const deleteEvent = useDeleteEvent();
@@ -54,7 +35,7 @@ export function EventDetailSheet({
   const { data: contactsData } = useContacts();
   const contacts: Contact[] = Array.isArray(contactsData)
     ? (contactsData as unknown as Contact[])
-    : ((contactsData as { items?: unknown[] } | undefined)?.items as unknown as Contact[]) ?? [];
+    : (((contactsData as { items?: unknown[] } | undefined)?.items as unknown as Contact[]) ?? []);
   const { data: deals = [] } = useDeals();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -79,11 +60,7 @@ export function EventDetailSheet({
     };
 
     const style = statusStyles[status] || statusStyles.scheduled;
-    return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${style.bg} ${style.text}`}>
-        {style.label}
-      </span>
-    );
+    return <span className={`px-2 py-1 rounded text-xs font-medium ${style.bg} ${style.text}`}>{style.label}</span>;
   };
 
   const formatDateTime = (dateString: string, allDay: boolean): string => {
@@ -113,12 +90,8 @@ export function EventDetailSheet({
     onOpenChange(false);
   };
 
-  const partner = event.partner_id
-    ? partners.find((p: Partner) => p.id === event.partner_id)
-    : null;
-  const contact = event.contact_id
-    ? contacts.find((c: Contact) => c.id === event.contact_id)
-    : null;
+  const partner = event.partner_id ? partners.find((p: Partner) => p.id === event.partner_id) : null;
+  const contact = event.contact_id ? contacts.find((c: Contact) => c.id === event.contact_id) : null;
   const deal = event.deal_id ? deals.find((d: Deal) => d.id === event.deal_id) : null;
 
   return (
@@ -146,9 +119,7 @@ export function EventDetailSheet({
               </div>
               <p className="font-medium">{formatDateTime(event.start_at, event.all_day)}</p>
               {event.end_at && (
-                <p className="text-sm text-gray-400">
-                  fino a {formatDateTime(event.end_at, event.all_day)}
-                </p>
+                <p className="text-sm text-gray-400">fino a {formatDateTime(event.end_at, event.all_day)}</p>
               )}
             </div>
           </div>
@@ -256,9 +227,7 @@ export function EventDetailSheet({
                 <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="font-medium text-red-100">Sei sicuro?</p>
-                  <p className="text-sm text-red-200 mt-1">
-                    Questa azione non può essere annullata.
-                  </p>
+                  <p className="text-sm text-red-200 mt-1">Questa azione non può essere annullata.</p>
                   <div className="flex gap-2 mt-3">
                     <Button
                       size="sm"

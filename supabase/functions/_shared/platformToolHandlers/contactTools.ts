@@ -40,11 +40,7 @@ export async function executeContactToolHandler(
     case "get_contact_detail": {
       let contact: Record<string, unknown> | null = null;
       if (args.contact_id) {
-        const { data } = await supabase
-          .from("imported_contacts")
-          .select("*")
-          .eq("id", args.contact_id)
-          .single();
+        const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single();
         contact = data as Record<string, unknown> | null;
       } else if (args.contact_name) {
         const { data } = await supabase

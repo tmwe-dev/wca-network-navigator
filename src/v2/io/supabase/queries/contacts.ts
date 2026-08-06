@@ -1,11 +1,7 @@
 /**
  * IO Queries: Contacts — facciata Result-based sul DAL canonico `src/data/contacts`.
  */
-import {
-  findContactsWindow,
-  getContactById,
-  countImportedContacts,
-} from "@/data/contacts";
+import { findContactsWindow, getContactById, countImportedContacts } from "@/data/contacts";
 import { type Result, err } from "../../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type Contact } from "../../../core/domain/entities";
@@ -19,9 +15,7 @@ export interface ContactFilters {
   readonly offset?: number;
 }
 
-export async function fetchContacts(
-  filters?: ContactFilters,
-): Promise<Result<Contact[], AppError>> {
+export async function fetchContacts(filters?: ContactFilters): Promise<Result<Contact[], AppError>> {
   try {
     const rows = await findContactsWindow({
       importLogId: filters?.importLogId,
@@ -36,15 +30,20 @@ export async function fetchContacts(
   }
 }
 
-export async function fetchContactById(
-  id: string,
-): Promise<Result<Contact, AppError>> {
+export async function fetchContactById(id: string): Promise<Result<Contact, AppError>> {
   try {
     const row = await getContactById(id);
     if (!row) {
-      return err(ioError("NOT_FOUND", `Contact ${id} not found`, {
-        contactId: id,
-      }, "fetchContactById"));
+      return err(
+        ioError(
+          "NOT_FOUND",
+          `Contact ${id} not found`,
+          {
+            contactId: id,
+          },
+          "fetchContactById",
+        ),
+      );
     }
     return mapContactRow(row);
   } catch (caught: unknown) {

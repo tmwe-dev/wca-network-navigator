@@ -3,14 +3,23 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Zap, ThumbsUp, Trophy, Info } from "lucide-react";
 import {
-  ALL_QUALITIES, getDeepSearchMeta, presetToMissionConfig, type DeepSearchQuality,
+  ALL_QUALITIES,
+  getDeepSearchMeta,
+  presetToMissionConfig,
+  type DeepSearchQuality,
 } from "@/lib/deepSearchPresets";
 import type { MissionStepProps } from "./types";
 
 const QUALITY_ICONS = { fast: Zap, standard: ThumbsUp, premium: Trophy } as const;
 
 export function DeepSearchStep({ data, onChange }: MissionStepProps) {
-  const ds = data.deepSearch || { enabled: false, scrapeWebsite: true, scrapeLinkedIn: true, verifyWhatsApp: false, aiAnalysis: true };
+  const ds = data.deepSearch || {
+    enabled: false,
+    scrapeWebsite: true,
+    scrapeLinkedIn: true,
+    verifyWhatsApp: false,
+    aiAnalysis: true,
+  };
   const [quality, setQuality] = useState<DeepSearchQuality>("standard");
   const meta = getDeepSearchMeta(quality);
 
@@ -33,7 +42,9 @@ export function DeepSearchStep({ data, onChange }: MissionStepProps) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">Attivare Deep Search prima dell'invio?</p>
-          <p className="text-xs text-muted-foreground">Arricchisce i dati dei contatti per messaggi più personalizzati</p>
+          <p className="text-xs text-muted-foreground">
+            Arricchisce i dati dei contatti per messaggi più personalizzati
+          </p>
         </div>
         <Switch checked={ds.enabled} onCheckedChange={setEnabled} />
       </div>
@@ -75,7 +86,9 @@ export function DeepSearchStep({ data, onChange }: MissionStepProps) {
               <div className="text-xs font-medium text-foreground">{meta.label} include:</div>
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {meta.includedLabels.map((l) => (
-                  <Badge key={l} variant="secondary" className="text-[10px] py-0 px-1.5 h-4 font-normal">{l}</Badge>
+                  <Badge key={l} variant="secondary" className="text-[10px] py-0 px-1.5 h-4 font-normal">
+                    {l}
+                  </Badge>
                 ))}
               </div>
               <div className="text-[10px] text-muted-foreground mt-1.5 leading-tight">{meta.description}</div>
@@ -86,7 +99,8 @@ export function DeepSearchStep({ data, onChange }: MissionStepProps) {
 
       {!ds.enabled && (
         <div className="bg-muted/20 rounded-lg p-3 text-xs text-muted-foreground">
-          💡 Senza Deep Search, i messaggi saranno generati con i dati già presenti nel database. Puoi sempre attivarlo dopo.
+          💡 Senza Deep Search, i messaggi saranno generati con i dati già presenti nel database. Puoi sempre attivarlo
+          dopo.
         </div>
       )}
     </div>

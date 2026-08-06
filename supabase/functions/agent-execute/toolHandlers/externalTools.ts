@@ -1,9 +1,6 @@
 import { resolvePartnerId } from "../shared.ts";
 
-export async function handleEnrichPartnerWebsite(
-  args: Record<string, unknown>,
-  authHeader: string
-): Promise<unknown> {
+export async function handleEnrichPartnerWebsite(args: Record<string, unknown>, authHeader: string): Promise<unknown> {
   let pid = args.partner_id as string;
 
   if (!pid && args.company_name) {
@@ -15,30 +12,22 @@ export async function handleEnrichPartnerWebsite(
     return { error: "Partner non trovato" };
   }
 
-  console.warn(
-    "[LEGACY] agent-execute → enrich_partner_website: preferire Deep Search client-side."
-  );
+  console.warn("[LEGACY] agent-execute → enrich_partner_website: preferire Deep Search client-side.");
 
-  const response = await fetch(
-    `${Deno.env.get("SUPABASE_URL")}/functions/v1/enrich-partner-website`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
-      },
-      body: JSON.stringify({ partner_id: pid }),
-    }
-  );
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/enrich-partner-website`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: authHeader,
+    },
+    body: JSON.stringify({ partner_id: pid }),
+  });
 
   const data = await response.json();
   return response.ok ? { success: true, ...data } : { error: data.error || "Errore" };
 }
 
-export async function handleGenerateAliases(
-  args: Record<string, unknown>,
-  authHeader: string
-): Promise<unknown> {
+export async function handleGenerateAliases(args: Record<string, unknown>, authHeader: string): Promise<unknown> {
   const body: Record<string, unknown> = {
     type: args.type || "company",
     limit: Number(args.limit) || 20,
@@ -52,17 +41,14 @@ export async function handleGenerateAliases(
     body.country_code = String(args.country_code).toUpperCase();
   }
 
-  const response = await fetch(
-    `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-aliases`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
-      },
-      body: JSON.stringify(body),
-    }
-  );
+  const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-aliases`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: authHeader,
+    },
+    body: JSON.stringify(body),
+  });
 
   const data = await response.json();
   return response.ok ? { success: true, ...data } : { error: data.error || "Errore" };
@@ -70,14 +56,11 @@ export async function handleGenerateAliases(
 
 export async function handleScanDirectory(): Promise<unknown> {
   return {
-    error:
-      "Funzione scrape-wca-directory rimossa. Il download directory è ora gestito dal sistema esterno wca-app.",
+    error: "Funzione scrape-wca-directory rimossa. Il download directory è ora gestito dal sistema esterno wca-app.",
   };
 }
 
-export async function handleSuggestNextContacts(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleSuggestNextContacts(args: Record<string, unknown>): Promise<unknown> {
   const url = Deno.env.get("SUPABASE_URL")!;
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 

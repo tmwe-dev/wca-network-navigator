@@ -31,8 +31,15 @@ export const LEAD_STATUS_ORDER: Record<string, number> = {
 
 export const TERMINAL_STATUSES = new Set(["archived", "blacklisted"]);
 export const ALL_STATUSES = new Set([
-  "new", "first_touch_sent", "holding", "engaged",
-  "qualified", "negotiation", "converted", "archived", "blacklisted",
+  "new",
+  "first_touch_sent",
+  "holding",
+  "engaged",
+  "qualified",
+  "negotiation",
+  "converted",
+  "archived",
+  "blacklisted",
 ]);
 
 export function isValidLeadTransition(from: string | null | undefined, to: string): boolean {
@@ -60,10 +67,15 @@ export interface ApplyLeadStatusInput {
     name?: string;
   };
   decisionOrigin:
-    | "manual" | "ai_auto" | "ai_approved" | "ai_rejected"
-    | "ai_modified" | "system_cron" | "system_trigger";
+    | "manual"
+    | "ai_auto"
+    | "ai_approved"
+    | "ai_rejected"
+    | "ai_modified"
+    | "system_cron"
+    | "system_trigger";
   trigger: string;
-  reason?: string;          // obbligatorio per archived/blacklisted
+  reason?: string; // obbligatorio per archived/blacklisted
   partnerIdForAudit?: string;
   contactIdForAudit?: string;
   metadata?: Record<string, unknown>;
@@ -99,7 +111,9 @@ export async function applyLeadStatusChange(
 
   if (fetchErr || !current) {
     return {
-      applied: false, previousStatus: null, newStatus,
+      applied: false,
+      previousStatus: null,
+      newStatus,
       blockedReason: `Record non trovato in ${table} (${recordId})`,
     };
   }
@@ -108,22 +122,38 @@ export async function applyLeadStatusChange(
 
   // 2) Validazione
   if (!isValidLeadTransition(previousStatus, newStatus)) {
-    console.warn("[leadStatusGuard] BLOCKED transition", JSON.stringify({
-      table, recordId, from: previousStatus, to: newStatus, actor: input.actor.name,
-    }));
+    console.warn(
+      "[leadStatusGuard] BLOCKED transition",
+      JSON.stringify({
+        table,
+        recordId,
+        from: previousStatus,
+        to: newStatus,
+        actor: input.actor.name,
+      }),
+    );
     return {
-      applied: false, previousStatus, newStatus,
+      applied: false,
+      previousStatus,
+      newStatus,
       blockedReason: `Transizione non valida: ${previousStatus} → ${newStatus}`,
     };
   }
 
   // 3) Reason obbligatoria per terminali
   if (TERMINAL_STATUSES.has(newStatus) && !input.reason?.trim()) {
-    console.warn("[leadStatusGuard] BLOCKED terminal without reason", JSON.stringify({
-      table, recordId, to: newStatus,
-    }));
+    console.warn(
+      "[leadStatusGuard] BLOCKED terminal without reason",
+      JSON.stringify({
+        table,
+        recordId,
+        to: newStatus,
+      }),
+    );
     return {
-      applied: false, previousStatus, newStatus,
+      applied: false,
+      previousStatus,
+      newStatus,
       blockedReason: `Per "${newStatus}" la ragione è obbligatoria`,
     };
   }
@@ -137,14 +167,13 @@ export async function applyLeadStatusChange(
     updates.last_interaction_at = new Date().toISOString();
   }
 
-  const { error: updErr } = await supabase
-    .from(table)
-    .update(updates)
-    .eq("id", recordId);
+  const { error: updErr } = await supabase.from(table).update(updates).eq("id", recordId);
 
   if (updErr) {
     return {
-      applied: false, previousStatus, newStatus,
+      applied: false,
+      previousStatus,
+      newStatus,
       blockedReason: `DB error: ${updErr.message}`,
     };
   }

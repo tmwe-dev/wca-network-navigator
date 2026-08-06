@@ -72,9 +72,8 @@ export function SuggestRuleButton({
         priority,
       });
       setSaved(true);
-      const label = suggestionType === "user_preference"
-        ? "Preferenza salvata"
-        : "Proposta inviata per approvazione admin";
+      const label =
+        suggestionType === "user_preference" ? "Preferenza salvata" : "Proposta inviata per approvazione admin";
       toast.success(label);
       onSaved?.();
     } catch (e) {
@@ -82,7 +81,20 @@ export function SuggestRuleButton({
     } finally {
       setSaving(false);
     }
-  }, [saved, saving, userId, sourceContext, suggestionType, title, content, reasoning, targetBlockId, targetCategory, priority, onSaved]);
+  }, [
+    saved,
+    saving,
+    userId,
+    sourceContext,
+    suggestionType,
+    title,
+    content,
+    reasoning,
+    targetBlockId,
+    targetCategory,
+    priority,
+    onSaved,
+  ]);
 
   return (
     <div className="my-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -93,9 +105,7 @@ export function SuggestRuleButton({
             {suggestionType === "user_preference" ? "Salvare come preferenza?" : "Proporre come regola?"}
           </p>
           <p className="text-[11px] font-medium mt-1">{title}</p>
-          {reasoning && (
-            <p className="text-[10px] text-muted-foreground mt-0.5 italic">{reasoning}</p>
-          )}
+          {reasoning && <p className="text-[10px] text-muted-foreground mt-0.5 italic">{reasoning}</p>}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <Button
@@ -107,12 +117,7 @@ export function SuggestRuleButton({
           >
             {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </Button>
-          <Button
-            size="sm"
-            className="h-7 px-3 text-[11px] gap-1"
-            disabled={saved || saving}
-            onClick={handleSave}
-          >
+          <Button size="sm" className="h-7 px-3 text-[11px] gap-1" disabled={saved || saving} onClick={handleSave}>
             {saved ? (
               <>
                 <Check className="h-3 w-3" />

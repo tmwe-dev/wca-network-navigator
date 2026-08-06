@@ -74,7 +74,8 @@ serve(async (req) => {
 
             if (map.has("elevenlabs_tts_model")) modelId = map.get("elevenlabs_tts_model")!;
             if (map.has("elevenlabs_stability")) stability = parseFloat(map.get("elevenlabs_stability")!) || 0.5;
-            if (map.has("elevenlabs_similarity")) similarityBoost = parseFloat(map.get("elevenlabs_similarity")!) || 0.75;
+            if (map.has("elevenlabs_similarity"))
+              similarityBoost = parseFloat(map.get("elevenlabs_similarity")!) || 0.75;
             if (map.has("elevenlabs_style")) style = parseFloat(map.get("elevenlabs_style")!) || 0.3;
             if (map.has("elevenlabs_speaker_boost")) useSpeakerBoost = map.get("elevenlabs_speaker_boost") !== "false";
             if (map.has("elevenlabs_output_format")) outputFormat = map.get("elevenlabs_output_format")!;
@@ -107,7 +108,7 @@ serve(async (req) => {
           },
           ...(language && modelId !== "eleven_monolingual_v1" ? { language_code: language } : {}),
         }),
-      }
+      },
     );
 
     if (!response.ok) {

@@ -3,7 +3,10 @@ import type { BulkEntry } from "../types";
 import type { LeadStatus } from "@/data/contacts";
 import { assertCalledFromRunner } from "./_internal";
 
-export interface UpdateOriginItem { readonly contactId: string; readonly origin: string; }
+export interface UpdateOriginItem {
+  readonly contactId: string;
+  readonly origin: string;
+}
 export const updateOriginEntry: BulkEntry<UpdateOriginItem, { ok: boolean }> = {
   scope: "update.origin",
   itemId: (i) => i.contactId,
@@ -11,13 +14,18 @@ export const updateOriginEntry: BulkEntry<UpdateOriginItem, { ok: boolean }> = {
   handler: async (item) => {
     assertCalledFromRunner("update.origin");
     const mod: typeof import("@/data/contacts/queries") = await import("@/data/contacts/queries");
-    if (!mod.bulkUpdateContactsOrigin) throw new Error("bulkUpdateContactsOrigin not exported by @/data/contacts/queries");
+    if (!mod.bulkUpdateContactsOrigin)
+      throw new Error("bulkUpdateContactsOrigin not exported by @/data/contacts/queries");
     await mod.bulkUpdateContactsOrigin([item.contactId], item.origin);
     return { ok: true };
   },
 };
 
-export interface UpdateLeadStatusItem { readonly contactId: string; readonly newStatus: LeadStatus; readonly statusReason?: string; }
+export interface UpdateLeadStatusItem {
+  readonly contactId: string;
+  readonly newStatus: LeadStatus;
+  readonly statusReason?: string;
+}
 export const updateLeadStatusEntry: BulkEntry<UpdateLeadStatusItem, { ok: boolean }> = {
   scope: "update.leadStatus",
   itemId: (i) => i.contactId,
@@ -31,7 +39,12 @@ export const updateLeadStatusEntry: BulkEntry<UpdateLeadStatusItem, { ok: boolea
   },
 };
 
-export interface UpdateEmailRulesItem { readonly userId: string; readonly emailAddress: string; readonly autoAction?: string; readonly blocked?: boolean; }
+export interface UpdateEmailRulesItem {
+  readonly userId: string;
+  readonly emailAddress: string;
+  readonly autoAction?: string;
+  readonly blocked?: boolean;
+}
 export const updateEmailRulesEntry: BulkEntry<UpdateEmailRulesItem, { ok: boolean }> = {
   scope: "update.emailRules",
   itemId: (i) => i.emailAddress,
@@ -39,13 +52,20 @@ export const updateEmailRulesEntry: BulkEntry<UpdateEmailRulesItem, { ok: boolea
   handler: async (item) => {
     assertCalledFromRunner("update.emailRules");
     const mod: typeof import("@/data/emailAddressRules") = await import("@/data/emailAddressRules");
-    if (item.autoAction !== undefined && mod.bulkUpdateAutoAction) await mod.bulkUpdateAutoAction(item.userId, [item.emailAddress], item.autoAction);
-    if (item.blocked !== undefined && mod.bulkSetBlocked) await mod.bulkSetBlocked(item.userId, [item.emailAddress], item.blocked);
+    if (item.autoAction !== undefined && mod.bulkUpdateAutoAction)
+      await mod.bulkUpdateAutoAction(item.userId, [item.emailAddress], item.autoAction);
+    if (item.blocked !== undefined && mod.bulkSetBlocked)
+      await mod.bulkSetBlocked(item.userId, [item.emailAddress], item.blocked);
     return { ok: true };
   },
 };
 
-export interface UpdateBackfillItem { readonly userId: string; readonly target: string; readonly scope: "address" | "group"; readonly dryRun?: boolean; }
+export interface UpdateBackfillItem {
+  readonly userId: string;
+  readonly target: string;
+  readonly scope: "address" | "group";
+  readonly dryRun?: boolean;
+}
 export const updateBackfillEntry: BulkEntry<UpdateBackfillItem, { ok: boolean }> = {
   scope: "update.backfill",
   itemId: (i) => `${i.scope}:${i.target}`,
@@ -59,7 +79,9 @@ export const updateBackfillEntry: BulkEntry<UpdateBackfillItem, { ok: boolean }>
   },
 };
 
-export interface AnalyzeAiItem { readonly emailAddress: string; }
+export interface AnalyzeAiItem {
+  readonly emailAddress: string;
+}
 export const updateAnalyzeAiEntry: BulkEntry<AnalyzeAiItem, { ok: boolean }> = {
   scope: "update.analyzeAi",
   itemId: (i) => i.emailAddress,

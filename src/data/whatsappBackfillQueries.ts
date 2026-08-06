@@ -21,14 +21,18 @@ export async function getChannelBackfillCursor(externalChatId: string): Promise<
   return (data as BackfillCursorRow | null) ?? null;
 }
 
-export async function upsertChannelMessageIgnoreDup(row: Database["public"]["Tables"]["channel_messages"]["Insert"]): Promise<{ error: { message: string } | null; status: number }> {
+export async function upsertChannelMessageIgnoreDup(
+  row: Database["public"]["Tables"]["channel_messages"]["Insert"],
+): Promise<{ error: { message: string } | null; status: number }> {
   const { error, status } = await supabase
     .from("channel_messages")
     .upsert(row, { onConflict: "message_id_external", ignoreDuplicates: true });
   return { error, status };
 }
 
-export async function upsertChannelBackfillState(row: Database["public"]["Tables"]["channel_backfill_state"]["Insert"]): Promise<void> {
+export async function upsertChannelBackfillState(
+  row: Database["public"]["Tables"]["channel_backfill_state"]["Insert"],
+): Promise<void> {
   const { error } = await supabase
     .from("channel_backfill_state")
     .upsert(row, { onConflict: "operator_id,channel,external_chat_id" });
@@ -37,11 +41,7 @@ export async function upsertChannelBackfillState(row: Database["public"]["Tables
 
 /** Operatore associato a un utente, per il flusso di backfill WhatsApp deprecato. */
 export async function findOperatorIdByUserId(userId: string): Promise<string | null> {
-  const { data } = await supabase
-    .from("operators")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data } = await supabase.from("operators").select("id").eq("user_id", userId).maybeSingle();
   return data?.id ?? null;
 }
 

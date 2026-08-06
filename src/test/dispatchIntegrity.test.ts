@@ -52,9 +52,7 @@ function computeReport(
     }
 
     const hasAct = activities.some(
-      (a) =>
-        a.partner_id === action.partner_id &&
-        new Date(a.created_at) >= new Date(action.executed_at),
+      (a) => a.partner_id === action.partner_id && new Date(a.created_at) >= new Date(action.executed_at),
     );
     if (!hasAct) {
       missingActivity++;
@@ -62,10 +60,7 @@ function computeReport(
     }
 
     const partner = partners.find((p) => p.id === action.partner_id);
-    if (
-      !partner?.last_outbound_at ||
-      new Date(partner.last_outbound_at) < new Date(action.executed_at)
-    ) {
+    if (!partner?.last_outbound_at || new Date(partner.last_outbound_at) < new Date(action.executed_at)) {
       missingPartnerTouch++;
       issues.push("missing_partner_touch");
     }
@@ -177,8 +172,14 @@ describe("dispatch integrity computation", () => {
     const report = computeReport(
       [action1, action2],
       [{ partner_id: "p1", direction: "outbound", created_at: action1.executed_at }],
-      [{ partner_id: "p1", created_at: action1.executed_at }, { partner_id: "p2", created_at: action2.executed_at }],
-      [{ id: "p1", last_outbound_at: action1.executed_at }, { id: "p2", last_outbound_at: action2.executed_at }],
+      [
+        { partner_id: "p1", created_at: action1.executed_at },
+        { partner_id: "p2", created_at: action2.executed_at },
+      ],
+      [
+        { id: "p1", last_outbound_at: action1.executed_at },
+        { id: "p2", last_outbound_at: action2.executed_at },
+      ],
     );
     expect(report.total_executed).toBe(2);
     expect(report.missing_channel_message).toBe(1); // p2 missing
@@ -199,9 +200,7 @@ describe("dispatch integrity computation", () => {
   });
 
   it("should limit details to max 50", () => {
-    const actions = Array.from({ length: 60 }, (_, i) =>
-      makeAction({ id: `a-${i}`, partner_id: `p-${i}` }),
-    );
+    const actions = Array.from({ length: 60 }, (_, i) => makeAction({ id: `a-${i}`, partner_id: `p-${i}` }));
     const report = computeReport(actions, [], [], []);
     // Our implementation doesn't limit, but the edge function does.
     // Here we test the computation is correct for many items.

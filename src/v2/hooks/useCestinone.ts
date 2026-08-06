@@ -3,7 +3,14 @@
  */
 import { useMemo, useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCestinone, cancelCestinoItem, snoozeCestinoItem, type CestinoItem, type CestinoChannel, type CestinoStatus } from "@/data/cestinone";
+import {
+  fetchCestinone,
+  cancelCestinoItem,
+  snoozeCestinoItem,
+  type CestinoItem,
+  type CestinoChannel,
+  type CestinoStatus,
+} from "@/data/cestinone";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface CestinoFilters {
@@ -40,7 +47,8 @@ export function useCestinone(filters: CestinoFilters = {}) {
       if (filters.status && filters.status !== "all" && it.status !== filters.status) return false;
       if (filters.search && filters.search.trim()) {
         const s = filters.search.toLowerCase();
-        const hay = `${it.subject ?? ""} ${it.recipientName ?? ""} ${it.recipientHandle ?? ""} ${it.preview ?? ""}`.toLowerCase();
+        const hay =
+          `${it.subject ?? ""} ${it.recipientName ?? ""} ${it.recipientHandle ?? ""} ${it.preview ?? ""}`.toLowerCase();
         if (!hay.includes(s)) return false;
       }
       return true;
@@ -71,8 +79,7 @@ export function useCestinone(filters: CestinoFilters = {}) {
   });
 
   const snooze = useMutation({
-    mutationFn: ({ item, minutes }: { item: CestinoItem; minutes?: number }) =>
-      snoozeCestinoItem(item, minutes ?? 60),
+    mutationFn: ({ item, minutes }: { item: CestinoItem; minutes?: number }) => snoozeCestinoItem(item, minutes ?? 60),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.cestinone.all }),
   });
 

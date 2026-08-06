@@ -41,16 +41,11 @@ export async function withRetry<T>(
     } catch (caught: unknown) {
       lastError = caught;
 
-      const shouldContinue = opts.shouldRetry
-        ? opts.shouldRetry(caught, attempt)
-        : true;
+      const shouldContinue = opts.shouldRetry ? opts.shouldRetry(caught, attempt) : true;
 
       if (!shouldContinue || attempt >= opts.maxAttempts) break;
 
-      const delay = Math.min(
-        opts.baseDelayMs * Math.pow(2, attempt - 1),
-        opts.maxDelayMs,
-      );
+      const delay = Math.min(opts.baseDelayMs * Math.pow(2, attempt - 1), opts.maxDelayMs);
 
       logger.warn("retrying", {
         attempt,
@@ -63,8 +58,7 @@ export async function withRetry<T>(
     }
   }
 
-  const errorMessage =
-    lastError instanceof Error ? lastError.message : String(lastError);
+  const errorMessage = lastError instanceof Error ? lastError.message : String(lastError);
 
   return err(
     ioError("NETWORK_ERROR", `All ${opts.maxAttempts} attempts failed: ${errorMessage}`, {

@@ -48,7 +48,9 @@ export default function RoutingRulesTab() {
         enabled: true,
       } as never);
       toast.success("Regola creata");
-      setName(""); setValue(""); setGroupId("");
+      setName("");
+      setValue("");
+      setGroupId("");
       qc.invalidateQueries({ queryKey: QK });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
@@ -58,16 +60,26 @@ export default function RoutingRulesTab() {
   return (
     <div className="flex flex-col gap-4 overflow-auto pb-6">
       <Card>
-        <CardHeader><CardTitle className="text-base">Nuova regola composite</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Nuova regola composite</CardTitle>
+        </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-6 gap-2">
           <Input placeholder="Nome regola" value={name} onChange={(e) => setName(e.target.value)} />
-          <select className="h-9 rounded-md border bg-background px-2 text-sm" value={field} onChange={(e) => setField(e.target.value as FunnemailRoutingCondition["field"])}>
+          <select
+            className="h-9 rounded-md border bg-background px-2 text-sm"
+            value={field}
+            onChange={(e) => setField(e.target.value as FunnemailRoutingCondition["field"])}
+          >
             <option value="from_address">from_address</option>
             <option value="domain">domain</option>
             <option value="subject">subject</option>
             <option value="body">body</option>
           </select>
-          <select className="h-9 rounded-md border bg-background px-2 text-sm" value={op} onChange={(e) => setOp(e.target.value as FunnemailRoutingCondition["op"])}>
+          <select
+            className="h-9 rounded-md border bg-background px-2 text-sm"
+            value={op}
+            onChange={(e) => setOp(e.target.value as FunnemailRoutingCondition["op"])}
+          >
             <option value="equals">equals</option>
             <option value="contains">contains</option>
             <option value="starts_with">starts_with</option>
@@ -77,7 +89,13 @@ export default function RoutingRulesTab() {
           <Input placeholder="valore" value={value} onChange={(e) => setValue(e.target.value)} />
           <Input placeholder="target group_id (uuid)" value={groupId} onChange={(e) => setGroupId(e.target.value)} />
           <div className="flex gap-2">
-            <Input type="number" placeholder="prio" value={priority} onChange={(e) => setPriority(Number(e.target.value) || 100)} className="w-20" />
+            <Input
+              type="number"
+              placeholder="prio"
+              value={priority}
+              onChange={(e) => setPriority(Number(e.target.value) || 100)}
+              className="w-20"
+            />
             <Button onClick={handleCreate}>Crea</Button>
           </div>
         </CardContent>
@@ -85,7 +103,9 @@ export default function RoutingRulesTab() {
 
       <div className="grid gap-2">
         {isLoading && <p className="text-sm text-muted-foreground">Carico...</p>}
-        {!isLoading && rules.length === 0 && <p className="text-sm text-muted-foreground">Nessuna regola configurata.</p>}
+        {!isLoading && rules.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nessuna regola configurata.</p>
+        )}
         {rules.map((r: FunnemailRoutingRuleRow) => (
           <Card key={r.id}>
             <CardContent className="flex items-center justify-between gap-3 py-3">
@@ -95,7 +115,9 @@ export default function RoutingRulesTab() {
                   <Badge variant="outline">prio {r.priority}</Badge>
                   <Badge variant="secondary">match {r.match_count}</Badge>
                 </div>
-                <code className="text-xs text-muted-foreground truncate">{JSON.stringify(r.conditions)} → {r.target_group_name ?? r.target_group_id}</code>
+                <code className="text-xs text-muted-foreground truncate">
+                  {JSON.stringify(r.conditions)} → {r.target_group_name ?? r.target_group_id}
+                </code>
               </div>
               <div className="flex items-center gap-3">
                 <Switch
@@ -106,7 +128,8 @@ export default function RoutingRulesTab() {
                   }}
                 />
                 <Button
-                  variant="ghost" size="icon"
+                  variant="ghost"
+                  size="icon"
                   onClick={async () => {
                     if (!confirm("Eliminare questa regola?")) return;
                     await deleteFunnemailRoutingRule(r.id);

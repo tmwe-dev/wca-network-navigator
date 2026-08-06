@@ -20,9 +20,12 @@ interface InboundRow {
 export const readInboxTool: Tool = {
   id: "read-inbox",
   label: "Posta in arrivo",
-  description: "Mostra i messaggi ricevuti (inbound) più recenti: email/WhatsApp/LinkedIn in entrata, mittente, oggetto, stato lettura.",
+  description:
+    "Mostra i messaggi ricevuti (inbound) più recenti: email/WhatsApp/LinkedIn in entrata, mittente, oggetto, stato lettura.",
   match: (p) =>
-    /\b(posta\s+in\s+arrivo|inbox|messaggi\s+ricevut|email\s+ricevut|email\s+in\s+entrata|inbound|in\s+entrata|non\s+letti|da\s+leggere|risposte\s+ricevut)\b/i.test(p),
+    /\b(posta\s+in\s+arrivo|inbox|messaggi\s+ricevut|email\s+ricevut|email\s+in\s+entrata|inbound|in\s+entrata|non\s+letti|da\s+leggere|risposte\s+ricevut)\b/i.test(
+      p,
+    ),
 
   execute: async (): Promise<ToolResult> => {
     let rows: InboundRow[];

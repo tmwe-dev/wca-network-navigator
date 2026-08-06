@@ -29,13 +29,24 @@ interface Group {
 
 /** Categorization is purely string-pattern based — easy to extend. */
 const GROUPS: readonly Group[] = [
-  { key: "partner",    label: "Partner & CRM",       match: (id) => /partner|contact|deduplicate|lead-score|quality/i.test(id) },
-  { key: "outreach",   label: "Outreach & Campagne", match: (id) => /campaign|outreach|enqueue|mission|follow/i.test(id) },
-  { key: "email",      label: "Email & Inbox",       match: (id) => /email|inbox|folder|compose/i.test(id) },
-  { key: "messaging",  label: "WhatsApp & LinkedIn", match: (id) => /whatsapp|linkedin/i.test(id) },
-  { key: "search",     label: "Ricerca & Scraping",  match: (id) => /scrape|deep-search|enrich|browser|website/i.test(id) },
-  { key: "kb",         label: "Knowledge Base",      match: (id) => /kb|knowledge|country-kb/i.test(id) },
-  { key: "ops",        label: "Sistema & Audit",     match: (id) => /health|audit|export|replay|sync|harmonize|optimus|report|snapshot|dashboard|status|analyze|business-card|parse|pending/i.test(id) },
+  { key: "partner", label: "Partner & CRM", match: (id) => /partner|contact|deduplicate|lead-score|quality/i.test(id) },
+  {
+    key: "outreach",
+    label: "Outreach & Campagne",
+    match: (id) => /campaign|outreach|enqueue|mission|follow/i.test(id),
+  },
+  { key: "email", label: "Email & Inbox", match: (id) => /email|inbox|folder|compose/i.test(id) },
+  { key: "messaging", label: "WhatsApp & LinkedIn", match: (id) => /whatsapp|linkedin/i.test(id) },
+  { key: "search", label: "Ricerca & Scraping", match: (id) => /scrape|deep-search|enrich|browser|website/i.test(id) },
+  { key: "kb", label: "Knowledge Base", match: (id) => /kb|knowledge|country-kb/i.test(id) },
+  {
+    key: "ops",
+    label: "Sistema & Audit",
+    match: (id) =>
+      /health|audit|export|replay|sync|harmonize|optimus|report|snapshot|dashboard|status|analyze|business-card|parse|pending/i.test(
+        id,
+      ),
+  },
 ];
 
 function categorize(tool: ToolMetadata): string {
@@ -55,9 +66,7 @@ export function CommandHelpPage() {
       if (filter === "write" && !t.requiresApproval) return false;
       if (!q) return true;
       return (
-        t.id.toLowerCase().includes(q) ||
-        t.label.toLowerCase().includes(q) ||
-        t.description.toLowerCase().includes(q)
+        t.id.toLowerCase().includes(q) || t.label.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
       );
     });
   }, [query, filter]);
@@ -156,10 +165,15 @@ export function CommandHelpPage() {
         <Card className="mb-6 border-dashed">
           <CardContent className="flex flex-col gap-2 py-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <strong className="text-foreground">Dove vivono le regole di Command:</strong> i prompt operativi sono
-              nel <Link to="/v2/prompt-lab" className="underline underline-offset-2">Prompt Lab</Link>{" "}
-              (filtra per <code className="rounded bg-muted px-1 py-0.5 text-xs">context = command</code>).
-              Le schede informative sono nella <Link to="/v2/knowledge-base" className="underline underline-offset-2">Knowledge Base</Link>{" "}
+              <strong className="text-foreground">Dove vivono le regole di Command:</strong> i prompt operativi sono nel{" "}
+              <Link to="/v2/prompt-lab" className="underline underline-offset-2">
+                Prompt Lab
+              </Link>{" "}
+              (filtra per <code className="rounded bg-muted px-1 py-0.5 text-xs">context = command</code>). Le schede
+              informative sono nella{" "}
+              <Link to="/v2/knowledge-base" className="underline underline-offset-2">
+                Knowledge Base
+              </Link>{" "}
               (categoria <code className="rounded bg-muted px-1 py-0.5 text-xs">command_tools</code>).
             </div>
           </CardContent>
@@ -185,20 +199,25 @@ export function CommandHelpPage() {
               ) : (
                 <ul className="space-y-2 max-h-72 overflow-auto pr-1">
                   {promptsAndKb!.prompts.map((p) => (
-                    <li key={p.id} className="text-sm flex items-start justify-between gap-2 border-b border-border/40 pb-1.5 last:border-0">
+                    <li
+                      key={p.id}
+                      className="text-sm flex items-start justify-between gap-2 border-b border-border/40 pb-1.5 last:border-0"
+                    >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-medium truncate">{p.name}</span>
                           {p.tags?.includes("OBBLIGATORIA") && (
-                            <Badge variant="outline" className="text-[9px] px-1 py-0">OBBL</Badge>
+                            <Badge variant="outline" className="text-[9px] px-1 py-0">
+                              OBBL
+                            </Badge>
                           )}
                           {p.is_active === false && (
-                            <Badge variant="secondary" className="text-[9px] px-1 py-0">off</Badge>
+                            <Badge variant="secondary" className="text-[9px] px-1 py-0">
+                              off
+                            </Badge>
                           )}
                         </div>
-                        {p.objective && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">{p.objective}</p>
-                        )}
+                        {p.objective && <p className="text-xs text-muted-foreground line-clamp-2">{p.objective}</p>}
                       </div>
                       <span className="text-[10px] text-muted-foreground shrink-0">P{p.priority ?? 0}</span>
                     </li>
@@ -217,7 +236,9 @@ export function CommandHelpPage() {
                 <BookOpen className="h-4 w-4" /> Memoria & Guru
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Schede KB lette automaticamente da Command (categoria <code className="rounded bg-muted px-1 py-0.5">command_tools</code> e <code className="rounded bg-muted px-1 py-0.5">ai_memory</code>).
+                Schede KB lette automaticamente da Command (categoria{" "}
+                <code className="rounded bg-muted px-1 py-0.5">command_tools</code> e{" "}
+                <code className="rounded bg-muted px-1 py-0.5">ai_memory</code>).
               </p>
             </CardHeader>
             <CardContent className="pt-0">
@@ -230,7 +251,9 @@ export function CommandHelpPage() {
                   {promptsAndKb!.kb.map((k) => (
                     <li key={k.id} className="text-sm flex items-center justify-between gap-2">
                       <span className="truncate">{k.title}</span>
-                      <Badge variant="secondary" className="text-[9px] shrink-0">{k.category}</Badge>
+                      <Badge variant="secondary" className="text-[9px] shrink-0">
+                        {k.category}
+                      </Badge>
                     </li>
                   ))}
                 </ul>

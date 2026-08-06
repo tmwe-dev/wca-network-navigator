@@ -31,18 +31,13 @@ const SEND_POINTS = [
   "supabase/functions/process-email-queue/index.ts",
 ] as const;
 
-const AGENT_POINTS = [
-  "supabase/functions/agent-execute/toolHandlers/emailTools.ts",
-] as const;
+const AGENT_POINTS = ["supabase/functions/agent-execute/toolHandlers/emailTools.ts"] as const;
 
 describe("Editorial Layer — pipeline coverage", () => {
-  it.each([...PRODUCTION_POINTS, ...SEND_POINTS, ...AGENT_POINTS])(
-    "%s invoca journalistReview()",
-    (path) => {
-      const src = read(path);
-      expect(src).toMatch(/journalistReview\s*\(/);
-    },
-  );
+  it.each([...PRODUCTION_POINTS, ...SEND_POINTS, ...AGENT_POINTS])("%s invoca journalistReview()", (path) => {
+    const src = read(path);
+    expect(src).toMatch(/journalistReview\s*\(/);
+  });
 
   it("agent-execute copre TUTTI e 3 i canali (email, whatsapp, linkedin)", () => {
     const src = read("supabase/functions/agent-execute/toolHandlers/emailTools.ts");
@@ -59,10 +54,7 @@ describe("Editorial Layer — pipeline coverage", () => {
   });
 
   it("nessun chiamante usa più optimus.enabled come gate", () => {
-    const files = [
-      ...PRODUCTION_POINTS,
-      ...AGENT_POINTS,
-    ];
+    const files = [...PRODUCTION_POINTS, ...AGENT_POINTS];
     for (const f of files) {
       const src = read(f);
       expect(src, `kill-switch trovato in ${f}`).not.toMatch(/optimus\.enabled\s*&&/);
@@ -81,7 +73,9 @@ describe("Editorial Layer — pipeline coverage", () => {
       // tutti i body diretti a send-email DEVONO contenere partner_id
       // Match solo POST/invoke verso send-email (non stringhe di log come "send-email failed").
       const sendEmailFetch =
-        src.match(/(?:functions\/v1\/send-email|invokeEdge[^)]*"send-email"|invoke\([^)]*"send-email"|fetch[^)]*send-email)[^]*?\}\s*\)/g) || [];
+        src.match(
+          /(?:functions\/v1\/send-email|invokeEdge[^)]*"send-email"|invoke\([^)]*"send-email"|fetch[^)]*send-email)[^]*?\}\s*\)/g,
+        ) || [];
       expect(sendEmailFetch.length).toBeGreaterThan(0);
       for (const block of sendEmailFetch) {
         expect(block, `partner_id mancante in ${f}`).toMatch(/partner_id/);

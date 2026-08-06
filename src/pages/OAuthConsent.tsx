@@ -104,9 +104,7 @@ export default function OAuthConsent() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm space-y-4">
-        <h1 className="text-lg font-semibold text-foreground">
-          Collega un'app al tuo account
-        </h1>
+        <h1 className="text-lg font-semibold text-foreground">Collega un'app al tuo account</h1>
 
         {error && (
           <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
@@ -114,9 +112,7 @@ export default function OAuthConsent() {
           </div>
         )}
 
-        {!details && !error && (
-          <p className="text-sm text-muted-foreground">Caricamento…</p>
-        )}
+        {!details && !error && <p className="text-sm text-muted-foreground">Caricamento…</p>}
 
         {details && (
           <>
@@ -127,8 +123,8 @@ export default function OAuthConsent() {
               chiede di collegarsi a WCA Network Navigator.
             </p>
             <p className="text-sm text-muted-foreground">
-              Il client potrà chiamare i tool MCP dell'app agendo come te,
-              rispettando i permessi e le policy RLS del tuo account.
+              Il client potrà chiamare i tool MCP dell'app agendo come te, rispettando i permessi e le policy RLS del
+              tuo account.
             </p>
             {details.client?.redirect_uris?.length ? (
               <p className="text-xs text-muted-foreground break-all">

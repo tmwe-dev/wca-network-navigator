@@ -55,7 +55,8 @@ export const missionControlTool: Tool = {
       return {
         kind: "approval",
         title: action ? `${ACTION_LABEL[action]} missione?` : "Controllo missione?",
-        description: "Lo stato della missione autopilot verrà aggiornato. I round già pianificati seguiranno il nuovo stato.",
+        description:
+          "Lo stato della missione autopilot verrà aggiornato. I round già pianificati seguiranno il nuovo stato.",
         details: [
           { label: "Missione", value: missionName ?? "(non identificata)" },
           { label: "Mission ID", value: missionId ?? "—" },

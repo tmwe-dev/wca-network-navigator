@@ -26,10 +26,7 @@ async function mintBridgeToken(userId: string): Promise<string | null> {
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     const raw = crypto.randomUUID() + "-" + crypto.randomUUID();
-    const hashBuf = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(raw),
-    );
+    const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
     const tokenHash = Array.from(new Uint8Array(hashBuf))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
@@ -60,10 +57,10 @@ serve(async (req) => {
   const secretAgentId = Deno.env.get("ELEVENLABS_COMMAND_AGENT_ID");
 
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: "ELEVENLABS_API_KEY non configurato" }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY non configurato" }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 
   // Hard auth check: verifica crittografica del JWT (con verify_jwt=false il
@@ -76,7 +73,9 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     requestedAgentId = (body?.agent_id as string | undefined)?.trim() || null;
-  } catch { /* body opzionale */ }
+  } catch {
+    /* body opzionale */
+  }
 
   let agentId: string | null = null;
   try {
@@ -86,9 +85,7 @@ serve(async (req) => {
       .select("elevenlabs_agent_id")
       .not("elevenlabs_agent_id", "is", null);
     const allowlist = new Set(
-      (rows ?? [])
-        .map((r) => (r.elevenlabs_agent_id as string | null)?.trim())
-        .filter((v): v is string => !!v),
+      (rows ?? []).map((r) => (r.elevenlabs_agent_id as string | null)?.trim()).filter((v): v is string => !!v),
     );
     if (requestedAgentId && allowlist.has(requestedAgentId)) {
       agentId = requestedAgentId;
@@ -121,19 +118,19 @@ serve(async (req) => {
 
     if (!resp.ok) {
       const detail = await resp.text();
-      return new Response(
-        JSON.stringify({ error: `ElevenLabs token request failed (${resp.status})`, detail }),
-        { status: 502, headers: { ...cors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: `ElevenLabs token request failed (${resp.status})`, detail }), {
+        status: 502,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
 
     const data = await resp.json();
     const token: string | undefined = data?.token;
     if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Risposta ElevenLabs senza token" }),
-        { status: 502, headers: { ...cors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Risposta ElevenLabs senza token" }), {
+        status: 502,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
 
     // Signed URL WebSocket — fallback più compatibile del WebRTC, non soggetto

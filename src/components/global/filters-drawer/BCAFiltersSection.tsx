@@ -28,27 +28,44 @@ export function BCAFiltersSection() {
           const st = r.match_status || "pending";
           stCounts[st] = (stCounts[st] || 0) + 1;
         });
-        setBcaEvents(Object.entries(evCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count));
+        setBcaEvents(
+          Object.entries(evCounts)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count),
+        );
         setBcaStatuses(Object.entries(stCounts).map(([status, count]) => ({ status, count })));
-      } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
+      } catch (e) {
+        log.debug("best-effort operation failed", {
+          error: e instanceof Error ? e.message : String(e),
+        }); /* best-effort */
+      }
     };
     fetchMeta();
   }, []);
 
   const STATUS_LABELS: Record<string, string> = {
-    matched: "Match", unmatched: "No match", pending: "Attesa",
+    matched: "Match",
+    unmatched: "No match",
+    pending: "Attesa",
   };
 
   return (
     <>
       <FilterSection icon={Search} label="Cerca">
-        <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca biglietto, azienda..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        <Input
+          value={g.filters.search}
+          onChange={(e) => g.setSearch(e.target.value)}
+          placeholder="Cerca biglietto, azienda..."
+          className="h-8 text-xs bg-muted/30 border-border/40"
+        />
       </FilterSection>
 
       <FilterSection icon={Filter} label="Stato match">
         <ChipGroup>
-          <Chip active={bcaStatusFilter === "all"} onClick={() => setBcaStatusFilter("all")}>Tutti</Chip>
-          {bcaStatuses.map(s => (
+          <Chip active={bcaStatusFilter === "all"} onClick={() => setBcaStatusFilter("all")}>
+            Tutti
+          </Chip>
+          {bcaStatuses.map((s) => (
             <Chip key={s.status} active={bcaStatusFilter === s.status} onClick={() => setBcaStatusFilter(s.status)}>
               {STATUS_LABELS[s.status] || s.status} ({s.count})
             </Chip>
@@ -59,8 +76,10 @@ export function BCAFiltersSection() {
       {bcaEvents.length > 0 && (
         <FilterSection icon={Users} label="Evento">
           <ChipGroup>
-            <Chip active={bcaEventFilter === ""} onClick={() => setBcaEventFilter("")}>Tutti</Chip>
-            {bcaEvents.map(e => (
+            <Chip active={bcaEventFilter === ""} onClick={() => setBcaEventFilter("")}>
+              Tutti
+            </Chip>
+            {bcaEvents.map((e) => (
               <Chip key={e.name} active={bcaEventFilter === e.name} onClick={() => setBcaEventFilter(e.name)}>
                 {e.name} ({e.count})
               </Chip>

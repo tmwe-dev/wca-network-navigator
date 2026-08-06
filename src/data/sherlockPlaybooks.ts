@@ -12,7 +12,6 @@ import type {
   SherlockLevel,
 } from "@/v2/services/sherlock/sherlockTypes";
 
-
 import { toRecordOrNull, toRecord } from "@/lib/records";
 import { asJsonArray } from "@/lib/typedJson";
 import { createLogger } from "@/lib/log";
@@ -26,7 +25,6 @@ export const sherlockKeys = {
 
 type PlaybookRow = Database["public"]["Tables"]["sherlock_playbooks"]["Row"];
 type InvestigationRow = Database["public"]["Tables"]["sherlock_investigations"]["Row"];
-
 
 /** Validatore runtime degli step playbook (colonna Json). Righe non conformi scartate. */
 export function parseSherlockSteps(value: unknown): SherlockStep[] {
@@ -158,9 +156,7 @@ interface CreateInvestigationInput {
   vars: Record<string, string>;
 }
 
-export async function createInvestigation(
-  input: CreateInvestigationInput,
-): Promise<SherlockInvestigation> {
+export async function createInvestigation(input: CreateInvestigationInput): Promise<SherlockInvestigation> {
   const { data, error } = await supabase
     .from("sherlock_investigations")
     .insert({
@@ -202,23 +198,13 @@ export async function updateInvestigation(
  * Persiste un sito web scoperto durante una indagine sul record partner,
  * solo se il campo è ancora vuoto (non sovrascrive dati inseriti dall'utente).
  */
-export async function updatePartnerWebsiteIfMissing(
-  partnerId: string,
-  website: string,
-): Promise<boolean> {
+export async function updatePartnerWebsiteIfMissing(partnerId: string, website: string): Promise<boolean> {
   if (!partnerId || !website) return false;
   try {
-    const { data: current } = await supabase
-      .from("partners")
-      .select("website")
-      .eq("id", partnerId)
-      .maybeSingle();
+    const { data: current } = await supabase.from("partners").select("website").eq("id", partnerId).maybeSingle();
     const existing = current?.website;
     if (existing && existing.trim().length > 0) return false;
-    const { error } = await supabase
-      .from("partners")
-      .update({ website })
-      .eq("id", partnerId);
+    const { error } = await supabase.from("partners").update({ website }).eq("id", partnerId);
     if (error) throw error;
     return true;
   } catch (e) {
@@ -231,23 +217,13 @@ export async function updatePartnerWebsiteIfMissing(
  * Persiste l'URL LinkedIn aziendale scoperto durante una indagine,
  * solo se il campo è ancora vuoto.
  */
-export async function updatePartnerLinkedinIfMissing(
-  partnerId: string,
-  linkedinUrl: string,
-): Promise<boolean> {
+export async function updatePartnerLinkedinIfMissing(partnerId: string, linkedinUrl: string): Promise<boolean> {
   if (!partnerId || !linkedinUrl) return false;
   try {
-    const { data: current } = await supabase
-      .from("partners")
-      .select("linkedin_url")
-      .eq("id", partnerId)
-      .maybeSingle();
+    const { data: current } = await supabase.from("partners").select("linkedin_url").eq("id", partnerId).maybeSingle();
     const existing = current?.linkedin_url;
     if (existing && existing.trim().length > 0) return false;
-    const { error } = await supabase
-      .from("partners")
-      .update({ linkedin_url: linkedinUrl })
-      .eq("id", partnerId);
+    const { error } = await supabase.from("partners").update({ linkedin_url: linkedinUrl }).eq("id", partnerId);
     if (error) throw error;
     return true;
   } catch (e) {

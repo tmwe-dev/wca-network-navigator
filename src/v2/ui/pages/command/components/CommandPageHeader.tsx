@@ -29,10 +29,15 @@ interface CommandPageHeaderProps {
 export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceConsole }: CommandPageHeaderProps) {
   const [open, setOpen] = useState(false);
   const phaseLabel =
-    flowPhase === "thinking" ? "ELABORAZIONE" :
-    flowPhase === "proposal" ? "PROPOSTA" :
-    flowPhase === "approval" ? "IN ATTESA" :
-    flowPhase !== "idle" && flowPhase !== "done" ? "ESECUZIONE" : null;
+    flowPhase === "thinking"
+      ? "ELABORAZIONE"
+      : flowPhase === "proposal"
+        ? "PROPOSTA"
+        : flowPhase === "approval"
+          ? "IN ATTESA"
+          : flowPhase !== "idle" && flowPhase !== "done"
+            ? "ESECUZIONE"
+            : null;
 
   return (
     // Lean Mode 2026-05-19: pillola compatta da inserire come `right` slot
@@ -45,11 +50,7 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
         title="Sessione attiva"
         aria-label="Sessione attiva"
       />
-      {phaseLabel && (
-        <span className="text-[9px] text-primary font-mono uppercase tracking-wider">
-          {phaseLabel}
-        </span>
-      )}
+      {phaseLabel && <span className="text-[9px] text-primary font-mono uppercase tracking-wider">{phaseLabel}</span>}
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -81,8 +82,8 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
                       a.status === "done"
                         ? "bg-success/90"
                         : a.status === "running"
-                        ? "bg-primary/95"
-                        : "bg-muted-foreground/30"
+                          ? "bg-primary/95"
+                          : "bg-muted-foreground/30"
                     }`}
                   />
                   <span className="text-[10px] text-foreground">{a.agent}</span>
@@ -102,7 +103,10 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
           <div className="flex flex-col gap-1">
             <button
               type="button"
-              onClick={() => { setOpen(false); onOpenTraceConsole(); }}
+              onClick={() => {
+                setOpen(false);
+                onOpenTraceConsole();
+              }}
               className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-foreground hover:bg-primary/10 hover:text-primary text-left"
             >
               <Activity className="w-3.5 h-3.5" />
@@ -118,7 +122,10 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
             </Link>
             <button
               type="button"
-              onClick={() => { setOpen(false); onLangChange(); }}
+              onClick={() => {
+                setOpen(false);
+                onLangChange();
+              }}
               className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-foreground hover:bg-primary/10 hover:text-primary text-left"
             >
               <Globe2 className="w-3.5 h-3.5" />

@@ -1,21 +1,6 @@
-export type AgentCategory =
-  | "core"
-  | "email"
-  | "outreach"
-  | "analysis"
-  | "voice"
-  | "autonomous"
-  | "classifier";
+export type AgentCategory = "core" | "email" | "outreach" | "analysis" | "voice" | "autonomous" | "classifier";
 
-export type AgentRole =
-  | "oracolo"
-  | "genera"
-  | "migliora"
-  | "giornalista"
-  | "voce"
-  | "codice"
-  | "worker"
-  | "classifier";
+export type AgentRole = "oracolo" | "genera" | "migliora" | "giornalista" | "voce" | "codice" | "worker" | "classifier";
 
 export interface PromptSource {
   label: string;

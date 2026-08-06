@@ -36,10 +36,7 @@ Se NON è presente, applica comunque queste regole minime non negoziabili:
  * per iniettarlo nel prompt come fonte di verità sulla formattazione.
  * Restituisce stringa vuota se non disponibile.
  */
-export async function fetchCalligrafiaBlock(
-  supabase: AnySupabaseClient,
-  userId?: string | null,
-): Promise<string> {
+export async function fetchCalligrafiaBlock(supabase: AnySupabaseClient, userId?: string | null): Promise<string> {
   try {
     let query = supabase
       .from("kb_entries")
@@ -66,10 +63,7 @@ export async function fetchCalligrafiaBlock(
 /**
  * Variante combinata: ritorna direttiva + blocco completo (se trovato).
  */
-export async function buildCalligrafiaSection(
-  supabase: AnySupabaseClient,
-  userId?: string | null,
-): Promise<string> {
+export async function buildCalligrafiaSection(supabase: AnySupabaseClient, userId?: string | null): Promise<string> {
   const block = await fetchCalligrafiaBlock(supabase, userId);
   return `${CALLIGRAFIA_DIRECTIVE}${block}`;
 }

@@ -9,10 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
-import {
-  upsertChannelMessageDedup,
-  getLastInboundOrOutboundForContact,
-} from "@/data/channelMessages";
+import { upsertChannelMessageDedup, getLastInboundOrOutboundForContact } from "@/data/channelMessages";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
@@ -30,9 +27,14 @@ type BackfillProgress = {
 };
 
 const INITIAL: BackfillProgress = {
-  status: "idle", phase: "idle", currentThread: null,
-  threadsProcessed: 0, threadsTotal: 0, recoveredMessages: 0,
-  pauseReason: null, lastError: null,
+  status: "idle",
+  phase: "idle",
+  currentThread: null,
+  threadsProcessed: 0,
+  threadsTotal: 0,
+  recoveredMessages: 0,
+  pauseReason: null,
+  lastError: null,
 };
 
 const MAX_THREADS_PER_SESSION = 5;
@@ -65,30 +67,61 @@ export function useLinkedInBackfill() {
     setProgress({ ...INITIAL, status: "running", phase: "discovery" });
 
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-      if (!user) { toast.error("Non autenticato"); return; }
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
+      if (!user) {
+        toast.error("Non autenticato");
+        return;
+      }
 
       // ── PHASE 1: Discovery ──
       await throttle("linkedin", "ping", "Ping estensione");
       const inboxResult = await readInbox();
       if (!inboxResult.success || !inboxResult.threads?.length) {
-        setProgress(p => ({ ...p, status: "done", phase: "idle" }));
+        setProgress((p) => ({ ...p, status: "done", phase: "idle" }));
         toast.info("Nessun thread LinkedIn trovato");
         return;
       }
 
-      if (abortRef.current) { setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" })); return; }
+      if (abortRef.current) {
+        setProgress((p) => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
+        return;
+      }
 
       // Etichette UI / ghost (definite qui per riuso anche nel save preview)
       const LI_UI_LABELS = new Set([
-        "messaggi", "messaggio", "da leggere", "non letti", "archiviata",
-        "archiviate", "spam", "inmail", "inmails", "sponsorizzato",
-        "sponsored", "tutti", "filtri", "messages", "unread", "archived",
+        "messaggi",
+        "messaggio",
+        "da leggere",
+        "non letti",
+        "archiviata",
+        "archiviate",
+        "spam",
+        "inmail",
+        "inmails",
+        "sponsorizzato",
+        "sponsored",
+        "tutti",
+        "filtri",
+        "messages",
+        "unread",
+        "archived",
       ]);
       const LI_GHOST_BODIES = new Set([
-        "foto", "video", "audio", "gif", "documento", "allegato",
-        "ha reagito", "ha risposto", "ha ritirato un messaggio",
-        "messaggio rimosso", "image", "attachment",
+        "foto",
+        "video",
+        "audio",
+        "gif",
+        "documento",
+        "allegato",
+        "ha reagito",
+        "ha risposto",
+        "ha ritirato un messaggio",
+        "messaggio rimosso",
+        "image",
+        "attachment",
       ]);
 
       // ── STEP 1.5: salva SEMPRE i preview dalla sidebar (anche senza threadUrl) ──
@@ -114,7 +147,9 @@ export function useLinkedInBackfill() {
             thread_id: thread.threadUrl || null,
           });
           if (r.inserted) previewSaved++;
-        } catch { /* ignore single failures */ }
+        } catch {
+          /* ignore single failures */
+        }
       }
       toast.info(`Preview salvati: ${previewSaved}/${inboxResult.threads.length} (${withUrl} con URL thread)`);
 
@@ -125,24 +160,26 @@ export function useLinkedInBackfill() {
         if (threadsWithGap.length >= MAX_THREADS_PER_SESSION) break;
         if (!thread.name || !thread.threadUrl) continue;
 
-        const lastMsg = await getLastInboundOrOutboundForContact(
-          user.id, "linkedin", thread.name,
-        );
+        const lastMsg = await getLastInboundOrOutboundForContact(user.id, "linkedin", thread.name);
 
         const sidebarText = (thread.lastMessage || "").trim().toLowerCase();
         const dbText = (lastMsg?.body_text || "").trim().toLowerCase();
 
         if (!lastMsg || (sidebarText && sidebarText !== dbText)) {
-          threadsWithGap.push({ name: thread.name, threadUrl: thread.threadUrl, lastDbText: lastMsg?.body_text || null });
+          threadsWithGap.push({
+            name: thread.name,
+            threadUrl: thread.threadUrl,
+            lastDbText: lastMsg?.body_text || null,
+          });
         }
       }
 
       if (threadsWithGap.length === 0) {
-        setProgress(p => ({ ...p, status: "done", phase: "idle" }));
+        setProgress((p) => ({ ...p, status: "done", phase: "idle" }));
         if (withUrl === 0) {
           toast.warning(
             "Nessun thread ha threadUrl (modalità legacy-structural). " +
-            "Apri linkedin.com/messaging e clicca su una chat per popolare gli URL, poi riprova.",
+              "Apri linkedin.com/messaging e clicca su una chat per popolare gli URL, poi riprova.",
             { duration: 8000 },
           );
         } else {
@@ -152,18 +189,18 @@ export function useLinkedInBackfill() {
       }
 
       // ── PHASE 2: Deep Recovery ──
-      setProgress(p => ({ ...p, phase: "deep", threadsTotal: threadsWithGap.length, threadsProcessed: 0 }));
+      setProgress((p) => ({ ...p, phase: "deep", threadsTotal: threadsWithGap.length, threadsProcessed: 0 }));
       let totalRecovered = 0;
 
       for (let i = 0; i < threadsWithGap.length; i++) {
         if (abortRef.current) {
-          setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
+          setProgress((p) => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
           toast.info("Recupero interrotto");
           return;
         }
 
         const thread = threadsWithGap[i];
-        setProgress(p => ({ ...p, currentThread: thread.name, threadsProcessed: i }));
+        setProgress((p) => ({ ...p, currentThread: thread.name, threadsProcessed: i }));
 
         let messages: Array<Record<string, unknown>> = [];
 
@@ -178,7 +215,9 @@ export function useLinkedInBackfill() {
         // Step 2: Check if anchor is among visible messages
         if (thread.lastDbText && messages.length > 0) {
           const foundAnchor = messages.some((m) => {
-            const t = String(m.text || "").trim().toLowerCase();
+            const t = String(m.text || "")
+              .trim()
+              .toLowerCase();
             return t === thread.lastDbText!.trim().toLowerCase();
           });
 
@@ -235,23 +274,23 @@ export function useLinkedInBackfill() {
         }
 
         totalRecovered += chatRecovered;
-        setProgress(p => ({ ...p, recoveredMessages: totalRecovered, threadsProcessed: i + 1 }));
+        setProgress((p) => ({ ...p, recoveredMessages: totalRecovered, threadsProcessed: i + 1 }));
 
         // Pause between threads (human-like)
         if (i < threadsWithGap.length - 1) {
           await throttle("linkedin", "betweenThreads", "Pausa tra thread");
           if (abortRef.current) {
-            setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
+            setProgress((p) => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
             toast.info("Recupero interrotto");
             return;
           }
         }
       }
 
-      setProgress(p => ({ ...p, status: "done", phase: "idle", currentThread: null }));
+      setProgress((p) => ({ ...p, status: "done", phase: "idle", currentThread: null }));
       toast.success(`LinkedIn: ${totalRecovered} messaggi recuperati da ${threadsWithGap.length} conversazioni`);
     } catch (err: unknown) {
-      setProgress(p => ({ ...p, status: "error", lastError: err instanceof Error ? err.message : String(err) }));
+      setProgress((p) => ({ ...p, status: "error", lastError: err instanceof Error ? err.message : String(err) }));
       toast.error(`Errore: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       runningRef.current = false;

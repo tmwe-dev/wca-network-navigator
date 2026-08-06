@@ -11,14 +11,7 @@
  * Intended to wrap any edge function that executes a queued AI action.
  */
 
-export type AiActionRisk =
-  | "READ"
-  | "PREPARE"
-  | "WRITE"
-  | "SEND"
-  | "EXTERNAL_AUTOMATION"
-  | "BULK"
-  | "DESTRUCTIVE";
+export type AiActionRisk = "READ" | "PREPARE" | "WRITE" | "SEND" | "EXTERNAL_AUTOMATION" | "BULK" | "DESTRUCTIVE";
 
 // deno-lint-ignore no-explicit-any
 type Sb = import("./supabaseClient.ts").AnySupabaseClient;
@@ -37,10 +30,7 @@ export interface ClaimResult {
  * Atomically claim a pending action for execution (two-phase commit start).
  * Returns ok=false if the action was already executing or in a terminal state.
  */
-export async function claimAction(
-  supabase: Sb,
-  actionId: string,
-): Promise<ClaimResult> {
+export async function claimAction(supabase: Sb, actionId: string): Promise<ClaimResult> {
   const { data, error } = await supabase.rpc("claim_pending_action", {
     _action_id: actionId,
   });
@@ -106,12 +96,7 @@ export async function runGuardedAction<T>(
     throw err;
   }
 
-  const gate = await hardGate(
-    supabase,
-    opts.risk,
-    opts.partnerId ?? null,
-    opts.contactId ?? null,
-  );
+  const gate = await hardGate(supabase, opts.risk, opts.partnerId ?? null, opts.contactId ?? null);
   if (!gate.allowed) {
     await finalizeAction(supabase, opts.actionId, "failed", `hard_gate:${gate.reason}`);
     const err = Object.assign(new Error(`AI_ACTION_HARD_GATE_BLOCKED:${gate.reason}`), { status: 403 });

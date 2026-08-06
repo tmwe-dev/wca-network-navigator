@@ -3,7 +3,8 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("emailContentNormalization");
 const BASE64_PATTERN = /^[A-Za-z0-9+/=\s]+$/;
 const BASE64_CHAR_PATTERN = /[A-Za-z0-9+/=]/g;
-const HTML_TAG_PATTERN = /<\/?(?:html|body|div|table|tbody|thead|tr|td|th|p|span|img|a|meta|style|section|article|header|footer)\b/i;
+const HTML_TAG_PATTERN =
+  /<\/?(?:html|body|div|table|tbody|thead|tr|td|th|p|span|img|a|meta|style|section|article|header|footer)\b/i;
 const HTML_ENTITY_PATTERN = /&(?:quot|amp|lt|gt|nbsp|#\d+|#x[0-9a-f]+);/i;
 const MIME_HEADER_PATTERN = /^(?:content-type|content-transfer-encoding|content-disposition):/im;
 
@@ -24,8 +25,14 @@ function htmlLooksCorrupted(value: string): boolean {
   let bad = 0;
   for (let i = 0; i < total; i++) {
     const code = sample.charCodeAt(i);
-    if (code === 0xfffd) { bad++; continue; }
-    if (code < 32 && code !== 9 && code !== 10 && code !== 13) { bad++; continue; }
+    if (code === 0xfffd) {
+      bad++;
+      continue;
+    }
+    if (code < 32 && code !== 9 && code !== 10 && code !== 13) {
+      bad++;
+      continue;
+    }
   }
   const ratio = bad / total;
   // Soglia: ≥3% caratteri "sporchi" → HTML corrotto.
@@ -62,9 +69,7 @@ function decodeHtmlEntities(value: string): string {
 
 function decodeQuotedPrintableText(value: string): string {
   if (!value) return value;
-  return value
-    .replace(/=\r?\n/g, "")
-    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return value.replace(/=\r?\n/g, "").replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 }
 
 /**
@@ -206,13 +211,7 @@ export function normalizeEmailText(value?: string | null): string | null {
   return normalized || null;
 }
 
-export function normalizeEmailContent({
-  bodyHtml,
-  bodyText,
-}: {
-  bodyHtml?: string | null;
-  bodyText?: string | null;
-}) {
+export function normalizeEmailContent({ bodyHtml, bodyText }: { bodyHtml?: string | null; bodyText?: string | null }) {
   let normalizedHtml = normalizeEmailHtml(bodyHtml);
   let normalizedText = normalizeEmailText(bodyText);
 
@@ -228,7 +227,10 @@ export function normalizeEmailContent({
     }
   }
 
-  if (normalizedHtml && (!normalizedText || looksLikeBase64(normalizedText) || looksLikeQuotedPrintable(normalizedText))) {
+  if (
+    normalizedHtml &&
+    (!normalizedText || looksLikeBase64(normalizedText) || looksLikeQuotedPrintable(normalizedText))
+  ) {
     normalizedText = htmlToText(normalizedHtml);
   }
 

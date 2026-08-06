@@ -3,6 +3,7 @@ name: Sprint Funnemail + Prompt Hardening 2026-05-11
 description: Sprint Codex; deduplicato funnemail_classifier (3→1), pilot Funnemail su Amministrativo+FORNITORI, UNIQUE INDEX anti-duplicato, ai_interaction_log esteso con edge_ai
 type: reference
 ---
+
 Sprint 1.1 ✅ funnemail_classifier: 3 nomi → 1 ("Funnemail Classifier v1") per 6 utenti. Le altre 2 varianti `is_active=false` + tag `deprecated_2026_05_11`.
 Sprint 1.2 ✅ classification/email/email-quality/outreach = layer compositivi legittimi (no dedup).
 Sprint 1.3 ✅ UNIQUE INDEX `operative_prompts_active_unique_idx (user_id, context, name) WHERE is_active`.

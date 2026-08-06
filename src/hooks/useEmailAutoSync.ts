@@ -24,15 +24,22 @@ export function useEmailAutoSync(options: Options = {}) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       return stored === "enabled";
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return false; }
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      return false;
+    }
   });
   const checkInbox = useCheckInbox();
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
   const toggle = useCallback(() => {
-    setEnabled(prev => {
+    setEnabled((prev) => {
       const next = !prev;
-      try { localStorage.setItem(STORAGE_KEY, next ? "enabled" : "disabled"); } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); }
+      try {
+        localStorage.setItem(STORAGE_KEY, next ? "enabled" : "disabled");
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      }
       return next;
     });
   }, []);
@@ -51,8 +58,10 @@ export function useEmailAutoSync(options: Options = {}) {
       }
     }, INTERVAL_MS);
 
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [active]);  
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [active]);
 
   return {
     enabled,

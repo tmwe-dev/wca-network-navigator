@@ -101,7 +101,8 @@ serve(async (req) => {
   const skipIfSame = payload.skipIfSame !== false;
   if (skipIfSame && source && source === target) {
     const result: TranslateResponse = {
-      subject, body,
+      subject,
+      body,
       source_language: source,
       target_language: target,
       translated: false,
@@ -121,7 +122,7 @@ serve(async (req) => {
     "3. Mantieni nomi propri, brand, indirizzi email, URL e numeri esattamente identici.",
     "4. Mantieni il tono professionale e diretto dell'originale.",
     "5. Se trovi placeholder come {{contact_name}} o {{company_name}}, lasciali INVARIATI.",
-    "6. Restituisci ESCLUSIVAMENTE un JSON valido con esattamente queste chiavi: {\"subject\":\"…\",\"body\":\"…\"}.",
+    '6. Restituisci ESCLUSIVAMENTE un JSON valido con esattamente queste chiavi: {"subject":"…","body":"…"}.',
     "7. Niente markdown attorno al JSON, niente ```json fence.",
   ].join("\n");
 
@@ -149,7 +150,10 @@ serve(async (req) => {
     });
 
     const raw = (ai.content || "").trim();
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
     let parsed: { subject?: string; body?: string };
     try {
       parsed = JSON.parse(cleaned);

@@ -20,8 +20,11 @@ import { useEmailAutoSync } from "./useEmailAutoSync";
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
-  // eslint-disable-next-line no-empty
-  try { localStorage.removeItem("email_auto_sync_enabled"); } catch {}
+  try {
+    localStorage.removeItem("email_auto_sync_enabled");
+  } catch {
+    /* ignore */
+  }
 });
 
 afterEach(() => {
@@ -70,7 +73,9 @@ describe("useEmailAutoSync", () => {
     localStorage.setItem("email_auto_sync_enabled", "enabled");
     renderHookWithProviders(() => useEmailAutoSync());
     mockMutate.mockClear();
-    act(() => { vi.advanceTimersByTime(2 * 60 * 1000); });
+    act(() => {
+      vi.advanceTimersByTime(2 * 60 * 1000);
+    });
     expect(mockMutate).toHaveBeenCalledTimes(1);
   });
 });

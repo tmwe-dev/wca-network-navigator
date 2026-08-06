@@ -2,13 +2,7 @@
 // activity update + autopilot/needs_human side-effects.
 // Estratto 1:1 da index.ts. Comportamento identico.
 
-import {
-  CLASSIFICATIONS,
-  SENTIMENTS,
-  URGENCIES,
-  type ClassifyResult,
-  type RequestBody,
-} from "./types.ts";
+import { CLASSIFICATIONS, SENTIMENTS, URGENCIES, type ClassifyResult, type RequestBody } from "./types.ts";
 import { buildClassificationPrompt } from "./aiPromptBuilder.ts";
 import { aiFetch } from "../../_shared/aiCallShim.ts";
 import { buildCanonicalExtension, isMessageIntelligenceV1Enabled } from "./canonicalFields.ts";
@@ -20,7 +14,8 @@ export async function runAiClassification(
   supabase: Sb,
   body: RequestBody,
 ): Promise<{ result: ClassifyResult; model: string }> {
-  const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+  const LOVABLE_API_KEY =
+    Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
   const model = "google/gemini-3-flash-preview";
 
   let result: ClassifyResult = {
@@ -38,12 +33,13 @@ export async function runAiClassification(
 
   try {
     const aiResp = await aiFetch({
-        model,
-        messages: [
-          { role: "system", content: finalSystemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [{
+      model,
+      messages: [
+        { role: "system", content: finalSystemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [
+        {
           type: "function",
           function: {
             name: "classify_message",
@@ -62,9 +58,10 @@ export async function runAiClassification(
               additionalProperties: false,
             },
           },
-        }],
-        tool_choice: { type: "function", function: { name: "classify_message" } },
-      });
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "classify_message" } },
+    });
 
     if (aiResp.ok) {
       const aiData = await aiResp.json();
@@ -72,7 +69,9 @@ export async function runAiClassification(
       if (toolCall?.function?.arguments) {
         const parsed = JSON.parse(toolCall.function.arguments);
         result = {
-          classification: (CLASSIFICATIONS as readonly string[]).includes(parsed.classification) ? parsed.classification : "neutral",
+          classification: (CLASSIFICATIONS as readonly string[]).includes(parsed.classification)
+            ? parsed.classification
+            : "neutral",
           confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
           sentiment: (SENTIMENTS as readonly string[]).includes(parsed.sentiment) ? parsed.sentiment : "neutral",
           urgency: (URGENCIES as readonly string[]).includes(parsed.urgency) ? parsed.urgency : "normal",
@@ -115,20 +114,21 @@ export async function persistClassificationSideEffects(
   // payload identico al comportamento pre-B2. Zero round-trip DB extra:
   // usiamo esclusivamente dati già disponibili in `result`.
   if (isMessageIntelligenceV1Enabled(Deno.env)) {
-    Object.assign(
-      insertPayload,
-      buildCanonicalExtension({ classification: result.classification }),
-    );
+    Object.assign(insertPayload, buildCanonicalExtension({ classification: result.classification }));
   }
   const { error: classErr } = await supabase.from("reply_classifications").insert(insertPayload);
   if (classErr) console.error("[classify-inbound] Insert error:", classErr);
 
   // Update activity description
   if (activity_id) {
-    await supabase.from("activities").update({
-      description: `[${result.classification} ${(result.confidence * 100).toFixed(0)}% | ${result.sentiment}] ` +
-        `${channel} from ${from_address}. Intent: ${result.intent}`,
-    }).eq("id", activity_id);
+    await supabase
+      .from("activities")
+      .update({
+        description:
+          `[${result.classification} ${(result.confidence * 100).toFixed(0)}% | ${result.sentiment}] ` +
+          `${channel} from ${from_address}. Intent: ${result.intent}`,
+      })
+      .eq("id", activity_id);
   }
 
   // Autopilot: positive + mission autopilot → pending action
@@ -160,9 +160,12 @@ export async function persistClassificationSideEffects(
 
   // Needs human → escalate activity priority
   if (result.classification === "needs_human" && activity_id) {
-    await supabase.from("activities").update({
-      priority: "critical",
-      status: "pending",
-    }).eq("id", activity_id);
+    await supabase
+      .from("activities")
+      .update({
+        priority: "critical",
+        status: "pending",
+      })
+      .eq("id", activity_id);
   }
 }

@@ -10,15 +10,36 @@ function looksLikeSimpleQuery(prompt: string): boolean {
   if (!lower) return false;
   // Action verbs → not simple read
   const actionPatterns = [
-    /\bcrea\b/, /\baggiungi\b/, /\baggiorna\b/, /\bmodifica\b/, /\belimina\b/,
-    /\bscrap/, /\benrich/, /\barricch/, /\bdedup/, /\bcalcola lead/, /\binvia\b/,
-    /\bcomponi\b/, /\bgenera\b/, /\bgenerami\b/, /\bnaviga\b/, /\bcompila form/, /\bprogramma\b/, /\bschedul/,
+    /\bcrea\b/,
+    /\baggiungi\b/,
+    /\baggiorna\b/,
+    /\bmodifica\b/,
+    /\belimina\b/,
+    /\bscrap/,
+    /\benrich/,
+    /\barricch/,
+    /\bdedup/,
+    /\bcalcola lead/,
+    /\binvia\b/,
+    /\bcomponi\b/,
+    /\bgenera\b/,
+    /\bgenerami\b/,
+    /\bnaviga\b/,
+    /\bcompila form/,
+    /\bprogramma\b/,
+    /\bschedul/,
     /\bapprov/,
     // Write/compose intents — vanno al planner / composeEmail, non al fast-lane di lettura
-    /\bscriv/, /\bredig/, /\bprepar/, /\bmand/, /\bbozz[ae]/, /\bdraft\b/,
+    /\bscriv/,
+    /\bredig/,
+    /\bprepar/,
+    /\bmand/,
+    /\bbozz[ae]/,
+    /\bdraft\b/,
     /\b(?:e-?mail|mail)\s+(?:di|per|a|ai|agli|alle)\b/,
     /\b(?:e-?mail|mail)\s+(?:di\s+)?(?:presentazione|collaborazione|invito)\b/,
-    /\bemail\s+ai\b/, /\bmail\s+ai\b/,
+    /\bemail\s+ai\b/,
+    /\bmail\s+ai\b/,
     /\binvit/,
   ];
   if (actionPatterns.some((re) => re.test(lower))) return false;
@@ -41,14 +62,11 @@ function looksLikeSimpleQuery(prompt: string): boolean {
 }
 
 export function usePromptAnalysis() {
-  const analyzePrompt = useCallback(
-    (prompt: string): { isSimpleQuery: boolean } => {
-      return {
-        isSimpleQuery: looksLikeSimpleQuery(prompt),
-      };
-    },
-    []
-  );
+  const analyzePrompt = useCallback((prompt: string): { isSimpleQuery: boolean } => {
+    return {
+      isSimpleQuery: looksLikeSimpleQuery(prompt),
+    };
+  }, []);
 
   return { analyzePrompt, looksLikeSimpleQuery };
 }

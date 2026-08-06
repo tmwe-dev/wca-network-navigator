@@ -20,15 +20,14 @@ export function FunnemailTab(): React.ReactElement {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-foreground">
           <p>
-            Qui potrai compilare un'email finta (mittente, oggetto, body) e vedere il "viaggio"
-            stage-by-stage: injection guard, classificazione AI, scout mittente, auto-route, policy
-            engine, triage. Ogni step mostrerà prompt usato, output AI, durata e azioni proposte —
-            senza scrivere niente nel database reale.
+            Qui potrai compilare un'email finta (mittente, oggetto, body) e vedere il "viaggio" stage-by-stage:
+            injection guard, classificazione AI, scout mittente, auto-route, policy engine, triage. Ogni step mostrerà
+            prompt usato, output AI, durata e azioni proposte — senza scrivere niente nel database reale.
           </p>
           <p className="text-foreground">
             Richiede una nuova edge <code className="rounded bg-muted px-1">simulate-funnemail-classify</code>
-            (read-only wrapper di <code className="rounded bg-muted px-1">classify-inbound-message</code>):
-            la consegno nel prossimo round.
+            (read-only wrapper di <code className="rounded bg-muted px-1">classify-inbound-message</code>): la consegno
+            nel prossimo round.
           </p>
         </CardContent>
       </Card>
@@ -39,12 +38,11 @@ export function FunnemailTab(): React.ReactElement {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-foreground">
           <p>
-            Le pipeline reali di smistamento Funnemail sono già tracciate stage-by-stage.
-            Vai alla pagina Pipeline Traces e filtra per <code className="rounded bg-muted px-1">classify-inbound-message</code>
-            o per uno dei suoi stage: <code className="rounded bg-muted px-1">classified</code>,
-            <code className="rounded bg-muted px-1">scouted</code>,
-            <code className="rounded bg-muted px-1">routed</code>,
-            <code className="rounded bg-muted px-1">policy_applied</code>.
+            Le pipeline reali di smistamento Funnemail sono già tracciate stage-by-stage. Vai alla pagina Pipeline
+            Traces e filtra per <code className="rounded bg-muted px-1">classify-inbound-message</code>o per uno dei
+            suoi stage: <code className="rounded bg-muted px-1">classified</code>,
+            <code className="rounded bg-muted px-1">scouted</code>,<code className="rounded bg-muted px-1">routed</code>
+            ,<code className="rounded bg-muted px-1">policy_applied</code>.
           </p>
           <Button asChild size="sm" className="gap-1.5">
             <Link to="/v2/pipeline-traces">

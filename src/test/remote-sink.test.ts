@@ -4,11 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { logConfig, createLogger } from "@/lib/log";
-import {
-  installRemoteSink,
-  __getInstalledSinkState,
-  __resetInstalledSinkState,
-} from "@/lib/log/remoteSink";
+import { installRemoteSink, __getInstalledSinkState, __resetInstalledSinkState } from "@/lib/log/remoteSink";
 
 describe("remoteSink", () => {
   let fetchMock: ReturnType<typeof vi.fn>;

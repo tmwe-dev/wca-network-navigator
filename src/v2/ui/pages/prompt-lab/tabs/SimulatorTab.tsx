@@ -18,12 +18,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
-} from "@/components/ui/select";
-import {
-  Loader2, Play, FlaskConical, ShieldCheck, Wrench, FileText, Sparkles,
-  AlertTriangle, CheckCircle2, Ban,
+  Loader2,
+  Play,
+  FlaskConical,
+  ShieldCheck,
+  Wrench,
+  FileText,
+  Sparkles,
+  AlertTriangle,
+  CheckCircle2,
+  Ban,
 } from "lucide-react";
 import { toast } from "sonner";
 import { listAgentsForCapabilities } from "@/data/agentsForPromptLab";
@@ -81,14 +87,18 @@ export function SimulatorTab() {
         <div className="flex items-center gap-2">
           <FlaskConical className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold">Simulatore agente</h3>
-          <Badge variant="outline" className="text-[10px]">read-only</Badge>
+          <Badge variant="outline" className="text-[10px]">
+            read-only
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-1">
             <Label className="text-xs">Agente / Edge function</Label>
             <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-              <SelectTrigger className="h-8 mt-1"><SelectValue placeholder="Seleziona agente" /></SelectTrigger>
+              <SelectTrigger className="h-8 mt-1">
+                <SelectValue placeholder="Seleziona agente" />
+              </SelectTrigger>
               <SelectContent>
                 {agentsQuery.data && agentsQuery.data.length > 0 && (
                   <>
@@ -144,8 +154,7 @@ export function SimulatorTab() {
           <label className="flex items-center gap-2 text-xs cursor-pointer">
             <Switch checked={dryRunAI} onCheckedChange={setDryRunAI} />
             <span>
-              <strong>Dry-run AI</strong> — chiama il modello e mostra i tool_calls proposti
-              (nessuna esecuzione)
+              <strong>Dry-run AI</strong> — chiama il modello e mostra i tool_calls proposti (nessuna esecuzione)
             </span>
           </label>
           <Button
@@ -154,9 +163,7 @@ export function SimulatorTab() {
             size="sm"
             className="gap-2"
           >
-            {sim.isPending
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <Play className="h-3.5 w-3.5" />}
+            {sim.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
             Simula
           </Button>
         </div>
@@ -164,8 +171,8 @@ export function SimulatorTab() {
 
       {!result && !sim.isPending && (
         <Card className="p-6 text-center text-sm text-muted-foreground">
-          Seleziona un agente, scrivi un messaggio e premi <strong>Simula</strong> per vedere
-          come verrebbe assemblato il prompt prima di eseguire qualsiasi flusso reale.
+          Seleziona un agente, scrivi un messaggio e premi <strong>Simula</strong> per vedere come verrebbe assemblato
+          il prompt prima di eseguire qualsiasi flusso reale.
         </Card>
       )}
 
@@ -189,14 +196,22 @@ export function SimulatorTab() {
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold">Persona</h3>
-                {result.persona.loaded
-                  ? <Badge className="text-[10px] bg-success">caricata</Badge>
-                  : <Badge variant="outline" className="text-[10px]">default</Badge>}
+                {result.persona.loaded ? (
+                  <Badge className="text-[10px] bg-success">caricata</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px]">
+                    default
+                  </Badge>
+                )}
               </div>
               {result.persona.loaded ? (
                 <div className="text-xs space-y-1">
-                  <div><span className="text-muted-foreground">Tono:</span> {result.persona.tone}</div>
-                  <div><span className="text-muted-foreground">Lingua:</span> {result.persona.language}</div>
+                  <div>
+                    <span className="text-muted-foreground">Tono:</span> {result.persona.tone}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Lingua:</span> {result.persona.language}
+                  </div>
                   <pre className="text-[11px] font-mono bg-muted/40 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap mt-1">
                     {result.persona.block_preview}
                   </pre>
@@ -210,18 +225,37 @@ export function SimulatorTab() {
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold">Capabilities</h3>
-                {result.capabilities.loaded
-                  ? <Badge className="text-[10px] bg-success">DB</Badge>
-                  : <Badge variant="outline" className="text-[10px]">default</Badge>}
+                {result.capabilities.loaded ? (
+                  <Badge className="text-[10px] bg-success">DB</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px]">
+                    default
+                  </Badge>
+                )}
               </div>
               <div className="text-xs grid grid-cols-2 gap-1.5">
-                <div><span className="text-muted-foreground">Modalità:</span> {result.capabilities.execution_mode}</div>
-                <div><span className="text-muted-foreground">Modello:</span> {result.capabilities.preferred_model ?? "default"}</div>
-                <div><span className="text-muted-foreground">Temp:</span> {result.capabilities.temperature}</div>
-                <div><span className="text-muted-foreground">Max tokens:</span> {result.capabilities.max_tokens_per_call}</div>
-                <div><span className="text-muted-foreground">Iter max:</span> {result.capabilities.max_iterations}</div>
-                <div><span className="text-muted-foreground">Concorrenza:</span> {result.capabilities.max_concurrent_tools}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">Timeout step:</span> {result.capabilities.step_timeout_ms} ms</div>
+                <div>
+                  <span className="text-muted-foreground">Modalità:</span> {result.capabilities.execution_mode}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Modello:</span>{" "}
+                  {result.capabilities.preferred_model ?? "default"}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Temp:</span> {result.capabilities.temperature}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Max tokens:</span> {result.capabilities.max_tokens_per_call}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Iter max:</span> {result.capabilities.max_iterations}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Concorrenza:</span> {result.capabilities.max_concurrent_tools}
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Timeout step:</span> {result.capabilities.step_timeout_ms} ms
+                </div>
               </div>
             </Card>
           </div>
@@ -236,10 +270,7 @@ export function SimulatorTab() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
               {result.tools.approval_map.map((t) => (
-                <div
-                  key={t.name}
-                  className="flex items-center justify-between gap-2 px-2 py-1 rounded border text-xs"
-                >
+                <div key={t.name} className="flex items-center justify-between gap-2 px-2 py-1 rounded border text-xs">
                   <span className="font-mono truncate">{t.name}</span>
                   {t.requires_approval && (
                     <Badge variant="outline" className="text-[9px] border-warning text-warning">
@@ -257,7 +288,9 @@ export function SimulatorTab() {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {result.tools.filtered_out.map((n) => (
-                    <Badge key={n} variant="outline" className="text-[10px] line-through opacity-60">{n}</Badge>
+                    <Badge key={n} variant="outline" className="text-[10px] line-through opacity-60">
+                      {n}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -290,7 +323,8 @@ export function SimulatorTab() {
               </ul>
             )}
             <div className="text-[11px] text-muted-foreground pt-1 border-t">
-              Match: contexts <code>{result.operative_prompts.matched.contexts.join(", ") || "—"}</code>{" · "}
+              Match: contexts <code>{result.operative_prompts.matched.contexts.join(", ") || "—"}</code>
+              {" · "}
               tags <code>{result.operative_prompts.matched.tags.join(", ") || "—"}</code>
             </div>
             {result.operative_prompts.block_preview && (
@@ -314,7 +348,9 @@ export function SimulatorTab() {
               <div>
                 <span className="text-muted-foreground">Tabelle vietate: </span>
                 {result.hard_guards.forbidden_tables.map((t) => (
-                  <code key={t} className="mx-0.5 px-1 rounded bg-muted">{t}</code>
+                  <code key={t} className="mx-0.5 px-1 rounded bg-muted">
+                    {t}
+                  </code>
                 ))}
               </div>
               <div>
@@ -323,7 +359,9 @@ export function SimulatorTab() {
               </div>
               <div>
                 <span className="text-muted-foreground">Bulk caps: </span>
-                {Object.entries(result.hard_guards.bulk_caps).map(([k, v]) => `${k}=${v}`).join(", ")}
+                {Object.entries(result.hard_guards.bulk_caps)
+                  .map(([k, v]) => `${k}=${v}`)
+                  .join(", ")}
               </div>
               <div>
                 <span className="text-muted-foreground">Approvazione obbligatoria: </span>
@@ -339,7 +377,9 @@ export function SimulatorTab() {
                 <Sparkles className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold">Dry-run AI</h3>
                 {result.dry_run.model && (
-                  <Badge variant="outline" className="text-[10px]">{result.dry_run.model}</Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    {result.dry_run.model}
+                  </Badge>
                 )}
                 {typeof result.dry_run.elapsed_ms === "number" && (
                   <Badge variant="outline" className="text-[10px]">
@@ -379,14 +419,16 @@ export function SimulatorTab() {
                               tc.would_be_blocked
                                 ? "border-destructive bg-destructive/5"
                                 : tc.would_require_approval
-                                ? "border-warning bg-warning/5"
-                                : "border-border"
+                                  ? "border-warning bg-warning/5"
+                                  : "border-border"
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-0.5">
                               <span className="font-semibold">{tc.name}</span>
                               {tc.would_be_blocked && (
-                                <Badge variant="destructive" className="text-[9px]">bloccato</Badge>
+                                <Badge variant="destructive" className="text-[9px]">
+                                  bloccato
+                                </Badge>
                               )}
                               {tc.would_require_approval && !tc.would_be_blocked && (
                                 <Badge variant="outline" className="text-[9px] border-warning text-warning">

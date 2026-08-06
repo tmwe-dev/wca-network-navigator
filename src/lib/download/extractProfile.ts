@@ -18,7 +18,18 @@ export interface ExtractionResult {
 }
 
 export function normalizeExtensionResult(raw: unknown): ExtractionResult {
-  if (!raw) return { success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_ERROR", companyName: null, contacts: [], profile: {}, profileHtml: null, htmlLength: 0, error: "No response" };
+  if (!raw)
+    return {
+      success: false,
+      state: "bridge_error",
+      errorCode: "EXT_BRIDGE_ERROR",
+      companyName: null,
+      contacts: [],
+      profile: {},
+      profileHtml: null,
+      htmlLength: 0,
+      error: "No response",
+    };
   const r = raw as Record<string, unknown>;
   return {
     success: (r.success as boolean) ?? false,

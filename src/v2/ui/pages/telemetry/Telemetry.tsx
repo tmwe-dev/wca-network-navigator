@@ -34,7 +34,9 @@ export default function Telemetry() {
             className="text-xs px-3 py-1.5 rounded-lg border border-border bg-card"
           >
             {RANGES.map((r) => (
-              <option key={r.key} value={r.key}>{r.label}</option>
+              <option key={r.key} value={r.key}>
+                {r.label}
+              </option>
             ))}
           </select>
         </div>
@@ -47,7 +49,8 @@ export default function Telemetry() {
                 tab === t.key ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span className="mr-1">{t.icon}</span>{t.label}
+              <span className="mr-1">{t.icon}</span>
+              {t.label}
             </button>
           ))}
         </div>

@@ -20,16 +20,19 @@ export async function improveBlock(
   callAgent: CallAgent,
   { block, instruction, tabLabel, tabActivation, nearbyBlocks, goal, briefing }: ImproveOptions,
 ): Promise<string> {
-  const guidance = instruction?.trim() ?? "Migliora questo blocco mantenendo il senso ma rendendolo più chiaro, conciso e operativo.";
+  const guidance =
+    instruction?.trim() ?? "Migliora questo blocco mantenendo il senso ma rendendolo più chiaro, conciso e operativo.";
   const sourceDesc = describeSource(block.source);
   const nearbySummary = summarizeNearby(nearbyBlocks ?? [], block.id);
   const briefingForcesVoice = briefing?.targetChannel === "voice_agent";
-  const isVoice = briefingForcesVoice || isVoiceBlock({
-    tabLabel,
-    source: block.source,
-    label: block.label,
-    content: block.content,
-  });
+  const isVoice =
+    briefingForcesVoice ||
+    isVoiceBlock({
+      tabLabel,
+      source: block.source,
+      label: block.label,
+      content: block.content,
+    });
   const [doctrineSnippet, voiceFewShot] = await Promise.all([
     loadDoctrineForBlock(block, tabLabel ?? "n/d"),
     isVoice ? loadVoiceTemplatesFewShot() : Promise.resolve(""),
@@ -106,19 +109,18 @@ export interface ImproveBlockGlobalParams {
   briefing?: BriefingPayload;
 }
 
-export async function improveBlockGlobal(
-  callAgent: CallAgent,
-  params: ImproveBlockGlobalParams,
-): Promise<string> {
+export async function improveBlockGlobal(callAgent: CallAgent, params: ImproveBlockGlobalParams): Promise<string> {
   const { block, tabLabel, tabActivation, systemMap, doctrineFull, systemMission, goal, briefing } = params;
   const sourceDesc = describeSource(block.source);
   const briefingForcesVoice = briefing?.targetChannel === "voice_agent";
-  const isVoice = briefingForcesVoice || isVoiceBlock({
-    tabLabel,
-    source: block.source,
-    label: block.label,
-    content: block.content,
-  });
+  const isVoice =
+    briefingForcesVoice ||
+    isVoiceBlock({
+      tabLabel,
+      source: block.source,
+      label: block.label,
+      content: block.content,
+    });
   const rubric = resolveRubric(block.source, { forceVoice: isVoice });
   const rubricSection = rubricToPromptSection(rubric);
   const voiceFewShot = isVoice ? await loadVoiceTemplatesFewShot() : "";
@@ -204,7 +206,8 @@ export async function analyzeBlockArchitect(
   callAgent: CallAgent,
   params: AnalyzeBlockArchitectParams,
 ): Promise<ArchitectDiagnosticV2[]> {
-  const { block, tabLabel, tabActivation, nearbyBlocks, systemMap, doctrineFull, goal, mode, loadArchitectProcedure } = params;
+  const { block, tabLabel, tabActivation, nearbyBlocks, systemMap, doctrineFull, goal, mode, loadArchitectProcedure } =
+    params;
   const sourceDesc = describeSource(block.source);
   const nearbySummary = summarizeNearby(nearbyBlocks ?? [], block.id);
   const doctrineSnippet = doctrineFull ?? (await loadDoctrineForBlock(block, tabLabel ?? "n/d"));
@@ -216,8 +219,7 @@ export async function analyzeBlockArchitect(
     ? `\n=== PROCEDURA LAB ARCHITECT (vincolante per questa risposta) ===\n${architectProcedure}\n=== FINE PROCEDURA ===\n`
     : "";
 
-  const ownerAgent: AgentRegistryEntry | undefined =
-    params.agent ?? AGENT_REGISTRY[resolveBlockAgent(block).agentId];
+  const ownerAgent: AgentRegistryEntry | undefined = params.agent ?? AGENT_REGISTRY[resolveBlockAgent(block).agentId];
   const contractSection =
     mode === "architect" && ownerAgent
       ? `\n=== CONTRATTI RUNTIME DELL'AGENTE PROPRIETARIO ===

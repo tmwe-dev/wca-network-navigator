@@ -1,9 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  listSharedMailboxes,
-  listOperatorMailboxAccess,
-  setOperatorMailboxAccess,
-} from "@/hooks/useMailboxAdmin";
+import { listSharedMailboxes, listOperatorMailboxAccess, setOperatorMailboxAccess } from "@/hooks/useMailboxAdmin";
 import { queryKeys } from "@/lib/queryKeys";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
@@ -49,16 +45,18 @@ export function OperatorMailboxAccessEditor({ operatorId }: { operatorId: string
   return (
     <div className="flex flex-wrap gap-3 items-center">
       <span className="text-xs text-muted-foreground">Accesso a:</span>
-      {mailboxes.filter((m) => m.is_active).map((m) => {
-        const checked = access.includes(m.id);
-        return (
-          <label key={m.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
-            <Checkbox checked={checked} onCheckedChange={(v) => toggle(m.id, v === true)} />
-            <span>{m.label}</span>
-            {m.auto_grant && <span className="text-[10px] text-muted-foreground">(default)</span>}
-          </label>
-        );
-      })}
+      {mailboxes
+        .filter((m) => m.is_active)
+        .map((m) => {
+          const checked = access.includes(m.id);
+          return (
+            <label key={m.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <Checkbox checked={checked} onCheckedChange={(v) => toggle(m.id, v === true)} />
+              <span>{m.label}</span>
+              {m.auto_grant && <span className="text-[10px] text-muted-foreground">(default)</span>}
+            </label>
+          );
+        })}
     </div>
   );
 }

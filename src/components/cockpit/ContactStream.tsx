@@ -18,11 +18,31 @@ import type { ViewMode, CockpitFilter } from "@/types/cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
 const FLAG: Record<string, string> = {
-  IT: "🇮🇹", GB: "🇬🇧", FR: "🇫🇷", DE: "🇩🇪", ES: "🇪🇸", JP: "🇯🇵", RU: "🇷🇺", US: "🇺🇸",
-  CN: "🇨🇳", BR: "🇧🇷", NL: "🇳🇱", BE: "🇧🇪", CH: "🇨🇭", AT: "🇦🇹", PT: "🇵🇹", PL: "🇵🇱",
-  TR: "🇹🇷", IN: "🇮🇳", AE: "🇦🇪", SA: "🇸🇦", KR: "🇰🇷", AU: "🇦🇺", CA: "🇨🇦", MX: "🇲🇽",
+  IT: "🇮🇹",
+  GB: "🇬🇧",
+  FR: "🇫🇷",
+  DE: "🇩🇪",
+  ES: "🇪🇸",
+  JP: "🇯🇵",
+  RU: "🇷🇺",
+  US: "🇺🇸",
+  CN: "🇨🇳",
+  BR: "🇧🇷",
+  NL: "🇳🇱",
+  BE: "🇧🇪",
+  CH: "🇨🇭",
+  AT: "🇦🇹",
+  PT: "🇵🇹",
+  PL: "🇵🇱",
+  TR: "🇹🇷",
+  IN: "🇮🇳",
+  AE: "🇦🇪",
+  SA: "🇸🇦",
+  KR: "🇰🇷",
+  AU: "🇦🇺",
+  CA: "🇨🇦",
+  MX: "🇲🇽",
 };
-
 
 interface ContactStreamProps {
   viewMode: ViewMode;
@@ -54,10 +74,32 @@ interface ContactStreamProps {
 }
 
 export function ContactStream({
-  viewMode, searchQuery, onSearchChange: _onSearchChange, filters, contacts, isLoading,
-  onDragStart, onDragEnd,
-  selectedIds, onToggle, onSelectAll, onClear, isAllSelected, selectionCount,
-  onBulkDeepSearch, onBulkAlias: _onBulkAlias, onBulkLinkedInLookup, isLinkedInLookupRunning, onSingleDeepSearch, onSingleAlias, onSingleLinkedInLookup, onBulkDelete, onBatchMode, activeContactId, enrichmentState, assignmentMap,
+  viewMode,
+  searchQuery,
+  onSearchChange: _onSearchChange,
+  filters,
+  contacts,
+  isLoading,
+  onDragStart,
+  onDragEnd,
+  selectedIds,
+  onToggle,
+  onSelectAll,
+  onClear,
+  isAllSelected,
+  selectionCount,
+  onBulkDeepSearch,
+  onBulkAlias: _onBulkAlias,
+  onBulkLinkedInLookup,
+  isLinkedInLookupRunning,
+  onSingleDeepSearch,
+  onSingleAlias,
+  onSingleLinkedInLookup,
+  onBulkDelete,
+  onBatchMode,
+  activeContactId,
+  enrichmentState,
+  assignmentMap,
 }: ContactStreamProps) {
   const [hideHolding, setHideHolding] = useState(true);
   const { filters: gf } = useGlobalFilters();
@@ -70,24 +112,26 @@ export function ContactStream({
     let result = [...contacts];
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(c =>
-        c.name.toLowerCase().includes(q) || c.company.toLowerCase().includes(q) || c.role.toLowerCase().includes(q)
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) || c.company.toLowerCase().includes(q) || c.role.toLowerCase().includes(q),
       );
     }
     for (const f of filters) {
-      if (f.type === "language" && f.id.includes("it")) result = result.filter(c => c.language === "italiano");
-      if (f.type === "channel" && f.label.toLowerCase().includes("linkedin")) result = result.filter(c => c.channels.includes("linkedin"));
-      if (f.type === "priority") result = result.filter(c => c.priority >= 7);
+      if (f.type === "language" && f.id.includes("it")) result = result.filter((c) => c.language === "italiano");
+      if (f.type === "channel" && f.label.toLowerCase().includes("linkedin"))
+        result = result.filter((c) => c.channels.includes("linkedin"));
+      if (f.type === "priority") result = result.filter((c) => c.priority >= 7);
     }
     if (hideHolding) {
-      result = result.filter(c => !isInHolding(c));
+      result = result.filter((c) => !isInHolding(c));
     }
     // Cockpit sidebar filters
     if (gf.cockpitCountries.size > 0) {
-      result = result.filter(c => gf.cockpitCountries.has(c.country?.toUpperCase() || "??"));
+      result = result.filter((c) => gf.cockpitCountries.has(c.country?.toUpperCase() || "??"));
     }
     if (gf.cockpitChannels.size > 0) {
-      result = result.filter(c => {
+      result = result.filter((c) => {
         for (const ch of gf.cockpitChannels) {
           if (ch === "with_email" && !c.email) return false;
           if (ch === "with_linkedin" && !c.linkedinUrl) return false;
@@ -98,7 +142,7 @@ export function ContactStream({
       });
     }
     if (gf.cockpitQuality.size > 0) {
-      result = result.filter(c => {
+      result = result.filter((c) => {
         for (const q of gf.cockpitQuality) {
           if (q === "enriched" && !c.deepSearchAt) return false;
           if (q === "not_enriched" && c.deepSearchAt) return false;
@@ -115,12 +159,19 @@ export function ContactStream({
     else if (sortBy === "country") result.sort((a, b) => a.country.localeCompare(b.country));
     else result.sort((a, b) => b.priority - a.priority);
     return result;
-  }, [searchQuery, filters, contacts, hideHolding, gf.cockpitCountries, gf.cockpitChannels, gf.cockpitQuality, gf.sortBy]);
+  }, [
+    searchQuery,
+    filters,
+    contacts,
+    hideHolding,
+    gf.cockpitCountries,
+    gf.cockpitChannels,
+    gf.cockpitQuality,
+    gf.sortBy,
+  ]);
 
   // Get selected contacts for bulk actions
-  const selectedContacts = useMemo(() =>
-    contacts.filter(c => selectedIds.has(c.id)),
-  [contacts, selectedIds]);
+  const selectedContacts = useMemo(() => contacts.filter((c) => selectedIds.has(c.id)), [contacts, selectedIds]);
 
   if (isLoading) {
     return (
@@ -154,7 +205,7 @@ export function ContactStream({
         <div className="flex items-center gap-2">
           <Checkbox
             checked={isAllSelected}
-            onCheckedChange={(checked) => checked ? onSelectAll() : onClear()}
+            onCheckedChange={(checked) => (checked ? onSelectAll() : onClear())}
             className="h-3.5 w-3.5"
           />
           <span className="text-xs font-medium text-foreground">
@@ -167,7 +218,7 @@ export function ContactStream({
             "flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-colors",
             hideHolding
               ? "bg-warning/10 text-warning border border-warning/30"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
           title={hideHolding ? "Mostra tutti" : "Nascondi in circuito"}
         >
@@ -177,28 +228,51 @@ export function ContactStream({
       </div>
 
       {/* Bulk action bar — fixed height, horizontal scroll, never wraps */}
-      <div className={cn(
-        "h-8 flex items-center gap-1 px-1 overflow-x-auto scrollbar-none transition-opacity",
-        selectionCount > 0 ? "opacity-100" : "opacity-0 pointer-events-none"
-      )}>
+      <div
+        className={cn(
+          "h-8 flex items-center gap-1 px-1 overflow-x-auto scrollbar-none transition-opacity",
+          selectionCount > 0 ? "opacity-100" : "opacity-0 pointer-events-none",
+        )}
+      >
         <BulkActionMenu selectedContacts={selectedContacts} onComplete={onClear} />
         <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkDeepSearch}>
           <Search className="w-3 h-3" /> Deep Search
         </Button>
         {onBulkLinkedInLookup && (
           <InfoTooltip content="Cerca l'URL del profilo LinkedIn dei contatti selezionati via Google (non scrape diretto)">
-            <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
-              {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} Trova URL LinkedIn
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-[10px] gap-1 px-2 shrink-0"
+              onClick={onBulkLinkedInLookup}
+              disabled={isLinkedInLookupRunning}
+            >
+              {isLinkedInLookupRunning ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Linkedin className="w-3 h-3" />
+              )}{" "}
+              Trova URL LinkedIn
             </Button>
           </InfoTooltip>
         )}
         {onBatchMode && (
-          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0 text-primary" onClick={onBatchMode}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-[10px] gap-1 px-2 shrink-0 text-primary"
+            onClick={onBatchMode}
+          >
             <Sparkles className="w-3 h-3" /> Genera
           </Button>
         )}
         {onBulkDelete && (
-          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0 text-destructive hover:bg-destructive/10" onClick={onBulkDelete}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-[10px] gap-1 px-2 shrink-0 text-destructive hover:bg-destructive/10"
+            onClick={onBulkDelete}
+          >
             <Trash2 className="w-3 h-3" /> Elimina
           </Button>
         )}
@@ -212,14 +286,17 @@ export function ContactStream({
           {filteredContacts.map((contact, i) => (
             <div key={contact.id} className="relative group">
               <CockpitContactCard
-                contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
+                contact={contact}
+                flag={FLAG[contact.country] || "🌍"}
+                index={i}
                 isSelected={selectedIds.has(contact.id)}
                 isWorked={isInHolding(contact)}
                 assignment={assignmentMap?.get(contact.partnerId || contact.sourceId)}
                 sourceType={contact.sourceType as RecordSourceType}
                 sourceId={contact.sourceId}
                 onToggleSelect={() => onToggle(contact.id)}
-                onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
+                onDragStart={() => onDragStart(contact.id)}
+                onDragEnd={onDragEnd}
                 onDeepSearch={() => onSingleDeepSearch(contact.id)}
                 onAlias={() => onSingleAlias(contact.id)}
                 onLinkedInLookup={onSingleLinkedInLookup ? () => onSingleLinkedInLookup(contact.id) : undefined}
@@ -239,10 +316,13 @@ export function ContactStream({
             <div key={contact.id} className="relative group flex items-center">
               <div className="flex-1">
                 <CockpitContactListItem
-                  contact={contact} flag={FLAG[contact.country] || "🌍"} index={i}
+                  contact={contact}
+                  flag={FLAG[contact.country] || "🌍"}
+                  index={i}
                   isSelected={selectedIds.has(contact.id)}
                   onToggleSelect={() => onToggle(contact.id)}
-                  onDragStart={() => onDragStart(contact.id)} onDragEnd={onDragEnd}
+                  onDragStart={() => onDragStart(contact.id)}
+                  onDragEnd={onDragEnd}
                 />
               </div>
               <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-1">

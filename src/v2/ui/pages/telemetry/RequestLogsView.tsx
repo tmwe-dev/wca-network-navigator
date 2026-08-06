@@ -17,9 +17,7 @@ export function RequestLogsView({ sinceIso }: { sinceIso: string }) {
 
   const total = data.length;
   const errors = data.filter((d) => d.status !== "ok").length;
-  const avgLatency = Math.round(
-    data.reduce((s, d) => s + (d.latency_ms ?? 0), 0) / Math.max(1, total)
-  );
+  const avgLatency = Math.round(data.reduce((s, d) => s + (d.latency_ms ?? 0), 0) / Math.max(1, total));
   const errorRate = total > 0 ? ((errors / total) * 100).toFixed(1) : "0";
   const topFns = aggregateBy(data, "function_name").slice(0, 5);
 
@@ -60,7 +58,9 @@ export function RequestLogsView({ sinceIso }: { sinceIso: string }) {
                 <tr key={r.id} className="hover:bg-muted/50">
                   <td className="py-1.5 text-muted-foreground whitespace-nowrap">{fmtTime(r.created_at)}</td>
                   <td className="font-mono">{r.function_name}</td>
-                  <td><StatusPill status={r.status} /></td>
+                  <td>
+                    <StatusPill status={r.status} />
+                  </td>
                   <td className="text-muted-foreground">{r.latency_ms ? `${r.latency_ms}ms` : "—"}</td>
                   <td className="font-mono text-[10px] text-muted-foreground">{r.trace_id?.slice(0, 8) ?? "—"}</td>
                 </tr>

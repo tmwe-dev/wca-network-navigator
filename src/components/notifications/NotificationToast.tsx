@@ -63,24 +63,16 @@ export function NotificationToast({
     <div
       className={cn(
         "fixed bottom-4 right-4 max-w-sm border rounded-lg shadow-lg p-4 backdrop-blur-sm z-50 animate-slide-in-up",
-        TOAST_COLORS[notification.type] || "border-primary/50 bg-primary/10"
+        TOAST_COLORS[notification.type] || "border-primary/50 bg-primary/10",
       )}
       onClick={handleClick}
     >
       <div className="flex items-start gap-3">
-        <span className="text-xl shrink-0">
-          {NOTIFICATION_ICONS[notification.type] || "🔔"}
-        </span>
+        <span className="text-xl shrink-0">{NOTIFICATION_ICONS[notification.type] || "🔔"}</span>
 
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-foreground line-clamp-1">
-            {notification.title}
-          </h4>
-          {notification.body && (
-            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-              {notification.body}
-            </p>
-          )}
+          <h4 className="text-sm font-semibold text-foreground line-clamp-1">{notification.title}</h4>
+          {notification.body && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{notification.body}</p>}
         </div>
 
         <Button

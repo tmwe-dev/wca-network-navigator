@@ -42,19 +42,23 @@ export async function reviewMessage(args: ReviewMessageArgs): Promise<ReviewMess
       },
       context: `reviewMessage.${args.channel}`,
     });
-    return out ?? {
-      verdict: "warn",
-      edited_text: args.draft,
-      warnings: [{ description: "Review non disponibile (risposta vuota)", severity: "warning" }],
-      reasoning_summary: "Review skipped: empty response",
-    };
+    return (
+      out ?? {
+        verdict: "warn",
+        edited_text: args.draft,
+        warnings: [{ description: "Review non disponibile (risposta vuota)", severity: "warning" }],
+        reasoning_summary: "Review skipped: empty response",
+      }
+    );
   } catch (err) {
     log.error("review.failed", { channel: args.channel, error: err instanceof Error ? err.message : String(err) });
     // Fail-closed: blocca l'invio se la review fallisce (doctrine intoccabile)
     return {
       verdict: "block",
       edited_text: args.draft,
-      warnings: [{ description: `Review fallita: ${err instanceof Error ? err.message : String(err)}`, severity: "blocking" }],
+      warnings: [
+        { description: `Review fallita: ${err instanceof Error ? err.message : String(err)}`, severity: "blocking" },
+      ],
       reasoning_summary: "Review error → fail-closed",
     };
   }

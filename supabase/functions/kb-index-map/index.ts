@@ -68,10 +68,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data, error } = await supabase
       .from("kb_entries")
@@ -79,13 +76,16 @@ Deno.serve(async (req) => {
       .eq("is_active", true);
     if (error) throw error;
 
-    const families: Record<string, {
-      family: string;
-      categories: string[];
-      total_entries: number;
-      chapters: Record<string, number>;
-      sample_titles: string[];
-    }> = {};
+    const families: Record<
+      string,
+      {
+        family: string;
+        categories: string[];
+        total_entries: number;
+        chapters: Record<string, number>;
+        sample_titles: string[];
+      }
+    > = {};
 
     const allFamilies = new Set(Object.values(FAMILY_MAP));
     for (const f of allFamilies) {

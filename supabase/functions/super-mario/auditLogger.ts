@@ -12,7 +12,9 @@ type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 async function sha256(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
   const buf = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 const PII_PATTERNS: Array<[RegExp, string]> = [

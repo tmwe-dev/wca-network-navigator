@@ -31,7 +31,10 @@ export function OptimusBadge({ channel, pageType, className }: OptimusBadgeProps
 
   if (!data) {
     return (
-      <Badge variant="outline" className={cn("text-[9px] gap-1 h-5 px-1.5 cursor-default text-muted-foreground", className)}>
+      <Badge
+        variant="outline"
+        className={cn("text-[9px] gap-1 h-5 px-1.5 cursor-default text-muted-foreground", className)}
+      >
         <Bot className="w-2.5 h-2.5" /> Optimus N/A
       </Badge>
     );
@@ -59,7 +62,11 @@ export function OptimusBadge({ channel, pageType, className }: OptimusBadgeProps
   }
 
   return (
-    <Badge variant="outline" className={cn("text-[9px] gap-1 h-5 px-1.5 cursor-default", style, className)} title={title}>
+    <Badge
+      variant="outline"
+      className={cn("text-[9px] gap-1 h-5 px-1.5 cursor-default", style, className)}
+      title={title}
+    >
       <Bot className="w-2.5 h-2.5" /> {label}
     </Badge>
   );

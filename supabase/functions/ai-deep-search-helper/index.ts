@@ -28,11 +28,9 @@ serve(async (req) => {
     // ── Auth (guard condiviso, contratto terse) ──
     const auth = await requireAuth(req, dynCors, { errorFormat: "terse" });
     if (auth instanceof Response) return auth;
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: `Bearer ${auth.token}` } } }
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: `Bearer ${auth.token}` } },
+    });
 
     // LOVABLE-93: global pause check
     const { data: pauseSettings } = await supabase
@@ -50,7 +48,10 @@ serve(async (req) => {
     }
 
     // ── Input validation ──
-    const body = await req.json().catch((e) => { console.warn("[ai-deep-search-helper] Invalid JSON body:", e.message); return {}; });
+    const body = await req.json().catch((e) => {
+      console.warn("[ai-deep-search-helper] Invalid JSON body:", e.message);
+      return {};
+    });
     const prompt = typeof body.prompt === "string" ? body.prompt : "";
     const requestedModel = typeof body.model === "string" ? body.model : DEFAULT_MODEL;
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
@@ -78,15 +79,18 @@ serve(async (req) => {
       context: `deep-search-helper:${auth.userId.substring(0, 8)}`,
     });
 
-    return new Response(JSON.stringify({
-      content: result.content,
-      usage: result.usage,
-      modelUsed: result.modelUsed,
-      latencyMs: result.latencyMs,
-    }), {
-      status: 200,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        content: result.content,
+        usage: result.usage,
+        modelUsed: result.modelUsed,
+        latencyMs: result.latencyMs,
+      }),
+      {
+        status: 200,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      },
+    );
   } catch (err) {
     return mapErrorToResponse(err, dynCors);
   }

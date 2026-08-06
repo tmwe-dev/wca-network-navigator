@@ -106,10 +106,7 @@ export function BulkChangeOriginDialog({
             </div>
             <div className="flex flex-wrap gap-1.5">
               {breakdown.map((b) => (
-                <span
-                  key={b.label}
-                  className="text-[11px] px-2 py-0.5 rounded-md border border-border/40 bg-muted/40"
-                >
+                <span key={b.label} className="text-[11px] px-2 py-0.5 rounded-md border border-border/40 bg-muted/40">
                   {b.label} <span className="text-muted-foreground">· {b.n}</span>
                 </span>
               ))}
@@ -117,7 +114,10 @@ export function BulkChangeOriginDialog({
           </div>
 
           <div>
-            <label htmlFor="new-origin" className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">
+            <label
+              htmlFor="new-origin"
+              className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground"
+            >
               Nuova origine
             </label>
             <Input

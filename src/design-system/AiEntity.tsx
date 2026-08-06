@@ -15,14 +15,17 @@ const sizes = {
   hero: { outer: 120, inner: 50, ring: 160 },
 };
 
-const phaseConfig: Record<string, {
-  breathDuration: number;
-  ringDuration: number;
-  irisScale: [number, number, number];
-  glowOpacity: [number, number, number];
-  auroraScale: [number, number, number];
-  hueShift?: string;
-}> = {
+const phaseConfig: Record<
+  string,
+  {
+    breathDuration: number;
+    ringDuration: number;
+    irisScale: [number, number, number];
+    glowOpacity: [number, number, number];
+    auroraScale: [number, number, number];
+    hueShift?: string;
+  }
+> = {
   idle: {
     breathDuration: 4,
     ringDuration: 30,
@@ -74,17 +77,19 @@ const AiEntity = ({ size = "md", pulse = true, phase, className = "" }: AiEntity
   const cfg = phaseConfig[phase ?? "idle"] ?? phaseConfig.idle;
   const doPulse = pulse;
 
-  const primaryVar = cfg.hueShift === "success"
-    ? "var(--success)"
-    : cfg.hueShift === "destructive"
-    ? "var(--destructive)"
-    : "var(--primary)";
+  const primaryVar =
+    cfg.hueShift === "success"
+      ? "var(--success)"
+      : cfg.hueShift === "destructive"
+        ? "var(--destructive)"
+        : "var(--primary)";
 
-  const accentVar = cfg.hueShift === "success"
-    ? "var(--success)"
-    : cfg.hueShift === "destructive"
-    ? "var(--destructive)"
-    : "var(--accent)";
+  const accentVar =
+    cfg.hueShift === "success"
+      ? "var(--success)"
+      : cfg.hueShift === "destructive"
+        ? "var(--destructive)"
+        : "var(--accent)";
 
   return (
     <div className={`relative flex items-center justify-center ${className}`} style={{ width: s.ring, height: s.ring }}>

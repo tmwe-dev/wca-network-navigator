@@ -3,20 +3,19 @@ import type { Database } from "@/integrations/supabase/types";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { format } from "date-fns";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  MoreVertical, StickyNote, CalendarClock, Mail, MessageCircle,
-  CheckCircle2, CalendarIcon,
-} from "lucide-react";
+import { MoreVertical, StickyNote, CalendarClock, Mail, MessageCircle, CheckCircle2, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -35,7 +34,13 @@ interface Props {
   waAvailable?: boolean;
 }
 
-export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSendWhatsApp, waAvailable: _waAvailable }: Props) {
+export function PartnerContactActionMenu({
+  contact,
+  partner,
+  onSendEmail,
+  onSendWhatsApp,
+  waAvailable: _waAvailable,
+}: Props) {
   const navigate = useAppNavigate();
   const qc = useQueryClient();
   const [noteOpen, setNoteOpen] = useState(false);
@@ -49,9 +54,12 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
   const createActivity = async (
     activityType: Database["public"]["Enums"]["activity_type"],
     status: "completed" | "pending",
-    extra: { due_date?: string; description?: string; completed_at?: string } = {}
+    extra: { due_date?: string; description?: string; completed_at?: string } = {},
   ) => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (!user) return;
     await insertActivity({
       user_id: user.id,
@@ -92,7 +100,10 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
       onSendWhatsApp(contact);
     } else {
       const phone = (contact.mobile || contact.direct_phone || "").replace(/[^0-9+]/g, "");
-      if (!phone) { toast.info("Numero non disponibile"); return; }
+      if (!phone) {
+        toast.info("Numero non disponibile");
+        return;
+      }
       // Fallback: open wa.me if no callback provided (bridge should be used via parent)
       window.open(`https://wa.me/${phone.replace("+", "")}`, "_blank");
     }
@@ -130,7 +141,12 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md opacity-60 hover:opacity-100 hover:bg-accent shrink-0" aria-label="Altre azioni">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 rounded-md opacity-60 hover:opacity-100 hover:bg-accent shrink-0"
+            aria-label="Altre azioni"
+          >
             <MoreVertical className="w-3.5 h-3.5" />
           </Button>
         </DropdownMenuTrigger>
@@ -178,13 +194,17 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
           </DialogHeader>
           <Textarea
             value={noteText}
-            onChange={e => setNoteText(e.target.value)}
+            onChange={(e) => setNoteText(e.target.value)}
             placeholder="Scrivi una nota..."
             className="min-h-[100px] text-sm"
           />
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setNoteOpen(false)}>Annulla</Button>
-            <Button size="sm" onClick={handleSaveNote} disabled={!noteText.trim()}>Salva</Button>
+            <Button variant="outline" size="sm" onClick={() => setNoteOpen(false)}>
+              Annulla
+            </Button>
+            <Button size="sm" onClick={handleSaveNote} disabled={!noteText.trim()}>
+              Salva
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -198,7 +218,10 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
           <div className="space-y-3">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left text-sm", !scheduleDate && "text-muted-foreground")}>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left text-sm", !scheduleDate && "text-muted-foreground")}
+                >
                   <CalendarIcon className="w-4 h-4 mr-2" />
                   {scheduleDate ? format(scheduleDate, "dd/MM/yyyy") : "Seleziona data"}
                 </Button>
@@ -215,14 +238,18 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
             </Popover>
             <Textarea
               value={scheduleNote}
-              onChange={e => setScheduleNote(e.target.value)}
+              onChange={(e) => setScheduleNote(e.target.value)}
               placeholder="Nota opzionale..."
               className="min-h-[60px] text-sm"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setScheduleOpen(false)}>Annulla</Button>
-            <Button size="sm" onClick={handleSchedule} disabled={!scheduleDate}>Programma</Button>
+            <Button variant="outline" size="sm" onClick={() => setScheduleOpen(false)}>
+              Annulla
+            </Button>
+            <Button size="sm" onClick={handleSchedule} disabled={!scheduleDate}>
+              Programma
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

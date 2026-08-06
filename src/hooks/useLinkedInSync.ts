@@ -7,7 +7,11 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useLinkedInMessagingBridge, type LinkedInThreadDTO, type LinkedInMessageDTO } from "./useLinkedInMessagingBridge";
+import {
+  useLinkedInMessagingBridge,
+  type LinkedInThreadDTO,
+  type LinkedInMessageDTO,
+} from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { createLogger } from "@/lib/log";
 
@@ -21,14 +25,36 @@ import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 import { toJsonValue } from "@/lib/jsonGuards";
 
 const LI_UI_LABELS = new Set([
-  "messaggi", "messaggio", "da leggere", "non letti", "archiviata",
-  "archiviate", "spam", "inmail", "inmails", "sponsorizzato",
-  "sponsored", "tutti", "filtri", "messages", "unread", "archived",
+  "messaggi",
+  "messaggio",
+  "da leggere",
+  "non letti",
+  "archiviata",
+  "archiviate",
+  "spam",
+  "inmail",
+  "inmails",
+  "sponsorizzato",
+  "sponsored",
+  "tutti",
+  "filtri",
+  "messages",
+  "unread",
+  "archived",
 ]);
 const LI_GHOST_BODIES = new Set([
-  "foto", "video", "audio", "gif", "documento", "allegato",
-  "ha reagito", "ha risposto", "ha ritirato un messaggio",
-  "messaggio rimosso", "image", "attachment",
+  "foto",
+  "video",
+  "audio",
+  "gif",
+  "documento",
+  "allegato",
+  "ha reagito",
+  "ha risposto",
+  "ha ritirato un messaggio",
+  "messaggio rimosso",
+  "image",
+  "attachment",
 ]);
 
 function isUiLabel(s: string): boolean {
@@ -79,7 +105,8 @@ function buildLinkedInMessageScope(
   m: LinkedInMessageDTO,
   direction: "inbound" | "outbound",
 ): string {
-  const threadKey = thread.threadId || thread.threadUrl || thread.profileUrl || thread.linkedinId || thread.profileId || thread.name;
+  const threadKey =
+    thread.threadId || thread.threadUrl || thread.profileUrl || thread.linkedinId || thread.profileId || thread.name;
   const senderKey = (m.sender || "").trim().toLowerCase();
   const textKey = (m.text || "").trim().toLowerCase().slice(0, 120);
   // Timestamp ISO se affidabile, altrimenti omesso (resta stabile su ri-letture nello stesso giorno).
@@ -102,278 +129,319 @@ export function useLinkedInSync() {
       const r = e as Record<string, unknown>;
       if (typeof r.error === "string") return r.error;
       if (typeof r.message === "string") return r.message;
-      try { return JSON.stringify(r).slice(0, 200); } catch { return "errore"; }
+      try {
+        return JSON.stringify(r).slice(0, 200);
+      } catch {
+        return "errore";
+      }
     }
     return String(e);
   };
 
-  const readNow = useCallback(async (silent = false) => {
-    if (!isAvailable) {
-      if (!silent) toast.error("Estensione LinkedIn non disponibile");
-      return;
-    }
-    // Single-op guard
-    let guard!: import("@/lib/syncGuard").GuardToken;
-    try {
-      guard = tryAcquire("linkedin", "Lettura inbox");
-    } catch (e) {
-      if (e instanceof SyncGuardBusyError) {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "linkedin" } }));
-        }
-        if (!silent) toast.warning("LinkedIn: un'operazione è già in corso, attendi.");
+  const readNow = useCallback(
+    async (silent = false) => {
+      if (!isAvailable) {
+        if (!silent) toast.error("Estensione LinkedIn non disponibile");
         return;
       }
-      throw e;
-    }
-    setIsReading(true);
-    try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-      if (!user) {
-        if (!silent) toast.error("Non autenticato");
-        return;
-      }
-
-      // Resolve operator_id
-      const opRow = await findOperatorByUserId(user.id);
-      const operatorId = opRow?.id ?? null;
-      if (!operatorId) {
-        log.warn("No operator found for user, skipping sync");
-        if (!silent) toast.error("Nessun operatore associato");
-        return;
-      }
-
-      await throttle("linkedin", "ping", "Ping estensione");
-      const result = await readInbox();
-      log.debug("readInbox result", { preview: JSON.stringify(result).slice(0, 500) });
-      // Diagnostica visibile: l'utente segnalava "tutte aggiornate ma 0 scaricati".
-      if (!silent) {
-        const n = Array.isArray(result.threads) ? result.threads.length : 0;
-        toast.info(`LinkedIn bridge: ${n} thread visibili nella sidebar`);
-      }
-
-      if (!result.success) {
-        if (!silent) toast.error(`Lettura LinkedIn fallita: ${result.error || "errore sconosciuto"}`);
-        return;
-      }
-
-      if (!result.threads?.length) {
-        if (!silent) toast.info("Nessun thread LinkedIn trovato nell'inbox");
-        return;
-      }
-
-      // P0.1 — Dedup composita lato sync (oltre a quella già fatta dall'estensione).
-      const seenKeys = new Set<string>();
-      const threads = (result.threads as LinkedInThreadDTO[]).filter((t) => {
-        const k = buildDedupKey(t);
-        if (!k || seenKeys.has(k)) return false;
-        seenKeys.add(k);
-        return true;
-      });
-
-      let newMsgs = 0;
-      // P2.1 — Counters & warnings per pannello qualità sync.
-      const stats = {
-        rawCandidates: Array.isArray(result.threads) ? result.threads.length : 0,
-        threadsAccepted: 0,
-        threadsDropped: { ui_label: 0, ghost_body: 0, dup_key: 0, missing_name: 0 },
-        messagesAccepted: 0,
-        messagesDropped: { ax_tree_direction_unknown: 0, ghost_body: 0, empty_text: 0 },
-        methods: { optimus: 0, structural: 0, ax_tree: 0, unknown: 0 } as Record<string, number>,
-        confidenceSum: 0,
-        confidenceCount: 0,
-        warnings: [] as string[],
-      };
-      const addWarn = (w: string) => { if (!stats.warnings.includes(w)) stats.warnings.push(w); };
-      const tallyMethod = (m?: string | null) => {
-        const k = (m || "unknown").toLowerCase();
-        const bucket = k.startsWith("optimus") ? "optimus" : k.includes("ax") ? "ax_tree" : k.includes("structural") ? "structural" : "unknown";
-        stats.methods[bucket] = (stats.methods[bucket] || 0) + 1;
-      };
-      for (const thread of threads) {
-        if (!thread.name) { stats.threadsDropped.missing_name++; continue; }
-        if (isUiLabel(thread.name)) { stats.threadsDropped.ui_label++; continue; }
-        if (!thread.lastMessage || isGhostBody(thread.lastMessage)) { stats.threadsDropped.ghost_body++; continue; }
-        stats.threadsAccepted++;
-        tallyMethod(thread.method);
-        if (typeof thread.confidence === "number") { stats.confidenceSum += thread.confidence; stats.confidenceCount++; }
-        if (!thread.profileUrl && !thread.linkedinId && !thread.profileId) addWarn("profile_url_missing");
-        if (thread.method === "ax_tree") addWarn("ax_tree_missing_last_message");
-        if (thread.method === "structural" && thread.unread === undefined) addWarn("structural_unread_low_confidence");
-
-        await throttle("linkedin", "read", `Preview: ${thread.name}`);
-        // 1) Salva sempre il preview della sidebar.
-        // P0.3 — Scope su ID reale (threadId/threadUrl), non più solo nome.
-        const threadScope = thread.threadId || thread.threadUrl || thread.profileUrl || `name:${thread.name}`;
-        const extIdPreview = buildDeterministicId("li", thread.name, thread.lastMessage, threadScope);
-        const tsIso = new Date().toISOString();
-        const contactAddr = buildContactAddress(thread);
-        const profileSlug = extractProfileSlug(thread);
-        const rawPayload = {
-          profileUrl: thread.profileUrl,
-          profileId: thread.profileId,
-          linkedinId: thread.linkedinId,
-          threadUrl: thread.threadUrl,
-          threadId: thread.threadId,
-          method: thread.method ?? null,
-          confidence: thread.confidence ?? null,
-        };
-        try {
-          const res = await upsertChannelMessageDedup({
-            user_id: user.id,
-            operator_id: operatorId,
-            channel: "linkedin",
-            direction: "inbound",
-            from_address: contactAddr,
-            from_name: thread.name,
-            body_text: thread.lastMessage,
-            message_id_external: extIdPreview,
-            thread_id: thread.threadId || thread.threadUrl || null,
-            email_date: tsIso,
-            raw_payload: toJsonValue(rawPayload),
-            created_at: tsIso,
-          });
-          if (res.inserted) {
-            newMsgs++;
-            // P0.4 — Rubrica LinkedIn (best-effort).
-            if (profileSlug) {
-              try {
-                await upsertLinkedInAddress({
-                  p_user_id: user.id,
-                  p_operator_id: operatorId,
-                  p_profile_slug: profileSlug,
-                  p_profile_url: thread.profileUrl ?? null,
-                  p_display_name: thread.name,
-                  p_headline: null,
-                  p_direction: "inbound",
-                  p_message_at: tsIso,
-                });
-              } catch (e) {
-                log.warn("upsert_linkedin_address failed", { error: errMsg(e) });
-              }
-            }
+      // Single-op guard
+      let guard!: import("@/lib/syncGuard").GuardToken;
+      try {
+        guard = tryAcquire("linkedin", "Lettura inbox");
+      } catch (e) {
+        if (e instanceof SyncGuardBusyError) {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "linkedin" } }));
           }
-        } catch (e) {
-          log.warn("preview upsert failed", { error: errMsg(e) });
+          if (!silent) toast.warning("LinkedIn: un'operazione è già in corso, attendi.");
+          return;
+        }
+        throw e;
+      }
+      setIsReading(true);
+      try {
+        const {
+          data: { session: __s },
+        } = await supabase.auth.getSession();
+        const user = __s?.user ?? null;
+        if (!user) {
+          if (!silent) toast.error("Non autenticato");
+          return;
         }
 
-        // 2) Se thread non letto E abbiamo URL, apri thread per recuperare conversazione completa
-        if (thread.unread && thread.threadUrl) {
+        // Resolve operator_id
+        const opRow = await findOperatorByUserId(user.id);
+        const operatorId = opRow?.id ?? null;
+        if (!operatorId) {
+          log.warn("No operator found for user, skipping sync");
+          if (!silent) toast.error("Nessun operatore associato");
+          return;
+        }
+
+        await throttle("linkedin", "ping", "Ping estensione");
+        const result = await readInbox();
+        log.debug("readInbox result", { preview: JSON.stringify(result).slice(0, 500) });
+        // Diagnostica visibile: l'utente segnalava "tutte aggiornate ma 0 scaricati".
+        if (!silent) {
+          const n = Array.isArray(result.threads) ? result.threads.length : 0;
+          toast.info(`LinkedIn bridge: ${n} thread visibili nella sidebar`);
+        }
+
+        if (!result.success) {
+          if (!silent) toast.error(`Lettura LinkedIn fallita: ${result.error || "errore sconosciuto"}`);
+          return;
+        }
+
+        if (!result.threads?.length) {
+          if (!silent) toast.info("Nessun thread LinkedIn trovato nell'inbox");
+          return;
+        }
+
+        // P0.1 — Dedup composita lato sync (oltre a quella già fatta dall'estensione).
+        const seenKeys = new Set<string>();
+        const threads = (result.threads as LinkedInThreadDTO[]).filter((t) => {
+          const k = buildDedupKey(t);
+          if (!k || seenKeys.has(k)) return false;
+          seenKeys.add(k);
+          return true;
+        });
+
+        let newMsgs = 0;
+        // P2.1 — Counters & warnings per pannello qualità sync.
+        const stats = {
+          rawCandidates: Array.isArray(result.threads) ? result.threads.length : 0,
+          threadsAccepted: 0,
+          threadsDropped: { ui_label: 0, ghost_body: 0, dup_key: 0, missing_name: 0 },
+          messagesAccepted: 0,
+          messagesDropped: { ax_tree_direction_unknown: 0, ghost_body: 0, empty_text: 0 },
+          methods: { optimus: 0, structural: 0, ax_tree: 0, unknown: 0 } as Record<string, number>,
+          confidenceSum: 0,
+          confidenceCount: 0,
+          warnings: [] as string[],
+        };
+        const addWarn = (w: string) => {
+          if (!stats.warnings.includes(w)) stats.warnings.push(w);
+        };
+        const tallyMethod = (m?: string | null) => {
+          const k = (m || "unknown").toLowerCase();
+          const bucket = k.startsWith("optimus")
+            ? "optimus"
+            : k.includes("ax")
+              ? "ax_tree"
+              : k.includes("structural")
+                ? "structural"
+                : "unknown";
+          stats.methods[bucket] = (stats.methods[bucket] || 0) + 1;
+        };
+        for (const thread of threads) {
+          if (!thread.name) {
+            stats.threadsDropped.missing_name++;
+            continue;
+          }
+          if (isUiLabel(thread.name)) {
+            stats.threadsDropped.ui_label++;
+            continue;
+          }
+          if (!thread.lastMessage || isGhostBody(thread.lastMessage)) {
+            stats.threadsDropped.ghost_body++;
+            continue;
+          }
+          stats.threadsAccepted++;
+          tallyMethod(thread.method);
+          if (typeof thread.confidence === "number") {
+            stats.confidenceSum += thread.confidence;
+            stats.confidenceCount++;
+          }
+          if (!thread.profileUrl && !thread.linkedinId && !thread.profileId) addWarn("profile_url_missing");
+          if (thread.method === "ax_tree") addWarn("ax_tree_missing_last_message");
+          if (thread.method === "structural" && thread.unread === undefined)
+            addWarn("structural_unread_low_confidence");
+
+          await throttle("linkedin", "read", `Preview: ${thread.name}`);
+          // 1) Salva sempre il preview della sidebar.
+          // P0.3 — Scope su ID reale (threadId/threadUrl), non più solo nome.
+          const threadScope = thread.threadId || thread.threadUrl || thread.profileUrl || `name:${thread.name}`;
+          const extIdPreview = buildDeterministicId("li", thread.name, thread.lastMessage, threadScope);
+          const tsIso = new Date().toISOString();
+          const contactAddr = buildContactAddress(thread);
+          const profileSlug = extractProfileSlug(thread);
+          const rawPayload = {
+            profileUrl: thread.profileUrl,
+            profileId: thread.profileId,
+            linkedinId: thread.linkedinId,
+            threadUrl: thread.threadUrl,
+            threadId: thread.threadId,
+            method: thread.method ?? null,
+            confidence: thread.confidence ?? null,
+          };
           try {
-            await throttle("linkedin", "open", `Apri thread: ${thread.name}`);
-            const tr = await readThread(thread.threadUrl);
-            if (tr.success && Array.isArray(tr.messages)) {
-              await throttle("linkedin", "read", `Leggo messaggi: ${thread.name}`);
-              const msgs = tr.messages as LinkedInMessageDTO[];
-              for (const m of msgs) {
-                const text = String(m.text || "").trim();
-                if (!text || isGhostBody(text)) continue;
-                // P0.2 — Direction honest. "unknown" da AX/structural: salva come inbound
-                // SOLO se il preview era unread (segnale forte che è arrivato qualcosa).
-                let direction: "inbound" | "outbound";
-                if (m.direction === "outbound") direction = "outbound";
-                else if (m.direction === "inbound") direction = "inbound";
-                else if (thread.unread === true) direction = "inbound";
-                else {
-                  log.debug("skip unknown-direction message", { method: m.method, sender: m.sender });
-                  stats.messagesDropped.ax_tree_direction_unknown++;
-                  addWarn("ax_tree_direction_unknown");
-                  continue;
-                }
-                // Scope al thread + posizione del messaggio nella conversazione,
-                // così due bolle identiche nello stesso thread restano distinte.
-                const msgScope = buildLinkedInMessageScope(thread, m, direction);
-                const extId = buildDeterministicId(
-                  direction === "outbound" ? "li_out" : "li",
-                  thread.name,
-                  text,
-                  msgScope,
-                );
-                const msgIso = m.timestamp && /\d{4}-\d{2}-\d{2}T/.test(m.timestamp) ? m.timestamp : new Date().toISOString();
+            const res = await upsertChannelMessageDedup({
+              user_id: user.id,
+              operator_id: operatorId,
+              channel: "linkedin",
+              direction: "inbound",
+              from_address: contactAddr,
+              from_name: thread.name,
+              body_text: thread.lastMessage,
+              message_id_external: extIdPreview,
+              thread_id: thread.threadId || thread.threadUrl || null,
+              email_date: tsIso,
+              raw_payload: toJsonValue(rawPayload),
+              created_at: tsIso,
+            });
+            if (res.inserted) {
+              newMsgs++;
+              // P0.4 — Rubrica LinkedIn (best-effort).
+              if (profileSlug) {
                 try {
-                  const r = await upsertChannelMessageDedup({
-                    user_id: user.id,
-                    operator_id: operatorId,
-                    channel: "linkedin",
-                    direction,
-                    from_address: direction === "inbound" ? contactAddr : "me",
-                    to_address: direction === "outbound" ? contactAddr : "me",
-                    from_name: direction === "inbound" ? thread.name : null,
-                    to_name: direction === "outbound" ? thread.name : null,
-                    body_text: text,
-                    message_id_external: extId,
-                    thread_id: thread.threadId || thread.threadUrl,
-                    email_date: msgIso,
-                    raw_payload: toJsonValue({ ...rawPayload, message_method: m.method ?? null, message_confidence: m.confidence ?? null }),
-                    created_at: new Date().toISOString(),
+                  await upsertLinkedInAddress({
+                    p_user_id: user.id,
+                    p_operator_id: operatorId,
+                    p_profile_slug: profileSlug,
+                    p_profile_url: thread.profileUrl ?? null,
+                    p_display_name: thread.name,
+                    p_headline: null,
+                    p_direction: "inbound",
+                    p_message_at: tsIso,
                   });
-                  if (r.inserted) {
-                    newMsgs++;
-                    stats.messagesAccepted++;
-                    tallyMethod(m.method);
-                    if (typeof m.confidence === "number") { stats.confidenceSum += m.confidence; stats.confidenceCount++; }
-                    if (profileSlug) {
-                      try {
-                        await upsertLinkedInAddress({
-                          p_user_id: user.id,
-                          p_operator_id: operatorId,
-                          p_profile_slug: profileSlug,
-                          p_profile_url: thread.profileUrl ?? null,
-                          p_display_name: thread.name,
-                          p_headline: null,
-                          p_direction: direction,
-                          p_message_at: msgIso,
-                        });
-                      } catch (e) {
-                        log.warn("upsert_linkedin_address (msg) failed", { error: errMsg(e) });
-                      }
-                    }
-                  }
                 } catch (e) {
-                  log.warn("thread msg upsert failed", { error: errMsg(e) });
+                  log.warn("upsert_linkedin_address failed", { error: errMsg(e) });
                 }
               }
             }
           } catch (e) {
-            log.warn("readThread failed", { thread: thread.name, error: errMsg(e) });
+            log.warn("preview upsert failed", { error: errMsg(e) });
           }
-          await throttle("linkedin", "betweenThreads", "Pausa tra thread");
-        }
-      }
 
-      if (newMsgs > 0) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
-        if (!silent) toast.success(`${newMsgs} nuovi messaggi LinkedIn salvati`);
-      } else if (!silent) {
-        toast.info(`Nessun nuovo messaggio (${threads.length} thread analizzati, già in DB o filtrati)`);
+          // 2) Se thread non letto E abbiamo URL, apri thread per recuperare conversazione completa
+          if (thread.unread && thread.threadUrl) {
+            try {
+              await throttle("linkedin", "open", `Apri thread: ${thread.name}`);
+              const tr = await readThread(thread.threadUrl);
+              if (tr.success && Array.isArray(tr.messages)) {
+                await throttle("linkedin", "read", `Leggo messaggi: ${thread.name}`);
+                const msgs = tr.messages as LinkedInMessageDTO[];
+                for (const m of msgs) {
+                  const text = String(m.text || "").trim();
+                  if (!text || isGhostBody(text)) continue;
+                  // P0.2 — Direction honest. "unknown" da AX/structural: salva come inbound
+                  // SOLO se il preview era unread (segnale forte che è arrivato qualcosa).
+                  let direction: "inbound" | "outbound";
+                  if (m.direction === "outbound") direction = "outbound";
+                  else if (m.direction === "inbound") direction = "inbound";
+                  else if (thread.unread === true) direction = "inbound";
+                  else {
+                    log.debug("skip unknown-direction message", { method: m.method, sender: m.sender });
+                    stats.messagesDropped.ax_tree_direction_unknown++;
+                    addWarn("ax_tree_direction_unknown");
+                    continue;
+                  }
+                  // Scope al thread + posizione del messaggio nella conversazione,
+                  // così due bolle identiche nello stesso thread restano distinte.
+                  const msgScope = buildLinkedInMessageScope(thread, m, direction);
+                  const extId = buildDeterministicId(
+                    direction === "outbound" ? "li_out" : "li",
+                    thread.name,
+                    text,
+                    msgScope,
+                  );
+                  const msgIso =
+                    m.timestamp && /\d{4}-\d{2}-\d{2}T/.test(m.timestamp) ? m.timestamp : new Date().toISOString();
+                  try {
+                    const r = await upsertChannelMessageDedup({
+                      user_id: user.id,
+                      operator_id: operatorId,
+                      channel: "linkedin",
+                      direction,
+                      from_address: direction === "inbound" ? contactAddr : "me",
+                      to_address: direction === "outbound" ? contactAddr : "me",
+                      from_name: direction === "inbound" ? thread.name : null,
+                      to_name: direction === "outbound" ? thread.name : null,
+                      body_text: text,
+                      message_id_external: extId,
+                      thread_id: thread.threadId || thread.threadUrl,
+                      email_date: msgIso,
+                      raw_payload: toJsonValue({
+                        ...rawPayload,
+                        message_method: m.method ?? null,
+                        message_confidence: m.confidence ?? null,
+                      }),
+                      created_at: new Date().toISOString(),
+                    });
+                    if (r.inserted) {
+                      newMsgs++;
+                      stats.messagesAccepted++;
+                      tallyMethod(m.method);
+                      if (typeof m.confidence === "number") {
+                        stats.confidenceSum += m.confidence;
+                        stats.confidenceCount++;
+                      }
+                      if (profileSlug) {
+                        try {
+                          await upsertLinkedInAddress({
+                            p_user_id: user.id,
+                            p_operator_id: operatorId,
+                            p_profile_slug: profileSlug,
+                            p_profile_url: thread.profileUrl ?? null,
+                            p_display_name: thread.name,
+                            p_headline: null,
+                            p_direction: direction,
+                            p_message_at: msgIso,
+                          });
+                        } catch (e) {
+                          log.warn("upsert_linkedin_address (msg) failed", { error: errMsg(e) });
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    log.warn("thread msg upsert failed", { error: errMsg(e) });
+                  }
+                }
+              }
+            } catch (e) {
+              log.warn("readThread failed", { thread: thread.name, error: errMsg(e) });
+            }
+            await throttle("linkedin", "betweenThreads", "Pausa tra thread");
+          }
+        }
+
+        if (newMsgs > 0) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
+          if (!silent) toast.success(`${newMsgs} nuovi messaggi LinkedIn salvati`);
+        } else if (!silent) {
+          toast.info(`Nessun nuovo messaggio (${threads.length} thread analizzati, già in DB o filtrati)`);
+        }
+        const avgConfidence = stats.confidenceCount > 0 ? stats.confidenceSum / stats.confidenceCount : 0;
+        const summary = {
+          newMessages: newMsgs,
+          rawCandidates: stats.rawCandidates,
+          threadsAccepted: stats.threadsAccepted,
+          threadsDropped: stats.threadsDropped,
+          messagesAccepted: stats.messagesAccepted,
+          messagesDropped: stats.messagesDropped,
+          methods: stats.methods,
+          avgConfidence,
+          warnings: stats.warnings,
+          at: Date.now(),
+        };
+        log.info("li sync summary", summary);
+        window.dispatchEvent(
+          new CustomEvent("li-sync-completed", {
+            detail: summary,
+          }),
+        );
+        window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "linkedin" } }));
+        setLastSyncAt(Date.now());
+      } catch (err: unknown) {
+        log.warn("sync error", { message: errMsg(err) });
+        if (!silent) toast.error(`Errore sync: ${errMsg(err)}`);
+      } finally {
+        setIsReading(false);
+        guard.release();
       }
-      const avgConfidence = stats.confidenceCount > 0 ? stats.confidenceSum / stats.confidenceCount : 0;
-      const summary = {
-        newMessages: newMsgs,
-        rawCandidates: stats.rawCandidates,
-        threadsAccepted: stats.threadsAccepted,
-        threadsDropped: stats.threadsDropped,
-        messagesAccepted: stats.messagesAccepted,
-        messagesDropped: stats.messagesDropped,
-        methods: stats.methods,
-        avgConfidence,
-        warnings: stats.warnings,
-        at: Date.now(),
-      };
-      log.info("li sync summary", summary);
-      window.dispatchEvent(new CustomEvent("li-sync-completed", {
-        detail: summary,
-      }));
-      window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "linkedin" } }));
-      setLastSyncAt(Date.now());
-    } catch (err: unknown) {
-      log.warn("sync error", { message: errMsg(err) });
-      if (!silent) toast.error(`Errore sync: ${errMsg(err)}`);
-    } finally {
-      setIsReading(false);
-      guard.release();
-    }
-  }, [isAvailable, readInbox, readThread, queryClient]);
+    },
+    [isAvailable, readInbox, readThread, queryClient],
+  );
 
   return { isReading, isAvailable, readNow, lastSyncAt };
 }

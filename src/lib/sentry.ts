@@ -99,11 +99,7 @@ export function SentryErrorBoundary({
   if (_Sentry) {
     const SentryEB = _Sentry.ErrorBoundary;
     const fb = (fallback ?? React.createElement(DefaultErrorFallback, null)) as React.ReactElement;
-    return React.createElement(
-      SentryEB,
-      { fallback: fb },
-      children,
-    );
+    return React.createElement(SentryEB, { fallback: fb }, children);
   }
 
   // SDK not yet loaded — render children directly (errors bubble to window.onerror).

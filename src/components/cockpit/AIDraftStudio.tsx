@@ -1,7 +1,32 @@
 import { lazy, Suspense } from "react";
 import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus, Reply, MailOpen } from "lucide-react";
+import {
+  Sparkles,
+  Mail,
+  Linkedin,
+  MessageCircle,
+  Smartphone,
+  Copy,
+  Send,
+  RotateCcw,
+  Target,
+  ExternalLink,
+  Brain,
+  Database,
+  Zap,
+  Globe,
+  User,
+  Building2,
+  BookOpen,
+  Search,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  UserPlus,
+  Reply,
+  MailOpen,
+} from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import type { DraftState } from "@/types/cockpit";
@@ -40,12 +65,27 @@ const channelMeta: Record<string, { icon: React.ElementType; label: string; colo
   sms: { icon: Smartphone, label: "SMS", color: "text-chart-3" },
 };
 
-export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview, onStartGeneration, pendingBulkCount = 0 }: AIDraftStudioProps) {
+export function AIDraftStudio({
+  draft,
+  onDraftChange,
+  onRegenerate,
+  onGenerateAfterReview,
+  onStartGeneration,
+  pendingBulkCount = 0,
+}: AIDraftStudioProps) {
   const { goal, baseProposal } = useMission();
   const {
-    sending, liDmOpen, setLiDmOpen,
-    waBridge, liBridge, pcBridge,
-    handleCopy, handleSendWhatsApp, handleSendLinkedIn, handleSend, handleConnectLinkedIn,
+    sending,
+    liDmOpen,
+    setLiDmOpen,
+    waBridge,
+    liBridge,
+    pcBridge,
+    handleCopy,
+    handleSendWhatsApp,
+    handleSendLinkedIn,
+    handleSend,
+    handleConnectLinkedIn,
   } = useAIDraftActions(draft, onDraftChange);
 
   const meta = draft.channel ? channelMeta[draft.channel] : null;
@@ -56,7 +96,11 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
 
   const openOriginalMail = () => {
     if (!draft.replySource?.messageId) return;
-    window.open(`/v2/funnemail-inbox?msg=${encodeURIComponent(draft.replySource.messageId)}`, "_blank", "noopener,noreferrer");
+    window.open(
+      `/v2/funnemail-inbox?msg=${encodeURIComponent(draft.replySource.messageId)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   if (!draft.channel) {
@@ -117,9 +161,15 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
       {/* Tabs */}
       <Tabs defaultValue="preview" className="flex-1 flex flex-col min-h-0">
         <TabsList className="mx-4 mt-2 bg-muted/30 p-0.5 h-8">
-          <TabsTrigger value="preview" className="text-xs h-7">Preview</TabsTrigger>
-          <TabsTrigger value="sources" className="text-xs h-7">Sources</TabsTrigger>
-          <TabsTrigger value="variables" className="text-xs h-7">Variables</TabsTrigger>
+          <TabsTrigger value="preview" className="text-xs h-7">
+            Preview
+          </TabsTrigger>
+          <TabsTrigger value="sources" className="text-xs h-7">
+            Sources
+          </TabsTrigger>
+          <TabsTrigger value="variables" className="text-xs h-7">
+            Variables
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -140,8 +190,11 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Configura a sinistra <strong>obiettivo</strong>, <strong>tipo di email</strong> e <strong>tono</strong>,
-                poi premi il pulsante per avviare l'AI. {pendingBulkCount > 0 && (
-                  <>Verrà generata anche una bozza per gli altri <strong>{pendingBulkCount}</strong> contatti in coda.</>
+                poi premi il pulsante per avviare l'AI.{" "}
+                {pendingBulkCount > 0 && (
+                  <>
+                    Verrà generata anche una bozza per gli altri <strong>{pendingBulkCount}</strong> contatti in coda.
+                  </>
                 )}
               </p>
               <button
@@ -159,9 +212,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           {draft.scrapingPhase !== "reviewing" && (
             <DraftPreview draft={draft} isHtmlContent={isHtmlContent} onDraftChange={onDraftChange} />
           )}
-          {draft.body && !draft.isGenerating && (
-            <AgentBadgesPanel draft={draft} />
-          )}
+          {draft.body && !draft.isGenerating && <AgentBadgesPanel draft={draft} />}
         </TabsContent>
 
         <TabsContent value="sources" className="flex-1 overflow-y-auto p-4">
@@ -195,10 +246,18 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
               onCopy={handleCopy}
               onDraftChange={onDraftChange}
             />
-            <button onClick={handleCopy} className="p-2 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors" title="Copia">
+            <button
+              onClick={handleCopy}
+              className="p-2 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
+              title="Copia"
+            >
               <Copy className="w-3.5 h-3.5" />
             </button>
-            <button onClick={onRegenerate} className="p-2 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors" title="Rigenera">
+            <button
+              onClick={onRegenerate}
+              className="p-2 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
+              title="Rigenera"
+            >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </motion.div>
@@ -236,11 +295,17 @@ function ReviewingState({ draft, onGenerateAfterReview }: { draft: DraftState; o
             <Linkedin className="w-5 h-5 text-[hsl(210,80%,55%)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-foreground truncate">{draft.linkedinProfile?.name || draft.contactName}</div>
-            {draft.linkedinProfile?.headline && <div className="text-xs text-muted-foreground truncate">{draft.linkedinProfile.headline}</div>}
+            <div className="text-sm font-semibold text-foreground truncate">
+              {draft.linkedinProfile?.name || draft.contactName}
+            </div>
+            {draft.linkedinProfile?.headline && (
+              <div className="text-xs text-muted-foreground truncate">{draft.linkedinProfile.headline}</div>
+            )}
           </div>
         </div>
-        {draft.linkedinProfile?.location && <div className="text-xs text-muted-foreground">📍 {draft.linkedinProfile.location}</div>}
+        {draft.linkedinProfile?.location && (
+          <div className="text-xs text-muted-foreground">📍 {draft.linkedinProfile.location}</div>
+        )}
         {draft.linkedinProfile?.about && (
           <div className="text-xs text-muted-foreground bg-background/50 rounded-lg p-2.5 max-h-[120px] overflow-y-auto leading-relaxed">
             {draft.linkedinProfile.about}
@@ -248,23 +313,42 @@ function ReviewingState({ draft, onGenerateAfterReview }: { draft: DraftState; o
         )}
         <div className="flex items-center gap-2 pt-1">
           {draft.linkedinProfile?.connectionStatus === "connected" ? (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success"><CheckCircle2 className="w-3 h-3" /> Già connesso</span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">
+              <CheckCircle2 className="w-3 h-3" /> Già connesso
+            </span>
           ) : draft.linkedinProfile?.connectionStatus === "pending" ? (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/10 text-warning"><AlertTriangle className="w-3 h-3" /> Richiesta in attesa</span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/10 text-warning">
+              <AlertTriangle className="w-3 h-3" /> Richiesta in attesa
+            </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground"><UserPlus className="w-3 h-3" /> Non connesso</span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              <UserPlus className="w-3 h-3" /> Non connesso
+            </span>
           )}
         </div>
       </div>
-      <button onClick={onGenerateAfterReview} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
+      <button
+        onClick={onGenerateAfterReview}
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+      >
         <Sparkles className="w-4 h-4" /> Genera Messaggio AI
       </button>
-      <p className="text-[10px] text-muted-foreground text-center">Il messaggio sarà personalizzato in base ai dati estratti dal profilo</p>
+      <p className="text-[10px] text-muted-foreground text-center">
+        Il messaggio sarà personalizzato in base ai dati estratti dal profilo
+      </p>
     </motion.div>
   );
 }
 
-function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftState; isHtmlContent: boolean; onDraftChange: (d: DraftState) => void }) {
+function DraftPreview({
+  draft,
+  isHtmlContent,
+  onDraftChange,
+}: {
+  draft: DraftState;
+  isHtmlContent: boolean;
+  onDraftChange: (d: DraftState) => void;
+}) {
   const isReady = !draft.isGenerating && !!draft.body;
   return (
     <>
@@ -279,9 +363,13 @@ function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftSta
             />
           ) : (
             <div className="mt-1 text-sm font-medium text-foreground">
-              {draft.isGenerating && !draft.subject ? <span className="text-muted-foreground">Generazione in corso...</span>
-                : draft.subject ? <TypewriterText text={draft.subject} speed={25} />
-                : <span className="text-muted-foreground">In attesa...</span>}
+              {draft.isGenerating && !draft.subject ? (
+                <span className="text-muted-foreground">Generazione in corso...</span>
+              ) : draft.subject ? (
+                <TypewriterText text={draft.subject} speed={25} />
+              ) : (
+                <span className="text-muted-foreground">In attesa...</span>
+              )}
             </div>
           )}
         </div>
@@ -292,8 +380,15 @@ function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftSta
           {draft.isGenerating && !draft.body ? (
             <div className="space-y-3">
               <ScrapingPhaseIndicator phase={draft.scrapingPhase} linkedinProfile={draft.linkedinProfile} />
-              {[1, 2, 3].map(i => (
-                <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: [0.3, 0.5, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.3 }} className="h-3 rounded bg-muted/50" style={{ width: `${70 + i * 10}%` }} />
+              {[1, 2, 3].map((i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0.3, 0.5, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.3 }}
+                  className="h-3 rounded bg-muted/50"
+                  style={{ width: `${70 + i * 10}%` }}
+                />
               ))}
             </div>
           ) : isReady ? (
@@ -303,7 +398,9 @@ function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftSta
               rows={isHtmlContent ? 16 : 10}
               className="w-full text-sm text-foreground bg-card border border-border/60 rounded p-2 font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary/50 resize-y"
             />
-          ) : <span className="text-muted-foreground">In attesa...</span>}
+          ) : (
+            <span className="text-muted-foreground">In attesa...</span>
+          )}
         </div>
       </div>
     </>
@@ -333,12 +430,8 @@ function AgentBadgesPanel({ draft }: { draft: DraftState }) {
           </span>
         )}
       </div>
-      {draft.journalist_review && (
-        <JournalistBadge review={draft.journalist_review} />
-      )}
-      {draft.context_summary && (
-        <OracleContextPanel summary={draft.context_summary} hasRecipient />
-      )}
+      {draft.journalist_review && <JournalistBadge review={draft.journalist_review} />}
+      {draft.context_summary && <OracleContextPanel summary={draft.context_summary} hasRecipient />}
     </div>
   );
 }
@@ -390,10 +483,22 @@ function SourcesTab({ draft }: { draft: DraftState }) {
             <div className="space-y-1">
               <span className="text-[10px] text-muted-foreground font-medium">Fonti consultate:</span>
               <div className="flex flex-wrap gap-1">
-                {d.recipient_intelligence.sources_checked.map(src => {
-                  const found = d.recipient_intelligence!.data_found[src === "partner_contacts" ? "contacts" : src === "partner_networks" ? "networks" : src === "partner_services" ? "services" : src];
+                {d.recipient_intelligence.sources_checked.map((src) => {
+                  const found =
+                    d.recipient_intelligence!.data_found[
+                      src === "partner_contacts"
+                        ? "contacts"
+                        : src === "partner_networks"
+                          ? "networks"
+                          : src === "partner_services"
+                            ? "services"
+                            : src
+                    ];
                   return (
-                    <span key={src} className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded font-mono ${found ? "bg-success/10 text-success" : "bg-muted/50 text-muted-foreground"}`}>
+                    <span
+                      key={src}
+                      className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded font-mono ${found ? "bg-success/10 text-success" : "bg-muted/50 text-muted-foreground"}`}
+                    >
                       {found ? <CheckCircle2 className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
                       {src.replace("partner_", "").replace("imported_", "")}
                     </span>
@@ -403,12 +508,18 @@ function SourcesTab({ draft }: { draft: DraftState }) {
             </div>
             {d.recipient_intelligence.enrichment_snippet && (
               <details className="group">
-                <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">Mostra contesto iniettato nel prompt ▸</summary>
-                <pre className="mt-1 text-[9px] text-muted-foreground whitespace-pre-wrap bg-background/50 rounded p-2 max-h-[150px] overflow-y-auto">{d.recipient_intelligence.enrichment_snippet}</pre>
+                <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">
+                  Mostra contesto iniettato nel prompt ▸
+                </summary>
+                <pre className="mt-1 text-[9px] text-muted-foreground whitespace-pre-wrap bg-background/50 rounded p-2 max-h-[150px] overflow-y-auto">
+                  {d.recipient_intelligence.enrichment_snippet}
+                </pre>
               </details>
             )}
           </>
-        ) : <span className="text-xs text-muted-foreground">Non disponibile</span>}
+        ) : (
+          <span className="text-xs text-muted-foreground">Non disponibile</span>
+        )}
       </DebugSection>
 
       <DebugSection icon={Database} color="text-chart-2" label="Fonti Arricchimento">
@@ -420,23 +531,48 @@ function SourcesTab({ draft }: { draft: DraftState }) {
             <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(210,80%,55%)] uppercase tracking-wider">
               <Linkedin className="w-3 h-3" /> Profilo LinkedIn (Scraping Live)
             </div>
-            {draft.linkedinProfile.name && <div className="text-xs font-medium text-foreground">{draft.linkedinProfile.name}</div>}
-            {draft.linkedinProfile.headline && <div className="text-[11px] text-muted-foreground">{draft.linkedinProfile.headline}</div>}
-            {draft.linkedinProfile.about && <div className="text-[10px] text-muted-foreground line-clamp-3">{draft.linkedinProfile.about}</div>}
-            {draft.linkedinProfile.location && <div className="text-[10px] text-muted-foreground">📍 {draft.linkedinProfile.location}</div>}
+            {draft.linkedinProfile.name && (
+              <div className="text-xs font-medium text-foreground">{draft.linkedinProfile.name}</div>
+            )}
+            {draft.linkedinProfile.headline && (
+              <div className="text-[11px] text-muted-foreground">{draft.linkedinProfile.headline}</div>
+            )}
+            {draft.linkedinProfile.about && (
+              <div className="text-[10px] text-muted-foreground line-clamp-3">{draft.linkedinProfile.about}</div>
+            )}
+            {draft.linkedinProfile.location && (
+              <div className="text-[10px] text-muted-foreground">📍 {draft.linkedinProfile.location}</div>
+            )}
           </div>
         )}
       </DebugSection>
 
       <DebugSection icon={BookOpen} color="text-warning" label="Knowledge Base">
-        <DebugRow label="KB caricata" value={<span className={d.kb_loaded ? "text-success" : "text-destructive"}>{d.kb_loaded ? "✓ Sì" : "✗ No"}</span>} />
-        <DebugRow label="Sales KB" value={<span className={d.sales_kb_loaded ? "text-success" : "text-destructive"}>{d.sales_kb_loaded ? "✓ Sì" : "✗ No"}</span>} />
+        <DebugRow
+          label="KB caricata"
+          value={
+            <span className={d.kb_loaded ? "text-success" : "text-destructive"}>{d.kb_loaded ? "✓ Sì" : "✗ No"}</span>
+          }
+        />
+        <DebugRow
+          label="Sales KB"
+          value={
+            <span className={d.sales_kb_loaded ? "text-success" : "text-destructive"}>
+              {d.sales_kb_loaded ? "✓ Sì" : "✗ No"}
+            </span>
+          }
+        />
         {d.sales_kb_loaded && <DebugRow label="Sezioni" value={d.sales_kb_sections} />}
       </DebugSection>
 
       <DebugSection icon={Target} color="text-primary" label="Obiettivo & Proposta">
-        <div><span className="text-muted-foreground">Goal:</span> <span className="text-foreground">{d.goal_used}</span></div>
-        <div><span className="text-muted-foreground">Proposta:</span> <span className="text-foreground">{d.proposal_used}</span></div>
+        <div>
+          <span className="text-muted-foreground">Goal:</span> <span className="text-foreground">{d.goal_used}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Proposta:</span>{" "}
+          <span className="text-foreground">{d.proposal_used}</span>
+        </div>
       </DebugSection>
 
       <DebugSection icon={Zap} color="text-warning" label="Consumo">
@@ -447,8 +583,10 @@ function SourcesTab({ draft }: { draft: DraftState }) {
 
       <DebugSection icon={Database} color="text-muted-foreground" label="Impostazioni caricate">
         <div className="flex flex-wrap gap-1">
-          {d.settings_keys_found.map(key => (
-            <span key={key} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-mono">{key.replace("ai_", "")}</span>
+          {d.settings_keys_found.map((key) => (
+            <span key={key} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-mono">
+              {key.replace("ai_", "")}
+            </span>
           ))}
         </div>
       </DebugSection>
@@ -461,7 +599,10 @@ function VariablesTab({ draft, goal, baseProposal }: { draft: DraftState; goal: 
     <div className="space-y-3">
       <DebugSection icon={Target} color="text-primary" label="Contesto AI (da sidebar)">
         <DebugRow label="Goal" value={<span className="truncate max-w-[180px]">{goal || "—"}</span>} />
-        <DebugRow label="Proposta" value={<span className="truncate max-w-[180px]">{baseProposal ? baseProposal.slice(0, 40) + "…" : "—"}</span>} />
+        <DebugRow
+          label="Proposta"
+          value={<span className="truncate max-w-[180px]">{baseProposal ? baseProposal.slice(0, 40) + "…" : "—"}</span>}
+        />
       </DebugSection>
       <div className="border-t border-border/30 pt-2 space-y-2 text-xs">
         <DebugRow label="recipient_name" value={draft.contactName} />
@@ -491,17 +632,35 @@ interface ActionButtonsProps {
   onDraftChange: (draft: DraftState) => void;
 }
 
-function ActionButtons({ draft, sending, waBridge, liBridge, onSendEmail, onSendWhatsApp, onSendLinkedIn, onConnectLinkedIn, onCopy }: ActionButtonsProps) {
+function ActionButtons({
+  draft,
+  sending,
+  waBridge,
+  liBridge,
+  onSendEmail,
+  onSendWhatsApp,
+  onSendLinkedIn,
+  onConnectLinkedIn,
+  onCopy,
+}: ActionButtonsProps) {
   if (draft.channel === "email" && draft.contactEmail) {
     return (
-      <button onClick={onSendEmail} disabled={sending} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+      <button
+        onClick={onSendEmail}
+        disabled={sending}
+        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+      >
         <Send className="w-3.5 h-3.5" /> {sending ? "Invio..." : "Invia Email"}
       </button>
     );
   }
   if (draft.channel === "whatsapp" && draft.contactPhone) {
     return (
-      <button onClick={onSendWhatsApp} disabled={sending} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(142,70%,40%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+      <button
+        onClick={onSendWhatsApp}
+        disabled={sending}
+        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[hsl(142,70%,40%)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+      >
         {waBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <ExternalLink className="w-3.5 h-3.5" />}
         {sending ? "Invio..." : waBridge.isAvailable ? "Invia WhatsApp" : "Apri WhatsApp"}
       </button>
@@ -510,15 +669,35 @@ function ActionButtons({ draft, sending, waBridge, liBridge, onSendEmail, onSend
   if (draft.channel === "linkedin") {
     return (
       <div className="flex-1 flex gap-1.5">
-        <button onClick={onSendLinkedIn} disabled={sending} className={cn("flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity disabled:opacity-50", draft.linkedinProfile?.connectionStatus === "connected" ? "bg-[hsl(210,80%,45%)] hover:opacity-90" : "bg-[hsl(210,80%,45%)]/60 hover:opacity-90")}>
+        <button
+          onClick={onSendLinkedIn}
+          disabled={sending}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity disabled:opacity-50",
+            draft.linkedinProfile?.connectionStatus === "connected"
+              ? "bg-[hsl(210,80%,45%)] hover:opacity-90"
+              : "bg-[hsl(210,80%,45%)]/60 hover:opacity-90",
+          )}
+        >
           {liBridge.isAvailable ? <Send className="w-3.5 h-3.5" /> : <Linkedin className="w-3.5 h-3.5" />}
           {sending ? "..." : "DM"}
         </button>
-        {draft.linkedinProfile?.connectionStatus !== "connected" && draft.linkedinProfile?.connectionStatus !== "pending" && (
-          <button onClick={onConnectLinkedIn} disabled={sending || !liBridge.isAvailable} className={cn("flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity disabled:opacity-50", liBridge.isAvailable ? "bg-[hsl(210,80%,35%)] hover:opacity-90" : "bg-[hsl(210,80%,35%)]/50 opacity-60 cursor-not-allowed")} title="Invia richiesta di collegamento">
-            <UserPlus className="w-3.5 h-3.5" /> {sending ? "..." : "Connetti"}
-          </button>
-        )}
+        {draft.linkedinProfile?.connectionStatus !== "connected" &&
+          draft.linkedinProfile?.connectionStatus !== "pending" && (
+            <button
+              onClick={onConnectLinkedIn}
+              disabled={sending || !liBridge.isAvailable}
+              className={cn(
+                "flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-opacity disabled:opacity-50",
+                liBridge.isAvailable
+                  ? "bg-[hsl(210,80%,35%)] hover:opacity-90"
+                  : "bg-[hsl(210,80%,35%)]/50 opacity-60 cursor-not-allowed",
+              )}
+              title="Invia richiesta di collegamento"
+            >
+              <UserPlus className="w-3.5 h-3.5" /> {sending ? "..." : "Connetti"}
+            </button>
+          )}
         {draft.linkedinProfile?.connectionStatus === "pending" && (
           <span className="flex items-center gap-1 px-3 py-2 rounded-lg bg-warning/10 text-warning text-xs font-medium">
             <AlertTriangle className="w-3.5 h-3.5" /> In attesa
@@ -528,7 +707,10 @@ function ActionButtons({ draft, sending, waBridge, liBridge, onSendEmail, onSend
     );
   }
   return (
-    <button onClick={onCopy} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity">
+    <button
+      onClick={onCopy}
+      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+    >
       <Copy className="w-3.5 h-3.5" /> Copia messaggio
     </button>
   );
@@ -536,7 +718,17 @@ function ActionButtons({ draft, sending, waBridge, liBridge, onSendEmail, onSend
 
 /* ── Tiny helpers ── */
 
-function DebugSection({ icon: Icon, color, label, children }: { icon: React.ElementType; color: string; label: string; children: React.ReactNode }) {
+function DebugSection({
+  icon: Icon,
+  color,
+  label,
+  children,
+}: {
+  icon: React.ElementType;
+  color: string;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
@@ -559,7 +751,9 @@ function DebugRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 function SourceBadge({ source }: { source?: string }) {
   return (
-    <span className={`font-mono text-[10px] ${source === "live_scraped" ? "text-success" : source === "cached" ? "text-chart-3" : "text-muted-foreground"}`}>
+    <span
+      className={`font-mono text-[10px] ${source === "live_scraped" ? "text-success" : source === "cached" ? "text-chart-3" : "text-muted-foreground"}`}
+    >
       {source === "live_scraped" ? "🔴 Live" : source === "cached" ? "📦 Cache" : "—"}
     </span>
   );

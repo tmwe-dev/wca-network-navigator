@@ -17,7 +17,8 @@ serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 401,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -34,13 +35,15 @@ serve(async (req) => {
         return forwardToFunction("ai-deep-search-helper", body, req.headers);
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
-          status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
+          status: 400,
+          headers: { ...dynCors, "Content-Type": "application/json" },
         });
     }
   } catch (e: Record<string, unknown>) {
     console.error("ai-utility error:", e);
     return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
-      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

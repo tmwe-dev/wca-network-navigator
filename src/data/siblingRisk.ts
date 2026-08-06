@@ -26,12 +26,14 @@ export async function checkSiblingRisk(
   windowDays = 30,
 ): Promise<SiblingRiskRow[]> {
   if (!partnerId) return [];
-  const { data, error } = await (supabase as unknown as {
-    rpc: (
-      fn: string,
-      args: Record<string, unknown>,
-    ) => Promise<{ data: SiblingRiskRow[] | null; error: Error | null }>;
-  }).rpc("check_sibling_risk", {
+  const { data, error } = await (
+    supabase as unknown as {
+      rpc: (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: SiblingRiskRow[] | null; error: Error | null }>;
+    }
+  ).rpc("check_sibling_risk", {
     _partner_id: partnerId,
     _contact_id: contactId ?? null,
     _window_days: windowDays,

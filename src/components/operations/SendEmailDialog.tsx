@@ -1,7 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -22,7 +20,13 @@ interface SendEmailDialogProps {
 }
 
 export function SendEmailDialog({
-  open, onOpenChange, recipientEmail, recipientName, companyName, partnerId, isDark: _isDark,
+  open,
+  onOpenChange,
+  recipientEmail,
+  recipientName,
+  companyName,
+  partnerId,
+  isDark: _isDark,
 }: SendEmailDialogProps) {
   const [subject, setSubject] = useState(`Contatto da ${companyName}`);
   const [body, setBody] = useState("");
@@ -67,13 +71,13 @@ export function SendEmailDialog({
           </div>
           <div>
             <Label className="text-xs">Oggetto</Label>
-            <Input value={subject} onChange={e => setSubject(e.target.value)} className="text-sm" />
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} className="text-sm" />
           </div>
           <div>
             <Label className="text-xs">Messaggio</Label>
             <Textarea
               value={body}
-              onChange={e => setBody(e.target.value)}
+              onChange={(e) => setBody(e.target.value)}
               placeholder="Scrivi il messaggio..."
               rows={6}
               className="text-sm resize-none"

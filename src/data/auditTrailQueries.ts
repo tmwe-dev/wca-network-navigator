@@ -40,14 +40,17 @@ export async function findAuditTrail(filters: AuditTrailFilters): Promise<AuditT
     .range(filters.offset, filters.offset + filters.limit - 1);
 
   if (filters.actorType && filters.actorType !== "all") query = query.eq("actor_type", filters.actorType);
-  if (filters.actionCategory && filters.actionCategory !== "all") query = query.eq("action_category", filters.actionCategory);
+  if (filters.actionCategory && filters.actionCategory !== "all")
+    query = query.eq("action_category", filters.actionCategory);
   if (filters.dateRange) {
     query = query.gte("created_at", filters.dateRange.from).lte("created_at", filters.dateRange.to);
   }
   if (filters.domain) query = query.eq("email_address", filters.domain);
   if (filters.searchText && filters.searchText.trim()) {
     const searchTerm = `%${filters.searchText.trim()}%`;
-    query = query.or(`target_label.ilike.${searchTerm},action_detail.ilike.${searchTerm},email_address.ilike.${searchTerm}`);
+    query = query.or(
+      `target_label.ilike.${searchTerm},action_detail.ilike.${searchTerm},email_address.ilike.${searchTerm}`,
+    );
   }
 
   const { data, error } = await query;
@@ -59,14 +62,17 @@ export async function countAuditTrail(filters: Omit<AuditTrailFilters, "offset" 
   let query = supabase.from("supervisor_audit_log").select("id", { count: "exact" });
 
   if (filters.actorType && filters.actorType !== "all") query = query.eq("actor_type", filters.actorType);
-  if (filters.actionCategory && filters.actionCategory !== "all") query = query.eq("action_category", filters.actionCategory);
+  if (filters.actionCategory && filters.actionCategory !== "all")
+    query = query.eq("action_category", filters.actionCategory);
   if (filters.dateRange) {
     query = query.gte("created_at", filters.dateRange.from).lte("created_at", filters.dateRange.to);
   }
   if (filters.domain) query = query.eq("email_address", filters.domain);
   if (filters.searchText && filters.searchText.trim()) {
     const searchTerm = `%${filters.searchText.trim()}%`;
-    query = query.or(`target_label.ilike.${searchTerm},action_detail.ilike.${searchTerm},email_address.ilike.${searchTerm}`);
+    query = query.or(
+      `target_label.ilike.${searchTerm},action_detail.ilike.${searchTerm},email_address.ilike.${searchTerm}`,
+    );
   }
 
   const { count, error } = await query;

@@ -7,20 +7,8 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Archive, GripVertical, HelpCircle, Star, Inbox, Mail } from "lucide-react";
-import {
-  DndContext,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -83,10 +71,7 @@ function applyUserOrder(folders: FunnemailGroupFolder[], order: StoredOrder): Fu
   });
 }
 
-function sortBySection(
-  folders: FunnemailGroupFolder[],
-  order: StoredOrder,
-): Record<Section, FunnemailGroupFolder[]> {
+function sortBySection(folders: FunnemailGroupFolder[], order: StoredOrder): Record<Section, FunnemailGroupFolder[]> {
   const buckets: Record<Section, FunnemailGroupFolder[]> = {
     operative: [],
     archive: [],
@@ -172,7 +157,15 @@ function SortableRow({ folder, active, count, onSelect, draggable }: SortableRow
   );
 }
 
-export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount: _totalCount, loading, onSelect, variant = "standalone" }: Props) {
+export function InboxGroupsSidebar({
+  folders,
+  counts,
+  selectedFolder,
+  totalCount: _totalCount,
+  loading,
+  onSelect,
+  variant = "standalone",
+}: Props) {
   const [order, setOrder] = useState<StoredOrder>(() => loadOrder());
   const isDrawer = variant === "drawer";
 
@@ -181,10 +174,7 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
   }, [order]);
 
   const arranged = useMemo(() => applyUserOrder(folders, order), [folders, order]);
-  const grouped = useMemo(
-    () => sortBySection(arranged, order),
-    [arranged, order],
-  );
+  const grouped = useMemo(() => sortBySection(arranged, order), [arranged, order]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -247,9 +237,7 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
     >
       {!isDrawer && (
         <div className="flex-shrink-0 border-b border-border px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Funny Mail
-          </p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Funny Mail</p>
         </div>
       )}
 
@@ -258,7 +246,11 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
           <div className="space-y-4 p-2">
             {(["operative", "sorting", "archive", "priority", "secondary", "unclassified"] as const).map((section) => {
               const items = grouped[section];
-              if (items.length === 0 && (section === "priority" || section === "secondary" || section === "unclassified")) return null;
+              if (
+                items.length === 0 &&
+                (section === "priority" || section === "secondary" || section === "unclassified")
+              )
+                return null;
               const MetaIcon = SECTION_META[section].icon;
               return (
                 <div key={section} className="space-y-0.5">

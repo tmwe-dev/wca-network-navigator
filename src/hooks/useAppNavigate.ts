@@ -13,12 +13,7 @@ export function useAppNavigate() {
   return useCallback(
     (to: string | number, options?: NavigateOptions) => {
       if (typeof to === "number") return navigate(to);
-      if (
-        isV2 &&
-        to.startsWith("/") &&
-        !to.startsWith("/v2") &&
-        !to.startsWith("/auth")
-      ) {
+      if (isV2 && to.startsWith("/") && !to.startsWith("/v2") && !to.startsWith("/auth")) {
         return navigate("/v2" + to, options);
       }
       return navigate(to, options);

@@ -55,9 +55,8 @@ export function useVoiceCoherenceCheck(persona: PersonaSummary | null, voiceProm
       items.push({
         field: "Tono",
         status: hits.length > 0 ? "ok" : "warn",
-        message: hits.length > 0
-          ? `Tono "${persona.tone}" rilevato`
-          : `Tono "${persona.tone}" non rilevato chiaramente`,
+        message:
+          hits.length > 0 ? `Tono "${persona.tone}" rilevato` : `Tono "${persona.tone}" non rilevato chiaramente`,
       });
     }
 
@@ -78,9 +77,7 @@ export function useVoiceCoherenceCheck(persona: PersonaSummary | null, voiceProm
       items.push({
         field: "Vocabolario DON'T",
         status: violations.length === 0 ? "ok" : "fail",
-        message: violations.length === 0
-          ? "Nessuna violazione"
-          : `Violazioni: ${violations.join(", ")}`,
+        message: violations.length === 0 ? "Nessuna violazione" : `Violazioni: ${violations.join(", ")}`,
       });
     }
 

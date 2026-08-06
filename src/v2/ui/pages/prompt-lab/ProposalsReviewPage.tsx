@@ -22,11 +22,7 @@ import {
   markPromptChangeProposalApplied,
   type PromptChangeProposal,
 } from "@/data/promptChangeProposals";
-import {
-  listKbEntryProposals,
-  reviewKbEntryProposal,
-  type KbEntryProposal,
-} from "@/data/kbProposals";
+import { listKbEntryProposals, reviewKbEntryProposal, type KbEntryProposal } from "@/data/kbProposals";
 import { insertKbEntryForApproval } from "@/data/kbEntries";
 import { useAuth } from "@/providers/AuthProvider";
 import { DiffViewer } from "./components/DiffViewer";
@@ -51,9 +47,8 @@ export default function ProposalsReviewPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Le proposte arrivano dal Co-pilot del Prompt Reader. Nessuna è applicata
-        automaticamente: il Rubric Engine arriverà nelle fasi successive (vedi
-        ADR 0004). Per ora ogni approvazione è una decisione umana esplicita.
+        Le proposte arrivano dal Co-pilot del Prompt Reader. Nessuna è applicata automaticamente: il Rubric Engine
+        arriverà nelle fasi successive (vedi ADR 0004). Per ora ogni approvazione è una decisione umana esplicita.
       </p>
 
       <Tabs defaultValue="prompts">
@@ -97,10 +92,12 @@ function PromptProposalsList() {
     }
   }, [filter]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function approve(p: PromptChangeProposal) {
-    if (!ALLOWED_BLOCKS.includes(p.block_name as typeof ALLOWED_BLOCKS[number])) {
+    if (!ALLOWED_BLOCKS.includes(p.block_name as (typeof ALLOWED_BLOCKS)[number])) {
       toast.error(`Blocco non supportato: ${p.block_name}`);
       return;
     }
@@ -154,9 +151,13 @@ function PromptProposalsList() {
       </div>
 
       {loading ? (
-        <div className="text-xs text-muted-foreground p-4"><Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Carico…</div>
+        <div className="text-xs text-muted-foreground p-4">
+          <Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Carico…
+        </div>
       ) : items.length === 0 ? (
-        <div className="text-xs text-muted-foreground p-4 italic">Nessuna proposta {filter !== "all" && `con stato "${filter}"`}.</div>
+        <div className="text-xs text-muted-foreground p-4 italic">
+          Nessuna proposta {filter !== "all" && `con stato "${filter}"`}.
+        </div>
       ) : (
         <ScrollArea className="h-[calc(100vh-260px)]">
           <div className="space-y-3 pr-3">
@@ -177,7 +178,10 @@ function PromptProposalsList() {
 }
 
 function PromptProposalCard({
-  p, busy, onApprove, onReject,
+  p,
+  busy,
+  onApprove,
+  onReject,
 }: {
   p: PromptChangeProposal;
   busy: boolean;
@@ -189,12 +193,17 @@ function PromptProposalCard({
     <div className="rounded-lg border bg-card p-3 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px]">
-          <Badge variant="secondary" className="font-mono text-[10px]">{p.block_name}</Badge>
+          <Badge variant="secondary" className="font-mono text-[10px]">
+            {p.block_name}
+          </Badge>
           <span className="text-muted-foreground">prompt</span>
           <code className="text-[10px]">{p.prompt_id.slice(0, 8)}</code>
           <span className="text-muted-foreground">· {p.source_tool}</span>
         </div>
-        <Badge variant={p.status === "pending" ? "outline" : p.status === "applied" ? "default" : "secondary"} className="text-[10px]">
+        <Badge
+          variant={p.status === "pending" ? "outline" : p.status === "applied" ? "default" : "secondary"}
+          className="text-[10px]"
+        >
           {p.status}
         </Badge>
       </div>
@@ -202,35 +211,46 @@ function PromptProposalCard({
       <div className="grid grid-cols-2 gap-2 text-[11px]">
         <div>
           <div className="text-muted-foreground mb-1">Attuale</div>
-          <pre className="bg-muted/50 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{p.current_content || "—"}</pre>
+          <pre className="bg-muted/50 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">
+            {p.current_content || "—"}
+          </pre>
         </div>
         <div>
           <div className="text-muted-foreground mb-1">Proposto</div>
-          <pre className="bg-primary/5 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-words border border-primary/20">{p.proposed_content}</pre>
+          <pre className="bg-primary/5 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-words border border-primary/20">
+            {p.proposed_content}
+          </pre>
         </div>
       </div>
 
       {/* Diff visivo: prioritario sul confronto a 2 colonne, rende immediato cosa cambia. */}
       <div>
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Differenze</div>
-        <DiffViewer
-          before={p.current_content ?? ""}
-          after={p.proposed_content ?? ""}
-        />
+        <DiffViewer before={p.current_content ?? ""} after={p.proposed_content ?? ""} />
       </div>
 
       {(p.rationale || p.risks || p.assumptions) && (
         <div className="grid grid-cols-3 gap-2 text-[10px]">
-          {p.rationale && <div><span className="font-semibold">Razionale:</span> {p.rationale}</div>}
-          {p.risks && <div><span className="font-semibold text-warning">Rischi:</span> {p.risks}</div>}
-          {p.assumptions && <div><span className="font-semibold">Assunzioni:</span> {p.assumptions}</div>}
+          {p.rationale && (
+            <div>
+              <span className="font-semibold">Razionale:</span> {p.rationale}
+            </div>
+          )}
+          {p.risks && (
+            <div>
+              <span className="font-semibold text-warning">Rischi:</span> {p.risks}
+            </div>
+          )}
+          {p.assumptions && (
+            <div>
+              <span className="font-semibold">Assunzioni:</span> {p.assumptions}
+            </div>
+          )}
         </div>
       )}
 
       {p.kb_entries_consulted.length > 0 && (
-        <div className="text-[10px] text-muted-foreground">
-          KB consultate: {p.kb_entries_consulted.length}
-        </div>
+        <div className="text-[10px] text-muted-foreground">KB consultate: {p.kb_entries_consulted.length}</div>
       )}
 
       {p.status === "pending" && (
@@ -242,7 +262,13 @@ function PromptProposalCard({
             placeholder="Nota (obbligatoria per rifiuto)…"
             className="text-[11px] min-h-[32px] resize-none"
           />
-          <Button size="sm" variant="outline" onClick={() => onReject(note || "rejected")} disabled={busy} className="h-8 gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onReject(note || "rejected")}
+            disabled={busy}
+            className="h-8 gap-1"
+          >
             <X className="h-3 w-3" /> Rifiuta
           </Button>
           <Button size="sm" onClick={onApprove} disabled={busy} className="h-8 gap-1">
@@ -254,7 +280,8 @@ function PromptProposalCard({
 
       {p.review_note && (
         <div className="text-[10px] text-muted-foreground italic border-t pt-1">
-          Nota review: {p.review_note}{p.reviewed_at ? ` · ${new Date(p.reviewed_at).toLocaleString()}` : ""}
+          Nota review: {p.review_note}
+          {p.reviewed_at ? ` · ${new Date(p.reviewed_at).toLocaleString()}` : ""}
         </div>
       )}
     </div>
@@ -282,10 +309,15 @@ function KbProposalsList() {
     }
   }, [filter]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function approve(p: KbEntryProposal) {
-    if (!user?.id) { toast.error("Utente non autenticato"); return; }
+    if (!user?.id) {
+      toast.error("Utente non autenticato");
+      return;
+    }
     if (!p.suggested_category || !p.suggested_chapter || !p.suggested_title || !p.suggested_content) {
       toast.error("Proposta incompleta: mancano category/chapter/title/content");
       return;
@@ -342,9 +374,13 @@ function KbProposalsList() {
       </div>
 
       {loading ? (
-        <div className="text-xs text-muted-foreground p-4"><Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Carico…</div>
+        <div className="text-xs text-muted-foreground p-4">
+          <Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Carico…
+        </div>
       ) : items.length === 0 ? (
-        <div className="text-xs text-muted-foreground p-4 italic">Nessuna proposta {filter !== "all" && `con stato "${filter}"`}.</div>
+        <div className="text-xs text-muted-foreground p-4 italic">
+          Nessuna proposta {filter !== "all" && `con stato "${filter}"`}.
+        </div>
       ) : (
         <ScrollArea className="h-[calc(100vh-260px)]">
           <div className="space-y-3 pr-3">
@@ -365,7 +401,10 @@ function KbProposalsList() {
 }
 
 function KbProposalCard({
-  p, busy, onApprove, onReject,
+  p,
+  busy,
+  onApprove,
+  onReject,
 }: {
   p: KbEntryProposal;
   busy: boolean;
@@ -377,11 +416,17 @@ function KbProposalCard({
     <div className="rounded-lg border bg-card p-3 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px]">
-          <Badge variant="secondary" className="text-[10px]">{p.source}</Badge>
-          <span className="font-mono text-[10px]">{p.suggested_category ?? "?"}/{p.suggested_chapter ?? "?"}</span>
+          <Badge variant="secondary" className="text-[10px]">
+            {p.source}
+          </Badge>
+          <span className="font-mono text-[10px]">
+            {p.suggested_category ?? "?"}/{p.suggested_chapter ?? "?"}
+          </span>
           <span className="text-muted-foreground">prio {p.suggested_priority ?? "—"}</span>
         </div>
-        <Badge variant={p.status === "pending" ? "outline" : "default"} className="text-[10px]">{p.status}</Badge>
+        <Badge variant={p.status === "pending" ? "outline" : "default"} className="text-[10px]">
+          {p.status}
+        </Badge>
       </div>
 
       <div className="text-sm font-semibold">{p.suggested_title ?? "(senza titolo)"}</div>
@@ -394,21 +439,28 @@ function KbProposalCard({
 
       {p.suggested_tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {p.suggested_tags.map((t) => <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>)}
+          {p.suggested_tags.map((t) => (
+            <Badge key={t} variant="outline" className="text-[10px]">
+              {t}
+            </Badge>
+          ))}
         </div>
       )}
 
-      {p.duplicates_of && (
-        <div className="text-[10px] text-warning">⚠ Duplicato sospetto di: {p.duplicates_of}</div>
-      )}
+      {p.duplicates_of && <div className="text-[10px] text-warning">⚠ Duplicato sospetto di: {p.duplicates_of}</div>}
       {p.conflicts_with.length > 0 && (
         <div className="text-[10px] text-destructive">⚠ Conflitti con: {p.conflicts_with.join(", ")}</div>
       )}
-      {p.ai_rationale && (
-        <div className="text-[10px] italic text-muted-foreground">{p.ai_rationale}</div>
-      )}
+      {p.ai_rationale && <div className="text-[10px] italic text-muted-foreground">{p.ai_rationale}</div>}
       {p.source_url && (
-        <a href={p.source_url} target="_blank" rel="noreferrer" className="text-[10px] underline text-primary block truncate">{p.source_url}</a>
+        <a
+          href={p.source_url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[10px] underline text-primary block truncate"
+        >
+          {p.source_url}
+        </a>
       )}
 
       {p.status === "pending" && (
@@ -420,7 +472,13 @@ function KbProposalCard({
             placeholder="Nota…"
             className="text-[11px] min-h-[32px] resize-none"
           />
-          <Button size="sm" variant="outline" onClick={() => onReject(note || "rejected")} disabled={busy} className="h-8 gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onReject(note || "rejected")}
+            disabled={busy}
+            className="h-8 gap-1"
+          >
             <X className="h-3 w-3" /> Rifiuta
           </Button>
           <Button size="sm" onClick={onApprove} disabled={busy} className="h-8 gap-1">
@@ -432,7 +490,8 @@ function KbProposalCard({
 
       {p.review_note && (
         <div className="text-[10px] text-muted-foreground italic border-t pt-1">
-          Nota review: {p.review_note}{p.reviewed_at ? ` · ${new Date(p.reviewed_at).toLocaleString()}` : ""}
+          Nota review: {p.review_note}
+          {p.reviewed_at ? ` · ${new Date(p.reviewed_at).toLocaleString()}` : ""}
         </div>
       )}
     </div>

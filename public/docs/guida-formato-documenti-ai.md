@@ -28,13 +28,13 @@ Se il documento è scritto come un blocco continuo, il modello fatica a separarl
 
 ## 2. Formato file accettati
 
-| Formato | Estensione | Quando usarlo |
-|---|---|---|
-| Markdown | `.md` | **Preferito**. Massima leggibilità + struttura nativa per heading. |
-| Testo semplice | `.txt` | Solo per liste flat di brevi voci (es. blacklist termini). |
-| Word | `.docx` | Accettato, ma viene convertito a markdown internamente: i tracked changes vengono persi. |
-| PDF | `.pdf` | Sconsigliato per dottrine. OK per allegati di riferimento (manuali). |
-| JSON | `.json` | Solo per export strutturati (es. seed di tabelle), non per dottrine narrative. |
+| Formato        | Estensione | Quando usarlo                                                                            |
+| -------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| Markdown       | `.md`      | **Preferito**. Massima leggibilità + struttura nativa per heading.                       |
+| Testo semplice | `.txt`     | Solo per liste flat di brevi voci (es. blacklist termini).                               |
+| Word           | `.docx`    | Accettato, ma viene convertito a markdown internamente: i tracked changes vengono persi. |
+| PDF            | `.pdf`     | Sconsigliato per dottrine. OK per allegati di riferimento (manuali).                     |
+| JSON           | `.json`    | Solo per export strutturati (es. seed di tabelle), non per dottrine narrative.           |
 
 **Encoding obbligatorio**: UTF-8 senza BOM. Niente Windows-1252.
 
@@ -48,6 +48,7 @@ Ogni entità deve seguire questo schema:
 
 ```markdown
 ## 📄 Titolo univoco e parlante
+
 **Categoria suggerita:** doctrine
 **Capitolo:** c1
 **Priorità:** 80
@@ -58,33 +59,35 @@ Contenuto narrativo della voce. Da 80 a 1500 parole.
 Spiegare cosa, perché, quando, chi, come.
 
 ### Esempi (opzionale ma raccomandato)
+
 - Esempio concreto 1
 - Esempio concreto 2
 
 ### Anti-esempi (opzionale)
+
 - Cosa NON fare
 ```
 
 ### Metadati obbligatori
 
-| Campo | Valori ammessi | Note |
-|---|---|---|
-| `Categoria suggerita` | `doctrine` · `system_doctrine` · `sales_doctrine` · `procedures` · `playbook` · `glossary` · `policy` · `template` | Usare le categorie esistenti del DB. Categorie nuove vanno proposte separatamente. |
-| `Capitolo` | `c0` … `c12` | Codice del macro-tema. Usare lo stesso capitolo per voci correlate. |
-| `Priorità` | numero 0–100 | 90+ = Legge Fondamentale (sempre iniettata nel contesto). 70–89 = importante. 50–69 = standard. <50 = referenza. |
-| `Tabella target` | nome tabella DB | Vedi sezione 5. Se non sei sicuro, scrivere `kb_entries` (default). |
+| Campo                 | Valori ammessi                                                                                                     | Note                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `Categoria suggerita` | `doctrine` · `system_doctrine` · `sales_doctrine` · `procedures` · `playbook` · `glossary` · `policy` · `template` | Usare le categorie esistenti del DB. Categorie nuove vanno proposte separatamente.                               |
+| `Capitolo`            | `c0` … `c12`                                                                                                       | Codice del macro-tema. Usare lo stesso capitolo per voci correlate.                                              |
+| `Priorità`            | numero 0–100                                                                                                       | 90+ = Legge Fondamentale (sempre iniettata nel contesto). 70–89 = importante. 50–69 = standard. <50 = referenza. |
+| `Tabella target`      | nome tabella DB                                                                                                    | Vedi sezione 5. Se non sei sicuro, scrivere `kb_entries` (default).                                              |
 
 ### Metadati opzionali
 
-| Campo | Quando usarlo |
-|---|---|
-| `Tag` | Lista parole chiave separate da virgola. Usate per cross-reference e filtri agente. |
-| `Lingua` | `it` (default) · `en` · `es` · `fr` · `de` |
-| `Validità` | `permanent` · `temporary` · `experimental` |
-| `Owner` | nome del referente umano (per tracciabilità) |
-| `Versione` | semver (`1.0.0`) — utile per dottrine in evoluzione |
-| `Sostituisce` | titolo della voce precedente che questa rimpiazza |
-| `Riferimenti` | lista di altri titoli `## ...` collegati |
+| Campo         | Quando usarlo                                                                       |
+| ------------- | ----------------------------------------------------------------------------------- |
+| `Tag`         | Lista parole chiave separate da virgola. Usate per cross-reference e filtri agente. |
+| `Lingua`      | `it` (default) · `en` · `es` · `fr` · `de`                                          |
+| `Validità`    | `permanent` · `temporary` · `experimental`                                          |
+| `Owner`       | nome del referente umano (per tracciabilità)                                        |
+| `Versione`    | semver (`1.0.0`) — utile per dottrine in evoluzione                                 |
+| `Sostituisce` | titolo della voce precedente che questa rimpiazza                                   |
+| `Riferimenti` | lista di altri titoli `## ...` collegati                                            |
 
 ---
 
@@ -115,16 +118,16 @@ Spiegare cosa, perché, quando, chi, come.
 
 Quando il documento contiene voci destinate a tabelle specifiche, dichiararlo nei metadati. Questo evita che l'AI proponga `INSERT` su `kb_entries` per contenuti che dovrebbero stare altrove.
 
-| Tipo di contenuto | Tabella target | Note |
-|---|---|---|
-| Dottrine, principi, knowledge generale | `kb_entries` | Default per tutto ciò che non è strutturato. |
-| Configurazione persona di un agente (tono, vocabolario do/dont) | `agent_personas` | Riferimento all'agente nel campo `agent_id`. |
-| Anagrafica agente (nome, ruolo, system prompt) | `agents` | Modifica delicata: usa Tabella target solo se sai cosa fai. |
-| Prompt operativi strutturati | `operative_prompts` | Per blocchi di prompt riutilizzabili. |
-| Template email | `email_prompts` | Include subject + body + tone. |
-| Regole di routing/firma per indirizzo email | `email_address_rules` | Sender policy. |
-| Playbook commerciali multi-step | `commercial_playbooks` | Strutturati a fasi. |
-| Configurazione applicazione | `app_settings` | Modifiche di impostazione, non dottrine. |
+| Tipo di contenuto                                               | Tabella target         | Note                                                        |
+| --------------------------------------------------------------- | ---------------------- | ----------------------------------------------------------- |
+| Dottrine, principi, knowledge generale                          | `kb_entries`           | Default per tutto ciò che non è strutturato.                |
+| Configurazione persona di un agente (tono, vocabolario do/dont) | `agent_personas`       | Riferimento all'agente nel campo `agent_id`.                |
+| Anagrafica agente (nome, ruolo, system prompt)                  | `agents`               | Modifica delicata: usa Tabella target solo se sai cosa fai. |
+| Prompt operativi strutturati                                    | `operative_prompts`    | Per blocchi di prompt riutilizzabili.                       |
+| Template email                                                  | `email_prompts`        | Include subject + body + tone.                              |
+| Regole di routing/firma per indirizzo email                     | `email_address_rules`  | Sender policy.                                              |
+| Playbook commerciali multi-step                                 | `commercial_playbooks` | Strutturati a fasi.                                         |
+| Configurazione applicazione                                     | `app_settings`         | Modifiche di impostazione, non dottrine.                    |
 
 ---
 
@@ -157,6 +160,7 @@ Per dichiarare che due entità sono collegate, usare il blocco `### Riferimenti`
 
 ```markdown
 ### Riferimenti
+
 - → "Gestione obiezione prezzo" (sales_doctrine, c4)
 - → "Persona Luca — tono" (agent_personas)
 - ← "Playbook inbound fiera" (playbook, c2)
@@ -178,6 +182,7 @@ Se la nuova versione di un documento contraddice una entità già esistente nel 
 
 ```markdown
 ## 📄 Politica sconti spot 2026
+
 **Categoria suggerita:** sales_doctrine
 **Capitolo:** c4
 **Priorità:** 85
@@ -230,6 +235,7 @@ Prima di caricare il documento nel pannello "Armonizza tutto":
 # Mini-libreria TMWE — Sezione Vendite Air Cargo
 
 ## 📄 Qualifica lead air cargo
+
 **Categoria suggerita:** sales_doctrine
 **Capitolo:** c2
 **Priorità:** 85
@@ -247,11 +253,12 @@ Sotto questi requisiti l'agente non genera quotazione spot,
 ma propone un percorso di nurturing (vedi "Nurturing lead non qualificato").
 
 ### Riferimenti
+
 - → "Nurturing lead non qualificato" (procedures, c2)
 - → "Calcolo break-even quotazione spot" (sales_doctrine, c4)
 
-
 ## 📄 Nurturing lead non qualificato
+
 **Categoria suggerita:** procedures
 **Capitolo:** c2
 **Priorità:** 60

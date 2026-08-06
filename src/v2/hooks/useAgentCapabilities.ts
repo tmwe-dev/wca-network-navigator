@@ -4,50 +4,54 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { findActiveAgentsForCapabilities, findAgentTasksForCapabilities } from "@/data/agentCapabilities";
-import {
-  ALL_OPERATIONAL_TOOLS,
-  MANAGEMENT_TOOLS,
-  STRATEGIC_TOOLS,
-} from "@/constants/agentTemplates/roles";
+import { ALL_OPERATIONAL_TOOLS, MANAGEMENT_TOOLS, STRATEGIC_TOOLS } from "@/constants/agentTemplates/roles";
 
-const ALL_TOOLS = [
-  ...ALL_OPERATIONAL_TOOLS,
-  ...MANAGEMENT_TOOLS,
-  ...STRATEGIC_TOOLS,
-];
+const ALL_TOOLS = [...ALL_OPERATIONAL_TOOLS, ...MANAGEMENT_TOOLS, ...STRATEGIC_TOOLS];
 
 const TOOL_CATEGORIES: Record<string, string[]> = {
   Partner: [
-    "search_partners", "get_partner_detail", "update_partner",
-    "add_partner_note", "manage_partner_contact", "bulk_update_partners",
+    "search_partners",
+    "get_partner_detail",
+    "update_partner",
+    "add_partner_note",
+    "manage_partner_contact",
+    "bulk_update_partners",
   ],
   Network: [
-    "get_country_overview", "get_directory_status", "list_jobs",
-    "check_job_status", "get_partners_without_contacts",
+    "get_country_overview",
+    "get_directory_status",
+    "list_jobs",
+    "check_job_status",
+    "get_partners_without_contacts",
   ],
-  Ricerca: [
-    "deep_search_partner", "deep_search_contact",
-    "enrich_partner_website", "generate_aliases",
-  ],
-  CRM: [
-    "search_contacts", "get_contact_detail", "update_lead_status",
-    "search_prospects",
-  ],
-  Outreach: [
-    "generate_outreach", "send_email", "schedule_email", "queue_outreach",
-  ],
+  Ricerca: ["deep_search_partner", "deep_search_contact", "enrich_partner_website", "generate_aliases"],
+  CRM: ["search_contacts", "get_contact_detail", "update_lead_status", "search_prospects"],
+  Outreach: ["generate_outreach", "send_email", "schedule_email", "queue_outreach"],
   Agenda: [
-    "create_activity", "list_activities", "update_activity",
-    "create_reminder", "update_reminder", "list_reminders",
+    "create_activity",
+    "list_activities",
+    "update_activity",
+    "create_reminder",
+    "update_reminder",
+    "list_reminders",
   ],
   Sistema: [
-    "check_blacklist", "get_global_summary", "save_memory", "search_memory",
-    "delete_records", "search_business_cards", "execute_ui_action",
+    "check_blacklist",
+    "get_global_summary",
+    "save_memory",
+    "search_memory",
+    "delete_records",
+    "search_business_cards",
+    "execute_ui_action",
     "get_operations_dashboard",
   ],
   Comunicazione: [
-    "get_inbox", "get_conversation_history", "get_holding_pattern",
-    "update_message_status", "get_email_thread", "analyze_incoming_email",
+    "get_inbox",
+    "get_conversation_history",
+    "get_holding_pattern",
+    "update_message_status",
+    "get_email_thread",
+    "analyze_incoming_email",
   ],
   Management: MANAGEMENT_TOOLS,
   Strategic: STRATEGIC_TOOLS,

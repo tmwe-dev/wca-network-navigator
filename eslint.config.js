@@ -73,7 +73,7 @@ export default tseslint.config(
       "no-var": "error",
       "prefer-const": "error",
       // `!= null` è idioma legittimo per (null||undefined); vietiamo == e != su tutto il resto.
-      "eqeqeq": ["error", "always", { "null": "ignore" }],
+      eqeqeq: ["error", "always", { null: "ignore" }],
     },
   },
   // ── Test files override: mocks & console-based assertions are legitimate ──
@@ -104,9 +104,7 @@ export default tseslint.config(
   // silenziosamente i selector precedenti (il ban DAL era di fatto spento).
   // Tutti i selector strutturali vivono quindi in un solo blocco.
   {
-    files: [
-      "src/**/*.{ts,tsx}",
-    ],
+    files: ["src/**/*.{ts,tsx}"],
     ignores: [
       "src/data/**",
       "src/integrations/**",
@@ -129,11 +127,13 @@ export default tseslint.config(
         "error",
         {
           selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
-          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead. See src/data/README.md",
+          message:
+            "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead. See src/data/README.md",
         },
         {
           selector: "CallExpression[callee.property.name='sendWhatsApp']",
-          message: "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
+          message:
+            "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
         },
       ],
     },
@@ -148,7 +148,8 @@ export default tseslint.config(
           patterns: [
             {
               group: ["@/data/*"],
-              message: "Components should not import from src/data/ directly. Use a hook instead. See docs/architecture/OVERVIEW-2026-04-14.md",
+              message:
+                "Components should not import from src/data/ directly. Use a hook instead. See docs/architecture/OVERVIEW-2026-04-14.md",
             },
           ],
         },
@@ -165,8 +166,16 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["@/components/acquisition/*", "@/components/cockpit/*", "@/components/contacts/*", "@/components/email/*", "@/components/operations/*", "@/components/global/*"],
-              message: "Hooks should not import from src/components/. Move shared types to src/types/. See docs/architecture/OVERVIEW-2026-04-14.md",
+              group: [
+                "@/components/acquisition/*",
+                "@/components/cockpit/*",
+                "@/components/contacts/*",
+                "@/components/email/*",
+                "@/components/operations/*",
+                "@/components/global/*",
+              ],
+              message:
+                "Hooks should not import from src/components/. Move shared types to src/types/. See docs/architecture/OVERVIEW-2026-04-14.md",
             },
           ],
         },
@@ -176,10 +185,7 @@ export default tseslint.config(
   // ── V2 migration guardrail: warn on v1 page imports in v2 pages ──
   {
     files: ["src/v2/ui/pages/**/*.{ts,tsx}"],
-    ignores: [
-      "src/v2/ui/pages/**/*.test.{ts,tsx}",
-      "src/v2/ui/pages/**/__tests__/**",
-    ],
+    ignores: ["src/v2/ui/pages/**/*.test.{ts,tsx}", "src/v2/ui/pages/**/__tests__/**"],
     rules: {
       "no-restricted-imports": [
         "warn",
@@ -191,7 +197,8 @@ export default tseslint.config(
             },
             {
               group: ["@/data/*"],
-              message: "Le pagine v2 non devono importare src/data/ direttamente: usa un hook. See docs/architecture/OVERVIEW-2026-04-14.md",
+              message:
+                "Le pagine v2 non devono importare src/data/ direttamente: usa un hook. See docs/architecture/OVERVIEW-2026-04-14.md",
             },
           ],
         },
@@ -202,11 +209,13 @@ export default tseslint.config(
         "error",
         {
           selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
-          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead. See src/data/README.md",
+          message:
+            "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead. See src/data/README.md",
         },
         {
           selector: "CallExpression[callee.property.name='sendWhatsApp']",
-          message: "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
+          message:
+            "no-direct-extension-send: usa sendWhatsAppDirect / queueWhatsAppForApproval da src/lib/messaging/whatsappSender.ts.",
         },
         {
           selector: "ImportExpression > Literal[value=/^@\\/pages/]",
@@ -222,10 +231,7 @@ export default tseslint.config(
   // accesso diretto alle tabelle resta attivo su di loro (blocco globale
   // no-restricted-syntax + tmwe/no-direct-db-access).
   {
-    files: [
-      "src/v2/ui/pages/command/tools/**/*.ts",
-      "src/v2/ui/pages/command/lib/**/*.ts",
-    ],
+    files: ["src/v2/ui/pages/command/tools/**/*.ts", "src/v2/ui/pages/command/lib/**/*.ts"],
     rules: {
       "no-restricted-imports": "off",
     },
@@ -240,7 +246,8 @@ export default tseslint.config(
           patterns: [
             {
               group: ["@/data/*"],
-              message: "I componenti v2 non devono importare src/data/ direttamente: usa un hook. See docs/architecture/OVERVIEW-2026-04-14.md",
+              message:
+                "I componenti v2 non devono importare src/data/ direttamente: usa un hook. See docs/architecture/OVERVIEW-2026-04-14.md",
             },
           ],
         },
@@ -281,7 +288,7 @@ export default tseslint.config(
     rules: {
       "no-var": "error",
       "prefer-const": "error",
-      "eqeqeq": ["error", "always"],
+      eqeqeq: ["error", "always"],
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },

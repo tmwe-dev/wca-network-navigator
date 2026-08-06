@@ -23,14 +23,19 @@ export interface AgentPersona {
 export async function findAgentPersonas(userId: string): Promise<AgentPersona[]> {
   const { data, error } = await supabase
     .from("agent_personas")
-    .select("id, user_id, agent_id, tone, custom_tone_prompt, language, style_rules, vocabulary_do, vocabulary_dont, example_messages, signature_template")
+    .select(
+      "id, user_id, agent_id, tone, custom_tone_prompt, language, style_rules, vocabulary_do, vocabulary_dont, example_messages, signature_template",
+    )
     .eq("user_id", userId);
   if (error) throw error;
   return (data ?? []) as AgentPersona[];
 }
 
 export async function updateAgentPersona(id: string, patch: Partial<AgentPersona>): Promise<void> {
-  const { error } = await supabase.from("agent_personas").update(patch as AgentPersonaUpdate).eq("id", id);
+  const { error } = await supabase
+    .from("agent_personas")
+    .update(patch as AgentPersonaUpdate)
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -38,7 +43,9 @@ export async function updateAgentPersona(id: string, patch: Partial<AgentPersona
 export async function getAgentPersonaByAgent(agentId: string): Promise<AgentPersona | null> {
   const { data, error } = await supabase
     .from("agent_personas")
-    .select("id, user_id, agent_id, tone, custom_tone_prompt, language, style_rules, vocabulary_do, vocabulary_dont, example_messages, signature_template")
+    .select(
+      "id, user_id, agent_id, tone, custom_tone_prompt, language, style_rules, vocabulary_do, vocabulary_dont, example_messages, signature_template",
+    )
     .eq("agent_id", agentId)
     .maybeSingle();
   if (error) throw error;
@@ -58,13 +65,13 @@ export interface AgentPersonaUpsert {
 
 /** Create or update the persona for an agent. */
 export async function upsertAgentPersona(input: AgentPersonaUpsert): Promise<void> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   if (!userId) throw new Error("Non autenticato");
   const payload: Database["public"]["Tables"]["agent_personas"]["Insert"] = { ...input, user_id: userId };
-  const { error } = await supabase
-    .from("agent_personas")
-    .upsert(payload, { onConflict: "agent_id" });
+  const { error } = await supabase.from("agent_personas").upsert(payload, { onConflict: "agent_id" });
   if (error) throw error;
 }
 /** Update arbitrario della persona di un agente, per agent_id (usato dai tool Command). */

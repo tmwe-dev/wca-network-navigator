@@ -16,13 +16,7 @@ export function useDirectContactActions() {
   const logAction = useLogAction();
 
   const handleSendEmail = useCallback(
-    (opts: {
-      email: string;
-      name?: string;
-      company?: string;
-      partnerId?: string;
-      contactId?: string;
-    }) => {
+    (opts: { email: string; name?: string; company?: string; partnerId?: string; contactId?: string }) => {
       navigate("/v2/email-composer", {
         state: {
           ...(opts.partnerId ? { partnerIds: [opts.partnerId] } : {}),
@@ -36,7 +30,7 @@ export function useDirectContactActions() {
         },
       });
     },
-    [navigate]
+    [navigate],
   );
 
   const handleSendWhatsApp = useCallback(
@@ -79,9 +73,12 @@ export function useDirectContactActions() {
         if (result?.success) {
           toast.success(`Chat WhatsApp aperta con ${opts.contactName || cleanPhone}`);
           // LOVABLE-93: logAction chiama log-action edge → postSendPipeline server-side
-          const resolvedSourceType = opts.sourceType === "contact" ? "imported_contact" as const
-            : opts.sourceType === "prospect" ? "imported_contact" as const
-            : (opts.sourceType || "partner") as "partner" | "imported_contact" | "business_card";
+          const resolvedSourceType =
+            opts.sourceType === "contact"
+              ? ("imported_contact" as const)
+              : opts.sourceType === "prospect"
+                ? ("imported_contact" as const)
+                : ((opts.sourceType || "partner") as "partner" | "imported_contact" | "business_card");
           logAction.mutate({
             channel: "whatsapp",
             sourceType: resolvedSourceType,
@@ -105,7 +102,7 @@ export function useDirectContactActions() {
         setWaSending(null);
       }
     },
-    [waAvailable, waAuthenticated, navigate, logAction]
+    [waAvailable, waAuthenticated, navigate, logAction],
   );
 
   return { handleSendEmail, handleSendWhatsApp, waSending, waAvailable };

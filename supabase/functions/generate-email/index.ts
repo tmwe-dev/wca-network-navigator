@@ -37,17 +37,21 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await authClient.auth.getUser(token);
     if (userErr || !userData?.user?.id) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const userId = userData.user.id;
@@ -64,7 +68,8 @@ serve(async (req) => {
 
     if (pauseSettings?.value === "true") {
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 503,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -72,8 +77,34 @@ serve(async (req) => {
     const rl = checkRateLimit(`generate-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
-    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company, email_type_prompt, email_type_structure, email_type_kb_categories, _debug_return_prompt, _system_prompt_override, _user_prompt_override, learned_patterns } = await req.json();
-    const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
+    const {
+      activity_id,
+      goal,
+      base_proposal,
+      language,
+      document_ids,
+      quality: rawQuality,
+      oracle_type,
+      oracle_tone,
+      use_kb,
+      deep_search,
+      standalone,
+      partner_id,
+      _recipient_count,
+      recipient_countries,
+      recipient_name,
+      recipient_company,
+      email_type_prompt,
+      email_type_structure,
+      email_type_kb_categories,
+      _debug_return_prompt,
+      _system_prompt_override,
+      _user_prompt_override,
+      learned_patterns,
+    } = await req.json();
+    const quality: Quality = (
+      ["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard"
+    ) as Quality;
 
     // ── Load entity (partner + contact) ──
     let partner: PartnerData | null = null;
@@ -83,30 +114,88 @@ serve(async (req) => {
 
     if (standalone && partner_id) {
       const loaded = await loadStandalonePartner(supabase, partner_id, recipient_name);
-      partner = loaded.partner; contact = loaded.contact; contactEmail = loaded.contactEmail; sourceType = loaded.sourceType;
+      partner = loaded.partner;
+      contact = loaded.contact;
+      contactEmail = loaded.contactEmail;
+      sourceType = loaded.sourceType;
       if (!partner) {
-        partner = { id: partner_id, company_name: recipient_company || "Destinatario", company_alias: recipient_company || null, country_code: "IT", country_name: recipient_countries || "", city: "", email: null, phone: null, website: null, profile_description: null, rating: null, raw_profile_markdown: null };
+        partner = {
+          id: partner_id,
+          company_name: recipient_company || "Destinatario",
+          company_alias: recipient_company || null,
+          country_code: "IT",
+          country_name: recipient_countries || "",
+          city: "",
+          email: null,
+          phone: null,
+          website: null,
+          profile_description: null,
+          rating: null,
+          raw_profile_markdown: null,
+        };
         sourceType = "standalone";
       }
     } else if (standalone) {
-      const firstCountry = (recipient_countries || "").split(/[,;\s]+/).find((s: string) => s.trim().length === 2) || "IT";
-      partner = { id: null, company_name: recipient_company || "Destinatario generico", company_alias: recipient_company || null, country_code: firstCountry.toUpperCase().trim(), country_name: recipient_countries || "Vari", city: "", email: null, phone: null, website: null, profile_description: null, rating: null, raw_profile_markdown: null };
-      contact = recipient_name ? { id: "", name: recipient_name, contact_alias: recipient_name, title: null, email: null, direct_phone: null, mobile: null } : null;
+      const firstCountry =
+        (recipient_countries || "").split(/[,;\s]+/).find((s: string) => s.trim().length === 2) || "IT";
+      partner = {
+        id: null,
+        company_name: recipient_company || "Destinatario generico",
+        company_alias: recipient_company || null,
+        country_code: firstCountry.toUpperCase().trim(),
+        country_name: recipient_countries || "Vari",
+        city: "",
+        email: null,
+        phone: null,
+        website: null,
+        profile_description: null,
+        rating: null,
+        raw_profile_markdown: null,
+      };
+      contact = recipient_name
+        ? {
+            id: "",
+            name: recipient_name,
+            contact_alias: recipient_name,
+            title: null,
+            email: null,
+            direct_phone: null,
+            mobile: null,
+          }
+        : null;
       contactEmail = "destinatario@email.com";
       sourceType = "standalone";
     } else {
       if (!activity_id) throw new Error("activity_id is required");
       const loaded = await loadEntityFromActivity(supabase, activity_id);
-      partner = loaded.partner; contact = loaded.contact; contactEmail = loaded.contactEmail; sourceType = loaded.sourceType;
+      partner = loaded.partner;
+      contact = loaded.contact;
+      contactEmail = loaded.contactEmail;
+      sourceType = loaded.sourceType;
       if (!partner) throw new Error("Source entity not found");
     }
 
     // ── Validations ──
     if (!standalone && sourceType === "partner" && !contact) {
-      return new Response(JSON.stringify({ error: "no_contact", message: "Nessun contatto selezionato. Seleziona un contatto prima di generare l'email.", partner_name: partner!.company_name }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          error: "no_contact",
+          message: "Nessun contatto selezionato. Seleziona un contatto prima di generare l'email.",
+          partner_name: partner!.company_name,
+        }),
+        { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
     }
     if (!standalone && !contactEmail) {
-      return new Response(JSON.stringify({ error: "no_email", message: "Nessun indirizzo email disponibile per questo contatto/partner", partner_name: partner!.company_name, contact_name: contact?.name || null }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          error: "no_email",
+          message: "Nessun indirizzo email disponibile per questo contatto/partner",
+          partner_name: partner!.company_name,
+          contact_name: contact?.name || null,
+        }),
+        { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
     }
 
     // ── LOVABLE-81/82: Costruisci contratto + detector tipo (non bloccante per standalone) ──
@@ -157,18 +246,34 @@ serve(async (req) => {
           );
         }
       } catch (cerr) {
-        console.warn("[generate-email] contract/detector failed (non-blocking):", cerr instanceof Error ? cerr.message : cerr);
+        console.warn(
+          "[generate-email] contract/detector failed (non-blocking):",
+          cerr instanceof Error ? cerr.message : cerr,
+        );
       }
     }
 
     // ── Assemble context ──
     let ctx;
     try {
-      ctx = await assembleContextBlocks(supabase, userId, partner!, contact, contactEmail, sourceType, quality, !!standalone, { oracle_type, use_kb, document_ids, partner_id, deep_search, authHeader, email_type_kb_categories });
+      ctx = await assembleContextBlocks(
+        supabase,
+        userId,
+        partner!,
+        contact,
+        contactEmail,
+        sourceType,
+        quality,
+        !!standalone,
+        { oracle_type, use_kb, document_ids, partner_id, deep_search, authHeader, email_type_kb_categories },
+      );
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; recentContact?: unknown };
       if (err.code === "duplicate_branch") {
-        return new Response(JSON.stringify({ error: "duplicate_branch", message: err.message, recent_contact: err.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
+        return new Response(
+          JSON.stringify({ error: "duplicate_branch", message: err.message, recent_contact: err.recentContact }),
+          { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
       }
       throw e;
     }
@@ -208,23 +313,39 @@ serve(async (req) => {
         const { data: lpRows } = await supabase
           .from("suggested_improvements")
           .select("title, content, suggestion_type, priority")
-          .or(`and(created_by.eq.${userId},suggestion_type.eq.user_preference),suggestion_type.in.(kb_rule,prompt_adjustment)`)
+          .or(
+            `and(created_by.eq.${userId},suggestion_type.eq.user_preference),suggestion_type.in.(kb_rule,prompt_adjustment)`,
+          )
           .in("status", ["approved", "applied"])
           .order("priority", { ascending: false })
           .limit(20);
         if (lpRows && lpRows.length > 0) {
-          effectiveLearnedPatterns = (lpRows as Array<{ title: string; content: string; suggestion_type: string; priority: string }>)
+          effectiveLearnedPatterns = (
+            lpRows as Array<{ title: string; content: string; suggestion_type: string; priority: string }>
+          )
             .map((r) => `[${r.suggestion_type}|${r.priority}] ${r.title}: ${r.content.slice(0, 200)}`)
             .join("\n");
         }
-      } catch { /* non-blocking */ }
+      } catch {
+        /* non-blocking */
+      }
     }
 
     // ── Build prompts ──
     const built = buildEmailPrompts({
-      partner: partner!, contact, contactEmail, sourceType, quality, language,
-      goal, base_proposal, oracle_type, oracle_tone, use_kb,
-      email_type_prompt, email_type_structure,
+      partner: partner!,
+      contact,
+      contactEmail,
+      sourceType,
+      quality,
+      language,
+      goal,
+      base_proposal,
+      oracle_type,
+      oracle_tone,
+      use_kb,
+      email_type_prompt,
+      email_type_structure,
       decisionContext: decisionContext as never,
       learnedPatterns: effectiveLearnedPatterns || undefined,
       ...ctx,
@@ -232,11 +353,15 @@ serve(async (req) => {
     // ── Calligrafia (regole di formattazione email — SSOT KB "calligrafia") ──
     const calligrafiaSection = await buildCalligrafiaSection(supabase, userId);
     // Prompt-Lab overrides: replace system/user prompt entirely if provided
-    const baseSystemPrompt = (typeof _system_prompt_override === "string" && _system_prompt_override.trim().length > 0)
-      ? _system_prompt_override : built.systemPrompt;
+    const baseSystemPrompt =
+      typeof _system_prompt_override === "string" && _system_prompt_override.trim().length > 0
+        ? _system_prompt_override
+        : built.systemPrompt;
     const systemPrompt = `${baseSystemPrompt}\n${calligrafiaSection}`;
-    const userPrompt = (typeof _user_prompt_override === "string" && _user_prompt_override.trim().length > 0)
-      ? _user_prompt_override : built.userPrompt;
+    const userPrompt =
+      typeof _user_prompt_override === "string" && _user_prompt_override.trim().length > 0
+        ? _user_prompt_override
+        : built.userPrompt;
     const blocks = built.blocks;
     const systemBlocks = built.systemBlocks;
     const promptOverridden = baseSystemPrompt !== built.systemPrompt || userPrompt !== built.userPrompt;
@@ -247,8 +372,14 @@ serve(async (req) => {
     const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_generate_email", 1500);
     const result = await aiChat({
       models: [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"],
-      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      timeoutMs: 45000, maxRetries: 1, max_tokens: maxTokens, context: "generate-email:" + userId.substring(0, 8),
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      timeoutMs: 45000,
+      maxRetries: 1,
+      max_tokens: maxTokens,
+      context: "generate-email:" + userId.substring(0, 8),
       // Funnemail Doctrine 2026-05-10: sblocca varietà per evitare email-fotocopia.
       temperature: 0.75,
       presence_penalty: 0.3,
@@ -277,37 +408,45 @@ serve(async (req) => {
           !!ctx.historyContext ||
           (typeResolution?.resolved_type && ["follow_up", "reply"].includes(typeResolution.resolved_type as string));
 
-        journalistResult = await journalistReview(supabase, userId, {
-          final_draft: finalBody,
-          resolved_brief: {
-            email_type: oracle_type ?? undefined,
-            objective: goal ?? undefined,
-            playbook_active: ctx.playbookActive ? "yes" : undefined,
+        journalistResult = await journalistReview(
+          supabase,
+          userId,
+          {
+            final_draft: finalBody,
+            resolved_brief: {
+              email_type: oracle_type ?? undefined,
+              objective: goal ?? undefined,
+              playbook_active: ctx.playbookActive ? "yes" : undefined,
+            },
+            channel: "email",
+            language: language || ctx.settings?.ai_language || undefined,
+            commercial_state: {
+              lead_status:
+                (ctx.commercialState as string) || (partner as { lead_status?: string } | null)?.lead_status || "new",
+              touch_count: ctx.touchCount ?? 0,
+              last_outcome: ctx.lastOutcome ?? undefined,
+              days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
+              has_active_conversation: !!ctx.historyContext,
+            },
+            partner: {
+              id: partner?.id ?? null,
+              company_name: partner?.company_name,
+              country: partner?.country_name,
+            },
+            contact: contact ? { name: contact.name, role: contact.title } : undefined,
+            history_summary: ctx.historyContext || undefined,
+            kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
+            is_reply: isReplyContext,
+            original_inbound: isReplyContext
+              ? {
+                  subject: ctx.historyContext?.split("\n")[0],
+                  summary: ctx.historyContext,
+                  classification: typeResolution?.original_type,
+                }
+              : undefined,
           },
-          channel: "email",
-          language: language || ctx.settings?.ai_language || undefined,
-          commercial_state: {
-            lead_status: (ctx.commercialState as string) || (partner as { lead_status?: string } | null)?.lead_status || "new",
-            touch_count: ctx.touchCount ?? 0,
-            last_outcome: ctx.lastOutcome ?? undefined,
-            days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
-            has_active_conversation: !!ctx.historyContext,
-          },
-          partner: {
-            id: partner?.id ?? null,
-            company_name: partner?.company_name,
-            country: partner?.country_name,
-          },
-          contact: contact ? { name: contact.name, role: contact.title } : undefined,
-          history_summary: ctx.historyContext || undefined,
-          kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
-          is_reply: isReplyContext,
-          original_inbound: isReplyContext ? {
-            subject: ctx.historyContext?.split("\n")[0],
-            summary: ctx.historyContext,
-            classification: typeResolution?.original_type,
-          } : undefined,
-        }, { mode: optimus.mode, strictness: optimus.strictness });
+          { mode: optimus.mode, strictness: optimus.strictness },
+        );
         if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
           finalBody = journalistResult.edited_text;
         }
@@ -338,85 +477,114 @@ serve(async (req) => {
     //   but the output was not usable/publishable, so the user doesn't get full value.
     // - Otherwise, deduct full credits: the email was approved or allowed to proceed.
     if (result.usage) {
-      let creditsToDeduct = Math.max(1, Math.ceil((result.usage.promptTokens + result.usage.completionTokens * 2) / 1000));
+      let creditsToDeduct = Math.max(
+        1,
+        Math.ceil((result.usage.promptTokens + result.usage.completionTokens * 2) / 1000),
+      );
       if (journalistResult?.verdict === "block") {
         creditsToDeduct = Math.ceil(creditsToDeduct * 0.5);
       }
-      await supabase.rpc("deduct_credits", { p_user_id: userId, p_amount: creditsToDeduct, p_operation: "ai_call", p_description: `generate-email (${quality}): ${result.usage.promptTokens} in + ${result.usage.completionTokens} out${journalistResult?.verdict === "block" ? " [50% blocked by journalist]" : ""}` });
+      await supabase.rpc("deduct_credits", {
+        p_user_id: userId,
+        p_amount: creditsToDeduct,
+        p_operation: "ai_call",
+        p_description: `generate-email (${quality}): ${result.usage.promptTokens} in + ${result.usage.completionTokens} out${journalistResult?.verdict === "block" ? " [50% blocked by journalist]" : ""}`,
+      });
     }
 
     // Supervisor audit (fire-and-forget)
     logSupervisorAudit(supabase, {
-      user_id: userId, actor_type: "ai_agent", actor_name: model,
+      user_id: userId,
+      actor_type: "ai_agent",
+      actor_name: model,
       action_category: "email_drafted",
       action_detail: `Bozza email generata per ${contactEmail}: ${finalSubject}`,
-      target_type: "email", target_label: finalSubject,
-      partner_id: partner?.id || undefined, email_address: contactEmail || undefined,
+      target_type: "email",
+      target_label: finalSubject,
+      partner_id: partner?.id || undefined,
+      email_address: contactEmail || undefined,
       decision_origin: "ai_auto",
-      metadata: { model, quality, tokens: result.usage?.promptTokens, journalist_verdict: journalistResult?.verdict ?? null },
+      metadata: {
+        model,
+        quality,
+        tokens: result.usage?.promptTokens,
+        journalist_verdict: journalistResult?.verdict ?? null,
+      },
     });
 
     metrics.userId = userId;
     endMetrics(metrics, true, 200);
-    return new Response(JSON.stringify({
-      subject: finalSubject, body: finalBody, full_content: result.content || "",
-      partner_name: partner!.company_name,
-      contact_name: contact?.contact_alias || contact?.name || null,
-      contact_email: contactEmail, has_contact: !!contact,
-      used_partner_email: !contact?.email && !!partner!.email, quality, model,
-      journalist_review: journalistResult ? {
-        journalist: journalistResult.journalist,
-        verdict: journalistResult.verdict,
-        warnings: journalistResult.warnings,
-        edits: journalistResult.edits,
-        quality_score: journalistResult.quality_score,
-        reasoning: journalistResult.reasoning_summary,
-      } : null,
-      grounding_guard: {
-        applied: groundingWarnings.length > 0,
-        warnings: groundingWarnings,
-      },
-      _context_summary: {
-        kb_sections: ctx.salesKBSections || [],
-        history_present: !!ctx.historyContext,
-        touch_count: ctx.touchCount ?? 0,
-        days_since_last_contact: ctx.daysSinceLastContact ?? null,
-        warmth_score: ctx.warmthScore ?? null,
-        commercial_state: ctx.commercialState ?? null,
-        last_channel: ctx.lastChannel ?? null,
-        last_outcome: ctx.lastOutcome ?? null,
-        deep_search_status: ctx.deepSearchStatus ?? "missing",
-        deep_search_age_days: ctx.deepSearchAgeDays ?? null,
-        playbook_active: ctx.playbookActive ?? false,
-        met_in_person: !!ctx.metInPersonContext,
-        documents_count: (document_ids?.length ?? 0),
-        sender_settings_ok: !!(ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name),
-        oracle_type: oracle_type ?? null,
-        // Audit trail: prompt operativi (Prompt Lab) iniettati e modello AI usato
-        operative_prompts_applied: ctx.operativePromptsApplied ?? [],
-        model: model,
-      },
-      // LOVABLE-75: segnale al frontend che NON ci sono dati di arricchimento per questo partner.
-      // Il backend non chiama mai più enrich-partner-website live: arricchimento si fa da Settings o Email Forge.
-      enrichment_missing: ctx.deepSearchStatus === "missing",
-      contract_used: true,
-      contract_warnings: contractWarnings,
-      type_resolution: typeResolution,
-      ...(_debug_return_prompt ? {
-        _debug: {
-          systemPrompt,
-          userPrompt,
-          systemBlocks,
-          blocks,
-          model,
-          quality,
-          ai_latency_ms: aiLatencyMs,
-          tokens_in: result.usage?.promptTokens ?? null,
-          tokens_out: result.usage?.completionTokens ?? null,
-          prompt_overridden: promptOverridden,
+    return new Response(
+      JSON.stringify({
+        subject: finalSubject,
+        body: finalBody,
+        full_content: result.content || "",
+        partner_name: partner!.company_name,
+        contact_name: contact?.contact_alias || contact?.name || null,
+        contact_email: contactEmail,
+        has_contact: !!contact,
+        used_partner_email: !contact?.email && !!partner!.email,
+        quality,
+        model,
+        journalist_review: journalistResult
+          ? {
+              journalist: journalistResult.journalist,
+              verdict: journalistResult.verdict,
+              warnings: journalistResult.warnings,
+              edits: journalistResult.edits,
+              quality_score: journalistResult.quality_score,
+              reasoning: journalistResult.reasoning_summary,
+            }
+          : null,
+        grounding_guard: {
+          applied: groundingWarnings.length > 0,
+          warnings: groundingWarnings,
         },
-      } : {}),
-    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+        _context_summary: {
+          kb_sections: ctx.salesKBSections || [],
+          history_present: !!ctx.historyContext,
+          touch_count: ctx.touchCount ?? 0,
+          days_since_last_contact: ctx.daysSinceLastContact ?? null,
+          warmth_score: ctx.warmthScore ?? null,
+          commercial_state: ctx.commercialState ?? null,
+          last_channel: ctx.lastChannel ?? null,
+          last_outcome: ctx.lastOutcome ?? null,
+          deep_search_status: ctx.deepSearchStatus ?? "missing",
+          deep_search_age_days: ctx.deepSearchAgeDays ?? null,
+          playbook_active: ctx.playbookActive ?? false,
+          met_in_person: !!ctx.metInPersonContext,
+          documents_count: document_ids?.length ?? 0,
+          sender_settings_ok: !!(ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name),
+          oracle_type: oracle_type ?? null,
+          // Audit trail: prompt operativi (Prompt Lab) iniettati e modello AI usato
+          operative_prompts_applied: ctx.operativePromptsApplied ?? [],
+          model: model,
+        },
+        // LOVABLE-75: segnale al frontend che NON ci sono dati di arricchimento per questo partner.
+        // Il backend non chiama mai più enrich-partner-website live: arricchimento si fa da Settings o Email Forge.
+        enrichment_missing: ctx.deepSearchStatus === "missing",
+        contract_used: true,
+        contract_warnings: contractWarnings,
+        type_resolution: typeResolution,
+        ...(_debug_return_prompt
+          ? {
+              _debug: {
+                systemPrompt,
+                userPrompt,
+                systemBlocks,
+                blocks,
+                model,
+                quality,
+                ai_latency_ms: aiLatencyMs,
+                tokens_in: result.usage?.promptTokens ?? null,
+                tokens_out: result.usage?.completionTokens ?? null,
+                prompt_overridden: promptOverridden,
+              },
+            }
+          : {}),
+      }),
+      { headers: { ...dynCors, "Content-Type": "application/json" } },
+    );
   } catch (e: unknown) {
     logEdgeError("generate-email", e);
     endMetrics(metrics, false, 500);

@@ -23,7 +23,10 @@ export async function findAllBlacklistEntries(select = "id, company_name, countr
   return data ?? [];
 }
 
-export async function updateBlacklistEntry(id: string, updates: Partial<Database["public"]["Tables"]["blacklist_entries"]["Update"]>) {
+export async function updateBlacklistEntry(
+  id: string,
+  updates: Partial<Database["public"]["Tables"]["blacklist_entries"]["Update"]>,
+) {
   const { error } = await supabase.from("blacklist_entries").update(updates).eq("id", id);
   if (error) throw error;
 }
@@ -70,9 +73,7 @@ export async function findBlacklistSyncLogs(limit = 10) {
 
 /** Statistiche blacklist: totale voci e voci matchate + data ultimo sync. */
 export async function getBlacklistStats(): Promise<{ total: number; matched: number; lastUpdated: string | null }> {
-  const { data: entries, error } = await supabase
-    .from("blacklist_entries")
-    .select("id, matched_partner_id");
+  const { data: entries, error } = await supabase.from("blacklist_entries").select("id, matched_partner_id");
   if (error) throw error;
   const logs = await findBlacklistSyncLogs(1);
   return {
@@ -84,10 +85,7 @@ export async function getBlacklistStats(): Promise<{ total: number; matched: num
 
 /** Voci blacklist collegate a un partner. */
 export async function findBlacklistEntriesForPartner(partnerId: string) {
-  const { data, error } = await supabase
-    .from("blacklist_entries")
-    .select("*")
-    .eq("matched_partner_id", partnerId);
+  const { data, error } = await supabase.from("blacklist_entries").select("*").eq("matched_partner_id", partnerId);
   if (error) throw error;
   return data ?? [];
 }

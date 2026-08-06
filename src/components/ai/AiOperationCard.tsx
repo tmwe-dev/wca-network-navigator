@@ -1,8 +1,30 @@
-import { Download, Search, Mail, Linkedin, Globe, Database, RefreshCw, Zap, FileSearch, Shield, ArrowUpRight } from "lucide-react";
+import {
+  Download,
+  Search,
+  Mail,
+  Linkedin,
+  Globe,
+  Database,
+  RefreshCw,
+  Zap,
+  FileSearch,
+  Shield,
+  ArrowUpRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface AiOperation {
-  op_type: "download" | "deep_search" | "email_send" | "linkedin_scrape" | "directory_scan" | "enrichment" | "bulk_update" | "import" | "blacklist_check" | "generic";
+  op_type:
+    | "download"
+    | "deep_search"
+    | "email_send"
+    | "linkedin_scrape"
+    | "directory_scan"
+    | "enrichment"
+    | "bulk_update"
+    | "import"
+    | "blacklist_check"
+    | "generic";
   status: "running" | "completed" | "failed" | "queued";
   title: string;
   detail?: string;
@@ -31,12 +53,37 @@ const OP_COLORS: Record<AiOperation["op_type"], { bg: string; border: string; ic
   download: { bg: "bg-primary/10", border: "border-primary/25", icon: "text-primary", accent: "bg-primary" },
   deep_search: { bg: "bg-primary/10", border: "border-primary/25", icon: "text-primary", accent: "bg-primary" },
   email_send: { bg: "bg-primary/10", border: "border-primary/25", icon: "text-primary", accent: "bg-primary" },
-  linkedin_scrape: { bg: "bg-muted", border: "border-border", icon: "text-muted-foreground", accent: "bg-muted-foreground" },
-  directory_scan: { bg: "bg-emerald-500/10", border: "border-emerald-500/25", icon: "text-emerald-400", accent: "bg-emerald-500" },
+  linkedin_scrape: {
+    bg: "bg-muted",
+    border: "border-border",
+    icon: "text-muted-foreground",
+    accent: "bg-muted-foreground",
+  },
+  directory_scan: {
+    bg: "bg-emerald-500/10",
+    border: "border-emerald-500/25",
+    icon: "text-emerald-400",
+    accent: "bg-emerald-500",
+  },
   enrichment: { bg: "bg-primary/10", border: "border-primary/25", icon: "text-primary", accent: "bg-primary" },
-  bulk_update: { bg: "bg-muted", border: "border-border", icon: "text-muted-foreground", accent: "bg-muted-foreground" },
-  import: { bg: "bg-emerald-500/10", border: "border-emerald-500/25", icon: "text-emerald-400", accent: "bg-emerald-500" },
-  blacklist_check: { bg: "bg-destructive/10", border: "border-destructive/25", icon: "text-destructive", accent: "bg-destructive" },
+  bulk_update: {
+    bg: "bg-muted",
+    border: "border-border",
+    icon: "text-muted-foreground",
+    accent: "bg-muted-foreground",
+  },
+  import: {
+    bg: "bg-emerald-500/10",
+    border: "border-emerald-500/25",
+    icon: "text-emerald-400",
+    accent: "bg-emerald-500",
+  },
+  blacklist_check: {
+    bg: "bg-destructive/10",
+    border: "border-destructive/25",
+    icon: "text-destructive",
+    accent: "bg-destructive",
+  },
   generic: { bg: "bg-muted", border: "border-border", icon: "text-muted-foreground", accent: "bg-muted-foreground" },
 };
 
@@ -61,9 +108,7 @@ export function AiOperationCard({ op }: { op: AiOperation }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-foreground truncate">{op.title}</div>
-          {op.target && (
-            <div className="text-muted-foreground text-[10px] truncate">{op.target}</div>
-          )}
+          {op.target && <div className="text-muted-foreground text-[10px] truncate">{op.target}</div>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <span className={cn("w-1.5 h-1.5 rounded-full", statusInfo.dot)} />
@@ -89,8 +134,7 @@ export function AiOperationCard({ op }: { op: AiOperation }) {
           {op.source && <span className="shrink-0 opacity-70">via {op.source}</span>}
           {op.eta_minutes != null && op.status === "running" && (
             <span className="shrink-0 flex items-center gap-0.5">
-              <RefreshCw className="w-2.5 h-2.5 animate-spin" />
-              ~{op.eta_minutes} min
+              <RefreshCw className="w-2.5 h-2.5 animate-spin" />~{op.eta_minutes} min
             </span>
           )}
         </div>

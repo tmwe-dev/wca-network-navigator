@@ -46,8 +46,7 @@ export function usePartnersInfinite(filters: PartnerFilters = {}) {
       return { partners: [] as PartnerV2[], total: 0, hasMore: false };
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
-      lastPage.hasMore ? lastPageParam + 1 : undefined,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => (lastPage.hasMore ? lastPageParam + 1 : undefined),
     staleTime: 30_000,
   });
 }

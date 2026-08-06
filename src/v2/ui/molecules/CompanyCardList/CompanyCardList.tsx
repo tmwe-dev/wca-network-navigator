@@ -31,7 +31,7 @@ export interface CompanyCardListProps extends CompanyCardListCallbacks {
   onCityClick?: (city: string) => void;
 }
 
-const ROW_HEIGHT = 150;       // card partner completa (px)
+const ROW_HEIGHT = 150; // card partner completa (px)
 const COMPACT_BREAKPOINT = 520; // px — sotto questa larghezza usa layout 2-righe
 
 export function CompanyCardList({
@@ -48,14 +48,9 @@ export function CompanyCardList({
 }: CompanyCardListProps): React.ReactElement {
   const parentRef = useRef<HTMLDivElement>(null);
   // Carica i livelli Sherlock per le aziende visibili in lista (id = partner.id per WCA).
-  const partnerIds = useMemo(
-    () => companies.filter((c) => c.source === "wca").map((c) => c.id),
-    [companies],
-  );
+  const partnerIds = useMemo(() => companies.filter((c) => c.source === "wca").map((c) => c.id), [companies]);
   const sherlockLevels = useSherlockLevels("partner", partnerIds);
-  const [width, setWidth] = useState<number>(() =>
-    typeof window !== "undefined" ? window.innerWidth : 1024
-  );
+  const [width, setWidth] = useState<number>(() => (typeof window !== "undefined" ? window.innerWidth : 1024));
   const compact = width < COMPACT_BREAKPOINT;
 
   useEffect(() => {
@@ -71,7 +66,7 @@ export function CompanyCardList({
 
   const estimateSize = useCallback(
     () => (compact ? estimateRowSize + 32 : estimateRowSize + 18),
-    [estimateRowSize, compact]
+    [estimateRowSize, compact],
   );
 
   const virtualizer = useVirtualizer({

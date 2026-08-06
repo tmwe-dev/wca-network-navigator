@@ -76,7 +76,10 @@ export type AgentPersonaRow = {
 };
 
 export const safeFilename = (s: string) =>
-  s.replace(/[^a-z0-9-_]+/gi, "_").replace(/_+/g, "_").slice(0, 80);
+  s
+    .replace(/[^a-z0-9-_]+/gi, "_")
+    .replace(/_+/g, "_")
+    .slice(0, 80);
 
 export function mdAgent(a: AgentRow): string {
   const tools = JSON.stringify(a.assigned_tools, null, 2);

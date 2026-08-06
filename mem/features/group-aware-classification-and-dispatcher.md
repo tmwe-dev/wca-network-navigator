@@ -3,6 +3,7 @@ name: Group-Aware Classification + Operative Dispatcher
 description: F1-F5 del piano prompt-audit-2026-05-04. classify-email-response inietta SENDER GROUP e blocca promozioni lead da gruppi non commerciali (getNextStatusGated). Tabelle inbound_operative_actions e wake_up_rules pronte. Campi hint su email_sender_groups.
 type: feature
 ---
+
 - `classify-email-response` joina `email_sender_groups` via group_id e inietta blocco `## SENDER GROUP` nel prompt.
 - `getNextStatusGated(currentStatus, classification, senderGroup)` blocca escalation lead se gruppo ∈ {amministrazione, fornitori, system, internal, support_provider, administrative, providers, newsletter}. Solo `unsubscribe`/`bounce` passano sempre.
 - `inbound_operative_actions(group_name, category, action_type, default_assignee, sla_hours)` — pronta per dispatch automatico, edge `dispatch-inbound-action` da implementare quando l'utente configura regole.

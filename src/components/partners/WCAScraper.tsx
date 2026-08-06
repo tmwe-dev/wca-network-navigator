@@ -54,7 +54,10 @@ export function WCAScraper() {
     if (maxWcaId) {
       setStartId(maxWcaId + 1);
       setEndId(maxWcaId + 50);
-      toast({ title: "Sync impostato", description: `Cercherò nuovi partner da ID ${maxWcaId + 1} a ${maxWcaId + 50}` });
+      toast({
+        title: "Sync impostato",
+        description: `Cercherò nuovi partner da ID ${maxWcaId + 1} a ${maxWcaId + 50}`,
+      });
     }
   };
 
@@ -295,11 +298,15 @@ export function WCAScraper() {
                           <span className="font-medium truncate">{log.companyName}</span>
                           <span className="text-muted-foreground text-xs hidden sm:inline">
                             <MapPin className="w-3 h-3 inline mr-0.5" />
-                            {log.city}{log.countryCode ? `, ${log.countryCode}` : ""}
+                            {log.city}
+                            {log.countryCode ? `, ${log.countryCode}` : ""}
                           </span>
                         </div>
                         {log.hasContactDetails && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500 text-emerald-600 dark:text-emerald-400">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 border-emerald-500 text-emerald-600 dark:text-emerald-400"
+                          >
                             📧 Contatti completi
                           </Badge>
                         )}
@@ -310,9 +317,7 @@ export function WCAScraper() {
                         )}
                       </div>
                     )}
-                    {log.status === "not_found" && (
-                      <span className="text-muted-foreground">Non trovato</span>
-                    )}
+                    {log.status === "not_found" && <span className="text-muted-foreground">Non trovato</span>}
                     {log.status === "error" && (
                       <span className="text-destructive text-xs truncate">{log.error || "Errore"}</span>
                     )}
@@ -323,10 +328,15 @@ export function WCAScraper() {
                         {log.action === "inserted" ? "Nuovo" : "Aggiornato"}
                       </Badge>
                     )}
-                    {log.status === "not_found" && <Badge variant="outline" className="text-xs">Skip</Badge>}
+                    {log.status === "not_found" && (
+                      <Badge variant="outline" className="text-xs">
+                        Skip
+                      </Badge>
+                    )}
                     {log.status === "error" && (
                       <Badge variant="destructive" className="text-xs">
-                        <AlertCircle className="w-3 h-3 mr-1" />Errore
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                        Errore
                       </Badge>
                     )}
                   </div>

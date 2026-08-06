@@ -21,8 +21,13 @@ export function StaffPage() {
   const [showJobs, setShowJobs] = useState(false);
 
   // Filter staff agents (those with director/manager/strategist roles)
-  const staffAgents = agents.filter((a) =>
-    STAFF_ROLES.some((r) => a.role.toLowerCase().includes(r)) || a.name.toLowerCase().includes("luca") || a.name.toLowerCase().includes("gigi") || a.name.toLowerCase().includes("felice") || a.name.toLowerCase().includes("gianfranco")
+  const staffAgents = agents.filter(
+    (a) =>
+      STAFF_ROLES.some((r) => a.role.toLowerCase().includes(r)) ||
+      a.name.toLowerCase().includes("luca") ||
+      a.name.toLowerCase().includes("gigi") ||
+      a.name.toLowerCase().includes("felice") ||
+      a.name.toLowerCase().includes("gianfranco"),
   );
 
   const activeAgent = staffAgents.find((a) => a.id === activeId) ?? (staffAgents.length > 0 ? staffAgents[0] : null);
@@ -64,9 +69,7 @@ export function StaffPage() {
             <Crown className="w-4 h-4 text-primary" />
             Staff Direzionale
           </h1>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {staffAgents.length} consulenti AI
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{staffAgents.length} consulenti AI</p>
         </div>
 
         {/* Staff list */}
@@ -79,7 +82,7 @@ export function StaffPage() {
                 "w-full text-left p-3 rounded-xl transition-all",
                 activeAgent?.id === agent.id
                   ? "bg-primary/10 border border-primary/30"
-                  : "hover:bg-muted/50 border border-transparent"
+                  : "hover:bg-muted/50 border border-transparent",
               )}
             >
               <div className="flex items-center gap-3">
@@ -88,7 +91,12 @@ export function StaffPage() {
                   <div className="text-sm font-medium text-foreground truncate">{agent.name}</div>
                   <div className="text-[11px] text-muted-foreground capitalize">{agent.role}</div>
                 </div>
-                <Circle className={cn("w-2 h-2 fill-current shrink-0", agent.is_active ? "text-success" : "text-muted-foreground")} />
+                <Circle
+                  className={cn(
+                    "w-2 h-2 fill-current shrink-0",
+                    agent.is_active ? "text-success" : "text-muted-foreground",
+                  )}
+                />
               </div>
             </button>
           ))}
@@ -105,19 +113,21 @@ export function StaffPage() {
           </button>
           {showJobs && jobs && (
             <div className="max-h-48 overflow-y-auto px-3 pb-3 space-y-1">
-              {jobs.length === 0 && (
-                <p className="text-[11px] text-muted-foreground px-1">Nessun job</p>
-              )}
+              {jobs.length === 0 && <p className="text-[11px] text-muted-foreground px-1">Nessun job</p>}
               {jobs.map((j) => (
                 <div key={j.id} className="text-[11px] p-2 rounded-lg bg-muted/30 border border-border/30">
                   <div className="font-medium text-foreground truncate">{j.title}</div>
                   <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded text-[9px] font-medium",
-                      j.status === "completed" ? "bg-success/15 text-success" :
-                      j.status === "in_progress" ? "bg-primary/10 text-primary" :
-                      "bg-muted text-muted-foreground"
-                    )}>
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.5 rounded text-[9px] font-medium",
+                        j.status === "completed"
+                          ? "bg-success/15 text-success"
+                          : j.status === "in_progress"
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground",
+                      )}
+                    >
                       {j.status}
                     </span>
                     <span>{new Date(j.created_at).toLocaleDateString("it-IT")}</span>

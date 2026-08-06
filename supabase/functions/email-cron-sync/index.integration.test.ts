@@ -37,7 +37,7 @@ Deno.test("[B10] Night pause message mentions CET", async () => {
   });
   const body = await res.json();
   // If it's night pause, message should reference CET
-  if (body.message && body.message.toLowerCase().includes("night") || body.message?.includes("pause")) {
+  if ((body.message && body.message.toLowerCase().includes("night")) || body.message?.includes("pause")) {
     const mentionsCET = body.message.includes("CET") || body.message.includes("cet");
     assertEquals(mentionsCET, true);
   }

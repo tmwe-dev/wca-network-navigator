@@ -62,26 +62,24 @@ export async function requireAuth(
 ): Promise<AuthResult | Response> {
   const errorFormat: AuthErrorFormat = options.errorFormat ?? "verbose";
   const buildErrorBody = (code: "AUTH_REQUIRED" | "AUTH_INVALID", message: string): string =>
-    errorFormat === "terse"
-      ? JSON.stringify({ error: code })
-      : JSON.stringify({ error: code, message });
+    errorFormat === "terse" ? JSON.stringify({ error: code }) : JSON.stringify({ error: code, message });
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(
-      buildErrorBody("AUTH_REQUIRED", "Bearer token required"),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(buildErrorBody("AUTH_REQUIRED", "Bearer token required"), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const token = authHeader.replace("Bearer ", "");
   const verifier = options._claimsVerifier ?? defaultClaimsVerifier;
   const { sub, error: claimsError } = await verifier(token, authHeader);
   if (claimsError || !sub) {
-    return new Response(
-      buildErrorBody("AUTH_INVALID", "Invalid or expired token"),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(buildErrorBody("AUTH_INVALID", "Invalid or expired token"), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   return { userId: sub, token };

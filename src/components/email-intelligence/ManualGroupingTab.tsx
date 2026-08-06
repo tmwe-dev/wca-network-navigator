@@ -15,12 +15,17 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
-import { Loader2, ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
+  Loader2,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  ArrowDown01,
+  ArrowUp01,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { CreateCategoryDialog } from "./management/CreateCategoryDialog";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
@@ -52,28 +57,28 @@ export default function ManualGroupingTab() {
   const { bulkUpdateAutoAction, bulkSetBlocked } = useAddressRulesRepo();
   const { createSenderGroup } = useSenderManagementRepo();
   const {
-    senders, setSenders, classifiedSenders, setClassifiedSenders,
-    groups, setGroups, isLoading, isPopulating,
-    loadData, populateAddressRules,
-    assignedByGroup, reloadAssignedRules,
+    senders,
+    setSenders,
+    classifiedSenders,
+    setClassifiedSenders,
+    groups,
+    setGroups,
+    isLoading,
+    isPopulating,
+    loadData,
+    populateAddressRules,
+    assignedByGroup,
+    reloadAssignedRules,
   } = useGroupingData();
 
-  const allSenders = useMemo<SenderAnalysis[]>(
-    () => [...senders, ...classifiedSenders],
-    [senders, classifiedSenders],
-  );
+  const allSenders = useMemo<SenderAnalysis[]>(() => [...senders, ...classifiedSenders], [senders, classifiedSenders]);
 
-  const {
-    searchQuery,
-    groupSortOption, setGroupSortOption,
-    sortOption, setSortOption,
-    sortedSenders, sortedGroups,
-  } = useFilterAndSort(allSenders, groups);
+  const { searchQuery, groupSortOption, setGroupSortOption, sortOption, setSortOption, sortedSenders, sortedGroups } =
+    useFilterAndSort(allSenders, groups);
 
   const { activeDrag, setActiveDrag, hoveredGroupId, handleDragEnd } = useDragAndDrop();
   const { assignToGroup, bulkAssignGroup } = useGroupAssignment(groups, setSenders);
-  const { selectedSenders, setSelectedSenders, toggleSenderSelection, getSelectedSenderObjects } =
-    useSelectionState();
+  const { selectedSenders, setSelectedSenders, toggleSenderSelection, getSelectedSenderObjects } = useSelectionState();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [previewSender, setPreviewSender] = useState<SenderAnalysis | null>(null);
@@ -137,7 +142,10 @@ export default function ManualGroupingTab() {
     colore: string;
     icon: string;
   }) => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (!user) return;
     let created: unknown;
     try {
@@ -171,99 +179,118 @@ export default function ManualGroupingTab() {
 
   // ── Callback delle azioni rapide della card ─────────────────────────────────
   const withUser = async <T,>(fn: (uid: string) => Promise<T>): Promise<T | null> => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-    if (!user) { toast.error("Sessione scaduta"); return null; }
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
+    if (!user) {
+      toast.error("Sessione scaduta");
+      return null;
+    }
     return fn(user.id);
   };
 
-  const onCardOpenRules = useCallback((s: SenderAnalysis) => {
-    openActionsDialog(s);
-  }, [openActionsDialog]);
+  const onCardOpenRules = useCallback(
+    (s: SenderAnalysis) => {
+      openActionsDialog(s);
+    },
+    [openActionsDialog],
+  );
 
-  const onCardMarkRead = useCallback(async (s: SenderAnalysis) => {
-    try {
-      await withUser((uid) =>
-        bulkUpdateAutoAction(uid, [s.email], "mark_read", { also_mark_read: true }),
-      );
-      toast.success(`${s.companyName}: segna come letto attivato`);
-      await loadData();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Errore");
-    }
-  }, [loadData]);
+  const onCardMarkRead = useCallback(
+    async (s: SenderAnalysis) => {
+      try {
+        await withUser((uid) => bulkUpdateAutoAction(uid, [s.email], "mark_read", { also_mark_read: true }));
+        toast.success(`${s.companyName}: segna come letto attivato`);
+        await loadData();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Errore");
+      }
+    },
+    [loadData],
+  );
 
-  const onCardDelete = useCallback(async (s: SenderAnalysis) => {
-    try {
-      await withUser((uid) => bulkUpdateAutoAction(uid, [s.email], "delete"));
-      toast.success(`${s.companyName}: regola di eliminazione impostata`);
-      await loadData();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Errore");
-    }
-  }, [loadData]);
+  const onCardDelete = useCallback(
+    async (s: SenderAnalysis) => {
+      try {
+        await withUser((uid) => bulkUpdateAutoAction(uid, [s.email], "delete"));
+        toast.success(`${s.companyName}: regola di eliminazione impostata`);
+        await loadData();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Errore");
+      }
+    },
+    [loadData],
+  );
 
-  const onCardBlock = useCallback(async (s: SenderAnalysis) => {
-    try {
-      await withUser((uid) => bulkSetBlocked(uid, [s.email], true));
-      toast.success(`${s.companyName} bloccato (spam IMAP attivato)`);
-      await loadData();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Errore");
-    }
-  }, [loadData]);
+  const onCardBlock = useCallback(
+    async (s: SenderAnalysis) => {
+      try {
+        await withUser((uid) => bulkSetBlocked(uid, [s.email], true));
+        toast.success(`${s.companyName} bloccato (spam IMAP attivato)`);
+        await loadData();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Errore");
+      }
+    },
+    [loadData],
+  );
 
   const onCardExport = useCallback((s: SenderAnalysis) => {
     setExportSenderEmails([s.email]);
     setShowExportDialog(true);
   }, []);
 
-  const onCardAnalyzeAI = useCallback(async (s: SenderAnalysis) => {
-    const toastId = toast.loading(`Analisi AI di ${s.companyName}…`);
-    try {
-      const data = await invokeAi<SuggestEmailGroupsResponse>("suggest-email-groups", {
-        scope: "email",
-        context: {
-          source: "ManualGroupingTab.onCardAnalyzeAI",
-          route: "/v2/email-intelligence",
-          mode: "single-address-suggestion",
-          extra: { email: s.email, domain: s.domain },
-        },
-        body: { emails: [s.email], min_email_count: 0, batch_size: 1 },
-      });
+  const onCardAnalyzeAI = useCallback(
+    async (s: SenderAnalysis) => {
+      const toastId = toast.loading(`Analisi AI di ${s.companyName}…`);
+      try {
+        const data = await invokeAi<SuggestEmailGroupsResponse>("suggest-email-groups", {
+          scope: "email",
+          context: {
+            source: "ManualGroupingTab.onCardAnalyzeAI",
+            route: "/v2/email-intelligence",
+            mode: "single-address-suggestion",
+            extra: { email: s.email, domain: s.domain },
+          },
+          body: { emails: [s.email], min_email_count: 0, batch_size: 1 },
+        });
 
-      const suggestion = data.suggestions?.find((item) => item.email.toLowerCase() === s.email.toLowerCase());
+        const suggestion = data.suggestions?.find((item) => item.email.toLowerCase() === s.email.toLowerCase());
 
-      // Patch in-place senza ricaricare l'intera lista (evita scroll-jump
-      // e re-mount delle ~1200 card). Aggiorniamo SOLO il sender toccato.
-      if (suggestion?.suggested_group && suggestion.suggested_group !== "uncategorized") {
-        const patch = (arr: SenderAnalysis[]) =>
-          arr.map((x) =>
-            x.email.toLowerCase() === s.email.toLowerCase()
-              ? {
-                  ...x,
-                  aiSuggestion: {
-                    group_name: suggestion.suggested_group,
-                    confidence: suggestion.confidence ?? 0,
-                    accepted: null,
-                  },
-                }
-              : x,
-          );
-        setSenders(patch);
-        setClassifiedSenders(patch);
+        // Patch in-place senza ricaricare l'intera lista (evita scroll-jump
+        // e re-mount delle ~1200 card). Aggiorniamo SOLO il sender toccato.
+        if (suggestion?.suggested_group && suggestion.suggested_group !== "uncategorized") {
+          const patch = (arr: SenderAnalysis[]) =>
+            arr.map((x) =>
+              x.email.toLowerCase() === s.email.toLowerCase()
+                ? {
+                    ...x,
+                    aiSuggestion: {
+                      group_name: suggestion.suggested_group,
+                      confidence: suggestion.confidence ?? 0,
+                      accepted: null,
+                    },
+                  }
+                : x,
+            );
+          setSenders(patch);
+          setClassifiedSenders(patch);
+        }
+
+        if (suggestion?.suggested_group && suggestion.suggested_group !== "uncategorized") {
+          toast.success(`Suggerito: ${suggestion.suggested_group}`, { id: toastId });
+          handleAiChipClick(suggestion.suggested_group);
+          return;
+        }
+
+        toast.info("AI completata: nessun gruppo affidabile trovato", { id: toastId });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Errore analisi AI", { id: toastId });
       }
-
-      if (suggestion?.suggested_group && suggestion.suggested_group !== "uncategorized") {
-        toast.success(`Suggerito: ${suggestion.suggested_group}`, { id: toastId });
-        handleAiChipClick(suggestion.suggested_group);
-        return;
-      }
-
-      toast.info("AI completata: nessun gruppo affidabile trovato", { id: toastId });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Errore analisi AI", { id: toastId });
-    }
-  }, [handleAiChipClick, setSenders, setClassifiedSenders]);
+    },
+    [handleAiChipClick, setSenders, setClassifiedSenders],
+  );
 
   const onCardAcceptAiSuggestion = useCallback(
     async (s: SenderAnalysis, groupName: string) => {
@@ -315,7 +342,10 @@ export default function ManualGroupingTab() {
       for (let i = 0; i < candidates.length; i++) {
         const s = candidates[i];
         const target = groups.find((g) => g.nome_gruppo === s.aiSuggestion!.group_name);
-        if (!target) { ko++; continue; }
+        if (!target) {
+          ko++;
+          continue;
+        }
         try {
           await assignToGroup(s, target.nome_gruppo, target.id);
           ok++;
@@ -361,10 +391,7 @@ export default function ManualGroupingTab() {
       <ActiveFiltersBar />
 
       {/* Layout 3 colonne resizable: [Preview opzionale] | [Sender cards verticali] | [Gruppi] */}
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="flex-1 min-h-0 rounded-lg border"
-      >
+      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0 rounded-lg border">
         {/* COL 1 — Anteprima mail (nascondibile) */}
         {showPreview && (
           <>
@@ -395,9 +422,11 @@ export default function ManualGroupingTab() {
                         onClick={() => setShowPreview((v) => !v)}
                         aria-label={showPreview ? "Nascondi anteprima" : "Mostra anteprima"}
                       >
-                        {showPreview
-                          ? <PanelLeftClose className="h-3.5 w-3.5" />
-                          : <PanelLeftOpen className="h-3.5 w-3.5" />}
+                        {showPreview ? (
+                          <PanelLeftClose className="h-3.5 w-3.5" />
+                        ) : (
+                          <PanelLeftOpen className="h-3.5 w-3.5" />
+                        )}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -427,13 +456,23 @@ export default function ManualGroupingTab() {
                         aria-label="Cambia ordinamento mittenti"
                       >
                         {sortOption === "name-asc" ? (
-                          <><ArrowDownAZ className="h-3.5 w-3.5 mr-1" />A → Z</>
+                          <>
+                            <ArrowDownAZ className="h-3.5 w-3.5 mr-1" />A → Z
+                          </>
                         ) : sortOption === "name-desc" ? (
-                          <><ArrowUpAZ className="h-3.5 w-3.5 mr-1" />Z → A</>
+                          <>
+                            <ArrowUpAZ className="h-3.5 w-3.5 mr-1" />Z → A
+                          </>
                         ) : sortOption === "count-desc" ? (
-                          <><ArrowDown01 className="h-3.5 w-3.5 mr-1" />Più email</>
+                          <>
+                            <ArrowDown01 className="h-3.5 w-3.5 mr-1" />
+                            Più email
+                          </>
                         ) : (
-                          <><ArrowUp01 className="h-3.5 w-3.5 mr-1" />Meno email</>
+                          <>
+                            <ArrowUp01 className="h-3.5 w-3.5 mr-1" />
+                            Meno email
+                          </>
                         )}
                       </Button>
                     </TooltipTrigger>
@@ -464,17 +503,15 @@ export default function ManualGroupingTab() {
                         onClick={handleAcceptAllAiSuggestions}
                         disabled={isAcceptingAll}
                       >
-                        {isAcceptingAll
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          : <Sparkles className="h-3.5 w-3.5" />}
-                        <span className="text-xs font-medium">
-                          Accetta tutti ({acceptableCount})
-                        </span>
+                        {isAcceptingAll ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                        <span className="text-xs font-medium">Accetta tutti ({acceptableCount})</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      Accetta in blocco i suggerimenti AI generati sulle card
-                    </TooltipContent>
+                    <TooltipContent>Accetta in blocco i suggerimenti AI generati sulle card</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}

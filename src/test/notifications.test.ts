@@ -81,7 +81,10 @@ type Chain = {
   order: MockFn;
   range: MockFn;
   single: MockFn;
-  then: (resolve: ((value: any) => unknown) | null | undefined, reject?: ((reason: any) => unknown) | null | undefined) => Promise<any>;
+  then: (
+    resolve: ((value: any) => unknown) | null | undefined,
+    reject?: ((reason: any) => unknown) | null | undefined,
+  ) => Promise<any>;
 };
 function buildChain(terminal: any): Chain {
   const chain = {} as Chain;

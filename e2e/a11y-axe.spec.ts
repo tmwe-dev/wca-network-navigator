@@ -30,14 +30,10 @@ for (const route of PUBLIC_ROUTES) {
       .disableRules(["color-contrast"]) // gestito dal design system; valutiamo a parte
       .analyze();
 
-    const serious = results.violations.filter(
-      (v) => v.impact === "serious" || v.impact === "critical",
-    );
+    const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
 
     if (serious.length > 0) {
-      const summary = serious
-        .map((v) => `  [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodi)`)
-        .join("\n");
+      const summary = serious.map((v) => `  [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodi)`).join("\n");
       const msg = `Violazioni a11y SERIOUS/CRITICAL su ${route}:\n${summary}`;
       if (WARN_ONLY) {
         console.warn(msg);

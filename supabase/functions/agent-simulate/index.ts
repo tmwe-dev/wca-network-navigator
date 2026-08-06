@@ -41,9 +41,7 @@ const TOOL_DEFINITIONS = [
 // Hard guards summary — informational, sourced from src/v2/agent/policy/hardGuards.ts.
 // Kept short on purpose: this is what the UI surfaces, not the enforcement itself.
 const HARD_GUARDS_SUMMARY = {
-  forbidden_tables: [
-    "auth.*", "storage.*", "realtime.*", "supabase_functions.*", "vault.*",
-  ],
+  forbidden_tables: ["auth.*", "storage.*", "realtime.*", "supabase_functions.*", "vault.*"],
   destructive_ops_blocked: ["DELETE physical (auto-converted to soft-delete)", "DROP", "TRUNCATE"],
   bulk_caps: { default: 50, outreach_send: 25 },
   approval_required_always: ["execute_bulk_outreach", "send_email (bulk)", "update_*_status_bulk"],
@@ -71,7 +69,9 @@ serve(async (req: Request) => {
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
       );
-      const { data: { user } } = await sb.auth.getUser(token);
+      const {
+        data: { user },
+      } = await sb.auth.getUser(token);
       if (user) userId = user.id;
     }
     if (!userId) return jsonResp({ error: "Auth richiesta" }, 401, cors);
@@ -87,27 +87,28 @@ serve(async (req: Request) => {
     // The Simulator UI calls this once to populate the dropdown without
     // hitting the agents table.
     if (listEdgeFns) {
-      return jsonResp({
-        edge_fns: EDGE_FN_REGISTRY.map((s) => ({
-          id: s.id,
-          edge_function: s.edgeFunction,
-          label: s.label,
-          description: s.description,
-          default_model: s.defaultModel,
-          has_tools: s.hasTools,
-          loader_options: s.loaderOptions,
-        })),
-      }, 200, cors);
+      return jsonResp(
+        {
+          edge_fns: EDGE_FN_REGISTRY.map((s) => ({
+            id: s.id,
+            edge_function: s.edgeFunction,
+            label: s.label,
+            description: s.description,
+            default_model: s.defaultModel,
+            has_tools: s.hasTools,
+            loader_options: s.loaderOptions,
+          })),
+        },
+        200,
+        cors,
+      );
     }
 
     if (!userMessage.trim()) {
       return jsonResp({ error: "userMessage obbligatorio" }, 400, cors);
     }
 
-    const supabaseSrv = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabaseSrv = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // ── Branch: pseudo-agent for an AI edge function ──
     if (isEdgeFnAgentId(agentId)) {
@@ -120,20 +121,21 @@ serve(async (req: Request) => {
 
       let dryRun: Record<string, unknown> | null = null;
       if (dryRunAI) {
-        const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+        const LOVABLE_API_KEY =
+          Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
         if (!LOVABLE_API_KEY) {
           dryRun = { error: "LOVABLE_API_KEY non configurata" };
         } else {
           const start = Date.now();
           const resp = await aiFetch({
-              model: spec.defaultModel.startsWith("claude") ? "google/gemini-2.5-flash" : spec.defaultModel,
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userMessage },
-              ],
-              temperature: 0.2,
-              max_tokens: 500,
-            });
+            model: spec.defaultModel.startsWith("claude") ? "google/gemini-2.5-flash" : spec.defaultModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            temperature: 0.2,
+            max_tokens: 500,
+          });
           const elapsed = Date.now() - start;
           if (!resp.ok) {
             const txt = await resp.text();
@@ -152,47 +154,54 @@ serve(async (req: Request) => {
         }
       }
 
-      return jsonResp({
-        kind: "edge_fn",
-        edge_fn: {
-          id: spec.id,
-          edge_function: spec.edgeFunction,
-          label: spec.label,
-          description: spec.description,
-          default_model: spec.defaultModel,
-          has_tools: spec.hasTools,
-          loader_options: spec.loaderOptions,
+      return jsonResp(
+        {
+          kind: "edge_fn",
+          edge_fn: {
+            id: spec.id,
+            edge_function: spec.edgeFunction,
+            label: spec.label,
+            description: spec.description,
+            default_model: spec.defaultModel,
+            has_tools: spec.hasTools,
+            loader_options: spec.loaderOptions,
+          },
+          assembled: {
+            system_prompt: systemPrompt,
+            char_count: systemPrompt.length,
+          },
+          persona: {
+            loaded: false,
+            note: "Le edge function di classificazione/generazione non usano persona DB. Sono comandate solo dal base prompt + Prompt Lab.",
+          },
+          capabilities: {
+            loaded: false,
+            execution_mode: "edge-function",
+            preferred_model: spec.defaultModel,
+            temperature: 0.2,
+            max_tokens_per_call: 500,
+            max_iterations: 1,
+            max_concurrent_tools: 0,
+            step_timeout_ms: 30000,
+          },
+          operative_prompts: {
+            applied: lab.appliedNames,
+            has_mandatory: lab.hasMandatory,
+            matched: lab.matched,
+            block_preview: lab.block ?? "",
+          },
+          tools: {
+            all_registered: [],
+            effective: [],
+            filtered_out: [],
+            approval_map: [],
+          },
+          hard_guards: HARD_GUARDS_SUMMARY,
+          dry_run: dryRun,
         },
-        assembled: {
-          system_prompt: systemPrompt,
-          char_count: systemPrompt.length,
-        },
-        persona: { loaded: false, note: "Le edge function di classificazione/generazione non usano persona DB. Sono comandate solo dal base prompt + Prompt Lab." },
-        capabilities: {
-          loaded: false,
-          execution_mode: "edge-function",
-          preferred_model: spec.defaultModel,
-          temperature: 0.2,
-          max_tokens_per_call: 500,
-          max_iterations: 1,
-          max_concurrent_tools: 0,
-          step_timeout_ms: 30000,
-        },
-        operative_prompts: {
-          applied: lab.appliedNames,
-          has_mandatory: lab.hasMandatory,
-          matched: lab.matched,
-          block_preview: lab.block ?? "",
-        },
-        tools: {
-          all_registered: [],
-          effective: [],
-          filtered_out: [],
-          approval_map: [],
-        },
-        hard_guards: HARD_GUARDS_SUMMARY,
-        dry_run: dryRun,
-      }, 200, cors);
+        200,
+        cors,
+      );
     }
 
     // ── 1. Persona ──
@@ -200,9 +209,7 @@ serve(async (req: Request) => {
     const personaBlock = renderPersonaBlock(persona);
 
     // ── 2. Capabilities ──
-    const capabilities = agentId
-      ? await loadAgentCapabilities(supabaseSrv, agentId)
-      : { ...DEFAULT_CAPABILITIES };
+    const capabilities = agentId ? await loadAgentCapabilities(supabaseSrv, agentId) : { ...DEFAULT_CAPABILITIES };
 
     // ── 3. Operative prompts (Prompt Lab) ──
     const lab = await loadOperativePrompts(supabaseSrv, userId, {
@@ -212,7 +219,10 @@ serve(async (req: Request) => {
     });
 
     // ── 4. Tool whitelist after filtering ──
-    const effectiveTools = filterToolsByCapabilities(TOOL_DEFINITIONS as unknown as Array<{ function: { name: string } }>, capabilities);
+    const effectiveTools = filterToolsByCapabilities(
+      TOOL_DEFINITIONS as unknown as Array<{ function: { name: string } }>,
+      capabilities,
+    );
     const allToolNames = TOOL_DEFINITIONS.map((t) => t.function.name);
     const effectiveToolNames = effectiveTools.map((t) => (t as { function: { name: string } }).function.name);
     const filteredOut = allToolNames.filter((n) => !effectiveToolNames.includes(n));
@@ -224,9 +234,7 @@ serve(async (req: Request) => {
     // ── 5. Assemble system prompt EXACTLY like agent-loop ──
     const promptLabBlock = lab.block ? `\n\n${lab.block}` : "";
     const personaBlockStr = personaBlock ? `\n\n${personaBlock}` : "";
-    const sessionCtxStr = sessionContext
-      ? `CONTESTO PAGINA: ${JSON.stringify(sessionContext).slice(0, 1000)}`
-      : "";
+    const sessionCtxStr = sessionContext ? `CONTESTO PAGINA: ${JSON.stringify(sessionContext).slice(0, 1000)}` : "";
     const systemPrompt = `Sei LUCA, direttore del CRM WCA Network Navigator. Italiano, asciutto, operativo.
 
 OBIETTIVO ATTUALE: ${userMessage}
@@ -237,22 +245,23 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
     // ── 6. Optional dry-run AI call (single iteration, NO execution) ──
     let dryRun: Record<string, unknown> | null = null;
     if (dryRunAI) {
-      const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+      const LOVABLE_API_KEY =
+        Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) {
         dryRun = { error: "LOVABLE_API_KEY non configurata" };
       } else {
         const model = capabilities.preferredModel ?? "google/gemini-2.5-flash";
         const start = Date.now();
         const resp = await aiFetch({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userMessage },
-            ],
-            tools: effectiveTools,
-            temperature: capabilities.temperature ?? 0.2,
-            max_tokens: capabilities.maxTokensPerCall ?? 500,
-          });
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          tools: effectiveTools,
+          temperature: capabilities.temperature ?? 0.2,
+          max_tokens: capabilities.maxTokensPerCall ?? 500,
+        });
         const elapsed = Date.now() - start;
         if (!resp.ok) {
           const txt = await resp.text();
@@ -265,7 +274,9 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
             let args: unknown = {};
             try {
               args = typeof fn.arguments === "string" ? JSON.parse(fn.arguments) : fn.arguments;
-            } catch { /* leave as raw */ }
+            } catch {
+              /* leave as raw */
+            }
             const name = fn.name as string;
             return {
               name,
@@ -285,44 +296,44 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
       }
     }
 
-    return jsonResp({
-      assembled: {
-        system_prompt: systemPrompt,
-        char_count: systemPrompt.length,
-      },
-      persona: persona
-        ? { loaded: true, tone: persona.tone, language: persona.language, block_preview: personaBlock }
-        : { loaded: false, note: "Nessuna persona DB; verrà usata solo l'identità di base dell'agente." },
-      capabilities: {
-        loaded: capabilities.loaded,
-        execution_mode: capabilities.executionMode,
-        preferred_model: capabilities.preferredModel,
-        temperature: capabilities.temperature,
-        max_tokens_per_call: capabilities.maxTokensPerCall,
-        max_iterations: capabilities.maxIterations,
-        max_concurrent_tools: capabilities.maxConcurrentTools,
-        step_timeout_ms: capabilities.stepTimeoutMs,
-      },
-      operative_prompts: {
-        applied: lab.appliedNames,
-        has_mandatory: lab.hasMandatory,
-        matched: lab.matched,
-        block_preview: lab.block ?? "",
-      },
-      tools: {
-        all_registered: allToolNames,
-        effective: effectiveToolNames,
-        filtered_out: filteredOut,
-        approval_map: toolsApproval,
-      },
-      hard_guards: HARD_GUARDS_SUMMARY,
-      dry_run: dryRun,
-    }, 200, cors);
-  } catch (e) {
     return jsonResp(
-      { error: e instanceof Error ? e.message : "Errore sconosciuto" },
-      500,
+      {
+        assembled: {
+          system_prompt: systemPrompt,
+          char_count: systemPrompt.length,
+        },
+        persona: persona
+          ? { loaded: true, tone: persona.tone, language: persona.language, block_preview: personaBlock }
+          : { loaded: false, note: "Nessuna persona DB; verrà usata solo l'identità di base dell'agente." },
+        capabilities: {
+          loaded: capabilities.loaded,
+          execution_mode: capabilities.executionMode,
+          preferred_model: capabilities.preferredModel,
+          temperature: capabilities.temperature,
+          max_tokens_per_call: capabilities.maxTokensPerCall,
+          max_iterations: capabilities.maxIterations,
+          max_concurrent_tools: capabilities.maxConcurrentTools,
+          step_timeout_ms: capabilities.stepTimeoutMs,
+        },
+        operative_prompts: {
+          applied: lab.appliedNames,
+          has_mandatory: lab.hasMandatory,
+          matched: lab.matched,
+          block_preview: lab.block ?? "",
+        },
+        tools: {
+          all_registered: allToolNames,
+          effective: effectiveToolNames,
+          filtered_out: filteredOut,
+          approval_map: toolsApproval,
+        },
+        hard_guards: HARD_GUARDS_SUMMARY,
+        dry_run: dryRun,
+      },
+      200,
       cors,
     );
+  } catch (e) {
+    return jsonResp({ error: e instanceof Error ? e.message : "Errore sconosciuto" }, 500, cors);
   }
 });

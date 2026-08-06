@@ -53,9 +53,7 @@ const TABLE_PURPOSE: Record<string, string> = {
 };
 
 function buildSystemPrompt(liveSchema: string): string {
-  const tableList = ALLOWED_TABLES
-    .map((t) => `  • ${t} — ${TABLE_PURPOSE[t] ?? ""}`)
-    .join("\n");
+  const tableList = ALLOWED_TABLES.map((t) => `  • ${t} — ${TABLE_PURPOSE[t] ?? ""}`).join("\n");
 
   return `Sei un Query Planner per un CRM logistico. Ricevi una richiesta in linguaggio naturale e produci un piano di query SELECT in JSON.
 
@@ -120,13 +118,15 @@ function plannerFallbackResponse(
 ): Response {
   return new Response(
     JSON.stringify({
-      plans: [{
-        table: "INVALID",
-        filters: [],
-        limit: 1,
-        title: "AI Query non disponibile",
-        rationale,
-      }],
+      plans: [
+        {
+          table: "INVALID",
+          filters: [],
+          limit: 1,
+          title: "AI Query non disponibile",
+          rationale,
+        },
+      ],
       fallback: true,
       kind,
     }),
@@ -197,10 +197,13 @@ Deno.serve(async (req: Request) => {
     } catch (e) {
       if (e instanceof AiGatewayError) {
         const userMsg =
-          e.kind === "credits_exhausted" ? "Crediti AI esauriti."
-          : e.kind === "rate_limited" ? openAiLimitMessage(e)
-          : e.kind === "unauthorized" ? "Chiave AI non valida o scaduta."
-          : `Errore AI: ${e.kind}`;
+          e.kind === "credits_exhausted"
+            ? "Crediti AI esauriti."
+            : e.kind === "rate_limited"
+              ? openAiLimitMessage(e)
+              : e.kind === "unauthorized"
+                ? "Chiave AI non valida o scaduta."
+                : `Errore AI: ${e.kind}`;
         return plannerFallbackResponse(corsHeaders, userMsg, e.kind);
       }
       throw e;
@@ -239,7 +242,8 @@ Deno.serve(async (req: Request) => {
     // ── Bonus optimization: COUNT vs LIST detection from user prompt ──
     // LIST intent wins over COUNT when both could match ("dammi l'elenco di
     // quanti partner..." → user wants the list, not just a number).
-    const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
+    const isListIntent =
+      /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
     const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|conteggio|count)\b/i.test(prompt);
     const isRealTable = (t: unknown) => typeof t === "string" && t !== "INVALID" && t !== "SMALLTALK";
     for (const plan of plans) {

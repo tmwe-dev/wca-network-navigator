@@ -84,9 +84,12 @@ export async function fetchTimingTemplates(): Promise<TimingTemplate[]> {
 }
 
 export async function createTimingTemplate(
-  tpl: Omit<TimingTemplate, "id" | "created_at" | "updated_at">
+  tpl: Omit<TimingTemplate, "id" | "created_at" | "updated_at">,
 ): Promise<TimingTemplate> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+  const {
+    data: { session: __s },
+  } = await supabase.auth.getSession();
+  const user = __s?.user ?? null;
   if (!user) throw new Error("Not authenticated");
 
   const insertRow: Database["public"]["Tables"]["outreach_timing_templates"]["Insert"] = {
@@ -95,11 +98,7 @@ export async function createTimingTemplate(
     user_id: user.id,
     is_system: false,
   };
-  const { data, error } = await supabase
-    .from("outreach_timing_templates")
-    .insert(insertRow)
-    .select()
-    .single();
+  const { data, error } = await supabase.from("outreach_timing_templates").insert(insertRow).select().single();
   if (error) throw error;
   return mapTimingTemplateRow(data);
 }
@@ -125,9 +124,6 @@ export async function duplicateTimingTemplate(id: string): Promise<TimingTemplat
 }
 
 export async function deleteTimingTemplate(id: string) {
-  const { error } = await supabase
-    .from("outreach_timing_templates")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("outreach_timing_templates").delete().eq("id", id);
   if (error) throw error;
 }

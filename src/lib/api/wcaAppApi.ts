@@ -7,12 +7,7 @@ import { createLogger } from "@/lib/log";
 import { ApiError } from "@/lib/api/apiError";
 import { waitForGreenLight, markRequestSent } from "@/lib/wcaCheckpoint";
 import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
-import {
-  safeParseDiscover,
-  safeParseScrape,
-  safeParseCheckIds,
-  safeParseJobStart,
-} from "./wcaAppApi.schemas";
+import { safeParseDiscover, safeParseScrape, safeParseCheckIds, safeParseJobStart } from "./wcaAppApi.schemas";
 
 const _log = createLogger("wcaAppApi");
 
@@ -115,7 +110,15 @@ export interface ScrapeProfile {
   emergency_call?: string;
   website?: string;
   email?: string;
-  contacts?: Array<{ name?: string; title?: string; email?: string; direct_line?: string; fax?: string; mobile?: string; skype?: string }>;
+  contacts?: Array<{
+    name?: string;
+    title?: string;
+    email?: string;
+    direct_line?: string;
+    fax?: string;
+    mobile?: string;
+    skype?: string;
+  }>;
   services?: string[];
   certifications?: string[];
   branch_cities?: string[];
@@ -233,7 +236,7 @@ export async function wcaLogin(): Promise<string> {
 export async function wcaDiscover(
   country: string,
   page = 1,
-  options?: { cookie?: string; networks?: string[]; searchTerm?: string; searchBy?: string; city?: string }
+  options?: { cookie?: string; networks?: string[]; searchTerm?: string; searchBy?: string; city?: string },
 ): Promise<DiscoverResult> {
   const cookie = options?.cookie || (await getOrRefreshCookie());
   const filters: Record<string, unknown> = { country };
@@ -258,7 +261,7 @@ export async function wcaDiscover(
 /** Discover TUTTI i membri (tutte le pagine) */
 export async function wcaDiscoverAll(
   country: string,
-  onProgress?: (page: number, totalEstimate: number) => void
+  onProgress?: (page: number, totalEstimate: number) => void,
 ): Promise<WcaMember[]> {
   const cookie = await getOrRefreshCookie();
   const all: WcaMember[] = [];
@@ -321,7 +324,7 @@ export async function wcaCheckIds(ids: number[], country?: string): Promise<Chec
 /** Avvia job download server-side */
 export async function wcaJobStart(
   countries: Array<{ code: string; name: string }>,
-  options?: { networks?: string[]; searchTerm?: string; searchBy?: string }
+  options?: { networks?: string[]; searchTerm?: string; searchBy?: string },
 ): Promise<JobStartResult> {
   const res = await fetch(`${BASE}/job-start`, {
     method: "POST",
@@ -394,7 +397,7 @@ export async function wcaWorkerTrigger(jobId?: string): Promise<WorkerResult> {
 export async function wcaEnrich(
   companyName: string,
   networkDomain: string,
-  options?: { originalWcaId?: number; networkName?: string }
+  options?: { originalWcaId?: number; networkName?: string },
 ): Promise<EnrichResult> {
   await gateAndMark("wcaEnrich");
   const res = await fetch(`${BASE}/enrich`, {

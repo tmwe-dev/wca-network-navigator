@@ -13,7 +13,12 @@ interface BuilderVoiceControlsProps {
 }
 
 export function BuilderVoiceControls({
-  chatInput, onChatInputChange, onSend, isChatLoading, chatInputRef, speech,
+  chatInput,
+  onChatInputChange,
+  onSend,
+  isChatLoading,
+  chatInputRef,
+  speech,
 }: BuilderVoiceControlsProps) {
   return (
     <div className="px-4 py-3 border-t border-border max-w-2xl mx-auto w-full">
@@ -22,16 +27,37 @@ export function BuilderVoiceControls({
       )}
       <div className="flex gap-2">
         {speech.hasSpeechAPI && (
-          <Button size="icon" variant={speech.listening ? "default" : "outline"} onClick={speech.toggle}
-            className={`flex-shrink-0 ${speech.listening ? "animate-pulse" : ""}`} aria-label={speech.listening ? "Stop dettatura" : "Dettatura vocale"}>
+          <Button
+            size="icon"
+            variant={speech.listening ? "default" : "outline"}
+            onClick={speech.toggle}
+            className={`flex-shrink-0 ${speech.listening ? "animate-pulse" : ""}`}
+            aria-label={speech.listening ? "Stop dettatura" : "Dettatura vocale"}
+          >
             {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </Button>
         )}
-        <Textarea ref={chatInputRef} value={chatInput} onChange={e => onChatInputChange(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(chatInput); } }}
+        <Textarea
+          ref={chatInputRef}
+          value={chatInput}
+          onChange={(e) => onChatInputChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSend(chatInput);
+            }
+          }}
           placeholder={speech.listening ? "🎙 Sto ascoltando…" : "Descrivi la tua missione..."}
-          className="min-h-[40px] max-h-[80px] resize-none text-sm" rows={1} />
-        <Button size="icon" onClick={() => onSend(chatInput)} disabled={isChatLoading || !chatInput.trim()} className="flex-shrink-0" aria-label="Invia">
+          className="min-h-[40px] max-h-[80px] resize-none text-sm"
+          rows={1}
+        />
+        <Button
+          size="icon"
+          onClick={() => onSend(chatInput)}
+          disabled={isChatLoading || !chatInput.trim()}
+          className="flex-shrink-0"
+          aria-label="Invia"
+        >
           <Send className="w-4 h-4" />
         </Button>
       </div>

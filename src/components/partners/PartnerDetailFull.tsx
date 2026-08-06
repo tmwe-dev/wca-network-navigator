@@ -9,7 +9,6 @@ import { PartnerDetailHeader } from "./PartnerDetailHeader";
 import { PartnerDetailInfo } from "./PartnerDetailInfo";
 import { PartnerDetailActivity } from "./PartnerDetailActivity";
 
- 
 interface PartnerDetailFullProps {
   partner: PartnerViewModel;
   onToggleFavorite: () => void;
@@ -24,13 +23,31 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
   const years = getYearsMember(partner.member_since as string | null);
   const services = (partner.partner_services || []) as { service_category: string }[];
   const enrichment = (partner.enrichment_data as Record<string, unknown>) || null;
-  const contacts = (partner.partner_contacts || []) as { id: string; name: string; title?: string; email?: string; direct_phone?: string; mobile?: string; is_primary?: boolean }[];
+  const contacts = (partner.partner_contacts || []) as {
+    id: string;
+    name: string;
+    title?: string;
+    email?: string;
+    direct_phone?: string;
+    mobile?: string;
+    is_primary?: boolean;
+  }[];
   const networks = (partner.partner_networks || []) as { id: string; network_name: string; expires?: string }[];
-  const interactions = (partner.interactions || []) as { id: string; interaction_type?: string; subject?: string; interaction_date: string; notes?: string }[];
+  const interactions = (partner.interactions || []) as {
+    id: string;
+    interaction_type?: string;
+    subject?: string;
+    interaction_date: string;
+    notes?: string;
+  }[];
   const reminders = (partner.reminders || []) as { id: string; title: string; due_date: string; status: string }[];
 
   const expiryDate = partner.membership_expires ? new Date(String(partner.membership_expires)) : null;
-  const isExpiringSoon = !!(expiryDate && expiryDate > new Date() && expiryDate < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
+  const isExpiringSoon = !!(
+    expiryDate &&
+    expiryDate > new Date() &&
+    expiryDate < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+  );
   const isExpired = !!(expiryDate && expiryDate < new Date());
 
   return (

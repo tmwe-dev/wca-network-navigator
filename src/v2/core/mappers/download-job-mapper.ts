@@ -9,9 +9,16 @@ import { type DownloadJob, downloadJobId, userId } from "../domain/entities";
 export function mapDownloadJobRow(row: unknown): Result<DownloadJob, AppError> {
   const parsed = DownloadJobRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `DownloadJob row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "download-job-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `DownloadJob row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "download-job-mapper",
+      ),
+    );
   }
   const r = parsed.data;
   return ok({

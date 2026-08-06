@@ -14,10 +14,7 @@ import { useMemo } from "react";
 import { useContactsPaginated } from "@/hooks/useContactsPaginated";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { deriveCountryCode } from "./countryHints";
-import type {
-  CompanyEntity,
-  ContactEntity,
-} from "@/v2/ui/molecules/CompanyCardList";
+import type { CompanyEntity, ContactEntity } from "@/v2/ui/molecules/CompanyCardList";
 import { toRecord } from "@/lib/records";
 
 interface RawContact {
@@ -37,7 +34,10 @@ interface RawContact {
   [k: string]: unknown;
 }
 
-function normalizeCompanyKey(name: string | null | undefined, email: string | null | undefined): {
+function normalizeCompanyKey(
+  name: string | null | undefined,
+  email: string | null | undefined,
+): {
   key: string;
   display: string;
 } {
@@ -52,8 +52,7 @@ function normalizeCompanyKey(name: string | null | undefined, email: string | nu
 
 function toContactEntity(c: RawContact, companyId: string): ContactEntity {
   const row = toRecord(c);
-  const inHolding =
-    row.in_holding_pattern === true || row.lead_status === "holding";
+  const inHolding = row.in_holding_pattern === true || row.lead_status === "holding";
   return {
     id: c.id,
     name: c.name || c.email || "—",
@@ -92,18 +91,14 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
       origins: Array.from(filters.crmOrigin ?? new Set<string>()) as string[],
       quality: filters.crmQuality !== "all" ? filters.crmQuality : undefined,
       channel: filters.crmChannel !== "all" ? filters.crmChannel : undefined,
-      wcaMatch: filters.crmWcaMatch !== "all"
-        ? (filters.crmWcaMatch as "matched" | "unmatched")
-        : undefined,
+      wcaMatch: filters.crmWcaMatch !== "all" ? (filters.crmWcaMatch as "matched" | "unmatched") : undefined,
       holdingPattern: (filters.holdingPattern as "out" | "in" | "all") || "all",
       sort: "company_asc" as const,
     }),
-    [filters]
+    [filters],
   );
 
-  const { data, isLoading, error, hasNextPage, fetchNextPage } = useContactsPaginated(
-    queryFilters
-  );
+  const { data, isLoading, error, hasNextPage, fetchNextPage } = useContactsPaginated(queryFilters);
 
   const allContacts = useMemo<RawContact[]>(() => {
     const pages = data?.pages ?? [];
@@ -118,10 +113,7 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
   const companies = useMemo<CompanyEntity[]>(() => {
     const groups = new Map<string, { display: string; rows: RawContact[] }>();
     for (const c of allContacts) {
-      const { key, display } = normalizeCompanyKey(
-        c.company_alias || c.company_name,
-        c.email
-      );
+      const { key, display } = normalizeCompanyKey(c.company_alias || c.company_name, c.email);
       const g = groups.get(key);
       if (g) g.rows.push(c);
       else groups.set(key, { display, rows: [c] });
@@ -137,10 +129,7 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
       // `lead_status === 'holding'` (compatibilità con la pipeline lead).
       const inHolding = g.rows.some((r) => {
         const row = r as Record<string, unknown>;
-        return (
-          row.in_holding_pattern === true ||
-          row.lead_status === "holding"
-        );
+        return row.in_holding_pattern === true || row.lead_status === "holding";
       });
       out.push({
         id,
@@ -162,10 +151,7 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
         })(),
         logoUrl: ((): string | null => {
           for (const r of g.rows) {
-            const ed = (r as Record<string, unknown>).enrichment_data as
-              | Record<string, unknown>
-              | null
-              | undefined;
+            const ed = (r as Record<string, unknown>).enrichment_data as Record<string, unknown> | null | undefined;
             const logo = ed && (ed.logo_url as string | undefined);
             if (logo) return logo;
           }
@@ -179,9 +165,7 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
           const r = g.rows.find((x) => !!(x.phone || x.mobile));
           return ((r?.phone as string) || (r?.mobile as string)) ?? null;
         })(),
-        badge: matched
-          ? { label: "WCA", tone: "wca" }
-          : { label: "CRM", tone: "neutral" },
+        badge: matched ? { label: "WCA", tone: "wca" } : { label: "CRM", tone: "neutral" },
         contactsCount: contacts.length,
         contacts,
         score: (() => {
@@ -191,9 +175,7 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
           if (!scores.length) return null;
           return Math.max(...scores);
         })(),
-        primaryContact: contacts[0]
-          ? { name: contacts[0].name, role: contacts[0].role ?? null }
-          : null,
+        primaryContact: contacts[0] ? { name: contacts[0].name, role: contacts[0].role ?? null } : null,
         channels: {
           email: contacts.some((c) => c.channels.email),
           whatsapp: contacts.some((c) => c.channels.whatsapp),
@@ -218,7 +200,10 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
             .reverse();
           return ts[0] ?? null;
         })(),
-        interactionCount: g.rows.reduce((s, r) => s + (Number((r as Record<string, unknown>).interaction_count) || 0), 0),
+        interactionCount: g.rows.reduce(
+          (s, r) => s + (Number((r as Record<string, unknown>).interaction_count) || 0),
+          0,
+        ),
         hasBca: g.rows.some((r) => !!(r as Record<string, unknown>).business_card_id),
         bcaCount: g.rows.filter((r) => !!(r as Record<string, unknown>).business_card_id).length,
         raw: { rows: g.rows },

@@ -12,20 +12,20 @@ export function EmailComposerContactPicker({ onConfirm: _onConfirm }: { onConfir
 
   return (
     <PageErrorBoundary>
-    <div className="flex flex-col h-full">
-      <PickerHeader picker={picker} />
+      <div className="flex flex-col h-full">
+        <PickerHeader picker={picker} />
 
-      {/* Main: Left country strip + Right results */}
-      <div className="flex-1 flex min-h-0 gap-2">
-        <CountryStrip
-          sortedCountries={picker.sortedCountries}
-          selectedCountry={picker.state.selectedCountry}
-          countrySort={picker.state.countrySort}
-          dispatch={picker.dispatch}
-        />
-        <ResultsList picker={picker} />
+        {/* Main: Left country strip + Right results */}
+        <div className="flex-1 flex min-h-0 gap-2">
+          <CountryStrip
+            sortedCountries={picker.sortedCountries}
+            selectedCountry={picker.state.selectedCountry}
+            countrySort={picker.state.countrySort}
+            dispatch={picker.dispatch}
+          />
+          <ResultsList picker={picker} />
+        </div>
       </div>
-    </div>
     </PageErrorBoundary>
   );
 }

@@ -50,7 +50,8 @@ const COMMAND_TOOLS: ToolDescriptor[] = [
     name: "compose-email",
     description: "Prepara una bozza email (singola o batch) per uno o più partner.",
     when_to_use: "Quando l'utente chiede di preparare/scrivere email. NON invia.",
-    arguments_schema: "{ recipientScope?: 'single'|'batch', countryName?: string, company?: string, person?: string, email?: string, intent: string, tone?: 'amichevole'|'professionale'|'diretto'|'informale' }",
+    arguments_schema:
+      "{ recipientScope?: 'single'|'batch', countryName?: string, company?: string, person?: string, email?: string, intent: string, tone?: 'amichevole'|'professionale'|'diretto'|'informale' }",
     risk_level: "write",
     requires_confirmation: true,
   },
@@ -123,8 +124,9 @@ export function loadToolCatalog(scope: string): ToolDescriptor[] {
 /** Renderizza il catalog come blocco testuale per il system prompt. */
 export function renderToolCatalog(catalog: ToolDescriptor[]): string {
   if (catalog.length === 0) return "TOOL CATALOG: (vuoto, nessun tool disponibile)";
-  const lines = catalog.map((t) =>
-    `- ${t.name} [risk=${t.risk_level}${t.requires_confirmation ? ", needs_confirm" : ""}]\n  ${t.description}\n  Quando: ${t.when_to_use}\n  Args: ${t.arguments_schema}`,
+  const lines = catalog.map(
+    (t) =>
+      `- ${t.name} [risk=${t.risk_level}${t.requires_confirmation ? ", needs_confirm" : ""}]\n  ${t.description}\n  Quando: ${t.when_to_use}\n  Args: ${t.arguments_schema}`,
   );
   return `TOOL CATALOG (puoi chiamare solo questi):\n\n${lines.join("\n\n")}`;
 }

@@ -27,10 +27,7 @@ type Props = React.ComponentProps<typeof ResizablePanelGroup> & {
 
 const STORAGE_PREFIX = "ui:resizable:";
 
-export function PersistentResizablePanelGroup({
-  storageId,
-  ...rest
-}: Props): React.ReactElement {
+export function PersistentResizablePanelGroup({ storageId, ...rest }: Props): React.ReactElement {
   return <ResizablePanelGroup autoSaveId={`${STORAGE_PREFIX}${storageId}`} {...rest} />;
 }
 

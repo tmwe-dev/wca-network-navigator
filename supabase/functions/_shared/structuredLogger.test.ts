@@ -25,7 +25,9 @@ Deno.test("time() measures duration and propagates errors", async () => {
   assertEquals(v, 42);
   let threw = false;
   try {
-    await log.time("fail-op", async () => { throw new Error("nope"); });
+    await log.time("fail-op", async () => {
+      throw new Error("nope");
+    });
   } catch (e) {
     threw = e instanceof Error && e.message === "nope";
   }

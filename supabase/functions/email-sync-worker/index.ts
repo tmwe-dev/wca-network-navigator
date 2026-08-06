@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-
 /**
  * Email Sync Worker — server-side autonomous email download.
  *
@@ -21,7 +20,8 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 401,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 
@@ -38,7 +38,8 @@ Deno.serve(async (req: Request) => {
     const { error: claimsErr } = await authClient.auth.getClaims(token);
     if (claimsErr) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
   }
@@ -82,11 +83,7 @@ Deno.serve(async (req: Request) => {
       // Loop: process batches for this job until time runs out
       while (Date.now() - startTime < MAX_WALL_CLOCK_MS) {
         // Re-check job status (might have been paused by user)
-        const { data: freshJob } = await supabase
-          .from("email_sync_jobs")
-          .select("status")
-          .eq("id", job.id)
-          .single();
+        const { data: freshJob } = await supabase.from("email_sync_jobs").select("status").eq("id", job.id).single();
 
         if (!freshJob || freshJob.status !== "running") {
           break;
@@ -113,11 +110,12 @@ Deno.serve(async (req: Request) => {
           consecutiveErrors = 0;
           batchesProcessed++;
 
-          const hasMore = typeof result.has_more === "boolean"
-            ? result.has_more
-            : typeof result.remaining === "number"
-              ? result.remaining > 0
-              : result.total > 0;
+          const hasMore =
+            typeof result.has_more === "boolean"
+              ? result.has_more
+              : typeof result.remaining === "number"
+                ? result.remaining > 0
+                : result.total > 0;
 
           const serverRemaining = typeof result.remaining === "number" ? result.remaining : 0;
 
@@ -161,7 +159,9 @@ Deno.serve(async (req: Request) => {
           consecutiveErrors++;
           errorCount++;
           lastError = err.message;
-          console.warn(`[sync-worker] Job ${job.id} batch error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${err.message}`);
+          console.warn(
+            `[sync-worker] Job ${job.id} batch error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${err.message}`,
+          );
 
           if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
             await supabase

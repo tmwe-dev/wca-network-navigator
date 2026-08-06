@@ -23,15 +23,96 @@ interface TimingField {
 }
 
 const TIMING_FIELDS: TimingField[] = [
-  { key: "email_send_delay", label: "Delay invio email", description: "Secondi tra un'email e la successiva in coda", icon: Mail, unit: "sec", min: 3, max: 120, defaultValue: 10 },
-  { key: "email_batch_size", label: "Batch email", description: "Numero massimo email per ciclo di invio", icon: Mail, unit: "email", min: 1, max: 50, defaultValue: 10 },
-  { key: "whatsapp_send_delay", label: "Delay invio WhatsApp", description: "Secondi tra un messaggio WhatsApp e il successivo", icon: MessageCircle, unit: "sec", min: 5, max: 120, defaultValue: 15 },
-  { key: "linkedin_send_delay", label: "Delay invio LinkedIn", description: "Secondi tra un messaggio LinkedIn e il successivo", icon: MessageCircle, unit: "sec", min: 10, max: 180, defaultValue: 30 },
-  { key: "scraping_base_delay", label: "Delay scraping WCA", description: "Secondi tra una pagina e la successiva durante lo scraping", icon: Search, unit: "sec", min: 5, max: 60, defaultValue: 15 },
-  { key: "deep_search_delay", label: "Delay Deep Search", description: "Secondi tra una ricerca approfondita e la successiva", icon: Search, unit: "sec", min: 5, max: 120, defaultValue: 20 },
-  { key: "agent_cycle_interval", label: "Intervallo ciclo agenti", description: "Minuti tra un ciclo autonomo e il successivo", icon: Bot, unit: "min", min: 5, max: 1440, defaultValue: 60 },
-  { key: "agent_max_actions_per_cycle", label: "Max azioni per ciclo", description: "Numero massimo di azioni che un agente può eseguire per ciclo", icon: Bot, unit: "azioni", min: 1, max: 50, defaultValue: 10 },
-  { key: "agent_cooldown_after_error", label: "Pausa dopo errore", description: "Minuti di pausa quando un agente incontra un errore", icon: Bot, unit: "min", min: 1, max: 60, defaultValue: 10 },
+  {
+    key: "email_send_delay",
+    label: "Delay invio email",
+    description: "Secondi tra un'email e la successiva in coda",
+    icon: Mail,
+    unit: "sec",
+    min: 3,
+    max: 120,
+    defaultValue: 10,
+  },
+  {
+    key: "email_batch_size",
+    label: "Batch email",
+    description: "Numero massimo email per ciclo di invio",
+    icon: Mail,
+    unit: "email",
+    min: 1,
+    max: 50,
+    defaultValue: 10,
+  },
+  {
+    key: "whatsapp_send_delay",
+    label: "Delay invio WhatsApp",
+    description: "Secondi tra un messaggio WhatsApp e il successivo",
+    icon: MessageCircle,
+    unit: "sec",
+    min: 5,
+    max: 120,
+    defaultValue: 15,
+  },
+  {
+    key: "linkedin_send_delay",
+    label: "Delay invio LinkedIn",
+    description: "Secondi tra un messaggio LinkedIn e il successivo",
+    icon: MessageCircle,
+    unit: "sec",
+    min: 10,
+    max: 180,
+    defaultValue: 30,
+  },
+  {
+    key: "scraping_base_delay",
+    label: "Delay scraping WCA",
+    description: "Secondi tra una pagina e la successiva durante lo scraping",
+    icon: Search,
+    unit: "sec",
+    min: 5,
+    max: 60,
+    defaultValue: 15,
+  },
+  {
+    key: "deep_search_delay",
+    label: "Delay Deep Search",
+    description: "Secondi tra una ricerca approfondita e la successiva",
+    icon: Search,
+    unit: "sec",
+    min: 5,
+    max: 120,
+    defaultValue: 20,
+  },
+  {
+    key: "agent_cycle_interval",
+    label: "Intervallo ciclo agenti",
+    description: "Minuti tra un ciclo autonomo e il successivo",
+    icon: Bot,
+    unit: "min",
+    min: 5,
+    max: 1440,
+    defaultValue: 60,
+  },
+  {
+    key: "agent_max_actions_per_cycle",
+    label: "Max azioni per ciclo",
+    description: "Numero massimo di azioni che un agente può eseguire per ciclo",
+    icon: Bot,
+    unit: "azioni",
+    min: 1,
+    max: 50,
+    defaultValue: 10,
+  },
+  {
+    key: "agent_cooldown_after_error",
+    label: "Pausa dopo errore",
+    description: "Minuti di pausa quando un agente incontra un errore",
+    icon: Bot,
+    unit: "min",
+    min: 1,
+    max: 60,
+    defaultValue: 10,
+  },
 ];
 
 const SCHEDULE_FIELDS = [
@@ -54,15 +135,15 @@ export default function TimingSettings() {
   };
 
   const handleChange = (key: string, val: string) => {
-    setValues(prev => ({ ...prev, [key]: val }));
+    setValues((prev) => ({ ...prev, [key]: val }));
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const allFields = [
-        ...TIMING_FIELDS.map(f => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
-        ...SCHEDULE_FIELDS.map(f => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
+        ...TIMING_FIELDS.map((f) => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
+        ...SCHEDULE_FIELDS.map((f) => ({ key: f.key, value: getValue(f.key, f.defaultValue) })),
       ];
       for (const f of allFields) {
         await updateSetting.mutateAsync({ key: f.key, value: f.value });
@@ -78,8 +159,12 @@ export default function TimingSettings() {
 
   const handleReset = () => {
     const resetVals: Record<string, string> = {};
-    TIMING_FIELDS.forEach(f => { resetVals[f.key] = String(f.defaultValue); });
-    SCHEDULE_FIELDS.forEach(f => { resetVals[f.key] = f.defaultValue; });
+    TIMING_FIELDS.forEach((f) => {
+      resetVals[f.key] = String(f.defaultValue);
+    });
+    SCHEDULE_FIELDS.forEach((f) => {
+      resetVals[f.key] = f.defaultValue;
+    });
     setValues(resetVals);
   };
 
@@ -102,10 +187,13 @@ export default function TimingSettings() {
       <div className="space-y-4">
         <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Delay tra operazioni</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {TIMING_FIELDS.map(field => {
+          {TIMING_FIELDS.map((field) => {
             const Icon = field.icon;
             return (
-              <div key={field.key} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+              <div
+                key={field.key}
+                className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/50"
+              >
                 <Icon className="w-4 h-4 mt-1 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <Label className="text-xs font-medium">{field.label}</Label>
@@ -116,7 +204,7 @@ export default function TimingSettings() {
                       min={field.min}
                       max={field.max}
                       value={getValue(field.key, field.defaultValue)}
-                      onChange={e => handleChange(field.key, e.target.value)}
+                      onChange={(e) => handleChange(field.key, e.target.value)}
                       className="h-7 w-20 text-xs"
                     />
                     <span className="text-[10px] text-muted-foreground">{field.unit}</span>
@@ -134,12 +222,12 @@ export default function TimingSettings() {
       <div className="space-y-4">
         <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Orari di lavoro agenti</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {SCHEDULE_FIELDS.map(field => (
+          {SCHEDULE_FIELDS.map((field) => (
             <div key={field.key} className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5">
               <Label className="text-xs font-medium">{field.label}</Label>
               <Input
                 value={getValue(field.key, field.defaultValue)}
-                onChange={e => handleChange(field.key, e.target.value)}
+                onChange={(e) => handleChange(field.key, e.target.value)}
                 className="h-7 text-xs"
                 placeholder={field.unit}
               />
@@ -155,7 +243,9 @@ export default function TimingSettings() {
       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
         <div>
           <Label className="text-xs font-medium">Richiedi approvazione per azioni AI</Label>
-          <p className="text-[10px] text-muted-foreground">Se attivo, ogni azione degli agenti richiede autorizzazione prima dell'esecuzione</p>
+          <p className="text-[10px] text-muted-foreground">
+            Se attivo, ogni azione degli agenti richiede autorizzazione prima dell'esecuzione
+          </p>
         </div>
         <Switch
           checked={requireApproval}

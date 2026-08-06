@@ -175,7 +175,8 @@ export function InviatiSubTab() {
     const daysSince = (Date.now() - new Date(item.sent_at).getTime()) / 86400000;
     if (daysSince < 3) return { label: "Appena inviato", color: "text-blue-500", dot: "bg-blue-500", icon: CheckCheck };
     if (daysSince < 7) return { label: "In attesa", color: "text-amber-500", dot: "bg-amber-500", icon: Clock };
-    if (daysSince < 14) return { label: "Nessuna risposta", color: "text-orange-500", dot: "bg-orange-500", icon: AlertTriangle };
+    if (daysSince < 14)
+      return { label: "Nessuna risposta", color: "text-orange-500", dot: "bg-orange-500", icon: AlertTriangle };
     return { label: "Scaduto", color: "text-destructive", dot: "bg-destructive", icon: AlertTriangle };
   };
 
@@ -229,7 +230,7 @@ export function InviatiSubTab() {
                     <div
                       className={cn(
                         "flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer",
-                        isExpanded && "bg-muted/20 rounded-b-none"
+                        isExpanded && "bg-muted/20 rounded-b-none",
                       )}
                     >
                       <div className="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
@@ -237,17 +238,15 @@ export function InviatiSubTab() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-foreground truncate">
-                            {item.partner_name}
-                          </span>
+                          <span className="text-xs font-medium text-foreground truncate">{item.partner_name}</span>
                           {item.email && (
                             <span className="text-[10px] text-muted-foreground truncate">{item.email}</span>
                           )}
-                        {item.send_method && item.send_method !== "direct" && (
-                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-medium">
-                            {item.send_method === "campaign" ? "Bulk" : item.send_method === "agent" ? "AI" : "Coda"}
-                          </span>
-                        )}
+                          {item.send_method && item.send_method !== "direct" && (
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-medium">
+                              {item.send_method === "campaign" ? "Bulk" : item.send_method === "agent" ? "AI" : "Coda"}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">{item.subject}</p>
                       </div>

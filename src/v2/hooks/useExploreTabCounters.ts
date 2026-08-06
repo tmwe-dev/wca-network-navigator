@@ -19,9 +19,8 @@ export interface ExploreTabCounters {
 }
 
 async function fetchCount(table: "imported_contacts" | "business_cards"): Promise<number> {
-  const { count, error } = table === "imported_contacts"
-    ? await fetchContactsCountRaw()
-    : await fetchBusinessCardsCountRaw();
+  const { count, error } =
+    table === "imported_contacts" ? await fetchContactsCountRaw() : await fetchBusinessCardsCountRaw();
   if (error) throw error;
   return count ?? 0;
 }
@@ -44,14 +43,10 @@ export function useExploreTabCounters(): ExploreTabCounters {
   });
 
   const networkTotal =
-    country.data?.global?.total ??
-    (country.data?.global as { total?: number } | undefined)?.total ??
-    null;
+    country.data?.global?.total ?? (country.data?.global as { total?: number } | undefined)?.total ?? null;
 
   const mapActive = country.data
-    ? Object.values(country.data.byCountry ?? {}).filter(
-        (c) => (c?.total_partners ?? 0) > 0,
-      ).length
+    ? Object.values(country.data.byCountry ?? {}).filter((c) => (c?.total_partners ?? 0) > 0).length
     : null;
 
   return {

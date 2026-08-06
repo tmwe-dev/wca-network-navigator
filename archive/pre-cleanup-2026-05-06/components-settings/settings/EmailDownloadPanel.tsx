@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertCircle, CheckCircle2, Download, Mail, Pause, Play,
-  RotateCcw, Square, Loader2, Server,
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  Mail,
+  Pause,
+  Play,
+  RotateCcw,
+  Square,
+  Loader2,
+  Server,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -44,19 +52,14 @@ export default function EmailDownloadPage() {
       return;
     }
 
-    const selectionStillExists = selectedEmailId
-      ? emails.some((email) => email.id === selectedEmailId)
-      : false;
+    const selectionStillExists = selectedEmailId ? emails.some((email) => email.id === selectedEmailId) : false;
 
     if (!selectionStillExists) {
       setSelectedEmailId(emails[0].id);
     }
   }, [emails, selectedEmailId]);
 
-  const selectedEmail = useMemo(
-    () => emails.find((e) => e.id === selectedEmailId) ?? null,
-    [emails, selectedEmailId],
-  );
+  const selectedEmail = useMemo(() => emails.find((e) => e.id === selectedEmailId) ?? null, [emails, selectedEmailId]);
 
   // Start server job
   const handleStartServer = useCallback(() => {
@@ -90,14 +93,22 @@ export default function EmailDownloadPage() {
             <Mail className="h-5 w-5 text-primary" />
             Download Email
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {emailCount.toLocaleString()} email in database
-          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{emailCount.toLocaleString()} email in database</p>
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button size="sm" variant="ghost" onClick={() => resetSync.mutate()} disabled={resetSync.isPending || isServerRunning} className="gap-1.5">
-            {resetSync.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => resetSync.mutate()}
+            disabled={resetSync.isPending || isServerRunning}
+            className="gap-1.5"
+          >
+            {resetSync.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RotateCcw className="h-3.5 w-3.5" />
+            )}
             Reset
           </Button>
 
@@ -130,7 +141,11 @@ export default function EmailDownloadPage() {
             </>
           ) : (
             <Button size="sm" onClick={handleStartServer} disabled={startJob.isPending} className="gap-1.5">
-              {startJob.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              {startJob.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
               Scarica Tutto
             </Button>
           )}
@@ -139,29 +154,38 @@ export default function EmailDownloadPage() {
 
       {/* Server job status banner */}
       {hasActiveJob && (
-        <div className={cn(
-          "flex-shrink-0 border-b border-border px-4 py-3 space-y-2",
-          isServerRunning && "bg-primary/5",
-          isServerPaused && "bg-amber-500/5",
-          isServerError && "bg-destructive/5",
-        )}>
+        <div
+          className={cn(
+            "flex-shrink-0 border-b border-border px-4 py-3 space-y-2",
+            isServerRunning && "bg-primary/5",
+            isServerPaused && "bg-amber-500/5",
+            isServerError && "bg-destructive/5",
+          )}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Server className="h-4 w-4 text-muted-foreground" />
               {isServerRunning && (
-                <><Loader2 className="h-4 w-4 animate-spin text-primary" /><span className="text-primary">Download autonomo in corso...</span></>
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-primary">Download autonomo in corso...</span>
+                </>
               )}
               {isServerPaused && (
-                <><Pause className="h-4 w-4 text-amber-500" /><span className="text-amber-600">Download in pausa</span></>
+                <>
+                  <Pause className="h-4 w-4 text-amber-500" />
+                  <span className="text-amber-600">Download in pausa</span>
+                </>
               )}
               {isServerError && (
-                <><AlertCircle className="h-4 w-4 text-destructive" /><span className="text-destructive">Errore nel download</span></>
+                <>
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <span className="text-destructive">Errore nel download</span>
+                </>
               )}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              {activeJob.last_batch_at && (
-                <span>Ultimo batch: {timeSince(activeJob.last_batch_at)}</span>
-              )}
+              {activeJob.last_batch_at && <span>Ultimo batch: {timeSince(activeJob.last_batch_at)}</span>}
               <span className="flex items-center gap-1">
                 <Server className="h-3 w-3" />
                 Continua anche a browser chiuso
@@ -203,7 +227,8 @@ export default function EmailDownloadPage() {
         <div className="flex-shrink-0 border-b border-border bg-accent/30 px-4 py-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-            Ultimo download completato: {lastCompletedJob.downloaded_count} email scaricate, {lastCompletedJob.skipped_count} saltate
+            Ultimo download completato: {lastCompletedJob.downloaded_count} email scaricate,{" "}
+            {lastCompletedJob.skipped_count} saltate
             {lastCompletedJob.completed_at && ` — ${timeSince(lastCompletedJob.completed_at)}`}
           </div>
         </div>
@@ -231,9 +256,17 @@ export default function EmailDownloadPage() {
               <div>
                 <Mail className="mx-auto mb-2 h-12 w-12 opacity-20" />
                 {hasActiveJob ? (
-                  <p>Il download procede in background anche a browser chiuso.<br />Le email appariranno nella lista quando apri questa pagina.</p>
+                  <p>
+                    Il download procede in background anche a browser chiuso.
+                    <br />
+                    Le email appariranno nella lista quando apri questa pagina.
+                  </p>
                 ) : (
-                  <p>Premi "Scarica Tutto" per avviare il download.<br />Continuerà anche a computer spento.</p>
+                  <p>
+                    Premi "Scarica Tutto" per avviare il download.
+                    <br />
+                    Continuerà anche a computer spento.
+                  </p>
                 )}
               </div>
             </div>

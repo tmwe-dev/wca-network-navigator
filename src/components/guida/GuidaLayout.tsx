@@ -27,7 +27,10 @@ const GuidaLayout = ({ children, sectionLabels }: GuidaLayoutProps) => {
       sections.forEach((s, i) => {
         const rect = s.getBoundingClientRect();
         const dist = Math.abs(rect.top - container.getBoundingClientRect().top);
-        if (dist < minDist) { minDist = dist; closest = i; }
+        if (dist < minDist) {
+          minDist = dist;
+          closest = i;
+        }
       });
       setActiveIndex(closest);
     };
@@ -54,11 +57,7 @@ const GuidaLayout = ({ children, sectionLabels }: GuidaLayoutProps) => {
       </div>
 
       {/* Nav dots */}
-      <ScrollIndicator
-        labels={sectionLabels}
-        activeIndex={activeIndex}
-        onNavigate={scrollToSection}
-      />
+      <ScrollIndicator labels={sectionLabels} activeIndex={activeIndex} onNavigate={scrollToSection} />
 
       {/* Scroll container */}
       <div

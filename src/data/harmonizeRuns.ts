@@ -12,14 +12,7 @@ import { toJsonValue } from "@/lib/jsonGuards";
 
 type HarmonizeRunUpdate = Database["public"]["Tables"]["harmonize_runs"]["Update"];
 
-export type HarmonizeStatus =
-  | "collecting"
-  | "analyzing"
-  | "review"
-  | "executing"
-  | "done"
-  | "cancelled"
-  | "failed";
+export type HarmonizeStatus = "collecting" | "analyzing" | "review" | "executing" | "done" | "cancelled" | "failed";
 
 export type HarmonizeActionType = "UPDATE" | "INSERT" | "MOVE" | "DELETE";
 export type HarmonizeResolutionLayer = "text" | "contract" | "code_policy" | "kb_governance";
@@ -195,14 +188,18 @@ function asProposals(value: unknown): HarmonizeProposal[] {
 
 function asUploadedFiles(value: unknown): Array<{ name: string; size: number }> {
   return Array.isArray(value)
-    ? value.filter((f): f is { name: string; size: number } =>
-        f !== null && typeof f === "object" && typeof (f as { name?: unknown }).name === "string")
+    ? value.filter(
+        (f): f is { name: string; size: number } =>
+          f !== null && typeof f === "object" && typeof (f as { name?: unknown }).name === "string",
+      )
     : [];
 }
 
 function isHarmonizeStatus(value: unknown): value is HarmonizeStatus {
-  return typeof value === "string" &&
-    ["collecting", "analyzing", "review", "executing", "done", "cancelled", "failed"].includes(value);
+  return (
+    typeof value === "string" &&
+    ["collecting", "analyzing", "review", "executing", "done", "cancelled", "failed"].includes(value)
+  );
 }
 
 function mapHarmonizeRun(row: HarmonizeRunRow): HarmonizeRun {
@@ -237,34 +234,29 @@ export async function createHarmonizeRun(userId: string, goal: string, scope = "
 }
 
 export async function updateHarmonizeRun(runId: string, patch: Partial<HarmonizeRun>): Promise<void> {
-  const { real_inventory_summary, desired_inventory_summary, gap_classification, proposals, uploaded_files, ...rest } = patch;
+  const { real_inventory_summary, desired_inventory_summary, gap_classification, proposals, uploaded_files, ...rest } =
+    patch;
   const update: HarmonizeRunUpdate = {
     ...rest,
     ...(real_inventory_summary !== undefined ? { real_inventory_summary: toJsonValue(real_inventory_summary) } : {}),
-    ...(desired_inventory_summary !== undefined ? { desired_inventory_summary: toJsonValue(desired_inventory_summary) } : {}),
+    ...(desired_inventory_summary !== undefined
+      ? { desired_inventory_summary: toJsonValue(desired_inventory_summary) }
+      : {}),
     ...(gap_classification !== undefined ? { gap_classification: toJsonValue(gap_classification) } : {}),
     ...(proposals !== undefined ? { proposals: toJsonValue(proposals) } : {}),
     ...(uploaded_files !== undefined ? { uploaded_files: toJsonValue(uploaded_files) } : {}),
   };
-  const { error } = await supabase
-    .from("harmonize_runs")
-    .update(update)
-    .eq("id", runId);
+  const { error } = await supabase.from("harmonize_runs").update(update).eq("id", runId);
   if (error) throw error;
 }
 
 export async function appendHarmonizeProposal(runId: string, proposal: HarmonizeProposal): Promise<void> {
-  const { data, error: readErr } = await supabase
-    .from("harmonize_runs")
-    .select("proposals")
-    .eq("id", runId)
-    .single();
+  const { data, error: readErr } = await supabase.from("harmonize_runs").select("proposals").eq("id", runId).single();
   if (readErr) throw readErr;
   const current = asProposals(data?.proposals);
   const existingIndex = current.findIndex((p) => p.id === proposal.id);
-  const next = existingIndex >= 0
-    ? current.map((p, index) => (index === existingIndex ? proposal : p))
-    : [...current, proposal];
+  const next =
+    existingIndex >= 0 ? current.map((p, index) => (index === existingIndex ? proposal : p)) : [...current, proposal];
   const { error } = await supabase
     .from("harmonize_runs")
     .update({ proposals: toJsonValue(next) })
@@ -277,11 +269,7 @@ export async function updateHarmonizeProposal(
   proposalId: string,
   patch: Partial<HarmonizeProposal>,
 ): Promise<HarmonizeProposal[]> {
-  const { data, error: readErr } = await supabase
-    .from("harmonize_runs")
-    .select("proposals")
-    .eq("id", runId)
-    .single();
+  const { data, error: readErr } = await supabase.from("harmonize_runs").select("proposals").eq("id", runId).single();
   if (readErr) throw readErr;
 
   const current = asProposals(data?.proposals);
@@ -314,7 +302,11 @@ export async function setProposalStatus(
     .eq("id", runId)
     .single();
   if (readErr) throw readErr;
-  const row = { proposals: asProposals(data?.proposals), executed_count: data?.executed_count ?? 0, failed_count: data?.failed_count ?? 0 };
+  const row = {
+    proposals: asProposals(data?.proposals),
+    executed_count: data?.executed_count ?? 0,
+    failed_count: data?.failed_count ?? 0,
+  };
   const proposals = row.proposals.map((p) =>
     p.id === proposalId ? { ...p, status, ...(failureReason ? { failure_reason: failureReason } : {}) } : p,
   );
@@ -374,11 +366,7 @@ export async function appendProposalChat(
   proposalId: string,
   messages: Array<{ role: "user" | "assistant"; content: string }>,
 ): Promise<HarmonizeProposal[]> {
-  const { data, error: readErr } = await supabase
-    .from("harmonize_runs")
-    .select("proposals")
-    .eq("id", runId)
-    .single();
+  const { data, error: readErr } = await supabase.from("harmonize_runs").select("proposals").eq("id", runId).single();
   if (readErr) throw readErr;
 
   const current = asProposals(data?.proposals);

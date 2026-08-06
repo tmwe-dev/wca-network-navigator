@@ -16,7 +16,7 @@ function AuroraRing({ isNorth = true }: AuroraProps) {
     const innerRadius = 0.15;
     const outerRadius = 0.45;
     const segments = 64;
-    
+
     const geometry = new THREE.RingGeometry(innerRadius, outerRadius, segments, 8);
     return geometry;
   }, []);
@@ -143,7 +143,7 @@ function AuroraRing({ isNorth = true }: AuroraProps) {
     if (material.uniforms) {
       material.uniforms.uTime.value = time.current;
     }
-    
+
     // Slow rotation
     if (groupRef.current) {
       groupRef.current.rotation.z += delta * 0.05;
@@ -152,9 +152,7 @@ function AuroraRing({ isNorth = true }: AuroraProps) {
 
   // Position at pole
   const yPosition = isNorth ? 0.85 : -0.85;
-  const rotation: [number, number, number] = isNorth 
-    ? [-Math.PI / 2.2, 0, 0] 
-    : [Math.PI / 2.2, 0, 0];
+  const rotation: [number, number, number] = isNorth ? [-Math.PI / 2.2, 0, 0] : [Math.PI / 2.2, 0, 0];
 
   return (
     <group ref={groupRef} position={[0, yPosition, 0]} rotation={rotation}>
@@ -172,7 +170,7 @@ function AuroraParticles({ isNorth = true }: AuroraProps) {
     const count = 200;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
-    
+
     const colorPalette = [
       new THREE.Color("#22c55e"),
       new THREE.Color("#06b6d4"),
@@ -185,17 +183,17 @@ function AuroraParticles({ isNorth = true }: AuroraProps) {
       const angle = Math.random() * Math.PI * 2;
       const radius = 0.2 + Math.random() * 0.25;
       const height = (isNorth ? 0.8 : -0.8) + (Math.random() - 0.5) * 0.15;
-      
+
       positions[i * 3] = Math.cos(angle) * radius;
       positions[i * 3 + 1] = height;
       positions[i * 3 + 2] = Math.sin(angle) * radius;
-      
+
       const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
     }
-    
+
     return { positions, colors };
   }, [isNorth]);
 
@@ -212,11 +210,11 @@ function AuroraParticles({ isNorth = true }: AuroraProps) {
 
   useFrame((state, delta) => {
     time.current += delta;
-    
+
     if (pointsRef.current) {
       // Rotate particles
       pointsRef.current.rotation.y += delta * 0.1;
-      
+
       // Pulse size
       material.size = 0.012 + Math.sin(time.current * 2) * 0.005;
       material.opacity = 0.6 + Math.sin(time.current * 3) * 0.2;
@@ -226,18 +224,8 @@ function AuroraParticles({ isNorth = true }: AuroraProps) {
   return (
     <points ref={pointsRef}>
       <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={positions.length / 3}
-          array={positions}
-          itemSize={3}
-        />
-        <bufferAttribute
-          attach="attributes-color"
-          count={colors.length / 3}
-          array={colors}
-          itemSize={3}
-        />
+        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
+        <bufferAttribute attach="attributes-color" count={colors.length / 3} array={colors} itemSize={3} />
       </bufferGeometry>
       <primitive object={material} attach="material" />
     </points>
@@ -252,7 +240,7 @@ function AuroraBeams({ isNorth = true }: AuroraProps) {
   const beams = useMemo(() => {
     const count = 12;
     const beamData = [];
-    
+
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2;
       beamData.push({
@@ -264,13 +252,13 @@ function AuroraBeams({ isNorth = true }: AuroraProps) {
         phase: Math.random() * Math.PI * 2,
       });
     }
-    
+
     return beamData;
   }, []);
 
   useFrame((state, delta) => {
     time.current += delta;
-    
+
     if (groupRef.current) {
       groupRef.current.rotation.y += delta * 0.02;
     }
@@ -283,13 +271,9 @@ function AuroraBeams({ isNorth = true }: AuroraProps) {
       {beams.map((beam, index) => {
         const x = Math.cos(beam.angle) * 0.25;
         const z = Math.sin(beam.angle) * 0.25;
-        
+
         return (
-          <mesh
-            key={index}
-            position={[x, yBase, z]}
-            rotation={[isNorth ? -0.3 : 0.3, beam.angle, 0]}
-          >
+          <mesh key={index} position={[x, yBase, z]} rotation={[isNorth ? -0.3 : 0.3, beam.angle, 0]}>
             <planeGeometry args={[beam.width, beam.height]} />
             <meshBasicMaterial
               color={beam.color}
@@ -313,7 +297,7 @@ export function AuroraBorealis() {
       <AuroraRing isNorth={true} />
       <AuroraParticles isNorth={true} />
       <AuroraBeams isNorth={true} />
-      
+
       {/* South Pole Aurora (Aurora Australis) */}
       <AuroraRing isNorth={false} />
       <AuroraParticles isNorth={false} />

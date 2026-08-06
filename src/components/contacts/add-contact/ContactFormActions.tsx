@@ -19,16 +19,32 @@ interface ContactFormActionsProps {
 }
 
 export function ContactFormActions({
-  companyName, contactName, logoUrl, savedId, saving,
-  onClose, onSave, onReset,
+  companyName,
+  contactName,
+  logoUrl,
+  savedId,
+  saving,
+  onClose,
+  onSave,
+  onReset,
 }: ContactFormActionsProps): React.ReactElement {
   return (
     <div className="flex items-center justify-between pt-3 border-t border-border mt-2">
       <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
         {logoUrl && <OptimizedImage src={logoUrl} alt="" className="w-4 h-4 rounded" />}
-        {companyName && <Badge variant="secondary" className="text-[10px]">{companyName}</Badge>}
-        {contactName && <Badge variant="outline" className="text-[10px]">{contactName}</Badge>}
-        {savedId && <Badge className="text-[10px] bg-emerald-600/20 text-emerald-400 border-emerald-600/30">Salvato ✓</Badge>}
+        {companyName && (
+          <Badge variant="secondary" className="text-[10px]">
+            {companyName}
+          </Badge>
+        )}
+        {contactName && (
+          <Badge variant="outline" className="text-[10px]">
+            {contactName}
+          </Badge>
+        )}
+        {savedId && (
+          <Badge className="text-[10px] bg-emerald-600/20 text-emerald-400 border-emerald-600/30">Salvato ✓</Badge>
+        )}
       </div>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={onClose}>

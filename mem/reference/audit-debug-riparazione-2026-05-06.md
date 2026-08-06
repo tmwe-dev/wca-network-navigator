@@ -9,6 +9,7 @@ type: reference
 Sorgente: `tmwe_partner_connect_debug_e_riparazione.docx` (50+ pagine, caricato dall'utente).
 
 ## Menu principale (14 voci da `navItemsDef`)
+
 1. Command `/v2/command`
 2. Finder API `/v2/finder-api`
 3. Finder API Catalog `/v2/finder-api/schema`
@@ -27,6 +28,7 @@ Sorgente: `tmwe_partner_connect_debug_e_riparazione.docx` (50+ pagine, caricato 
 Sezione collassabile separata: `OrphanPagesNav` ("Tutte le pagine") + `NavMenuPopover` + `SettingsPage.DEV_PAGE_GROUPS` → **3 liste duplicate** di pagine dev/orfane.
 
 ## Verifica a 7 fasi (proposta utente)
+
 1. Inventario menu/rotte/pagine reali (matrice menu × routes.tsx × redirect × orfane).
 2. Verifica tecnica automatica (lint, typecheck, test, build, e2e, coverage).
 3. Smoke test pagine (no crash, no white-screen, console OK, redirect corretti, attivazione menu, mobile/desktop, drawer globali).
@@ -36,6 +38,7 @@ Sezione collassabile separata: `OrphanPagesNav` ("Tutte le pagine") + `NavMenuPo
 7. Piano PR ordinato (route test, pulizia sovrapposizioni, refactor incrementale, osservabilità).
 
 ## TOP 10 sovrapposizioni (da pp. 47-48)
+
 1. **SettingsPage VS ConfigSection** — strutturale, ALTA, route settings fantasma.
 2. **OrphanPagesNav VS NavMenuPopover VS SettingsPage.DEV_PAGE_GROUPS** — manutenzione, ALTA.
 3. **Leggi VS Funnemail Inbox** — funzionale/UX, ALTA, due inbox.
@@ -48,6 +51,7 @@ Sezione collassabile separata: `OrphanPagesNav` ("Tutte le pagine") + `NavMenuPo
 10. **Agenti VS AI Staff VS Missioni** — tassonomia AI, MEDIA.
 
 ## Canonical proposti
+
 - Partner WCA → `/v2/explore/network`
 - Contatti CRM → `/v2/explore/contacts`
 - Pipeline → `/v2/agenda/pipeline`
@@ -60,11 +64,13 @@ Sezione collassabile separata: `OrphanPagesNav` ("Tutte le pagine") + `NavMenuPo
 - Settings → `/v2/settings`
 
 ## Confini semantici raccomandati
+
 - Email: `Leggi` posta ricevuta · `Funnemail Inbox` posta lavorata da AI · `Funnemail` regole/intelligence · `Scrivi` composer operativo · `Email Forge` lab AI · `Cestinone` approvazione.
 - Tempo: `Agenda` cosa fare oggi · `Calendar` eventi/appuntamenti · `Pipeline` stato contatti.
 - AI: `Agenti` conversazione · `Missioni` automazioni · `AI Staff` consulenti direzionali · `Prompt Lab` prompt/KB · `AI Control` monitoraggio.
 
 ## Priorità verifiche (pp. 49-50)
+
 1. Sotto-route `/v2/settings/{ai-control,ai-analytics,prompt-lab,kb,outreach-tools}` funzionano?
 2. Tre liste Development allineate?
 3. Navigazione completa 14 voci menu.
@@ -77,4 +83,5 @@ Sezione collassabile separata: `OrphanPagesNav` ("Tutte le pagine") + `NavMenuPo
 10. Catalogo route canonical/alias/legacy.
 
 ## Conclusione utente
+
 "La sovrapposizione più pericolosa non è tra pagine business, ma tra strutture di navigazione e configurazione: SettingsPage, ConfigSection, OrphanPagesNav, NavMenuPopover, SettingsPage Development list, routes.tsx."

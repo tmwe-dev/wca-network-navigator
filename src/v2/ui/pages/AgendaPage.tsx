@@ -31,10 +31,10 @@ const VALID_RESPONSES: ResponseFilter[] = ["all", "responded", "no_response"];
 
 const CHANNEL_META: Record<string, { label: string; icon: typeof Mail }> = {
   send_email: { label: "Email", icon: Mail },
-  whatsapp:   { label: "WhatsApp", icon: MessageCircle },
-  linkedin:   { label: "LinkedIn", icon: Linkedin },
+  whatsapp: { label: "WhatsApp", icon: MessageCircle },
+  linkedin: { label: "LinkedIn", icon: Linkedin },
   phone_call: { label: "Chiamate", icon: Phone },
-  other:      { label: "Note", icon: StickyNote },
+  other: { label: "Note", icon: StickyNote },
 };
 
 const RESPONSE_LABEL: Record<string, string> = {
@@ -57,20 +57,23 @@ export function AgendaPage() {
   const [activeIdx, setActiveIdx] = useState(0);
   useEffect(() => {
     // se cambia la lista, resta nei limiti
-    setActiveIdx(idx => Math.min(idx, dayKeys.length - 1));
+    setActiveIdx((idx) => Math.min(idx, dayKeys.length - 1));
   }, [dayKeys.length]);
 
   const activeKey = dayKeys[Math.min(activeIdx, dayKeys.length - 1)] ?? todayKey;
   const activeDay = useMemo(() => parseISO(activeKey), [activeKey]);
 
-  const filters = useMemo(() => ({
-    activityType: (VALID_CHANNELS.includes(g.filters.agendaChannel as ActivityTypeFilter)
-      ? g.filters.agendaChannel
-      : "all") as ActivityTypeFilter,
-    responseStatus: (VALID_RESPONSES.includes(g.filters.agendaResponse as ResponseFilter)
-      ? g.filters.agendaResponse
-      : "all") as ResponseFilter,
-  }), [g.filters.agendaChannel, g.filters.agendaResponse]);
+  const filters = useMemo(
+    () => ({
+      activityType: (VALID_CHANNELS.includes(g.filters.agendaChannel as ActivityTypeFilter)
+        ? g.filters.agendaChannel
+        : "all") as ActivityTypeFilter,
+      responseStatus: (VALID_RESPONSES.includes(g.filters.agendaResponse as ResponseFilter)
+        ? g.filters.agendaResponse
+        : "all") as ResponseFilter,
+    }),
+    [g.filters.agendaChannel, g.filters.agendaResponse],
+  );
 
   const { data } = useAgendaDayActivities(activeDay);
   const respondedIds = data?.respondedPartnerIds || new Set<string>();
@@ -93,8 +96,8 @@ export function AgendaPage() {
   const hasActiveFilters = !!channelMeta || !!responseLabel || !!searchTerm;
 
   // ── Frecce navigazione tabs ────────────────────────────────────────────
-  const prev = () => setActiveIdx(i => Math.max(0, i - 1));
-  const next = () => setActiveIdx(i => Math.min(dayKeys.length - 1, i + 1));
+  const prev = () => setActiveIdx((i) => Math.max(0, i - 1));
+  const next = () => setActiveIdx((i) => Math.min(dayKeys.length - 1, i + 1));
 
   return (
     <div data-testid="page-agenda" className="flex flex-col h-full">
@@ -103,8 +106,12 @@ export function AgendaPage() {
       <div className="shrink-0 border-b border-border/40 bg-card/40">
         <div className="flex items-center gap-2 px-3 py-2">
           <Button
-            variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-            onClick={prev} disabled={activeIdx === 0} aria-label="Giorno precedente"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={prev}
+            disabled={activeIdx === 0}
+            aria-label="Giorno precedente"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -130,10 +137,14 @@ export function AgendaPage() {
                 >
                   {format(d, "EEE d MMM", { locale: it })}
                   {isToday && (
-                    <span className={cn(
-                      "ml-1.5 text-[9px] uppercase tracking-wide opacity-70",
-                      isActive ? "" : "text-primary"
-                    )}>oggi</span>
+                    <span
+                      className={cn(
+                        "ml-1.5 text-[9px] uppercase tracking-wide opacity-70",
+                        isActive ? "" : "text-primary",
+                      )}
+                    >
+                      oggi
+                    </span>
                   )}
                 </button>
               );
@@ -141,8 +152,12 @@ export function AgendaPage() {
           </div>
 
           <Button
-            variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-            onClick={next} disabled={activeIdx >= dayKeys.length - 1} aria-label="Giorno successivo"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={next}
+            disabled={activeIdx >= dayKeys.length - 1}
+            aria-label="Giorno successivo"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -150,9 +165,7 @@ export function AgendaPage() {
 
         {hasActiveFilters && (
           <div className="flex items-center gap-1.5 px-3 pb-2 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground mr-1">
-              Filtri attivi:
-            </span>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground mr-1">Filtri attivi:</span>
 
             {channelMeta && (
               <Badge

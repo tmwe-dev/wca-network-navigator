@@ -10,7 +10,10 @@ import * as React from "react";
 import { Search, ScanSearch, Telescope, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SherlockLauncherDialog, type SherlockLauncherTarget } from "./SherlockLauncherDialog";
 import { buildEmailDeepSearchTarget, type BuildEmailTargetOpts } from "./deepSearchEmailAdapter";
@@ -28,7 +31,12 @@ interface Props {
 }
 
 export function DeepSearchEmailBulkButton({
-  items, size = "sm", variant = "outline", className, label, disabled,
+  items,
+  size = "sm",
+  variant = "outline",
+  className,
+  label,
+  disabled,
 }: Props): React.ReactElement {
   const [queue, setQueue] = React.useState<typeof items>([]);
   const [idx, setIdx] = React.useState(0);
@@ -53,7 +61,10 @@ export function DeepSearchEmailBulkButton({
 
   // Quando l'utente chiude il dialog, avanza alla prossima email (o termina).
   const handleOpenChange = (next: boolean) => {
-    if (next) { setOpen(true); return; }
+    if (next) {
+      setOpen(true);
+      return;
+    }
     setOpen(false);
     if (stopRef.current) {
       toast.info(`Bulk Deep Search interrotto (${idx + 1}/${queue.length})`);
@@ -71,7 +82,10 @@ export function DeepSearchEmailBulkButton({
     }
   };
 
-  const stop = () => { stopRef.current = true; setOpen(false); };
+  const stop = () => {
+    stopRef.current = true;
+    setOpen(false);
+  };
 
   const buttonLabel = label ?? `Deep Search${items.length ? ` (${items.length})` : ""}`;
 
@@ -80,19 +94,27 @@ export function DeepSearchEmailBulkButton({
       <div className="inline-flex items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size={size} variant={variant} className={className} disabled={disabled || !items.length || queue.length > 0}>
+            <Button
+              size={size}
+              variant={variant}
+              className={className}
+              disabled={disabled || !items.length || queue.length > 0}
+            >
               <Search className="mr-1.5 h-3.5 w-3.5" /> {buttonLabel}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onSelect={() => start(1)} className="gap-2 text-xs">
-              <Search className="h-3.5 w-3.5" /> Scout <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
+              <Search className="h-3.5 w-3.5" /> Scout{" "}
+              <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => start(2)} className="gap-2 text-xs">
-              <ScanSearch className="h-3.5 w-3.5" /> Detective <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
+              <ScanSearch className="h-3.5 w-3.5" /> Detective{" "}
+              <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => start(3)} className="gap-2 text-xs">
-              <Telescope className="h-3.5 w-3.5" /> Sherlock <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
+              <Telescope className="h-3.5 w-3.5" /> Sherlock{" "}
+              <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -108,12 +130,7 @@ export function DeepSearchEmailBulkButton({
         )}
       </div>
 
-      <SherlockLauncherDialog
-        open={open}
-        onOpenChange={handleOpenChange}
-        target={target}
-        autoStartLevel={level}
-      />
+      <SherlockLauncherDialog open={open} onOpenChange={handleOpenChange} target={target} autoStartLevel={level} />
     </>
   );
 }

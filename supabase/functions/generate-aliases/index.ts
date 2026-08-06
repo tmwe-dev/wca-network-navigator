@@ -8,7 +8,6 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;
 
-
 const BATCH_SIZE = 15;
 
 interface PartnerContactRow {
@@ -36,11 +35,9 @@ serve(async (req) => {
   try {
     const { countryCodes, partnerIds, contactIds, userId: bodyUserId } = await req.json();
 
-  const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // Risolvi user_id (per caricare le regole dal Prompt Lab personali).
@@ -62,9 +59,7 @@ serve(async (req) => {
           limit: 4,
         })
       : { block: "" };
-    const systemPrompt = promptLab.block
-      ? `${promptLab.block}\n\n${BASE_IDENTITY}`
-      : BASE_IDENTITY;
+    const systemPrompt = promptLab.block ? `${promptLab.block}\n\n${BASE_IDENTITY}` : BASE_IDENTITY;
 
     // ── Branch: imported_contacts (contactIds) ──
     if (contactIds?.length) {
@@ -79,13 +74,12 @@ serve(async (req) => {
     // ── Branch: partners by country (original) ──
     if (!countryCodes?.length) throw new Error("countryCodes, partnerIds, or contactIds required");
     return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes, systemPrompt);
-
   } catch (e: unknown) {
     console.error("generate-aliases error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });
 
@@ -126,14 +120,14 @@ const TOOL_DEF = {
 
 async function callAI(apiKey: string, items: Array<Record<string, unknown>>, systemPrompt: string) {
   const response = await aiFetch({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify(items) },
-      ],
-      tools: [TOOL_DEF],
-      tool_choice: { type: "function", function: { name: "save_aliases" } },
-    });
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: JSON.stringify(items) },
+    ],
+    tools: [TOOL_DEF],
+    tool_choice: { type: "function", function: { name: "save_aliases" } },
+  });
 
   if (!response.ok) {
     const errText = await response.text();
@@ -159,7 +153,12 @@ function ok(data: Record<string, unknown>) {
 }
 
 // ── Process imported_contacts ──
-async function processImportedContacts(supabase: SupabaseClient, apiKey: string, contactIds: string[], systemPrompt: string) {
+async function processImportedContacts(
+  supabase: SupabaseClient,
+  apiKey: string,
+  contactIds: string[],
+  systemPrompt: string,
+) {
   const { data: contacts, error } = await supabase
     .from("imported_contacts")
     .select("id, company_name, name, company_alias, contact_alias")
@@ -167,9 +166,7 @@ async function processImportedContacts(supabase: SupabaseClient, apiKey: string,
 
   if (error) throw error;
 
-  const eligible = (contacts || []).filter(
-    (c: Record<string, unknown>) => !c.company_alias || !c.contact_alias
-  );
+  const eligible = (contacts || []).filter((c: Record<string, unknown>) => !c.company_alias || !c.contact_alias);
 
   if (!eligible.length) return ok({ success: true, processed: 0, message: "Nessun contatto da elaborare" });
 
@@ -209,7 +206,12 @@ async function processImportedContacts(supabase: SupabaseClient, apiKey: string,
 }
 
 // ── Process partners by specific IDs ──
-async function processPartnersByIds(supabase: SupabaseClient, apiKey: string, partnerIds: string[], systemPrompt: string) {
+async function processPartnersByIds(
+  supabase: SupabaseClient,
+  apiKey: string,
+  partnerIds: string[],
+  systemPrompt: string,
+) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, company_alias, partner_contacts(id, name, title, contact_alias)")
@@ -220,7 +222,12 @@ async function processPartnersByIds(supabase: SupabaseClient, apiKey: string, pa
 }
 
 // ── Process partners by country (original logic) ──
-async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string, countryCodes: string[], systemPrompt: string) {
+async function processPartnersByCountry(
+  supabase: SupabaseClient,
+  apiKey: string,
+  countryCodes: string[],
+  systemPrompt: string,
+) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, country_code, company_alias, partner_contacts(id, name, title, contact_alias)")
@@ -230,7 +237,12 @@ async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string
   return processPartners(supabase, apiKey, partners || [], systemPrompt);
 }
 
-async function processPartners(supabase: SupabaseClient, apiKey: string, partners: PartnerAliasRow[], systemPrompt: string) {
+async function processPartners(
+  supabase: SupabaseClient,
+  apiKey: string,
+  partners: PartnerAliasRow[],
+  systemPrompt: string,
+) {
   const eligible = partners.filter((p) => {
     const contacts = p.partner_contacts || [];
     return !p.company_alias || contacts.some((c) => !c.contact_alias);
@@ -284,27 +296,29 @@ async function processPartners(supabase: SupabaseClient, apiKey: string, partner
   for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
     const batch = eligible.slice(i, i + BATCH_SIZE);
 
-    const partnerList = batch.map((p) => {
-      const contacts = (p.partner_contacts || [])
-        .filter((c) => !c.contact_alias)
-        .map((c) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
-      return {
-        partner_id: p.id,
-        company_name: p.company_name,
-        needs_company_alias: !p.company_alias,
-        contacts,
-      };
-    }).filter((p) => p.needs_company_alias || p.contacts.length > 0);
+    const partnerList = batch
+      .map((p) => {
+        const contacts = (p.partner_contacts || [])
+          .filter((c) => !c.contact_alias)
+          .map((c) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
+        return {
+          partner_id: p.id,
+          company_name: p.company_name,
+          needs_company_alias: !p.company_alias,
+          contacts,
+        };
+      })
+      .filter((p) => p.needs_company_alias || p.contacts.length > 0);
 
     const response = await aiFetch({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: JSON.stringify(partnerList) },
-        ],
-        tools: [PARTNER_TOOL],
-        tool_choice: { type: "function", function: { name: "save_aliases" } },
-      });
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: JSON.stringify(partnerList) },
+      ],
+      tools: [PARTNER_TOOL],
+      tool_choice: { type: "function", function: { name: "save_aliases" } },
+    });
 
     if (!response.ok) {
       const errText = await response.text();
@@ -334,7 +348,10 @@ async function processPartners(supabase: SupabaseClient, apiKey: string, partner
       }
       for (const contact of alias.contacts || []) {
         if (contact.contact_alias) {
-          await supabase.from("partner_contacts").update({ contact_alias: contact.contact_alias }).eq("id", contact.contact_id);
+          await supabase
+            .from("partner_contacts")
+            .update({ contact_alias: contact.contact_alias })
+            .eq("id", contact.contact_id);
           totalContacts++;
         }
       }

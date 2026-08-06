@@ -6,8 +6,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  findKbEntries, upsertKbEntry, deleteKbEntry as dalDeleteKbEntry,
-  countKbEntries, bulkInsertKbEntries, invalidateKbEntries,
+  findKbEntries,
+  upsertKbEntry,
+  deleteKbEntry as dalDeleteKbEntry,
+  countKbEntries,
+  bulkInsertKbEntries,
+  invalidateKbEntries,
   type KbEntry,
 } from "@/data/kbEntries";
 import { getDefaultKbEntries } from "@/data/kbSeedData";
@@ -29,7 +33,10 @@ export function useUpsertKbEntry() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (entry: Partial<KbEntry> & { title: string; content: string }) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       await upsertKbEntry(entry, user.id);
     },
@@ -57,7 +64,10 @@ export function useSeedKbFromLegacy() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const count = await countKbEntries();

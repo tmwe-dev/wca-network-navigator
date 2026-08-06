@@ -8,9 +8,27 @@ import * as React from "react";
 import { useLocation } from "react-router-dom";
 import { buildCrumbs } from "../breadcrumbConfig";
 import {
-  FileText, LayoutDashboard, Search, Kanban, Radar, Brain, Settings,
-  Calendar, Inbox, Mail, Users, BookOpen, FlaskConical, Activity,
-  Database, Globe, MessageSquare, Sparkles, Bot, ListChecks, Shield,
+  FileText,
+  LayoutDashboard,
+  Search,
+  Kanban,
+  Radar,
+  Brain,
+  Settings,
+  Calendar,
+  Inbox,
+  Mail,
+  Users,
+  BookOpen,
+  FlaskConical,
+  Activity,
+  Database,
+  Globe,
+  MessageSquare,
+  Sparkles,
+  Bot,
+  ListChecks,
+  Shield,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -60,7 +78,10 @@ const SEGMENT_ICON: Record<string, LucideIcon> = {
 
 function pickIcon(pathname: string): LucideIcon {
   // /v2/<segment>/...
-  const parts = pathname.replace(/^\/v2\/?/, "").split("/").filter(Boolean);
+  const parts = pathname
+    .replace(/^\/v2\/?/, "")
+    .split("/")
+    .filter(Boolean);
   for (const p of parts) {
     const icon = SEGMENT_ICON[p];
     if (icon) return icon;
@@ -77,9 +98,7 @@ export function AutoPageTitle(): React.ReactElement | null {
     if (!slot) return;
     const update = (): void => {
       // Conta solo figli che NON sono il nostro fallback
-      const children = Array.from(slot.children).filter(
-        (c) => !c.hasAttribute("data-auto-page-title"),
-      );
+      const children = Array.from(slot.children).filter((c) => !c.hasAttribute("data-auto-page-title"));
       setSlotHasChild(children.length > 0);
     };
     update();
@@ -103,9 +122,7 @@ export function AutoPageTitle(): React.ReactElement | null {
       className="inline-flex items-center gap-1.5 rounded-md bg-primary-foreground/95 px-2 py-1 border border-primary/30 shadow-sm min-w-0"
     >
       <Icon className="h-4 w-4 text-primary shrink-0" />
-      <span className="text-sm font-semibold text-primary truncate">
-        {last.label}
-      </span>
+      <span className="text-sm font-semibold text-primary truncate">{last.label}</span>
     </div>
   );
 }

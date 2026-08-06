@@ -8,28 +8,99 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
-  Mail, SortAsc, SortDesc, ChevronDown, ChevronRight, Linkedin, Loader2, Globe, Brain, Image as ImageIcon, ExternalLink, Search,
+  Mail,
+  SortAsc,
+  SortDesc,
+  ChevronDown,
+  ChevronRight,
+  Linkedin,
+  Loader2,
+  Globe,
+  Brain,
+  Image as ImageIcon,
+  ExternalLink,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type EnrichedRow, type SortField, type SortDir, getEnrichStatus } from "@/hooks/useEnrichmentData";
 import type { RowEnrichmentState } from "@/hooks/useBaseEnrichment";
 
 const COUNTRY_FLAGS: Record<string, string> = {
-  AE: "🇦🇪", AR: "🇦🇷", AT: "🇦🇹", AU: "🇦🇺", BE: "🇧🇪", BG: "🇧🇬", BR: "🇧🇷",
-  CA: "🇨🇦", CH: "🇨🇭", CL: "🇨🇱", CN: "🇨🇳", CO: "🇨🇴", CZ: "🇨🇿", DE: "🇩🇪",
-  DK: "🇩🇰", EE: "🇪🇪", EG: "🇪🇬", ES: "🇪🇸", FI: "🇫🇮", FR: "🇫🇷", GB: "🇬🇧",
-  GR: "🇬🇷", HK: "🇭🇰", HR: "🇭🇷", HU: "🇭🇺", ID: "🇮🇩", IE: "🇮🇪", IL: "🇮🇱",
-  IN: "🇮🇳", IS: "🇮🇸", IT: "🇮🇹", JP: "🇯🇵", KE: "🇰🇪", KR: "🇰🇷", KW: "🇰🇼",
-  LT: "🇱🇹", LU: "🇱🇺", LV: "🇱🇻", MA: "🇲🇦", MX: "🇲🇽", MY: "🇲🇾", NG: "🇳🇬",
-  NL: "🇳🇱", NO: "🇳🇴", NZ: "🇳🇿", PE: "🇵🇪", PH: "🇵🇭", PK: "🇵🇰", PL: "🇵🇱",
-  PT: "🇵🇹", QA: "🇶🇦", RO: "🇷🇴", RS: "🇷🇸", RU: "🇷🇺", SA: "🇸🇦", SE: "🇸🇪",
-  SG: "🇸🇬", SI: "🇸🇮", SK: "🇸🇰", TH: "🇹🇭", TR: "🇹🇷", TW: "🇹🇼", UA: "🇺🇦",
-  US: "🇺🇸", UY: "🇺🇾", VN: "🇻🇳", ZA: "🇿🇦",
+  AE: "🇦🇪",
+  AR: "🇦🇷",
+  AT: "🇦🇹",
+  AU: "🇦🇺",
+  BE: "🇧🇪",
+  BG: "🇧🇬",
+  BR: "🇧🇷",
+  CA: "🇨🇦",
+  CH: "🇨🇭",
+  CL: "🇨🇱",
+  CN: "🇨🇳",
+  CO: "🇨🇴",
+  CZ: "🇨🇿",
+  DE: "🇩🇪",
+  DK: "🇩🇰",
+  EE: "🇪🇪",
+  EG: "🇪🇬",
+  ES: "🇪🇸",
+  FI: "🇫🇮",
+  FR: "🇫🇷",
+  GB: "🇬🇧",
+  GR: "🇬🇷",
+  HK: "🇭🇰",
+  HR: "🇭🇷",
+  HU: "🇭🇺",
+  ID: "🇮🇩",
+  IE: "🇮🇪",
+  IL: "🇮🇱",
+  IN: "🇮🇳",
+  IS: "🇮🇸",
+  IT: "🇮🇹",
+  JP: "🇯🇵",
+  KE: "🇰🇪",
+  KR: "🇰🇷",
+  KW: "🇰🇼",
+  LT: "🇱🇹",
+  LU: "🇱🇺",
+  LV: "🇱🇻",
+  MA: "🇲🇦",
+  MX: "🇲🇽",
+  MY: "🇲🇾",
+  NG: "🇳🇬",
+  NL: "🇳🇱",
+  NO: "🇳🇴",
+  NZ: "🇳🇿",
+  PE: "🇵🇪",
+  PH: "🇵🇭",
+  PK: "🇵🇰",
+  PL: "🇵🇱",
+  PT: "🇵🇹",
+  QA: "🇶🇦",
+  RO: "🇷🇴",
+  RS: "🇷🇸",
+  RU: "🇷🇺",
+  SA: "🇸🇦",
+  SE: "🇸🇪",
+  SG: "🇸🇬",
+  SI: "🇸🇮",
+  SK: "🇸🇰",
+  TH: "🇹🇭",
+  TR: "🇹🇷",
+  TW: "🇹🇼",
+  UA: "🇺🇦",
+  US: "🇺🇸",
+  UY: "🇺🇾",
+  VN: "🇻🇳",
+  ZA: "🇿🇦",
 };
 
 const ORIGIN_ACCENT: Record<string, string> = {
-  wca: "border-l-primary", contacts: "border-l-emerald-500", email: "border-l-primary",
-  cockpit: "border-l-emerald-500", bca: "border-l-primary",
+  wca: "border-l-primary",
+  contacts: "border-l-emerald-500",
+  email: "border-l-primary",
+  cockpit: "border-l-emerald-500",
+  bca: "border-l-primary",
 };
 
 const ORIGIN_BADGE_CLASS: Record<string, string> = {
@@ -40,8 +111,9 @@ const ORIGIN_BADGE_CLASS: Record<string, string> = {
   bca: "bg-primary/10 text-primary border-border",
 };
 
-const sourceLabel = (s: string) => ({ wca: "WCA", contacts: "Contatti", email: "Email", cockpit: "Cockpit", bca: "BCA" }[s] || s);
-const getFlag = (code?: string) => code ? COUNTRY_FLAGS[code.toUpperCase()] || "" : "";
+const sourceLabel = (s: string) =>
+  ({ wca: "WCA", contacts: "Contatti", email: "Email", cockpit: "Cockpit", bca: "BCA" })[s] || s;
+const getFlag = (code?: string) => (code ? COUNTRY_FLAGS[code.toUpperCase()] || "" : "");
 
 // ── Status cell: 3 stati visivi chiari (Da arricchire / Parziale / Completo) ──
 function EnrichmentStatusCell({ row }: { row: EnrichedRow }) {
@@ -71,7 +143,12 @@ function EnrichmentStatusCell({ row }: { row: EnrichedRow }) {
 function StatusLine({ label, available, value }: { label: string; available: boolean; value?: string | null }) {
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <span className={cn("shrink-0 text-sm leading-none", available ? "text-emerald-600 dark:text-emerald-400" : "text-foreground/30")}>
+      <span
+        className={cn(
+          "shrink-0 text-sm leading-none",
+          available ? "text-emerald-600 dark:text-emerald-400" : "text-foreground/30",
+        )}
+      >
         {available ? "✓" : "○"}
       </span>
       <span className="text-foreground/70 shrink-0">{label}</span>
@@ -82,7 +159,11 @@ function StatusLine({ label, available, value }: { label: string; available: boo
 
 function formatDate(s?: string | null): string {
   if (!s) return "";
-  try { return new Date(s).toLocaleDateString("it-IT"); } catch { return ""; }
+  try {
+    return new Date(s).toLocaleDateString("it-IT");
+  } catch {
+    return "";
+  }
 }
 
 interface Props {
@@ -99,8 +180,16 @@ interface Props {
 }
 
 export function EnrichmentRowList({
-  rows, selected, allSelected, sortField, sortDir, rowStates,
-  onToggleAll, onToggleOne, onToggleSort, onDeepSearch,
+  rows,
+  selected,
+  allSelected,
+  sortField,
+  sortDir,
+  rowStates,
+  onToggleAll,
+  onToggleOne,
+  onToggleSort,
+  onDeepSearch,
 }: Props) {
   const SortIcon = sortDir === "asc" ? SortAsc : SortDesc;
   const parentRef = useRef<HTMLDivElement>(null);
@@ -109,7 +198,8 @@ export function EnrichmentRowList({
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -117,7 +207,7 @@ export function EnrichmentRowList({
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (i) => expanded.has(rows[i]?.id) ? 220 : 52,
+    estimateSize: (i) => (expanded.has(rows[i]?.id) ? 220 : 52),
     overscan: 15,
   });
 
@@ -134,11 +224,17 @@ export function EnrichmentRowList({
           <Checkbox checked={allSelected} onCheckedChange={onToggleAll} className="h-3.5 w-3.5" />
         </div>
         <div />
-        <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => onToggleSort("name")}>
+        <button
+          className="flex items-center gap-1 hover:text-foreground transition-colors text-left"
+          onClick={() => onToggleSort("name")}
+        >
           Azienda {sortField === "name" && <SortIcon className="w-3 h-3" />}
         </button>
         <div>Paese</div>
-        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => onToggleSort("emailCount")}>
+        <button
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+          onClick={() => onToggleSort("emailCount")}
+        >
           <Mail className="w-3 h-3" /> Email {sortField === "emailCount" && <SortIcon className="w-3 h-3" />}
         </button>
         <div>Stato</div>
@@ -183,7 +279,11 @@ export function EnrichmentRowList({
                     onClick={() => toggleExpand(row.id)}
                   >
                     <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox checked={isSelected} onCheckedChange={() => onToggleOne(row.id)} className="h-3.5 w-3.5" />
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => onToggleOne(row.id)}
+                        className="h-3.5 w-3.5"
+                      />
                     </div>
                     <div className="text-foreground/60 shrink-0">
                       {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -192,7 +292,11 @@ export function EnrichmentRowList({
                     <div className="flex items-center gap-3 min-w-0">
                       {row.logoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={row.logoUrl} alt={row.name} className="w-8 h-8 rounded object-contain bg-card border border-border/60 shrink-0" />
+                        <img
+                          src={row.logoUrl}
+                          alt={row.name}
+                          className="w-8 h-8 rounded object-contain bg-card border border-border/60 shrink-0"
+                        />
                       ) : (
                         <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-foreground/60 text-sm font-bold shrink-0">
                           {initial}
@@ -226,7 +330,9 @@ export function EnrichmentRowList({
                       {row.emailCount ? (
                         <span className="font-semibold text-foreground">{row.emailCount} msg</span>
                       ) : row.email ? (
-                        <span className="truncate" title={row.email}>{row.email}</span>
+                        <span className="truncate" title={row.email}>
+                          {row.email}
+                        </span>
                       ) : (
                         <span className="text-foreground/40">—</span>
                       )}
@@ -251,27 +357,47 @@ export function EnrichmentRowList({
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         {/* COL 1 — Dati base */}
                         <div>
-                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Dati disponibili</p>
+                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">
+                            Dati disponibili
+                          </p>
                           <div className="space-y-1.5">
                             <StatusLine label="LinkedIn" available={row.hasLinkedin} value={row.linkedinUrl} />
-                            <StatusLine label="Sito web" available={!!row.hasWebsiteExcerpt} value={ed?.description?.slice(0, 60)} />
+                            <StatusLine
+                              label="Sito web"
+                              available={!!row.hasWebsiteExcerpt}
+                              value={ed?.description?.slice(0, 60)}
+                            />
                             <StatusLine label="Logo" available={row.hasLogo} />
-                            <StatusLine label="Email estratte" available={!!ed?.emails?.length} value={ed?.emails?.slice(0, 2).join(", ")} />
-                            <StatusLine label="Telefoni" available={!!ed?.phones?.length} value={ed?.phones?.slice(0, 2).join(", ")} />
+                            <StatusLine
+                              label="Email estratte"
+                              available={!!ed?.emails?.length}
+                              value={ed?.emails?.slice(0, 2).join(", ")}
+                            />
+                            <StatusLine
+                              label="Telefoni"
+                              available={!!ed?.phones?.length}
+                              value={ed?.phones?.slice(0, 2).join(", ")}
+                            />
                           </div>
                         </div>
 
                         {/* COL 2 — Deep Search status */}
                         <div>
-                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Deep Search</p>
+                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">
+                            Deep Search
+                          </p>
                           {row.hasDeepSearch && row.deepSearchAt ? (
                             <div className="space-y-1 text-foreground/70">
-                              <p>Eseguito: <span className="text-foreground">{formatDate(row.deepSearchAt)}</span></p>
+                              <p>
+                                Eseguito: <span className="text-foreground">{formatDate(row.deepSearchAt)}</span>
+                              </p>
                               <p className="text-primary text-[11px]">✓ Contatti / Reputazione / Mentions</p>
                             </div>
                           ) : ed?.scraped_at ? (
                             <div className="space-y-1 text-foreground/70">
-                              <p>Scraping: <span className="text-foreground">{formatDate(ed.scraped_at)}</span></p>
+                              <p>
+                                Scraping: <span className="text-foreground">{formatDate(ed.scraped_at)}</span>
+                              </p>
                               <p className="text-foreground/50 italic text-[11px]">Solo Base — manca Deep Search</p>
                             </div>
                           ) : (
@@ -281,38 +407,64 @@ export function EnrichmentRowList({
 
                         {/* COL 3 — Azioni */}
                         <div>
-                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Azioni</p>
+                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">
+                            Azioni
+                          </p>
                           <div className="flex flex-col gap-1.5 items-stretch">
-                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start" onClick={() => onDeepSearch([row])}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1.5 justify-start"
+                              onClick={() => onDeepSearch([row])}
+                            >
                               <Brain className="w-3.5 h-3.5" /> Deep Search
                             </Button>
                             {!row.hasLogo && (
                               <Button
-                                size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start"
-                                onClick={() => window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${row.name} company logo`)}`, "_blank")}
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1.5 justify-start"
+                                onClick={() =>
+                                  window.open(
+                                    `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${row.name} company logo`)}`,
+                                    "_blank",
+                                  )
+                                }
                               >
                                 <ImageIcon className="w-3.5 h-3.5" /> Cerca Logo Google
                               </Button>
                             )}
                             {!row.hasLinkedin && (
                               <Button
-                                size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start"
-                                onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(`${row.name} site:linkedin.com/company`)}`, "_blank")}
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1.5 justify-start"
+                                onClick={() =>
+                                  window.open(
+                                    `https://www.google.com/search?q=${encodeURIComponent(`${row.name} site:linkedin.com/company`)}`,
+                                    "_blank",
+                                  )
+                                }
                               >
                                 <Search className="w-3.5 h-3.5" /> Cerca LinkedIn
                               </Button>
                             )}
                             {row.linkedinUrl && (
                               <Button
-                                size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1.5 justify-start"
                                 onClick={() => window.open(row.linkedinUrl, "_blank")}
                               >
-                                <Linkedin className="w-3.5 h-3.5" /> Apri LinkedIn <ExternalLink className="w-3 h-3 ml-auto" />
+                                <Linkedin className="w-3.5 h-3.5" /> Apri LinkedIn{" "}
+                                <ExternalLink className="w-3 h-3 ml-auto" />
                               </Button>
                             )}
                             {row.domain && (
                               <Button
-                                size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1.5 justify-start"
                                 onClick={() => window.open(`https://${row.domain}`, "_blank")}
                               >
                                 <Globe className="w-3.5 h-3.5" /> Apri sito <ExternalLink className="w-3 h-3 ml-auto" />

@@ -20,7 +20,10 @@ function isSkippableCheckInboxError(err: unknown): err is ApiError {
   }
   if (!(err instanceof ApiError)) {
     // Edge-case: errore non-ApiError raw (es. TypeError di fetch) → transient.
-    if (err instanceof Error && /Failed to (fetch|send)|FunctionsFetchError|FunctionsRelayError|NetworkError/i.test(err.message)) {
+    if (
+      err instanceof Error &&
+      /Failed to (fetch|send)|FunctionsFetchError|FunctionsRelayError|NetworkError/i.test(err.message)
+    ) {
       return true;
     }
     return false;
@@ -29,8 +32,7 @@ function isSkippableCheckInboxError(err: unknown): err is ApiError {
   const body = err.details?.body as Record<string, unknown> | undefined;
   const bodyCode = typeof body?.code === "string" ? body.code : undefined;
   const isRuntimeBootError =
-    err.httpStatus === 503 ||
-    /SUPABASE_EDGE_RUNTIME_ERROR|temporarily unavailable/i.test(err.message);
+    err.httpStatus === 503 || /SUPABASE_EDGE_RUNTIME_ERROR|temporarily unavailable/i.test(err.message);
   const isResourceLimitError =
     err.httpStatus === 546 ||
     bodyCode === "WORKER_RESOURCE_LIMIT" ||
@@ -55,10 +57,7 @@ export interface CallCheckInboxOptions {
   readonly unreadOnly?: boolean;
 }
 
-export async function callCheckInbox(
-  mailboxId?: string | null,
-  opts: CallCheckInboxOptions = {},
-): Promise<unknown> {
+export async function callCheckInbox(mailboxId?: string | null, opts: CallCheckInboxOptions = {}): Promise<unknown> {
   const key = inFlightKey(mailboxId ?? null, !!opts.unreadOnly);
   const existing = inFlightCheckInbox.get(key);
   if (existing) {
@@ -73,10 +72,7 @@ export async function callCheckInbox(
   return p;
 }
 
-async function callCheckInboxOnce(
-  mailboxId: string | null,
-  opts: CallCheckInboxOptions,
-): Promise<unknown> {
+async function callCheckInboxOnce(mailboxId: string | null, opts: CallCheckInboxOptions): Promise<unknown> {
   try {
     const headers: Record<string, string> = {};
     if (mailboxId) headers["x-mailbox-id"] = mailboxId;
@@ -95,7 +91,8 @@ async function callCheckInboxOnce(
     // prossimo tick o scaricamento manuale riprenderà senza duplicare side effect.
     if (isSkippableCheckInboxError(err)) {
       const status = err instanceof ApiError ? err.httpStatus : undefined;
-      const code = err instanceof ApiError ? (err.details?.body as Record<string, unknown> | undefined)?.code : undefined;
+      const code =
+        err instanceof ApiError ? (err.details?.body as Record<string, unknown> | undefined)?.code : undefined;
       log.warn("check-inbox skipped this tick", {
         status,
         code,

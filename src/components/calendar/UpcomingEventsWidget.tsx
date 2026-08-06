@@ -13,11 +13,7 @@ interface UpcomingEventsWidgetProps {
   className?: string;
 }
 
-export function UpcomingEventsWidget({
-  limit = 5,
-  onEventClick,
-  className = "",
-}: UpcomingEventsWidgetProps) {
+export function UpcomingEventsWidget({ limit = 5, onEventClick, className = "" }: UpcomingEventsWidgetProps) {
   const { data: events = [], isLoading } = useUpcomingEvents(limit);
 
   const getEventTypeColor = (type: string): string => {
@@ -78,9 +74,7 @@ export function UpcomingEventsWidget({
             <Clock className="w-4 h-4 text-blue-400" />
             <h3 className="text-sm font-semibold text-white">Prossimi Eventi</h3>
           </div>
-          <span className="text-xs bg-blue-900 text-blue-100 px-2 py-1 rounded">
-            {events.length}
-          </span>
+          <span className="text-xs bg-blue-900 text-blue-100 px-2 py-1 rounded">{events.length}</span>
         </div>
       </div>
 
@@ -97,22 +91,16 @@ export function UpcomingEventsWidget({
             >
               <div className="space-y-1">
                 <div className="flex items-start justify-between gap-2">
-                  <h4 className="text-sm font-medium text-white line-clamp-2">
-                    {event.title}
-                  </h4>
+                  <h4 className="text-sm font-medium text-white line-clamp-2">{event.title}</h4>
                   <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span className="badge px-2 py-0.5 rounded bg-gray-700">
-                    {getEventTypeLabel(event.event_type)}
-                  </span>
+                  <span className="badge px-2 py-0.5 rounded bg-gray-700">{getEventTypeLabel(event.event_type)}</span>
                   <span className="font-medium">{formatTime(event.start_at)}</span>
                 </div>
 
-                {event.location && (
-                  <p className="text-xs text-gray-500">📍 {event.location}</p>
-                )}
+                {event.location && <p className="text-xs text-gray-500">📍 {event.location}</p>}
               </div>
             </div>
           ))}

@@ -38,8 +38,16 @@ export interface LinkedInProfileData {
   connectionStatus?: LinkedInConnectionStatus;
 }
 
-export interface DraftLink { label: string; url: string }
-export interface DraftAttachment { name: string; path: string; size: number; mime: string }
+export interface DraftLink {
+  label: string;
+  url: string;
+}
+export interface DraftAttachment {
+  name: string;
+  path: string;
+  size: number;
+  mime: string;
+}
 
 export interface DraftState {
   channel: DraftChannel;

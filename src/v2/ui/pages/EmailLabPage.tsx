@@ -36,20 +36,26 @@ export function EmailLabPage(): React.ReactElement {
           </PopoverTrigger>
           <PopoverContent align="start" className="w-80 text-sm">
             <p className="text-foreground">
-              Genera o smista un'email finta e vedi come la produce/classifica l'AI.
-              Nessuna scrittura su CRM, contatti o caselle reali.
+              Genera o smista un'email finta e vedi come la produce/classifica l'AI. Nessuna scrittura su CRM, contatti
+              o caselle reali.
             </p>
             <ol className="mt-3 space-y-1.5 text-xs text-foreground">
               <li className="flex items-start gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">1</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
+                  1
+                </span>
                 Scegli uno scenario o parti da bianco
               </li>
               <li className="flex items-start gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">2</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
+                  2
+                </span>
                 Configura destinatario e tipo
               </li>
               <li className="flex items-start gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">3</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
+                  3
+                </span>
                 Lancia e confronta le iterazioni
               </li>
             </ol>
@@ -92,9 +98,7 @@ export function EmailLabPage(): React.ReactElement {
       {toolsOpen ? <ToolsBanner /> : null}
 
       {/* WORKFLOW della modalità attiva */}
-      <div className="min-h-0 flex-1">
-        {mode === "production" ? <ProductionTab /> : <FunnemailTab />}
-      </div>
+      <div className="min-h-0 flex-1">{mode === "production" ? <ProductionTab /> : <FunnemailTab />}</div>
     </div>
   );
 }

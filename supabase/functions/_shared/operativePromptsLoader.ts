@@ -51,21 +51,27 @@ export type PromptScope =
 
 /** Canonical mapping scope → contexts/tags accepted from the DB. */
 const SCOPE_MAP: Record<PromptScope, { contexts: string[]; tags: string[] }> = {
-  "email":          { contexts: ["email"],                         tags: ["email", "outreach"] },
-  "email-quality":  { contexts: ["email-quality", "email"],        tags: ["email-quality", "copywriting", "email"] },
-  "outreach":       { contexts: ["outreach", "multi-channel"],     tags: ["outreach", "multi-canale", "workflow"] },
-  "whatsapp":       { contexts: ["whatsapp", "multi-channel"],     tags: ["whatsapp", "multi-canale", "gate-hard"] },
-  "linkedin":       { contexts: ["linkedin", "multi-channel"],     tags: ["linkedin", "multi-canale"] },
-  "multi-channel":  { contexts: ["multi-channel"],                 tags: ["multi-canale", "sequenza"] },
-  "lead-status":    { contexts: ["lead-status"],                   tags: ["lead-status", "qualification", "9-stati"] },
-  "post-send":      { contexts: ["post-send"],                     tags: ["post-send", "checklist"] },
-  "classification": { contexts: ["lead-status", "email-quality"],  tags: ["lead-status", "qualification", "classification"] },
-  "agent-loop":     { contexts: ["outreach", "multi-channel", "lead-status"], tags: ["workflow", "outreach", "lead-status"] },
-  "command":        { contexts: ["command"],                       tags: ["command", "tool-routing", "router"] },
-  "funnemail_classifier": { contexts: ["funnemail_classifier"],    tags: ["funnemail", "classifier", "inbound"] },
-  "content-intelligence": { contexts: ["content-intelligence"],    tags: ["content", "inbound", "funnemail"] },
-  "conversation-summary": { contexts: ["conversation-summary"],    tags: ["conversation-summary", "context", "inbound"] },
-  "general":        { contexts: [],                                tags: [] },
+  email: { contexts: ["email"], tags: ["email", "outreach"] },
+  "email-quality": { contexts: ["email-quality", "email"], tags: ["email-quality", "copywriting", "email"] },
+  outreach: { contexts: ["outreach", "multi-channel"], tags: ["outreach", "multi-canale", "workflow"] },
+  whatsapp: { contexts: ["whatsapp", "multi-channel"], tags: ["whatsapp", "multi-canale", "gate-hard"] },
+  linkedin: { contexts: ["linkedin", "multi-channel"], tags: ["linkedin", "multi-canale"] },
+  "multi-channel": { contexts: ["multi-channel"], tags: ["multi-canale", "sequenza"] },
+  "lead-status": { contexts: ["lead-status"], tags: ["lead-status", "qualification", "9-stati"] },
+  "post-send": { contexts: ["post-send"], tags: ["post-send", "checklist"] },
+  classification: {
+    contexts: ["lead-status", "email-quality"],
+    tags: ["lead-status", "qualification", "classification"],
+  },
+  "agent-loop": {
+    contexts: ["outreach", "multi-channel", "lead-status"],
+    tags: ["workflow", "outreach", "lead-status"],
+  },
+  command: { contexts: ["command"], tags: ["command", "tool-routing", "router"] },
+  funnemail_classifier: { contexts: ["funnemail_classifier"], tags: ["funnemail", "classifier", "inbound"] },
+  "content-intelligence": { contexts: ["content-intelligence"], tags: ["content", "inbound", "funnemail"] },
+  "conversation-summary": { contexts: ["conversation-summary"], tags: ["conversation-summary", "context", "inbound"] },
+  general: { contexts: [], tags: [] },
 };
 
 const UNIVERSAL_TAGS = new Set(["universale", "post-send"]);
@@ -166,14 +172,26 @@ export async function loadOperativePrompts(
 
     if (error || !data || data.length === 0) {
       if (error) console.warn("[operativePromptsLoader] load failed:", error.message);
-      return { block: "", appliedNames: [], hasMandatory: false, matched: { contexts: [...matched.contexts], tags: [...matched.tags] } };
+      return {
+        block: "",
+        appliedNames: [],
+        hasMandatory: false,
+        matched: { contexts: [...matched.contexts], tags: [...matched.tags] },
+      };
     }
 
     const rows = data as OperativePromptRow[];
     const relevant = rows.filter((r) => isRelevant(r, matched.contexts, matched.tags));
     if (relevant.length === 0) {
-      console.warn(`[operativePromptsLoader] HEALTH: nessun prompt operativo per scope='${options.scope}'${options.channel ? " canale='" + options.channel + "'" : ""} → l'AI gira senza regole del Prompt Lab`);
-      return { block: "", appliedNames: [], hasMandatory: false, matched: { contexts: [...matched.contexts], tags: [...matched.tags] } };
+      console.warn(
+        `[operativePromptsLoader] HEALTH: nessun prompt operativo per scope='${options.scope}'${options.channel ? " canale='" + options.channel + "'" : ""} → l'AI gira senza regole del Prompt Lab`,
+      );
+      return {
+        block: "",
+        appliedNames: [],
+        hasMandatory: false,
+        matched: { contexts: [...matched.contexts], tags: [...matched.tags] },
+      };
     }
 
     // Dedup per NOME: i prompt sono salvati per-utente (copie identiche su più
@@ -195,12 +213,14 @@ export async function loadOperativePrompts(
     const deduped = [...bestByName.values()];
 
     // Mandatory first, then by priority desc.
-    const sorted = deduped.sort((a, b) => {
-      const am = isMandatory(a) ? 1 : 0;
-      const bm = isMandatory(b) ? 1 : 0;
-      if (am !== bm) return bm - am;
-      return (b.priority ?? 0) - (a.priority ?? 0);
-    }).slice(0, limit);
+    const sorted = deduped
+      .sort((a, b) => {
+        const am = isMandatory(a) ? 1 : 0;
+        const bm = isMandatory(b) ? 1 : 0;
+        if (am !== bm) return bm - am;
+        return (b.priority ?? 0) - (a.priority ?? 0);
+      })
+      .slice(0, limit);
 
     const rendered = sorted.map(renderPrompt).join("\n\n");
     const appliedNames = sorted.map((r) => r.name);
@@ -219,7 +239,12 @@ In caso di conflitto, vince la regola **OBBLIGATORIA** con priorità più alta.`
     };
   } catch (e) {
     console.warn("[operativePromptsLoader] exception:", (e as Error).message);
-    return { block: "", appliedNames: [], hasMandatory: false, matched: { contexts: [...matched.contexts], tags: [...matched.tags] } };
+    return {
+      block: "",
+      appliedNames: [],
+      hasMandatory: false,
+      matched: { contexts: [...matched.contexts], tags: [...matched.tags] },
+    };
   }
 }
 

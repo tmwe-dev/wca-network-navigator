@@ -28,9 +28,11 @@ const FloatingDock = ({ items = [] }: FloatingDockProps) => {
           const isActive = location.pathname === item.to;
           return (
             <NavLink key={item.to} to={item.to} className="relative">
-              <div className={`p-2.5 rounded-xl transition-all duration-300 ${
-                isActive ? "text-primary bg-primary/30" : "text-muted-foreground hover:text-foreground"
-              }`}>
+              <div
+                className={`p-2.5 rounded-xl transition-all duration-300 ${
+                  isActive ? "text-primary bg-primary/30" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
                 {item.icon}
               </div>
               {isActive && (

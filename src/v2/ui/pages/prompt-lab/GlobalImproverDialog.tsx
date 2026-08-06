@@ -14,7 +14,25 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2, Wrench, Code2, BookOpen, Ban, Undo2, ChevronDown, Clock } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  RotateCcw,
+  Save,
+  X,
+  Upload,
+  Trash2,
+  Wrench,
+  Code2,
+  BookOpen,
+  Ban,
+  Undo2,
+  ChevronDown,
+  Clock,
+} from "lucide-react";
 import { useGlobalPromptImprover } from "./hooks/useGlobalPromptImprover";
 import { rollbackSavedProposals } from "@/data/promptLabGlobalRuns";
 import { useAuth } from "@/providers/AuthProvider";
@@ -41,7 +59,13 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
   const [grouping, setGrouping] = useState<"tab" | "agent">(defaultGrouping);
   const [schedulingOpen, setSchedulingOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable } = useGlobalPromptImprover(userId, goal, referenceMaterial, uploadedFiles, grouping);
+  const { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable } = useGlobalPromptImprover(
+    userId,
+    goal,
+    referenceMaterial,
+    uploadedFiles,
+    grouping,
+  );
   const signals = usePromptLabSignals(userId);
   const { counts: suggestionCounts } = useSuggestedImprovements(userId, true);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
@@ -65,10 +89,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
     setUploadedFiles((prev) => prev.filter((_, i) => i !== idx));
   }, []);
 
-  const readyProposals = useMemo(
-    () => state.proposals.filter((p) => p.status === "ready"),
-    [state.proposals],
-  );
+  const readyProposals = useMemo(() => state.proposals.filter((p) => p.status === "ready"), [state.proposals]);
   const skippedCount = state.proposals.filter((p) => p.status === "skipped").length;
   const _minorChangeCount = state.proposals.filter((p) => p.status === "minor_change").length;
   const errorCount = state.proposals.filter((p) => p.status === "error").length;
@@ -80,7 +101,8 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
   function toggle(id: string) {
     setAccepted((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -150,7 +172,8 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
             Migliora tutto il sistema
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Il Lab Agent analizza l'intero ecosistema (system prompt, KB doctrine, prompt operativi, email, playbook, persona) e propone una versione coerente per ogni blocco. Tu approvi cosa salvare.
+            Il Lab Agent analizza l'intero ecosistema (system prompt, KB doctrine, prompt operativi, email, playbook,
+            persona) e propone una versione coerente per ogni blocco. Tu approvi cosa salvare.
           </DialogDescription>
         </DialogHeader>
 
@@ -163,7 +186,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                 onAnalyze={signals.analyze}
                 onDismiss={signals.dismiss}
                 onAcknowledge={signals.acknowledge}
-                onCopySuggestion={(text) => setReferenceMaterial((prev) => prev ? `${prev}\n\n${text}` : text)}
+                onCopySuggestion={(text) => setReferenceMaterial((prev) => (prev ? `${prev}\n\n${text}` : text))}
               />
 
               {/* LOVABLE-110: Banner suggerimenti approvati pronti per l'Architect */}
@@ -172,7 +195,9 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                   <Sparkles className="h-4 w-4 text-success flex-shrink-0" />
                   <div className="text-xs flex-1">
                     <span className="font-medium text-success">
-                      {suggestionCounts.approved} suggeriment{suggestionCounts.approved === 1 ? "o approvato" : "i approvati"} pronto{suggestionCounts.approved > 1 ? "i" : ""} per l'Architect.
+                      {suggestionCounts.approved} suggeriment
+                      {suggestionCounts.approved === 1 ? "o approvato" : "i approvati"} pronto
+                      {suggestionCounts.approved > 1 ? "i" : ""} per l'Architect.
                     </span>
                     <span className="text-muted-foreground ml-1">
                       Verranno integrati automaticamente al prossimo "Migliora tutto".
@@ -222,7 +247,8 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                   Materiale di riferimento (opzionale)
                 </label>
                 <p className="text-[10px] text-muted-foreground mb-1">
-                  Incolla qui nuove procedure, servizi, documentazione tecnica, regole — il Lab Agent li userà come contesto per migliorare prompt e KB.
+                  Incolla qui nuove procedure, servizi, documentazione tecnica, regole — il Lab Agent li userà come
+                  contesto per migliorare prompt e KB.
                 </p>
                 <Textarea
                   value={referenceMaterial}
@@ -235,10 +261,13 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
               {/* LOVABLE-92: Upload file */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Documenti allegati (opzionale)
-                  </label>
-                  <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => fileInputRef.current?.click()}>
+                  <label className="text-xs font-medium text-muted-foreground">Documenti allegati (opzionale)</label>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-[10px] gap-1"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     <Upload className="h-3 w-3" />
                     Carica file
                   </Button>
@@ -257,7 +286,10 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                 {uploadedFiles.length > 0 && (
                   <div className="space-y-1">
                     {uploadedFiles.map((f, idx) => (
-                      <div key={`${f.name}-${idx}`} className="flex items-center justify-between rounded border bg-muted/20 px-2 py-1">
+                      <div
+                        key={`${f.name}-${idx}`}
+                        className="flex items-center justify-between rounded border bg-muted/20 px-2 py-1"
+                      >
                         <div className="flex items-center gap-1.5 min-w-0">
                           <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                           <span className="text-[11px] truncate">{f.name}</span>
@@ -301,7 +333,10 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
               <div className="rounded border bg-muted/30 p-3 text-xs space-y-1.5">
                 <p className="font-medium">Cosa farà il Lab Agent:</p>
                 <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
-                  <li>Carica TUTTI i blocchi modificabili + architettura sistema (tool, edge function, side-effect) + profilo azienda</li>
+                  <li>
+                    Carica TUTTI i blocchi modificabili + architettura sistema (tool, edge function, side-effect) +
+                    profilo azienda
+                  </li>
                   <li>Costruisce una mappa testuale del runtime (dove ogni blocco viene eseguito)</li>
                   <li>Inietta la dottrina KB completa + materiale di riferimento + documenti allegati</li>
                   <li>Per ogni blocco genera una versione migliorata, coerente con tutto il contesto disponibile</li>
@@ -326,7 +361,9 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
               </Collapsible>
 
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => handleClose(false)}>Annulla</Button>
+                <Button variant="outline" onClick={() => handleClose(false)}>
+                  Annulla
+                </Button>
                 <Button onClick={startImprovement} disabled={!userId}>
                   <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                   Avvia analisi globale
@@ -357,7 +394,8 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                   {state.dbSaveCount > 0 && (
                     <p className="text-[10px] text-muted-foreground text-center mt-1.5 flex items-center justify-center gap-1">
                       <Save className="h-3 w-3" />
-                      Salvato {state.dbSaveCount}/{state.progress.total} proposte — puoi chiudere senza perdere progressi
+                      Salvato {state.dbSaveCount}/{state.progress.total} proposte — puoi chiudere senza perdere
+                      progressi
                     </p>
                   )}
                 </div>
@@ -428,10 +466,13 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                       <div
                         key={p.block.id}
                         className={`rounded border p-3 ${
-                          isSaved ? "bg-success/10 border-success/40" :
-                          isError ? "bg-destructive/10 border-destructive/40" :
-                          isSkipped ? "bg-muted/20 opacity-60" :
-                          "bg-background"
+                          isSaved
+                            ? "bg-success/10 border-success/40"
+                            : isError
+                              ? "bg-destructive/10 border-destructive/40"
+                              : isSkipped
+                                ? "bg-muted/20 opacity-60"
+                                : "bg-background"
                         }`}
                       >
                         <div className="flex items-start gap-2 mb-2">
@@ -444,11 +485,25 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">{p.tabLabel}</Badge>
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {p.tabLabel}
+                              </Badge>
                               <span className="text-xs font-medium">{p.block.label}</span>
-                              {isSaved && <Badge variant="default" className="bg-success text-success-foreground text-[10px]">Salvato</Badge>}
-                              {isError && <Badge variant="destructive" className="text-[10px]">Errore</Badge>}
-                              {isSkipped && <Badge variant="secondary" className="text-[10px]">Già ottimo</Badge>}
+                              {isSaved && (
+                                <Badge variant="default" className="bg-success text-success-foreground text-[10px]">
+                                  Salvato
+                                </Badge>
+                              )}
+                              {isError && (
+                                <Badge variant="destructive" className="text-[10px]">
+                                  Errore
+                                </Badge>
+                              )}
+                              {isSkipped && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Già ottimo
+                                </Badge>
+                              )}
                               {/* LOVABLE-109: outcome_type badges */}
                               {p.outcomeType === "contract_needed" && (
                                 <Badge variant="outline" className="text-[10px] border-warning text-warning gap-0.5">
@@ -483,18 +538,20 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                             )}
                           </div>
                         </div>
-                        {isError && (
-                          <p className="text-xs text-destructive mt-1">{p.error}</p>
-                        )}
+                        {isError && <p className="text-xs text-destructive mt-1">{p.error}</p>}
                         {(isReady || isSaved) && p.after && (
                           <div className="grid grid-cols-2 gap-2 mt-2">
                             <div>
                               <p className="text-[10px] font-medium text-muted-foreground mb-1">Prima</p>
-                              <pre className="text-[11px] font-mono bg-muted/40 rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">{p.before || "(vuoto)"}</pre>
+                              <pre className="text-[11px] font-mono bg-muted/40 rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">
+                                {p.before || "(vuoto)"}
+                              </pre>
                             </div>
                             <div>
                               <p className="text-[10px] font-medium text-success mb-1">Dopo</p>
-                              <pre className="text-[11px] font-mono bg-success/10 rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">{p.after}</pre>
+                              <pre className="text-[11px] font-mono bg-success/10 rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">
+                                {p.after}
+                              </pre>
                             </div>
                           </div>
                         )}
@@ -515,7 +572,11 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                       onClick={handleRollback}
                       disabled={rollbackBusy}
                     >
-                      {rollbackBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+                      {rollbackBusy ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Undo2 className="h-3.5 w-3.5" />
+                      )}
                       Annulla ultimo miglioramento
                     </Button>
                   )}

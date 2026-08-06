@@ -186,7 +186,7 @@ export function CompanyCard({
             BADGE_BASE,
             badge.tone === "wca" && "bg-primary/15 text-primary border-primary/30",
             badge.tone === "primary" && "bg-primary/15 text-primary border-primary/30",
-            badge.tone === "neutral" && "bg-muted/40 text-muted-foreground border-border/40"
+            badge.tone === "neutral" && "bg-muted/40 text-muted-foreground border-border/40",
           )}
         >
           {badge.label}
@@ -242,7 +242,7 @@ export function CompanyCard({
         recency.tone === "ok" && "text-success border-success/30",
         recency.tone === "warn" && "text-warning border-warning/30",
         recency.tone === "alert" && "text-destructive border-destructive/30",
-        recency.tone === "muted" && "text-muted-foreground border-border/50"
+        recency.tone === "muted" && "text-muted-foreground border-border/50",
       )}
       title={lastInteractionAt ? `Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}` : "Mai contattato"}
     >
@@ -252,10 +252,14 @@ export function CompanyCard({
   );
 
   const contactSlot = primaryContact ? (
-    <div className={cn(
-      "grid min-w-0 gap-2 rounded-md border border-border/50 bg-muted/15 px-2.5 py-2",
-      compact ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]"
-    )}>
+    <div
+      className={cn(
+        "grid min-w-0 gap-2 rounded-md border border-border/50 bg-muted/15 px-2.5 py-2",
+        compact
+          ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+          : "sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]",
+      )}
+    >
       <div className="min-w-0">
         <span className="block text-[10px] font-semibold leading-none text-muted-foreground">Contatto</span>
         <span className="mt-1 block truncate text-[13px] font-semibold leading-tight text-foreground">
@@ -317,7 +321,10 @@ export function CompanyCard({
               e.stopPropagation();
               onCityClick(city);
             }}
-            className={cn(CHIP_BASE, "max-w-[180px] border-border/55 bg-muted/35 text-foreground hover:border-primary/45 hover:text-primary")}
+            className={cn(
+              CHIP_BASE,
+              "max-w-[180px] border-border/55 bg-muted/35 text-foreground hover:border-primary/45 hover:text-primary",
+            )}
             title={`Filtra per città ${city}`}
           >
             <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -338,16 +345,17 @@ export function CompanyCard({
         </span>
       )}
       {origin && (
-        <span className={cn(CHIP_BASE, "max-w-[150px] border-border/45 bg-muted/25 text-muted-foreground")} title={`Origine: ${origin}`}>
+        <span
+          className={cn(CHIP_BASE, "max-w-[150px] border-border/45 bg-muted/25 text-muted-foreground")}
+          title={`Origine: ${origin}`}
+        >
           <span className="truncate">{origin}</span>
         </span>
       )}
     </div>
   );
 
-  const countryNode = (
-    <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />
-  );
+  const countryNode = <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />;
 
   return (
     <article
@@ -357,12 +365,18 @@ export function CompanyCard({
         compact ? "p-2.5" : "p-3",
         CARD_BORDER[source],
         selected && "ring-1 ring-primary/50 bg-primary/[0.05]",
-        opened && "ring-1 ring-primary/70 border-primary/70 bg-primary/[0.07] shadow-[0_0_0_1px_hsl(var(--primary)/0.25)]"
+        opened &&
+          "ring-1 ring-primary/70 border-primary/70 bg-primary/[0.07] shadow-[0_0_0_1px_hsl(var(--primary)/0.25)]",
       )}
     >
       <div className={cn("absolute left-0 top-0 h-full w-1 bg-gradient-to-b", CARD_STRIPE[source])} />
 
-      <div className={cn("grid min-w-0 gap-3", compact ? "grid-cols-[42px_minmax(0,1fr)_28px]" : "grid-cols-[64px_minmax(0,1fr)_minmax(128px,auto)]")}>
+      <div
+        className={cn(
+          "grid min-w-0 gap-3",
+          compact ? "grid-cols-[42px_minmax(0,1fr)_28px]" : "grid-cols-[64px_minmax(0,1fr)_minmax(128px,auto)]",
+        )}
+      >
         <div className="flex flex-col items-center gap-2 pl-1">
           {onToggleSelect && (
             <div onClick={(e) => e.stopPropagation()}>
@@ -426,7 +440,9 @@ export function CompanyCard({
           )}
         </div>
 
-        <div className={cn("flex min-w-0 flex-col items-end", compact ? "justify-between gap-2" : "justify-between gap-3")}>
+        <div
+          className={cn("flex min-w-0 flex-col items-end", compact ? "justify-between gap-2" : "justify-between gap-3")}
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -458,13 +474,13 @@ export function CompanyCard({
                 <ExternalLink className="mr-2 h-3.5 w-3.5" /> Apri dettaglio
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">
-                Deep Search
-              </DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Deep Search</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 1 } }));
+                  window.dispatchEvent(
+                    new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 1 } }),
+                  );
                 }}
               >
                 <Search className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> Scout
@@ -473,7 +489,9 @@ export function CompanyCard({
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 2 } }));
+                  window.dispatchEvent(
+                    new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 2 } }),
+                  );
                 }}
               >
                 <ScanSearch className="mr-2 h-3.5 w-3.5 text-primary" /> Detective
@@ -482,7 +500,9 @@ export function CompanyCard({
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 3 } }));
+                  window.dispatchEvent(
+                    new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 3 } }),
+                  );
                 }}
               >
                 <Telescope className="mr-2 h-3.5 w-3.5 text-warning" /> Sherlock
@@ -491,7 +511,11 @@ export function CompanyCard({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {compact && <div className="mt-auto max-w-[28px] [&_.rounded-md]:px-1 [&_.rounded-md]:text-[0px] [&_svg]:h-3.5 [&_svg]:w-3.5">{statusBadgesSlot}</div>}
+          {compact && (
+            <div className="mt-auto max-w-[28px] [&_.rounded-md]:px-1 [&_.rounded-md]:text-[0px] [&_svg]:h-3.5 [&_svg]:w-3.5">
+              {statusBadgesSlot}
+            </div>
+          )}
 
           {!compact && (
             <div className="flex min-w-[128px] flex-col items-end gap-1.5">

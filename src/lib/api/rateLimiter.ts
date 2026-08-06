@@ -95,14 +95,20 @@ function tryHalfOpen(b: BucketState, cfg: RateLimiterConfig): void {
 }
 
 export class RateLimitedError extends Error {
-  constructor(public readonly key: string, public readonly retryAfterMs: number) {
+  constructor(
+    public readonly key: string,
+    public readonly retryAfterMs: number,
+  ) {
     super(`Rate limited on ${key}, retry in ${retryAfterMs}ms`);
     this.name = "RateLimitedError";
   }
 }
 
 export class CircuitOpenError extends Error {
-  constructor(public readonly key: string, public readonly resetInMs: number) {
+  constructor(
+    public readonly key: string,
+    public readonly resetInMs: number,
+  ) {
     super(`Circuit open on ${key}, reset in ${resetInMs}ms`);
     this.name = "CircuitOpenError";
   }
@@ -117,11 +123,7 @@ export class CircuitOpenError extends Error {
  * @param fn funzione async da eseguire
  * @param maxRetries default 3
  */
-export async function withRateLimit<T>(
-  key: string,
-  fn: () => Promise<T>,
-  maxRetries = 3
-): Promise<T> {
+export async function withRateLimit<T>(key: string, fn: () => Promise<T>, maxRetries = 3): Promise<T> {
   const cfg = getConfig(key);
   const b = getBucket(key);
 

@@ -8,61 +8,136 @@ import { TARGET_SCHEMA, type ColumnMapping, type TransformationType, type Target
 /** Italian synonym dictionary for each target field */
 const SYNONYMS: Record<string, string[]> = {
   company_name: [
-    "azienda", "company", "ditta", "ragione sociale", "rag. sociale", "rag sociale",
-    "società", "societa", "impresa", "denominazione", "company name", "nome azienda",
-    "ente", "organizzazione", "brand",
+    "azienda",
+    "company",
+    "ditta",
+    "ragione sociale",
+    "rag. sociale",
+    "rag sociale",
+    "società",
+    "societa",
+    "impresa",
+    "denominazione",
+    "company name",
+    "nome azienda",
+    "ente",
+    "organizzazione",
+    "brand",
   ],
   company_alias: ["alias azienda", "nome breve", "short name", "company alias", "sigla"],
   name: [
-    "nome", "contatto", "referente", "contact", "nome contatto", "nominativo",
-    "nome e cognome", "nome cognome", "full name", "fullname", "first name", "firstname",
-    "cognome", "last name", "lastname", "surname", "contact name", "person",
+    "nome",
+    "contatto",
+    "referente",
+    "contact",
+    "nome contatto",
+    "nominativo",
+    "nome e cognome",
+    "nome cognome",
+    "full name",
+    "fullname",
+    "first name",
+    "firstname",
+    "cognome",
+    "last name",
+    "lastname",
+    "surname",
+    "contact name",
+    "person",
   ],
   contact_alias: ["alias contatto", "soprannome", "nickname", "contact alias"],
   position: [
-    "ruolo", "posizione", "qualifica", "titolo", "role", "position", "job title",
-    "mansione", "funzione", "carica", "title",
+    "ruolo",
+    "posizione",
+    "qualifica",
+    "titolo",
+    "role",
+    "position",
+    "job title",
+    "mansione",
+    "funzione",
+    "carica",
+    "title",
   ],
-  email: [
-    "email", "e-mail", "mail", "posta elettronica", "indirizzo email", "pec",
-    "email address", "e mail",
-  ],
+  email: ["email", "e-mail", "mail", "posta elettronica", "indirizzo email", "pec", "email address", "e mail"],
   phone: [
-    "telefono", "phone", "tel", "tel.", "telephone", "numero telefono",
-    "n. telefono", "recapito", "fisso", "landline", "phone number",
+    "telefono",
+    "phone",
+    "tel",
+    "tel.",
+    "telephone",
+    "numero telefono",
+    "n. telefono",
+    "recapito",
+    "fisso",
+    "landline",
+    "phone number",
   ],
   mobile: [
-    "cellulare", "cell", "mobile", "cel", "cel.", "cell.", "smartphone",
-    "numero cellulare", "mobile phone", "whatsapp",
+    "cellulare",
+    "cell",
+    "mobile",
+    "cel",
+    "cel.",
+    "cell.",
+    "smartphone",
+    "numero cellulare",
+    "mobile phone",
+    "whatsapp",
   ],
-  country: [
-    "nazione", "country", "stato", "paese", "nation", "cod. nazione",
-    "codice nazione", "country code", "naz",
-  ],
-  city: [
-    "città", "citta", "city", "comune", "localita", "località", "town",
-    "luogo", "sede",
-  ],
+  country: ["nazione", "country", "stato", "paese", "nation", "cod. nazione", "codice nazione", "country code", "naz"],
+  city: ["città", "citta", "city", "comune", "localita", "località", "town", "luogo", "sede"],
   address: [
-    "indirizzo", "via", "street", "address", "piazza", "corso", "viale",
-    "strada", "loc.", "sede legale", "indirizzo completo",
+    "indirizzo",
+    "via",
+    "street",
+    "address",
+    "piazza",
+    "corso",
+    "viale",
+    "strada",
+    "loc.",
+    "sede legale",
+    "indirizzo completo",
   ],
   zip_code: [
-    "cap", "postal code", "zip", "zipcode", "zip code", "codice postale",
-    "c.a.p.", "codice avviamento", "postal_code", "postcode",
+    "cap",
+    "postal code",
+    "zip",
+    "zipcode",
+    "zip code",
+    "codice postale",
+    "c.a.p.",
+    "codice avviamento",
+    "postal_code",
+    "postcode",
   ],
   origin: [
-    "origine", "source", "provenienza", "sorgente", "origin", "fonte",
-    "canale", "channel", "fiera", "evento", "event",
+    "origine",
+    "source",
+    "provenienza",
+    "sorgente",
+    "origin",
+    "fonte",
+    "canale",
+    "channel",
+    "fiera",
+    "evento",
+    "event",
   ],
   external_id: [
-    "codice", "id", "codice cliente", "customer id", "external id",
-    "id esterno", "cod.", "matricola", "rif", "riferimento",
+    "codice",
+    "id",
+    "codice cliente",
+    "customer id",
+    "external id",
+    "id esterno",
+    "cod.",
+    "matricola",
+    "rif",
+    "riferimento",
   ],
-  note: [
-    "note", "notes", "annotazioni", "commento", "commenti",
-    "osservazioni", "descrizione", "memo",
-  ],
+  note: ["note", "notes", "annotazioni", "commento", "commenti", "osservazioni", "descrizione", "memo"],
 };
 
 function normalizeString(s: string): string {
@@ -81,9 +156,8 @@ function levenshtein(a: string, b: string): number {
   for (let j = 0; j <= a.length; j++) m[0][j] = j;
   for (let i = 1; i <= b.length; i++) {
     for (let j = 1; j <= a.length; j++) {
-      m[i][j] = b[i - 1] === a[j - 1]
-        ? m[i - 1][j - 1]
-        : Math.min(m[i - 1][j - 1] + 1, m[i][j - 1] + 1, m[i - 1][j] + 1);
+      m[i][j] =
+        b[i - 1] === a[j - 1] ? m[i - 1][j - 1] : Math.min(m[i - 1][j - 1] + 1, m[i][j - 1] + 1, m[i - 1][j] + 1);
     }
   }
   return m[b.length][a.length];
@@ -103,14 +177,15 @@ function similarity(a: string, b: string): number {
 function detectTransformation(
   sourceHeader: string,
   targetKey: TargetColumnKey,
-  _sampleValues: string[]
+  _sampleValues: string[],
 ): TransformationType {
   const norm = normalizeString(sourceHeader);
 
   // Full name → split
-  if (targetKey === "name" && (
-    norm.includes("nome e cognome") || norm.includes("nominativo") || norm === "nome completo"
-  )) {
+  if (
+    targetKey === "name" &&
+    (norm.includes("nome e cognome") || norm.includes("nominativo") || norm === "nome completo")
+  ) {
     return "capitalize";
   }
 
@@ -127,10 +202,7 @@ function detectTransformation(
  * Uses synonym dictionary + Levenshtein similarity.
  * Returns a mapping for every source column (unmapped ones have targetColumn = "").
  */
-export function autoMapColumns(
-  sourceHeaders: string[],
-  sampleRows: string[][]
-): ColumnMapping[] {
+export function autoMapColumns(sourceHeaders: string[], sampleRows: string[][]): ColumnMapping[] {
   const mappings: ColumnMapping[] = [];
   const usedTargets = new Set<string>();
 
@@ -162,7 +234,7 @@ export function autoMapColumns(
     }
 
     if (bestScore >= 0.5 && bestMatch) {
-      const sampleValues = sampleRows.map(r => r[i] || "");
+      const sampleValues = sampleRows.map((r) => r[i] || "");
       usedTargets.add(bestMatch);
       mappings.push({
         sourceColumn: sourceHeader,

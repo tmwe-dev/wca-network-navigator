@@ -28,32 +28,39 @@ export function useAgentChatV2(agentId: string | null) {
     enabled: !!agentId,
   });
 
-  const sendMessage = useCallback(async (content: string) => {
-    if (!agentId) return;
-    const userMsg: ChatMessage = { role: "user", content, timestamp: new Date().toISOString() };
-    setMessages((prev) => [...prev, userMsg]);
-    setIsLoading(true);
-    try {
-      const result = await invokeAi<{ reply: string }>("unified-assistant", {
-        scope: "chat",
-        context: { source: "useAgentChatV2" },
-        body: { message: content, agentId, scope: "chat" },
-      });
-      const assistantMsg: ChatMessage = {
-        role: "assistant",
-        content: result.reply ?? "Nessuna risposta",
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Errore nella comunicazione con l'agente.", timestamp: new Date().toISOString() },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [agentId]);
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (!agentId) return;
+      const userMsg: ChatMessage = { role: "user", content, timestamp: new Date().toISOString() };
+      setMessages((prev) => [...prev, userMsg]);
+      setIsLoading(true);
+      try {
+        const result = await invokeAi<{ reply: string }>("unified-assistant", {
+          scope: "chat",
+          context: { source: "useAgentChatV2" },
+          body: { message: content, agentId, scope: "chat" },
+        });
+        const assistantMsg: ChatMessage = {
+          role: "assistant",
+          content: result.reply ?? "Nessuna risposta",
+          timestamp: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Errore nella comunicazione con l'agente.",
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [agentId],
+  );
 
   return { agent: agentQuery.data, messages, sendMessage, isLoading, clearMessages: () => setMessages([]) };
 }

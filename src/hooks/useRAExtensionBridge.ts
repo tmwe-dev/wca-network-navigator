@@ -30,7 +30,9 @@ export function useRAExtensionBridge() {
   const pendingRef = useRef<Map<string, (response: RAResponse) => void>>(new Map());
   const availableRef = useRef(false);
 
-  useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
+  useEffect(() => {
+    availableRef.current = isAvailable;
+  }, [isAvailable]);
 
   // Listen for responses from the RA content script
   useEffect(() => {
@@ -63,7 +65,10 @@ export function useRAExtensionBridge() {
   // Poll for RA extension every 5s
   useEffect(() => {
     const doPing = () => {
-      window.postMessage({ direction: "from-webapp-ra", action: "ping", requestId: `ra_poll_${Date.now()}` }, window.location.origin);
+      window.postMessage(
+        { direction: "from-webapp-ra", action: "ping", requestId: `ra_poll_${Date.now()}` },
+        window.location.origin,
+      );
     };
     doPing();
     const interval = setInterval(doPing, 5000);
@@ -88,22 +93,39 @@ export function useRAExtensionBridge() {
         window.postMessage({ direction: "from-webapp-ra", action, requestId, ...payload }, window.location.origin);
       });
     },
-    []
+    [],
   );
 
   const scrapeByAteco = useCallback(
-    (params: { atecoCode?: string; atecoCodes?: string[]; region?: string; regions?: string[]; province?: string; provinces?: string[]; minFatturato?: number; maxFatturato?: number; delaySeconds?: number; batchSize?: number }) => {
+    (params: {
+      atecoCode?: string;
+      atecoCodes?: string[];
+      region?: string;
+      regions?: string[];
+      province?: string;
+      provinces?: string[];
+      minFatturato?: number;
+      maxFatturato?: number;
+      delaySeconds?: number;
+      batchSize?: number;
+    }) => {
       return sendMessage("scrapeByAteco", { params }, 1800000); // 30min timeout
     },
-    [sendMessage]
+    [sendMessage],
   );
 
   /** Phase 1: Search only — returns list of companies without scraping profiles */
   const searchOnly = useCallback(
-    (params: { atecoCodes?: string[]; regions?: string[]; provinces?: string[]; filters?: Record<string, unknown>; delaySeconds?: number }) => {
+    (params: {
+      atecoCodes?: string[];
+      regions?: string[];
+      provinces?: string[];
+      filters?: Record<string, unknown>;
+      delaySeconds?: number;
+    }) => {
       return sendMessage("searchOnly", { params }, 600000); // 10min timeout
     },
-    [sendMessage]
+    [sendMessage],
   );
 
   /** Phase 2: Scrape specific selected items */
@@ -111,33 +133,21 @@ export function useRAExtensionBridge() {
     (params: { items: Array<{ name: string; url: string }>; delaySeconds?: number; batchSize?: number }) => {
       return sendMessage("scrapeSelected", { params }, 1800000); // 30min timeout
     },
-    [sendMessage]
+    [sendMessage],
   );
 
-  const scrapeCompany = useCallback(
-    (url: string) => sendMessage("scrapeCompany", { url }, 60000),
-    [sendMessage]
-  );
+  const scrapeCompany = useCallback((url: string) => sendMessage("scrapeCompany", { url }, 60000), [sendMessage]);
 
   const getScrapingStatus = useCallback(
     (): Promise<RAResponse> => sendMessage("getScrapingStatus", {}, 5000),
-    [sendMessage]
+    [sendMessage],
   );
 
-  const stopScraping = useCallback(
-    () => sendMessage("stopScraping", {}, 5000),
-    [sendMessage]
-  );
+  const stopScraping = useCallback(() => sendMessage("stopScraping", {}, 5000), [sendMessage]);
 
-  const syncCookies = useCallback(
-    () => sendMessage("syncCookies", {}, 15000),
-    [sendMessage]
-  );
+  const syncCookies = useCallback(() => sendMessage("syncCookies", {}, 15000), [sendMessage]);
 
-  const autoLogin = useCallback(
-    () => sendMessage("autoLogin", {}, 15000),
-    [sendMessage]
-  );
+  const autoLogin = useCallback(() => sendMessage("autoLogin", {}, 15000), [sendMessage]);
 
   return {
     isAvailable,

@@ -29,7 +29,7 @@ export async function buildContextBlock(
   supabase: AgentExecuteSupabaseClient,
   userId: string,
   agentId: string,
-  allAgents: AgentRow[] | null
+  allAgents: AgentRow[] | null,
 ): Promise<string> {
   // Accumulatore di pattern di prompt-injection trovati nei contenuti non-trusted.
   // Logato a fine funzione per audit (vedi summarizeFindings).
@@ -51,27 +51,25 @@ export async function buildContextBlock(
   // applicato la policy "redact" sui pattern high/medium.
   if (ctx.findings.length > 0) {
     const summary = summarizeFindings(ctx.findings satisfies SanitizeFinding[]);
-    console.warn(JSON.stringify({
-      level: "warn",
-      event: "prompt_injection_detected",
-      fn: "agent-execute/contextInjection",
-      userId,
-      agentId,
-      ...summary,
-    }));
+    console.warn(
+      JSON.stringify({
+        level: "warn",
+        event: "prompt_injection_detected",
+        fn: "agent-execute/contextInjection",
+        userId,
+        agentId,
+        ...summary,
+      }),
+    );
   }
 
   return ctx.text;
 }
 
-
 /**
  * Build learning block from past decisions and corrections
  */
-export async function buildLearningBlock(
-  supabase: AgentExecuteSupabaseClient,
-  agentId: string
-): Promise<string> {
+export async function buildLearningBlock(supabase: AgentExecuteSupabaseClient, agentId: string): Promise<string> {
   let learningBlock = "";
   try {
     const { data: decisionsData } = await supabase
@@ -94,7 +92,8 @@ export async function buildLearningBlock(
           learningBlock += `${JSON.stringify(d.input_context).substring(0, 200)}\n`;
         }
       }
-      learningBlock += "IMPORTANTE: Evita di ripetere errori corretti dall'utente. Adatta il tuo approccio in base ai feedback.\n";
+      learningBlock +=
+        "IMPORTANTE: Evita di ripetere errori corretti dall'utente. Adatta il tuo approccio in base ai feedback.\n";
     }
   } catch {
     /* ai_decision_log may not exist */
@@ -107,14 +106,16 @@ export async function buildLearningBlock(
  */
 export async function buildMissionBlock(
   supabase: AgentExecuteSupabaseClient,
-  missionId: string | undefined
+  missionId: string | undefined,
 ): Promise<string> {
   let missionBlock = "";
   try {
     if (missionId) {
       const { data } = await supabase
         .from("agent_missions")
-        .select("title, goal_description, goal_type, kpi_target, kpi_current, budget, budget_consumed, approval_only_for")
+        .select(
+          "title, goal_description, goal_type, kpi_target, kpi_current, budget, budget_consumed, approval_only_for",
+        )
         .eq("id", missionId)
         .maybeSingle();
       const mission = asMaybe(data as AgentMissionRow | null);

@@ -32,7 +32,10 @@ interface EvalCase {
   expected_decision: { suggested_action?: string; confidence_min?: number; tags?: string[] };
 }
 
-function diffDecisions(expected: EvalCase["expected_decision"], actual: Record<string, unknown>): { passed: boolean; diff: Record<string, unknown> } {
+function diffDecisions(
+  expected: EvalCase["expected_decision"],
+  actual: Record<string, unknown>,
+): { passed: boolean; diff: Record<string, unknown> } {
   const diff: Record<string, unknown> = {};
   let passed = true;
   if (expected.suggested_action && actual.suggested_action !== expected.suggested_action) {
@@ -49,19 +52,28 @@ function diffDecisions(expected: EvalCase["expected_decision"], actual: Record<s
   return { passed, diff };
 }
 
-async function classifyDryRun(payload: EvalCase["inbound_payload"]): Promise<{ result: Record<string, unknown>; latency_ms: number; error?: string }> {
-  const apiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+async function classifyDryRun(
+  payload: EvalCase["inbound_payload"],
+): Promise<{ result: Record<string, unknown>; latency_ms: number; error?: string }> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return { result: {}, latency_ms: 0, error: "LOVABLE_API_KEY missing" };
   const t0 = Date.now();
   try {
     const resp = await aiFetch({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "Sei il classificatore Funnemail. Rispondi solo JSON con {suggested_action, confidence, reasoning}. suggested_action ∈ {reply,archive,escalate,ignore,deep_search,crm_update,autoresponder}." },
-          { role: "user", content: `MITTENTE: ${payload.from_address ?? ""}\nOGGETTO: ${payload.subject ?? ""}\nCORPO:\n${payload.body_text ?? ""}` },
-        ],
-        response_format: { type: "json_object" },
-      });
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Sei il classificatore Funnemail. Rispondi solo JSON con {suggested_action, confidence, reasoning}. suggested_action ∈ {reply,archive,escalate,ignore,deep_search,crm_update,autoresponder}.",
+        },
+        {
+          role: "user",
+          content: `MITTENTE: ${payload.from_address ?? ""}\nOGGETTO: ${payload.subject ?? ""}\nCORPO:\n${payload.body_text ?? ""}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
     const latency_ms = Date.now() - t0;
     if (!resp.ok) return { result: {}, latency_ms, error: `gateway ${resp.status}` };
     const data = await resp.json();
@@ -82,12 +94,17 @@ Deno.serve(async (req) => {
     if (!authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
     }
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } },
-    );
-    const { data: roleCheck } = await userClient.rpc("has_role", { _user_id: undefined as never, _role: "admin" }).single().then((r) => r, () => ({ data: null } as never));
+    const userClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
+    });
+    const { data: roleCheck } = await userClient
+      .rpc("has_role", { _user_id: undefined as never, _role: "admin" })
+      .single()
+      .then(
+        (r) => r,
+        () => ({ data: null }) as never,
+      );
     // fallback: verifica via RLS implicita (se può leggere eval_cases con admin policy)
     void roleCheck;
 
@@ -99,11 +116,9 @@ Deno.serve(async (req) => {
     const input = parsed.data;
     const promptVersionId = (input as { prompt_version_id?: string }).prompt_version_id ?? null;
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // Carica casi
     let query = admin.from("funnemail_eval_cases").select("*").eq("enabled", true);
@@ -121,21 +136,31 @@ Deno.serve(async (req) => {
       const { passed, diff } = error
         ? { passed: false, diff: { error } as Record<string, unknown> }
         : diffDecisions(c.expected_decision ?? {}, result);
-      const { data: insertedRun } = await admin.from("funnemail_eval_runs").insert({
-        case_id: c.id,
-        prompt_version_id: promptVersionId,
-        actual_decision: result,
-        passed,
-        diff,
-        latency_ms,
-        error: error ?? null,
-      }).select("id").single();
+      const { data: insertedRun } = await admin
+        .from("funnemail_eval_runs")
+        .insert({
+          case_id: c.id,
+          prompt_version_id: promptVersionId,
+          actual_decision: result,
+          passed,
+          diff,
+          latency_ms,
+          error: error ?? null,
+        })
+        .select("id")
+        .single();
       runs.push({ case_id: c.id, name: c.name, passed, diff, latency_ms, error, run_id: insertedRun?.id });
     }
 
     const passRate = runs.filter((r) => r.passed).length / runs.length;
-    return new Response(JSON.stringify({ ok: true, total: runs.length, pass_rate: passRate, runs }), { status: 200, headers });
+    return new Response(JSON.stringify({ ok: true, total: runs.length, pass_rate: passRate, runs }), {
+      status: 200,
+      headers,
+    });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500, headers });
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {
+      status: 500,
+      headers,
+    });
   }
 });

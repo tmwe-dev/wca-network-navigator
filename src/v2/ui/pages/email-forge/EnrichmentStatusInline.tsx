@@ -13,9 +13,7 @@ interface Props {
   partnerId: string | null | undefined;
 }
 
-function StatusRow({
-  ok, label, age,
-}: { ok: boolean; label: string; age: number | null }) {
+function StatusRow({ ok, label, age }: { ok: boolean; label: string; age: number | null }) {
   return (
     <div className="flex items-center gap-1.5 text-xs">
       {ok ? (
@@ -23,13 +21,9 @@ function StatusRow({
       ) : (
         <Circle className="w-3 h-3 text-muted-foreground shrink-0" />
       )}
-      <span className={cn("flex-1 truncate", ok ? "text-foreground" : "text-muted-foreground")}>
-        {label}
-      </span>
+      <span className={cn("flex-1 truncate", ok ? "text-foreground" : "text-muted-foreground")}>{label}</span>
       {ok && age != null && (
-        <span className="text-muted-foreground text-[10px] shrink-0">
-          {age === 0 ? "oggi" : `${age}gg fa`}
-        </span>
+        <span className="text-muted-foreground text-[10px] shrink-0">{age === 0 ? "oggi" : `${age}gg fa`}</span>
       )}
     </div>
   );
@@ -66,7 +60,11 @@ export function EnrichmentStatusInline({ partnerId }: Props): React.ReactElement
       />
       <StatusRow
         ok={snap.sherlock.available}
-        label={snap.sherlock.available ? `Sherlock${snap.sherlock.level ? ` Lv${snap.sherlock.level}` : ""}` : "Sherlock: mai eseguito"}
+        label={
+          snap.sherlock.available
+            ? `Sherlock${snap.sherlock.level ? ` Lv${snap.sherlock.level}` : ""}`
+            : "Sherlock: mai eseguito"
+        }
         age={snap.sherlock.age_days}
       />
       {noData && (

@@ -3,44 +3,47 @@
 ## Fatto in questa run
 
 ### 1. ESLint warning: 655 → 331 (−49 %)
+
 - Aggiunto `eslint-plugin-unused-imports` con autofix → −170 warning (import morti).
 - Prefisso `_` mirato per 160 variabili locali unused (identifier per colonna, skip componenti/hook) → −155 warning.
 - 0 errori TS, 0 errori ESLint.
 
 ### 2. Edge stub bulkOps rimosse
+
 - Cancellato `src/v2/services/bulkOps/entries/verify.ts` (verify-wa/li/email/dedup: edge mai deployate, 0 caller UI).
 - Rimosso `updateDispatchEntry` da `entries/update.ts` (extension-dispatch-enqueue: idem).
 - Aggiornati `BulkScope` (14 → 9), `registry.ts`, `registry.test.ts`. Test passano.
 
 ### 3. Bundle FE — snapshot
+
 Chunk brotli > 100 KB:
 
-| Chunk | brotli |
-| --- | --- |
-| index (main) | 236 KB |
-| exceljs | 213 KB |
+| Chunk             | brotli |
+| ----------------- | ------ |
+| index (main)      | 236 KB |
+| exceljs           | 213 KB |
 | vendor-three-core | 137 KB |
-| index secondario | 127 KB |
-| xlsx | 116 KB |
-| lib.modern | 113 KB |
-| AgentAtlasPage | 97 KB |
-| vendor-charts | 90 KB |
-| SettingsPage | 85 KB |
-| PromptLabPage | 52 KB |
-| vendor-react | 46 KB |
-| vendor-supabase | 43 KB |
+| index secondario  | 127 KB |
+| xlsx              | 116 KB |
+| lib.modern        | 113 KB |
+| AgentAtlasPage    | 97 KB  |
+| vendor-charts     | 90 KB  |
+| SettingsPage      | 85 KB  |
+| PromptLabPage     | 52 KB  |
+| vendor-react      | 46 KB  |
+| vendor-supabase   | 43 KB  |
 
 Nessun blocker. Chunk pesanti (xlsx/exceljs/three) già lazy-loaded.
 
 ## Backlog residuo (non toccato in questa run — richiede scelte)
 
-| Categoria | Warning/Item | Nota |
-| --- | --- | --- |
-| `no-restricted-imports` (v2 pages → v1) | 117 | Migrazione v1→v2 pagina per pagina, backlog dedicato in `docs/v2/MIGRATION_STATUS.md`. |
-| `react-hooks/exhaustive-deps` | 82 | Ogni fix è bug-risk (memoization). Va fatto un file alla volta con test manuale. |
-| `react-refresh/only-export-components` | 61 | Richiede split file (utility/export separati dal componente). Cosmetico. |
-| Consolidamento funnemail/inbox, agenti/intelligence, sherlock/deep-search | 3 aree | Refactor strutturale grosso, richiede design doc. |
-| SSOT `StandardPageFrame` universale | ~ decine di pagine | Migrazione progressiva. |
+| Categoria                                                                 | Warning/Item       | Nota                                                                                   |
+| ------------------------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------- |
+| `no-restricted-imports` (v2 pages → v1)                                   | 117                | Migrazione v1→v2 pagina per pagina, backlog dedicato in `docs/v2/MIGRATION_STATUS.md`. |
+| `react-hooks/exhaustive-deps`                                             | 82                 | Ogni fix è bug-risk (memoization). Va fatto un file alla volta con test manuale.       |
+| `react-refresh/only-export-components`                                    | 61                 | Richiede split file (utility/export separati dal componente). Cosmetico.               |
+| Consolidamento funnemail/inbox, agenti/intelligence, sherlock/deep-search | 3 aree             | Refactor strutturale grosso, richiede design doc.                                      |
+| SSOT `StandardPageFrame` universale                                       | ~ decine di pagine | Migrazione progressiva.                                                                |
 
 ## Impatto voto
 

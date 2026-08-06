@@ -8,8 +8,16 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { useAgentDashboard, type AgentTaskRow, type AgentWithTasks } from "@/hooks/useAgentDashboard";
 import {
-  Clock, CheckCircle, XCircle, Loader2, Zap, TrendingUp,
-  Activity, BarChart3, Timer, Sparkles,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Zap,
+  TrendingUp,
+  Activity,
+  BarChart3,
+  Timer,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -28,16 +36,26 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
   failed: { icon: <XCircle className="w-3 h-3" />, color: "text-destructive", label: "Fallito" },
 };
 
-function StatCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  color: string;
+}) {
   return (
     <motion.div
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      className={cn("flex items-center gap-3 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-3 min-w-[120px]")}
+      className={cn(
+        "flex items-center gap-3 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-3 min-w-[120px]",
+      )}
     >
-      <div className={cn("flex items-center justify-center w-9 h-9 rounded-lg", color)}>
-        {icon}
-      </div>
+      <div className={cn("flex items-center justify-center w-9 h-9 rounded-lg", color)}>{icon}</div>
       <div>
         <div className="text-xl font-bold tabular-nums">{value}</div>
         <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
@@ -61,7 +79,7 @@ function TaskRow({ task, showAgent }: { task: AgentTaskRow; showAgent?: string }
           ? "border-primary/30 bg-primary/5 shadow-sm shadow-primary/10"
           : task.status === "proposed"
             ? "border-primary/30 bg-primary/5"
-            : "border-border/40 bg-card/30"
+            : "border-border/40 bg-card/30",
       )}
     >
       <span className={cn("mt-0.5", cfg.color)}>{cfg.icon}</span>
@@ -74,9 +92,7 @@ function TaskRow({ task, showAgent }: { task: AgentTaskRow; showAgent?: string }
           <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5", cfg.color)}>
             {cfg.label}
           </Badge>
-          {showAgent && (
-            <span className="text-[9px] text-muted-foreground">{showAgent}</span>
-          )}
+          {showAgent && <span className="text-[9px] text-muted-foreground">{showAgent}</span>}
           <span className="text-[9px] text-muted-foreground ml-auto">{timeAgo}</span>
         </div>
         {task.result_summary && (
@@ -98,19 +114,26 @@ function LivePulse() {
 
 function AgentCard({ agent }: { agent: AgentWithTasks }) {
   const avatarSrc = resolveAgentAvatar(agent.name, agent.avatar_emoji);
-  const running = agent.tasks.filter(t => t.status === "running").length;
-  const pending = agent.tasks.filter(t => t.status === "pending" || t.status === "proposed").length;
-  const completed = agent.tasks.filter(t => t.status === "completed").length;
+  const running = agent.tasks.filter((t) => t.status === "running").length;
+  const pending = agent.tasks.filter((t) => t.status === "pending" || t.status === "proposed").length;
+  const completed = agent.tasks.filter((t) => t.status === "completed").length;
   const isWorking = running > 0;
 
   return (
-    <div className={cn(
-      "rounded-xl border p-3 transition-all",
-      isWorking ? "border-primary/40 bg-primary/5 shadow-sm" : "border-border/50 bg-card/30"
-    )}>
+    <div
+      className={cn(
+        "rounded-xl border p-3 transition-all",
+        isWorking ? "border-primary/40 bg-primary/5 shadow-sm" : "border-border/50 bg-card/30",
+      )}
+    >
       <div className="flex items-center gap-2.5 mb-2">
         {avatarSrc ? (
-          <Avatar className={cn("h-8 w-8 ring-2 ring-offset-1 ring-offset-background", isWorking ? "ring-primary" : "ring-transparent")}>
+          <Avatar
+            className={cn(
+              "h-8 w-8 ring-2 ring-offset-1 ring-offset-background",
+              isWorking ? "ring-primary" : "ring-transparent",
+            )}
+          >
             <AvatarImage src={avatarSrc} alt={agent.name} />
             <AvatarFallback className="text-xs">{agent.avatar_emoji}</AvatarFallback>
           </Avatar>
@@ -142,26 +165,51 @@ interface AgentTaskStats {
   completed: number;
 }
 
-function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: AgentTaskRow[]; stats: AgentTaskStats }) {
-  const activeTasks = tasks.filter(t => t.status === "running" || t.status === "pending" || t.status === "proposed");
-  const recentCompleted = tasks.filter(t => t.status === "completed").slice(0, 15);
-  const agentMap = new Map(agents.map(a => [a.id, a.name]));
+function GlobalTab({
+  agents,
+  tasks,
+  stats,
+}: {
+  agents: AgentWithTasks[];
+  tasks: AgentTaskRow[];
+  stats: AgentTaskStats;
+}) {
+  const activeTasks = tasks.filter((t) => t.status === "running" || t.status === "pending" || t.status === "proposed");
+  const recentCompleted = tasks.filter((t) => t.status === "completed").slice(0, 15);
+  const agentMap = new Map(agents.map((a) => [a.id, a.name]));
 
   return (
     <div className="space-y-4">
       {/* Stats */}
       <div className="flex flex-wrap gap-2">
         <StatCard label="Totali" value={stats.total} icon={<BarChart3 className="w-4 h-4" />} color="bg-muted/50" />
-        <StatCard label="In attesa" value={stats.pending} icon={<Timer className="w-4 h-4 text-primary" />} color="bg-primary/10" />
-        <StatCard label="Attivi" value={stats.running} icon={<Zap className="w-4 h-4 text-primary" />} color="bg-primary/10" />
-        <StatCard label="Completati" value={stats.completed} icon={<TrendingUp className="w-4 h-4 text-emerald-400" />} color="bg-emerald-500/10" />
+        <StatCard
+          label="In attesa"
+          value={stats.pending}
+          icon={<Timer className="w-4 h-4 text-primary" />}
+          color="bg-primary/10"
+        />
+        <StatCard
+          label="Attivi"
+          value={stats.running}
+          icon={<Zap className="w-4 h-4 text-primary" />}
+          color="bg-primary/10"
+        />
+        <StatCard
+          label="Completati"
+          value={stats.completed}
+          icon={<TrendingUp className="w-4 h-4 text-emerald-400" />}
+          color="bg-emerald-500/10"
+        />
       </div>
 
       {/* Agent Grid */}
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">👥 Team</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {agents.map(a => <AgentCard key={a.id} agent={a} />)}
+          {agents.map((a) => (
+            <AgentCard key={a.id} agent={a} />
+          ))}
         </div>
       </div>
 
@@ -174,7 +222,7 @@ function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: 
           </div>
           <div className="space-y-1.5">
             <AnimatePresence mode="popLayout">
-              {activeTasks.slice(0, 20).map(t => (
+              {activeTasks.slice(0, 20).map((t) => (
                 <TaskRow key={t.id} task={t} showAgent={agentMap.get(t.agent_id)} />
               ))}
             </AnimatePresence>
@@ -185,9 +233,11 @@ function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: 
       {/* Recent completed */}
       {recentCompleted.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">✅ Completate di recente</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            ✅ Completate di recente
+          </h3>
           <div className="space-y-1.5 opacity-80">
-            {recentCompleted.map(t => (
+            {recentCompleted.map((t) => (
               <TaskRow key={t.id} task={t} showAgent={agentMap.get(t.agent_id)} />
             ))}
           </div>
@@ -206,27 +256,19 @@ function GlobalTab({ agents, tasks, stats }: { agents: AgentWithTasks[]; tasks: 
 }
 
 function AgentTab({ agent }: { agent: AgentWithTasks }) {
-  const pending = agent.tasks.filter(t => t.status === "pending" || t.status === "proposed");
-  const running = agent.tasks.filter(t => t.status === "running");
-  const completed = agent.tasks.filter(t => t.status === "completed");
-  const failed = agent.tasks.filter(t => t.status === "failed");
+  const pending = agent.tasks.filter((t) => t.status === "pending" || t.status === "proposed");
+  const running = agent.tasks.filter((t) => t.status === "running");
+  const completed = agent.tasks.filter((t) => t.status === "completed");
+  const failed = agent.tasks.filter((t) => t.status === "failed");
 
   return (
     <div className="space-y-4">
       <AgentCard agent={agent} />
 
-      {running.length > 0 && (
-        <Section title="⚡ In esecuzione" tasks={running} />
-      )}
-      {pending.length > 0 && (
-        <Section title="⏳ In coda" tasks={pending} />
-      )}
-      {completed.length > 0 && (
-        <Section title="✅ Completate" tasks={completed.slice(0, 20)} />
-      )}
-      {failed.length > 0 && (
-        <Section title="❌ Fallite" tasks={failed.slice(0, 10)} />
-      )}
+      {running.length > 0 && <Section title="⚡ In esecuzione" tasks={running} />}
+      {pending.length > 0 && <Section title="⏳ In coda" tasks={pending} />}
+      {completed.length > 0 && <Section title="✅ Completate" tasks={completed.slice(0, 20)} />}
+      {failed.length > 0 && <Section title="❌ Fallite" tasks={failed.slice(0, 10)} />}
       {agent.tasks.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           <p className="text-sm">Nessun task per {agent.name}</p>
@@ -239,10 +281,14 @@ function AgentTab({ agent }: { agent: AgentWithTasks }) {
 function Section({ title, tasks }: { title: string; tasks: AgentTaskRow[] }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold mb-2">{title} ({tasks.length})</h4>
+      <h4 className="text-xs font-semibold mb-2">
+        {title} ({tasks.length})
+      </h4>
       <div className="space-y-1.5">
         <AnimatePresence mode="popLayout">
-          {tasks.map(t => <TaskRow key={t.id} task={t} />)}
+          {tasks.map((t) => (
+            <TaskRow key={t.id} task={t} />
+          ))}
         </AnimatePresence>
       </div>
     </div>
@@ -257,7 +303,7 @@ export function AgentOperationsDashboard({ open, onOpenChange }: Props) {
   const [pulse, setPulse] = useState(false);
   useEffect(() => {
     if (!open) return;
-    const iv = setInterval(() => setPulse(p => !p), 5000);
+    const iv = setInterval(() => setPulse((p) => !p), 5000);
     return () => clearInterval(iv);
   }, [open]);
 
@@ -266,10 +312,7 @@ export function AgentOperationsDashboard({ open, onOpenChange }: Props) {
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-4 pt-4 pb-2 border-b border-border/50">
           <div className="flex items-center gap-2">
-            <motion.div
-              animate={{ rotate: pulse ? 360 : 0 }}
-              transition={{ duration: 1, ease: "easeInOut" }}
-            >
+            <motion.div animate={{ rotate: pulse ? 360 : 0 }} transition={{ duration: 1, ease: "easeInOut" }}>
               <Activity className="w-5 h-5 text-primary" />
             </motion.div>
             <DialogTitle className="text-base">Centro Operazioni Agenti</DialogTitle>
@@ -288,10 +331,10 @@ export function AgentOperationsDashboard({ open, onOpenChange }: Props) {
               <TabsTrigger value="global" className="text-xs px-3 h-7 gap-1">
                 <BarChart3 className="w-3 h-3" /> Globale
               </TabsTrigger>
-              {agents.map(a => (
+              {agents.map((a) => (
                 <TabsTrigger key={a.id} value={a.id} className="text-xs px-2.5 h-7 gap-1 max-w-[100px]">
                   <span className="truncate">{a.name}</span>
-                  {a.tasks.filter(t => t.status === "running").length > 0 && <LivePulse />}
+                  {a.tasks.filter((t) => t.status === "running").length > 0 && <LivePulse />}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -308,7 +351,7 @@ export function AgentOperationsDashboard({ open, onOpenChange }: Props) {
                   <GlobalTab agents={agents} tasks={tasks} stats={stats} />
                 )}
               </TabsContent>
-              {agents.map(a => (
+              {agents.map((a) => (
                 <TabsContent key={a.id} value={a.id} className="mt-0">
                   <AgentTab agent={a} />
                 </TabsContent>

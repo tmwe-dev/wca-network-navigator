@@ -55,7 +55,9 @@ export function clearLastComposerContext(): void {
 export function isRegenerateIntent(prompt: string): boolean {
   const p = (prompt ?? "").toLowerCase();
   return (
-    /\b(rifai|riscrivi|rigener[ai]|cambia\s+tono|altro\s+tono|diverso\s+tono|più\s+(amichevole|breve|diretto|informale|formale|corto|lungo))\b/i.test(p) ||
+    /\b(rifai|riscrivi|rigener[ai]|cambia\s+tono|altro\s+tono|diverso\s+tono|più\s+(amichevole|breve|diretto|informale|formale|corto|lungo))\b/i.test(
+      p,
+    ) ||
     /\b(fammel[ae]\s+(?:vedere|rivedere|mostrare))\b/i.test(p) ||
     /\b(non\s+vedo|dove\s+sono|mostrami)\s+(?:le\s+)?(?:nuove\s+)?(?:versioni|bozze|mail|email)\b/i.test(p) ||
     /\b(riprovaci|prova\s+(?:di\s+)?nuovo|un'altra\s+versione)\b/i.test(p)

@@ -25,20 +25,35 @@ const TONES: Record<NonNullable<TabIntroBannerProps["tone"]>, string> = {
   emerald: "bg-emerald-500/5 border-emerald-500/20 text-foreground",
 };
 
-export function TabIntroBanner({ id, icon: Icon, title, purpose, origin, actions, relatedLink, tone = "neutral" }: TabIntroBannerProps) {
+export function TabIntroBanner({
+  id,
+  icon: Icon,
+  title,
+  purpose,
+  origin,
+  actions,
+  relatedLink,
+  tone = "neutral",
+}: TabIntroBannerProps) {
   const storageKey = `outreach-intro-${id}`;
   const [hidden, setHidden] = useState<boolean>(false);
 
   useEffect(() => {
     try {
       setHidden(localStorage.getItem(storageKey) === "1");
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [storageKey]);
 
   if (hidden) return null;
 
   const handleClose = () => {
-    try { localStorage.setItem(storageKey, "1"); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(storageKey, "1");
+    } catch {
+      /* ignore */
+    }
     setHidden(true);
   };
 
@@ -60,11 +75,7 @@ export function TabIntroBanner({ id, icon: Icon, title, purpose, origin, actions
             )}
             {actions && <span>Puoi: {actions}</span>}
             {relatedLink && (
-              <button
-                type="button"
-                onClick={relatedLink.onClick}
-                className="text-primary hover:underline font-medium"
-              >
+              <button type="button" onClick={relatedLink.onClick} className="text-primary hover:underline font-medium">
                 → {relatedLink.label}
               </button>
             )}

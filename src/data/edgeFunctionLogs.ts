@@ -12,10 +12,7 @@ export interface EdgeFunctionLogSample {
   success: boolean | null;
 }
 
-export async function fetchRecentEdgeFunctionLogs(
-  hours = 24,
-  limit = 5000,
-): Promise<EdgeFunctionLogSample[]> {
+export async function fetchRecentEdgeFunctionLogs(hours = 24, limit = 5000): Promise<EdgeFunctionLogSample[]> {
   const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("edge_function_logs")

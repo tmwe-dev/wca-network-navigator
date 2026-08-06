@@ -55,7 +55,7 @@ describe("leadEscalation (9-state taxonomy)", () => {
       expect(computeDowngrade("not_interested", 0.79, "first_touch_sent")).toBeNull();
     });
     it("returns archived at exact 0.80 threshold", () => {
-      expect(computeDowngrade("not_interested", 0.80, "first_touch_sent")).toBe("archived");
+      expect(computeDowngrade("not_interested", 0.8, "first_touch_sent")).toBe("archived");
     });
   });
 });

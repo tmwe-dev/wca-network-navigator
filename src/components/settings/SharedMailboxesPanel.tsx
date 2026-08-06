@@ -59,7 +59,11 @@ export default function SharedMailboxesPanel() {
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
   }
 
   const openNew = () => {
@@ -95,7 +99,9 @@ export default function SharedMailboxesPanel() {
             Caselle condivise (booking, amministrazione…) accessibili agli operatori autorizzati.
           </p>
         </div>
-        <Button onClick={openNew} className="gap-1.5"><Plus className="w-4 h-4" /> Nuova casella</Button>
+        <Button onClick={openNew} className="gap-1.5">
+          <Plus className="w-4 h-4" /> Nuova casella
+        </Button>
       </div>
 
       <div className="grid gap-3">
@@ -110,15 +116,28 @@ export default function SharedMailboxesPanel() {
                   <div className="min-w-0">
                     <CardTitle className="text-base flex items-center gap-2 truncate">
                       {m.label}
-                      <Badge variant="outline" className="text-[10px] uppercase">{m.department}</Badge>
-                      {m.auto_grant && <Badge variant="secondary" className="text-[10px]">Auto-assegnata</Badge>}
+                      <Badge variant="outline" className="text-[10px] uppercase">
+                        {m.department}
+                      </Badge>
+                      {m.auto_grant && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Auto-assegnata
+                        </Badge>
+                      )}
                       {!m.is_active && <Badge variant="outline">Disattiva</Badge>}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground truncate">{m.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => { setEditing(m); setOpen(true); }}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditing(m);
+                      setOpen(true);
+                    }}
+                  >
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button
@@ -135,9 +154,13 @@ export default function SharedMailboxesPanel() {
               </div>
             </CardHeader>
             <CardContent className="pt-0 text-xs text-muted-foreground">
-              {m.imap_user
-                ? <span>IMAP: {m.imap_user}@{m.imap_host}</span>
-                : <span className="text-amber-500">⚠ Credenziali IMAP/SMTP da configurare</span>}
+              {m.imap_user ? (
+                <span>
+                  IMAP: {m.imap_user}@{m.imap_host}
+                </span>
+              ) : (
+                <span className="text-amber-500">⚠ Credenziali IMAP/SMTP da configurare</span>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -153,21 +176,37 @@ export default function SharedMailboxesPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Slug *</Label>
-                  <Input value={editing.slug || ""} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} placeholder="booking" />
+                  <Input
+                    value={editing.slug || ""}
+                    onChange={(e) => setEditing({ ...editing, slug: e.target.value })}
+                    placeholder="booking"
+                  />
                 </div>
                 <div>
                   <Label>Etichetta *</Label>
-                  <Input value={editing.label || ""} onChange={(e) => setEditing({ ...editing, label: e.target.value })} placeholder="Booking" />
+                  <Input
+                    value={editing.label || ""}
+                    onChange={(e) => setEditing({ ...editing, label: e.target.value })}
+                    placeholder="Booking"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Email *</Label>
-                  <Input value={editing.email || ""} onChange={(e) => setEditing({ ...editing, email: e.target.value })} placeholder="booking@tmwe.it" />
+                  <Input
+                    value={editing.email || ""}
+                    onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+                    placeholder="booking@tmwe.it"
+                  />
                 </div>
                 <div>
                   <Label>Reparto *</Label>
-                  <Input value={editing.department || ""} onChange={(e) => setEditing({ ...editing, department: e.target.value })} placeholder="booking" />
+                  <Input
+                    value={editing.department || ""}
+                    onChange={(e) => setEditing({ ...editing, department: e.target.value })}
+                    placeholder="booking"
+                  />
                 </div>
               </div>
 
@@ -176,15 +215,25 @@ export default function SharedMailboxesPanel() {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <Label>Host</Label>
-                    <Input value={editing.imap_host || ""} onChange={(e) => setEditing({ ...editing, imap_host: e.target.value })} />
+                    <Input
+                      value={editing.imap_host || ""}
+                      onChange={(e) => setEditing({ ...editing, imap_host: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label>Utente</Label>
-                    <Input value={editing.imap_user || ""} onChange={(e) => setEditing({ ...editing, imap_user: e.target.value })} />
+                    <Input
+                      value={editing.imap_user || ""}
+                      onChange={(e) => setEditing({ ...editing, imap_user: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label>Porta</Label>
-                    <Input type="number" value={editing.imap_port ?? 993} onChange={(e) => setEditing({ ...editing, imap_port: Number(e.target.value) })} />
+                    <Input
+                      type="number"
+                      value={editing.imap_port ?? 993}
+                      onChange={(e) => setEditing({ ...editing, imap_port: Number(e.target.value) })}
+                    />
                   </div>
                 </div>
               </div>
@@ -194,15 +243,25 @@ export default function SharedMailboxesPanel() {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <Label>Host</Label>
-                    <Input value={editing.smtp_host || ""} onChange={(e) => setEditing({ ...editing, smtp_host: e.target.value })} />
+                    <Input
+                      value={editing.smtp_host || ""}
+                      onChange={(e) => setEditing({ ...editing, smtp_host: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label>Utente</Label>
-                    <Input value={editing.smtp_user || ""} onChange={(e) => setEditing({ ...editing, smtp_user: e.target.value })} />
+                    <Input
+                      value={editing.smtp_user || ""}
+                      onChange={(e) => setEditing({ ...editing, smtp_user: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label>Porta</Label>
-                    <Input type="number" value={editing.smtp_port ?? 465} onChange={(e) => setEditing({ ...editing, smtp_port: Number(e.target.value) })} />
+                    <Input
+                      type="number"
+                      value={editing.smtp_port ?? 465}
+                      onChange={(e) => setEditing({ ...editing, smtp_port: Number(e.target.value) })}
+                    />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
@@ -212,16 +271,25 @@ export default function SharedMailboxesPanel() {
 
               <div className="border-t pt-3">
                 <Label>Reply-To</Label>
-                <Input value={editing.reply_to || ""} onChange={(e) => setEditing({ ...editing, reply_to: e.target.value })} />
+                <Input
+                  value={editing.reply_to || ""}
+                  onChange={(e) => setEditing({ ...editing, reply_to: e.target.value })}
+                />
               </div>
 
               <div className="border-t pt-3 flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                  <Switch checked={editing.auto_grant ?? false} onCheckedChange={(v) => setEditing({ ...editing, auto_grant: v })} />
+                  <Switch
+                    checked={editing.auto_grant ?? false}
+                    onCheckedChange={(v) => setEditing({ ...editing, auto_grant: v })}
+                  />
                   <Label>Auto-assegnata a tutti i nuovi operatori</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={editing.is_active !== false} onCheckedChange={(v) => setEditing({ ...editing, is_active: v })} />
+                  <Switch
+                    checked={editing.is_active !== false}
+                    onCheckedChange={(v) => setEditing({ ...editing, is_active: v })}
+                  />
                   <Label>Attiva</Label>
                 </div>
               </div>

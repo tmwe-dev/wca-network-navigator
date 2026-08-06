@@ -16,7 +16,23 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, AlertTriangle, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye, FileQuestion, CheckCircle2, EyeOff, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  AlertTriangle,
+  Lock,
+  FlaskConical,
+  Pencil,
+  Check,
+  X,
+  Send,
+  Loader2,
+  ShieldCheck,
+  Eye,
+  FileQuestion,
+  CheckCircle2,
+  EyeOff,
+  Trash2,
+} from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,11 +90,7 @@ function EditableAfter({
   return (
     <div>
       <div className="text-xs font-semibold text-muted-foreground mb-1">Dopo (in modifica):</div>
-      <Textarea
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        className="text-xs font-mono min-h-[120px]"
-      />
+      <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="text-xs font-mono min-h-[120px]" />
       <div className="flex justify-end gap-2 mt-1">
         <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditing(false)}>
           <X className="h-3 w-3 mr-1" />
@@ -123,7 +135,17 @@ interface Props {
   applyingSelected?: boolean;
 }
 
-export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe: _onApproveAllSafe, onEditAfter, onApplySingle, onDiscardSingle, onApplySelected, applyingSelected }: Props) {
+export function HarmonizeReviewPanel({
+  proposals,
+  approvedIds,
+  onToggle,
+  onApproveAllSafe: _onApproveAllSafe,
+  onEditAfter,
+  onApplySingle,
+  onDiscardSingle,
+  onApplySelected,
+  applyingSelected,
+}: Props) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [discardingId, setDiscardingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "safe" | "review" | "notes" | "done">("all");
@@ -177,23 +199,30 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
   // Lista visibile nel tab attivo
   let baseList: HarmonizeProposal[];
   switch (filter) {
-    case "safe":   baseList = safeAll;    break;
-    case "review": baseList = reviewAll;  break;
-    case "notes":  baseList = notesAll;   break;
-    case "done":   baseList = managedAll; break;
-    default:       baseList = proposals;  break;
+    case "safe":
+      baseList = safeAll;
+      break;
+    case "review":
+      baseList = reviewAll;
+      break;
+    case "notes":
+      baseList = notesAll;
+      break;
+    case "done":
+      baseList = managedAll;
+      break;
+    default:
+      baseList = proposals;
+      break;
   }
   // Filtro "nascondi gestite": attivo ovunque tranne nel tab "Gestite".
-  const visible = (hideManaged && filter !== "done")
-    ? baseList.filter((p) => !isManaged(p))
-    : baseList;
+  const visible = hideManaged && filter !== "done" ? baseList.filter((p) => !isManaged(p)) : baseList;
 
   // Selezione "tutte le visibili" — toggle massivo che rispetta dipendenze e read-only.
   const visibleSelectableIds = visible
     .filter((p) => p.resolution_layer !== "contract" && p.resolution_layer !== "code_policy")
     .map((p) => p.id);
-  const allVisibleSelected =
-    visibleSelectableIds.length > 0 && visibleSelectableIds.every((id) => approvedIds.has(id));
+  const allVisibleSelected = visibleSelectableIds.length > 0 && visibleSelectableIds.every((id) => approvedIds.has(id));
   const someVisibleSelected = visibleSelectableIds.some((id) => approvedIds.has(id));
 
   const toggleAllVisible = () => {
@@ -217,7 +246,10 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
           tryAdd(stillMissing, guard - 1);
         }
       };
-      tryAdd(visibleSelectableIds.filter((id) => !approvedIds.has(id)), 5);
+      tryAdd(
+        visibleSelectableIds.filter((id) => !approvedIds.has(id)),
+        5,
+      );
     }
   };
 
@@ -228,32 +260,58 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
         <TabsList className="w-full grid grid-cols-5 h-auto">
           <TabsTrigger value="all" className="gap-1.5 py-2 flex-col sm:flex-row">
             <span>Tutte</span>
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]" title={`${remaining(proposals)} da gestire su ${proposals.length} totali`}>
+            <Badge
+              variant="secondary"
+              className="h-5 px-1.5 text-[10px]"
+              title={`${remaining(proposals)} da gestire su ${proposals.length} totali`}
+            >
               {remaining(proposals)}/{proposals.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="safe" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-success/10 data-[state=active]:text-success">
+          <TabsTrigger
+            value="safe"
+            className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-success/10 data-[state=active]:text-success"
+          >
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>Sicure</span>
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-success/15 text-success border-success/30" title={`${remaining(safeAll)} da gestire su ${safeAll.length} sicure`}>
+            <Badge
+              variant="secondary"
+              className="h-5 px-1.5 text-[10px] bg-success/15 text-success border-success/30"
+              title={`${remaining(safeAll)} da gestire su ${safeAll.length} sicure`}
+            >
               {remaining(safeAll)}/{safeAll.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="review" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-warning/10 data-[state=active]:text-warning">
+          <TabsTrigger
+            value="review"
+            className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-warning/10 data-[state=active]:text-warning"
+          >
             <Eye className="h-3.5 w-3.5" />
             <span>Da rivedere</span>
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-warning/15 text-warning border-warning/30" title={`${remaining(reviewAll)} da gestire su ${reviewAll.length} da rivedere`}>
+            <Badge
+              variant="secondary"
+              className="h-5 px-1.5 text-[10px] bg-warning/15 text-warning border-warning/30"
+              title={`${remaining(reviewAll)} da gestire su ${reviewAll.length} da rivedere`}
+            >
               {remaining(reviewAll)}/{reviewAll.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="notes" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-muted data-[state=active]:text-foreground" title="Riferimenti, indici, commenti dell'autore: non sono contenuto KB">
+          <TabsTrigger
+            value="notes"
+            className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-muted data-[state=active]:text-foreground"
+            title="Riferimenti, indici, commenti dell'autore: non sono contenuto KB"
+          >
             <FileQuestion className="h-3.5 w-3.5" />
             <span>Note doc</span>
             <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
               {remaining(notesAll)}/{notesAll.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="done" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-primary/10 data-[state=active]:text-primary" title="Già applicate al database o fallite">
+          <TabsTrigger
+            value="done"
+            className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            title="Già applicate al database o fallite"
+          >
             <CheckCircle2 className="h-3.5 w-3.5" />
             <span>Gestite</span>
             <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-primary/10 text-primary border-primary/30">
@@ -298,16 +356,16 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
               </Label>
             </div>
           )}
-          {readOnly.length > 0 && <span className="text-xs text-muted-foreground">{readOnly.length} read-only nel totale</span>}
+          {readOnly.length > 0 && (
+            <span className="text-xs text-muted-foreground">{readOnly.length} read-only nel totale</span>
+          )}
         </div>
       </div>
 
       <ScrollArea className="h-[420px] pr-2">
         <div className="space-y-2">
           {visible.length === 0 && (
-            <div className="text-center text-xs text-muted-foreground py-8">
-              Nessuna proposta in questa categoria.
-            </div>
+            <div className="text-center text-xs text-muted-foreground py-8">Nessuna proposta in questa categoria.</div>
           )}
           {visible.map((p) => {
             const isReadOnly = p.resolution_layer === "contract" || p.resolution_layer === "code_policy";
@@ -319,7 +377,10 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
             const blockedByDeps = missingDeps.length > 0;
             const disabled = isReadOnly || blockedByDeps;
             return (
-              <Card key={p.id} className={`p-3 ${safe ? "border-l-4 border-l-emerald-500/70" : "border-l-4 border-l-amber-500/70"}`}>
+              <Card
+                key={p.id}
+                className={`p-3 ${safe ? "border-l-4 border-l-emerald-500/70" : "border-l-4 border-l-amber-500/70"}`}
+              >
                 <div className="flex items-start gap-3">
                   <Checkbox
                     checked={approvedIds.has(p.id)}
@@ -330,17 +391,27 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       {safe ? (
-                        <Badge variant="outline" className="bg-success/10 text-success border-success/30 gap-1" title="Modifica di solo testo, basso impatto, reversibile">
+                        <Badge
+                          variant="outline"
+                          className="bg-success/10 text-success border-success/30 gap-1"
+                          title="Modifica di solo testo, basso impatto, reversibile"
+                        >
                           <ShieldCheck className="h-3 w-3" />
                           Sicura
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 gap-1" title="Da rivedere a mano: inserimento, eliminazione o impatto alto">
+                        <Badge
+                          variant="outline"
+                          className="bg-warning/10 text-warning border-warning/30 gap-1"
+                          title="Da rivedere a mano: inserimento, eliminazione o impatto alto"
+                        >
                           <Eye className="h-3 w-3" />
                           Da rivedere
                         </Badge>
                       )}
-                      <Badge className={ACTION_VARIANT[p.action]} variant="outline">{p.action}</Badge>
+                      <Badge className={ACTION_VARIANT[p.action]} variant="outline">
+                        {p.action}
+                      </Badge>
                       <Badge className={layer.cls} variant="outline">
                         <LayerIcon className="h-3 w-3 mr-1" />
                         {layer.label}
@@ -368,50 +439,54 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                           Bloccato: {missingDeps.length} dipendenz{missingDeps.length === 1 ? "a" : "e"}
                         </Badge>
                       )}
-                       <span className="text-xs text-muted-foreground truncate">{p.block_label}</span>
-                       <div className="ml-auto flex items-center gap-1.5">
-                         {onApplySingle && !isReadOnly && (
-                           <Button
-                             size="sm"
-                             variant="outline"
-                             className="h-6 px-2 text-xs"
-                             disabled={applyingId === p.id || discardingId === p.id || blockedByDeps}
-                             onClick={() => handleApplySingle(p.id)}
-                             title="Applica questa proposta al DB e rimuovila dalla lista"
-                           >
-                             {applyingId === p.id ? (
-                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                             ) : (
-                               <Send className="h-3 w-3 mr-1" />
-                             )}
-                             Applica
-                           </Button>
-                         )}
-                         {onDiscardSingle && (
-                           <Button
-                             size="sm"
-                             variant="ghost"
-                             className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                             disabled={applyingId === p.id || discardingId === p.id}
-                             onClick={() => handleDiscardSingle(p.id)}
-                             title="Scarta questa proposta: non verrà applicata al DB e sparirà dalla lista"
-                           >
-                             {discardingId === p.id ? (
-                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                             ) : (
-                               <Trash2 className="h-3 w-3 mr-1" />
-                             )}
-                             Scarta
-                           </Button>
-                         )}
-                       </div>
-                     </div>
+                      <span className="text-xs text-muted-foreground truncate">{p.block_label}</span>
+                      <div className="ml-auto flex items-center gap-1.5">
+                        {onApplySingle && !isReadOnly && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            disabled={applyingId === p.id || discardingId === p.id || blockedByDeps}
+                            onClick={() => handleApplySingle(p.id)}
+                            title="Applica questa proposta al DB e rimuovila dalla lista"
+                          >
+                            {applyingId === p.id ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Send className="h-3 w-3 mr-1" />
+                            )}
+                            Applica
+                          </Button>
+                        )}
+                        {onDiscardSingle && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                            disabled={applyingId === p.id || discardingId === p.id}
+                            onClick={() => handleDiscardSingle(p.id)}
+                            title="Scarta questa proposta: non verrà applicata al DB e sparirà dalla lista"
+                          >
+                            {discardingId === p.id ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3 mr-1" />
+                            )}
+                            Scarta
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     {p.after != null && (
                       <div className="mb-2">
                         <EditableAfter
                           value={p.after}
                           editable={!!onEditAfter && !isReadOnly}
-                          onSave={(v) => onEditAfter ? onEditAfter(p.id, v) : Promise.resolve({ ok: false, reason: "modifica non disponibile" })}
+                          onSave={(v) =>
+                            onEditAfter
+                              ? onEditAfter(p.id, v)
+                              : Promise.resolve({ ok: false, reason: "modifica non disponibile" })
+                          }
                         />
                       </div>
                     )}
@@ -444,11 +519,15 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                         {p.before != null && (
                           <div>
                             <div className="text-xs font-semibold text-muted-foreground">Prima:</div>
-                            <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap max-h-32 overflow-auto">{p.before}</pre>
+                            <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap max-h-32 overflow-auto">
+                              {p.before}
+                            </pre>
                           </div>
                         )}
                         <div>
-                          <div className="text-xs font-semibold text-muted-foreground">Evidenza ({p.evidence.source}):</div>
+                          <div className="text-xs font-semibold text-muted-foreground">
+                            Evidenza ({p.evidence.source}):
+                          </div>
                           <p className="text-xs italic">"{p.evidence.excerpt}"</p>
                         </div>
                         {p.dependencies.length > 0 && (
@@ -467,7 +546,8 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                             <ul className="list-disc list-inside">
                               {p.missing_contracts.map((c, i) => (
                                 <li key={i} className="font-mono text-[10px]">
-                                  {c.contract_name}{c.field ? `.${c.field}` : ""} — {c.why_needed}
+                                  {c.contract_name}
+                                  {c.field ? `.${c.field}` : ""} — {c.why_needed}
                                 </li>
                               ))}
                             </ul>

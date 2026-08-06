@@ -38,7 +38,7 @@ test.describe("Token Cockpit Page", () => {
         !e.includes("404") &&
         !e.includes("ERR_") &&
         !e.includes("ResizeObserver") &&
-        !e.includes("Cannot read properties")
+        !e.includes("Cannot read properties"),
     );
     expect(criticalErrors.length).toBeLessThan(5);
   });
@@ -75,9 +75,9 @@ test.describe("Token Cockpit Page", () => {
   });
 
   test("TokenByFunctionPie chart is rendered", async ({ page }) => {
-    const pieTitle = page.locator("text=/Token per funzione|Token by function/i").or(
-      page.locator("text=/Token per|Tokens/i")
-    );
+    const pieTitle = page
+      .locator("text=/Token per funzione|Token by function/i")
+      .or(page.locator("text=/Token per|Tokens/i"));
     await expect(pieTitle).toBeVisible({ timeout: 15000 });
   });
 
@@ -261,9 +261,7 @@ test.describe("Token Cockpit Page", () => {
 
   test("page background and text colors are applied", async ({ page }) => {
     const pageContainer = page.locator('[data-testid="page-token-cockpit"]');
-    const backgroundColor = await pageContainer.evaluate((el) =>
-      window.getComputedStyle(el).backgroundColor
-    );
+    const backgroundColor = await pageContainer.evaluate((el) => window.getComputedStyle(el).backgroundColor);
     // Should have a background color set (not transparent for main bg)
     expect(backgroundColor).toBeTruthy();
   });
@@ -285,9 +283,7 @@ test.describe("Token Cockpit Page", () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test("grid layout uses responsive column classes (grid-cols-1, sm:grid-cols-3, lg:grid-cols-2)", async ({
-    page,
-  }) => {
+  test("grid layout uses responsive column classes (grid-cols-1, sm:grid-cols-3, lg:grid-cols-2)", async ({ page }) => {
     // Check for grid elements
     const gridElements = page.locator('[class*="grid"]');
     const count = await gridElements.count();

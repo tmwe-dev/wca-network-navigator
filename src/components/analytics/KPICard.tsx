@@ -93,13 +93,7 @@ export function KPICard({
 
   if (loading) {
     return (
-      <div
-        className={cn(
-          "rounded-lg border bg-card/50 backdrop-blur-sm",
-          sizes.container,
-          colors.border
-        )}
-      >
+      <div className={cn("rounded-lg border bg-card/50 backdrop-blur-sm", sizes.container, colors.border)}>
         <div className="space-y-2">
           <div className="h-4 w-24 rounded bg-muted animate-pulse" />
           <div className="h-8 w-16 rounded bg-muted animate-pulse" />
@@ -115,7 +109,7 @@ export function KPICard({
         colors.bg,
         colors.border,
         sizes.container,
-        "bg-card/50 backdrop-blur-sm"
+        "bg-card/50 backdrop-blur-sm",
       )}
     >
       <div className="space-y-3">
@@ -128,30 +122,17 @@ export function KPICard({
             <div
               className={cn(
                 "flex items-center gap-1 text-xs font-medium",
-                trend.isPositive
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-rose-600 dark:text-rose-400"
+                trend.isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400",
               )}
             >
-              {trend.isPositive ? (
-                <TrendingUp className="w-3 h-3" />
-              ) : (
-                <TrendingDown className="w-3 h-3" />
-              )}
+              {trend.isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               <span>{Math.abs(trend.value).toFixed(1)}%</span>
             </div>
           )}
         </div>
 
         {/* Label */}
-        <p
-          className={cn(
-            "font-medium text-muted-foreground",
-            sizes.labelSize
-          )}
-        >
-          {label}
-        </p>
+        <p className={cn("font-medium text-muted-foreground", sizes.labelSize)}>{label}</p>
 
         {/* Value */}
         <div className="flex items-baseline gap-1">
@@ -163,11 +144,7 @@ export function KPICard({
                 }).format(value)
               : value}
           </span>
-          {unit && (
-            <span className={cn("text-muted-foreground", sizes.labelSize)}>
-              {unit}
-            </span>
-          )}
+          {unit && <span className={cn("text-muted-foreground", sizes.labelSize)}>{unit}</span>}
         </div>
       </div>
     </div>

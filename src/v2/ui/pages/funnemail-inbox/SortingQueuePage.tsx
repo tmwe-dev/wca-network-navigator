@@ -25,16 +25,16 @@ export function SortingQueuePage(): JSX.Element {
       <header className="flex items-center justify-between border-b border-border p-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/v2/funnemail-inbox"><ArrowLeft className="h-4 w-4" /> Inbox</Link>
+            <Link to="/v2/funnemail-inbox">
+              <ArrowLeft className="h-4 w-4" /> Inbox
+            </Link>
           </Button>
           <div>
             <h1 className="text-lg font-semibold">Sorting</h1>
             <p className="text-xs text-muted-foreground">Messaggi da smistare manualmente</p>
           </div>
         </div>
-        <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-          {data?.length ?? 0} in coda
-        </span>
+        <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{data?.length ?? 0} in coda</span>
       </header>
       <div className="flex-1 overflow-auto p-4">
         {isLoading && <p className="text-sm text-muted-foreground">Carico…</p>}

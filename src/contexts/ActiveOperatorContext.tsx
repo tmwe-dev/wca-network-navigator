@@ -26,8 +26,7 @@ const Ctx = createContext<ActiveOperatorCtx>({
 // chi accede dopo dallo stesso browser.
 const STORAGE_KEY_PREFIX = "activeOperator:v2:";
 const LEGACY_STORAGE_KEY = "activeOperator:v1";
-const storageKeyFor = (userId: string | null) =>
-  userId ? `${STORAGE_KEY_PREFIX}${userId}` : null;
+const storageKeyFor = (userId: string | null) => (userId ? `${STORAGE_KEY_PREFIX}${userId}` : null);
 
 type Persisted = { activeId: string | null; viewingAll: boolean };
 
@@ -61,7 +60,11 @@ export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
   // tra account diversi.
   useEffect(() => {
     if (typeof window !== "undefined") {
-      try { window.localStorage.removeItem(LEGACY_STORAGE_KEY); } catch { /* ignore */ }
+      try {
+        window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
     }
     if (!userId) {
       setActiveId(null);
@@ -90,7 +93,9 @@ export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(key, JSON.stringify({ activeId, viewingAll }));
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [userId, activeId, viewingAll]);
 
   const handleSetActiveId = (id: string) => {
@@ -106,28 +111,26 @@ export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
   // Hard guard: se l'activeId persistito non corrisponde a NESSUN operatore
   // accessibile dall'utente corrente (es. id "fantasma" di un altro account),
   // ricadiamo sull'operatore proprio. Mai su un id sconosciuto.
-  const resolvedActive = activeId ? operators.find(o => o.id === activeId) ?? null : null;
-  const activeOperator = viewingAll
-    ? null
-    : resolvedActive ?? currentOp ?? null;
+  const resolvedActive = activeId ? (operators.find((o) => o.id === activeId) ?? null) : null;
+  const activeOperator = viewingAll ? null : (resolvedActive ?? currentOp ?? null);
 
-  const isImpersonating = !viewingAll && activeOperator != null && currentOp != null && activeOperator.id !== currentOp.id;
+  const isImpersonating =
+    !viewingAll && activeOperator != null && currentOp != null && activeOperator.id !== currentOp.id;
 
-  const ctxValue = useMemo(() => ({
-    operators,
-    activeOperator,
-    setActiveOperatorId: handleSetActiveId,
-    isLoading: loadingOps || loadingCurrent,
-    viewingAll,
-    isImpersonating,
-    setViewingAll: handleSetViewingAll,
-  }), [operators, activeOperator, loadingOps, loadingCurrent, viewingAll, isImpersonating]);
-
-  return (
-    <Ctx.Provider value={ctxValue}>
-      {children}
-    </Ctx.Provider>
+  const ctxValue = useMemo(
+    () => ({
+      operators,
+      activeOperator,
+      setActiveOperatorId: handleSetActiveId,
+      isLoading: loadingOps || loadingCurrent,
+      viewingAll,
+      isImpersonating,
+      setViewingAll: handleSetViewingAll,
+    }),
+    [operators, activeOperator, loadingOps, loadingCurrent, viewingAll, isImpersonating],
   );
+
+  return <Ctx.Provider value={ctxValue}>{children}</Ctx.Provider>;
 }
 
 export const useActiveOperator = () => useContext(Ctx);

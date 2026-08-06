@@ -22,10 +22,12 @@ export const pendingActionExecutorTool: Tool = {
         kind: "approval",
         title: "Eseguire azione pending?",
         description: "L'azione approvata verrà eseguita immediatamente dall'executor.",
-        details: [
-          { label: "Action ID", value: actionId ?? "(da specificare)" },
-        ],
-        governance: { role: "DIRETTORE", permission: "EXECUTE:PENDING_ACTIONS", policy: "POLICY v1.0 · DECISION-ENGINE" },
+        details: [{ label: "Action ID", value: actionId ?? "(da specificare)" }],
+        governance: {
+          role: "DIRETTORE",
+          permission: "EXECUTE:PENDING_ACTIONS",
+          policy: "POLICY v1.0 · DECISION-ENGINE",
+        },
         pendingPayload: { action_id: actionId },
         toolId: "pending-action-executor",
       };
@@ -39,10 +41,10 @@ export const pendingActionExecutorTool: Tool = {
         meta: { count: 0, sourceLabel: "pending-action-executor" },
       };
     }
-    const res = await invokeEdge<{ status?: string; message?: string; error?: string }>(
-      "pending-action-executor",
-      { body: { action_id: String(p.action_id) }, context: "command:pending-action-executor" },
-    );
+    const res = await invokeEdge<{ status?: string; message?: string; error?: string }>("pending-action-executor", {
+      body: { action_id: String(p.action_id) },
+      context: "command:pending-action-executor",
+    });
     return {
       kind: "result",
       title: res?.error ? "Esecuzione fallita" : `Azione: ${res?.status ?? "ok"}`,

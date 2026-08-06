@@ -6,6 +6,7 @@ tags: [domain_routing, procedures, email, upsell, cross-sell, retention, existin
 # Gestione clienti convertiti (upsell)
 
 ## Obiettivo
+
 Gestire email commerciali provenienti da clienti già convertiti, riconoscendoli e applicando strategie di upsell/cross-sell appropriate.
 
 ## Riconoscimento del cliente convertito
@@ -13,11 +14,13 @@ Gestire email commerciali provenienti da clienti già convertiti, riconoscendoli
 Un client email va a **COMMERCIAL (con tag "EXISTING CLIENT")** se:
 
 ### Criteri di identificazione
+
 1. **Email proviene da dominio clienti** (stesso dominio dell'ordine originale)
 2. **Cliente ha almeno 1 booking completato** (pagato o consegnato)
 3. **Email contiene richiesta commerciale** (preventivo nuovo servizio, domanda su espansione, etc.)
 
 ### Verifica nel sistema
+
 ```
 if (customer_email IN (customers_with_completed_booking)) {
   customer_type = "EXISTING_CLIENT"
@@ -31,6 +34,7 @@ if (customer_email IN (customers_with_completed_booking)) {
 ## Strategie per client vs prospect
 
 ### PROSPECT NUOVO
+
 - Vendi VALUE: "Ecco perché dovete sceglierci"
 - Vendi FIDUCIA: "Ecco cos'hanno ottenuto altri"
 - Vendi CONVENIENZA: "Ecco quanto vi conviene"
@@ -38,6 +42,7 @@ if (customer_email IN (customers_with_completed_booking)) {
 **Tone**: Persuasivo, consultivo, cautamente fiducioso
 
 ### CLIENT ESISTENTE
+
 - Rafforza PARTNERSHIP: "Continuiamo a crescere insieme"
 - Vendi ESPANSIONE: "Come possiamo scalare il vostro volume?"
 - Vendi ECONOMIA: "Se consolidate, abbiamo sconti"
@@ -49,9 +54,11 @@ if (customer_email IN (customers_with_completed_booking)) {
 ## Tipi di opportunità upsell/cross-sell
 
 ### UPSELL (upgrade dello stesso servizio)
+
 Esempio: cliente che ordina 500 pezzi/mese chiede di salire a 1000
 
 **Approccio**:
+
 ```
 Caro [Nome],
 
@@ -66,9 +73,11 @@ Interessato?
 ```
 
 ### CROSS-SELL (nuovo servizio/prodotto complementare)
+
 Esempio: cliente che usa logistica chiede se fate anche warehousing
 
 **Approccio**:
+
 ```
 Caro [Nome],
 
@@ -81,9 +90,11 @@ Facciamo una call per capire se una di queste vi serve?
 ```
 
 ### RETENTION (servizio aggiuntivo per cliente a rischio)
+
 Esempio: cliente non ha ordinato in 3 mesi, comunica per ridimensionamento
 
 **Approccio**:
+
 ```
 Caro [Nome],
 
@@ -198,6 +209,7 @@ A presto,
 ## Elementi chiave nella comunicazione commercial a existing client
 
 ### ✓ SEMPRE INCLUDI
+
 - Recap della relazione (quando abbiamo iniziato)
 - Gratitudine per la partnership
 - Riconoscimento della loro performance/loyalty
@@ -206,6 +218,7 @@ A presto,
 - Timing e next step chiarissimi
 
 ### ✗ MAI FARE
+
 - Non iniziare con "Abbiamo una promozione"
 - Non offri stesso prezzo a tutti (personalizza per loyalty)
 - Non ignorare la loro storia con noi

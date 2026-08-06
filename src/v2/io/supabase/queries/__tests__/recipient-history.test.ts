@@ -20,13 +20,27 @@ function buildBuilder(table: string, rows: Row[], error: { message: string } | n
   const call: Call = { table };
   calls.push(call);
   const builder: Record<string, unknown> = {};
-  builder.select = (cols: string) => { call.select = cols; return builder; };
-  builder.order = (col: string, opts: { ascending: boolean }) => { call.order = { column: col, ascending: opts.ascending }; return builder; };
-  builder.eq = (col: string, val: unknown) => { call.eq = { column: col, value: val }; return builder; };
-  builder.or = (expr: string) => { call.or = expr; return builder; };
-  builder.limit = (n: number) => { call.limit = n; return builder; };
-  builder.then = (resolve: (v: unknown) => unknown) =>
-    resolve({ data: error ? null : rows, error });
+  builder.select = (cols: string) => {
+    call.select = cols;
+    return builder;
+  };
+  builder.order = (col: string, opts: { ascending: boolean }) => {
+    call.order = { column: col, ascending: opts.ascending };
+    return builder;
+  };
+  builder.eq = (col: string, val: unknown) => {
+    call.eq = { column: col, value: val };
+    return builder;
+  };
+  builder.or = (expr: string) => {
+    call.or = expr;
+    return builder;
+  };
+  builder.limit = (n: number) => {
+    call.limit = n;
+    return builder;
+  };
+  builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: error ? null : rows, error });
   return builder;
 }
 
@@ -43,7 +57,10 @@ import { fetchRecipientHistory } from "../channel-messages";
 
 describe("fetchRecipientHistory (B4.2 — SSOT unica, fallback interno)", () => {
   beforeEach(() => {
-    viewRows = []; viewError = null; legacyRows = []; legacyError = null;
+    viewRows = [];
+    viewError = null;
+    legacyRows = [];
+    legacyError = null;
     calls = [];
   });
 
@@ -54,7 +71,18 @@ describe("fetchRecipientHistory (B4.2 — SSOT unica, fallback interno)", () => 
   });
 
   it("view OK: legge dalla view, NON chiama legacy, filtri/ordine/limit/alias corretti (partnerId)", async () => {
-    viewRows = [{ id: "m1", channel: "email", direction: "inbound", subject: "S", body_text: null, from_address: null, email_date: null, created_at: "2026-07-20T00:00:00Z" }];
+    viewRows = [
+      {
+        id: "m1",
+        channel: "email",
+        direction: "inbound",
+        subject: "S",
+        body_text: null,
+        from_address: null,
+        email_date: null,
+        created_at: "2026-07-20T00:00:00Z",
+      },
+    ];
     const r = await fetchRecipientHistory({ partnerId: "p-1" });
     expect(r._tag).toBe("Ok");
     if (r._tag === "Ok") expect(r.value).toHaveLength(1);
@@ -85,7 +113,18 @@ describe("fetchRecipientHistory (B4.2 — SSOT unica, fallback interno)", () => 
 
   it("view Err → fallback trasparente su channel_messages con filtri/ordine/limit legacy", async () => {
     viewError = { message: "boom" };
-    legacyRows = [{ id: "l1", channel: "email", direction: "outbound", subject: null, body_text: null, from_address: null, email_date: null, created_at: "2026-07-20T00:00:00Z" }];
+    legacyRows = [
+      {
+        id: "l1",
+        channel: "email",
+        direction: "outbound",
+        subject: null,
+        body_text: null,
+        from_address: null,
+        email_date: null,
+        created_at: "2026-07-20T00:00:00Z",
+      },
+    ];
     const r = await fetchRecipientHistory({ partnerId: "p-1" });
     expect(r._tag).toBe("Ok");
     if (r._tag === "Ok") expect(r.value).toHaveLength(1);

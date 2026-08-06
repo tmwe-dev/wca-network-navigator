@@ -27,21 +27,21 @@ export async function isCronPausedWith(read: CronFlagReader): Promise<boolean> {
 }
 
 export async function isCronPaused(admin: SupabaseClient): Promise<boolean> {
-  return isCronPausedWith(() =>
-    admin.from("system_flags").select("value").eq("key", "cron_paused").maybeSingle()
-  );
+  return isCronPausedWith(() => admin.from("system_flags").select("value").eq("key", "cron_paused").maybeSingle());
 }
 
 export async function cronPausedResponse(admin: SupabaseClient, fn: string): Promise<Response | null> {
   if (!(await isCronPaused(admin))) return null;
-  console.warn(JSON.stringify({
-    level: "warn",
-    event: "cron_paused_skip",
-    function: fn,
-    timestamp: new Date().toISOString(),
-  }));
-  return new Response(
-    JSON.stringify({ skipped: true, reason: "cron_paused", function: fn }),
-    { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  console.warn(
+    JSON.stringify({
+      level: "warn",
+      event: "cron_paused_skip",
+      function: fn,
+      timestamp: new Date().toISOString(),
+    }),
   );
+  return new Response(JSON.stringify({ skipped: true, reason: "cron_paused", function: fn }), {
+    status: 503,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }

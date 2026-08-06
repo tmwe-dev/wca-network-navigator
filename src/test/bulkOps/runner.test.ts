@@ -39,7 +39,11 @@ vi.mock("@/v2/services/bulkOps/registry", () => ({
 import { runBulkOp } from "@/v2/services/bulkOps/runner";
 
 describe("bulkOps — runner", () => {
-  beforeEach(() => { created.length = 0; updated.length = 0; events.length = 0; });
+  beforeEach(() => {
+    created.length = 0;
+    updated.length = 0;
+    events.length = 0;
+  });
 
   it("crea il job, esegue gli item, marca completato", async () => {
     const r = await runBulkOp("enrich.base" as never, [{ id: "a" }, { id: "b" }]);

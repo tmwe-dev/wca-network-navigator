@@ -30,15 +30,8 @@ export async function executeUpdateAgentPrompt(
   if (args.replace_prompt) {
     newPrompt = String(args.replace_prompt);
   } else if (args.prompt_addition) {
-    const { data: current } = await supabase
-      .from("agents")
-      .select("system_prompt")
-      .eq("id", agentId)
-      .single();
-    newPrompt =
-      ((current as Record<string, unknown>)?.system_prompt || "") +
-      "\n\n" +
-      String(args.prompt_addition);
+    const { data: current } = await supabase.from("agents").select("system_prompt").eq("id", agentId).single();
+    newPrompt = ((current as Record<string, unknown>)?.system_prompt || "") + "\n\n" + String(args.prompt_addition);
   } else {
     return { error: "Specifica replace_prompt o prompt_addition" };
   }
@@ -78,9 +71,7 @@ export async function executeAddAgentKbEntry(
   if (!agentId) return { error: "Agente non trovato" };
 
   const category = String(args.category || "agent_custom");
-  const tags = Array.isArray(args.tags)
-    ? args.tags.map(String)
-    : ["agent"];
+  const tags = Array.isArray(args.tags) ? args.tags.map(String) : ["agent"];
 
   const { data: kbEntry, error: kbErr } = await supabase
     .from("kb_entries")
@@ -99,14 +90,12 @@ export async function executeAddAgentKbEntry(
     .single();
   if (kbErr) return { error: kbErr.message };
 
-  const { error: linkErr } = await supabase
-    .from("agent_knowledge_links")
-    .insert({
-      agent_id: agentId,
-      kb_entry_id: (kbEntry as Record<string, unknown>).id,
-      user_id: userId,
-      priority: 5,
-    });
+  const { error: linkErr } = await supabase.from("agent_knowledge_links").insert({
+    agent_id: agentId,
+    kb_entry_id: (kbEntry as Record<string, unknown>).id,
+    user_id: userId,
+    priority: 5,
+  });
   if (linkErr) return { error: linkErr.message };
   return {
     success: true,

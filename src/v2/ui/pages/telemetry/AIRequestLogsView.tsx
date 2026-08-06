@@ -62,7 +62,9 @@ export function AIRequestLogsView({ sinceIso }: { sinceIso: string }) {
                   <td className="font-mono text-muted-foreground">{a.model ?? "—"}</td>
                   <td className="text-muted-foreground">{a.total_tokens ?? "—"}</td>
                   <td className="text-muted-foreground">{a.latency_ms ? `${a.latency_ms}ms` : "—"}</td>
-                  <td><StatusPill status={a.status} /></td>
+                  <td>
+                    <StatusPill status={a.status} />
+                  </td>
                 </tr>
               ))}
             </tbody>

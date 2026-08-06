@@ -42,9 +42,7 @@ function useDirectoryTotal() {
  * into the ExploreContextHeader actions slot.
  * Il titolo + counter sono ora gestiti dall'ExploreContextHeader stesso.
  */
-function HeaderBarPortal({ deepSearch }: {
-  deepSearch: DeepSearchState;
-}) {
+function HeaderBarPortal({ deepSearch }: { deepSearch: DeepSearchState }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   useEffect(() => {
     const el = document.getElementById("explore-header-actions");
@@ -53,9 +51,7 @@ function HeaderBarPortal({ deepSearch }: {
 
   if (!container) return null;
 
-  const showDeepBtn =
-    (deepSearch.running || deepSearch.results?.length > 0) &&
-    !deepSearch.canvasOpen;
+  const showDeepBtn = (deepSearch.running || deepSearch.results?.length > 0) && !deepSearch.canvasOpen;
 
   if (!showDeepBtn) return null;
 
@@ -83,7 +79,9 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
     try {
       sessionStorage.setItem("network-view", networkView);
       window.dispatchEvent(new CustomEvent("network-view-change", { detail: { view: networkView } }));
-    } catch { /* sessionStorage may be unavailable */ }
+    } catch {
+      /* sessionStorage may be unavailable */
+    }
   }, [networkView]);
 
   // Sync with external theme changes (e.g. from V2 sidebar toggle)
@@ -113,19 +111,23 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
   const queryClient = useQueryClient();
   const { data: countryStatsData } = useCountryStats();
   const { data: dirData } = useDirectoryTotal();
-  const dirTotals = dirData ? {
-    scannedCountries: Object.keys(dirData).length,
-    totalDirectory: Object.values(dirData).reduce((sum, v) => sum + v.count, 0),
-  } : null;
-  const globalStats = countryStatsData ? {
-    totalPartners: countryStatsData.global.total,
-    withEmail: countryStatsData.global.withEmail,
-    withPhone: countryStatsData.global.withPhone,
-    withProfile: countryStatsData.global.withProfile,
-    withoutProfile: countryStatsData.global.withoutProfile,
-    scannedCountries: dirTotals?.scannedCountries || 0,
-    totalDirectory: dirTotals?.totalDirectory || 0,
-  } : null;
+  const dirTotals = dirData
+    ? {
+        scannedCountries: Object.keys(dirData).length,
+        totalDirectory: Object.values(dirData).reduce((sum, v) => sum + v.count, 0),
+      }
+    : null;
+  const globalStats = countryStatsData
+    ? {
+        totalPartners: countryStatsData.global.total,
+        withEmail: countryStatsData.global.withEmail,
+        withPhone: countryStatsData.global.withPhone,
+        withProfile: countryStatsData.global.withProfile,
+        withoutProfile: countryStatsData.global.withoutProfile,
+        scannedCountries: dirTotals?.scannedCountries || 0,
+        totalDirectory: dirTotals?.totalDirectory || 0,
+      }
+    : null;
   // globalStats è ora derivato ma non più mostrato qui (titolo+counter
   // gestiti dall'ExploreContextHeader). Mantengo il calcolo per eventuali
   // futuri consumer e per evitare regressioni di cache.
@@ -152,10 +154,13 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
   }, []);
 
   // Use countries from global filters
-  const activeCountryCodes = useMemo(() => Array.from(filters.networkSelectedCountries), [filters.networkSelectedCountries]);
+  const activeCountryCodes = useMemo(
+    () => Array.from(filters.networkSelectedCountries),
+    [filters.networkSelectedCountries],
+  );
   const activeCountryNames = useMemo(() => {
-    const _WCA = (toRecord(window)).__WCA_COUNTRIES;
-    return activeCountryCodes.map(code => {
+    const _WCA = toRecord(window).__WCA_COUNTRIES;
+    return activeCountryCodes.map((code) => {
       const found = WCA_COUNTRIES.find((c) => c.code === code);
       return found?.name || code;
     });
@@ -164,33 +169,45 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
 
   const { data: selectedPartner } = usePartner(selectedPartnerId || "");
 
-  const handleDeepSearch = useCallback((partnerIds: string[]) => {
-    deepSearch.start(partnerIds);
-  }, [deepSearch]);
+  const handleDeepSearch = useCallback(
+    (partnerIds: string[]) => {
+      deepSearch.start(partnerIds);
+    },
+    [deepSearch],
+  );
 
   const handleStopDeepSearch = useCallback(() => {
     deepSearch.stop();
   }, [deepSearch]);
 
-  const handleGenerateAliases = useCallback(async (codes: string[], _type: "company" | "contact") => {
-    if (aliasGenerating) return;
-    setAliasGenerating(true);
-    const toastId = toast.loading("Generazione alias in corso...");
-    try {
-      const data = await invokeEdge<Record<string, unknown>>("generate-aliases", { body: { countryCodes: codes }, context: "Operations.generate_aliases" });
-      if (data?.success) {
-        toast.success(`Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`, { id: toastId });
-        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
-        queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
-      } else {
-        toast.error(String(data?.error || "Errore generazione alias"), { id: toastId });
+  const handleGenerateAliases = useCallback(
+    async (codes: string[], _type: "company" | "contact") => {
+      if (aliasGenerating) return;
+      setAliasGenerating(true);
+      const toastId = toast.loading("Generazione alias in corso...");
+      try {
+        const data = await invokeEdge<Record<string, unknown>>("generate-aliases", {
+          body: { countryCodes: codes },
+          context: "Operations.generate_aliases",
+        });
+        if (data?.success) {
+          toast.success(
+            `Alias generati: ${data.processed ?? 0} aziende, ${data.contacts ?? 0} contatti (su ${data.total ?? 0} elaborati)`,
+            { id: toastId },
+          );
+          queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
+        } else {
+          toast.error(String(data?.error || "Errore generazione alias"), { id: toastId });
+        }
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : "Errore", { id: toastId });
+      } finally {
+        setAliasGenerating(false);
       }
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Errore", { id: toastId });
-    } finally {
-      setAliasGenerating(false);
-    }
-  }, [aliasGenerating, queryClient]);
+    },
+    [aliasGenerating, queryClient],
+  );
 
   // WCA sync is now handled globally by useWcaSync in AppLayout
 
@@ -206,16 +223,15 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
           <HeaderBarPortal deepSearch={deepSearch} />
 
           {/* ═══ MAIN ═══ */}
-          <div className={cn(
-            "flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden",
-            isMobile ? "flex flex-col" : "flex"
-          )}>
+          <div className={cn("flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden", isMobile ? "flex flex-col" : "flex")}>
             {/* COL 1: Partner List */}
             <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
-              <div className={cn(
-                "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
-                "bg-card/50 backdrop-blur-sm border-border"
-              )}>
+              <div
+                className={cn(
+                  "flex-1 min-h-0 rounded-xl border overflow-hidden relative",
+                  "bg-card/50 backdrop-blur-sm border-border",
+                )}
+              >
                 <PartnerListPanel
                   countryCodes={activeCountryCodes}
                   countryNames={activeCountryNames}
@@ -255,7 +271,9 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
                       <PartnerDetailCompact
                         partner={selectedPartner}
                         onBack={() => setSelectedPartnerId(null)}
-                        onToggleFavorite={() => toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })}
+                        onToggleFavorite={() =>
+                          toggleFavorite.mutate({ id: selectedPartner.id, isFavorite: !selectedPartner.is_favorite })
+                        }
                         isDark={isDark}
                       />
                     </div>
@@ -271,7 +289,6 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
           </div>
         </div>
       </div>
-      
     </ThemeCtx.Provider>
   );
 }

@@ -39,7 +39,7 @@ describe("findField", () => {
 describe("FIELD_ALIASES", () => {
   it("has all expected fields", () => {
     expect(Object.keys(FIELD_ALIASES)).toEqual(
-      expect.arrayContaining(["company_name", "name", "email", "phone", "mobile", "country", "city"])
+      expect.arrayContaining(["company_name", "name", "email", "phone", "mobile", "country", "city"]),
     );
   });
   it("each field has at least 2 aliases", () => {

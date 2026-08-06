@@ -8,8 +8,7 @@ export const searchKbTool: Tool = {
   id: "search-kb",
   label: "Cerca nella knowledge base",
   description: "Cerca documentazione e workflow nella KB del sistema WCA",
-  match: (prompt: string) =>
-    /\b(kb|knowledge|documentazione|come\s+(si\s+)?fa|workflow|guida|manuale)\b/i.test(prompt),
+  match: (prompt: string) => /\b(kb|knowledge|documentazione|come\s+(si\s+)?fa|workflow|guida|manuale)\b/i.test(prompt),
 
   execute: async (prompt: string): Promise<ToolResult> => {
     const cleaned = prompt.replace(/[^\p{L}\p{N}\s]/gu, " ").trim();

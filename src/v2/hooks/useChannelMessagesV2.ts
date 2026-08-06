@@ -2,10 +2,7 @@
  * useChannelMessagesV2 — Channel messages (email, whatsapp, linkedin)
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  fetchChannelMessages,
-  fetchChannelMessagesFromView,
-} from "@/v2/io/supabase/queries/channel-messages";
+import { fetchChannelMessages, fetchChannelMessagesFromView } from "@/v2/io/supabase/queries/channel-messages";
 import { markMessageRead } from "@/v2/io/supabase/mutations/channel-messages";
 import { isOk } from "@/v2/core/domain/result";
 import type { ChannelMessage } from "@/v2/core/domain/entities";

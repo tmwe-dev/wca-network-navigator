@@ -9,7 +9,6 @@ import {
   type ExportFilters,
 } from "@/data/exports";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("useExport");
 export type EntityType = "contacts" | "partners" | "deals" | "emails";
@@ -45,7 +44,7 @@ function convertToCSV(headers: string[], rows: Record<string, unknown>[]): strin
 async function convertToExcel(
   headers: string[],
   rows: Record<string, unknown>[],
-  sheetName: string
+  sheetName: string,
 ): Promise<Uint8Array<ArrayBuffer>> {
   try {
     // Dynamic import: ExcelJS resta fuori dal bundle iniziale.
@@ -58,7 +57,7 @@ async function convertToExcel(
       worksheet.addRow(
         headers.reduce<Record<string, unknown>>((acc, h) => {
           const v = row[h];
-          acc[h] = v === null || v === undefined ? "" : (typeof v === "object" ? JSON.stringify(v) : v);
+          acc[h] = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : v;
           return acc;
         }, {}),
       );
@@ -84,11 +83,30 @@ export function useExportCSV() {
       switch (options.entity) {
         case "contacts":
           data = await fetchContactsExportRows(options.filters);
-          defaultColumns = ["id", "name", "email", "phone", "mobile", "company_name", "position", "country", "created_at"];
+          defaultColumns = [
+            "id",
+            "name",
+            "email",
+            "phone",
+            "mobile",
+            "company_name",
+            "position",
+            "country",
+            "created_at",
+          ];
           break;
         case "partners":
           data = await fetchPartnersExportRows(options.filters);
-          defaultColumns = ["id", "company_name", "country_name", "website", "email", "phone", "lead_status", "created_at"];
+          defaultColumns = [
+            "id",
+            "company_name",
+            "country_name",
+            "website",
+            "email",
+            "phone",
+            "lead_status",
+            "created_at",
+          ];
           break;
         case "deals":
           data = await fetchDealsExportRows(options.filters);
@@ -127,11 +145,30 @@ export function useExportExcel() {
       switch (options.entity) {
         case "contacts":
           data = await fetchContactsExportRows(options.filters);
-          defaultColumns = ["id", "name", "email", "phone", "mobile", "company_name", "position", "country", "created_at"];
+          defaultColumns = [
+            "id",
+            "name",
+            "email",
+            "phone",
+            "mobile",
+            "company_name",
+            "position",
+            "country",
+            "created_at",
+          ];
           break;
         case "partners":
           data = await fetchPartnersExportRows(options.filters);
-          defaultColumns = ["id", "company_name", "country_name", "website", "email", "phone", "lead_status", "created_at"];
+          defaultColumns = [
+            "id",
+            "company_name",
+            "country_name",
+            "website",
+            "email",
+            "phone",
+            "lead_status",
+            "created_at",
+          ];
           break;
         case "deals":
           data = await fetchDealsExportRows(options.filters);

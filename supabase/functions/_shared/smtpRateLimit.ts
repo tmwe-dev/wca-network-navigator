@@ -30,10 +30,7 @@ function limitsEnabled(): boolean {
  * Verifica se l'utente può inviare un'altra email senza superare il cap orario.
  * Quando il kill-switch è OFF, ritorna sempre allowed=true (no-op).
  */
-export async function checkSmtpRateLimit(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<SmtpRateLimitResult> {
+export async function checkSmtpRateLimit(supabase: SupabaseClient, userId: string): Promise<SmtpRateLimitResult> {
   if (!limitsEnabled()) {
     return {
       allowed: true,

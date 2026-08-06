@@ -27,9 +27,10 @@ interface IndexEntry {
   priority?: number;
 }
 
-const index = JSON.parse(
-  fs.readFileSync(path.join(KB_DIR, "index.json"), "utf-8"),
-) as { version: number; entries: IndexEntry[] };
+const index = JSON.parse(fs.readFileSync(path.join(KB_DIR, "index.json"), "utf-8")) as {
+  version: number;
+  entries: IndexEntry[];
+};
 
 /** File .md volutamente fuori indice (vedi header). */
 const EXCLUDED = (rel: string): boolean =>
@@ -53,9 +54,7 @@ describe("KB source index integrity", () => {
   });
 
   it("ogni voce dell'indice punta a un file esistente", () => {
-    const missing = index.entries
-      .map((e) => e.path)
-      .filter((p) => !fs.existsSync(path.join(KB_DIR, p)));
+    const missing = index.entries.map((e) => e.path).filter((p) => !fs.existsSync(path.join(KB_DIR, p)));
     expect(missing).toEqual([]);
   });
 
@@ -67,9 +66,7 @@ describe("KB source index integrity", () => {
   });
 
   it("ogni voce ha title e almeno un tag", () => {
-    const invalid = index.entries.filter(
-      (e) => !e.title?.trim() || !Array.isArray(e.tags) || e.tags.length === 0,
-    );
+    const invalid = index.entries.filter((e) => !e.title?.trim() || !Array.isArray(e.tags) || e.tags.length === 0);
     expect(invalid.map((e) => e.path)).toEqual([]);
   });
 

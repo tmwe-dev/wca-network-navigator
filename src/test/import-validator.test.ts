@@ -36,9 +36,7 @@ describe("import/validator — pure helpers", () => {
 
   describe("extractEmail", () => {
     it("estrae email da stringa rumorosa", () => {
-      expect(extractEmail("Contattami su Mario.Rossi@Example.com per info")).toBe(
-        "mario.rossi@example.com"
-      );
+      expect(extractEmail("Contattami su Mario.Rossi@Example.com per info")).toBe("mario.rossi@example.com");
     });
 
     it("ritorna lowercase del valore se non match", () => {
@@ -90,16 +88,31 @@ describe("import/validator — pure helpers", () => {
   describe("validateAndTransform", () => {
     const mappings: ColumnMapping[] = [
       { sourceColumn: "Nome", sourceIndex: 0, targetColumn: "name", confidence: 100, transformation: "capitalize" },
-      { sourceColumn: "Email", sourceIndex: 1, targetColumn: "email", confidence: 100, transformation: "extract_email" },
-      { sourceColumn: "Telefono", sourceIndex: 2, targetColumn: "phone", confidence: 100, transformation: "normalize_phone" },
-      { sourceColumn: "Paese", sourceIndex: 3, targetColumn: "country", confidence: 100, transformation: "parse_country" },
+      {
+        sourceColumn: "Email",
+        sourceIndex: 1,
+        targetColumn: "email",
+        confidence: 100,
+        transformation: "extract_email",
+      },
+      {
+        sourceColumn: "Telefono",
+        sourceIndex: 2,
+        targetColumn: "phone",
+        confidence: 100,
+        transformation: "normalize_phone",
+      },
+      {
+        sourceColumn: "Paese",
+        sourceIndex: 3,
+        targetColumn: "country",
+        confidence: 100,
+        transformation: "parse_country",
+      },
     ];
 
     it("trasforma riga valida e popola tutti i target", () => {
-      const result = validateAndTransform(
-        [["mario rossi", "Mario.Rossi@Test.IT", "3331234567", "italia"]],
-        mappings
-      );
+      const result = validateAndTransform([["mario rossi", "Mario.Rossi@Test.IT", "3331234567", "italia"]], mappings);
       expect(result.validRows).toHaveLength(1);
       expect(result.rejectedRows).toHaveLength(0);
       const r = result.validRows[0];
@@ -111,8 +124,11 @@ describe("import/validator — pure helpers", () => {
 
     it("scarta righe completamente vuote", () => {
       const result = validateAndTransform(
-        [["", "", "", ""], ["mario", "m@x.it", "", ""]],
-        mappings
+        [
+          ["", "", "", ""],
+          ["mario", "m@x.it", "", ""],
+        ],
+        mappings,
       );
       expect(result.validRows).toHaveLength(1);
       expect(result.rejectedRows).toHaveLength(1);
@@ -138,7 +154,7 @@ describe("import/validator — pure helpers", () => {
           ["", "", "", ""],
           ["b", "b@b.it", "", ""],
         ],
-        mappings
+        mappings,
       );
       expect(result.stats.totalRows).toBe(3);
       expect(result.stats.importedCount).toBe(2);
@@ -170,7 +186,7 @@ describe("import/validator — pure helpers", () => {
 
     it("trova chiavi via fuzzy match", () => {
       const row = { "Nome Azienda": "globex" };
-      const mapping = { "nome_azienda": "company_name" };
+      const mapping = { nome_azienda: "company_name" };
       const result = transformRow(row, mapping);
       expect(result.company_name).toBe("Globex");
     });

@@ -1,13 +1,26 @@
 import * as React from "react";
 import {
-  Mail, Sparkles, History, ShieldCheck, User, CheckCircle2, Pencil, Clock,
-  ExternalLink, Trash2, Megaphone, Hash,
+  Mail,
+  Sparkles,
+  History,
+  ShieldCheck,
+  User,
+  CheckCircle2,
+  Pencil,
+  Clock,
+  ExternalLink,
+  Trash2,
+  Megaphone,
+  Hash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
@@ -30,7 +43,15 @@ export interface DetailPanelProps {
 }
 
 export function DetailPanel({
-  item, onConfirm, onEdit, onOpenOrigin, onOpenPartner, onRunSherlock, onSnooze, onCancel, canSnooze,
+  item,
+  onConfirm,
+  onEdit,
+  onOpenOrigin,
+  onOpenPartner,
+  onRunSherlock,
+  onSnooze,
+  onCancel,
+  canSnooze,
 }: DetailPanelProps): React.ReactElement {
   const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
   const st = STATUS_META[item.status] ?? STATUS_META.pending;
@@ -49,7 +70,9 @@ export function DetailPanel({
             <span title={ch.label} className={cn("h-6 w-6 rounded-md flex items-center justify-center", ch.bg)}>
               <ch.Icon className={cn("h-3.5 w-3.5", ch.tone)} />
             </span>
-            <Badge variant="outline" className={cn("text-[9px] border", st.tone)}>{st.label}</Badge>
+            <Badge variant="outline" className={cn("text-[9px] border", st.tone)}>
+              {st.label}
+            </Badge>
             <span title={tr.label} className={cn("flex items-center", tr.tone)}>
               <tr.Icon className="h-3.5 w-3.5" />
             </span>
@@ -60,19 +83,28 @@ export function DetailPanel({
           <span className="text-sm font-medium truncate max-w-[260px]">
             {item.partnerName ?? item.recipientName ?? "—"}
           </span>
-          {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
-          {pt && <Badge variant="outline" className={cn("text-[9px] border", pt.tone)}>{pt.label}</Badge>}
+          {flag && (
+            <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>
+              {flag}
+            </span>
+          )}
+          {pt && (
+            <Badge variant="outline" className={cn("text-[9px] border", pt.tone)}>
+              {pt.label}
+            </Badge>
+          )}
           {item.partnerLeadStatus && (
-            <Badge variant="outline" className="text-[9px]">Lead: {item.partnerLeadStatus}</Badge>
+            <Badge variant="outline" className="text-[9px]">
+              Lead: {item.partnerLeadStatus}
+            </Badge>
           )}
           {item.partnerWcaId && (
             <Badge variant="outline" className="text-[9px] gap-1">
-              <Hash className="h-2.5 w-2.5" />WCA #{item.partnerWcaId}
+              <Hash className="h-2.5 w-2.5" />
+              WCA #{item.partnerWcaId}
             </Badge>
           )}
-          <span className="text-[11px] text-muted-foreground truncate ml-1">
-            → {item.recipientHandle ?? "—"}
-          </span>
+          <span className="text-[11px] text-muted-foreground truncate ml-1">→ {item.recipientHandle ?? "—"}</span>
           <div className="ml-auto flex items-center gap-1.5">
             {item.campaignName && (
               <Badge variant="secondary" className="text-[9px] gap-1" title={item.campaignName}>
@@ -80,9 +112,7 @@ export function DetailPanel({
                 <span className="truncate max-w-[120px]">{item.campaignName}</span>
               </Badge>
             )}
-            {item.agentName && (
-              <AgentBadge name={item.agentName} />
-            )}
+            {item.agentName && <AgentBadge name={item.agentName} />}
           </div>
         </div>
       </div>
@@ -132,8 +162,13 @@ export function DetailPanel({
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="ghost" className="h-8 gap-1.5" disabled={!canSnooze}
-              title={canSnooze ? "Rinvia" : "Snooze non disponibile"}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5"
+              disabled={!canSnooze}
+              title={canSnooze ? "Rinvia" : "Snooze non disponibile"}
+            >
               <Clock className="h-3.5 w-3.5" /> Rinvia
             </Button>
           </DropdownMenuTrigger>
@@ -147,7 +182,12 @@ export function DetailPanel({
         <Button size="sm" variant="ghost" className="h-8 gap-1.5" onClick={onOpenOrigin}>
           <ExternalLink className="h-3.5 w-3.5" /> Apri origine
         </Button>
-        <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-destructive hover:text-destructive ml-auto" onClick={onCancel}>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 gap-1.5 text-destructive hover:text-destructive ml-auto"
+          onClick={onCancel}
+        >
           <Trash2 className="h-3.5 w-3.5" /> Annulla
         </Button>
       </footer>

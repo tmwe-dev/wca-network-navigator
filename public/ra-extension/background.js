@@ -3,7 +3,8 @@
 // ══════════════════════════════════════════════
 
 const SUPABASE_URL = "https://zrbditqddhjkutzjycgi.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyYmRpdHFkZGhqa3V0emp5Y2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDk5NjcsImV4cCI6MjA4NTUyNTk2N30.RvWUoMZf1fkqeEIe5sjXMyocxdFcb7yU1enEVoPdWb4";
 
 // ── Scraping state ──
 let scrapingState = {
@@ -18,7 +19,16 @@ let scrapingState = {
 };
 
 function resetState() {
-  scrapingState = { active: false, stopped: false, total: 0, processed: 0, saved: 0, errors: 0, currentCompany: "", log: [] };
+  scrapingState = {
+    active: false,
+    stopped: false,
+    total: 0,
+    processed: 0,
+    saved: 0,
+    errors: 0,
+    currentCompany: "",
+    log: [],
+  };
 }
 
 function addLog(msg) {
@@ -39,7 +49,9 @@ async function syncRACookies() {
     }
 
     const uniqueCookies = {};
-    allCookies.forEach((c) => { uniqueCookies[c.name] = c.value; });
+    allCookies.forEach((c) => {
+      uniqueCookies[c.name] = c.value;
+    });
     const cookieString = Object.entries(uniqueCookies)
       .map(([k, v]) => `${k}=${v}`)
       .join("; ");
@@ -48,8 +60,8 @@ async function syncRACookies() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ cookie: cookieString }),
     });
@@ -67,8 +79,8 @@ async function autoLogin() {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/get-ra-credentials`, {
       method: "GET",
       headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
     });
 
@@ -83,8 +95,11 @@ async function autoLogin() {
     });
 
     // Wait for login page to load
-    await new Promise(function(resolve) {
-      const timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
+    await new Promise(function (resolve) {
+      const timeout = setTimeout(function () {
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }, 20000);
       function listener(tabId, info) {
         if (tabId === tab.id && info.status === "complete") {
           chrome.tabs.onUpdated.removeListener(listener);
@@ -103,11 +118,16 @@ async function autoLogin() {
     });
 
     // Wait for form submission and redirect (fillLogin has internal 1.5s + 0.5s delays)
-    await new Promise(function(r) { setTimeout(r, 4000); });
+    await new Promise(function (r) {
+      setTimeout(r, 4000);
+    });
 
     // Wait for navigation after submit
-    await new Promise(function(resolve) {
-      const timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener2); resolve(); }, 15000);
+    await new Promise(function (resolve) {
+      const timeout = setTimeout(function () {
+        chrome.tabs.onUpdated.removeListener(listener2);
+        resolve();
+      }, 15000);
       function listener2(tabId, info) {
         if (tabId === tab.id && info.status === "complete") {
           chrome.tabs.onUpdated.removeListener(listener2);
@@ -135,10 +155,14 @@ async function autoLogin() {
 }
 
 function fillLogin(username, password) {
-  setTimeout(function() {
-    const emailField = document.querySelector('input#username, input[name="username"], input[type="email"], input#email');
+  setTimeout(function () {
+    const emailField = document.querySelector(
+      'input#username, input[name="username"], input[type="email"], input#email',
+    );
     const passField = document.querySelector('input#password, input[type="password"]');
-    const submitBtn = document.querySelector('input[type="submit"].btn_blu, input[type="submit"], button[type="submit"]');
+    const submitBtn = document.querySelector(
+      'input[type="submit"].btn_blu, input[type="submit"], button[type="submit"]',
+    );
 
     if (emailField) {
       emailField.value = username;
@@ -159,7 +183,9 @@ function fillLogin(username, password) {
     }
 
     if (submitBtn) {
-      setTimeout(function() { submitBtn.click(); }, 500);
+      setTimeout(function () {
+        submitBtn.click();
+      }, 500);
     }
   }, 1500);
 }
@@ -175,11 +201,15 @@ async function fetchWithCookies(url) {
   const cookies3 = await chrome.cookies.getAll({ domain: "ecommerce2.reportaziende.it" });
   const allCookies = [...cookies, ...cookies2, ...cookies3];
   const uniqueCookies = {};
-  allCookies.forEach((c) => { uniqueCookies[c.name] = c.value; });
-  const cookieStr = Object.entries(uniqueCookies).map(([k, v]) => `${k}=${v}`).join("; ");
+  allCookies.forEach((c) => {
+    uniqueCookies[c.name] = c.value;
+  });
+  const cookieStr = Object.entries(uniqueCookies)
+    .map(([k, v]) => `${k}=${v}`)
+    .join("; ");
 
   const res = await fetch(url, {
-    headers: { "Cookie": cookieStr },
+    headers: { Cookie: cookieStr },
     credentials: "include",
   });
   return res;
@@ -230,7 +260,11 @@ function extractProfileData() {
   const managementSection = document.querySelectorAll("table");
   for (const table of managementSection) {
     const headerText = (table.previousElementSibling || {}).textContent || "";
-    if (headerText.toLowerCase().includes("esponent") || headerText.toLowerCase().includes("management") || headerText.toLowerCase().includes("amministrat")) {
+    if (
+      headerText.toLowerCase().includes("esponent") ||
+      headerText.toLowerCase().includes("management") ||
+      headerText.toLowerCase().includes("amministrat")
+    ) {
       const rows = table.querySelectorAll("tr");
       for (const row of rows) {
         const cells = row.querySelectorAll("td");
@@ -247,7 +281,8 @@ function extractProfileData() {
   }
 
   // Try to find company name from heading
-  const companyName = getText("h1") || getText(".company-name") || getText(".ragione-sociale") || document.title.split(" - ")[0] || "";
+  const companyName =
+    getText("h1") || getText(".company-name") || getText(".ragione-sociale") || document.title.split(" - ")[0] || "";
 
   const result = {
     company_name: companyName,
@@ -298,17 +333,24 @@ function discoverFormFields() {
         id: el.id || "",
         placeholder: el.placeholder || "",
         className: el.className || "",
-        parentId: el.parentElement ? (el.parentElement.id || "") : "",
+        parentId: el.parentElement ? el.parentElement.id || "" : "",
       };
       fields.allInputs.push(info);
 
       // Categorize
       const ctx = (info.name + " " + info.id + " " + info.placeholder + " " + info.parentId).toLowerCase();
       if (ctx.indexOf("ateco") >= 0) fields.ateco.push(info);
-      if (ctx.indexOf("region") >= 0 || ctx.indexOf("provincia") >= 0 || ctx.indexOf("comune") >= 0 || ctx.indexOf("geograf") >= 0) fields.geography.push(info);
+      if (
+        ctx.indexOf("region") >= 0 ||
+        ctx.indexOf("provincia") >= 0 ||
+        ctx.indexOf("comune") >= 0 ||
+        ctx.indexOf("geograf") >= 0
+      )
+        fields.geography.push(info);
       if (ctx.indexOf("fatturato") >= 0 || ctx.indexOf("ricav") >= 0) fields.fatturato.push(info);
       if (ctx.indexOf("dipendent") >= 0 || ctx.indexOf("addetti") >= 0) fields.dipendenti.push(info);
-      if (ctx.indexOf("contatt") >= 0 || ctx.indexOf("telefon") >= 0 || ctx.indexOf("email") >= 0) fields.contatti.push(info);
+      if (ctx.indexOf("contatt") >= 0 || ctx.indexOf("telefon") >= 0 || ctx.indexOf("email") >= 0)
+        fields.contatti.push(info);
     }
 
     // Also detect modal IDs
@@ -375,9 +417,17 @@ function fillAndSubmitSearchForm(params) {
       if (!value || !container) return;
       if (typeof container === "string") container = document.querySelector(container);
       if (!container) return;
-      const inputs = container.querySelectorAll("input[type='text'], input[type='number'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
+      const inputs = container.querySelectorAll(
+        "input[type='text'], input[type='number'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])",
+      );
       for (let i = 0; i < inputs.length; i++) {
-        let ctx = ((inputs[i].name || "") + " " + (inputs[i].id || "") + " " + (inputs[i].placeholder || "")).toLowerCase();
+        let ctx = (
+          (inputs[i].name || "") +
+          " " +
+          (inputs[i].id || "") +
+          " " +
+          (inputs[i].placeholder || "")
+        ).toLowerCase();
         const parent = inputs[i].closest(".form-group, .input-group, label, .row");
         if (parent) ctx += " " + (parent.textContent || "").toLowerCase();
         if (ctx.indexOf(labelMatch) >= 0) {
@@ -398,7 +448,9 @@ function fillAndSubmitSearchForm(params) {
       for (let am = 0; am < atecoModalIds.length; am++) {
         const atecoModal = document.querySelector(atecoModalIds[am]);
         if (atecoModal) {
-          const atecoInput = atecoModal.querySelector("input[type='text'], input[type='search'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])");
+          const atecoInput = atecoModal.querySelector(
+            "input[type='text'], input[type='search'], input:not([type='checkbox']):not([type='radio']):not([type='hidden'])",
+          );
           if (atecoInput && codes.length > 0) setInput(atecoInput, codes[0]);
           setCheckboxes(atecoModal, codes);
           atecoSet = true;
@@ -461,7 +513,10 @@ function fillAndSubmitSearchForm(params) {
     }
 
     // ── 5. CONTATTI ──
-    if (params.filters && (params.filters.has_phone_and_email || params.filters.has_phone || params.filters.has_email)) {
+    if (
+      params.filters &&
+      (params.filters.has_phone_and_email || params.filters.has_phone || params.filters.has_email)
+    ) {
       const contModalIds = ["#MODALcontatti", "#modalContatti", "#modal-contatti"];
       for (let cm2 = 0; cm2 < contModalIds.length; cm2++) {
         const contModal = document.querySelector(contModalIds[cm2]);
@@ -520,7 +575,7 @@ function extractSearchResults() {
 
     // Try specific DataTable selectors first
     targetTable = document.querySelector("#DataTables_Table_0, .dataTable, table.display, table.table-striped");
-    
+
     if (!targetTable) {
       // Fallback: find table with company links
       const tables = document.querySelectorAll("table");
@@ -571,7 +626,15 @@ function extractSearchResults() {
           const provMatch = cellText.match(/\(([A-Z]{2})\)/);
           if (provMatch && !province) province = provMatch[1];
           // City: short text that's not a number and not the company name
-          if (!city && cellText.length > 1 && cellText.length < 50 && !/^\d+$/.test(cellText) && cellText !== name && !/\d{11}/.test(cellText) && !/^[A-Z]{2}$/.test(cellText)) {
+          if (
+            !city &&
+            cellText.length > 1 &&
+            cellText.length < 50 &&
+            !/^\d+$/.test(cellText) &&
+            cellText !== name &&
+            !/\d{11}/.test(cellText) &&
+            !/^[A-Z]{2}$/.test(cellText)
+          ) {
             city = cellText;
           }
           // ATECO code pattern: XX.XX.XX
@@ -590,7 +653,9 @@ function extractSearchResults() {
     if (infoEl) {
       totalText = infoEl.textContent.trim();
       // Try to parse number like "1.234 risultati" or "Showing 1 to 25 of 1,234"
-      const numMatch = totalText.match(/(?:di|of|totale|trovate?|risultati?:?)\s*([\d.,]+)/i) || totalText.match(/([\d.,]+)\s*(?:risultati|aziende|record)/i);
+      const numMatch =
+        totalText.match(/(?:di|of|totale|trovate?|risultati?:?)\s*([\d.,]+)/i) ||
+        totalText.match(/([\d.,]+)\s*(?:risultati|aziende|record)/i);
       if (numMatch) {
         totalCount = parseInt(numMatch[1].replace(/[.,]/g, ""), 10) || 0;
       }
@@ -598,14 +663,22 @@ function extractSearchResults() {
 
     // Detect pagination
     let hasNextPage = false;
-    const nextBtn = document.querySelector(".paginate_button.next:not(.disabled), a.next:not(.disabled), a[rel='next'], .page-item.next:not(.disabled) a");
+    const nextBtn = document.querySelector(
+      ".paginate_button.next:not(.disabled), a.next:not(.disabled), a[rel='next'], .page-item.next:not(.disabled) a",
+    );
     if (nextBtn && !nextBtn.classList.contains("disabled")) hasNextPage = true;
 
     // Also detect CTA gate (paywall modal) as sign of no session
     const ctaGate = document.querySelector("#modalCTAGate, .cta-gate, .paywall-modal");
-    const ctaVisible = ctaGate && (ctaGate.style.display !== "none" && ctaGate.classList.contains("show"));
+    const ctaVisible = ctaGate && ctaGate.style.display !== "none" && ctaGate.classList.contains("show");
 
-    return { results: results, hasNextPage: hasNextPage, totalText: totalText, totalCount: totalCount, ctaGateDetected: !!ctaVisible };
+    return {
+      results: results,
+      hasNextPage: hasNextPage,
+      totalText: totalText,
+      totalCount: totalCount,
+      ctaGateDetected: !!ctaVisible,
+    };
   } catch (e) {
     return { results: [], hasNextPage: false, totalText: "", totalCount: 0, error: e.message };
   }
@@ -653,17 +726,17 @@ async function scrapeCompanyProfile(url) {
 // ── Helper: detect session-expired URLs ──
 function isSessionExpiredUrl(url) {
   if (!url) return false;
-  return (
-    url.includes("errore_404") ||
-    url.includes("p=login")
-  );
+  return url.includes("errore_404") || url.includes("p=login");
 }
 
 // ── Helper: open a tab, wait for load, and check session; auto-login + retry once ──
 async function openTabWithSessionCheck(url) {
   let tab = await chrome.tabs.create({ url: url, active: false });
-  await new Promise(function(resolve) {
-    const timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 20000);
+  await new Promise(function (resolve) {
+    const timeout = setTimeout(function () {
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }, 20000);
     function listener(tabId, info) {
       if (tabId === tab.id && info.status === "complete") {
         chrome.tabs.onUpdated.removeListener(listener);
@@ -684,16 +757,23 @@ async function openTabWithSessionCheck(url) {
       return { tab: null, error: "session_expired", loginError: loginResult.error };
     }
     // Wait for login to complete (tab opens, fills form, submits)
-    await new Promise(function(r) { setTimeout(r, 12000); });
+    await new Promise(function (r) {
+      setTimeout(r, 12000);
+    });
     // Sync cookies after login
     await syncRACookies();
-    await new Promise(function(r) { setTimeout(r, 2000); });
+    await new Promise(function (r) {
+      setTimeout(r, 2000);
+    });
 
     // Retry opening the target page
     addLog("🔄 Riprovo dopo auto-login...");
     tab = await chrome.tabs.create({ url: url, active: false });
-    await new Promise(function(resolve) {
-      const timeout = setTimeout(function() { chrome.tabs.onUpdated.removeListener(listener2); resolve(); }, 20000);
+    await new Promise(function (resolve) {
+      const timeout = setTimeout(function () {
+        chrome.tabs.onUpdated.removeListener(listener2);
+        resolve();
+      }, 20000);
       function listener2(tabId, info) {
         if (tabId === tab.id && info.status === "complete") {
           chrome.tabs.onUpdated.removeListener(listener2);
@@ -707,7 +787,11 @@ async function openTabWithSessionCheck(url) {
     tabInfo = await chrome.tabs.get(tab.id);
     if (isSessionExpiredUrl(tabInfo.url)) {
       await chrome.tabs.remove(tab.id);
-      return { tab: null, error: "session_expired", reason: "Auto-login fallito. Effettua il login manualmente su ReportAziende." };
+      return {
+        tab: null,
+        error: "session_expired",
+        reason: "Auto-login fallito. Effettua il login manualmente su ReportAziende.",
+      };
     }
   }
 
@@ -720,7 +804,10 @@ async function runDiscoverFields() {
     const result = await openTabWithSessionCheck("https://www.reportaziende.it/search.php?tab=2");
     if (result.error) return { success: false, error: result.error, reason: result.reason };
     const tab = result.tab;
-    const [scriptResult] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: discoverFormFields });
+    const [scriptResult] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: discoverFormFields,
+    });
     await chrome.tabs.remove(tab.id);
     return { success: true, fields: scriptResult ? scriptResult.result : null };
   } catch (err) {
@@ -748,13 +835,14 @@ async function scrapeSearchResults(params) {
 
     const fillData = fillResult && fillResult.result;
     if (fillData && !fillData.submitted) {
-      await chrome.tabs.remove(tab.id); tab = null;
+      await chrome.tabs.remove(tab.id);
+      tab = null;
       return { success: false, error: "Form non compilato: " + (fillData.error || "sconosciuto"), results: [] };
     }
 
     // Wait for results page to load after form submission
-    await new Promise(function(resolve) {
-      const timeout = setTimeout(function() {
+    await new Promise(function (resolve) {
+      const timeout = setTimeout(function () {
         chrome.tabs.onUpdated.removeListener(listener);
         resolve();
       }, 25000);
@@ -771,7 +859,8 @@ async function scrapeSearchResults(params) {
     // Check for login redirect after form submit
     const tabInfo = await chrome.tabs.get(tab.id);
     if (isSessionExpiredUrl(tabInfo.url)) {
-      await chrome.tabs.remove(tab.id); tab = null;
+      await chrome.tabs.remove(tab.id);
+      tab = null;
       return { success: false, error: "session_expired", results: [] };
     }
 
@@ -781,7 +870,8 @@ async function scrapeSearchResults(params) {
       func: extractSearchResults,
     });
 
-    await chrome.tabs.remove(tab.id); tab = null;
+    await chrome.tabs.remove(tab.id);
+    tab = null;
 
     if (result && result.result) {
       // Check if CTA gate was detected (paywall = not properly logged in)
@@ -792,7 +882,10 @@ async function scrapeSearchResults(params) {
     }
     return { success: false, error: "Nessun risultato estratto", results: [] };
   } catch (err) {
-    if (tab) try { await chrome.tabs.remove(tab.id); } catch(e) {}
+    if (tab)
+      try {
+        await chrome.tabs.remove(tab.id);
+      } catch (e) {}
     return { success: false, error: err.message, results: [] };
   }
 }
@@ -800,7 +893,8 @@ async function scrapeSearchResults(params) {
 // Search Only: get list without scraping profiles
 async function runSearchOnly(params) {
   if (scrapingState.active) return { success: false, error: "Scraping già in corso" };
-  resetState(); scrapingState.active = true;
+  resetState();
+  scrapingState.active = true;
   addLog("Avvio ricerca lista aziende...");
   const delay = (params.delaySeconds || 20) * 1000;
   const atecoCodes = params.atecoCodes || (params.atecoCode ? [params.atecoCode] : []);
@@ -816,15 +910,45 @@ async function runSearchOnly(params) {
       for (let ri = 0; ri < regList.length; ri++) {
         for (let pi = 0; pi < provList.length; pi++) {
           if (scrapingState.stopped) break;
-          let page = 1, hasMore = true;
+          let page = 1,
+            hasMore = true;
           while (hasMore && !scrapingState.stopped) {
             addLog("Ricerca: ATECO=" + ateco + (regList[ri] ? " Reg=" + regList[ri] : "") + " pag." + page);
-            const sr = await scrapeSearchResults({ atecoCode: ateco, region: regList[ri] || undefined, province: provList[pi] || undefined, filters: params.filters, page: page });
-            if (!sr.success) { if (sr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); scrapingState.active = false; return { success: false, error: "session_expired", results: allResults, log: scrapingState.log.slice(-50) }; } addLog("Errore: " + sr.error); break; }
-            if (sr.results && sr.results.length > 0) { allResults = allResults.concat(sr.results); addLog("Trovate " + sr.results.length + " (tot: " + allResults.length + ")"); }
-            hasMore = sr.hasNextPage && sr.results && sr.results.length > 0; page++;
-            if (hasMore) await new Promise(function(r) { setTimeout(r, delay); });
-            if (allResults.length >= 2000) { addLog("Limite 2000 raggiunto."); hasMore = false; }
+            const sr = await scrapeSearchResults({
+              atecoCode: ateco,
+              region: regList[ri] || undefined,
+              province: provList[pi] || undefined,
+              filters: params.filters,
+              page: page,
+            });
+            if (!sr.success) {
+              if (sr.error === "session_expired") {
+                addLog("⚠️ Sessione scaduta!");
+                scrapingState.active = false;
+                return {
+                  success: false,
+                  error: "session_expired",
+                  results: allResults,
+                  log: scrapingState.log.slice(-50),
+                };
+              }
+              addLog("Errore: " + sr.error);
+              break;
+            }
+            if (sr.results && sr.results.length > 0) {
+              allResults = allResults.concat(sr.results);
+              addLog("Trovate " + sr.results.length + " (tot: " + allResults.length + ")");
+            }
+            hasMore = sr.hasNextPage && sr.results && sr.results.length > 0;
+            page++;
+            if (hasMore)
+              await new Promise(function (r) {
+                setTimeout(r, delay);
+              });
+            if (allResults.length >= 2000) {
+              addLog("Limite 2000 raggiunto.");
+              hasMore = false;
+            }
           }
         }
       }
@@ -832,7 +956,11 @@ async function runSearchOnly(params) {
     addLog("Ricerca completata: " + allResults.length + " aziende trovate.");
     scrapingState.active = false;
     return { success: true, results: allResults, total: allResults.length, log: scrapingState.log.slice(-50) };
-  } catch (err) { addLog("Errore: " + err.message); scrapingState.active = false; return { success: false, error: err.message, results: [], log: scrapingState.log.slice(-50) }; }
+  } catch (err) {
+    addLog("Errore: " + err.message);
+    scrapingState.active = false;
+    return { success: false, error: err.message, results: [], log: scrapingState.log.slice(-50) };
+  }
 }
 
 // Scrape Selected: scrape only specific URLs chosen by user
@@ -840,25 +968,65 @@ async function runScrapeSelected(params) {
   if (scrapingState.active) return { success: false, error: "Scraping già in corso" };
   const items = params.items || [];
   if (items.length === 0) return { success: false, error: "Nessun elemento" };
-  resetState(); scrapingState.active = true; scrapingState.total = items.length;
+  resetState();
+  scrapingState.active = true;
+  scrapingState.total = items.length;
   addLog("Scraping " + items.length + " profili selezionati");
-  let delay = (params.delaySeconds || 20) * 1000, batchSize = params.batchSize || 5, batch = [], LONG_PAUSE_EVERY = 10, LONG_PAUSE_MS = 45000;
+  let delay = (params.delaySeconds || 20) * 1000,
+    batchSize = params.batchSize || 5,
+    batch = [],
+    LONG_PAUSE_EVERY = 10,
+    LONG_PAUSE_MS = 45000;
   try {
     for (let i = 0; i < items.length; i++) {
-      if (scrapingState.stopped) { addLog("Interrotto."); break; }
-      scrapingState.currentCompany = items[i].name; scrapingState.processed = i + 1;
-      addLog("Scraping " + (i+1) + "/" + items.length + ": " + items[i].name);
+      if (scrapingState.stopped) {
+        addLog("Interrotto.");
+        break;
+      }
+      scrapingState.currentCompany = items[i].name;
+      scrapingState.processed = i + 1;
+      addLog("Scraping " + (i + 1) + "/" + items.length + ": " + items[i].name);
       const pr = await scrapeCompanyProfile(items[i].url);
-      if (pr.success && pr.data) { batch.push(pr.data); addLog("✅ " + items[i].name); }
-      else { scrapingState.errors++; if (pr.error === "session_expired") { addLog("⚠️ Sessione scaduta!"); if (batch.length > 0) await saveBatch(batch); scrapingState.active = false; return { success: false, error: "session_expired", saved: scrapingState.saved }; } addLog("❌ " + items[i].name); }
-      if (batch.length >= batchSize) { await saveBatch(batch); batch = []; }
-      if (i < items.length - 1 && !scrapingState.stopped) { const jit = delay * (0.8 + Math.random() * 0.8); if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) { addLog("⏸️ Pausa lunga (" + (LONG_PAUSE_MS/1000) + "s) dopo " + (i+1) + " profili..."); await new Promise(function(r) { setTimeout(r, LONG_PAUSE_MS); }); } else { await new Promise(function(r) { setTimeout(r, jit); }); } }
+      if (pr.success && pr.data) {
+        batch.push(pr.data);
+        addLog("✅ " + items[i].name);
+      } else {
+        scrapingState.errors++;
+        if (pr.error === "session_expired") {
+          addLog("⚠️ Sessione scaduta!");
+          if (batch.length > 0) await saveBatch(batch);
+          scrapingState.active = false;
+          return { success: false, error: "session_expired", saved: scrapingState.saved };
+        }
+        addLog("❌ " + items[i].name);
+      }
+      if (batch.length >= batchSize) {
+        await saveBatch(batch);
+        batch = [];
+      }
+      if (i < items.length - 1 && !scrapingState.stopped) {
+        const jit = delay * (0.8 + Math.random() * 0.8);
+        if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) {
+          addLog("⏸️ Pausa lunga (" + LONG_PAUSE_MS / 1000 + "s) dopo " + (i + 1) + " profili...");
+          await new Promise(function (r) {
+            setTimeout(r, LONG_PAUSE_MS);
+          });
+        } else {
+          await new Promise(function (r) {
+            setTimeout(r, jit);
+          });
+        }
+      }
     }
     if (batch.length > 0) await saveBatch(batch);
     addLog("Completato. Salvati: " + scrapingState.saved + ", Errori: " + scrapingState.errors);
     scrapingState.active = false;
     return { success: true, total: scrapingState.total, saved: scrapingState.saved, errors: scrapingState.errors };
-  } catch (err) { addLog("Errore: " + err.message); scrapingState.active = false; return { success: false, error: err.message }; }
+  } catch (err) {
+    addLog("Errore: " + err.message);
+    scrapingState.active = false;
+    return { success: false, error: err.message };
+  }
 }
 
 // Batch scrape: search + profile extraction
@@ -964,7 +1132,7 @@ async function runBatchScrape(params) {
       // Delay between requests with long pause every N profiles
       if (i < allResults.length - 1 && !scrapingState.stopped) {
         if (LONG_PAUSE_EVERY > 0 && (i + 1) % LONG_PAUSE_EVERY === 0) {
-          addLog("⏸️ Pausa lunga (" + (LONG_PAUSE_MS/1000) + "s) dopo " + (i+1) + " profili...");
+          addLog("⏸️ Pausa lunga (" + LONG_PAUSE_MS / 1000 + "s) dopo " + (i + 1) + " profili...");
           await new Promise((r) => setTimeout(r, LONG_PAUSE_MS));
         } else {
           const jitter = delay * (0.8 + Math.random() * 0.8);
@@ -1000,8 +1168,8 @@ async function saveBatch(prospects) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ prospects }),
     });

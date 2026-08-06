@@ -20,11 +20,26 @@ function buildBuilder(table: string, rows: Row[], error: { message: string } | n
   const call: Call = { table };
   calls.push(call);
   const b: Record<string, unknown> = {};
-  b.select = (cols: string) => { call.select = cols; return b; };
-  b.order = (col: string, opts: { ascending: boolean }) => { call.order = { column: col, ascending: opts.ascending }; return b; };
-  b.eq = (col: string, val: unknown) => { call.eq = { column: col, value: val }; return b; };
-  b.or = (expr: string) => { call.or = expr; return b; };
-  b.limit = (n: number) => { call.limit = n; return b; };
+  b.select = (cols: string) => {
+    call.select = cols;
+    return b;
+  };
+  b.order = (col: string, opts: { ascending: boolean }) => {
+    call.order = { column: col, ascending: opts.ascending };
+    return b;
+  };
+  b.eq = (col: string, val: unknown) => {
+    call.eq = { column: col, value: val };
+    return b;
+  };
+  b.or = (expr: string) => {
+    call.or = expr;
+    return b;
+  };
+  b.limit = (n: number) => {
+    call.limit = n;
+    return b;
+  };
   b.then = (resolve: (v: unknown) => unknown) => resolve({ data: error ? null : rows, error });
   return b;
 }
@@ -42,7 +57,10 @@ import { fetchSenderConversation } from "../channel-messages";
 
 describe("fetchSenderConversation (B4.4 — SSOT unica, fallback interno)", () => {
   beforeEach(() => {
-    viewRows = []; viewError = null; legacyRows = []; legacyError = null;
+    viewRows = [];
+    viewError = null;
+    legacyRows = [];
+    legacyError = null;
     calls = [];
   });
 
@@ -55,11 +73,19 @@ describe("fetchSenderConversation (B4.4 — SSOT unica, fallback interno)", () =
   });
 
   it("view OK: legge dalla view, NON chiama legacy, filtri/ordine/limit/alias/or corretti", async () => {
-    viewRows = [{
-      id: "m1", subject: "s", email_date: "2026-07-20", direction: "inbound",
-      channel: "email", from_address: "a@b.com", to_address: "me@x.com",
-      body_text: "b", body_html: "<p>b</p>",
-    }];
+    viewRows = [
+      {
+        id: "m1",
+        subject: "s",
+        email_date: "2026-07-20",
+        direction: "inbound",
+        channel: "email",
+        from_address: "a@b.com",
+        to_address: "me@x.com",
+        body_text: "b",
+        body_html: "<p>b</p>",
+      },
+    ];
     const r = await fetchSenderConversation("a@b.com", 20);
     expect(r._tag).toBe("Ok");
     if (r._tag === "Ok") {
@@ -79,11 +105,19 @@ describe("fetchSenderConversation (B4.4 — SSOT unica, fallback interno)", () =
 
   it("view Err → fallback trasparente su channel_messages (stessi filtri/ordine/limit)", async () => {
     viewError = { message: "boom" };
-    legacyRows = [{
-      id: "l1", subject: null, email_date: null, direction: "outbound",
-      channel: "email", from_address: "a@b.com", to_address: null,
-      body_text: null, body_html: null,
-    }];
+    legacyRows = [
+      {
+        id: "l1",
+        subject: null,
+        email_date: null,
+        direction: "outbound",
+        channel: "email",
+        from_address: "a@b.com",
+        to_address: null,
+        body_text: null,
+        body_html: null,
+      },
+    ];
     const r = await fetchSenderConversation("a@b.com");
     expect(r._tag).toBe("Ok");
     if (r._tag === "Ok") expect(r.value).toHaveLength(1);

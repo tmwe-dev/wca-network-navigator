@@ -10,9 +10,7 @@ interface ActivityRow {
   [key: string]: unknown;
 }
 
-async function resolvePartnerId(
-  args: Record<string, unknown>
-): Promise<{ id: string; name: string } | null> {
+async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
   if (args.partner_id) {
     const { data } = await supabase
       .from("partners")
@@ -33,14 +31,10 @@ async function resolvePartnerId(
   return null;
 }
 
-export async function handleListActivities(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleListActivities(args: Record<string, unknown>): Promise<unknown> {
   let query = supabase
     .from("activities")
-    .select(
-      "id, title, activity_type, status, priority, due_date, partner_id, source_meta, created_at"
-    )
+    .select("id, title, activity_type, status, priority, due_date, partner_id, source_meta, created_at")
     .order("due_date", { ascending: true, nullsFirst: false })
     .limit(Number(args.limit) || 30);
   if (args.status) query = query.eq("status", args.status);
@@ -56,10 +50,7 @@ export async function handleListActivities(
   };
 }
 
-export async function handleCreateActivity(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleCreateActivity(args: Record<string, unknown>, userId: string): Promise<unknown> {
   let partnerId = args.partner_id as string | null;
   let companyName = (args.company_name as string) || "";
   if (!partnerId && companyName) {
@@ -93,9 +84,7 @@ export async function handleCreateActivity(
   };
 }
 
-export async function handleUpdateActivity(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleUpdateActivity(args: Record<string, unknown>): Promise<unknown> {
   const updates: Record<string, unknown> = {};
   if (args.status) {
     updates.status = args.status;
@@ -103,10 +92,7 @@ export async function handleUpdateActivity(
   }
   if (args.priority) updates.priority = args.priority;
   if (args.due_date) updates.due_date = args.due_date;
-  const { error } = await supabase
-    .from("activities")
-    .update(updates)
-    .eq("id", args.activity_id);
+  const { error } = await supabase.from("activities").update(updates).eq("id", args.activity_id);
   if (error) return { error: error.message };
   return { success: true, message: "Attività aggiornata." };
 }

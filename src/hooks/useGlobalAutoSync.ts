@@ -43,17 +43,16 @@ export function useGlobalAutoSync() {
 
   // Load work hours once from DB
   useEffect(() => {
-    findAgentWorkHoursSettings()
-      .then((data) => {
-        if (!data) return;
-        for (const row of data) {
-          if (row.key === "agent_work_start_hour") workHoursRef.current.start = parseInt(row.value || "6", 10);
-          if (row.key === "agent_work_end_hour") workHoursRef.current.end = parseInt(row.value || "24", 10);
-        }
-        const isNight = isNightTimeCET(workHoursRef.current.start, workHoursRef.current.end);
-        setNightPause(isNight);
-        setResumeMinutes(minutesUntilResumeCET(workHoursRef.current.start));
-      });
+    findAgentWorkHoursSettings().then((data) => {
+      if (!data) return;
+      for (const row of data) {
+        if (row.key === "agent_work_start_hour") workHoursRef.current.start = parseInt(row.value || "6", 10);
+        if (row.key === "agent_work_end_hour") workHoursRef.current.end = parseInt(row.value || "24", 10);
+      }
+      const isNight = isNightTimeCET(workHoursRef.current.start, workHoursRef.current.end);
+      setNightPause(isNight);
+      setResumeMinutes(minutesUntilResumeCET(workHoursRef.current.start));
+    });
   }, []);
 
   // Check night status every minute
@@ -64,13 +63,15 @@ export function useGlobalAutoSync() {
       setResumeMinutes(minutesUntilResumeCET(workHoursRef.current.start));
       if (!isNight) setManualOverride(false);
     }, 60_000);
-    return () => { if (nightCheckRef.current) clearInterval(nightCheckRef.current); };
+    return () => {
+      if (nightCheckRef.current) clearInterval(nightCheckRef.current);
+    };
   }, []);
 
   const effectivePause = nightPause && !manualOverride;
 
   const toggleNightPause = useCallback(() => {
-    setManualOverride(prev => !prev);
+    setManualOverride((prev) => !prev);
   }, []);
 
   // Email auto-sync (still managed automatically)

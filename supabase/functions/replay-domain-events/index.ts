@@ -28,14 +28,9 @@ import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { eventBus } from "../_shared/domainEvents.ts";
 import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
-import type {
-  WCADomainEvent,
-} from "../_shared/domainEvents.ts";
+import type { WCADomainEvent } from "../_shared/domainEvents.ts";
 
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 // ═══════════════════════════════════════════════════════════
 //  TYPES
@@ -130,17 +125,14 @@ async function replayDomainEvents(): Promise<ReplayResult> {
           error: errorMsg,
         });
 
-        console.error(
-          `[replay-domain-events] ✗ Failed to process event ${row.event_id}: ${errorMsg}`,
-        );
+        console.error(`[replay-domain-events] ✗ Failed to process event ${row.event_id}: ${errorMsg}`);
 
         // Do NOT mark as processed — let it retry on next run
         // Optionally log to error tracking
       }
     }
 
-    result.summary =
-      `Processed: ${result.processed}, Failed: ${result.failed}, Skipped: ${result.skipped}`;
+    result.summary = `Processed: ${result.processed}, Failed: ${result.failed}, Skipped: ${result.skipped}`;
     console.log(`[replay-domain-events] Summary: ${result.summary}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -258,10 +250,10 @@ async function dispatchEvent(
 serve(async (req: Request) => {
   // Only accept POST requests (CRON uses POST)
   if (req.method !== "POST" && req.method !== "GET") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // Auth: cron secret OR admin JWT
@@ -272,30 +264,25 @@ serve(async (req: Request) => {
   if (!cronAuthorized) {
     const auth = await requireAuth(req, { "Content-Type": "application/json" });
     if (isAuthError(auth)) return auth;
-    const adminCheck = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
+    const adminCheck = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
     const { data: isAdmin } = await adminCheck.rpc("has_role", {
       _user_id: auth.userId,
       _role: "admin",
     });
     if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: "FORBIDDEN", message: "Admin role or cron secret required" }),
-        { status: 403, headers: { "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "FORBIDDEN", message: "Admin role or cron secret required" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   }
 
   const result = await replayDomainEvents();
 
-  return new Response(
-    JSON.stringify(result, null, 2),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    },
-  );
+  return new Response(JSON.stringify(result, null, 2), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 });

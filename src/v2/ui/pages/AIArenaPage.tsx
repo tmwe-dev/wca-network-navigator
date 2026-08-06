@@ -12,10 +12,14 @@ export function AIArenaPage(): React.ReactElement {
   if (!s.sessionStarted) {
     return (
       <ArenaPreSession
-        focus={s.focus} setFocus={s.setFocus}
-        channel={s.channel} setChannel={s.setChannel}
-        sendLanguage={s.sendLanguage} setSendLanguage={s.setSendLanguage}
-        batchSize={s.batchSize} setBatchSize={s.setBatchSize}
+        focus={s.focus}
+        setFocus={s.setFocus}
+        channel={s.channel}
+        setChannel={s.setChannel}
+        sendLanguage={s.sendLanguage}
+        setSendLanguage={s.setSendLanguage}
+        batchSize={s.batchSize}
+        setBatchSize={s.setBatchSize}
         onStart={s.startSession}
       />
     );
@@ -23,20 +27,32 @@ export function AIArenaPage(): React.ReactElement {
 
   return (
     <ArenaActiveSession
-      minutes={s.minutes} seconds={s.seconds}
-      proposed={s.proposed} confirmed={s.confirmed} skipped={s.skipped}
-      focus={s.focus} setFocus={s.setFocus}
-      batchSize={s.batchSize} setBatchSize={s.setBatchSize}
+      minutes={s.minutes}
+      seconds={s.seconds}
+      proposed={s.proposed}
+      confirmed={s.confirmed}
+      skipped={s.skipped}
+      focus={s.focus}
+      setFocus={s.setFocus}
+      batchSize={s.batchSize}
+      setBatchSize={s.setBatchSize}
       channel={s.channel}
-      current={s.current} loadingSuggestions={s.loadingSuggestions}
-      animState={s.animState} effectTrigger={s.effectTrigger}
+      current={s.current}
+      loadingSuggestions={s.loadingSuggestions}
+      animState={s.animState}
+      effectTrigger={s.effectTrigger}
       editing={s.editing}
-      editSubject={s.editSubject} setEditSubject={s.setEditSubject}
-      editBody={s.editBody} setEditBody={s.setEditBody}
-      handleConfirm={s.handleConfirm} handleSkip={s.handleSkip}
-      handleBlacklist={s.handleBlacklist} handleEdit={s.handleEdit}
+      editSubject={s.editSubject}
+      setEditSubject={s.setEditSubject}
+      editBody={s.editBody}
+      setEditBody={s.setEditBody}
+      handleConfirm={s.handleConfirm}
+      handleSkip={s.handleSkip}
+      handleBlacklist={s.handleBlacklist}
+      handleEdit={s.handleEdit}
       endSession={s.endSession}
-      sessionEnded={s.sessionEnded} sessionStats={s.sessionStats}
+      sessionEnded={s.sessionEnded}
+      sessionStats={s.sessionStats}
     />
   );
 }

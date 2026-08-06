@@ -19,21 +19,16 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
  * const onSave = useStableCallback((id: string) => save(id, formData));
  * ```
  */
- 
-export function useStableCallback<T extends (...args: never[]) => unknown>(
-  callback: T
-): T {
+
+export function useStableCallback<T extends (...args: never[]) => unknown>(callback: T): T {
   const ref = useRef<T>(callback);
 
   // Keep the ref up-to-date on every render (synchronous, no effect delay).
   ref.current = callback;
 
   // The stable wrapper is created once and never changes identity.
-   
-  const stable = useCallback(
-    ((...args: Parameters<T>) => ref.current(...args)) as T,
-    []
-  );
+
+  const stable = useCallback(((...args: Parameters<T>) => ref.current(...args)) as T, []);
 
   return stable;
 }
@@ -83,7 +78,7 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
  */
 export function createMemoSelector<TInput, TExtracted, TResult>(
   extractor: (input: TInput) => TExtracted,
-  transform: (extracted: TExtracted) => TResult
+  transform: (extracted: TExtracted) => TResult,
 ): (input: TInput) => TResult {
   let lastExtracted: TExtracted | undefined;
   let lastResult: TResult | undefined;
@@ -112,8 +107,7 @@ export function createMemoSelector<TInput, TExtracted, TResult>(
  */
 export function useMemoSelector<TInput, TExtracted, TResult>(
   extractor: (input: TInput) => TExtracted,
-  transform: (extracted: TExtracted) => TResult
+  transform: (extracted: TExtracted) => TResult,
 ): (input: TInput) => TResult {
-   
   return useMemo(() => createMemoSelector(extractor, transform), []);
 }

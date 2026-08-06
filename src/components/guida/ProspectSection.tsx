@@ -8,8 +8,8 @@ const ProspectSection = () => (
         <span className="text-primary text-sm font-bold tracking-widest uppercase">Prospect Center</span>
         <h2 className="text-4xl font-bold text-white">Discovery autonomo</h2>
         <p className="text-lg text-white/50 leading-relaxed">
-          Importazione automatica di prospect italiani da Report Aziende.
-          L'agente naviga il portale, estrae dati finanziari completi e li inserisce nel sistema.
+          Importazione automatica di prospect italiani da Report Aziende. L'agente naviga il portale, estrae dati
+          finanziari completi e li inserisce nel sistema.
         </p>
         <div className="space-y-3">
           {[

@@ -45,7 +45,11 @@ function defaultState(): PersistedState {
   };
 }
 function saveState(s: PersistedState) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* noop */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  } catch {
+    /* noop */
+  }
 }
 
 function fmtTime(ts: number) {
@@ -64,11 +68,16 @@ function statusColor(status?: string): string {
 
 function typeBadge(t: TraceEventType): string {
   switch (t) {
-    case "ai.invoke": return "bg-violet-500/15 text-violet-600 border-violet-500/30";
-    case "edge.invoke": return "bg-blue-500/15 text-blue-600 border-blue-500/30";
-    case "db.query": return "bg-emerald-500/15 text-emerald-600 border-emerald-500/30";
-    case "flow.step": return "bg-amber-500/15 text-amber-600 border-amber-500/30";
-    default: return "bg-muted text-muted-foreground border-border";
+    case "ai.invoke":
+      return "bg-violet-500/15 text-violet-600 border-violet-500/30";
+    case "edge.invoke":
+      return "bg-blue-500/15 text-blue-600 border-blue-500/30";
+    case "db.query":
+      return "bg-emerald-500/15 text-emerald-600 border-emerald-500/30";
+    case "flow.step":
+      return "bg-amber-500/15 text-amber-600 border-amber-500/30";
+    default:
+      return "bg-muted text-muted-foreground border-border";
   }
 }
 
@@ -78,7 +87,9 @@ export function TraceConsole() {
   const [paused, setPaused] = useState<boolean>(false);
   const events = useTraceBuffer();
 
-  useEffect(() => { saveState(state); }, [state]);
+  useEffect(() => {
+    saveState(state);
+  }, [state]);
 
   // Hotkey Ctrl+Shift+T
   useEffect(() => {
@@ -107,7 +118,8 @@ export function TraceConsole() {
       .filter((e) => state.filters.type === "all" || e.type === state.filters.type)
       .filter((e) => {
         if (!q) return true;
-        const blob = `${e.scope ?? ""} ${e.source ?? ""} ${e.route ?? ""} ${JSON.stringify(e.payload_summary ?? {})}`.toLowerCase();
+        const blob =
+          `${e.scope ?? ""} ${e.source ?? ""} ${e.route ?? ""} ${JSON.stringify(e.payload_summary ?? {})}`.toLowerCase();
         return blob.includes(q);
       })
       .slice()
@@ -153,13 +165,25 @@ export function TraceConsole() {
               {paused && <span className="text-amber-500">⏸ paused</span>}
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={togglePause} className="px-2 py-0.5 text-xs rounded border border-border hover:bg-accent" title="Pause/Resume">
+              <button
+                onClick={togglePause}
+                className="px-2 py-0.5 text-xs rounded border border-border hover:bg-accent"
+                title="Pause/Resume"
+              >
                 {paused ? "▶" : "⏸"}
               </button>
-              <button onClick={() => traceCollector.clear()} className="px-2 py-0.5 text-xs rounded border border-border hover:bg-accent" title="Clear buffer">
+              <button
+                onClick={() => traceCollector.clear()}
+                className="px-2 py-0.5 text-xs rounded border border-border hover:bg-accent"
+                title="Clear buffer"
+              >
                 🗑
               </button>
-              <button onClick={() => setState((s) => ({ ...s, open: false }))} className="px-2 py-0.5 text-xs rounded border border-border hover:bg-accent" title="Close">
+              <button
+                onClick={() => setState((s) => ({ ...s, open: false }))}
+                className="px-2 py-0.5 text-xs rounded border border-border hover:bg-accent"
+                title="Close"
+              >
                 ✕
               </button>
             </div>
@@ -187,7 +211,12 @@ export function TraceConsole() {
               <div className="flex gap-1 p-2 border-b border-border text-xs">
                 <select
                   value={state.filters.type}
-                  onChange={(e) => setState((s) => ({ ...s, filters: { ...s.filters, type: e.target.value as TraceEventType | "all" } }))}
+                  onChange={(e) =>
+                    setState((s) => ({
+                      ...s,
+                      filters: { ...s.filters, type: e.target.value as TraceEventType | "all" },
+                    }))
+                  }
                   className="px-1 py-0.5 rounded border border-border bg-background"
                 >
                   <option value="all">all</option>
@@ -206,10 +235,12 @@ export function TraceConsole() {
               {/* List */}
               <div className="flex-1 overflow-auto font-mono text-[11px]">
                 {filtered.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">Nessun evento — esegui un'azione nell'app.</div>
-                ) : filtered.map((e) => (
-                  <TraceRow key={e.id} ev={e} />
-                ))}
+                  <div className="p-4 text-center text-muted-foreground">
+                    Nessun evento — esegui un'azione nell'app.
+                  </div>
+                ) : (
+                  filtered.map((e) => <TraceRow key={e.id} ev={e} />)
+                )}
               </div>
             </>
           )}
@@ -218,26 +249,38 @@ export function TraceConsole() {
             <div className="flex-1 overflow-auto p-2 space-y-2 text-xs">
               {checklists.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">Nessun flusso noto eseguito di recente.</div>
-              ) : checklists.map((c) => (
-                <div key={`${c.correlation_id}-${c.flow.id}`} className="rounded border border-border p-2">
-                  <div className="flex items-center justify-between">
-                    <div className="font-semibold">{c.flow.label}</div>
-                    <div className={`text-[10px] ${c.missing === 0 ? "text-emerald-500" : "text-amber-500"}`}>
-                      {c.passed}/{c.passed + c.missing} step
+              ) : (
+                checklists.map((c) => (
+                  <div key={`${c.correlation_id}-${c.flow.id}`} className="rounded border border-border p-2">
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold">{c.flow.label}</div>
+                      <div className={`text-[10px] ${c.missing === 0 ? "text-emerald-500" : "text-amber-500"}`}>
+                        {c.passed}/{c.passed + c.missing} step
+                      </div>
                     </div>
+                    <div className="text-[10px] text-muted-foreground mb-1">
+                      {fmtTime(c.startedAt)} · corr {c.correlation_id.slice(0, 8)}
+                    </div>
+                    <ul className="space-y-0.5">
+                      {c.steps.map(({ step, matched }) => (
+                        <li key={step.id} className="flex items-center gap-2">
+                          <span>{matched ? "✅" : step.required === false ? "⚪" : "❌"}</span>
+                          <span
+                            className={
+                              matched ? "" : step.required === false ? "text-muted-foreground" : "text-rose-500"
+                            }
+                          >
+                            {step.label}
+                          </span>
+                          {matched?.duration_ms !== undefined && (
+                            <span className="text-muted-foreground">({matched.duration_ms}ms)</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="text-[10px] text-muted-foreground mb-1">{fmtTime(c.startedAt)} · corr {c.correlation_id.slice(0, 8)}</div>
-                  <ul className="space-y-0.5">
-                    {c.steps.map(({ step, matched }) => (
-                      <li key={step.id} className="flex items-center gap-2">
-                        <span>{matched ? "✅" : (step.required === false ? "⚪" : "❌")}</span>
-                        <span className={matched ? "" : (step.required === false ? "text-muted-foreground" : "text-rose-500")}>{step.label}</span>
-                        {matched?.duration_ms !== undefined && <span className="text-muted-foreground">({matched.duration_ms}ms)</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
@@ -259,11 +302,15 @@ function TraceRow({ ev }: { ev: TraceEvent }) {
       </button>
       {open && (
         <pre className="mt-1 ml-4 text-[10px] text-muted-foreground whitespace-pre-wrap break-all">
-{`scope: ${ev.scope ?? "-"}
+          {`scope: ${ev.scope ?? "-"}
 route: ${ev.route ?? "-"}
 corr:  ${ev.correlation_id}
-payload: ${JSON.stringify(ev.payload_summary ?? {}, null, 2)}${ev.error ? `
-error:   ${JSON.stringify(ev.error, null, 2)}` : ""}`}
+payload: ${JSON.stringify(ev.payload_summary ?? {}, null, 2)}${
+            ev.error
+              ? `
+error:   ${JSON.stringify(ev.error, null, 2)}`
+              : ""
+          }`}
         </pre>
       )}
     </div>

@@ -45,12 +45,12 @@ function channelGuidance(channel: string, pageType: string): string[] {
       "GUIDA WHATSAPP SIDEBAR:",
       "Il DOM di WhatsApp Web usa classi CSS offuscate (es. x1n2onr6, _ak72) che cambiano frequentemente. NON usarle come selettori primari.",
       "Selettori STABILI da preferire:",
-      "- container: [role=\"grid\"] (fallback: #pane-side)",
-      "- thread_item: [role=\"row\"] (singola conversazione nella lista)",
-      "- contact_name: span[title] dentro [role=\"gridcell\"][aria-colindex=\"2\"]",
+      '- container: [role="grid"] (fallback: #pane-side)',
+      '- thread_item: [role="row"] (singola conversazione nella lista)',
+      '- contact_name: span[title] dentro [role="gridcell"][aria-colindex="2"]',
       "- last_message: secondo span dentro la riga sotto il nome (preview testo)",
-      "- timestamp: span con testo che matcha HH:MM, \"ieri\", o nome del giorno",
-      "- unread_indicator: span con aria-label che contiene \"non lett\" / \"unread\", o badge numerico",
+      '- timestamp: span con testo che matcha HH:MM, "ieri", o nome del giorno',
+      '- unread_indicator: span con aria-label che contiene "non lett" / "unread", o badge numerico',
       "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: contact_name, last_message, timestamp, unread_indicator.",
     ];
   }
@@ -58,8 +58,8 @@ function channelGuidance(channel: string, pageType: string): string[] {
     return [
       "",
       "GUIDA WHATSAPP THREAD:",
-      "- container: [role=\"application\"] o div[data-tab=\"8\"] (area messaggi)",
-      "- message_bubble: div[role=\"row\"] dentro la chat area",
+      '- container: [role="application"] o div[data-tab="8"] (area messaggi)',
+      '- message_bubble: div[role="row"] dentro la chat area',
       "- message_text: span.selectable-text (innerText del messaggio)",
       "- message_sender: data-pre-plain-text del padre, o span del mittente",
       "- message_time: span con formato HH:MM all'interno del bubble",
@@ -74,7 +74,7 @@ function channelGuidance(channel: string, pageType: string): string[] {
       "- thread_item: li o div che contiene avatar + nome + preview di un thread",
       "- participant_name: testo nel link/heading della riga (nome contatto)",
       "- last_message: preview testo sotto il nome",
-      "- timestamp: testo con formato temporale (es. \"2h\", \"ieri\", \"15 apr\")",
+      '- timestamp: testo con formato temporale (es. "2h", "ieri", "15 apr")',
       "- thread_url: href del link nella riga (contiene /messaging/thread/)",
       "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: participant_name, last_message, timestamp, thread_url.",
     ];
@@ -85,11 +85,11 @@ function channelGuidance(channel: string, pageType: string): string[] {
       "GUIDA WHATSAPP SEND_FORM (mappa selettori per INVIARE un messaggio dalla sidebar):",
       "Devi identificare i selettori CSS che permettono a uno script di: 1) cercare un contatto, 2) aprire la chat trovata, 3) scrivere il messaggio, 4) cliccare il pulsante invio.",
       "Selettori STABILI da preferire (data-testid, role, aria-label, contenteditable):",
-      "- search_box: la casella di ricerca contatti in cima alla sidebar. Esempi: [data-testid=\"chat-list-search-container\"] [contenteditable=\"true\"], [data-testid=\"chat-list-search\"] [contenteditable=\"true\"], div[contenteditable=\"true\"][role=\"textbox\"][data-tab=\"3\"]",
-      "- chat_item: una riga risultato cliccabile nella lista contatti dopo aver cercato. Esempi: [data-testid=\"cell-frame-container\"], [data-testid=\"chat-cell-wrapper\"], [role=\"listitem\"], [role=\"row\"]",
-      "- chat_header: l'header della chat aperta che contiene il nome del contatto attivo (per verifica). Esempi: #main header span[title], [data-testid=\"conversation-header\"] span[title]",
-      "- composer: la casella di scrittura del messaggio in fondo. Esempi: footer [contenteditable=\"true\"], [data-testid=\"conversation-compose-box-input\"], [data-testid=\"compose-box-input\"]",
-      "- send_button: il pulsante per inviare il messaggio scritto. Esempi: [data-testid=\"send\"], button[aria-label*=\"send\" i], button[aria-label*=\"invia\" i], span[data-icon=\"send\"]",
+      '- search_box: la casella di ricerca contatti in cima alla sidebar. Esempi: [data-testid="chat-list-search-container"] [contenteditable="true"], [data-testid="chat-list-search"] [contenteditable="true"], div[contenteditable="true"][role="textbox"][data-tab="3"]',
+      '- chat_item: una riga risultato cliccabile nella lista contatti dopo aver cercato. Esempi: [data-testid="cell-frame-container"], [data-testid="chat-cell-wrapper"], [role="listitem"], [role="row"]',
+      '- chat_header: l\'header della chat aperta che contiene il nome del contatto attivo (per verifica). Esempi: #main header span[title], [data-testid="conversation-header"] span[title]',
+      '- composer: la casella di scrittura del messaggio in fondo. Esempi: footer [contenteditable="true"], [data-testid="conversation-compose-box-input"], [data-testid="compose-box-input"]',
+      '- send_button: il pulsante per inviare il messaggio scritto. Esempi: [data-testid="send"], button[aria-label*="send" i], button[aria-label*="invia" i], span[data-icon="send"]',
       "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: search_box, chat_item, chat_header, composer, send_button.",
     ];
   }
@@ -97,11 +97,11 @@ function channelGuidance(channel: string, pageType: string): string[] {
     return [
       "",
       "GUIDA LINKEDIN SEND_FORM (mappa selettori per INVIARE un messaggio in una conversazione aperta):",
-      "- composer: la casella editor del messaggio. Esempi: div[role=\"textbox\"][contenteditable=\"true\"], [contenteditable=\"true\"][aria-label*=\"messag\" i]",
+      '- composer: la casella editor del messaggio. Esempi: div[role="textbox"][contenteditable="true"], [contenteditable="true"][aria-label*="messag" i]',
       "- send_button: il pulsante per inviare. Esempi: button.msg-form__send-button, button[aria-label*=\"send\" i], button con testo esattamente 'Send' o 'Invia'",
-      "- recipient_header: header della conversazione con il nome del destinatario (per verifica). Esempi: .msg-thread__link-to-profile, header [class*=\"profile\"]",
-      "- conversation_item: una conversazione nella lista a sinistra (utile per click). Esempi: li.msg-conversation-listitem, [class*=\"conversation-listitem\"]",
-      "- search_box: la casella di ricerca conversazioni. Esempi: input[placeholder*=\"earch messag\" i], input[aria-label*=\"earch messag\" i]",
+      '- recipient_header: header della conversazione con il nome del destinatario (per verifica). Esempi: .msg-thread__link-to-profile, header [class*="profile"]',
+      '- conversation_item: una conversazione nella lista a sinistra (utile per click). Esempi: li.msg-conversation-listitem, [class*="conversation-listitem"]',
+      '- search_box: la casella di ricerca conversazioni. Esempi: input[placeholder*="earch messag" i], input[aria-label*="earch messag" i]',
       "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: search_box, conversation_item, recipient_header, composer, send_button.",
     ];
   }
@@ -116,7 +116,10 @@ function buildSystemPrompt(input: AnalyzeInput, previousPlan: Record<string, unk
     `TIPO PAGINA: ${input.page_type}`,
   ];
   if (input.previous_plan_failed) {
-    lines.push("", `ATTENZIONE: il piano precedente ha fallito. Errore: ${input.failure_context ?? "(nessun dettaglio)"}. Genera un piano alternativo.`);
+    lines.push(
+      "",
+      `ATTENZIONE: il piano precedente ha fallito. Errore: ${input.failure_context ?? "(nessun dettaglio)"}. Genera un piano alternativo.`,
+    );
   }
   if (previousPlan && Object.keys(previousPlan).length > 0) {
     lines.push("", "Piano precedente (potrebbe essere obsoleto):", JSON.stringify(previousPlan));
@@ -129,7 +132,7 @@ function buildSystemPrompt(input: AnalyzeInput, previousPlan: Record<string, unk
     "- Evita classi generate/offuscate (es. x1n2onr6, _ak72) come selettore primario",
     "- Per ogni selettore fornisci un'alternativa di fallback",
     "- Indica il livello di confidenza (0-1) per ogni selettore",
-    "- I NOMI DEI CAMPI nell'output sono FISSI: usa esattamente quelli indicati nella guida del canale; nomi diversi (es. \"name\" invece di \"contact_name\") sono ERRORE.",
+    '- I NOMI DEI CAMPI nell\'output sono FISSI: usa esattamente quelli indicati nella guida del canale; nomi diversi (es. "name" invece di "contact_name") sono ERRORE.',
   );
   lines.push(...channelGuidance(input.channel, input.page_type));
   lines.push(
@@ -179,14 +182,17 @@ async function callAI(systemPrompt: string, input: AnalyzeInput): Promise<AIResu
 
   let resp: Response;
   try {
-    resp = await aiFetch({
-      model: AI_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-      response_format: { type: "json_object" },
-    }, { signal: ac.signal });
+    resp = await aiFetch(
+      {
+        model: AI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        response_format: { type: "json_object" },
+      },
+      { signal: ac.signal },
+    );
   } finally {
     clearTimeout(timer);
   }
@@ -196,7 +202,7 @@ async function callAI(systemPrompt: string, input: AnalyzeInput): Promise<AIResu
     const txt = await resp.text();
     throw new Error(`AI gateway ${resp.status}: ${txt.slice(0, 300)}`);
   }
-  const data = await resp.json() as {
+  const data = (await resp.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
     usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
@@ -226,21 +232,27 @@ Deno.serve(async (req) => {
     const auth = await requireAuth(req, corsH);
     if (isAuthError(auth)) return auth;
 
-    const body = await req.json() as AnalyzeInput;
+    const body = (await req.json()) as AnalyzeInput;
     if (!body?.channel || !body?.page_type || typeof body.dom_snapshot !== "string" || !body.dom_hash) {
-      return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "channel, page_type, dom_snapshot, dom_hash required" }), { status: 400, headers });
+      return new Response(
+        JSON.stringify({ error: "VALIDATION_ERROR", message: "channel, page_type, dom_snapshot, dom_hash required" }),
+        { status: 400, headers },
+      );
     }
     if (!["whatsapp", "linkedin"].includes(body.channel)) {
-      return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "invalid channel" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "invalid channel" }), {
+        status: 400,
+        headers,
+      });
     }
     if (!["sidebar", "thread", "inbox", "messaging", "send_form"].includes(body.page_type)) {
-      return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "invalid page_type" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "invalid page_type" }), {
+        status: 400,
+        headers,
+      });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Resolve operator_id for this user
     const { data: opRow, error: opErr } = await supabase
@@ -250,7 +262,10 @@ Deno.serve(async (req) => {
       .eq("is_active", true)
       .maybeSingle();
     if (opErr || !opRow) {
-      return new Response(JSON.stringify({ error: "NOT_FOUND", message: "No active operator for user" }), { status: 404, headers });
+      return new Response(JSON.stringify({ error: "NOT_FOUND", message: "No active operator for user" }), {
+        status: 404,
+        headers,
+      });
     }
     const operatorId = opRow.id as string;
 
@@ -265,11 +280,12 @@ Deno.serve(async (req) => {
     const memory = memRow as MemoryRow | null;
 
     const previousFailed = body.previous_plan_failed === true;
-    const cacheHit = memory
-      && memory.dom_structure_hash === body.dom_hash
-      && !previousFailed
-      && memory.extraction_plan
-      && Object.keys(memory.extraction_plan).length > 0;
+    const cacheHit =
+      memory &&
+      memory.dom_structure_hash === body.dom_hash &&
+      !previousFailed &&
+      memory.extraction_plan &&
+      Object.keys(memory.extraction_plan).length > 0;
 
     const domSize = body.dom_snapshot.length;
 
@@ -290,13 +306,16 @@ Deno.serve(async (req) => {
         used_cached_plan: true,
         extraction_plan: memory.extraction_plan,
       });
-      return new Response(JSON.stringify({
-        plan: memory.extraction_plan,
-        cached: true,
-        plan_version: memory.plan_version,
-        confidence: (memory.extraction_plan as { confidence?: number }).confidence ?? null,
-        ai_latency_ms: null,
-      }), { status: 200, headers });
+      return new Response(
+        JSON.stringify({
+          plan: memory.extraction_plan,
+          cached: true,
+          plan_version: memory.plan_version,
+          confidence: (memory.extraction_plan as { confidence?: number }).confidence ?? null,
+          ai_latency_ms: null,
+        }),
+        { status: 200, headers },
+      );
     }
 
     // Need to call AI (api key gestita da aiCallShim via AI_PROVIDER)
@@ -327,38 +346,47 @@ Deno.serve(async (req) => {
           execution_result: "failure",
           error_message: `AI failed, returning stale plan: ${aiError}`,
         });
-        return new Response(JSON.stringify({
-          plan: memory.extraction_plan,
-          cached: true,
-          stale: true,
-          plan_version: memory.plan_version,
-          confidence: (memory.extraction_plan as { confidence?: number }).confidence ?? null,
-          ai_latency_ms: null,
-          ai_error: aiError,
-        }), { status: 200, headers });
+        return new Response(
+          JSON.stringify({
+            plan: memory.extraction_plan,
+            cached: true,
+            stale: true,
+            plan_version: memory.plan_version,
+            confidence: (memory.extraction_plan as { confidence?: number }).confidence ?? null,
+            ai_latency_ms: null,
+            ai_error: aiError,
+          }),
+          { status: 200, headers },
+        );
       }
-      return new Response(JSON.stringify({
-        error: "UPSTREAM_ERROR",
-        message: `AI unavailable and no cached plan: ${aiError}`,
-      }), { status: 503, headers });
+      return new Response(
+        JSON.stringify({
+          error: "UPSTREAM_ERROR",
+          message: `AI unavailable and no cached plan: ${aiError}`,
+        }),
+        { status: 503, headers },
+      );
     }
 
     // Upsert memory with new plan
     const newVersion = (memory?.plan_version ?? 0) + 1;
     const { data: upserted, error: upErr } = await supabase
       .from("scraper_agent_memory")
-      .upsert({
-        ...(memory?.id ? { id: memory.id } : {}),
-        operator_id: operatorId,
-        channel: body.channel,
-        page_type: body.page_type,
-        extraction_plan: aiResult.plan,
-        plan_version: newVersion,
-        dom_structure_hash: body.dom_hash,
-        total_invocations: (memory?.total_invocations ?? 0) + 1,
-        total_ai_calls: (memory?.total_ai_calls ?? 0) + 1,
-        consecutive_failures: previousFailed ? (memory?.consecutive_failures ?? 0) + 1 : 0,
-      }, { onConflict: "operator_id,channel,page_type" })
+      .upsert(
+        {
+          ...(memory?.id ? { id: memory.id } : {}),
+          operator_id: operatorId,
+          channel: body.channel,
+          page_type: body.page_type,
+          extraction_plan: aiResult.plan,
+          plan_version: newVersion,
+          dom_structure_hash: body.dom_hash,
+          total_invocations: (memory?.total_invocations ?? 0) + 1,
+          total_ai_calls: (memory?.total_ai_calls ?? 0) + 1,
+          consecutive_failures: previousFailed ? (memory?.consecutive_failures ?? 0) + 1 : 0,
+        },
+        { onConflict: "operator_id,channel,page_type" },
+      )
       .select()
       .maybeSingle();
 
@@ -382,13 +410,16 @@ Deno.serve(async (req) => {
       ai_latency_ms: aiResult.latencyMs,
     });
 
-    return new Response(JSON.stringify({
-      plan: aiResult.plan,
-      cached: false,
-      plan_version: newVersion,
-      confidence: (aiResult.plan as { confidence?: number }).confidence ?? null,
-      ai_latency_ms: aiResult.latencyMs,
-    }), { status: 200, headers });
+    return new Response(
+      JSON.stringify({
+        plan: aiResult.plan,
+        cached: false,
+        plan_version: newVersion,
+        confidence: (aiResult.plan as { confidence?: number }).confidence ?? null,
+        ai_latency_ms: aiResult.latencyMs,
+      }),
+      { status: 200, headers },
+    );
   } catch (e) {
     console.error("[optimus-analyze] fatal", e);
     const message = e instanceof Error ? e.message : String(e);

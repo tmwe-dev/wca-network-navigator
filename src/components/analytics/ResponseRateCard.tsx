@@ -21,7 +21,8 @@ export function ResponseRateCard() {
 
       if (!patterns?.length) return null;
 
-      let totalSent = 0, totalResponses = 0;
+      let totalSent = 0,
+        totalResponses = 0;
       const channelMap = new Map<string, { sent: number; responses: number }>();
 
       for (const p of patterns) {
@@ -54,7 +55,8 @@ export function ResponseRateCard() {
       const sorted = [...patterns].sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
       const half = Math.ceil(sorted.length / 2);
       const recentAvg = sorted.slice(0, half).reduce((s, p) => s + (p.response_rate || 0), 0) / half;
-      const olderAvg = sorted.slice(half).reduce((s, p) => s + (p.response_rate || 0), 0) / Math.max(sorted.length - half, 1);
+      const olderAvg =
+        sorted.slice(half).reduce((s, p) => s + (p.response_rate || 0), 0) / Math.max(sorted.length - half, 1);
       const trendDelta = Math.round((recentAvg - olderAvg) * 100);
 
       return { globalRate, channels, trendDelta };
@@ -72,7 +74,8 @@ export function ResponseRateCard() {
   }
 
   const TrendIcon = data.trendDelta > 0 ? TrendingUp : data.trendDelta < 0 ? TrendingDown : Minus;
-  const trendColor = data.trendDelta > 0 ? "text-green-500" : data.trendDelta < 0 ? "text-red-500" : "text-muted-foreground";
+  const trendColor =
+    data.trendDelta > 0 ? "text-green-500" : data.trendDelta < 0 ? "text-red-500" : "text-muted-foreground";
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/50 p-4 space-y-3">
@@ -82,12 +85,13 @@ export function ResponseRateCard() {
         <span className="text-3xl font-bold text-foreground">{data.globalRate}%</span>
         <div className={cn("flex items-center gap-1 text-xs font-medium pb-1", trendColor)}>
           <TrendIcon className="w-3.5 h-3.5" />
-          {data.trendDelta > 0 ? "+" : ""}{data.trendDelta}%
+          {data.trendDelta > 0 ? "+" : ""}
+          {data.trendDelta}%
         </div>
       </div>
 
       <div className="space-y-2">
-        {data.channels.map(ch => (
+        {data.channels.map((ch) => (
           <div key={ch.channel} className="space-y-1">
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-muted-foreground capitalize">{ch.channel}</span>

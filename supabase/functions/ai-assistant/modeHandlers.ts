@@ -31,10 +31,7 @@ export interface AiProvider {
  * Restituisce sempre la Response del primo tentativo riuscito, oppure l'ultimo
  * errore se anche il failover fallisce.
  */
-async function fetchAiCompletion(
-  provider: AiProvider,
-  body: Record<string, unknown>,
-): Promise<Response> {
+async function fetchAiCompletion(provider: AiProvider, body: Record<string, unknown>): Promise<Response> {
   const first = await fetch(provider.url, {
     method: "POST",
     headers: {
@@ -44,13 +41,10 @@ async function fetchAiCompletion(
     body: JSON.stringify({ ...body, model: provider.model }),
   });
   if (first.ok) return first;
-  const shouldFailover =
-    provider.isUserKey && (first.status === 429 || first.status === 402);
+  const shouldFailover = provider.isUserKey && (first.status === 429 || first.status === 402);
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!shouldFailover || !LOVABLE_API_KEY) return first;
-  console.warn(
-    `[AI] BYOK ${first.status} on ${provider.model} → failover Lovable Gateway`,
-  );
+  console.warn(`[AI] BYOK ${first.status} on ${provider.model} → failover Lovable Gateway`);
   const fb = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -72,20 +66,17 @@ export async function handleToolDecisionMode(
   userId: string | null,
   supabase: SupabaseClient,
   corsHeaders: Record<string, string>,
-  commandPromptBlock = ""
+  commandPromptBlock = "",
 ): Promise<Response> {
   if (!Array.isArray(toolList) || toolList.length === 0 || !userPrompt) {
-    return new Response(
-      JSON.stringify({ toolId: "none", reasoning: "Missing tools or prompt" }),
-      { status: 200, headers: jsonHeaders(corsHeaders) }
-    );
+    return new Response(JSON.stringify({ toolId: "none", reasoning: "Missing tools or prompt" }), {
+      status: 200,
+      headers: jsonHeaders(corsHeaders),
+    });
   }
 
   const toolDescriptions = toolList
-    .map(
-      (t: Record<string, unknown>) =>
-        `- id: "${t.id}" | label: "${t.label}" | description: "${t.description}"`
-    )
+    .map((t: Record<string, unknown>) => `- id: "${t.id}" | label: "${t.label}" | description: "${t.description}"`)
     .join("\n");
 
   const decisionSystemPrompt = `Sei un router di tool. Dato il prompt utente e la lista di tool disponibili, scegli il tool più appropriato.
@@ -107,25 +98,19 @@ ${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
   });
 
   if (!decisionResponse.ok) {
-    return new Response(
-      JSON.stringify({ toolId: "none", reasoning: "AI call failed" }),
-      { status: 200, headers: jsonHeaders(corsHeaders) }
-    );
+    return new Response(JSON.stringify({ toolId: "none", reasoning: "AI call failed" }), {
+      status: 200,
+      headers: jsonHeaders(corsHeaders),
+    });
   }
 
   const decisionData = await decisionResponse.json();
-  const rawContent =
-    decisionData?.choices?.[0]?.message?.content ?? '{"toolId":"none"}';
+  const rawContent = decisionData?.choices?.[0]?.message?.content ?? '{"toolId":"none"}';
 
   try {
     const parsed = JSON.parse(rawContent);
     if (userId) {
-      await consumeCredits(
-        supabase,
-        userId,
-        { prompt_tokens: 200, completion_tokens: 50 },
-        provider.isUserKey
-      );
+      await consumeCredits(supabase, userId, { prompt_tokens: 200, completion_tokens: 50 }, provider.isUserKey);
     }
     return new Response(
       JSON.stringify({
@@ -133,13 +118,13 @@ ${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
         toolParams: parsed.toolParams ?? {},
         reasoning: parsed.reasoning ?? "",
       }),
-      { status: 200, headers: jsonHeaders(corsHeaders) }
+      { status: 200, headers: jsonHeaders(corsHeaders) },
     );
   } catch {
-    return new Response(
-      JSON.stringify({ toolId: "none", reasoning: "Failed to parse AI response" }),
-      { status: 200, headers: jsonHeaders(corsHeaders) }
-    );
+    return new Response(JSON.stringify({ toolId: "none", reasoning: "Failed to parse AI response" }), {
+      status: 200,
+      headers: jsonHeaders(corsHeaders),
+    });
   }
 }
 
@@ -154,19 +139,19 @@ export async function handlePlanExecutionMode(
   userId: string | null,
   supabase: SupabaseClient,
   corsHeaders: Record<string, string>,
-  commandPromptBlock = ""
+  commandPromptBlock = "",
 ): Promise<Response> {
   if (!userPrompt || !Array.isArray(toolList) || toolList.length === 0) {
-    return new Response(
-      JSON.stringify({ steps: [], summary: "Missing prompt or tools" }),
-      { status: 200, headers: jsonHeaders(corsHeaders) }
-    );
+    return new Response(JSON.stringify({ steps: [], summary: "Missing prompt or tools" }), {
+      status: 200,
+      headers: jsonHeaders(corsHeaders),
+    });
   }
 
   const toolDescriptions = toolList
     .map(
       (t: Record<string, unknown>) =>
-        `- id: "${t.id}" | label: "${t.label}" | description: "${t.description}" | requiresApproval: ${t.requiresApproval ?? false}`
+        `- id: "${t.id}" | label: "${t.label}" | description: "${t.description}" | requiresApproval: ${t.requiresApproval ?? false}`,
     )
     .join("\n");
 
@@ -212,43 +197,33 @@ ${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
   });
 
   if (!planResponse.ok) {
-    console.error(
-      "[plan-execution] AI call failed:",
-      planResponse.status
-    );
-    return new Response(
-      JSON.stringify({ steps: [], summary: "AI call failed" }),
-      { status: 200, headers: jsonHeaders(corsHeaders) }
-    );
+    console.error("[plan-execution] AI call failed:", planResponse.status);
+    return new Response(JSON.stringify({ steps: [], summary: "AI call failed" }), {
+      status: 200,
+      headers: jsonHeaders(corsHeaders),
+    });
   }
 
   const planData = await planResponse.json();
-  const rawPlan =
-    planData?.choices?.[0]?.message?.content ??
-    '{"steps":[],"summary":"No response"}';
+  const rawPlan = planData?.choices?.[0]?.message?.content ?? '{"steps":[],"summary":"No response"}';
 
   try {
     const parsed = JSON.parse(rawPlan);
     if (userId) {
-      await consumeCredits(
-        supabase,
-        userId,
-        { prompt_tokens: 600, completion_tokens: 400 },
-        provider.isUserKey
-      );
+      await consumeCredits(supabase, userId, { prompt_tokens: 600, completion_tokens: 400 }, provider.isUserKey);
     }
-    
+
     return new Response(
       JSON.stringify({
         steps: Array.isArray(parsed.steps) ? parsed.steps : [],
         summary: parsed.summary ?? "",
       }),
-      { status: 200, headers: jsonHeaders(corsHeaders) }
+      { status: 200, headers: jsonHeaders(corsHeaders) },
     );
   } catch {
-    return new Response(
-      JSON.stringify({ steps: [], summary: "Failed to parse plan" }),
-      { status: 200, headers: jsonHeaders(corsHeaders) }
-    );
+    return new Response(JSON.stringify({ steps: [], summary: "Failed to parse plan" }), {
+      status: 200,
+      headers: jsonHeaders(corsHeaders),
+    });
   }
 }

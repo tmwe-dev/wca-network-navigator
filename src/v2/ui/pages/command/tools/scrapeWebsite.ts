@@ -13,8 +13,9 @@ export const scrapeWebsiteTool: Tool = {
   id: "scrape-website",
   label: "Scrape sito (URL)",
   description: "Estrae testo, metadati e link da un URL pubblico. Read-only, niente salvataggio in DB.",
-  match: (p) => /\b(scrape|estrai|leggi|analizza)\b[^.]{0,30}\b(sito|url|website|pagina)\b/i.test(p)
-    || /\bscrape\b\s+https?:\/\//i.test(p),
+  match: (p) =>
+    /\b(scrape|estrai|leggi|analizza)\b[^.]{0,30}\b(sito|url|website|pagina)\b/i.test(p) ||
+    /\bscrape\b\s+https?:\/\//i.test(p),
 
   execute: async (prompt): Promise<ToolResult> => {
     const url = extractUrl(prompt);
@@ -26,10 +27,13 @@ export const scrapeWebsiteTool: Tool = {
         meta: { count: 0, sourceLabel: "scrape-website" },
       };
     }
-    const res = await invokeEdge<{ title?: string; text?: string; meta?: Record<string, string>; links?: string[]; error?: string }>(
-      "scrape-website",
-      { body: { url }, context: "command:scrape-website" },
-    );
+    const res = await invokeEdge<{
+      title?: string;
+      text?: string;
+      meta?: Record<string, string>;
+      links?: string[];
+      error?: string;
+    }>("scrape-website", { body: { url }, context: "command:scrape-website" });
     if (res?.error) {
       return {
         kind: "result",
@@ -46,7 +50,9 @@ export const scrapeWebsiteTool: Tool = {
     if (res?.meta) {
       sections.push({
         heading: "Metadati",
-        body: Object.entries(res.meta).map(([k, v]) => `${k}: ${v}`).join("\n"),
+        body: Object.entries(res.meta)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join("\n"),
       });
     }
     if (res?.links?.length) {

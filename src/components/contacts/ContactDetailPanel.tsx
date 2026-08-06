@@ -7,7 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake, Loader2, Globe,
+import {
+  MessageCircle,
+  Search,
+  Plus,
+  Building2,
+  User,
+  Sparkles,
+  ChevronDown,
+  Handshake,
+  Loader2,
+  Globe,
 } from "lucide-react";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
@@ -48,7 +58,12 @@ function _formatPhone(phone: string): string {
 
 function Section({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-2", className)}>
+    <div
+      className={cn(
+        "bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-2",
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -76,39 +91,78 @@ function ContactUnifiedActions({ contact: c }: { contact: ContactDetail }) {
 
   const onEmail = useCallback(() => {
     if (!c.email) return;
-    handleSendEmail({ email: c.email, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined, contactId: c.id, partnerId });
+    handleSendEmail({
+      email: c.email,
+      name: c.contact_alias || c.name || undefined,
+      company: c.company_name || undefined,
+      contactId: c.id,
+      partnerId,
+    });
   }, [c, handleSendEmail, partnerId]);
 
   const onWhatsApp = useCallback(() => {
     if (!waPhone) return;
-    handleSendWhatsApp({ phone: waPhone, contactName: c.contact_alias || c.name || undefined, companyName: c.company_name || undefined, sourceType: "contact", sourceId: c.id });
+    handleSendWhatsApp({
+      phone: waPhone,
+      contactName: c.contact_alias || c.name || undefined,
+      companyName: c.company_name || undefined,
+      sourceType: "contact",
+      sourceId: c.id,
+    });
   }, [c, waPhone, handleSendWhatsApp]);
 
   const onWorkspace = useCallback(() => {
     if (!c.email) return;
-    navigate("/v2/email-composer", { state: { prefilledRecipient: { email: c.email, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined, contactId: c.id, partnerId } } });
+    navigate("/v2/email-composer", {
+      state: {
+        prefilledRecipient: {
+          email: c.email,
+          name: c.contact_alias || c.name || undefined,
+          company: c.company_name || undefined,
+          contactId: c.id,
+          partnerId,
+        },
+      },
+    });
   }, [c, navigate, partnerId]);
 
   const onCockpit = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const user = session?.user ?? null;
       if (!user) return;
-      await insertCockpitQueueItems([{ source_id: c.id, source_type: "contact", user_id: user.id, partner_id: partnerId || null }]);
+      await insertCockpitQueueItems([
+        { source_id: c.id, source_type: "contact", user_id: user.id, partner_id: partnerId || null },
+      ]);
       sonnerToast.success("✅ Aggiunto al Cockpit");
-    } catch (e: unknown) { sonnerToast.error(e instanceof Error ? e.message : "Errore"); }
+    } catch (e: unknown) {
+      sonnerToast.error(e instanceof Error ? e.message : "Errore");
+    }
   }, [c.id, partnerId]);
 
   const onDeepSearch = useCallback(async () => {
-    if (!partnerId) { sonnerToast.error("Nessun partner WCA associato"); return; }
+    if (!partnerId) {
+      sonnerToast.error("Nessun partner WCA associato");
+      return;
+    }
     try {
-      await invokeEdge("ai-utility", { body: { action: "deep_search", partnerIds: [partnerId] }, context: "ContactDetailPanel.deep_search" });
+      await invokeEdge("ai-utility", {
+        body: { action: "deep_search", partnerIds: [partnerId] },
+        context: "ContactDetailPanel.deep_search",
+      });
       sonnerToast.success("🔍 Deep Search avviata");
-    } catch (e: unknown) { sonnerToast.error(e instanceof Error ? e.message : "Errore"); }
+    } catch (e: unknown) {
+      sonnerToast.error(e instanceof Error ? e.message : "Errore");
+    }
   }, [partnerId]);
 
   const onLinkedIn = useCallback(() => {
-    if (linkedinUrl) { window.open(linkedinUrl, "_blank", "noopener,noreferrer"); return; }
+    if (linkedinUrl) {
+      window.open(linkedinUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     const q = [c.contact_alias || c.name, c.company_name].filter(Boolean).join(" ");
     window.open(`https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(q)}`, "_blank");
   }, [linkedinUrl, c]);
@@ -134,152 +188,246 @@ function ContactUnifiedActions({ contact: c }: { contact: ContactDetail }) {
 
 export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
   const {
-    state, dispatch, interactions: _interactions, matchedCard, needsAlias,
-    createInteractionPending, handleGenerateAlias, handleStatusChange, handleAddInteraction,
+    state,
+    dispatch,
+    interactions: _interactions,
+    matchedCard,
+    needsAlias,
+    createInteractionPending,
+    handleGenerateAlias,
+    handleStatusChange,
+    handleAddInteraction,
   } = useContactDetail({ contact, onContactUpdated });
 
   const c = state.contact;
 
   return (
     <PageErrorBoundary>
-    <div className="h-full overflow-y-auto p-5 space-y-4">
-      <Section className="space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/20 border border-primary/15 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-primary" />
+      <div className="h-full overflow-y-auto p-5 space-y-4">
+        <Section className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/20 border border-primary/15 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-bold text-foreground truncate">
+                {c.company_alias || c.company_name || "Senza azienda"}
+              </h2>
+              {c.company_alias && c.company_name && c.company_alias !== c.company_name && (
+                <p className="text-[11px] text-muted-foreground truncate mt-0.5">{c.company_name}</p>
+              )}
+            </div>
+            <LeadScoreBadge score={c.lead_score} breakdown={c.lead_score_breakdown} size="md" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-foreground truncate">{c.company_alias || c.company_name || "Senza azienda"}</h2>
-            {c.company_alias && c.company_name && c.company_alias !== c.company_name && (
-              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{c.company_name}</p>
-            )}
-          </div>
-          <LeadScoreBadge score={c.lead_score} breakdown={c.lead_score_breakdown} size="md" />
-        </div>
-        {(c.name || c.contact_alias) && (
-          <div className="flex items-center gap-2 ml-[52px]">
-            <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            <p className="text-sm text-foreground">
-              {c.contact_alias || c.name}
-              {c.contact_alias && c.name && c.contact_alias !== c.name && <span className="text-muted-foreground text-xs ml-1">({c.name})</span>}
-              {c.position && <span className="text-primary"> • {c.position}</span>}
+          {(c.name || c.contact_alias) && (
+            <div className="flex items-center gap-2 ml-[52px]">
+              <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <p className="text-sm text-foreground">
+                {c.contact_alias || c.name}
+                {c.contact_alias && c.name && c.contact_alias !== c.name && (
+                  <span className="text-muted-foreground text-xs ml-1">({c.name})</span>
+                )}
+                {c.position && <span className="text-primary"> • {c.position}</span>}
+              </p>
+              {(c.company_alias || c.contact_alias) && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
+            </div>
+          )}
+          {(c.city || c.country || c.address) && (
+            <p className="text-xs text-muted-foreground ml-[52px]">
+              {[c.city, c.country].filter(Boolean).join(", ")}
+              {c.address && ` — ${c.address}`}
             </p>
-            {(c.company_alias || c.contact_alias) && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
-          </div>
-        )}
-        {(c.city || c.country || c.address) && (
-          <p className="text-xs text-muted-foreground ml-[52px]">
-            {[c.city, c.country].filter(Boolean).join(", ")}{c.address && ` — ${c.address}`}
-          </p>
-        )}
-      </Section>
+          )}
+        </Section>
 
-      <ContactUnifiedActions contact={c} />
-      <div className="flex flex-wrap gap-1.5">
-        {c.company_name && (
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
-            onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(c.company_name + " logo")}&tbm=isch`, "_blank")}>
-            <Globe className="w-3.5 h-3.5" /> Cerca Logo
-          </Button>
-        )}
-        {needsAlias && (
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
-            onClick={handleGenerateAlias} disabled={state.aliasLoading}>
-            <Sparkles className="w-3.5 h-3.5" /> {state.aliasLoading ? "Generazione..." : "Genera Alias"}
-          </Button>
-        )}
-      </div>
+        <ContactUnifiedActions contact={c} />
+        <div className="flex flex-wrap gap-1.5">
+          {c.company_name && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
+              onClick={() =>
+                window.open(
+                  `https://www.google.com/search?q=${encodeURIComponent(c.company_name + " logo")}&tbm=isch`,
+                  "_blank",
+                )
+              }
+            >
+              <Globe className="w-3.5 h-3.5" /> Cerca Logo
+            </Button>
+          )}
+          {needsAlias && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
+              onClick={handleGenerateAlias}
+              disabled={state.aliasLoading}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> {state.aliasLoading ? "Generazione..." : "Genera Alias"}
+            </Button>
+          )}
+        </div>
 
-      <Section>
-        <SectionTitle icon={MessageCircle}>Circuito di attesa</SectionTitle>
-        <HoldingPatternIndicator status={c.lead_status as LeadStatus} onChangeStatus={handleStatusChange} />
-      </Section>
-
-      <div className="flex flex-wrap gap-1.5">
-        {c.origin && <Badge variant="outline" className="text-[10px] border-primary/15">{c.origin}</Badge>}
-        {c.contact_alias && <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0"><Sparkles className="w-2.5 h-2.5 mr-0.5" /> {c.contact_alias}</Badge>}
-        {c.deep_search_at && <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border-0"><Search className="w-2.5 h-2.5 mr-0.5" /> Deep Search</Badge>}
-        <Badge variant="outline" className="text-[10px] border-primary/15">{c.interaction_count} interazioni</Badge>
-      </div>
-
-      {matchedCard && (
         <Section>
-          <SectionTitle icon={Handshake}>Biglietto da visita</SectionTitle>
-          <div className="flex gap-3 items-start">
-            {matchedCard.photo_url && (
-              <div className="w-24 shrink-0 rounded-lg overflow-hidden border border-border/50">
-                <AspectRatio ratio={16 / 9}>
-                  <OptimizedImage src={matchedCard.photo_url} alt="Biglietto" className="w-full h-full object-cover" />
-                </AspectRatio>
+          <SectionTitle icon={MessageCircle}>Circuito di attesa</SectionTitle>
+          <HoldingPatternIndicator status={c.lead_status as LeadStatus} onChangeStatus={handleStatusChange} />
+        </Section>
+
+        <div className="flex flex-wrap gap-1.5">
+          {c.origin && (
+            <Badge variant="outline" className="text-[10px] border-primary/15">
+              {c.origin}
+            </Badge>
+          )}
+          {c.contact_alias && (
+            <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0">
+              <Sparkles className="w-2.5 h-2.5 mr-0.5" /> {c.contact_alias}
+            </Badge>
+          )}
+          {c.deep_search_at && (
+            <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border-0">
+              <Search className="w-2.5 h-2.5 mr-0.5" /> Deep Search
+            </Badge>
+          )}
+          <Badge variant="outline" className="text-[10px] border-primary/15">
+            {c.interaction_count} interazioni
+          </Badge>
+        </div>
+
+        {matchedCard && (
+          <Section>
+            <SectionTitle icon={Handshake}>Biglietto da visita</SectionTitle>
+            <div className="flex gap-3 items-start">
+              {matchedCard.photo_url && (
+                <div className="w-24 shrink-0 rounded-lg overflow-hidden border border-border/50">
+                  <AspectRatio ratio={16 / 9}>
+                    <OptimizedImage
+                      src={matchedCard.photo_url}
+                      alt="Biglietto"
+                      className="w-full h-full object-cover"
+                    />
+                  </AspectRatio>
+                </div>
+              )}
+              <div className="flex-1 min-w-0 space-y-1">
+                {matchedCard.event_name && (
+                  <p className="text-xs font-medium text-foreground">{matchedCard.event_name}</p>
+                )}
+                {matchedCard.met_at && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Incontrato: {format(new Date(matchedCard.met_at), "dd MMM yyyy", { locale: it })}
+                  </p>
+                )}
+                {matchedCard.location && <p className="text-[10px] text-muted-foreground">{matchedCard.location}</p>}
+                <Badge className="text-[9px] bg-emerald-500/15 text-emerald-400 border-0">
+                  <Handshake className="w-2.5 h-2.5 mr-0.5" /> Incontrato personalmente
+                </Badge>
+              </div>
+            </div>
+          </Section>
+        )}
+
+        <ContactEnrichmentCard
+          enrichmentData={(c.enrichment_data as Record<string, unknown> | undefined) ?? null}
+          deepSearchAt={c.deep_search_at}
+        />
+
+        <Collapsible open={state.detailsOpen} onOpenChange={(v) => dispatch({ type: "TOGGLE_DETAILS", value: v })}>
+          <CollapsibleTrigger asChild>
+            <button className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider font-medium">
+              <ChevronDown className={cn("w-3 h-3 transition-transform", state.detailsOpen && "rotate-180")} /> Dettagli
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-2">
+            <div className="text-[11px] text-muted-foreground space-y-0.5 bg-muted/30 rounded-lg p-3 border border-border/50">
+              {c.created_at && <p>Importato: {format(new Date(c.created_at), "dd MMM yyyy", { locale: it })}</p>}
+              {c.last_interaction_at && (
+                <p>Ultima interazione: {format(new Date(c.last_interaction_at), "dd MMM yyyy", { locale: it })}</p>
+              )}
+            </div>
+            {c.note && (
+              <div className="rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground border border-border/50">
+                {c.note}
               </div>
             )}
-            <div className="flex-1 min-w-0 space-y-1">
-              {matchedCard.event_name && <p className="text-xs font-medium text-foreground">{matchedCard.event_name}</p>}
-              {matchedCard.met_at && <p className="text-[10px] text-muted-foreground">Incontrato: {format(new Date(matchedCard.met_at), "dd MMM yyyy", { locale: it })}</p>}
-              {matchedCard.location && <p className="text-[10px] text-muted-foreground">{matchedCard.location}</p>}
-              <Badge className="text-[9px] bg-emerald-500/15 text-emerald-400 border-0"><Handshake className="w-2.5 h-2.5 mr-0.5" /> Incontrato personalmente</Badge>
-            </div>
-          </div>
-        </Section>
-      )}
+          </CollapsibleContent>
+        </Collapsible>
 
-      <ContactEnrichmentCard enrichmentData={(c.enrichment_data as Record<string, unknown> | undefined) ?? null} deepSearchAt={c.deep_search_at} />
-
-      <Collapsible open={state.detailsOpen} onOpenChange={(v) => dispatch({ type: "TOGGLE_DETAILS", value: v })}>
-        <CollapsibleTrigger asChild>
-          <button className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider font-medium">
-            <ChevronDown className={cn("w-3 h-3 transition-transform", state.detailsOpen && "rotate-180")} /> Dettagli
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2 space-y-2">
-          <div className="text-[11px] text-muted-foreground space-y-0.5 bg-muted/30 rounded-lg p-3 border border-border/50">
-            {c.created_at && <p>Importato: {format(new Date(c.created_at), "dd MMM yyyy", { locale: it })}</p>}
-            {c.last_interaction_at && <p>Ultima interazione: {format(new Date(c.last_interaction_at), "dd MMM yyyy", { locale: it })}</p>}
-          </div>
-          {c.note && <div className="rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground border border-border/50">{c.note}</div>}
-        </CollapsibleContent>
-      </Collapsible>
-
-      <Section>
-        <div className="flex items-center justify-between">
-          <SectionTitle icon={MessageCircle}>Timeline</SectionTitle>
-          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 text-primary hover:bg-primary/10" onClick={() => dispatch({ type: "SHOW_INTERACTION", value: true })}>
-            <Plus className="w-3 h-3" /> Aggiungi
-          </Button>
-        </div>
-        <ContactInteractionTimeline contactId={contact.id} contactEmail={contact.email} />
-      </Section>
-
-      <Dialog open={state.showNewInteraction} onOpenChange={(v) => dispatch({ type: "SHOW_INTERACTION", value: v })}>
-        <DialogContent className="max-w-sm bg-card border-primary/20">
-          <DialogHeader>
-            <DialogTitle className="text-sm flex items-center gap-2"><Plus className="w-4 h-4 text-primary" /> Nuova Interazione</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Select value={state.newType} onValueChange={(v) => dispatch({ type: "SET_NEW_TYPE", value: v })}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>{INTERACTION_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-            </Select>
-            <Input value={state.newTitle} onChange={(e) => dispatch({ type: "SET_NEW_TITLE", value: e.target.value })} placeholder="Titolo" className="h-8 text-xs" />
-            <Textarea value={state.newDesc} onChange={(e) => dispatch({ type: "SET_NEW_DESC", value: e.target.value })} placeholder="Descrizione (opzionale)" className="text-xs min-h-[60px]" />
-            <Select value={state.newOutcome} onValueChange={(v) => dispatch({ type: "SET_NEW_OUTCOME", value: v })}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Esito (opzionale)" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nessuno</SelectItem>
-                <SelectItem value="positive">Positivo</SelectItem>
-                <SelectItem value="neutral">Neutro</SelectItem>
-                <SelectItem value="negative">Negativo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button size="sm" className="text-xs gap-1.5" onClick={handleAddInteraction} disabled={createInteractionPending}>
-              {createInteractionPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Registra
+        <Section>
+          <div className="flex items-center justify-between">
+            <SectionTitle icon={MessageCircle}>Timeline</SectionTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs gap-1 text-primary hover:bg-primary/10"
+              onClick={() => dispatch({ type: "SHOW_INTERACTION", value: true })}
+            >
+              <Plus className="w-3 h-3" /> Aggiungi
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </div>
+          <ContactInteractionTimeline contactId={contact.id} contactEmail={contact.email} />
+        </Section>
+
+        <Dialog open={state.showNewInteraction} onOpenChange={(v) => dispatch({ type: "SHOW_INTERACTION", value: v })}>
+          <DialogContent className="max-w-sm bg-card border-primary/20">
+            <DialogHeader>
+              <DialogTitle className="text-sm flex items-center gap-2">
+                <Plus className="w-4 h-4 text-primary" /> Nuova Interazione
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <Select value={state.newType} onValueChange={(v) => dispatch({ type: "SET_NEW_TYPE", value: v })}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INTERACTION_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                value={state.newTitle}
+                onChange={(e) => dispatch({ type: "SET_NEW_TITLE", value: e.target.value })}
+                placeholder="Titolo"
+                className="h-8 text-xs"
+              />
+              <Textarea
+                value={state.newDesc}
+                onChange={(e) => dispatch({ type: "SET_NEW_DESC", value: e.target.value })}
+                placeholder="Descrizione (opzionale)"
+                className="text-xs min-h-[60px]"
+              />
+              <Select value={state.newOutcome} onValueChange={(v) => dispatch({ type: "SET_NEW_OUTCOME", value: v })}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Esito (opzionale)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nessuno</SelectItem>
+                  <SelectItem value="positive">Positivo</SelectItem>
+                  <SelectItem value="neutral">Neutro</SelectItem>
+                  <SelectItem value="negative">Negativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button
+                size="sm"
+                className="text-xs gap-1.5"
+                onClick={handleAddInteraction}
+                disabled={createInteractionPending}
+              >
+                {createInteractionPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}{" "}
+                Registra
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </PageErrorBoundary>
   );
 }

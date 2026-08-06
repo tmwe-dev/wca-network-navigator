@@ -27,7 +27,15 @@ interface PartnerQueueProps {
   onPartnerClick?: (wcaId: number) => void;
 }
 
-export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, onToggle, onSelectAll, onDeselectAll, onPartnerClick }: PartnerQueueProps) {
+export function PartnerQueue({
+  items,
+  activeIndex: _activeIndex,
+  selectedIds,
+  onToggle,
+  onSelectAll,
+  onDeselectAll,
+  onPartnerClick,
+}: PartnerQueueProps) {
   const selectedCount = items.filter((i) => selectedIds.has(i.wca_id)).length;
   const allSelected = items.length > 0 && selectedCount === items.length;
 
@@ -40,9 +48,7 @@ export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, on
             onCheckedChange={() => (allSelected ? onDeselectAll() : onSelectAll())}
             className="h-3.5 w-3.5"
           />
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Coda Partner
-          </span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Coda Partner</span>
         </div>
         <span className="text-xs text-muted-foreground">
           {selectedCount} sel. · {items.filter((i) => i.status === "done").length}/{items.length}
@@ -60,7 +66,7 @@ export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, on
                   "bg-sky-500/[0.08] border border-sky-500/30 shadow-md shadow-sky-500/[0.08] scale-[1.01]",
                 item.status === "done" && "opacity-70 hover:opacity-100 hover:bg-emerald-500/[0.06] cursor-pointer",
                 item.status === "pending" && "opacity-70 hover:bg-white/[0.04]",
-                item.status === "error" && "bg-destructive/10 border border-destructive/20"
+                item.status === "error" && "bg-destructive/10 border border-destructive/20",
               )}
             >
               {/* Checkbox */}
@@ -86,18 +92,18 @@ export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, on
               </div>
 
               {/* Flag */}
-              <span className="text-base flex-shrink-0">
-                {getCountryFlag(item.country_code)}
-              </span>
+              <span className="text-base flex-shrink-0">{getCountryFlag(item.country_code)}</span>
 
               {/* Name + City */}
               <div className="flex-1 min-w-0">
-                <div className={cn(
-                  "font-medium truncate text-xs",
-                  item.status === "active" && "text-foreground",
-                  item.status === "done" && "text-muted-foreground",
-                  item.status === "pending" && "text-muted-foreground"
-                )}>
+                <div
+                  className={cn(
+                    "font-medium truncate text-xs",
+                    item.status === "active" && "text-foreground",
+                    item.status === "done" && "text-muted-foreground",
+                    item.status === "pending" && "text-muted-foreground",
+                  )}
+                >
                   {item.company_name}
                 </div>
                 <div className="text-[10px] text-muted-foreground truncate">{item.city}</div>
@@ -105,9 +111,7 @@ export function PartnerQueue({ items, activeIndex: _activeIndex, selectedIds, on
 
               {/* Already downloaded badge */}
               {item.alreadyDownloaded && item.status === "pending" && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                  Già presente
-                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Già presente</span>
               )}
 
               {/* Skipped network badge */}

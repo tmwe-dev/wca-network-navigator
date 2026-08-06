@@ -12,11 +12,22 @@ import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 
 // ── Credential keys ──
 const _CREDENTIAL_KEYS = [
-  "smtp_host", "smtp_port", "smtp_user", "smtp_pass", "smtp_from",
-  "imap_host", "imap_port", "imap_user", "imap_pass",
-  "linkedin_cookie", "linkedin_user_agent",
-  "whatsapp_connected", "whatsapp_dom_schema",
-  "ra_username", "ra_password", "ra_network",
+  "smtp_host",
+  "smtp_port",
+  "smtp_user",
+  "smtp_pass",
+  "smtp_from",
+  "imap_host",
+  "imap_port",
+  "imap_user",
+  "imap_pass",
+  "linkedin_cookie",
+  "linkedin_user_agent",
+  "whatsapp_connected",
+  "whatsapp_dom_schema",
+  "ra_username",
+  "ra_password",
+  "ra_network",
 ] as const;
 
 export interface CredentialSettings {
@@ -61,10 +72,16 @@ function mapCredentials(raw: Record<string, string>): CredentialSettings {
 
 // ── AI Config keys ──
 const _AI_CONFIG_KEYS = [
-  "ai_tone", "ai_language", "ai_sales_knowledge_base",
-  "ai_custom_email_types", "ai_custom_goals", "ai_custom_proposals",
+  "ai_tone",
+  "ai_language",
+  "ai_sales_knowledge_base",
+  "ai_custom_email_types",
+  "ai_custom_goals",
+  "ai_custom_proposals",
   "ai_deep_search_config",
-  "agent_max_actions_per_cycle", "agent_work_start_hour", "agent_work_end_hour",
+  "agent_max_actions_per_cycle",
+  "agent_work_start_hour",
+  "agent_work_end_hour",
 ] as const;
 
 export interface AIConfigSettings {

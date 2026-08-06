@@ -10,11 +10,25 @@ vi.mock("@/lib/countries", () => ({
 }));
 
 const EMPTY_FORM: ContactFormData = {
-  companyName: "", companyAlias: "", country: "", city: "", address: "",
-  zipCode: "", companyPhone: "", companyEmail: "", website: "",
-  contactName: "", contactAlias: "", position: "", contactEmail: "",
-  contactPhone: "", contactMobile: "", origin: "", note: "",
-  logoUrl: "", linkedinUrl: "",
+  companyName: "",
+  companyAlias: "",
+  country: "",
+  city: "",
+  address: "",
+  zipCode: "",
+  companyPhone: "",
+  companyEmail: "",
+  website: "",
+  contactName: "",
+  contactAlias: "",
+  position: "",
+  contactEmail: "",
+  contactPhone: "",
+  contactMobile: "",
+  origin: "",
+  note: "",
+  logoUrl: "",
+  linkedinUrl: "",
 };
 
 const FILLED_FORM: ContactFormData = {

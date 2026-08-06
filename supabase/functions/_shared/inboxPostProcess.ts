@@ -2,7 +2,6 @@
  * postProcessing.ts — Post-sync operations: email rules and classification.
  */
 
-
 interface MessageRecord {
   id?: string;
   from_address?: string;
@@ -19,17 +18,13 @@ export async function applyEmailRules(
   supabaseUrl: string,
   serviceRoleKey: string,
   userId: string,
-  messages: MessageRecord[]
+  messages: MessageRecord[],
 ): Promise<void> {
   try {
     const newMsgIds = messages.map((m) => m.id as string).filter(Boolean);
     if (newMsgIds.length === 0) return;
 
-    const { data: opRow } = await supabase
-      .from("operators")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const { data: opRow } = await supabase.from("operators").select("id").eq("user_id", userId).maybeSingle();
 
     const opId = opRow?.id;
     if (!opId) return;
@@ -55,7 +50,7 @@ export async function classifyInboundEmails(
   supabaseUrl: string,
   serviceRoleKey: string,
   userId: string,
-  messages: MessageRecord[]
+  messages: MessageRecord[],
 ): Promise<void> {
   // B5 (2026-07-25) — GATE PASSED, fallback DISATTIVATO di default.
   // Baseline 7d: postProcess 156 invocazioni / 156 dedup_hits = 100% (≥ 60%).
@@ -69,9 +64,7 @@ export async function classifyInboundEmails(
     // FIX 2026-05-11: `direction` è top-level su channel_messages, NON dentro raw_payload.
     // Tutti i messages sintetizzati da check-inbox sono inbound (saveMessageToDb forza direction="inbound"),
     // quindi accettiamo qualsiasi messaggio senza direction esplicita = "outbound".
-    const toClassify = messages
-      .filter((m) => !m.direction || m.direction === "inbound")
-      .slice(0, 10);
+    const toClassify = messages.filter((m) => !m.direction || m.direction === "inbound").slice(0, 10);
 
     if (toClassify.length === 0) return;
 
@@ -100,13 +93,17 @@ export async function classifyInboundEmails(
         body: JSON.stringify(classifyPayload),
       }).catch(() => undefined);
     }
-
   } catch {
     // Classification fallback is deliberately fail-open.
   }
 }
 
-export function buildResponsePayload(messages: MessageRecord[], maxUid: number, remainingCount: number, hasMore: boolean): Record<string, unknown> {
+export function buildResponsePayload(
+  messages: MessageRecord[],
+  maxUid: number,
+  remainingCount: number,
+  hasMore: boolean,
+): Record<string, unknown> {
   const matched = messages.filter((m) => (m as Record<string, unknown>).source_type !== "unknown").length;
 
   return {
@@ -132,7 +129,7 @@ export function buildResponsePayload(messages: MessageRecord[], maxUid: number, 
       body_text_length: (m.body_text as string)?.length || 0,
       body_html_length: (m.body_html as string)?.length || 0,
       raw_size: ((m as Record<string, unknown>).raw_size_bytes as number) || 0,
-      raw_stored: !!((m as Record<string, unknown>).raw_storage_path),
+      raw_stored: !!(m as Record<string, unknown>).raw_storage_path,
     })),
   };
 }

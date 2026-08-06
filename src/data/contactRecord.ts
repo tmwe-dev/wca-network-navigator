@@ -34,31 +34,19 @@ export async function findPartnerRecord(id: string): Promise<PartnerRecordRow | 
 }
 
 export async function findImportedContactRecord(id: string) {
-  const { data, error } = await supabase
-    .from("imported_contacts")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("imported_contacts").select("*").eq("id", id).single();
   if (error || !data) return null;
   return data;
 }
 
 export async function findProspectRecord(id: string): Promise<Record<string, unknown> | null> {
-  const { data, error } = await supabase
-    .from("prospects")
-    .select("*, prospect_contacts(*)")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("prospects").select("*, prospect_contacts(*)").eq("id", id).single();
   if (error || !data) return null;
   return data as Record<string, unknown>;
 }
 
 export async function findBusinessCardRecord(id: string) {
-  const { data, error } = await supabase
-    .from("business_cards")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("business_cards").select("*").eq("id", id).single();
   if (error || !data) return null;
   return data;
 }

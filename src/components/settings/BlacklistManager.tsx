@@ -3,11 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, Loader2, ShieldAlert, CheckCircle2, FileSpreadsheet, Calendar, MapPin, DollarSign, Info, AlertTriangle } from "lucide-react";
+import {
+  Upload,
+  Loader2,
+  ShieldAlert,
+  CheckCircle2,
+  FileSpreadsheet,
+  Calendar,
+  MapPin,
+  DollarSign,
+  Info,
+  AlertTriangle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useBlacklistStats, useBlacklistSyncLog, useImportBlacklist, BlacklistEntry } from "@/hooks/useBlacklist";
 // ExcelJS loaded lazily to reduce bundle size
-const getExcelJS = () => import("exceljs").then(m => m.default);
+const getExcelJS = () => import("exceljs").then((m) => m.default);
 import { createLogger } from "@/lib/log";
 
 /** Soglia (giorni) oltre la quale la blacklist è considerata da aggiornare. */
@@ -95,7 +106,7 @@ function parseCsv(text: string): string[][] {
     ";": (firstLine.match(/;/g) || []).length,
     "\t": (firstLine.match(/\t/g) || []).length,
   };
-  const delimiter = (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]) || ",";
+  const delimiter = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || ",";
 
   const rows: string[][] = [];
   let row: string[] = [];
@@ -105,20 +116,34 @@ function parseCsv(text: string): string[][] {
     const c = text[i];
     if (inQuotes) {
       if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else { inQuotes = false; }
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
       } else {
         field += c;
       }
     } else {
       if (c === '"') inQuotes = true;
-      else if (c === delimiter) { row.push(field); field = ""; }
-      else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
-      else if (c === "\r") { /* skip, handled by \n */ }
-      else field += c;
+      else if (c === delimiter) {
+        row.push(field);
+        field = "";
+      } else if (c === "\n") {
+        row.push(field);
+        rows.push(row);
+        row = [];
+        field = "";
+      } else if (c === "\r") {
+        /* skip, handled by \n */
+      } else field += c;
     }
   }
-  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
   return rows.filter((r) => r.some((v) => v && v.trim().length > 0));
 }
 
@@ -209,19 +234,25 @@ export default function BlacklistManager() {
             <div className="p-2 rounded-lg bg-primary/10">
               <Calendar className="w-5 h-5 text-primary" />
             </div>
-          <div>
+            <div>
               <p className="text-2xl font-bold">
                 {statsLoading ? "..." : daysSinceUpdate != null ? `${daysSinceUpdate}g fa` : "Mai"}
               </p>
               <p className="text-xs text-muted-foreground">Ultimo aggiornamento</p>
               {daysSinceUpdate == null && (
-                <Badge variant="destructive" className="mt-1 text-[10px]">⚠️ Mai importata</Badge>
+                <Badge variant="destructive" className="mt-1 text-[10px]">
+                  ⚠️ Mai importata
+                </Badge>
               )}
               {isOverdue && (
-                <Badge variant="destructive" className="mt-1 text-[10px]">⚠️ Scaduta da {daysSinceUpdate! - BLACKLIST_REFRESH_DAYS}g</Badge>
+                <Badge variant="destructive" className="mt-1 text-[10px]">
+                  ⚠️ Scaduta da {daysSinceUpdate! - BLACKLIST_REFRESH_DAYS}g
+                </Badge>
               )}
               {isExpiringSoon && (
-                <Badge variant="warning" className="mt-1 text-[10px]">In scadenza tra {daysToNextUpdate}g</Badge>
+                <Badge variant="warning" className="mt-1 text-[10px]">
+                  In scadenza tra {daysToNextUpdate}g
+                </Badge>
               )}
               {!isOverdue && !isExpiringSoon && daysToNextUpdate != null && (
                 <p className="text-[10px] text-muted-foreground mt-1">Prossimo aggiornamento tra {daysToNextUpdate}g</p>
@@ -241,39 +272,38 @@ export default function BlacklistManager() {
             <div>
               <CardTitle className="text-base">Importa Blacklist</CardTitle>
               <CardDescription>
-                Carica il file <code className="text-[11px]">BlackListExport-*.xls</code> esportato da WCA World (formato CSV, XLS o XLSX). Aggiornamento consigliato ogni {BLACKLIST_REFRESH_DAYS} giorni.
+                Carica il file <code className="text-[11px]">BlackListExport-*.xls</code> esportato da WCA World
+                (formato CSV, XLS o XLSX). Aggiornamento consigliato ogni {BLACKLIST_REFRESH_DAYS} giorni.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xls,.xlsx,.csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+            <input ref={fileRef} type="file" accept=".xls,.xlsx,.csv" onChange={handleFileChange} className="hidden" />
             <Button variant="outline" onClick={() => fileRef.current?.click()}>
               <Upload className="w-4 h-4 mr-2" /> Seleziona File
             </Button>
             {fileName && (
               <div className="flex items-center gap-2 text-xs">
                 <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="font-mono truncate max-w-[260px]" title={fileName}>{fileName}</span>
+                <span className="font-mono truncate max-w-[260px]" title={fileName}>
+                  {fileName}
+                </span>
                 {parsing && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
               </div>
             )}
-            {allParsed.length > 0 && (
-              <Badge variant="secondary">{allParsed.length} record pronti</Badge>
-            )}
+            {allParsed.length > 0 && <Badge variant="secondary">{allParsed.length} record pronti</Badge>}
             {allParsed.length > 0 && (
               <Button onClick={handleImport} disabled={importMutation.isPending} size="sm" className="ml-auto">
                 {importMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Importazione...</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Importazione...
+                  </>
                 ) : (
-                  <><CheckCircle2 className="w-4 h-4 mr-2" /> Importa {allParsed.length} record</>
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" /> Importa {allParsed.length} record
+                  </>
                 )}
               </Button>
             )}
@@ -296,17 +326,26 @@ export default function BlacklistManager() {
                 <div className="p-3 space-y-2">
                   {preview.map((entry, i) => (
                     <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-muted/50 text-sm">
-                      <span className="text-xs font-mono text-muted-foreground w-6 shrink-0">#{entry.blacklist_no}</span>
+                      <span className="text-xs font-mono text-muted-foreground w-6 shrink-0">
+                        #{entry.blacklist_no}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{entry.company_name}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{entry.city}, {entry.country}</span>
-                          <Badge variant={entry.status?.toLowerCase() === "active" ? "default" : "destructive"} className="text-[10px]">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {entry.city}, {entry.country}
+                          </span>
+                          <Badge
+                            variant={entry.status?.toLowerCase() === "active" ? "default" : "destructive"}
+                            className="text-[10px]"
+                          >
                             {entry.status}
                           </Badge>
                           {entry.total_owed_amount && (
                             <span className="flex items-center gap-0.5 text-destructive font-medium">
-                              <DollarSign className="w-3 h-3" />{Number(entry.total_owed_amount).toLocaleString()}
+                              <DollarSign className="w-3 h-3" />
+                              {Number(entry.total_owed_amount).toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -325,12 +364,21 @@ export default function BlacklistManager() {
         <CardContent className="pt-6 flex items-start gap-3">
           <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
           <div className="text-xs text-muted-foreground space-y-1">
-            <p><strong className="text-foreground">Come aggiornare la blacklist:</strong></p>
+            <p>
+              <strong className="text-foreground">Come aggiornare la blacklist:</strong>
+            </p>
             <ol className="list-decimal pl-4 space-y-0.5">
-              <li>Su <code>wcaworld.com</code> esporta la blacklist in formato Excel.</li>
-              <li>Carica qui sopra il file (anche con estensione <code>.xls</code> in formato CSV).</li>
+              <li>
+                Su <code>wcaworld.com</code> esporta la blacklist in formato Excel.
+              </li>
+              <li>
+                Carica qui sopra il file (anche con estensione <code>.xls</code> in formato CSV).
+              </li>
               <li>L'import sostituisce gli ingressi precedenti e ri-aggancia i match con i partner CRM.</li>
-              <li>Ripeti l'operazione ogni {BLACKLIST_REFRESH_DAYS} giorni: ti avviseremo in cima alla pagina quando scade.</li>
+              <li>
+                Ripeti l'operazione ogni {BLACKLIST_REFRESH_DAYS} giorni: ti avviseremo in cima alla pagina quando
+                scade.
+              </li>
             </ol>
           </div>
         </CardContent>

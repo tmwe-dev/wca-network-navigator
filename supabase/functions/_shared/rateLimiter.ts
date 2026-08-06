@@ -52,10 +52,7 @@ function limitsEnabled(): boolean {
   return Deno.env.get("AI_USAGE_LIMITS_ENABLED") === "true";
 }
 
-export function checkRateLimit(
-  key: string,
-  config: Partial<RateLimitConfig> = {},
-): RateLimitResult {
+export function checkRateLimit(key: string, config: Partial<RateLimitConfig> = {}): RateLimitResult {
   if (!limitsEnabled()) {
     return { allowed: true, remaining: 999, retryAfterMs: 0 };
   }
@@ -84,10 +81,7 @@ export function checkRateLimit(
   return { allowed: false, remaining: 0, retryAfterMs };
 }
 
-export function rateLimitResponse(
-  result: RateLimitResult,
-  corsHeaders: Record<string, string>,
-): Response {
+export function rateLimitResponse(result: RateLimitResult, corsHeaders: Record<string, string>): Response {
   return new Response(
     JSON.stringify({
       error: "rate_limit_exceeded",

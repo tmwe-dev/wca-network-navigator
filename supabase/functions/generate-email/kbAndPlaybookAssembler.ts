@@ -31,8 +31,7 @@ async function loadKnowledgeBase(
   touchCount: number,
   kbCategories?: string[] | null,
 ): Promise<{ text: string; sections: string[] }> {
-  const isFollowUp =
-    emailCategory === "follow_up" || hasInteractionHistory || touchCount > 0;
+  const isFollowUp = emailCategory === "follow_up" || hasInteractionHistory || touchCount > 0;
 
   const kbResult = await fetchKbEntriesStrategic(supabase, quality, userId, {
     emailCategory,
@@ -42,9 +41,7 @@ async function loadKnowledgeBase(
   });
 
   if (!kbResult.text) {
-    console.warn(
-      "[generate-email] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries",
-    );
+    console.warn("[generate-email] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
   }
 
   return { text: kbResult.text, sections: kbResult.sections_used };
@@ -68,15 +65,7 @@ export async function assembleKbAndPlaybook(
   const finalCategory = emailCategory || inferredCategory;
 
   const [kbResult, playbook, operativePrompts] = await Promise.all([
-    loadKnowledgeBase(
-      supabase,
-      quality,
-      userId,
-      finalCategory,
-      hasInteractionHistory,
-      tcForCategory,
-      kbCategories,
-    ),
+    loadKnowledgeBase(supabase, quality, userId, finalCategory, hasInteractionHistory, tcForCategory, kbCategories),
     loadActivePlaybook(supabase, userId, partnerId ?? null),
     loadOperativePromptsBlock(supabase, userId),
   ]);

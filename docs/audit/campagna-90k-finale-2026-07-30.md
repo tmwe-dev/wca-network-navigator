@@ -9,22 +9,22 @@ Base: `ba38a93079eb17e0e5bb085f2afce62f6dfd4429` · Nessun deploy · Nessuna mig
 
 Censimento globale `supabase.from()` fuori da `src/data/**`.
 
-| Momento | Bypass |
-| --- | --- |
-| Inizio campagna | **180** |
-| Fine campagna | **152** |
-| **Rimossi** | **28** (target ≥25 raggiunto) |
+| Momento         | Bypass                        |
+| --------------- | ----------------------------- |
+| Inizio campagna | **180**                       |
+| Fine campagna   | **152**                       |
+| **Rimossi**     | **28** (target ≥25 raggiunto) |
 
 ### Cluster migrati
 
-| File runtime | Bypass prima | Dopo | DAL di destinazione |
-| --- | --- | --- | --- |
-| `email-intelligence/RulesAndActionsTab.tsx` | 14 | 0 | `emailAddressRules`, `emailPrompts`, `emailGrouping` |
-| `email-intelligence/AddressRulesManager.tsx` | 5 | 0 | `emailAddressRules` |
-| `outreach/InUscitaTab.tsx` | 9 | 0 | `outreachPipeline.fetchOutreachSubCounts` |
-| `manual-grouping/useGroupAssignment.ts` | 7 | 0 | `emailGrouping` (write path) |
-| `ai-control/PendingActionsPanel.tsx` | 7 | 0 | `aiPendingActions` (nuovo modulo) |
-| `v2/.../settings/DataSettingsTab.tsx` | 4 | 0 | `dataCounts` (nuovo modulo) |
+| File runtime                                 | Bypass prima | Dopo | DAL di destinazione                                  |
+| -------------------------------------------- | ------------ | ---- | ---------------------------------------------------- |
+| `email-intelligence/RulesAndActionsTab.tsx`  | 14           | 0    | `emailAddressRules`, `emailPrompts`, `emailGrouping` |
+| `email-intelligence/AddressRulesManager.tsx` | 5            | 0    | `emailAddressRules`                                  |
+| `outreach/InUscitaTab.tsx`                   | 9            | 0    | `outreachPipeline.fetchOutreachSubCounts`            |
+| `manual-grouping/useGroupAssignment.ts`      | 7            | 0    | `emailGrouping` (write path)                         |
+| `ai-control/PendingActionsPanel.tsx`         | 7            | 0    | `aiPendingActions` (nuovo modulo)                    |
+| `v2/.../settings/DataSettingsTab.tsx`        | 4            | 0    | `dataCounts` (nuovo modulo)                          |
 
 ### Invarianti preservati esplicitamente
 
@@ -53,10 +53,10 @@ Mappate le funzioni con auth in-code non ancora su `_shared/authGuard`.
 
 ### Migrate (contratto byte-identico verificato)
 
-| Function | Prima | Dopo |
-| --- | --- | --- |
-| `wca-country-counts` | header check + `getClaims` inline, `{error:"AUTH_REQUIRED"\|"AUTH_INVALID"}` 401 | `requireAuth(req, dynCors, { errorFormat: "terse" })` |
-| `email-imap-proxy` | idem via `jsonResponse`, con fallback `catch → AUTH_INVALID` | `requireAuth(... terse)` dentro try/catch, fallback legacy preservato |
+| Function             | Prima                                                                            | Dopo                                                                  |
+| -------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `wca-country-counts` | header check + `getClaims` inline, `{error:"AUTH_REQUIRED"\|"AUTH_INVALID"}` 401 | `requireAuth(req, dynCors, { errorFormat: "terse" })`                 |
+| `email-imap-proxy`   | idem via `jsonResponse`, con fallback `catch → AUTH_INVALID`                     | `requireAuth(... terse)` dentro try/catch, fallback legacy preservato |
 
 `deno check` prima/dopo: `wca-country-counts` 2 errori preesistenti → 2 (identici);
 `email-imap-proxy` 3 → 3 (identici). Nessuna regressione introdotta.
@@ -67,12 +67,12 @@ Mappate le funzioni con auth in-code non ancora su `_shared/authGuard`.
 Target di 8 funzioni **non raggiunto**: solo 2 hanno contratto equivalente.
 Le altre 26 candidate si dividono in tre famiglie con contratto diverso:
 
-| Famiglia | Numero | Payload d'errore | Perché blocca la migrazione |
-| --- | --- | --- | --- |
-| `getUser()` + `INVALID_TOKEN` | 6 (`apply-classification-insight`, `learn-from-group-correction`, `manage-email-folders`, `refine-classification-rule`, `suggest-email-groups`, `backfill-email-rules`) | `{error:"INVALID_TOKEN"}` | `requireAuth` emette `AUTH_INVALID`: cambio di codice visibile ai consumer |
-| `edgeError()` | 8 (`ai-assistant`, `check-inbox`, `check-inbox-booking`, `get-*-credentials`, `save-*`, `send-email`, `consume-credits`, `funnemail-send-autoresponder`, `save-correction-memory`) | `{error: <message>, code}` e **AUTH_INVALID → 403** | shape del body diversa e status diverso (403 vs 401) |
-| `{error:"Unauthorized"}` / `missing_auth` | 10 (`email-sync-worker`, `ai-arena-suggest`, `generate-outreach`, `ai-monitor`, `memory-embed-backfill`, `simulate-funnemail-classify`, `review-message`, `kb-embed-backfill`, `improve-email`, `process-email-queue`) | stringa libera | il client discrimina sul testo; migrare richiede adeguamento consumer |
-| solo header check, nessuna validazione token | 3 (`ai-utility`, `generate-content`, `unified-assistant`) | `{error:"AUTH_REQUIRED"}` | `requireAuth` **validerebbe anche il token**: è un irrobustimento, ma cambia il comportamento per token scaduti (oggi inoltrati a valle) |
+| Famiglia                                     | Numero                                                                                                                                                                                                                 | Payload d'errore                                    | Perché blocca la migrazione                                                                                                              |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `getUser()` + `INVALID_TOKEN`                | 6 (`apply-classification-insight`, `learn-from-group-correction`, `manage-email-folders`, `refine-classification-rule`, `suggest-email-groups`, `backfill-email-rules`)                                                | `{error:"INVALID_TOKEN"}`                           | `requireAuth` emette `AUTH_INVALID`: cambio di codice visibile ai consumer                                                               |
+| `edgeError()`                                | 8 (`ai-assistant`, `check-inbox`, `check-inbox-booking`, `get-*-credentials`, `save-*`, `send-email`, `consume-credits`, `funnemail-send-autoresponder`, `save-correction-memory`)                                     | `{error: <message>, code}` e **AUTH_INVALID → 403** | shape del body diversa e status diverso (403 vs 401)                                                                                     |
+| `{error:"Unauthorized"}` / `missing_auth`    | 10 (`email-sync-worker`, `ai-arena-suggest`, `generate-outreach`, `ai-monitor`, `memory-embed-backfill`, `simulate-funnemail-classify`, `review-message`, `kb-embed-backfill`, `improve-email`, `process-email-queue`) | stringa libera                                      | il client discrimina sul testo; migrare richiede adeguamento consumer                                                                    |
+| solo header check, nessuna validazione token | 3 (`ai-utility`, `generate-content`, `unified-assistant`)                                                                                                                                                              | `{error:"AUTH_REQUIRED"}`                           | `requireAuth` **validerebbe anche il token**: è un irrobustimento, ma cambia il comportamento per token scaduti (oggi inoltrati a valle) |
 
 L'ultima famiglia è un finding di sicurezza reale da trattare con un batch
 dedicato + verifica sui consumer, non dentro un consolidamento "puro".
@@ -126,14 +126,14 @@ migrazioni SQL: **vietato dalla campagna**, non conteggiato come fix.
 
 ## Radar (stessa formula del baseline 74.720 e dello score 85.500)
 
-| Dimensione | Prima | Ora | Note |
-| --- | --- | --- | --- |
-| Funzionalità | 19.000 | 19.000 | nessuna feature aggiunta o rimossa, comportamento invariato |
-| Affidabilità / test | 18.500 | 18.700 | +6 test contract DAL, 3104 verdi ×2 |
-| Pulizia codice | 16.000 | 17.200 | 28 bypass DAL rimossi (180→152), 2 moduli DAL nuovi tipizzati |
-| Coerenza infrastruttura | 15.500 | 15.900 | +2 edge function su `requireAuth`, famiglie residue quantificate |
-| Sicurezza / governance | 16.500 | 16.700 | auth guard esteso, anomalie legacy documentate anziché nascoste |
-| **Totale** | **85.500** | **87.500** | 8,75 / 10 |
+| Dimensione              | Prima      | Ora        | Note                                                             |
+| ----------------------- | ---------- | ---------- | ---------------------------------------------------------------- |
+| Funzionalità            | 19.000     | 19.000     | nessuna feature aggiunta o rimossa, comportamento invariato      |
+| Affidabilità / test     | 18.500     | 18.700     | +6 test contract DAL, 3104 verdi ×2                              |
+| Pulizia codice          | 16.000     | 17.200     | 28 bypass DAL rimossi (180→152), 2 moduli DAL nuovi tipizzati    |
+| Coerenza infrastruttura | 15.500     | 15.900     | +2 edge function su `requireAuth`, famiglie residue quantificate |
+| Sicurezza / governance  | 16.500     | 16.700     | auth guard esteso, anomalie legacy documentate anziché nascoste  |
+| **Totale**              | **85.500** | **87.500** | 8,75 / 10                                                        |
 
 ## Perché NON dichiaro 90.000
 

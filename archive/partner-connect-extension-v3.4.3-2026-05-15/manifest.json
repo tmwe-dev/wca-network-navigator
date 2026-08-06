@@ -3,15 +3,7 @@
   "name": "Partner Connect",
   "version": "3.4.3",
   "description": "LinkedIn delegato all'estensione dedicata LinkedIn Cookie Sync: relay LinkedIn-specific risponde subito con LI_DELEGATED invece di sendMessage al vuoto.",
-  "permissions": [
-    "activeTab",
-    "scripting",
-    "tabs",
-    "storage",
-    "downloads",
-    "alarms",
-    "nativeMessaging"
-  ],
+  "permissions": ["activeTab", "scripting", "tabs", "storage", "downloads", "alarms", "nativeMessaging"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none';"

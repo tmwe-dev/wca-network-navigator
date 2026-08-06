@@ -12,14 +12,7 @@
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = import("../_shared/supabaseClient.ts").AnySupabaseClient;
 
-export type KbDomain =
-  | "commercial"
-  | "email"
-  | "outreach"
-  | "partner-search"
-  | "agenda"
-  | "classification"
-  | "general";
+export type KbDomain = "commercial" | "email" | "outreach" | "partner-search" | "agenda" | "classification" | "general";
 
 export interface KbBlock {
   text: string;
@@ -121,17 +114,18 @@ async function loadOperativePrompts(
   return cards;
 }
 
-async function loadSituational(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<string> {
+async function loadSituational(supabase: SupabaseClient, userId: string): Promise<string> {
   try {
     const today = new Date().toISOString().slice(0, 10);
     const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
     const [partnerRes, agendaRes] = await Promise.all([
       supabase.from("partners").select("id", { count: "exact", head: true }).is("deleted_at", null),
-      supabase.from("activities").select("id", { count: "exact", head: true })
-        .eq("user_id", userId).gte("due_at", today).lt("due_at", tomorrow),
+      supabase
+        .from("activities")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("due_at", today)
+        .lt("due_at", tomorrow),
     ]);
     const lines: string[] = [];
     if (partnerRes?.count != null) lines.push(`- Partner totali nel CRM: ${partnerRes.count}`);

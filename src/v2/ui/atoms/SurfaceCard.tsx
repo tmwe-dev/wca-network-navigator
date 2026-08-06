@@ -25,8 +25,7 @@ type SurfacePadding = "default" | "none";
 const VARIANT_BASE: Record<SurfaceVariant, string> = {
   surface: "rounded-lg border border-border/60 bg-card",
   subtle: "rounded-md bg-muted/20",
-  interactive:
-    "rounded-lg border border-border/60 bg-card hover:border-primary/30 transition-colors cursor-pointer",
+  interactive: "rounded-lg border border-border/60 bg-card hover:border-primary/30 transition-colors cursor-pointer",
 };
 
 const VARIANT_FULL: Record<SurfaceVariant, string> = {

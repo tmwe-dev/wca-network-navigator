@@ -11,11 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { RotateCcw } from "lucide-react";
-import type {
-  CompanyFiltersState,
-  RecencyBucket,
-  TriBool,
-} from "@/v2/hooks/companyList/useCompanyFilters";
+import type { CompanyFiltersState, RecencyBucket, TriBool } from "@/v2/hooks/companyList/useCompanyFilters";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
 
 export interface EntityFiltersDrawerProps {
@@ -83,7 +79,7 @@ function ChipMulti({
               "h-6 px-2 rounded-full text-[10px] font-medium transition-all border",
               active
                 ? "bg-primary/15 text-primary border-primary/40"
-                : "bg-card/40 text-muted-foreground border-border/40 hover:border-border hover:text-foreground"
+                : "bg-card/40 text-muted-foreground border-border/40 hover:border-border hover:text-foreground",
             )}
           >
             {opt}
@@ -118,26 +114,11 @@ export function EntityFiltersDrawer({
     set({ [key]: next } as Partial<CompanyFiltersState>);
   };
 
-  const networkOptions = React.useMemo(
-    () => uniqSorted(companies.flatMap((c) => c.networks ?? [])),
-    [companies]
-  );
-  const serviceOptions = React.useMemo(
-    () => uniqSorted(companies.flatMap((c) => c.services ?? [])),
-    [companies]
-  );
-  const certOptions = React.useMemo(
-    () => uniqSorted(companies.flatMap((c) => c.certifications ?? [])),
-    [companies]
-  );
-  const leadStatusOptions = React.useMemo(
-    () => uniqSorted(companies.map((c) => c.leadStatus)),
-    [companies]
-  );
-  const officeTypeOptions = React.useMemo(
-    () => uniqSorted(companies.map((c) => c.officeType)),
-    [companies]
-  );
+  const networkOptions = React.useMemo(() => uniqSorted(companies.flatMap((c) => c.networks ?? [])), [companies]);
+  const serviceOptions = React.useMemo(() => uniqSorted(companies.flatMap((c) => c.services ?? [])), [companies]);
+  const certOptions = React.useMemo(() => uniqSorted(companies.flatMap((c) => c.certifications ?? [])), [companies]);
+  const leadStatusOptions = React.useMemo(() => uniqSorted(companies.map((c) => c.leadStatus)), [companies]);
+  const officeTypeOptions = React.useMemo(() => uniqSorted(companies.map((c) => c.officeType)), [companies]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -165,10 +146,22 @@ export function EntityFiltersDrawer({
               <ToggleRow label="Ha email" checked={!!filters.hasEmail} onChange={(v) => set({ hasEmail: v })} />
               <ToggleRow label="Ha telefono" checked={!!filters.hasPhone} onChange={(v) => set({ hasPhone: v })} />
               <ToggleRow label="Ha sito web" checked={!!filters.hasWebsite} onChange={(v) => set({ hasWebsite: v })} />
-              <ToggleRow label="Ha LinkedIn" checked={!!filters.hasLinkedin} onChange={(v) => set({ hasLinkedin: v })} />
+              <ToggleRow
+                label="Ha LinkedIn"
+                checked={!!filters.hasLinkedin}
+                onChange={(v) => set({ hasLinkedin: v })}
+              />
               <ToggleRow label="Ha logo" checked={!!filters.hasLogo} onChange={(v) => set({ hasLogo: v })} />
-              <ToggleRow label="Ha biglietto BCA collegato" checked={!!filters.hasBca} onChange={(v) => set({ hasBca: v })} />
-              <ToggleRow label="Solo preferiti ⭐" checked={!!filters.favoritesOnly} onChange={(v) => set({ favoritesOnly: v })} />
+              <ToggleRow
+                label="Ha biglietto BCA collegato"
+                checked={!!filters.hasBca}
+                onChange={(v) => set({ hasBca: v })}
+              />
+              <ToggleRow
+                label="Solo preferiti ⭐"
+                checked={!!filters.favoritesOnly}
+                onChange={(v) => set({ favoritesOnly: v })}
+              />
             </div>
           </Section>
 
@@ -183,7 +176,7 @@ export function EntityFiltersDrawer({
                     "h-7 rounded-md text-[10px] font-medium border",
                     (filters.holding ?? "any") === v
                       ? "bg-primary/15 text-primary border-primary/40"
-                      : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground"
+                      : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground",
                   )}
                 >
                   {v === "any" ? "Tutti" : v === "in" ? "✈ In attesa" : "✈ Fuori attesa"}
@@ -231,7 +224,9 @@ export function EntityFiltersDrawer({
                       onClick={() => set({ officeType: null })}
                       className={cn(
                         "h-7 rounded-md text-[10px] font-medium border",
-                        !filters.officeType ? "bg-primary/15 text-primary border-primary/40" : "bg-card/40 text-muted-foreground border-border/40"
+                        !filters.officeType
+                          ? "bg-primary/15 text-primary border-primary/40"
+                          : "bg-card/40 text-muted-foreground border-border/40",
                       )}
                     >
                       Tutti
@@ -243,7 +238,9 @@ export function EntityFiltersDrawer({
                         onClick={() => set({ officeType: o })}
                         className={cn(
                           "h-7 rounded-md text-[10px] font-medium border",
-                          filters.officeType === o ? "bg-primary/15 text-primary border-primary/40" : "bg-card/40 text-muted-foreground border-border/40"
+                          filters.officeType === o
+                            ? "bg-primary/15 text-primary border-primary/40"
+                            : "bg-card/40 text-muted-foreground border-border/40",
                         )}
                       >
                         {o}
@@ -255,7 +252,11 @@ export function EntityFiltersDrawer({
               {networkOptions.length > 0 && (
                 <div className="pt-2">
                   <div className="text-[10px] text-muted-foreground pb-1">Network</div>
-                  <ChipMulti options={networkOptions} selected={filters.networks ?? []} onToggle={(v) => toggleArr("networks", v)} />
+                  <ChipMulti
+                    options={networkOptions}
+                    selected={filters.networks ?? []}
+                    onToggle={(v) => toggleArr("networks", v)}
+                  />
                 </div>
               )}
             </Section>
@@ -292,10 +293,18 @@ export function EntityFiltersDrawer({
                     onClick={() => set({ recency: b })}
                     className={cn(
                       "h-7 rounded-md text-[9px] font-medium border",
-                      (filters.recency ?? "any") === b ? "bg-primary/15 text-primary border-primary/40" : "bg-card/40 text-muted-foreground border-border/40"
+                      (filters.recency ?? "any") === b
+                        ? "bg-primary/15 text-primary border-primary/40"
+                        : "bg-card/40 text-muted-foreground border-border/40",
                     )}
                     title={
-                      { any: "Tutti", lt7: "Ultimi 7 giorni", lt30: "Ultimi 30 giorni", gt90: "> 90 giorni", never: "Mai contattato" }[b]
+                      {
+                        any: "Tutti",
+                        lt7: "Ultimi 7 giorni",
+                        lt30: "Ultimi 30 giorni",
+                        gt90: "> 90 giorni",
+                        never: "Mai contattato",
+                      }[b]
                     }
                   >
                     {{ any: "Tutti", lt7: "<7g", lt30: "<30g", gt90: ">90g", never: "Mai" }[b]}
@@ -313,7 +322,9 @@ export function EntityFiltersDrawer({
                     onClick={() => set({ deepSearch: v })}
                     className={cn(
                       "h-7 rounded-md text-[10px] font-medium border",
-                      (filters.deepSearch ?? "any") === v ? "bg-primary/15 text-primary border-primary/40" : "bg-card/40 text-muted-foreground border-border/40"
+                      (filters.deepSearch ?? "any") === v
+                        ? "bg-primary/15 text-primary border-primary/40"
+                        : "bg-card/40 text-muted-foreground border-border/40",
                     )}
                   >
                     {v === "any" ? "Tutti" : v === "yes" ? "🔍 Fatto" : "Mai"}
@@ -328,13 +339,21 @@ export function EntityFiltersDrawer({
               {serviceOptions.length > 0 && (
                 <div>
                   <div className="text-[10px] text-muted-foreground pb-1">Servizi</div>
-                  <ChipMulti options={serviceOptions} selected={filters.services ?? []} onToggle={(v) => toggleArr("services", v)} />
+                  <ChipMulti
+                    options={serviceOptions}
+                    selected={filters.services ?? []}
+                    onToggle={(v) => toggleArr("services", v)}
+                  />
                 </div>
               )}
               {certOptions.length > 0 && (
                 <div className="pt-2">
                   <div className="text-[10px] text-muted-foreground pb-1">Certificazioni</div>
-                  <ChipMulti options={certOptions} selected={filters.certifications ?? []} onToggle={(v) => toggleArr("certifications", v)} />
+                  <ChipMulti
+                    options={certOptions}
+                    selected={filters.certifications ?? []}
+                    onToggle={(v) => toggleArr("certifications", v)}
+                  />
                 </div>
               )}
             </Section>

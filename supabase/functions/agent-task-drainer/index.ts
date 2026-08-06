@@ -85,9 +85,7 @@ Deno.serve(async (req) => {
     for (const row of pausedSettings ?? []) {
       const v = (row as { value: unknown }).value;
       const isTrue =
-        v === true ||
-        v === "true" ||
-        (typeof v === "object" && v !== null && JSON.stringify(v) === "true");
+        v === true || v === "true" || (typeof v === "object" && v !== null && JSON.stringify(v) === "true");
       const uid = (row as { user_id: string | null }).user_id;
       if (isTrue && uid) pausedUsers.add(uid);
     }
@@ -106,7 +104,9 @@ Deno.serve(async (req) => {
       candidateQuery = candidateQuery.not(
         "user_id",
         "in",
-        `(${Array.from(pausedUsers).map((u) => `"${u}"`).join(",")})`,
+        `(${Array.from(pausedUsers)
+          .map((u) => `"${u}"`)
+          .join(",")})`,
       );
     }
 
@@ -165,9 +165,7 @@ Deno.serve(async (req) => {
         break;
       }
       const chunk = tasks.slice(i, i + MAX_CONCURRENT);
-      const chunkResults = await Promise.all(
-        chunk.map((t) => executeTask(supabase, supabaseUrl, serviceKey, t)),
-      );
+      const chunkResults = await Promise.all(chunk.map((t) => executeTask(supabase, supabaseUrl, serviceKey, t)));
       results.push(...chunkResults);
     }
 
@@ -237,11 +235,7 @@ async function executeTask(
   } catch (err: unknown) {
     clearTimeout(timeoutId);
     const isTimeout = err instanceof DOMException && err.name === "AbortError";
-    const detail = isTimeout
-      ? `timeout after ${TASK_TIMEOUT_MS}ms`
-      : err instanceof Error
-        ? err.message
-        : String(err);
+    const detail = isTimeout ? `timeout after ${TASK_TIMEOUT_MS}ms` : err instanceof Error ? err.message : String(err);
     await markFailed(supabase, task.id, `drainer: ${detail}`);
     return {
       task_id: task.id,
@@ -251,11 +245,7 @@ async function executeTask(
   }
 }
 
-async function markFailed(
-  supabase: ReturnType<typeof createClient>,
-  taskId: string,
-  reason: string,
-): Promise<void> {
+async function markFailed(supabase: ReturnType<typeof createClient>, taskId: string, reason: string): Promise<void> {
   await supabase
     .from("agent_tasks")
     .update({

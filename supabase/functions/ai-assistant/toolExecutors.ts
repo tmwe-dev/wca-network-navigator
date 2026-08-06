@@ -31,15 +31,8 @@ import {
   executeSuggestNextContacts,
   executeDetectLanguage,
 } from "./toolExecutors/aiActions.ts";
-import {
-  executeCreateContact,
-  executeCreateCampaign,
-  executeScheduleEmail,
-} from "./toolExecutors/crm.ts";
-import {
-  executeUpdateAgentPrompt,
-  executeAddAgentKbEntry,
-} from "./toolExecutors/agents.ts";
+import { executeCreateContact, executeCreateCampaign, executeScheduleEmail } from "./toolExecutors/crm.ts";
+import { executeUpdateAgentPrompt, executeAddAgentKbEntry } from "./toolExecutors/agents.ts";
 import { executeRunKbAudit } from "./toolExecutors/system.ts";
 
 export interface ToolExecutorDeps {
@@ -72,8 +65,7 @@ export async function executeTool(
     get_global_summary: () => readH.executeGlobalSummary(),
     check_blacklist: () => readH.executeCheckBlacklist(args),
     list_reminders: () => readH.executeListReminders(args, userId),
-    get_partners_without_contacts: () =>
-      readH.executePartnersWithoutContacts(args),
+    get_partners_without_contacts: () => readH.executePartnersWithoutContacts(args),
     search_contacts: () => readH.executeSearchContacts(args, userId),
     get_contact_detail: () => readH.executeGetContactDetail(args, userId),
     search_prospects: () => readH.executeSearchProspects(args, userId),
@@ -97,19 +89,15 @@ export async function executeTool(
   // Write handlers needing authHeader / userId
   const writeAuthMap: Record<string, () => Promise<unknown>> = {
     update_partner: () => writeH.executeUpdatePartner(args, userId!),
-    bulk_update_partners: () =>
-      writeH.executeBulkUpdatePartners(args, userId!),
+    bulk_update_partners: () => writeH.executeBulkUpdatePartners(args, userId!),
     create_reminder: () => writeH.executeCreateReminder(args, userId!),
     create_activity: () => writeH.executeCreateActivity(args, userId!),
     delete_records: () => writeH.executeDeleteRecords(args, userId!),
     generate_outreach: () => writeH.executeGenerateOutreach(args, authHeader!),
     send_email: () => writeH.executeSendEmail(args, authHeader!, userId!),
-    deep_search_partner: () =>
-      writeH.executeDeepSearchPartner(args, authHeader!),
-    deep_search_contact: () =>
-      writeH.executeDeepSearchContact(args, authHeader!),
-    enrich_partner_website: () =>
-      writeH.executeEnrichPartnerWebsite(args, authHeader!),
+    deep_search_partner: () => writeH.executeDeepSearchPartner(args, authHeader!),
+    deep_search_contact: () => writeH.executeDeepSearchContact(args, authHeader!),
+    enrich_partner_website: () => writeH.executeEnrichPartnerWebsite(args, authHeader!),
     generate_aliases: () => writeH.executeGenerateAliases(args, authHeader!),
   };
   if (writeAuthMap[name]) return userId ? writeAuthMap[name]() : { error: "Auth required" };
@@ -119,18 +107,15 @@ export async function executeTool(
     save_memory: () => entH.executeSaveMemory(args, userId!),
     search_memory: () => entH.executeSearchMemory(args, userId!),
     create_work_plan: () => entH.executeCreateWorkPlan(args, userId!),
-    execute_plan_step: () =>
-      entH.executeExecutePlanStep(args, userId!, authHeader),
+    execute_plan_step: () => entH.executeExecutePlanStep(args, userId!, authHeader),
     get_active_plans: () => entH.executeGetActivePlans(userId!),
     save_as_template: () => entH.executeSaveAsTemplate(args, userId!),
     search_templates: () => entH.executeSearchTemplates(args, userId!),
     save_kb_rule: () => entH.executeSaveKbRule(args, userId!),
-    save_operative_prompt: () =>
-      entH.executeSaveOperativePrompt(args, userId!),
+    save_operative_prompt: () => entH.executeSaveOperativePrompt(args, userId!),
     list_workflows: () => entH.executeListWorkflows(args, userId!),
     start_workflow: () => entH.executeStartWorkflow(args, userId!),
-    advance_workflow_gate: () =>
-      entH.executeAdvanceWorkflowGate(args, userId!),
+    advance_workflow_gate: () => entH.executeAdvanceWorkflowGate(args, userId!),
     list_playbooks: () => entH.executeListPlaybooks(args, userId!),
     apply_playbook: () => entH.executeApplyPlaybook(args, userId!),
   };
@@ -158,7 +143,9 @@ export async function executeTool(
     return { error: "Tool non disponibile: i dati WCA sono già locali e l'AI non può scaricare profili o directory." };
   }
   if (name === "scan_directory") {
-    return { error: "Tool non disponibile: l'AI non può scansionare directory WCA; usa i dati locali già sincronizzati." };
+    return {
+      error: "Tool non disponibile: l'AI non può scansionare directory WCA; usa i dati locali già sincronizzati.",
+    };
   }
 
   // Email tools (email.ts)
@@ -174,19 +161,13 @@ export async function executeTool(
 
   // AI actions (aiActions.ts)
   if (name === "get_pending_actions") {
-    return userId
-      ? executeGetPendingActions(supabase, args, userId)
-      : { error: "Auth required" };
+    return userId ? executeGetPendingActions(supabase, args, userId) : { error: "Auth required" };
   }
   if (name === "approve_ai_action") {
-    return userId
-      ? executeApproveAiAction(supabase, args, userId)
-      : { error: "Auth required" };
+    return userId ? executeApproveAiAction(supabase, args, userId) : { error: "Auth required" };
   }
   if (name === "reject_ai_action") {
-    return userId
-      ? executeRejectAiAction(supabase, args, userId)
-      : { error: "Auth required" };
+    return userId ? executeRejectAiAction(supabase, args, userId) : { error: "Auth required" };
   }
   if (name === "suggest_next_contacts") {
     return executeSuggestNextContacts(authHeader, args);
@@ -197,38 +178,26 @@ export async function executeTool(
 
   // CRM tools (crm.ts)
   if (name === "create_contact") {
-    return userId
-      ? executeCreateContact(supabase, args, userId)
-      : { error: "Auth required" };
+    return userId ? executeCreateContact(supabase, args, userId) : { error: "Auth required" };
   }
   if (name === "create_campaign") {
-    return userId
-      ? executeCreateCampaign(supabase, args, userId)
-      : { error: "Auth required" };
+    return userId ? executeCreateCampaign(supabase, args, userId) : { error: "Auth required" };
   }
   if (name === "schedule_email") {
-    return userId
-      ? executeScheduleEmail(supabase, args, userId)
-      : { error: "Auth required" };
+    return userId ? executeScheduleEmail(supabase, args, userId) : { error: "Auth required" };
   }
 
   // Agent tools (agents.ts)
   if (name === "update_agent_prompt") {
-    return userId
-      ? executeUpdateAgentPrompt(supabase, args, userId)
-      : { error: "Auth required" };
+    return userId ? executeUpdateAgentPrompt(supabase, args, userId) : { error: "Auth required" };
   }
   if (name === "add_agent_kb_entry") {
-    return userId
-      ? executeAddAgentKbEntry(supabase, args, userId)
-      : { error: "Auth required" };
+    return userId ? executeAddAgentKbEntry(supabase, args, userId) : { error: "Auth required" };
   }
 
   // System tools (system.ts)
   if (name === "run_kb_audit") {
-    return userId
-      ? executeRunKbAudit(args, userId)
-      : { error: "Auth required" };
+    return userId ? executeRunKbAudit(args, userId) : { error: "Auth required" };
   }
 
   return { error: `Tool sconosciuto: ${name}` };

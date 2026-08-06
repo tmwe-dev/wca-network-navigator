@@ -37,17 +37,9 @@ import type { ParsedFile } from "../utils/fileParser";
 import { collectRealInventory } from "../hooks/harmonizeCollector";
 import type { EntityCreatedEntry } from "@/data/harmonizerSessions";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("useHarmonizerLibraryIngestion");
-export type IngestionPhase =
-  | "idle"
-  | "starting"
-  | "running"
-  | "review"
-  | "completed"
-  | "error"
-  | "cancelled";
+export type IngestionPhase = "idle" | "starting" | "running" | "review" | "completed" | "error" | "cancelled";
 
 export interface ChunkProgress {
   chunkIndex: number;
@@ -125,7 +117,9 @@ export function useHarmonizerLibraryIngestion(userId: string) {
       .then((s) => {
         if (s) setState((prev) => ({ ...prev, resumable: s }));
       })
-      .catch(() => { /* ignore */ });
+      .catch(() => {
+        /* ignore */
+      });
   }, [userId]);
 
   /** Aggiorna lo stato di un singolo chunk nel progress array. */
@@ -320,7 +314,10 @@ export function useHarmonizerLibraryIngestion(userId: string) {
         const chunkDef = TMWE_CHUNKS[idx];
         if (!chunkDef) continue;
         const r = await processChunk(chunkDef, sourceFile.content, session.id, runId, goal);
-        if (!r.ok) { firstError = r.error; break; }
+        if (!r.ok) {
+          firstError = r.error;
+          break;
+        }
       }
 
       const refreshed = await loadHarmonizerSession(session.id).catch(() => session);

@@ -20,11 +20,17 @@ export function OutreachLegendFooter() {
       const v = localStorage.getItem("outreach-legend-hidden");
       // Solo se l'utente ha esplicitamente messo "0" la mostriamo
       setHidden(v !== "0");
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
   if (hidden) return null;
   const close = () => {
-    try { localStorage.setItem("outreach-legend-hidden", "1"); } catch { /* ignore */ }
+    try {
+      localStorage.setItem("outreach-legend-hidden", "1");
+    } catch {
+      /* ignore */
+    }
     setHidden(true);
   };
   return (

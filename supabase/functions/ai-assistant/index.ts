@@ -47,19 +47,27 @@ function aiAssistantFailureResponse(
   corsHeaders: Record<string, string>,
 ): Response {
   const isActionable = statusCode === 401 || statusCode === 402 || statusCode === 429;
-  const safeMessage = statusCode === 401 ? "Chiave AI non valida o scaduta. Aggiorna la chiave API nelle impostazioni."
-    : statusCode === 402 ? "Crediti AI esauriti. Aggiorna la chiave API o ricarica il saldo AI."
-    : statusCode === 429 ? "Troppe richieste AI. Attendi qualche secondo e riprova."
-    : message || "Motore AI temporaneamente non disponibile. Riprova tra qualche secondo.";
+  const safeMessage =
+    statusCode === 401
+      ? "Chiave AI non valida o scaduta. Aggiorna la chiave API nelle impostazioni."
+      : statusCode === 402
+        ? "Crediti AI esauriti. Aggiorna la chiave API o ricarica il saldo AI."
+        : statusCode === 429
+          ? "Troppe richieste AI. Attendi qualche secondo e riprova."
+          : message || "Motore AI temporaneamente non disponibile. Riprova tra qualche secondo.";
 
   return new Response(
     JSON.stringify({
       ok: false,
       error: safeMessage,
-      code: statusCode === 401 ? "AI_UNAUTHORIZED"
-        : statusCode === 402 ? "AI_CREDITS_EXHAUSTED"
-        : statusCode === 429 ? "AI_RATE_LIMITED"
-        : "AI_SERVICE_UNAVAILABLE",
+      code:
+        statusCode === 401
+          ? "AI_UNAUTHORIZED"
+          : statusCode === 402
+            ? "AI_CREDITS_EXHAUSTED"
+            : statusCode === 429
+              ? "AI_RATE_LIMITED"
+              : "AI_SERVICE_UNAVAILABLE",
       content: safeMessage,
       response: safeMessage,
       fallback: !isActionable,
@@ -104,11 +112,7 @@ serve(async (req) => {
     const provider = await resolveAiProvider(supabase, userId);
     const limitsEnabled = Deno.env.get("AI_USAGE_LIMITS_ENABLED") === "true";
     if (limitsEnabled && !provider.isUserKey) {
-      const { data: credits } = await supabase
-        .from("user_credits")
-        .select("balance")
-        .eq("user_id", userId)
-        .single();
+      const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
       if (credits && credits.balance <= 0) {
         return new Response(
           JSON.stringify({
@@ -168,13 +172,13 @@ serve(async (req) => {
           limit: 10,
         });
         commandPromptBlock = block ?? "";
-      } catch { /* degrade silently */ }
+      } catch {
+        /* degrade silently */
+      }
       const result = await handleToolDecisionMode(
         provider,
         context?.tools,
-        Array.isArray(messages) && messages.length > 0
-          ? (messages[messages.length - 1]?.content ?? "")
-          : "",
+        Array.isArray(messages) && messages.length > 0 ? (messages[messages.length - 1]?.content ?? "") : "",
         userId,
         supabase,
         dynCors,
@@ -195,16 +199,13 @@ serve(async (req) => {
 
     // ═══ PLAN-EXECUTION MODE ═══
     if (mode === "plan-execution") {
-      const userPrompt = typeof context?.userPrompt === "string"
-        ? context.userPrompt
-        : Array.isArray(messages)
-          ? (
-              [...messages]
-                .reverse()
-                .find((m: Record<string, unknown>) => m?.role === "user")
-                ?.content as string
-            ) ?? ""
-          : "";
+      const userPrompt =
+        typeof context?.userPrompt === "string"
+          ? context.userPrompt
+          : Array.isArray(messages)
+            ? (([...messages].reverse().find((m: Record<string, unknown>) => m?.role === "user")?.content as string) ??
+              "")
+            : "";
       let commandPromptBlock = "";
       try {
         const mod = await import("../_shared/operativePromptsLoader.ts");
@@ -214,7 +215,9 @@ serve(async (req) => {
           limit: 10,
         });
         commandPromptBlock = block ?? "";
-      } catch { /* degrade silently */ }
+      } catch {
+        /* degrade silently */
+      }
       const result = await handlePlanExecutionMode(
         provider,
         context?.tools || [],
@@ -239,9 +242,7 @@ serve(async (req) => {
 
     // ── Detect conversational mode ──
     const isConversational: boolean =
-      mode === "conversational" ||
-      context?.conversational === true ||
-      context?.mode === "conversational";
+      mode === "conversational" || context?.conversational === true || context?.mode === "conversational";
 
     // ── Build system prompt ──
     const systemPromptBase = await composeSystemPrompt({
@@ -260,7 +261,7 @@ serve(async (req) => {
       isConversational,
       context,
       messages,
-      scope
+      scope,
     );
 
     // ── Detect conversational repetitions ──
@@ -271,10 +272,7 @@ serve(async (req) => {
         finalSystemPrompt += "\n\n" + repetitionWarning;
         // Fire-and-forget: save repetition as L1 memory
         if (userId) {
-          const lastMsg = [...messages]
-            .reverse()
-            .find((m: Record<string, unknown>) => m.role === "user")
-            ?.content;
+          const lastMsg = [...messages].reverse().find((m: Record<string, unknown>) => m.role === "user")?.content;
           supabase
             .from("ai_memory")
             .insert({
@@ -288,7 +286,10 @@ serve(async (req) => {
               decay_rate: 0.02,
               source: "repetition_detection",
             })
-            .then(() => {}, () => {});
+            .then(
+              () => {},
+              () => {},
+            );
         }
       }
     }
@@ -296,15 +297,13 @@ serve(async (req) => {
     // ── Message compression ──
     // Bypass per scope ingestion (kb-supervisor): è single-shot, niente
     // conversazione storica → niente riassunti/scritture su ai_memory.
-    const LOVABLE_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY")) || provider.apiKey;
-    const compressedMessages = scope === "kb-supervisor"
-      ? messages
-      : await compressMessages(
-          supabase,
-          messages,
-          LOVABLE_KEY,
-          userId
-        );
+    const LOVABLE_KEY =
+      Deno.env.get("OPENAI_API_KEY") ||
+      Deno.env.get("ANTHROPIC_API_KEY") ||
+      Deno.env.get("LOVABLE_API_KEY") ||
+      provider.apiKey;
+    const compressedMessages =
+      scope === "kb-supervisor" ? messages : await compressMessages(supabase, messages, LOVABLE_KEY, userId);
     const allMessages: Record<string, unknown>[] = [
       { role: "system", content: finalSystemPrompt },
       ...compressedMessages,
@@ -316,7 +315,7 @@ serve(async (req) => {
       isConversational,
       scope,
       allMessages,
-      isConversational ? undefined : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[])
+      isConversational ? undefined : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[]),
     );
 
     if (!initialResponse.ok) {
@@ -335,8 +334,9 @@ serve(async (req) => {
       lastPartnerResult: undefined,
       uiActions: [],
       totalUsage: {
-        prompt_tokens: (initialResult.usage as Record<string, unknown> | undefined)?.prompt_tokens as number || 0,
-        completion_tokens: (initialResult.usage as Record<string, unknown> | undefined)?.completion_tokens as number || 0,
+        prompt_tokens: ((initialResult.usage as Record<string, unknown> | undefined)?.prompt_tokens as number) || 0,
+        completion_tokens:
+          ((initialResult.usage as Record<string, unknown> | undefined)?.completion_tokens as number) || 0,
       },
     };
 
@@ -351,14 +351,14 @@ serve(async (req) => {
           isConversational,
           scope,
           loopMessages,
-          isConversational ? undefined : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[])
+          isConversational ? undefined : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[]),
         );
         return {
           ok: res.ok,
           data: res.data,
         };
       },
-      toolLoopState
+      toolLoopState,
     );
 
     // ── Format final response ──
@@ -371,7 +371,7 @@ serve(async (req) => {
           finalMessage,
           loopResult.state.lastPartnerResult,
           undefined,
-          loopResult.state.uiActions
+          loopResult.state.uiActions,
         );
       } else {
         responseContent = finalMessage;
@@ -397,33 +397,21 @@ serve(async (req) => {
         );
       }
       const fallbackResult = fallbackResponse.data as AiResponseData;
-      const fallbackText =
-        (fallbackResult.choices?.[0]?.message?.content as string) ||
-        "Nessuna risposta";
+      const fallbackText = (fallbackResult.choices?.[0]?.message?.content as string) || "Nessuna risposta";
       if (fallbackResult.usage) {
         loopResult.state.totalUsage.prompt_tokens +=
-          (fallbackResult.usage as Record<string, unknown>).prompt_tokens as number || 0;
+          ((fallbackResult.usage as Record<string, unknown>).prompt_tokens as number) || 0;
         loopResult.state.totalUsage.completion_tokens +=
-          (fallbackResult.usage as Record<string, unknown>).completion_tokens as number || 0;
+          ((fallbackResult.usage as Record<string, unknown>).completion_tokens as number) || 0;
       }
       responseContent = isConversational
         ? fallbackText
-        : appendStructuredData(
-            fallbackText,
-            loopResult.state.lastPartnerResult,
-            undefined,
-            loopResult.state.uiActions
-          );
+        : appendStructuredData(fallbackText, loopResult.state.lastPartnerResult, undefined, loopResult.state.uiActions);
     }
 
     // ── Consume credits ──
     if (userId) {
-      await consumeCredits(
-        supabase,
-        userId,
-        loopResult.state.totalUsage,
-        provider.isUserKey
-      );
+      await consumeCredits(supabase, userId, loopResult.state.totalUsage, provider.isUserKey);
     }
 
     endMetrics(metrics, true, 200);
@@ -445,15 +433,19 @@ serve(async (req) => {
     // (Harmonizer ecc.) di distinguere tra errore modello e troncamento per
     // max_tokens (finish_reason=length).
     const lastMsg = loopResult.state.assistantMessage as Record<string, unknown> | undefined;
-    const finishReason = (lastMsg as { finish_reason?: string } | undefined)?.finish_reason
-      ?? (initialResult.choices?.[0]?.finish_reason as string | undefined);
-    return new Response(JSON.stringify({
-      content: responseContent,
-      usage: loopResult.state.totalUsage,
-      finish_reason: finishReason,
-    }), {
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    const finishReason =
+      (lastMsg as { finish_reason?: string } | undefined)?.finish_reason ??
+      (initialResult.choices?.[0]?.finish_reason as string | undefined);
+    return new Response(
+      JSON.stringify({
+        content: responseContent,
+        usage: loopResult.state.totalUsage,
+        finish_reason: finishReason,
+      }),
+      {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      },
+    );
   } catch (e: unknown) {
     logEdgeError("ai-assistant", e);
     endMetrics(metrics, false, 500);

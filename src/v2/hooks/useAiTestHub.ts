@@ -5,8 +5,12 @@ import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  listScenarios, upsertScenario, deleteScenario, runScenarios,
-  type AiTestScenario, type AiTestRunResult,
+  listScenarios,
+  upsertScenario,
+  deleteScenario,
+  runScenarios,
+  type AiTestScenario,
+  type AiTestRunResult,
 } from "@/data/aiTestScenarios";
 
 const QK = ["v2", "ai-test-hub", "scenarios"] as const;
@@ -23,7 +27,8 @@ export function useAiTestHub() {
   const toggle = useCallback((id: string) => {
     setSelectedIds((s) => {
       const next = new Set(s);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
@@ -45,7 +50,10 @@ export function useAiTestHub() {
   });
 
   const runSelected = useCallback(() => {
-    if (selectedIds.size === 0) { toast.info("Seleziona almeno uno scenario"); return; }
+    if (selectedIds.size === 0) {
+      toast.info("Seleziona almeno uno scenario");
+      return;
+    }
     runMut.mutate(Array.from(selectedIds));
   }, [selectedIds, runMut]);
 
@@ -67,18 +75,28 @@ export function useAiTestHub() {
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteScenario(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: QK }); toast.success("Eliminato"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK });
+      toast.success("Eliminato");
+    },
     onError: (e: Error) => toast.error(`Errore: ${e.message}`),
   });
 
   return {
     scenarios: scenariosQ.data ?? [],
     isLoading: scenariosQ.isLoading,
-    selectedIds, toggle, selectAll, clearSelection,
-    results, running,
-    runSelected, runAll,
-    editing, setEditing,
-    save: saveMut.mutate, isSaving: saveMut.isPending,
+    selectedIds,
+    toggle,
+    selectAll,
+    clearSelection,
+    results,
+    running,
+    runSelected,
+    runAll,
+    editing,
+    setEditing,
+    save: saveMut.mutate,
+    isSaving: saveMut.isPending,
     remove: deleteMut.mutate,
   };
 }
