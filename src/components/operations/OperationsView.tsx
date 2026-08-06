@@ -12,7 +12,7 @@ import { WCA_COUNTRIES } from "@/catalogs/wcaCountries";
 import { PartnerListPanel } from "@/components/operations/PartnerListPanel";
 import { PartnerDetailCompact } from "@/components/partners/PartnerDetailCompact";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { rpcGetDirectoryCounts } from "@/application/data/rpc";
+import { rpcGetDirectoryCounts } from "@/data/rpc";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useCountryStats } from "@/hooks/useCountryStats";

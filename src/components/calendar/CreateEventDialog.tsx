@@ -11,8 +11,8 @@ import { useCreateEvent } from "@/hooks/useCalendar";
 import { usePartners } from "@/hooks/usePartners";
 import { useContacts } from "@/hooks/useContacts";
 import { useDeals } from "@/hooks/useDeals";
-import type { EventType, RecurrenceType } from "@/application/data/calendar";
-import type { Partner } from "@/application/data/partners";
+import type { EventType, RecurrenceType } from "@/data/calendar";
+import type { Partner } from "@/data/partners";
 import type { Deal } from "@/types/deals";
 
 interface Contact {

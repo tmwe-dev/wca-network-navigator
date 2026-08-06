@@ -23,7 +23,7 @@ import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { queryKeys } from "@/lib/queryKeys";
-import { getConversationContextByEmail, getAddressRuleByEmail } from "@/application/data/uiShellQueries";
+import { getConversationContextByEmail, getAddressRuleByEmail } from "@/data/uiShellQueries";
 
 const CHANNEL_ICONS: Record<string, React.ReactNode> = {
   email: <Mail className="h-4 w-4 text-blue-400" />,

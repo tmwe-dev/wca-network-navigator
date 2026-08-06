@@ -2,7 +2,7 @@
  * AIPerformancePanel — KPIs, per-type stats, and critical contacts
  */
 import { useQuery } from "@tanstack/react-query";
-import { findDecisionLogKpiRows, findDecisionLogTypeRows, findDecisionLogCriticalRows } from "@/application/data/aiDecisionLog";
+import { findDecisionLogKpiRows, findDecisionLogTypeRows, findDecisionLogCriticalRows } from "@/data/aiDecisionLog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Brain, Zap, CheckCircle, Target, AlertTriangle } from "lucide-react";

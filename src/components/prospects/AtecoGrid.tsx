@@ -3,7 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Search, X, FileText } from "lucide-react";
 import { t } from "@/components/download/theme";
-import { getAtecoRank } from "@/application/data/atecoRanking";
+import { getAtecoRank } from "@/data/atecoRanking";
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";
 import { useAtecoGrid, groups, passesRankingFilter } from "./ateco-grid/useAtecoGrid";
 import { FilterMultiSelect } from "./ateco-grid/AtecoFilterBar";

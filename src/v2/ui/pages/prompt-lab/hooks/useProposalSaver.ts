@@ -8,14 +8,14 @@
  */
 
 import type { BlockSource } from "../types";
-import { getAppSetting, upsertAppSetting } from "@/application/data/appSettings";
-import { upsertKbEntry } from "@/application/data/kbEntries";
-import { updateOperativePrompt } from "@/application/data/operativePrompts";
-import { updateEmailPrompt } from "@/application/data/emailPrompts";
-import { updateEmailAddressRule } from "@/application/data/emailAddressRules";
-import { updateCommercialPlaybook } from "@/application/data/commercialPlaybooks";
-import { updateAgentPersona } from "@/application/data/agentPersonas";
-import { logSupervisorAudit } from "@/application/data/supervisorAuditLog";
+import { getAppSetting, upsertAppSetting } from "@/data/appSettings";
+import { upsertKbEntry } from "@/data/kbEntries";
+import { updateOperativePrompt } from "@/data/operativePrompts";
+import { updateEmailPrompt } from "@/data/emailPrompts";
+import { updateEmailAddressRule } from "@/data/emailAddressRules";
+import { updateCommercialPlaybook } from "@/data/commercialPlaybooks";
+import { updateAgentPersona } from "@/data/agentPersonas";
+import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import type { GlobalProposal } from "./useProposalProcessing";
 
 const TYPES_KEY = "email_oracle_types";

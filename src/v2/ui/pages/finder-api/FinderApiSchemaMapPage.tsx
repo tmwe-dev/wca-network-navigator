@@ -38,7 +38,7 @@ import {
   finderApiSchemaKeys,
   type FinderApiSchemaField,
   type SchemaRole,
-} from "@/application/data/finderApiSchemaMap";
+} from "@/data/finderApiSchemaMap";
 
 const TMWE_OPS = [
   "profile.me",

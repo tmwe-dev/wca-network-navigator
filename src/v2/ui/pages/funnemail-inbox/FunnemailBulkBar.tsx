@@ -14,7 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/providers/AuthProvider";
-import { findSenderGroupNamesByUser } from "@/application/data/senderManagement";
+import { findSenderGroupNamesByUser } from "@/data/senderManagement";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";

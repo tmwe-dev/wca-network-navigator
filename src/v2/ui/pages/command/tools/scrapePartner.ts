@@ -2,7 +2,7 @@
  * scrapePartner tool — Scrapes a partner's website and proposes updates.
  * Wraps existing scrape-website edge function with scrape_cache.
  */
-import { getCachedScrapePayload, setCachedScrapePayload, updatePartnerFields, findPartnerBySearchTerm } from "@/application/data/commandScrapePartner";
+import { getCachedScrapePayload, setCachedScrapePayload, updatePartnerFields, findPartnerBySearchTerm } from "@/data/commandScrapePartner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult, ToolContext } from "./types";
 

@@ -21,7 +21,7 @@ import {
   type CreateSuggestionInput,
   type SuggestedImprovement,
   type SuggestionStatus,
-} from "@/application/data/suggestedImprovements";
+} from "@/data/suggestedImprovements";
 
 export function useSuggestedImprovements(userId: string, isAdmin: boolean = false) {
   const [pending, setPending] = useState<SuggestedImprovement[]>([]);

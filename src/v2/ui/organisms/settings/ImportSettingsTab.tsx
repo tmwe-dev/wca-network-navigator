@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findRecentImportLogs } from "@/application/data/importLogs";
+import { findRecentImportLogs } from "@/data/importLogs";
 import { FormSection } from "../../organisms/FormSection";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, Loader2 } from "lucide-react";

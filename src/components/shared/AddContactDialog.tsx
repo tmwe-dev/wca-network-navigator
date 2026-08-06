@@ -10,12 +10,12 @@ import { UserPlus, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import {
   getOrCreateManualImportLog,
   insertManualContact,
   insertManualPartnerContact,
-} from "@/application/data/manualContacts";
+} from "@/data/manualContacts";
 import { queryKeys } from "@/lib/queryKeys";
 
 type Destination = "contacts" | "network" | "cockpit";

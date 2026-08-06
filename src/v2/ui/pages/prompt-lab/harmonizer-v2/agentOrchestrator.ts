@@ -19,14 +19,14 @@ import {
   completeHarmonizerSession,
   type FactEntry,
   type EntityCreatedEntry,
-} from "@/application/data/harmonizerSessions";
+} from "@/data/harmonizerSessions";
 import {
   createHarmonizeRun,
   appendHarmonizeProposal,
   updateHarmonizeRun,
   type HarmonizeProposal,
   type HarmonizeActionType,
-} from "@/application/data/harmonizeRuns";
+} from "@/data/harmonizeRuns";
 
 
 import { createLogger } from "@/lib/log";

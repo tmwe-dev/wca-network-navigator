@@ -18,12 +18,12 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Save, User, Sparkles, BookOpen, Mic, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { listAgentsForCapabilities } from "@/application/data/agentsForPromptLab";
+import { listAgentsForCapabilities } from "@/data/agentsForPromptLab";
 import {
   getAgentPersonaByAgent,
   upsertAgentPersona,
   type AgentPersona,
-} from "@/application/data/agentPersonas";
+} from "@/data/agentPersonas";
 import { queryKeys } from "@/lib/queryKeys";
 
 const TONES = [

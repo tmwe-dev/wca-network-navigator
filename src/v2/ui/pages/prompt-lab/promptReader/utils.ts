@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import type { AgentRegistryEntry } from "@/constants/agentPrompts";
-import type { KbEntry } from "@/application/data/kbEntries";
+import type { KbEntry } from "@/data/kbEntries";
 
 export function copy(text: string, label = "Prompt") {
   navigator.clipboard.writeText(text).then(

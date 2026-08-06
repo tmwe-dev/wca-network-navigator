@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
-import { createMemory } from "@/application/data/aiMemory";
-import { findRecentMemoriesForFeedback, updateMemoryConfidence } from "@/application/data/aiMemoryOps";
+import { createMemory } from "@/data/aiMemory";
+import { findRecentMemoriesForFeedback, updateMemoryConfidence } from "@/data/aiMemoryOps";
 
 const log = createLogger("FeedbackButtons");
 

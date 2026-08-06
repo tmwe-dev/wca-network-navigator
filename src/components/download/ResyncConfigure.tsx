@@ -13,8 +13,8 @@ import {
   findPartnerContactEmails,
   findPartnerContactsWithEmail,
   findPartnersByWcaIds,
-} from "@/application/data/resyncStats";
-import { createDownloadJob } from "@/application/data/downloadJobs";
+} from "@/data/resyncStats";
+import { createDownloadJob } from "@/data/downloadJobs";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("ResyncConfigure");

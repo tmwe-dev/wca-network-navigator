@@ -15,7 +15,7 @@ import {
   toggleFunnemailRoutingRule,
   type FunnemailRoutingRuleRow,
   type FunnemailRoutingCondition,
-} from "@/application/data/funnemailRoutingRules";
+} from "@/data/funnemailRoutingRules";
 import { toJsonValue } from "@/lib/typedJson";
 
 const QK = ["funnemail", "routing-rules"] as const;

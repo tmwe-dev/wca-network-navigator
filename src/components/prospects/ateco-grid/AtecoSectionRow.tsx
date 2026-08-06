@@ -1,7 +1,7 @@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Folder, FolderOpen, Check, ChevronRight, ChevronDown } from "lucide-react";
 import type { AtecoEntry } from "@/catalogs/atecoCategories";
-import { getAtecoRank, calcScore, scoreColor, scoreBg } from "@/application/data/atecoRanking";
+import { getAtecoRank, calcScore, scoreColor, scoreBg } from "@/data/atecoRanking";
 import { t } from "@/components/download/theme";
 import { childDivisions, childGroups, allLeafCodes, passesRankingFilter } from "./useAtecoGrid";
 import type { ProspectFilters } from "@/components/prospects/ProspectAdvancedFilters";

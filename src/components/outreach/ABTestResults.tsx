@@ -2,7 +2,7 @@
  * ABTestResults — Dashboard showing A/B test results with comparison
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { findAbTests, completeAbTest, type ABTestRow } from "@/application/data/abTests";
+import { findAbTests, completeAbTest, type ABTestRow } from "@/data/abTests";
 import { toast } from "sonner";
 import { FlaskConical, Star, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";

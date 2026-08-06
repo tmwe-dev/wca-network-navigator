@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, Target, Brain, MessageSquare } from 'lucide-react';
-import { findEmailClassificationsPlain, findEmailClassificationCategories } from "@/application/data/emailClassifications";
+import { findEmailClassificationsPlain, findEmailClassificationCategories } from "@/data/emailClassifications";
 
 interface Classification {
   id: string;

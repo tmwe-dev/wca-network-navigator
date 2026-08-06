@@ -5,7 +5,7 @@
 import * as React from "react";
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findSupervisorKpisSince, findSupervisorFeed, type AuditRow } from "@/application/data/supervisorFeed";
+import { findSupervisorKpisSince, findSupervisorFeed, type AuditRow } from "@/data/supervisorFeed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

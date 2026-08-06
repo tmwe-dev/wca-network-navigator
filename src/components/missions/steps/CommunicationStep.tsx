@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { findActiveEmailPrompts } from "@/application/data/emailPrompts";
+import { findActiveEmailPrompts } from "@/data/emailPrompts";
 import type { MissionStepProps, CommunicationConfig } from "./types";
 
 interface EmailPromptEntry { id: string; title: string; scope: string }

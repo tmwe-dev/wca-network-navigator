@@ -3,7 +3,7 @@
  * Payload atteso: { contact_id?, contact_ref?, partner_id?, partner_ref?, confidence?: number }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { linkContactToPartner } from "@/application/data/contacts";
+import { linkContactToPartner } from "@/data/contacts";
 import { mergePayload, resolveContactRef, resolvePartnerRef } from "./_helpers/writePayload";
 
 type Payload = {

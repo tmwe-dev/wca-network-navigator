@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
-import { findOperativePromptOptions } from "@/application/data/operativePrompts";
+import { findOperativePromptOptions } from "@/data/operativePrompts";
 import {
   listTestCasesForPrompt,
   listRunsForPrompt,
@@ -22,7 +22,7 @@ import {
   runTests,
   type PromptTestCase,
   type PromptTestRun,
-} from "@/application/data/promptTests";
+} from "@/data/promptTests";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

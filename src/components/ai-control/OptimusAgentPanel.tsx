@@ -20,7 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { invalidateOptimusMemoryPlan, deleteOptimusMemory } from "@/application/data/optimusMemoryAdmin";
+import { invalidateOptimusMemoryPlan, deleteOptimusMemory } from "@/data/optimusMemoryAdmin";
 import { useOptimusOverview, useOptimusLogs, type OptimusOverviewRow } from "@/hooks/useOptimusStatus";
 import { cn } from "@/lib/utils";
 

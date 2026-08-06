@@ -2,7 +2,7 @@ import {
   Mail, MessageCircle, Linkedin, Phone, Megaphone, ArrowUpRight,
   Bot, Pencil, RefreshCw,
 } from "lucide-react";
-import type { CestinoChannel, CestinoStatus, CestinoTrigger } from "@/application/data/cestinone";
+import type { CestinoChannel, CestinoStatus, CestinoTrigger } from "@/data/cestinone";
 
 export const CHANNEL_META: Record<CestinoChannel, {
   label: string;

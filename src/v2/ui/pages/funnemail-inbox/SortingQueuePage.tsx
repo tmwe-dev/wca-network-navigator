@@ -6,7 +6,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Inbox } from "lucide-react";
-import { listSortingQueue, FUNNEMAIL_JOB_STATUS_LABELS } from "@/application/data/funnemailStatuses";
+import { listSortingQueue, FUNNEMAIL_JOB_STATUS_LABELS } from "@/data/funnemailStatuses";
 import { queryKeys } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { useFunnemailStatuses } from "@/v2/hooks/useFunnemailStatuses";

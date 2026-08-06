@@ -25,7 +25,7 @@ import { EntityListWithDetail } from "@/v2/ui/organisms/EntityListWithDetail";
 import { PartnerDetailInline } from "@/v2/ui/organisms/PartnerDetailInline";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
 import { supabase } from "@/integrations/supabase/client";
-import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { addCockpitPreselection } from "@/lib/cockpitPreselection";
 // Niente PageTitleHeader: il contesto "Esplora · WCA Partner" è già mostrato
 // da `ExploreContextHeader` nella top-bar globale (no doppione).

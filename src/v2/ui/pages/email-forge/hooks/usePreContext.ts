@@ -6,8 +6,8 @@
 import * as React from "react";
 import { useUnifiedEnrichmentSnapshot } from "@/hooks/useUnifiedEnrichmentSnapshot";
 import { useQuery } from "@tanstack/react-query";
-import { findPartnerRelationshipSnapshot } from "@/application/data/partners";
-import { findPartnerRelationshipMessages } from "@/application/data/channelMessages";
+import { findPartnerRelationshipSnapshot } from "@/data/partners";
+import { findPartnerRelationshipMessages } from "@/data/channelMessages";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 import type { PreGenerationContext } from "../components/ContextSummary";
 import type { ResolvedEmailType } from "../types/contract";

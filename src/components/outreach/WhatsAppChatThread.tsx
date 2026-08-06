@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
-import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/application/data/chatAttachments";
+import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/data/chatAttachments";
 import { toast } from "sonner";
 import { sendWhatsApp as sendWhatsAppUnified } from "@/lib/inbox/sendMessage";
 import { useLogAction } from "@/hooks/useLogAction";

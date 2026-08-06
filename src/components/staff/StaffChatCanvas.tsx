@@ -6,7 +6,7 @@ import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";
 import { cn } from "@/lib/utils";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { FileDropZone } from "./FileDropZone";
-import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/application/data/chatAttachments";
+import { uploadChatAttachment, getChatAttachmentPublicUrl } from "@/data/chatAttachments";
 import type { Agent } from "@/hooks/useAgents";
 import { createLogger } from "@/lib/log";
 

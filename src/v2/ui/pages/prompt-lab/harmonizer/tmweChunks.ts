@@ -13,7 +13,7 @@
  * - poi Procedure runtime (che usano gli agenti),
  * - infine Personas e Cross-cutting.
  */
-import type { ConflictEntry } from "@/application/data/harmonizerSessions";
+import type { ConflictEntry } from "@/data/harmonizerSessions";
 
 /**
  * Helper per generare ConflictEntry "seed" senza UUID runtime

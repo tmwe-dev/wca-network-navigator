@@ -5,7 +5,7 @@
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { findAiAutomationPauseSettings, upsertAiAutomationPauseSettings } from '@/application/data/appSettings';
+import { findAiAutomationPauseSettings, upsertAiAutomationPauseSettings } from '@/data/appSettings';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';

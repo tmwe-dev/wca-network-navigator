@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findAgendaPartnersByCountry } from "@/application/data/downloadViews";
+import { findAgendaPartnersByCountry } from "@/data/downloadViews";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

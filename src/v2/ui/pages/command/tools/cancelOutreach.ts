@@ -2,7 +2,7 @@
  * Tool: cancel-outreach-item — cancella o posticipa un item della coda outreach.
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { updateOutreachItem } from "@/application/data/outreachQueue";
+import { updateOutreachItem } from "@/data/outreachQueue";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = { item_id?: string; action?: "cancel" | "postpone"; new_scheduled_at?: string; [k: string]: unknown };

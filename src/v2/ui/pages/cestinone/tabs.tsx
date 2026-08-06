@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { resolveAgentAvatar } from "@/constants/agentAvatars";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
-import type { CestinoItem } from "@/application/data/cestinone";
+import type { CestinoItem } from "@/data/cestinone";
 import { CHANNEL_META, TRIGGER_META, PARTNER_TYPE_META } from "./meta";
 import { CheckRow } from "./AgentBadge";
 

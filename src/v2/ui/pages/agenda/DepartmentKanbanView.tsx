@@ -31,7 +31,7 @@ import {
   invalidateActivityCache,
   type KanbanJobCard,
   type ActivityDepartment,
-} from "@/application/data/activities";
+} from "@/data/activities";
 
 type ColumnId = ActivityDepartment | "unassigned";
 

@@ -3,9 +3,9 @@
  * Uses scrape-website edge function with scrape_cache.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { getCachedScrapePayload } from "@/application/data/commandScrapePartner";
-import { upsertScrapeCacheEntry } from "@/application/data/scrapeCache";
-import { applyProspectEnrichment, findProspectBySearchTerm } from "@/application/data/prospects";
+import { getCachedScrapePayload } from "@/data/commandScrapePartner";
+import { upsertScrapeCacheEntry } from "@/data/scrapeCache";
+import { applyProspectEnrichment, findProspectBySearchTerm } from "@/data/prospects";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 const MATCH = /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:prospect\s+)?/i;

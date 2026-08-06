@@ -12,14 +12,14 @@
  * note read-only per lo sviluppatore — così il modello non tenta di
  * "scrivere meglio" un problema che è di runtime/contratto/policy.
  */
-import { findKbEntries } from "@/application/data/kbEntries";
-import { findOperativePromptsFull } from "@/application/data/operativePrompts";
-import { findEmailPromptsByScope } from "@/application/data/emailPrompts";
-import { findEmailAddressRules } from "@/application/data/emailAddressRules";
-import { findCommercialPlaybooks } from "@/application/data/commercialPlaybooks";
-import { findAgentPersonas } from "@/application/data/agentPersonas";
+import { findKbEntries } from "@/data/kbEntries";
+import { findOperativePromptsFull } from "@/data/operativePrompts";
+import { findEmailPromptsByScope } from "@/data/emailPrompts";
+import { findEmailAddressRules } from "@/data/emailAddressRules";
+import { findCommercialPlaybooks } from "@/data/commercialPlaybooks";
+import { findAgentPersonas } from "@/data/agentPersonas";
 import type { ParsedFile } from "../utils/fileParser";
-import type { GapClassification, InventorySummary } from "@/application/data/harmonizeRuns";
+import type { GapClassification, InventorySummary } from "@/data/harmonizeRuns";
 
 /** Voce di inventario neutra (reale o desiderata). */
 export interface InventoryItem {

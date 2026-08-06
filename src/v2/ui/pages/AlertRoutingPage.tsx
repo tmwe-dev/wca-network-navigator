@@ -12,7 +12,7 @@ import {
   upsertAlertRecipient,
   deleteAlertRecipient,
   type AlertRecipient,
-} from "@/application/data/alertRecipients";
+} from "@/data/alertRecipients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

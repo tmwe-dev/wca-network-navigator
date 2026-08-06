@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
-import { upsertAppSetting, findAiSettingsForUser } from "@/application/data/appSettings";
+import { upsertAppSetting, findAiSettingsForUser } from "@/data/appSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

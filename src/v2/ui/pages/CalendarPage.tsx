@@ -9,7 +9,7 @@ import { CalendarView } from "@/components/calendar/CalendarView";
 import { CreateEventDialog } from "@/components/calendar/CreateEventDialog";
 import { EventDetailSheet } from "@/components/calendar/EventDetailSheet";
 import { UpcomingEventsWidget } from "@/components/calendar/UpcomingEventsWidget";
-import type { CalendarEvent, EventType } from "@/application/data/calendar";
+import type { CalendarEvent, EventType } from "@/data/calendar";
 
 export function CalendarPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);

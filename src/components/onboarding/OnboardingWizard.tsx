@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { findProfileForOnboarding, upsertOnboardingProfile } from "@/application/data/profiles";
-import { updateOperatorForOnboarding } from "@/application/data/operators";
+import { findProfileForOnboarding, upsertOnboardingProfile } from "@/data/profiles";
+import { updateOperatorForOnboarding } from "@/data/operators";
 import { StepOperatorIdentity, type OperatorIdentityValues } from "./StepOperatorIdentity";
 
 import { createLogger } from "@/lib/log";

@@ -15,7 +15,7 @@ import {
   insertTestRun, insertTestResults,
   fetchRecentRuns, fetchRunResults, exportResultsToCSV,
   type TestRunRow, type TestResultRow,
-} from "@/application/data/aiLabTestRuns";
+} from "@/data/aiLabTestRuns";
 
 interface TestScenario {
   id: number;

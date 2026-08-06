@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useMessageAttachments, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
-import { getImportFilePublicUrl } from "@/application/data/importLogs";
+import { getImportFilePublicUrl } from "@/data/importLogs";
 import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
 import { decodeRfc2047, extractSenderBrand } from "./email/emailUtils";

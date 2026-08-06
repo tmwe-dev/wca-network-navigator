@@ -3,7 +3,7 @@
  * Payload atteso: { activity_id?: string, activity_ref?: string, dueAt: string (ISO o YYYY-MM-DD), note?: string }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { findActivityRef, patchActivity } from "@/application/data/activities";
+import { findActivityRef, patchActivity } from "@/data/activities";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = {

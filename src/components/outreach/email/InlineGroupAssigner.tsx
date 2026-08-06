@@ -14,9 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
-import { upsertEmailAddressRule } from "@/application/data/emailAddressRules";
+import { upsertEmailAddressRule } from "@/data/emailAddressRules";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
-import { fetchSenderGroupsBrief } from "@/application/data/emailGrouping";
+import { fetchSenderGroupsBrief } from "@/data/emailGrouping";
 import { cn } from "@/lib/utils";
 
 type GroupRow = { nome_gruppo: string; colore: string | null; icon: string | null };

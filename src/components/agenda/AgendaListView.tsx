@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findAgendaPartnerRelations } from "@/application/data/agendaPartners";
+import { findAgendaPartnerRelations } from "@/data/agendaPartners";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,7 +13,7 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { queryKeys } from "@/lib/queryKeys";
-import { getPartnersByLeadStatusFromView } from "@/application/data/partners";
+import { getPartnersByLeadStatusFromView } from "@/data/partners";
 
 interface PartnerRow {
   id: string;

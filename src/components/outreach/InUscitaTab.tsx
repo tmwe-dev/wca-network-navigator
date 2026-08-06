@@ -10,7 +10,7 @@ import { DaInviareSubTab } from "./DaInviareSubTab";
 import { InviatiSubTab } from "./InviatiSubTab";
 import { ProgrammatiSubTab } from "./ProgrammatiSubTab";
 import { FallitiSubTab } from "./FallitiSubTab";
-import { fetchOutreachSubCounts } from "@/application/data/outreachPipeline";
+import { fetchOutreachSubCounts } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface InUscitaTabProps {

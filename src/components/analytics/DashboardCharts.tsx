@@ -7,7 +7,7 @@ import {
   findActivityTypes,
   findTopResponsePatterns,
   findLeadScores,
-} from "@/application/data/dashboardCharts";
+} from "@/data/dashboardCharts";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,

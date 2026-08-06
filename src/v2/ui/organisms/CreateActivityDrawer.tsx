@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { insertActivity } from "@/application/data/activities";
+import { insertActivity } from "@/data/activities";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { Button } from "../atoms/Button";
 import { toast } from "sonner";

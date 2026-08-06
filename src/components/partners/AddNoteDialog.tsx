@@ -6,9 +6,9 @@
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createInteraction } from "@/application/data/interactions";
-import { activityKeys, insertActivity } from "@/application/data/activities";
-import { updatePartner } from "@/application/data/partners";
+import { createInteraction } from "@/data/interactions";
+import { activityKeys, insertActivity } from "@/data/activities";
+import { updatePartner } from "@/data/partners";
 import { useAuth } from "@/providers/AuthProvider";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,

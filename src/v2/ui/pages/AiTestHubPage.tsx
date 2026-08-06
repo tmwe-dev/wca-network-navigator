@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiTestHub } from "@/v2/hooks/useAiTestHub";
-import type { AiTestScenario } from "@/application/data/aiTestScenarios";
+import type { AiTestScenario } from "@/data/aiTestScenarios";
 import { Loader2, Play, CheckCircle2, XCircle, AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { LabGuideHeader } from "@/v2/ui/molecules/LabGuideHeader";
 

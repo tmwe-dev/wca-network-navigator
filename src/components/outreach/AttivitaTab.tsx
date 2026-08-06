@@ -17,7 +17,7 @@ import { it } from "date-fns/locale";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { updateActivitySchedule, logAuditEntry, findRecentActivities, completeActivity, updateActivityDescription } from "@/application/data/outreachPipeline";
+import { updateActivitySchedule, logAuditEntry, findRecentActivities, completeActivity, updateActivityDescription } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 import { OutreachRow } from "./shared/OutreachRow";
 import { resolveActionKind } from "./shared/ActionIcon";

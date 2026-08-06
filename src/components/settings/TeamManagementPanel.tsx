@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useTeams, useTeamMembers, useCreateTeam, useUpdateTeam, useDeleteTeam, useAddTeamMember, useRemoveTeamMember, useUpdateMemberRole } from "@/hooks/useRBAC";
 import { useQuery } from "@tanstack/react-query";
-import { findAuthorizedUsersDirectory } from "@/application/data/authorizedUsersDirectory";
+import { findAuthorizedUsersDirectory } from "@/data/authorizedUsersDirectory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

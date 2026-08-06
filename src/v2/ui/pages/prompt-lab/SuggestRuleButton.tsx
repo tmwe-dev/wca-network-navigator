@@ -26,7 +26,7 @@ import {
   type SuggestionSource,
   type SuggestionType,
   type SuggestionPriority,
-} from "@/application/data/suggestedImprovements";
+} from "@/data/suggestedImprovements";
 
 interface SuggestRuleButtonProps {
   title: string;

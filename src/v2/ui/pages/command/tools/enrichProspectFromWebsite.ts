@@ -1,4 +1,4 @@
-import { fetchProspectById, updateProspect } from "@/application/data/prospectEnrichment";
+import { fetchProspectById, updateProspect } from "@/data/prospectEnrichment";
 import { invokeEdgeRaw } from "@/v2/io/edge/client";
 import type { Tool, ToolResult } from "./types";
 

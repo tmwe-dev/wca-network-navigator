@@ -4,7 +4,7 @@ import { useMission } from "@/contexts/MissionContext";
 import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/queryKeys";
-import { searchRecipientPartners } from "@/application/data/uiShellQueries";
+import { searchRecipientPartners } from "@/data/uiShellQueries";
 import { toRecord } from "@/lib/records";
 
 interface Props {

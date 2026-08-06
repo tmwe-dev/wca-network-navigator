@@ -21,7 +21,7 @@ import {
   tmweCatalogKeys,
   type TmweCatalogRow,
   type TmweRiskLevel,
-} from "@/application/data/tmweApiCatalog";
+} from "@/data/tmweApiCatalog";
 
 const RISK_BADGE: Record<TmweRiskLevel, string> = {
   read: "bg-success/15 text-success dark:text-success",

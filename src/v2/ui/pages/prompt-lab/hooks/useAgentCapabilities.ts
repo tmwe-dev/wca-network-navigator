@@ -9,7 +9,7 @@ import {
   getAgentCapabilities,
   updateAgentCapabilities,
   type AgentCapabilities,
-} from "@/application/data/agentCapabilities";
+} from "@/data/agentCapabilities";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 

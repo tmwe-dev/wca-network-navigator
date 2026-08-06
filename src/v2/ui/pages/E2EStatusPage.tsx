@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, MinusCircle, AlertTriangle, ExternalLink, Loader2, RefreshCw } from "lucide-react";
-import { listRecentE2ERuns, type E2ERunRow, type E2ESpecResult } from "@/application/data/e2eRuns";
+import { listRecentE2ERuns, type E2ERunRow, type E2ESpecResult } from "@/data/e2eRuns";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Activity } from "lucide-react";
 

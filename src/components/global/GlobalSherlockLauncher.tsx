@@ -12,7 +12,7 @@
 import * as React from "react";
 import { SherlockLauncherDialog, type SherlockLauncherTarget } from "@/v2/ui/organisms/sherlock/SherlockLauncherDialog";
 import type { SherlockLevel } from "@/v2/services/sherlock/sherlockTypes";
-import { getPartner } from "@/application/data/partners";
+import { getPartner } from "@/data/partners";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("GlobalSherlockLauncher");
