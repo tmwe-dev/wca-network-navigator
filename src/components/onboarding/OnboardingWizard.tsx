@@ -115,8 +115,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             // Nessuna riga operator esistente: il trigger non l'ha creata
             // (probabile email duplicata su un'altra utenza). Non blocchiamo:
             // l'operatore può essere ripristinato da Settings → Operatori.
-            // eslint-disable-next-line no-console
-            console.warn("[onboarding] no operator row matched user_id; skipping (admin can fix in Settings)");
+            log.warn("no operator row matched user_id; skipping (admin can fix in Settings)", {
+              userId: user.id,
+            });
           }
         } catch (opErr) {
           log.warn("[onboarding] operator update non-blocking:", { detail: describeSaveError(opErr) });

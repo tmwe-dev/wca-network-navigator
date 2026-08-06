@@ -11,12 +11,14 @@ import { createRequire } from "node:module";
 const requireCjs = createRequire(import.meta.url);
 const noDirectAiInvoke = requireCjs("./eslint-rules/no-direct-ai-invoke.cjs");
 const noDirectBulkOp = requireCjs("./eslint-rules/no-direct-bulk-op.cjs");
+const noDirectDbAccess = requireCjs("./eslint-rules/no-direct-db-access.cjs");
 
 // Plugin locale che espone le regole di governance del progetto.
 const tmwe = {
   rules: {
     "no-direct-ai-invoke": noDirectAiInvoke,
     "no-direct-bulk-op": noDirectBulkOp,
+    "no-direct-db-access": noDirectDbAccess,
   },
 };
 
@@ -121,10 +123,6 @@ export default tseslint.config(
       "src/hooks/useWhatsAppExtensionBridge.ts",
       "src/hooks/useApproveAndDispatch.ts",
       "src/components/test-extensions/**",
-      // TODO(F5): eccezioni temporanee e tracciate — accesso DB diretto dal
-      // layer command. Da migrare al DAL, non da nascondere.
-      "src/v2/ui/pages/command/tools/scheduleActivity.ts",
-      "src/v2/ui/pages/command/lib/safeQueryExecutor.ts",
     ],
     rules: {
       "no-restricted-syntax": [
@@ -181,9 +179,6 @@ export default tseslint.config(
     ignores: [
       "src/v2/ui/pages/**/*.test.{ts,tsx}",
       "src/v2/ui/pages/**/__tests__/**",
-      // TODO(F5): eccezioni temporanee e tracciate (accesso DB diretto).
-      "src/v2/ui/pages/command/tools/scheduleActivity.ts",
-      "src/v2/ui/pages/command/lib/safeQueryExecutor.ts",
     ],
     rules: {
       "no-restricted-imports": [
@@ -252,6 +247,9 @@ export default tseslint.config(
       // Ratchet e inventario: docs/audit/lint-gates-2026-08-02.md
       "tmwe/no-direct-ai-invoke": "warn",
       "tmwe/no-direct-bulk-op": "warn",
+      // Confine dati: i bypass reali sono a zero, quindi la regola nasce
+      // direttamente come "error" e impedisce che il debito si riformi.
+      "tmwe/no-direct-db-access": "error",
     },
   },
   // ── public/ browser extensions: basic JS linting ──
