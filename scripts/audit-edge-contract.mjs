@@ -22,7 +22,7 @@ const BASELINE = {
   cors: 1,
   auth: 95,
   error: 132,
-  logging: 144,
+  logging: 139,
 };
 
 // Funzioni server-to-server / redirect OAuth: non servite al browser,
