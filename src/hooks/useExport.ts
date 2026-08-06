@@ -40,7 +40,7 @@ function convertToCSV(headers: string[], rows: Record<string, unknown>[]): strin
   return [headerRow, ...dataRows].join("\n");
 }
 
-// ── Excel Builder (using xlsx if available) ──
+// ── Excel Builder (ExcelJS — unica libreria fogli di calcolo del progetto) ──
 
 async function convertToExcel(
   headers: string[],
@@ -48,20 +48,23 @@ async function convertToExcel(
   sheetName: string
 ): Promise<Uint8Array<ArrayBuffer>> {
   try {
-    // Dynamic import to avoid bundling xlsx if not needed
-    const XLSX = await import("xlsx");
+    // Dynamic import: ExcelJS resta fuori dal bundle iniziale.
+    const ExcelJS = (await import("exceljs")).default;
 
-    const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(sheetName.slice(0, 31) || "Sheet1");
+    worksheet.columns = headers.map((h) => ({ header: h, key: h, width: 20 }));
+    for (const row of rows) {
+      worksheet.addRow(
+        headers.reduce<Record<string, unknown>>((acc, h) => {
+          const v = row[h];
+          acc[h] = v === null || v === undefined ? "" : (typeof v === "object" ? JSON.stringify(v) : v);
+          return acc;
+        }, {}),
+      );
+    }
 
-    // Set column widths
-    const colWidths = headers.map(() => ({ wch: 20 }));
-    worksheet["!cols"] = colWidths;
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-
-    // `type: "array"` restituisce un ArrayBuffer: conversione reale, non cast.
-    const buffer: ArrayBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const buffer = (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
     return new Uint8Array(buffer);
   } catch (error) {
     log.error("Excel export error:", { error: error });
