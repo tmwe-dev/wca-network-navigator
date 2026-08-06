@@ -13,6 +13,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("log-action");
 
 interface LogActionBody {
   channel: "email" | "whatsapp" | "linkedin" | "sms";
@@ -93,7 +96,7 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    console.error("[log-action] Error:", e);
+    log.error("post_send_pipeline_failed", e);
     return new Response(
       JSON.stringify({ error: "INTERNAL_ERROR", message: e instanceof Error ? e.message : String(e) }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },

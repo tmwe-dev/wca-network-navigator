@@ -8,6 +8,9 @@
  */
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabaseClient.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("health-check");
 
 type CheckStatus = "ok" | "fail";
 interface CheckResult {
@@ -123,6 +126,13 @@ Deno.serve(async (req: Request) => {
 
   // Overall status
   const allOk = Object.values(checks).every((s) => s === "ok");
+  if (!allOk) {
+    log.warn("health_degraded", {
+      failing: Object.entries(checks)
+        .filter(([, v]) => v !== "ok")
+        .map(([k]) => k),
+    });
+  }
   const result: CheckResult = {
     status: allOk ? "healthy" : "degraded",
     checks,

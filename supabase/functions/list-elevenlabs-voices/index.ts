@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { edgeError, edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("list-elevenlabs-voices");
 
 interface VoiceRaw {
   voice_id?: string;
@@ -63,7 +66,7 @@ serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("list-elevenlabs-voices error:", error);
+    log.error("voices_fetch_failed", error);
     return edgeError("INTERNAL_ERROR", "Internal error", undefined, dynCors, {
       voices: [],
       status: "error",
