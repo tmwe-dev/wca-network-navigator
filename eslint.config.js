@@ -216,6 +216,20 @@ export default tseslint.config(
     },
   },
   // ── Layer enforcement: componenti v2 (non-pagine) non importano il DAL ──
+  // ── Eccezione motivata: il layer "tools"/"lib" di Command non è UI ──
+  // Sono moduli di logica (tool del planner, esecutore query) senza JSX né
+  // React: l'obbligo di passare da un hook non si applica. Il divieto di
+  // accesso diretto alle tabelle resta attivo su di loro (blocco globale
+  // no-restricted-syntax + tmwe/no-direct-db-access).
+  {
+    files: [
+      "src/v2/ui/pages/command/tools/**/*.ts",
+      "src/v2/ui/pages/command/lib/**/*.ts",
+    ],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
   {
     files: ["src/v2/ui/**/*.{ts,tsx}"],
     ignores: ["src/v2/ui/pages/**"],
