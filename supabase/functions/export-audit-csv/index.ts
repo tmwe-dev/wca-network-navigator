@@ -5,6 +5,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("export-audit-csv");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -35,6 +38,7 @@ serve(async (req) => {
       .limit(5000);
 
     if (qErr) {
+      log.error("audit_query_failed", qErr);
       return new Response(JSON.stringify({ error: qErr.message }), {
         status: 500,
         headers: { ...dynCors, "Content-Type": "application/json" },
@@ -67,6 +71,7 @@ serve(async (req) => {
       },
     });
   } catch (err) {
+    log.error("export_failed", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },
