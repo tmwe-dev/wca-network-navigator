@@ -27,6 +27,7 @@ jobs:
       - run: npm run i18n:check
       - run: npm run audit:function-auth
       - run: npm run audit:edge-contract
+      - run: npm run audit:prompt-sources
       - run: npm run typecheck:public
       - run: npm run format:check
       - name: README stats freshness

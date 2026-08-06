@@ -1,3 +1,8 @@
+/**
+ * Copia di emergenza del prompt. La sorgente autorevole è il database.
+ * @fallback-of operative_prompts/email-improver
+ * Vedi docs/architecture/prompt-kb-single-source.md
+ */
 const prompt = `# Email Improver — Copywriter B2B Logistics
 
 ## Identità

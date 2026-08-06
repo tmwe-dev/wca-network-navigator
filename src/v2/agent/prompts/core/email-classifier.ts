@@ -1,3 +1,8 @@
+/**
+ * Copia di emergenza del prompt. La sorgente autorevole è il database.
+ * @fallback-of operative_prompts/email-classifier
+ * Vedi docs/architecture/prompt-kb-single-source.md
+ */
 const prompt = `# Email Classifier — Classificatore Risposte Inbound
 
 ## Identità
