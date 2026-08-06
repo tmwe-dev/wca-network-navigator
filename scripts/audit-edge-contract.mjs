@@ -88,9 +88,7 @@ for (const key of Object.keys(BASELINE)) {
   const delta = current - base;
   const status = delta > 0 ? `❌ +${delta}` : delta < 0 ? `✅ −${Math.abs(delta)}` : "✅ OK";
   if (delta > 0) failed = true;
-  console.log(
-    `  ${LABELS[key].padEnd(35)} ${String(current).padStart(12)}  ${String(base).padStart(8)}  ${status}`,
-  );
+  console.log(`  ${LABELS[key].padEnd(35)} ${String(current).padStart(12)}  ${String(base).padStart(8)}  ${status}`);
 }
 
 if (process.argv.includes("--list")) {

@@ -46,12 +46,12 @@ Aggiunto `npm run audit:edge-contract` (blocking in CI). Non riscrive nulla:
 misura quante delle 149 funzioni usano i moduli condivisi e impedisce
 regressioni (ratchet). Baseline non conformi al 2026-08-06:
 
-| Requisito | Non conformi |
-|---|---|
-| CORS condiviso (`_shared/cors.ts`) | 1 (`record-e2e-run`, CORS wildcard su endpoint protetto da `x-e2e-secret`) |
-| Auth guard condiviso | 95 |
-| Contratto errore (`handleEdgeError`) | 132 |
-| Logger strutturato | 144 |
+| Requisito                            | Non conformi                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| CORS condiviso (`_shared/cors.ts`)   | 1 (`record-e2e-run`, CORS wildcard su endpoint protetto da `x-e2e-secret`) |
+| Auth guard condiviso                 | 95                                                                         |
+| Contratto errore (`handleEdgeError`) | 132                                                                        |
+| Logger strutturato                   | 139 (era 144)                                                              |
 
 Esclusi dal check CORS perché server-to-server o redirect OAuth: `mcp`,
 `replay-domain-events`, `tmwe-oauth-callback`.
@@ -60,3 +60,10 @@ Regola: ogni nuova edge function nasce conforme; i baseline scendono a ogni
 lotto di uniformazione (`node scripts/audit-edge-contract.mjs --list` elenca
 le funzioni da migrare). Nessuna riscrittura di massa: le funzioni vive si
 uniformano una famiglia alla volta con verifica funzionale dopo ogni lotto.
+
+### Lotto 1 — logger strutturato (2026-08-06)
+
+`health-check`, `wca-country-counts`, `export-audit-csv`, `log-action`,
+`list-elevenlabs-voices`: aggiunto `createLogger` e sostituiti i `console.error`
+residui. Nessuna modifica ai contratti di risposta (status, header e body
+invariati). Baseline logging 144 -> 139.
