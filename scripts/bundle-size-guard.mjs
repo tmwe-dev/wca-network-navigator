@@ -2,10 +2,10 @@
 /**
  * Bundle size guard.
  * Calcola la dimensione totale di dist/assets/*.{js,css} e fallisce se
- * supera la soglia (env BUNDLE_MAX_KB, default 10000 KB).
+ * supera la soglia (env BUNDLE_MAX_KB, default 9900 KB).
  * Il totale include TUTTI i chunk (anche quelli lazy): il budget va abbassato
  * gradualmente (ratchet) man mano che si alleggerisce il bundle. Valore reale
- * misurato al 2026-08-06: ~9814 KB.
+ * misurato al 2026-08-06: ~9805 KB.
  * Reporting-only se BUNDLE_GUARD_WARN_ONLY=1.
  */
 import fs from "node:fs";
@@ -17,7 +17,7 @@ if (!fs.existsSync(distDir)) {
   process.exit(1);
 }
 
-const MAX_KB = Number(process.env.BUNDLE_MAX_KB ?? 10000);
+const MAX_KB = Number(process.env.BUNDLE_MAX_KB ?? 9900);
 const WARN_ONLY = process.env.BUNDLE_GUARD_WARN_ONLY === "1";
 
 const files = fs
