@@ -8,7 +8,7 @@ import { Brain, TrendingDown, TrendingUp, Sparkles, Send, X } from "lucide-react
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
-import { createMemory } from "@/application/data/aiMemory";
+import { createMemory } from "@/data/aiMemory";
 
 const log = createLogger("EmailEditLearning");
 

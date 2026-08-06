@@ -7,18 +7,18 @@
  *  - resolution_layer in ("contract", "code_policy") → SKIP (read-only).
  *  - Audit log per ogni azione tramite logSupervisorAudit.
  */
-import { upsertKbEntry, deleteKbEntry } from "@/application/data/kbEntries";
-import { updateOperativePrompt } from "@/application/data/operativePrompts";
-import { updateEmailPrompt } from "@/application/data/emailPrompts";
-import { updateEmailAddressRule } from "@/application/data/emailAddressRules";
-import { updateCommercialPlaybook } from "@/application/data/commercialPlaybooks";
-import { updateAgentPersona } from "@/application/data/agentPersonas";
-import { createAgent, updateAgent, type AgentInsert, type AgentUpdate } from "@/application/data/agents";
-import { upsertAppSetting } from "@/application/data/appSettings";
-import { createHarmonizerFollowup, followupFromProposal } from "@/application/data/harmonizerFollowups";
+import { upsertKbEntry, deleteKbEntry } from "@/data/kbEntries";
+import { updateOperativePrompt } from "@/data/operativePrompts";
+import { updateEmailPrompt } from "@/data/emailPrompts";
+import { updateEmailAddressRule } from "@/data/emailAddressRules";
+import { updateCommercialPlaybook } from "@/data/commercialPlaybooks";
+import { updateAgentPersona } from "@/data/agentPersonas";
+import { createAgent, updateAgent, type AgentInsert, type AgentUpdate } from "@/data/agents";
+import { upsertAppSetting } from "@/data/appSettings";
+import { createHarmonizerFollowup, followupFromProposal } from "@/data/harmonizerFollowups";
 import { toJsonValue } from "@/lib/jsonGuards";
-import { logSupervisorAudit } from "@/application/data/supervisorAuditLog";
-import type { HarmonizeProposal } from "@/application/data/harmonizeRuns";
+import { logSupervisorAudit } from "@/data/supervisorAuditLog";
+import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
 
 import { createLogger } from "@/lib/log";

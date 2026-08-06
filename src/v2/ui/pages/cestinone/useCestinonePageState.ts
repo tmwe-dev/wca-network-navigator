@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useCestinone } from "@/v2/hooks/useCestinone";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
-import type { CestinoChannel, CestinoItem } from "@/application/data/cestinone";
+import type { CestinoChannel, CestinoItem } from "@/data/cestinone";
 
 export function useCestinonePageState() {
   const [channel, setChannel] = useState<CestinoChannel | "all">("all");

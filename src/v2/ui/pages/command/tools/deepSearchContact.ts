@@ -3,7 +3,7 @@
  * Sherlock (Scout/Detective/Sherlock) è il motore unico di Deep Search.
  * Questo tool mostra lo stato; l'esecuzione si fa da Email Forge → tab Deep Search.
  */
-import { findDeepSearchContacts } from "@/application/data/commandDeepSearchContact";
+import { findDeepSearchContacts } from "@/data/commandDeepSearchContact";
 import type { Tool, ToolResult } from "./types";
 
 export const deepSearchContactTool: Tool = {

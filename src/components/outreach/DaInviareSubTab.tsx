@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
-import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, updateActivitySchedule, updateMissionActionSchedule, logAuditEntry, findPendingBulkQueue, cancelBulkQueueItem } from "@/application/data/outreachPipeline";
+import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, updateActivitySchedule, updateMissionActionSchedule, logAuditEntry, findPendingBulkQueue, cancelBulkQueueItem } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 import { EmailPreviewPane, type EmailPreviewItem } from "./EmailPreviewPane";
 

@@ -11,7 +11,7 @@ import { useAgents, type AgentInsert } from "@/hooks/useAgents";
 import { AgentAvatarCarousel } from "@/components/agents/AgentAvatarCarousel";
 import { AgentVoiceCall } from "@/components/agents/AgentVoiceCall";
 import { supabase } from "@/integrations/supabase/client";
-import { createMemory } from "@/application/data/aiMemory";
+import { createMemory } from "@/data/aiMemory";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { LazyMarkdown as ReactMarkdown } from "@/components/ui/lazy-markdown";

@@ -30,7 +30,7 @@ import {
   listFunnemailActions,
   type FunnemailGroupRow,
   type FunnemailPolicy,
-} from "@/application/data/funnemail";
+} from "@/data/funnemail";
 
 const ALL_ACTIONS: Array<{ key: NonNullable<FunnemailPolicy["actions"]>[number]; label: string; desc: string }> = [
   { key: "tag_only", label: "Classifica & tagga", desc: "Salva sempre la classificazione AI nel log" },

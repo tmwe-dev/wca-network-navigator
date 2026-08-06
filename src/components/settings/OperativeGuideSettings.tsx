@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getOperativeStrategyValue, upsertOperativeStrategy } from "@/application/data/operativeGuideSettings";
+import { getOperativeStrategyValue, upsertOperativeStrategy } from "@/data/operativeGuideSettings";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("OperativeGuideSettings");

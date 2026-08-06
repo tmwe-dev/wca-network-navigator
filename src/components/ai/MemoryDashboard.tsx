@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findUserMemories, promoteMemoryToL3, rejectMemoryPromotion } from "@/application/data/aiMemoryOps";
+import { findUserMemories, promoteMemoryToL3, rejectMemoryPromotion } from "@/data/aiMemoryOps";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain, Check, X, Trash2, Shield, Zap, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { deleteMemory } from "@/application/data/aiMemory";
+import { deleteMemory } from "@/data/aiMemory";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface MemoryRow {

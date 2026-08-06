@@ -19,7 +19,7 @@ import type {
   HarmonizeSeverity,
   HarmonizeTestUrgency,
   MissingContract,
-} from "@/application/data/harmonizeRuns";
+} from "@/data/harmonizeRuns";
 import type { CollectorOutput, GapCandidate } from "./harmonizeCollector";
 
 import { createLogger } from "@/lib/log";

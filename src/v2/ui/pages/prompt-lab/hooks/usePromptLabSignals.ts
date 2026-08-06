@@ -10,7 +10,7 @@ import {
   analyzeAndGenerateSignals,
   getRecentSignalCount,
   type PromptLabSignal,
-} from "@/application/data/promptLabSignals";
+} from "@/data/promptLabSignals";
 
 export interface SignalsState {
   loading: boolean;

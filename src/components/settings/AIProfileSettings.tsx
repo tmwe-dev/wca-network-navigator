@@ -15,7 +15,7 @@ import {
 import { DEFAULT_SALES_KNOWLEDGE_BASE } from "@/constants/salesKnowledgeBase";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
-import { uploadTemplateFile, getTemplatePublicUrl } from "@/application/data/templatesStorage";
+import { uploadTemplateFile, getTemplatePublicUrl } from "@/data/templatesStorage";
 import { createLogger } from "@/lib/log";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 

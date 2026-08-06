@@ -22,7 +22,7 @@ import {
 import type { EntityToParse } from "./entityParser";
 import type { MatchCandidate } from "./entityMatcher";
 import type { FullEntryContent } from "./entityRetriever";
-import type { FactEntry } from "@/application/data/harmonizerSessions";
+import type { FactEntry } from "@/data/harmonizerSessions";
 
 
 import { createLogger } from "@/lib/log";

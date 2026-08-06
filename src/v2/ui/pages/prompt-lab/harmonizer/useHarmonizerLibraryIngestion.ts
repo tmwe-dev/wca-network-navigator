@@ -23,19 +23,19 @@ import {
   cancelHarmonizerSession,
   findActiveHarmonizerSession,
   type HarmonizerSession,
-} from "@/application/data/harmonizerSessions";
+} from "@/data/harmonizerSessions";
 import {
   createHarmonizeRun,
   updateHarmonizeRun,
   appendHarmonizeProposal,
   type HarmonizeRun,
-} from "@/application/data/harmonizeRuns";
+} from "@/data/harmonizeRuns";
 import { TMWE_CHUNKS, TMWE_EXECUTION_ORDER, type TmweChunkDef } from "./tmweChunks";
 import { runLibraryChunkCollector } from "./harmonizerLibraryCollector";
 import { runLibraryChunkAnalyzer, type LibraryAnalyzerOutput } from "./harmonizerLibraryAnalyzer";
 import type { ParsedFile } from "../utils/fileParser";
 import { collectRealInventory } from "../hooks/harmonizeCollector";
-import type { EntityCreatedEntry } from "@/application/data/harmonizerSessions";
+import type { EntityCreatedEntry } from "@/data/harmonizerSessions";
 
 
 import { createLogger } from "@/lib/log";

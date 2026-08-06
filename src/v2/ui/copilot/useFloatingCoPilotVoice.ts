@@ -13,7 +13,7 @@ import { useConversation } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import { invokeAi } from "@/lib/ai/invokeAi";
-import { findIntentByKey, listNavigationIntents, matchIntentLocally } from "@/application/data/uiNavigationMap";
+import { findIntentByKey, listNavigationIntents, matchIntentLocally } from "@/data/uiNavigationMap";
 
 const log = createLogger("useFloatingCoPilotVoice");
 

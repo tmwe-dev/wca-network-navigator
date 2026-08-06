@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listEmailImages, getEmailImagePublicUrl, uploadEmailImage, removeEmailImage } from "@/application/data/emailImages";
+import { listEmailImages, getEmailImagePublicUrl, uploadEmailImage, removeEmailImage } from "@/data/emailImages";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, Trash2, Copy, Check, Loader2, ImageIcon } from "lucide-react";

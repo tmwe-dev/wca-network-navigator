@@ -3,7 +3,7 @@
  * Payload: { company_name?: string, partner_id?: string, reason?: string }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { insertBlacklistEntry, deleteBlacklistByRef } from "@/application/data/blacklist";
+import { insertBlacklistEntry, deleteBlacklistByRef } from "@/data/blacklist";
 import { mergePayload, isUuid, resolvePartnerRef } from "./_helpers/writePayload";
 
 type Payload = { company_name?: string; partner_id?: string; reason?: string; [k: string]: unknown };

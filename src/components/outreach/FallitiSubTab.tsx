@@ -10,7 +10,7 @@ import { AlertTriangle, Loader2, RotateCcw, X } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
-import { findFailedOutreach, retryMissionAction, cancelMissionAction, logAuditEntry } from "@/application/data/outreachPipeline";
+import { findFailedOutreach, retryMissionAction, cancelMissionAction, logAuditEntry } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface FailedItem {

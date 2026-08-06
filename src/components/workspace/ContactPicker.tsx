@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { User, AlertTriangle, CheckCircle2, Mail, ArrowRightLeft, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { queryKeys } from "@/lib/queryKeys";
-import { findPartnerContacts, findPartnerSocialLinks } from "@/application/data/partnerRelations";
+import { findPartnerContacts, findPartnerSocialLinks } from "@/data/partnerRelations";
 
 interface ContactPickerProps {
   activityId: string;

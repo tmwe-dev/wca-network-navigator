@@ -86,3 +86,13 @@ La diagnosi resta aperta e va profilata sulla macchina che la osserva.
 3. Ridurre gli import morti in `supabase/functions` (93 + 275).
 4. Ogni batch abbassa i budget in `scripts/lint-ratchet.mjs`: il ratchet
    segnala esplicitamente quando un budget è più alto del reale.
+
+## Aggiornamento 2026-08-06 — rimozione barrel `src/application/data/`
+
+I 145 file `src/application/data/*.ts` erano puri `export * from "@/data/*"` e
+servivano solo ad aggirare la layer rule "i componenti non importano il DAL".
+Eliminati; i 309 file importatori riscritti su `@/data/*`.
+
+Conseguenza: budget `no-restricted-imports` da 0 a **420**, cioè il numero reale
+di import UI→DAL. Non è una regressione: è debito che prima era invisibile.
+Scende a lotti con la migrazione a hook, non risale mai.

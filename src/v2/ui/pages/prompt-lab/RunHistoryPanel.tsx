@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/providers/AuthProvider";
-import { findLastRuns, type GlobalRun, type GlobalRunProposal } from "@/application/data/promptLabGlobalRuns";
+import { findLastRuns, type GlobalRun, type GlobalRunProposal } from "@/data/promptLabGlobalRuns";
 import { CheckCircle2, AlertCircle, FileText, Clock, ChevronDown, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { it as itLocale } from "date-fns/locale";

@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Rocket, RefreshCw, Brain, AlertCircle, CheckCircle2 } from "lucide-react";
 import { isSuperMarioEnabled, setSuperMarioEnabled } from "@/v2/ai/superMarioFlag";
-import { findRecentSuperMarioInvocations, type SuperMarioInvocationRow } from "@/application/data/superMarioInvocations";
+import { findRecentSuperMarioInvocations, type SuperMarioInvocationRow } from "@/data/superMarioInvocations";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 

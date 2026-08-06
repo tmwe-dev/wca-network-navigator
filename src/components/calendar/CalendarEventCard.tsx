@@ -4,7 +4,7 @@
  */
 import React from "react";
 import { Clock, Users, Target, AlertCircle, ArrowRight } from "lucide-react";
-import type { CalendarEvent, EventType } from "@/application/data/calendar";
+import type { CalendarEvent, EventType } from "@/data/calendar";
 
 interface CalendarEventCardProps {
   event: CalendarEvent;

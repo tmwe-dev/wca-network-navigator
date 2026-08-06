@@ -1,6 +1,6 @@
 import SectionWrapper from "./SectionWrapper";
 import { useQuery } from "@tanstack/react-query";
-import { findActiveAgents } from "@/application/data/agents";
+import { findActiveAgents } from "@/data/agents";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface AgentView {

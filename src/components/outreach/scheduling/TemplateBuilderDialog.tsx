@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Trash2, GripVertical, Mail, MessageCircle, Linkedin, Phone } from "lucide-react";
 import { toast } from "sonner";
-import { createTimingTemplate, type TimingStep } from "@/application/data/outreachTimingTemplates";
+import { createTimingTemplate, type TimingStep } from "@/data/outreachTimingTemplates";
 import { SequenceVisualizer } from "./SequenceVisualizer";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";

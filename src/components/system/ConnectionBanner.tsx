@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { WifiOff } from "lucide-react";
 import { createLogger } from "@/lib/log";
-import { checkProfileConnection } from "@/application/data/profiles";
+import { checkProfileConnection } from "@/data/profiles";
 import { useAuth } from "@/providers/AuthProvider";
 
 const log = createLogger("ConnectionBanner");

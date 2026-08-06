@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Building2, MapPin, Clock, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getPartnerSnapshot } from "@/application/data/uiShellQueries";
+import { getPartnerSnapshot } from "@/data/uiShellQueries";
 
 interface RecipientSnapshotHeaderProps {
   readonly partnerId: string | null;

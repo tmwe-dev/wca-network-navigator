@@ -15,7 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, useDismissNotification, useMarkAsRead } from "@/hooks/useNotifications";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { Mail, TrendingUp, Bot, AlertTriangle, MessageSquare, Clock, Bell } from "lucide-react";
-import type { NotificationType, NotificationPriority, Notification } from "@/application/data/notifications";
+import type { NotificationType, NotificationPriority, Notification } from "@/data/notifications";
 import { PageShell } from "@/v2/ui/templates/PageShell";
 
 export default function NotificationsPage(): React.ReactElement {

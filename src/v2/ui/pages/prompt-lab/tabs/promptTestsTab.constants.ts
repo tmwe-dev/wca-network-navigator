@@ -5,7 +5,7 @@
 import type { ReactNode } from "react";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { createElement } from "react";
-import type { PromptTestCase } from "@/application/data/promptTests";
+import type { PromptTestCase } from "@/data/promptTests";
 
 export interface PromptOption {
   id: string;

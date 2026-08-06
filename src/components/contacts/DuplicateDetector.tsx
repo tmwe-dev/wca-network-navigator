@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { findContactsForDuplicateScan } from "@/application/data/contacts";
+import { findContactsForDuplicateScan } from "@/data/contacts";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
-import type { TimingTemplate } from "@/application/data/outreachTimingTemplates";
+import type { TimingTemplate } from "@/data/outreachTimingTemplates";
 import { SequenceVisualizer } from "./SequenceVisualizer";
 
 interface Props {

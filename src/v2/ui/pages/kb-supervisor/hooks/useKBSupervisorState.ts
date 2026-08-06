@@ -7,7 +7,7 @@
  */
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { findElevenLabsVoiceSettings } from "@/application/data/appSettings";
+import { findElevenLabsVoiceSettings } from "@/data/appSettings";
 import { useVoiceInput } from "@/v2/ui/pages/command/hooks/useVoiceInput";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { invokeAi } from "@/lib/ai/invokeAi";
@@ -20,7 +20,7 @@ import {
   upsertKbEntry,
   deleteKbEntry as dalDeleteKbEntry,
   type KbEntry,
-} from "@/application/data/kbEntries";
+} from "@/data/kbEntries";
 
 export interface SupervisorMessage {
   readonly id: string;

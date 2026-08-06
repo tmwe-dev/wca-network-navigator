@@ -17,7 +17,7 @@ import {
   findAddressRuleIdByAddressAndUser,
   updateAddressRuleSenderGroup,
   insertSenderAddressRule,
-} from '@/application/data/senderManagement';
+} from '@/data/senderManagement';
 import { toast } from 'sonner';
 import { SenderCard } from './management/SenderCard';
 import { GroupDropZone } from './management/GroupDropZone';

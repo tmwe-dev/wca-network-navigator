@@ -8,7 +8,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { Loader2, Plane } from "lucide-react";
-import { tmweLoginStart } from "@/application/data/tmwe";
+import { tmweLoginStart } from "@/data/tmwe";
 
 export function TmweLoginPopupPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Save, Shield, ListChecks, Ban } from "lucide-react";
 import { useAgentCapabilities } from "../hooks/useAgentCapabilities";
-import { listAgentsForCapabilities } from "@/application/data/agentsForPromptLab";
+import { listAgentsForCapabilities } from "@/data/agentsForPromptLab";
 import { queryKeys } from "@/lib/queryKeys";
 
 const TOOL_REGISTRY = [

@@ -15,9 +15,9 @@ import {
   type InventoryItem,
   type CollectorOutput,
 } from "../hooks/harmonizeCollector";
-import type { HarmonizerSession } from "@/application/data/harmonizerSessions";
+import type { HarmonizerSession } from "@/data/harmonizerSessions";
 import { sliceChunkLines, type TmweChunkDef } from "./tmweChunks";
-import type { InventorySummary } from "@/application/data/harmonizeRuns";
+import type { InventorySummary } from "@/data/harmonizeRuns";
 
 export interface LibraryCollectorInput {
   userId: string;

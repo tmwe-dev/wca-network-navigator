@@ -4,8 +4,8 @@
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { findAuthorizedUsersDirectory } from "@/application/data/authorizedUsersDirectory";
-import { findUserRolesForUsers } from "@/application/data/userRolesLookup";
+import { findAuthorizedUsersDirectory } from "@/data/authorizedUsersDirectory";
+import { findUserRolesForUsers } from "@/data/userRolesLookup";
 import { useRoles, useAssignUserRole, useRemoveUserRole, type Role } from "@/hooks/useRBAC";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

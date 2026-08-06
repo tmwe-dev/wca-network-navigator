@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { createLogger } from "@/lib/log";
-import { findJobsByStatusSelect } from "@/application/data/downloadJobs";
+import { findJobsByStatusSelect } from "@/data/downloadJobs";
 
 const log = createLogger("RuntimeDiagnosticPanel");
 

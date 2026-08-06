@@ -6,7 +6,7 @@
  * Regex sul prompt solo come fallback per input umano diretto.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { insertPendingActionReturningId } from "@/application/data/aiPendingActions";
+import { insertPendingActionReturningId } from "@/data/aiPendingActions";
 import type { Tool, ToolResult, ToolContext } from "./types";
 import { mergePayload } from "./_helpers/writePayload";
 

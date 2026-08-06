@@ -21,13 +21,13 @@ import {
   updateOperativePromptBlockPatch,
   markPromptChangeProposalApplied,
   type PromptChangeProposal,
-} from "@/application/data/promptChangeProposals";
+} from "@/data/promptChangeProposals";
 import {
   listKbEntryProposals,
   reviewKbEntryProposal,
   type KbEntryProposal,
-} from "@/application/data/kbProposals";
-import { insertKbEntryForApproval } from "@/application/data/kbEntries";
+} from "@/data/kbProposals";
+import { insertKbEntryForApproval } from "@/data/kbEntries";
 import { useAuth } from "@/providers/AuthProvider";
 import { DiffViewer } from "./components/DiffViewer";
 

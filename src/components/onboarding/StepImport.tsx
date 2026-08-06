@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Users, FileSpreadsheet, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { insertOnboardingContacts } from "@/application/data/onboardingImport";
+import { insertOnboardingContacts } from "@/data/onboardingImport";
 import { toast } from "sonner";
 import Papa from "papaparse";
 

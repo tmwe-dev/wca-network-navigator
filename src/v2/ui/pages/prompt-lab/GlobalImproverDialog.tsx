@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2, Wrench, Code2, BookOpen, Ban, Undo2, ChevronDown, Clock } from "lucide-react";
 import { useGlobalPromptImprover } from "./hooks/useGlobalPromptImprover";
-import { rollbackSavedProposals } from "@/application/data/promptLabGlobalRuns";
+import { rollbackSavedProposals } from "@/data/promptLabGlobalRuns";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSuggestedImprovements } from "./hooks/useSuggestedImprovements";
 import { toast } from "sonner";

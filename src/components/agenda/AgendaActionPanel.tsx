@@ -27,8 +27,8 @@ import {
   ArrowUpRight, MailX, CalendarPlus, Plane,
 } from "lucide-react";
 import { useUpdateActivity } from "@/hooks/useActivities";
-import { insertActivity, activityKeys } from "@/application/data/activities";
-import { findInboundPreview } from "@/application/data/channelMessages";
+import { insertActivity, activityKeys } from "@/data/activities";
+import { findInboundPreview } from "@/data/channelMessages";
 import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/providers/AuthProvider";
 import { isInHoldingPattern } from "@/constants/holdingPattern";

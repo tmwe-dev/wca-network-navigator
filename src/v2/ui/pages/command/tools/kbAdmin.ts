@@ -2,7 +2,7 @@
  * Tools: update-kb-entry, delete-kb-entry (soft-delete).
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { findKbEntryRef, updateKbEntryFields, softDeleteKbEntry } from "@/application/data/kbEntries";
+import { findKbEntryRef, updateKbEntryFields, softDeleteKbEntry } from "@/data/kbEntries";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type UpdatePayload = { entry_id?: string; title?: string; updates?: Record<string, unknown>; [k: string]: unknown };

@@ -15,8 +15,8 @@ import { HoldingPatternIndicator } from "@/components/contacts/HoldingPatternInd
 import { useHoldingPatternList, useHoldingTimeline, type HoldingItem } from "@/hooks/useHoldingPattern";
 import { cn } from "@/lib/utils";
 import type { LeadStatus } from "@/hooks/useContacts";
-import { updateLeadStatus } from "@/application/data/partners";
-import { updateProspectLeadStatus } from "@/application/data/prospects";
+import { updateLeadStatus } from "@/data/partners";
+import { updateProspectLeadStatus } from "@/data/prospects";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";

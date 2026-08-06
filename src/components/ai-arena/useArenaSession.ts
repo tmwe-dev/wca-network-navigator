@@ -4,8 +4,8 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { insertActivity } from "@/application/data/activities";
-import { insertBlacklistBatch } from "@/application/data/blacklist";
+import { insertActivity } from "@/data/activities";
+import { insertBlacklistBatch } from "@/data/blacklist";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 

@@ -12,12 +12,12 @@ import { useDownloadJobs } from "@/hooks/useDownloadJobs";
 import { useDailyBriefing } from "@/hooks/useDailyBriefing";
 import { useQuery } from "@tanstack/react-query";
 
-import { countActivePartners } from "@/application/data/partners";
+import { countActivePartners } from "@/data/partners";
 import { MiniAgenda } from "./shared/MiniAgenda";
 import { UnifiedContactList, type UnifiedContact } from "./shared/UnifiedContactList";
 import { ContactDetail } from "./shared/ContactDetail";
 import { queryKeys } from "@/lib/queryKeys";
-import { findPrototypeContacts } from "@/application/data/uiShellQueries";
+import { findPrototypeContacts } from "@/data/uiShellQueries";
 import { toRecords } from "@/lib/records";
 
 const NAV_ITEMS = [

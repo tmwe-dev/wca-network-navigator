@@ -7,10 +7,10 @@ import { extractWidgets, type WidgetConfig } from "@/components/missions/Mission
 import { useMissionActions, type MissionPlan } from "@/hooks/useMissionActions";
 import { createLogger } from "@/lib/log";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
-import { insertOutreachMission } from "@/application/data/outreachMissions";
+import { insertOutreachMission } from "@/data/outreachMissions";
 import { toJsonValue } from "@/lib/jsonGuards";
-import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
-import { findActivePartnersCountryEmailStats, findActivePartnerIdsByCountries } from "@/application/data/partners";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { findActivePartnersCountryEmailStats, findActivePartnerIdsByCountries } from "@/data/partners";
 
 const log = createLogger("MissionBuilder");
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;

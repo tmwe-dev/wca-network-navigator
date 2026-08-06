@@ -1,6 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { insertReactCrashLog } from "@/application/data/appErrorLogs";
+import { insertReactCrashLog } from "@/data/appErrorLogs";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("GlobalErrorBoundary");

@@ -9,7 +9,7 @@
  * un singolo run di analisi multi-blocco.
  */
 import { useCallback } from "react";
-import { findKbEntries } from "@/application/data/kbEntries";
+import { findKbEntries } from "@/data/kbEntries";
 
 const ARCHITECT_KB_CATEGORY = "lab_architect_procedure";
 

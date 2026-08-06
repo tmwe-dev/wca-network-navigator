@@ -15,7 +15,7 @@ import {
   tmweDisconnect,
   tmweGetMyProfile,
   tmweQueryKeys,
-} from "@/application/data/tmwe";
+} from "@/data/tmwe";
 
 export function ConnectionsSettingsTab(): React.ReactElement {
   const { data: settings } = useSettingsV2();

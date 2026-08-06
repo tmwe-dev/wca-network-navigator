@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { insertActivity } from "@/application/data/activities";
+import { insertActivity } from "@/data/activities";
 import { queryKeys } from "@/lib/queryKeys";
 import type { PartnerContactActionTarget } from "@/types/partner-views";
 

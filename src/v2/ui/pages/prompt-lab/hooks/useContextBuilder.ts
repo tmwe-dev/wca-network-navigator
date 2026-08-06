@@ -13,7 +13,7 @@
  * per rilevanza al blocco specifico, riducendo rumore e token.
  */
 
-import { getAppSetting } from "@/application/data/appSettings";
+import { getAppSetting } from "@/data/appSettings";
 import { buildSystemManifest, buildCompanyProfile } from "../utils/systemManifest";
 import type { ParsedFile } from "../utils/fileParser";
 import type { Block } from "../types";

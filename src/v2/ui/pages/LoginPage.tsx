@@ -10,7 +10,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { Loader2, Plane } from "lucide-react";
-import { tmweLoginStart } from "@/application/data/tmwe";
+import { tmweLoginStart } from "@/data/tmwe";
 
 const REASON_MESSAGES: Record<string, string> = {
   not_whitelisted: "Email non autorizzata. Contatta l'amministratore per essere aggiunto alla lista operatori.",

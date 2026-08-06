@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Trash2, FileText, FileSpreadsheet, Image, File, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { useEmailTemplateAdmin } from "@/hooks/useEmailTemplateAdmin";
-import { removeTemplateFile, uploadTemplateFile, createTemplateSignedUrl } from "@/application/data/templatesStorage";
+import { removeTemplateFile, uploadTemplateFile, createTemplateSignedUrl } from "@/data/templatesStorage";
 
 const FILE_ICONS: Record<string, React.ReactNode> = {
   pdf: <FileText className="w-8 h-8 text-destructive" />,

@@ -10,7 +10,7 @@ import {
   findCommandHelpPromptsAndKb,
   type CommandHelpPromptRow as CommandPromptRow,
   type CommandHelpKbRow as CommandKbRow,
-} from "@/application/data/commandPromptsV2";
+} from "@/data/commandPromptsV2";
 
 export type { CommandPromptRow, CommandKbRow };
 

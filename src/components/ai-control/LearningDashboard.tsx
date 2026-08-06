@@ -4,7 +4,7 @@
  * Visual: Progress bars, TrendingUp/Down, problematic senders, yellow suggestion card.
  */
 import { useQuery } from '@tanstack/react-query';
-import { findLearningDecisions, findRecentFeedbackDecisions } from '@/application/data/aiDecisionLog';
+import { findLearningDecisions, findRecentFeedbackDecisions } from '@/data/aiDecisionLog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle2 } from 'lucide-react';

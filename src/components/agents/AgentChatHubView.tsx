@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { AgentSystemDirectory } from "@/components/agents/AgentSystemDirectory";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { createLogger } from "@/lib/log";
-import { createMemory } from "@/application/data/aiMemory";
+import { createMemory } from "@/data/aiMemory";
 
 const log = createLogger("AgentChatHub");
 

@@ -4,7 +4,7 @@
 import { Mail, MessageCircle, Linkedin, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { TimingStep } from "@/application/data/outreachTimingTemplates";
+import type { TimingStep } from "@/data/outreachTimingTemplates";
 
 const CHANNEL_ICON: Record<string, typeof Mail> = {
   email: Mail, whatsapp: MessageCircle, linkedin: Linkedin, phone: Phone,

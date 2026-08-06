@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { findAgentDetailForEditor } from "@/application/data/agents";
+import { findAgentDetailForEditor } from "@/data/agents";
 import { useAgentPersona } from "@/v2/hooks/useAgentPersona";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

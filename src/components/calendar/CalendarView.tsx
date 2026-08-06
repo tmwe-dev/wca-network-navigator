@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCalendarEvents } from "@/hooks/useCalendar";
 import { CalendarEventCard } from "./CalendarEventCard";
-import type { CalendarEvent, EventType } from "@/application/data/calendar";
+import type { CalendarEvent, EventType } from "@/data/calendar";
 
 interface CalendarViewProps {
   onEventClick?: (event: CalendarEvent) => void;

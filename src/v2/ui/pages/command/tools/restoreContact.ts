@@ -2,7 +2,7 @@
  * Tool: restore-contact — ripristina un contatto soft-deleted.
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { restoreContactById, restoreContactByTerm } from "@/application/data/commandRestoreContact";
+import { restoreContactById, restoreContactByTerm } from "@/data/commandRestoreContact";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = { contact_id?: string; contact_ref?: string; [k: string]: unknown };

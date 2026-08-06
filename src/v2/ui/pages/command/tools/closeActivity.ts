@@ -3,7 +3,7 @@
  * Payload atteso dal planner: { activity_id?: string, activity_ref?: string, status?: "completed"|"cancelled", note?: string }
  */
 import type { Tool, ToolResult, ToolContext } from "./types";
-import { findActivityRef, patchActivity } from "@/application/data/activities";
+import { findActivityRef, patchActivity } from "@/data/activities";
 import { mergePayload, isUuid } from "./_helpers/writePayload";
 
 type Payload = {

@@ -1,5 +1,5 @@
 import type { Block } from "../../types";
-import { findKbEntries } from "@/application/data/kbEntries";
+import { findKbEntries } from "@/data/kbEntries";
 import { loadFullDoctrine } from "../useBlockCollector";
 import { filterDoctrineForBlock } from "../useContextBuilder";
 

@@ -42,7 +42,7 @@ import { getBranchCountries } from "@/lib/partnerUtils";
 import { PartnerContactActionMenu } from "@/components/partners/PartnerContactActionMenu";
 import { queryKeys } from "@/lib/queryKeys";
 import { UnifiedSmartActions } from "@/components/shared/entity-panel/UnifiedSmartActions";
-import { insertCockpitQueueItems } from "@/application/data/cockpitQueue";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 
 interface NetworkItem {

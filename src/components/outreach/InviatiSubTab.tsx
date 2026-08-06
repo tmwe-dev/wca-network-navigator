@@ -9,12 +9,12 @@ import { Mail, CheckCheck, Clock, AlertTriangle, Loader2, CornerDownRight, Reply
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { findSentOutreach } from "@/application/data/outreachPipeline";
+import { findSentOutreach } from "@/data/outreachPipeline";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
-import { findRecentSendLogRows } from "@/application/data/emailSendLog";
-import { findInboundMessagesByAddresses } from "@/application/data/channelMessages";
-import { findArchiveBounceRulesForEmails } from "@/application/data/emailAddressRules";
+import { findRecentSendLogRows } from "@/data/emailSendLog";
+import { findInboundMessagesByAddresses } from "@/data/channelMessages";
+import { findArchiveBounceRulesForEmails } from "@/data/emailAddressRules";
 import { OutreachStatusTimeline } from "./OutreachStatusTimeline";
 import { queryKeys } from "@/lib/queryKeys";
 

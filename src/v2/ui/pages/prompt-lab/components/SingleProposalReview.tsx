@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Pencil, Check, X, Loader2, Send, AlertTriangle, ShieldCheck, Eye, FileQuestion, CheckCircle2, Database, BookOpen, Wrench, Mail, Settings, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { HarmonizeProposal } from "@/application/data/harmonizeRuns";
+import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 import { ProposalNavigator } from "./ProposalNavigator";
 import { GordonChatPanel } from "./GordonChatPanel";
 

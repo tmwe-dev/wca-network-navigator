@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { updateProfileOnboarding } from "@/application/data/profiles";
+import { updateProfileOnboarding } from "@/data/profiles";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/queryClient";
 import { queryKeys } from "@/lib/queryKeys";
