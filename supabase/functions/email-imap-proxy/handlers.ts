@@ -11,28 +11,19 @@ import {
 import { parseHeaders } from "./email-parser.ts";
 import { handleSend } from "./smtp-client.ts";
 
-export async function handleVerify(body: {
-  host: string;
-  port: number;
-  tls: boolean;
-}): Promise<Response> {
+export async function handleVerify(body: { host: string; port: number; tls: boolean }): Promise<Response> {
   const { host, port = 993, tls = true } = body;
   if (!host) return jsonResponse({ error: "host richiesto" }, 400);
 
   try {
-    const conn = tls
-      ? await Deno.connectTls({ hostname: host, port })
-      : await Deno.connect({ hostname: host, port });
+    const conn = tls ? await Deno.connectTls({ hostname: host, port }) : await Deno.connect({ hostname: host, port });
 
     const buf = new Uint8Array(1024);
     const n = await conn.read(buf);
     const greeting = new TextDecoder().decode(buf.subarray(0, n || 0));
     conn.close();
 
-    const reachable =
-      greeting.includes("OK") ||
-      greeting.includes("IMAP") ||
-      greeting.includes("*");
+    const reachable = greeting.includes("OK") || greeting.includes("IMAP") || greeting.includes("*");
     return jsonResponse({
       reachable,
       greeting: greeting.slice(0, 200),
@@ -54,10 +45,7 @@ export async function handleTest(body: {
 }): Promise<Response> {
   const { email, password, host, port = 993, tls = true } = body;
   if (!email || !password || !host) {
-    return jsonResponse(
-      { error: "email, password e host richiesti" },
-      400
-    );
+    return jsonResponse({ error: "email, password e host richiesti" }, 400);
   }
 
   const imap = await connectImap(host, port, tls);
@@ -84,7 +72,7 @@ export async function handleTest(body: {
         success: false,
         error: err instanceof Error ? err.message : "Unknown error",
       },
-      401
+      401,
     );
   }
 }
@@ -98,20 +86,9 @@ export async function handleFetch(body: {
   lastUid: number;
   batchSize: number;
 }): Promise<Response> {
-  const {
-    email,
-    password,
-    host,
-    port = 993,
-    tls = true,
-    lastUid = 0,
-    batchSize = 50,
-  } = body;
+  const { email, password, host, port = 993, tls = true, lastUid = 0, batchSize = 50 } = body;
   if (!email || !password || !host) {
-    return jsonResponse(
-      { error: "email, password e host richiesti" },
-      400
-    );
+    return jsonResponse({ error: "email, password e host richiesti" }, 400);
   }
 
   const imap = await connectImap(host, port, tls);
@@ -146,7 +123,7 @@ export async function handleFetch(body: {
       } catch (err) {
         console.error(
           `[email-imap-proxy] Failed to fetch UID ${uid}:`,
-          err instanceof Error ? err.message : "Unknown error"
+          err instanceof Error ? err.message : "Unknown error",
         );
       }
     }
@@ -166,10 +143,7 @@ export async function handleFetch(body: {
     } catch {
       // Ignore
     }
-    return jsonResponse(
-      { error: err instanceof Error ? err.message : "Unknown error" },
-      500
-    );
+    return jsonResponse({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 }
 
@@ -189,9 +163,6 @@ export async function handleSendEmail(body: {
   if (result.success) {
     return jsonResponse({ success: true, messageId: result.messageId });
   } else {
-    return jsonResponse(
-      { success: false, error: result.error },
-      500
-    );
+    return jsonResponse({ success: false, error: result.error }, 500);
   }
 }

@@ -23,7 +23,8 @@ function extractMessage(prompt: string): string {
 export const sendLinkedinTool: Tool = {
   id: "send-linkedin",
   label: "Invia LinkedIn",
-  description: "Accoda un messaggio LinkedIn tramite estensione (no subject, max 300 char, finestra 9-19 CET, limite giornaliero).",
+  description:
+    "Accoda un messaggio LinkedIn tramite estensione (no subject, max 300 char, finestra 9-19 CET, limite giornaliero).",
   match: (p) => /\b(?:invia|manda|scrivi|spedisci|connetti)\b[^.]{0,40}\b(?:linkedin|li)\b/i.test(p),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
@@ -39,7 +40,11 @@ export const sendLinkedinTool: Tool = {
           { label: "Anteprima", value: message_text.slice(0, 140) + (message_text.length > 140 ? "…" : "") },
           { label: "Canale", value: "LinkedIn · extension bridge" },
         ],
-        governance: { role: "COMMERCIALE", permission: "WRITE:CHANNEL_MESSAGES", policy: "POLICY v1.0 · LI-DAILY-LIMIT" },
+        governance: {
+          role: "COMMERCIALE",
+          permission: "WRITE:CHANNEL_MESSAGES",
+          policy: "POLICY v1.0 · LI-DAILY-LIMIT",
+        },
         pendingPayload: { recipient, message_text },
         toolId: "send-linkedin",
       };

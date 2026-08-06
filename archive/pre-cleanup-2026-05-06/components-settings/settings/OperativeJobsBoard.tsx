@@ -1,5 +1,18 @@
 import { useState } from "react";
-import { Plus, Zap, Loader2, Pause, Play, CheckCircle, Trash2, RefreshCw, Pencil, ChevronDown, ChevronUp, Briefcase } from "lucide-react";
+import {
+  Plus,
+  Zap,
+  Loader2,
+  Pause,
+  Play,
+  CheckCircle,
+  Trash2,
+  RefreshCw,
+  Pencil,
+  ChevronDown,
+  ChevronUp,
+  Briefcase,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,7 +55,13 @@ export default function OperativeJobsBoard() {
   const [channels, setChannels] = useState<string[]>(["email"]);
   const [deadline, setDeadline] = useState<Date | undefined>();
 
-  const resetForm = () => { setTitle(""); setDescription(""); setChannels(["email"]); setDeadline(undefined); setShowForm(false); };
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setChannels(["email"]);
+    setDeadline(undefined);
+    setShowForm(false);
+  };
 
   const handleCreate = async () => {
     if (!title.trim()) return;
@@ -58,7 +77,7 @@ export default function OperativeJobsBoard() {
   };
 
   const toggleChannel = (ch: string) => {
-    setChannels(prev => prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]);
+    setChannels((prev) => (prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]));
   };
 
   const openPromptDialog = (job: OperativeJob) => {
@@ -68,7 +87,11 @@ export default function OperativeJobsBoard() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center gap-2 py-10 justify-center text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Caricamento…</div>;
+    return (
+      <div className="flex items-center gap-2 py-10 justify-center text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Caricamento…
+      </div>
+    );
   }
 
   return (
@@ -78,7 +101,9 @@ export default function OperativeJobsBoard() {
         <div className="flex items-center gap-2">
           <Briefcase className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Jobs Operativi</h2>
-          <Badge variant="secondary" className="text-xs">{jobs.filter(j => j.status === "running").length} attivi</Badge>
+          <Badge variant="secondary" className="text-xs">
+            {jobs.filter((j) => j.status === "running").length} attivi
+          </Badge>
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={() => setShowRules(!showRules)} className="gap-1 text-xs">
@@ -92,7 +117,8 @@ export default function OperativeJobsBoard() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Elenco delle attività operative che il Supervisor AI gestisce in parallelo. Ogni job genera automaticamente un prompt AI strutturato (⚡).
+        Elenco delle attività operative che il Supervisor AI gestisce in parallelo. Ogni job genera automaticamente un
+        prompt AI strutturato (⚡).
       </p>
 
       {/* Collapsible global rules */}
@@ -108,11 +134,25 @@ export default function OperativeJobsBoard() {
       {showForm && (
         <Card className="border-primary/30">
           <CardContent className="pt-4 space-y-3">
-            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Titolo job (es. Promozione FindAir ai partner WCA)" />
-            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Istruzioni libere: cosa fare, come, con quali documenti, tono…" rows={4} />
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Titolo job (es. Promozione FindAir ai partner WCA)"
+            />
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Istruzioni libere: cosa fare, come, con quali documenti, tono…"
+              rows={4}
+            />
             <div className="flex flex-wrap gap-2">
-              {CHANNEL_OPTIONS.map(ch => (
-                <Button key={ch.id} variant={channels.includes(ch.id) ? "default" : "outline"} size="sm" onClick={() => toggleChannel(ch.id)}>
+              {CHANNEL_OPTIONS.map((ch) => (
+                <Button
+                  key={ch.id}
+                  variant={channels.includes(ch.id) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleChannel(ch.id)}
+                >
                   {ch.label}
                 </Button>
               ))}
@@ -129,8 +169,15 @@ export default function OperativeJobsBoard() {
                 </PopoverContent>
               </Popover>
               <div className="flex-1" />
-              <Button variant="ghost" size="sm" onClick={resetForm}>Annulla</Button>
-              <Button size="sm" onClick={handleCreate} disabled={!title.trim() || createJob.isPending} className="gap-1">
+              <Button variant="ghost" size="sm" onClick={resetForm}>
+                Annulla
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleCreate}
+                disabled={!title.trim() || createJob.isPending}
+                className="gap-1"
+              >
                 {createJob.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
                 Crea e Genera Prompt
               </Button>
@@ -147,7 +194,7 @@ export default function OperativeJobsBoard() {
       )}
 
       <div className="space-y-2">
-        {jobs.map(job => {
+        {jobs.map((job) => {
           const st = STATUS_MAP[job.status] || STATUS_MAP.draft;
           const hasPrompt = !!job.metadata?.generated_prompt;
           return (
@@ -158,7 +205,7 @@ export default function OperativeJobsBoard() {
                   onClick={() => openPromptDialog(job)}
                   className={cn(
                     "shrink-0 rounded-md p-1.5 transition-colors",
-                    hasPrompt ? "text-amber-500 hover:bg-amber-500/10" : "text-muted-foreground/40 hover:bg-muted"
+                    hasPrompt ? "text-amber-500 hover:bg-amber-500/10" : "text-muted-foreground/40 hover:bg-muted",
                   )}
                   title={hasPrompt ? "Visualizza prompt AI" : "Nessun prompt generato"}
                 >
@@ -175,8 +222,10 @@ export default function OperativeJobsBoard() {
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{job.description}</p>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    {(job.steps?.channels || []).map(ch => (
-                      <Badge key={ch} variant="outline" className="text-[10px] px-1">{ch}</Badge>
+                    {(job.steps?.channels || []).map((ch) => (
+                      <Badge key={ch} variant="outline" className="text-[10px] px-1">
+                        {ch}
+                      </Badge>
                     ))}
                     {job.steps?.deadline && (
                       <span className="text-[10px] text-muted-foreground">⏰ {job.steps.deadline}</span>
@@ -187,24 +236,64 @@ export default function OperativeJobsBoard() {
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
                   {job.status === "running" && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Pausa" aria-label="Pausa" onClick={() => updateStatus.mutate({ id: job.id, status: "paused" })}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Pausa"
+                      aria-label="Pausa"
+                      onClick={() => updateStatus.mutate({ id: job.id, status: "paused" })}
+                    >
                       <Pause className="h-3.5 w-3.5" />
                     </Button>
                   )}
                   {job.status === "paused" && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Riprendi" aria-label="Esegui" onClick={() => updateStatus.mutate({ id: job.id, status: "running" })}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Riprendi"
+                      aria-label="Esegui"
+                      onClick={() => updateStatus.mutate({ id: job.id, status: "running" })}
+                    >
                       <Play className="h-3.5 w-3.5" />
                     </Button>
                   )}
                   {job.status !== "completed" && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Completa" aria-label="Conferma" onClick={() => updateStatus.mutate({ id: job.id, status: "completed" })}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Completa"
+                      aria-label="Conferma"
+                      onClick={() => updateStatus.mutate({ id: job.id, status: "completed" })}
+                    >
                       <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Rigenera prompt" aria-label="Aggiorna" onClick={() => generatePrompt.mutate(job)} disabled={generatePrompt.isPending}>
-                    {generatePrompt.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    title="Rigenera prompt"
+                    aria-label="Aggiorna"
+                    onClick={() => generatePrompt.mutate(job)}
+                    disabled={generatePrompt.isPending}
+                  >
+                    {generatePrompt.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina" aria-label="Elimina" onClick={() => deleteJob.mutate(job.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    title="Elimina"
+                    aria-label="Elimina"
+                    onClick={() => deleteJob.mutate(job.id)}
+                  >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
@@ -215,7 +304,12 @@ export default function OperativeJobsBoard() {
       </div>
 
       {/* Prompt Dialog */}
-      <Dialog open={!!promptDialog} onOpenChange={open => { if (!open) setPromptDialog(null); }}>
+      <Dialog
+        open={!!promptDialog}
+        onOpenChange={(open) => {
+          if (!open) setPromptDialog(null);
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -229,17 +323,31 @@ export default function OperativeJobsBoard() {
                 <>
                   <Textarea
                     value={editedPromptText}
-                    onChange={e => setEditedPromptText(e.target.value)}
+                    onChange={(e) => setEditedPromptText(e.target.value)}
                     rows={15}
                     className="font-mono text-xs"
                   />
                   <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setEditingPrompt(false)}>Annulla</Button>
-                    <Button size="sm" onClick={() => {
-                      savePrompt.mutate({ id: promptDialog.id, prompt: editedPromptText, currentMeta: promptDialog.metadata });
-                      setPromptDialog({ ...promptDialog, metadata: { ...promptDialog.metadata, generated_prompt: editedPromptText } });
-                      setEditingPrompt(false);
-                    }}>Salva</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingPrompt(false)}>
+                      Annulla
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        savePrompt.mutate({
+                          id: promptDialog.id,
+                          prompt: editedPromptText,
+                          currentMeta: promptDialog.metadata,
+                        });
+                        setPromptDialog({
+                          ...promptDialog,
+                          metadata: { ...promptDialog.metadata, generated_prompt: editedPromptText },
+                        });
+                        setEditingPrompt(false);
+                      }}
+                    >
+                      Salva
+                    </Button>
                   </div>
                 </>
               ) : (
@@ -249,19 +357,39 @@ export default function OperativeJobsBoard() {
                       {promptDialog.metadata.generated_prompt}
                     </pre>
                   ) : (
-                    <p className="text-sm text-muted-foreground py-8 text-center">Nessun prompt generato. Clicca "Genera" per crearne uno.</p>
+                    <p className="text-sm text-muted-foreground py-8 text-center">
+                      Nessun prompt generato. Clicca "Genera" per crearne uno.
+                    </p>
                   )}
                   {promptDialog.metadata?.prompt_generated_at && (
                     <p className="text-xs text-muted-foreground">
-                      Generato: {format(new Date(promptDialog.metadata.prompt_generated_at), "dd MMM yyyy HH:mm", { locale: it })}
+                      Generato:{" "}
+                      {format(new Date(promptDialog.metadata.prompt_generated_at), "dd MMM yyyy HH:mm", { locale: it })}
                     </p>
                   )}
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" className="gap-1" onClick={() => { setEditedPromptText(promptDialog.metadata?.generated_prompt || ""); setEditingPrompt(true); }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => {
+                        setEditedPromptText(promptDialog.metadata?.generated_prompt || "");
+                        setEditingPrompt(true);
+                      }}
+                    >
                       <Pencil className="h-3 w-3" /> Modifica
                     </Button>
-                    <Button size="sm" className="gap-1" onClick={() => generatePrompt.mutate(promptDialog)} disabled={generatePrompt.isPending}>
-                      {generatePrompt.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    <Button
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => generatePrompt.mutate(promptDialog)}
+                      disabled={generatePrompt.isPending}
+                    >
+                      {generatePrompt.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" />
+                      )}
                       Rigenera
                     </Button>
                   </div>

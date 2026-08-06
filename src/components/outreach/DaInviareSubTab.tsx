@@ -15,11 +15,29 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
-import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, updateActivitySchedule, updateMissionActionSchedule, logAuditEntry, findPendingBulkQueue, cancelBulkQueueItem } from "@/data/outreachPipeline";
+import {
+  findPendingOutreach,
+  cancelActivity,
+  cancelMissionAction,
+  cancelPendingAction,
+  updateActivitySchedule,
+  updateMissionActionSchedule,
+  logAuditEntry,
+  findPendingBulkQueue,
+  cancelBulkQueueItem,
+} from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 import { EmailPreviewPane, type EmailPreviewItem } from "./EmailPreviewPane";
 
-const CHANNEL_ICON: Record<string, typeof Mail> = { send_email: Mail, email: Mail, outreach: Mail, send_whatsapp: MessageCircle, whatsapp: MessageCircle, linkedin: Linkedin, phone: Phone };
+const CHANNEL_ICON: Record<string, typeof Mail> = {
+  send_email: Mail,
+  email: Mail,
+  outreach: Mail,
+  send_whatsapp: MessageCircle,
+  whatsapp: MessageCircle,
+  linkedin: Linkedin,
+  phone: Phone,
+};
 const SOURCE_BADGE: Record<string, { label: string; color: string }> = {
   partner: { label: "Manuale", color: "bg-muted text-muted-foreground" },
   ai_agent: { label: "AI", color: "bg-primary/15 text-primary" },
@@ -69,31 +87,49 @@ export function DaInviareSubTab() {
 
     for (const a of data.activities) {
       result.push({
-        id: `act-${a.id}`, type: "activity",
-        email: (a as Record<string, unknown>).source_meta ? ((a as Record<string, unknown>).source_meta as Record<string, string>).email || "" : "",
+        id: `act-${a.id}`,
+        type: "activity",
+        email: (a as Record<string, unknown>).source_meta
+          ? ((a as Record<string, unknown>).source_meta as Record<string, string>).email || ""
+          : "",
         partner_name: (a.partners as Record<string, string>)?.company_name || "—",
-        channel: a.activity_type, subject: a.email_subject || a.title,
-        source: a.source_type || "partner", scheduled_at: a.scheduled_at, status: a.status, created_at: a.created_at,
+        channel: a.activity_type,
+        subject: a.email_subject || a.title,
+        source: a.source_type || "partner",
+        scheduled_at: a.scheduled_at,
+        status: a.status,
+        created_at: a.created_at,
         body: a.email_body || "",
       });
     }
     for (const ma of data.missionActions) {
       result.push({
-        id: `ma-${ma.id}`, type: "mission_action",
-        email: (ma.metadata as Record<string, string>)?.email || (ma.metadata as Record<string, string>)?.target_email || "",
+        id: `ma-${ma.id}`,
+        type: "mission_action",
+        email:
+          (ma.metadata as Record<string, string>)?.email || (ma.metadata as Record<string, string>)?.target_email || "",
         partner_name: (ma.metadata as Record<string, string>)?.company_name || ma.action_label || "—",
-        channel: ma.action_type, subject: ma.action_label || "",
-        source: "mission", scheduled_at: ma.scheduled_at, status: ma.status, created_at: ma.created_at,
+        channel: ma.action_type,
+        subject: ma.action_label || "",
+        source: "mission",
+        scheduled_at: ma.scheduled_at,
+        status: ma.status,
+        created_at: ma.created_at,
         body: (ma.metadata as Record<string, string>)?.email_body || "",
       });
     }
     for (const pa of data.pendingActions) {
       result.push({
-        id: `pa-${pa.id}`, type: "pending_action",
+        id: `pa-${pa.id}`,
+        type: "pending_action",
         email: pa.email_address || "",
         partner_name: (pa.action_payload as Record<string, string>)?.company_name || "—",
-        channel: pa.action_type, subject: pa.suggested_content?.slice(0, 80) || pa.reasoning || "",
-        source: pa.source || "ai_agent", scheduled_at: null, status: pa.status || "pending", created_at: pa.created_at || "",
+        channel: pa.action_type,
+        subject: pa.suggested_content?.slice(0, 80) || pa.reasoning || "",
+        source: pa.source || "ai_agent",
+        scheduled_at: null,
+        status: pa.status || "pending",
+        created_at: pa.created_at || "",
         body: pa.suggested_content || "",
       });
     }
@@ -114,7 +150,8 @@ export function DaInviareSubTab() {
     }
 
     return result.sort((a, b) => {
-      if (a.scheduled_at && b.scheduled_at) return new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+      if (a.scheduled_at && b.scheduled_at)
+        return new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
       if (a.scheduled_at) return -1;
       if (b.scheduled_at) return 1;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -123,12 +160,18 @@ export function DaInviareSubTab() {
 
   const filtered = useMemo(() => {
     let list = items;
-    if (channelFilter !== "all") list = list.filter(i => i.channel.includes(channelFilter));
-    if (sourceFilter !== "all") list = list.filter(i => i.source === sourceFilter);
+    if (channelFilter !== "all") list = list.filter((i) => i.channel.includes(channelFilter));
+    if (sourceFilter !== "all") list = list.filter((i) => i.source === sourceFilter);
     return list;
   }, [items, channelFilter, sourceFilter]);
 
-  const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   const handleCancel = async (item: UnifiedItem) => {
     const realId = item.id.split("-").slice(1).join("-");
@@ -138,11 +181,18 @@ export function DaInviareSubTab() {
       } else if (item.type === "activity") await cancelActivity(realId);
       else if (item.type === "mission_action") await cancelMissionAction(realId);
       else await cancelPendingAction(realId);
-      await logAuditEntry({ action_category: "activity_deleted", action_detail: `Annullato: ${item.subject}`, decision_origin: "manual", target_type: item.type === "activity" ? "activity" : "mission" });
+      await logAuditEntry({
+        action_category: "activity_deleted",
+        action_detail: `Annullato: ${item.subject}`,
+        decision_origin: "manual",
+        target_type: item.type === "activity" ? "activity" : "mission",
+      });
       qc.invalidateQueries({ queryKey: queryKeys.outreach.pending() });
       qc.invalidateQueries({ queryKey: ["outreach", "pending", "bulk"] });
       toast.success("Annullato");
-    } catch { toast.error("Errore annullamento"); }
+    } catch {
+      toast.error("Errore annullamento");
+    }
   };
 
   const handleSchedule = async (item: UnifiedItem, date: Date) => {
@@ -151,15 +201,22 @@ export function DaInviareSubTab() {
     try {
       if (item.type === "activity") await updateActivitySchedule(realId, isoDate);
       else if (item.type === "mission_action") await updateMissionActionSchedule(realId, isoDate);
-      await logAuditEntry({ action_category: "activity_updated", action_detail: `Riprogrammato per ${format(date, "dd MMM yyyy", { locale: it })}: ${item.subject}`, decision_origin: "manual", target_type: "activity" });
+      await logAuditEntry({
+        action_category: "activity_updated",
+        action_detail: `Riprogrammato per ${format(date, "dd MMM yyyy", { locale: it })}: ${item.subject}`,
+        decision_origin: "manual",
+        target_type: "activity",
+      });
       qc.invalidateQueries({ queryKey: queryKeys.outreach.pending() });
       toast.success(`Programmato per ${format(date, "dd MMM yyyy", { locale: it })}`);
-    } catch { toast.error("Errore programmazione"); }
+    } catch {
+      toast.error("Errore programmazione");
+    }
   };
 
   const handleBulkCancel = async () => {
     for (const id of selected) {
-      const item = items.find(i => i.id === id);
+      const item = items.find((i) => i.id === id);
       if (item) await handleCancel(item);
     }
     setSelected(new Set());
@@ -167,14 +224,19 @@ export function DaInviareSubTab() {
 
   const previewItem: EmailPreviewItem | null = (() => {
     if (!selectedPreviewId) return null;
-    const it = items.find(i => i.id === selectedPreviewId);
+    const it = items.find((i) => i.id === selectedPreviewId);
     if (!it) return null;
     const sb = SOURCE_BADGE[it.source] || SOURCE_BADGE.partner;
     const tone: EmailPreviewItem["sourceTone"] =
-      it.source === "ai_agent" ? "primary" :
-      it.source === "campaign" ? "blue" :
-      it.source === "mission" ? "amber" :
-      it.source === "cadence" ? "purple" : "muted";
+      it.source === "ai_agent"
+        ? "primary"
+        : it.source === "campaign"
+          ? "blue"
+          : it.source === "mission"
+            ? "amber"
+            : it.source === "cadence"
+              ? "purple"
+              : "muted";
     return {
       id: it.id,
       recipientName: it.partner_name,
@@ -192,7 +254,9 @@ export function DaInviareSubTab() {
       {/* Filters + bulk */}
       <div className="shrink-0 px-4 py-2 border-b border-border/30 flex items-center gap-2 flex-wrap">
         <Select value={channelFilter} onValueChange={setChannelFilter}>
-          <SelectTrigger className="h-7 w-[110px] text-[11px]"><SelectValue placeholder="Canale" /></SelectTrigger>
+          <SelectTrigger className="h-7 w-[110px] text-[11px]">
+            <SelectValue placeholder="Canale" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutti</SelectItem>
             <SelectItem value="email">Email</SelectItem>
@@ -201,7 +265,9 @@ export function DaInviareSubTab() {
           </SelectContent>
         </Select>
         <Select value={sourceFilter} onValueChange={setSourceFilter}>
-          <SelectTrigger className="h-7 w-[110px] text-[11px]"><SelectValue placeholder="Sorgente" /></SelectTrigger>
+          <SelectTrigger className="h-7 w-[110px] text-[11px]">
+            <SelectValue placeholder="Sorgente" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutte</SelectItem>
             <SelectItem value="partner">Manuale</SelectItem>
@@ -210,7 +276,9 @@ export function DaInviareSubTab() {
             <SelectItem value="campaign">Campagna</SelectItem>
           </SelectContent>
         </Select>
-        <Badge variant="outline" className="text-[10px] h-5">{filtered.length} in coda</Badge>
+        <Badge variant="outline" className="text-[10px] h-5">
+          {filtered.length} in coda
+        </Badge>
 
         {selected.size > 0 && (
           <div className="flex items-center gap-1.5 ml-auto">
@@ -218,80 +286,114 @@ export function DaInviareSubTab() {
             <Button size="sm" variant="destructive" className="h-6 text-[10px] gap-1" onClick={handleBulkCancel}>
               <X className="w-3 h-3" /> Annulla
             </Button>
-            <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setSelected(new Set())}>Deseleziona</Button>
+            <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setSelected(new Set())}>
+              Deseleziona
+            </Button>
           </div>
         )}
       </div>
 
       <div className="flex flex-1 min-h-0">
         <ScrollArea className="flex-1 min-h-0 min-w-0">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-sm">Nessun invio in attesa</div>
-        ) : (
-          <div className="p-2 space-y-1">
-            {filtered.map((item) => {
-              const ChannelIcon = CHANNEL_ICON[item.channel] || Mail;
-              const sourceBadge = SOURCE_BADGE[item.source] || SOURCE_BADGE.partner;
-              const isSel = selectedPreviewId === item.id;
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm">Nessun invio in attesa</div>
+          ) : (
+            <div className="p-2 space-y-1">
+              {filtered.map((item) => {
+                const ChannelIcon = CHANNEL_ICON[item.channel] || Mail;
+                const sourceBadge = SOURCE_BADGE[item.source] || SOURCE_BADGE.partner;
+                const isSel = selectedPreviewId === item.id;
 
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedPreviewId(item.id)}
-                  className={cn(
-                    "flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer",
-                    isSel && "bg-primary/10 ring-1 ring-primary/30"
-                  )}
-                >
-                  <Checkbox checked={selected.has(item.id)} onCheckedChange={() => toggleSelect(item.id)} className="shrink-0" />
-                  <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                    <ChannelIcon className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-foreground truncate">{item.partner_name}</span>
-                      <span className={cn("text-[8px] px-1.5 py-0.5 rounded-full font-medium", sourceBadge.color)}>{sourceBadge.label}</span>
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedPreviewId(item.id)}
+                    className={cn(
+                      "flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer",
+                      isSel && "bg-primary/10 ring-1 ring-primary/30",
+                    )}
+                  >
+                    <Checkbox
+                      checked={selected.has(item.id)}
+                      onCheckedChange={() => toggleSelect(item.id)}
+                      className="shrink-0"
+                    />
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <ChannelIcon className="w-3.5 h-3.5 text-primary" />
                     </div>
-                    <p className="text-[11px] text-muted-foreground truncate">{item.email || item.subject}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-foreground truncate">{item.partner_name}</span>
+                        <span className={cn("text-[8px] px-1.5 py-0.5 rounded-full font-medium", sourceBadge.color)}>
+                          {sourceBadge.label}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground truncate">{item.email || item.subject}</p>
+                    </div>
+                    {item.scheduled_at && (
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0">
+                        <Clock className="w-3 h-3" />
+                        {format(new Date(item.scheduled_at), "dd MMM HH:mm", { locale: it })}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <CalendarIcon className="w-3 h-3 text-muted-foreground" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <Calendar
+                            mode="single"
+                            onSelect={(d) => d && handleSchedule(item, d)}
+                            className="p-3 pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancel(item);
+                        }}
+                      >
+                        <X className="w-3 h-3 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                  {item.scheduled_at && (
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0">
-                      <Clock className="w-3 h-3" />
-                      {format(new Date(item.scheduled_at), "dd MMM HH:mm", { locale: it })}
-                    </span>
-                  )}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => e.stopPropagation()}><CalendarIcon className="w-3 h-3 text-muted-foreground" /></Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar mode="single" onSelect={(d) => d && handleSchedule(item, d)} className="p-3 pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); handleCancel(item); }}>
-                      <X className="w-3 h-3 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
         </ScrollArea>
         <div className="w-[420px] shrink-0 hidden lg:block">
           <EmailPreviewPane
             item={previewItem}
             onClose={() => setSelectedPreviewId(null)}
             onCancel={(id) => {
-              const it = items.find(i => i.id === id);
-              if (it) { handleCancel(it); setSelectedPreviewId(null); }
+              const it = items.find((i) => i.id === id);
+              if (it) {
+                handleCancel(it);
+                setSelectedPreviewId(null);
+              }
             }}
             onReschedule={(id, date) => {
-              const it = items.find(i => i.id === id);
-              if (it) { handleSchedule(it, date); }
+              const it = items.find((i) => i.id === id);
+              if (it) {
+                handleSchedule(it, date);
+              }
             }}
           />
         </div>

@@ -24,8 +24,11 @@ interface PersonaData {
 export async function loadAgentPersona(
   supabase: SupabaseClient,
   agentId: string,
-  userId: string
-): Promise<{ persona: PersonaData | null; kbEntries: Array<{ title: string; content: string; chapter?: string; category?: string }> }> {
+  userId: string,
+): Promise<{
+  persona: PersonaData | null;
+  kbEntries: Array<{ title: string; content: string; chapter?: string; category?: string }>;
+}> {
   let persona: PersonaData | null = null;
   let personaKbEntries: Array<{ title: string; content: string; chapter?: string; category?: string }> = [];
 
@@ -111,7 +114,7 @@ export async function assembleSystemPrompt(
   contextBlock: string,
   learningBlock: string,
   missionBlock: string,
-  userId: string
+  userId: string,
 ): Promise<string> {
   const baseDoctrine = buildBasePrompt(agentPrompt, persona);
 
@@ -134,11 +137,15 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
 
   // Format KB blocks
   const personaKbBlock = personaKbEntries.length
-    ? "\n\n--- KNOWLEDGE BASE (AGENTE) ---\n" + personaKbEntries.map((k: { title: string; content: string }) => `### ${k.title}\n${(k.content as string).substring(0, 800)}\n`).join("\n")
+    ? "\n\n--- KNOWLEDGE BASE (AGENTE) ---\n" +
+      personaKbEntries
+        .map((k: { title: string; content: string }) => `### ${k.title}\n${(k.content as string).substring(0, 800)}\n`)
+        .join("\n")
     : "";
 
   const agentKbBlock = agentKbEntries?.length
-    ? "\n\n--- KNOWLEDGE BASE ---\n" + agentKbEntries.map((e: { title: string; content: string }) => `### ${e.title}\n${e.content}`).join("\n")
+    ? "\n\n--- KNOWLEDGE BASE ---\n" +
+      agentKbEntries.map((e: { title: string; content: string }) => `### ${e.title}\n${e.content}`).join("\n")
     : "";
 
   // Assemble with context budget
@@ -153,10 +160,8 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
       { key: "learning", content: learningBlock, priority: 70, minTokens: 200 },
       { key: "agent_kb", content: agentKbBlock, priority: 60, minTokens: 300 },
     ],
-    contextBudget
+    contextBudget,
   );
-
-  
 
   return assembled.text;
 }

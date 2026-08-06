@@ -58,13 +58,14 @@ function CompanyAvatar({ logoUrl, companyName }: { logoUrl: string | null; compa
       />
     );
   }
-  const initials = companyName
-    .replace(/["'`]/g, "")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("") || "?";
+  const initials =
+    companyName
+      .replace(/["'`]/g, "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "?";
   const hue = monogramHue(companyName);
   return (
     <div
@@ -77,7 +78,11 @@ function CompanyAvatar({ logoUrl, companyName }: { logoUrl: string | null; compa
   );
 }
 
-function ManualEmailField(props: Pick<RecipientHeroCardProps, "manualEmail" | "onManualEmailChange" | "onAddManualEmail"> & { isFirst: boolean }) {
+function ManualEmailField(
+  props: Pick<RecipientHeroCardProps, "manualEmail" | "onManualEmailChange" | "onAddManualEmail"> & {
+    isFirst: boolean;
+  },
+) {
   const { manualEmail, onManualEmailChange, onAddManualEmail, isFirst } = props;
   return (
     <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-dashed border-border/50 bg-muted/20">
@@ -92,7 +97,9 @@ function ManualEmailField(props: Pick<RecipientHeroCardProps, "manualEmail" | "o
             onAddManualEmail();
           }
         }}
-        onBlur={() => { if (manualEmail.trim()) onAddManualEmail(); }}
+        onBlur={() => {
+          if (manualEmail.trim()) onAddManualEmail();
+        }}
         placeholder={isFirst ? "Aggiungi email destinatario…" : "Aggiungi un altro destinatario…"}
         className="flex-1 min-w-[160px] text-xs bg-transparent outline-none placeholder:text-muted-foreground h-5"
       />
@@ -125,9 +132,7 @@ export function RecipientHeroCard({
     return (
       <div className="mb-2 flex items-center gap-2 px-2 py-1 rounded-md border border-dashed border-border/50 bg-muted/10">
         <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground shrink-0">
-          Nessun destinatario
-        </span>
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground shrink-0">Nessun destinatario</span>
         <div className="flex-1 min-w-0">
           <ManualEmailField
             manualEmail={manualEmail}
@@ -148,7 +153,9 @@ export function RecipientHeroCard({
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">Modalità bulk</span>
-            <Badge variant="secondary" className="text-[10px]">{recipients.length} destinatari</Badge>
+            <Badge variant="secondary" className="text-[10px]">
+              {recipients.length} destinatari
+            </Badge>
           </div>
           <ManualEmailField
             manualEmail={manualEmail}
@@ -161,9 +168,7 @@ export function RecipientHeroCard({
           {recipients.map((r, i) => (
             <Badge key={i} variant="outline" className="gap-1 pl-1.5 pr-1 py-0.5 text-[10px] font-normal">
               <span className="text-sm leading-none">{getCountryFlag(r.countryCode || "")}</span>
-              <span className="truncate max-w-[180px]">
-                {r.companyAlias || r.companyName}
-              </span>
+              <span className="truncate max-w-[180px]">{r.companyAlias || r.companyName}</span>
               <button
                 onClick={() => onRemoveRecipient(i)}
                 className="ml-0.5 p-0.5 rounded-full hover:bg-destructive/10"
@@ -239,10 +244,7 @@ export function RecipientHeroCard({
             )}
             <Badge
               variant={ds.tone === "fresh" ? "default" : ds.tone === "stale" ? "secondary" : "outline"}
-              className={cn(
-                "h-5 text-[10px] px-1.5",
-                ds.tone === "missing" && "border-dashed text-muted-foreground",
-              )}
+              className={cn("h-5 text-[10px] px-1.5", ds.tone === "missing" && "border-dashed text-muted-foreground")}
             >
               {ds.label}
             </Badge>

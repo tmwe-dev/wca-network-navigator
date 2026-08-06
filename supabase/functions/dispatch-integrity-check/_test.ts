@@ -74,27 +74,51 @@ function computeReport(
     const issues: string[] = [];
 
     const hasCm = channelMessages.some(
-      (cm) => cm.partner_id === action.partner_id && cm.direction === "outbound"
-        && new Date(cm.created_at as string) >= new Date(action.executed_at as string),
+      (cm) =>
+        cm.partner_id === action.partner_id &&
+        cm.direction === "outbound" &&
+        new Date(cm.created_at as string) >= new Date(action.executed_at as string),
     );
-    if (!hasCm) { missingChannelMessage++; issues.push("missing_channel_message"); }
+    if (!hasCm) {
+      missingChannelMessage++;
+      issues.push("missing_channel_message");
+    }
 
     const hasAct = activities.some(
-      (a) => a.partner_id === action.partner_id
-        && new Date(a.created_at as string) >= new Date(action.executed_at as string),
+      (a) =>
+        a.partner_id === action.partner_id &&
+        new Date(a.created_at as string) >= new Date(action.executed_at as string),
     );
-    if (!hasAct) { missingActivity++; issues.push("missing_activity"); }
+    if (!hasAct) {
+      missingActivity++;
+      issues.push("missing_activity");
+    }
 
     const partner = partners.find((p) => p.id === action.partner_id);
-    if (!partner?.last_outbound_at || new Date(partner.last_outbound_at as string) < new Date(action.executed_at as string)) {
+    if (
+      !partner?.last_outbound_at ||
+      new Date(partner.last_outbound_at as string) < new Date(action.executed_at as string)
+    ) {
       missingPartnerTouch++;
       issues.push("missing_partner_touch");
     }
 
     if (issues.length > 0) {
-      details.push({ action_id: action.id, partner_id: action.partner_id, action_type: action.action_type, executed_at: action.executed_at, issues });
+      details.push({
+        action_id: action.id,
+        partner_id: action.partner_id,
+        action_type: action.action_type,
+        executed_at: action.executed_at,
+        issues,
+      });
     }
   }
 
-  return { total_executed: actions.length, missing_channel_message: missingChannelMessage, missing_activity: missingActivity, missing_partner_touch: missingPartnerTouch, details };
+  return {
+    total_executed: actions.length,
+    missing_channel_message: missingChannelMessage,
+    missing_activity: missingActivity,
+    missing_partner_touch: missingPartnerTouch,
+    details,
+  };
 }

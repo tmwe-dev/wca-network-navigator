@@ -105,10 +105,7 @@ describe("isProceedIntent", () => {
     expect(isProceedIntent(p)).toBe(true);
   });
 
-  it.each(["", "ciao", "trovami partner Malta", "rifai più amichevole"])(
-    "non matcha: %s",
-    (p) => {
-      expect(isProceedIntent(p)).toBe(false);
-    },
-  );
+  it.each(["", "ciao", "trovami partner Malta", "rifai più amichevole"])("non matcha: %s", (p) => {
+    expect(isProceedIntent(p)).toBe(false);
+  });
 });

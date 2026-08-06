@@ -14,7 +14,9 @@ function fallbackFromPrompt(prompt: string): Record<string, unknown> {
   const idMatch = prompt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
   const emailMatch = prompt.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
   const updates: Record<string, unknown> = {};
-  const status = prompt.match(/\b(lead[_\s-]?status|stato)\s+(a|=|:)?\s*(nuovo|contattato|qualificato|attivo|perso|non_interessato|new|contacted|qualified|active|lost)/i);
+  const status = prompt.match(
+    /\b(lead[_\s-]?status|stato)\s+(a|=|:)?\s*(nuovo|contattato|qualificato|attivo|perso|non_interessato|new|contacted|qualified|active|lost)/i,
+  );
   if (status) updates.lead_status = status[3].toLowerCase();
   const phone = prompt.match(/\btelefono\s+(a|=|:)?\s*([+\d\s().-]{6,})/i);
   if (phone) updates.phone = phone[2].trim();

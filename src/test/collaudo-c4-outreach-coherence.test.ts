@@ -30,7 +30,7 @@ function realStage(
   interactions: number,
   responses: number,
   unansweredStreak: number,
-  daysSinceLastResponse: number
+  daysSinceLastResponse: number,
 ): string {
   if (interactions === 0) return "cold";
   const responseRate = interactions > 0 ? responses / interactions : 0;
@@ -46,7 +46,6 @@ function realStage(
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C2 — Relationship Stage Coherence", () => {
-
   it("C2.1 — BUG: naive stage says 'active' for partner with 6 interactions but 0 responses", () => {
     const naive = naiveStage(6);
     expect(naive).toBe("active"); // WRONG — should be "ghosted"
@@ -98,7 +97,6 @@ describe("Collaudo C2 — Relationship Stage Coherence", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C2 — Tone Must Match Stage", () => {
-
   const FORBIDDEN_TONES: Record<string, string[]> = {
     cold: ["intimate", "demanding", "partnership"],
     ghosted: ["warm", "collaborative", "enthusiastic"],
@@ -127,7 +125,6 @@ describe("Collaudo C2 — Tone Must Match Stage", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C2 — Playbook Injection in Generators", () => {
-
   // Simulate what generate-outreach currently loads
   interface GeneratorContext {
     kbEntries: string[];
@@ -194,7 +191,6 @@ describe("Collaudo C2 — Playbook Injection in Generators", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C2 — Channel Context Honesty", () => {
-
   function getChannelContext(channel: string): { hasFullHistory: boolean; note: string } {
     switch (channel) {
       case "email":

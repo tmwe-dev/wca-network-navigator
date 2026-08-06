@@ -91,9 +91,7 @@ export async function runToolLoop(
     iterations++;
 
     if (detectRepetition) {
-      const signature = msg.tool_calls
-        .map((tc) => `${tc.function.name}:${tc.function.arguments}`)
-        .join("|");
+      const signature = msg.tool_calls.map((tc) => `${tc.function.name}:${tc.function.arguments}`).join("|");
       if (signature === lastSignature) {
         repeatCount++;
         if (repeatCount >= 2) {
@@ -110,7 +108,11 @@ export async function runToolLoop(
     const toolResults: ChatMessage[] = [];
     for (const tc of msg.tool_calls) {
       let args: Record<string, unknown> = {};
-      try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* ignore */ }
+      try {
+        args = JSON.parse(tc.function.arguments || "{}");
+      } catch {
+        /* ignore */
+      }
       let toolResult: unknown;
       try {
         toolResult = await executeTool(tc.function.name, args);

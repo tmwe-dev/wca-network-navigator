@@ -12,7 +12,5 @@ export function getProfileTruncation(quality: Quality): { description: number; r
 }
 
 export function getModel(quality: Quality): string {
-  return quality === "fast"
-    ? "google/gemini-2.5-flash-lite"
-    : "google/gemini-3-flash-preview";
+  return quality === "fast" ? "google/gemini-2.5-flash-lite" : "google/gemini-3-flash-preview";
 }

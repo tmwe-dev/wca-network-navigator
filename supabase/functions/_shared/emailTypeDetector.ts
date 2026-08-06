@@ -6,39 +6,11 @@
 
 import type { EmailContract, ResolvedEmailType, TypeConflict } from "./emailContract.ts";
 
-const FIRST_CONTACT_TYPES = [
-  "primo_contatto",
-  "primo contatto",
-  "first_contact",
-  "cold_outreach",
-  "introduction",
-];
+const FIRST_CONTACT_TYPES = ["primo_contatto", "primo contatto", "first_contact", "cold_outreach", "introduction"];
 const FOLLOWUP_TYPES = ["follow_up", "follow-up", "followup", "ricontatto", "reminder"];
-const RELATIONSHIP_TYPES = [
-  "proposta",
-  "proposal",
-  "negoziazione",
-  "offerta",
-  "quotation",
-  "onboarding",
-];
-const CLOSING_TYPES = [
-  "proposta",
-  "chiusura",
-  "contratto",
-  "proposal",
-  "closing",
-  "quotation",
-];
-const PHASE_ORDER = [
-  "new",
-  "first_touch_sent",
-  "holding",
-  "engaged",
-  "qualified",
-  "negotiation",
-  "converted",
-];
+const RELATIONSHIP_TYPES = ["proposta", "proposal", "negoziazione", "offerta", "quotation", "onboarding"];
+const CLOSING_TYPES = ["proposta", "chiusura", "contratto", "proposal", "closing", "quotation"];
+const PHASE_ORDER = ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted"];
 const RELATIONSHIP_SIGNALS = [
   "come discusso",
   "in seguito a",
@@ -125,8 +97,7 @@ export function detectEmailType(contract: EmailContract): ResolvedEmailType {
         type: "status_channel_mismatch",
         description: `Partner in "holding" (circuito di attesa). Ultimo contatto ${daysSinceOutbound} giorni fa, minimo 7`,
         severity: "blocking",
-        suggestion:
-          "Aspetta almeno 7 giorni dal circuito di attesa, oppure cambia stato se il partner ha risposto",
+        suggestion: "Aspetta almeno 7 giorni dal circuito di attesa, oppure cambia stato se il partner ha risposto",
       });
     }
   }
@@ -158,11 +129,7 @@ export function detectEmailType(contract: EmailContract): ResolvedEmailType {
   }
 
   // CHECK 6: Email recente sullo stesso canale
-  if (
-    daysSinceOutbound !== undefined &&
-    daysSinceOutbound < 2 &&
-    contract.relationship.last_channel === "email"
-  ) {
+  if (daysSinceOutbound !== undefined && daysSinceOutbound < 2 && contract.relationship.last_channel === "email") {
     conflicts.push({
       type: "duplicate_recent",
       description: `Email inviata ${daysSinceOutbound} giorni fa allo stesso partner. Possibile duplicato.`,

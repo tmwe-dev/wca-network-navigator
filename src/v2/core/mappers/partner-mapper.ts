@@ -10,9 +10,16 @@ import type { PartnerV2 } from "../domain/partner-entity";
 export function mapPartnerRow(row: unknown): Result<PartnerV2, AppError> {
   const parsed = PartnerRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `Partner row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "partner-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `Partner row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "partner-mapper",
+      ),
+    );
   }
 
   const r = parsed.data;

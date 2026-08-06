@@ -17,12 +17,7 @@ import { withTimeout } from "./lib/withTimeout";
 export const MAX_PLAN_STEPS = 8;
 const STEP_TIMEOUT_MS = 60_000;
 
-export type PlanStepStatus =
-  | "pending"
-  | "running"
-  | "done"
-  | "blocked-on-approval"
-  | "error";
+export type PlanStepStatus = "pending" | "running" | "done" | "blocked-on-approval" | "error";
 
 export interface PlanStepState {
   step: PlanStep;
@@ -47,27 +42,19 @@ export interface PlanExecutionState {
 /**
  * Resolves placeholders like {{step1.result.partnerId}} using prior step results
  */
-function resolveParams(
-  params: Record<string, unknown>,
-  results: Record<number, ToolResult>,
-): Record<string, unknown> {
+function resolveParams(params: Record<string, unknown>, results: Record<number, ToolResult>): Record<string, unknown> {
   const json = JSON.stringify(params);
-  const replaced = json.replace(
-    /\{\{step(\d+)\.result\.([\w.]+)\}\}/g,
-    (_match, stepNum, path) => {
-      const result = results[parseInt(stepNum)];
-      if (!result) return "null";
-      const value = (path as string)
-        .split(".")
-        .reduce((acc: unknown, key: string) => {
-          if (acc && typeof acc === "object" && key in acc) {
-            return (acc as Record<string, unknown>)[key];
-          }
-          return null;
-        }, result);
-      return JSON.stringify(value ?? null);
-    },
-  );
+  const replaced = json.replace(/\{\{step(\d+)\.result\.([\w.]+)\}\}/g, (_match, stepNum, path) => {
+    const result = results[parseInt(stepNum)];
+    if (!result) return "null";
+    const value = (path as string).split(".").reduce((acc: unknown, key: string) => {
+      if (acc && typeof acc === "object" && key in acc) {
+        return (acc as Record<string, unknown>)[key];
+      }
+      return null;
+    }, result);
+    return JSON.stringify(value ?? null);
+  });
   try {
     return JSON.parse(replaced);
   } catch {
@@ -134,9 +121,7 @@ export async function executePlan(
   let current: PlanExecutionState = { ...state, status: "running" };
   onStepUpdate(current);
 
-  const startIdx = startFromStep
-    ? sorted.findIndex((s) => s.stepNumber === startFromStep)
-    : 0;
+  const startIdx = startFromStep ? sorted.findIndex((s) => s.stepNumber === startFromStep) : 0;
 
   for (let i = startIdx; i < sorted.length; i++) {
     const step = sorted[i];
@@ -199,7 +184,12 @@ export async function executePlan(
       const msg = e instanceof Error ? e.message : "errore sconosciuto";
       const errStates = [...current.stepStates];
       errStates[stepIdx] = { ...errStates[stepIdx], status: "error", error: msg };
-      current = { ...current, stepStates: errStates, status: "error", error: `Step ${step.stepNumber} (${step.toolId}): ${msg}` };
+      current = {
+        ...current,
+        stepStates: errStates,
+        status: "error",
+        error: `Step ${step.stepNumber} (${step.toolId}): ${msg}`,
+      };
       onStepUpdate(current);
       return current;
     }

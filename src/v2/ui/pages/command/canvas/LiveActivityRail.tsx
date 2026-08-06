@@ -63,9 +63,7 @@ export default function LiveActivityRail({ activities }: Props) {
                   <Icon className={`w-3 h-3 mt-0.5 flex-shrink-0 ${Meta.tint}`} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] font-light text-foreground truncate">{a.label}</div>
-                    {a.detail && (
-                      <div className="text-[8px] text-muted-foreground font-mono truncate">{a.detail}</div>
-                    )}
+                    {a.detail && <div className="text-[8px] text-muted-foreground font-mono truncate">{a.detail}</div>}
                   </div>
                   <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${STATUS_DOT[a.status]}`} />
                 </motion.div>

@@ -110,7 +110,9 @@ interface SupabaseQueryResult<T> {
 }
 
 /** Fetch all rows by iterating with .range() in blocks of 1000 */
-async function fetchAllRows<T>(buildQuery: (from: number, to: number) => PromiseLike<SupabaseQueryResult<T>>): Promise<T[]> {
+async function fetchAllRows<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<SupabaseQueryResult<T>>,
+): Promise<T[]> {
   const all: T[] = [];
   let offset = 0;
   while (true) {
@@ -128,9 +130,7 @@ async function fetchAllRows<T>(buildQuery: (from: number, to: number) => Promise
 
 export async function findPartners(filters?: PartnerFilters): Promise<PartnerWithRelations[]> {
   return fetchAllRows((from, to) => {
-    let query = supabase
-      .from("partners")
-      .select(PARTNER_LIST_SELECT);
+    let query = supabase.from("partners").select(PARTNER_LIST_SELECT);
 
     if (filters?.search) {
       const s = sanitizeSearchTerm(filters.search);
@@ -155,7 +155,7 @@ export async function findPartnersByCountry(countryCode: string): Promise<Partne
       .eq("country_code", countryCode)
       .order("company_name")
       .range(from, to)
-      .returns<PartnerWithRelations[]>()
+      .returns<PartnerWithRelations[]>(),
   );
 }
 
@@ -174,11 +174,7 @@ export async function findPartnersPreview(limit = 50): Promise<PartnerWithRelati
 }
 
 export async function getPartner(id: string) {
-  const { data, error } = await supabase
-    .from("partners")
-    .select(PARTNER_DETAIL_SELECT)
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("partners").select(PARTNER_DETAIL_SELECT).eq("id", id).single();
   if (error) throw error;
   return data;
 }
@@ -189,28 +185,19 @@ export async function updatePartner(id: string, updates: Partial<PartnerRow>) {
 
   if (lead_status) {
     // P3.7: apply_lead_status_rpc non esiste a DB. Fallback a UPDATE diretto.
-    const { error: rpcError } = await supabase
-      .from("partners")
-      .update({ lead_status })
-      .eq("id", id);
+    const { error: rpcError } = await supabase.from("partners").update({ lead_status }).eq("id", id);
     if (rpcError) throw rpcError;
   }
 
   // Apply remaining non-status updates
   if (Object.keys(otherUpdates).length > 0) {
-    const { error } = await supabase
-      .from("partners")
-      .update(otherUpdates)
-      .eq("id", id);
+    const { error } = await supabase.from("partners").update(otherUpdates).eq("id", id);
     if (error) throw error;
   }
 }
 
 export async function toggleFavorite(id: string, isFavorite: boolean) {
-  const { error } = await supabase
-    .from("partners")
-    .update({ is_favorite: isFavorite })
-    .eq("id", id);
+  const { error } = await supabase.from("partners").update({ is_favorite: isFavorite }).eq("id", id);
   if (error) throw error;
 }
 
@@ -314,13 +301,26 @@ export async function persistSherlockFindings(
 }
 
 export async function getPartnerStats() {
-  const partners = await fetchAllRows<{ id: string; country_code: string; country_name: string; partner_type: string | null; member_since: string | null }>(
-    (from, to) =>
-      supabase
-        .from("partners")
-        .select("id, country_code, country_name, partner_type, member_since")
-        .range(from, to)
-        .returns<{ id: string; country_code: string; country_name: string; partner_type: string | null; member_since: string | null }[]>()
+  const partners = await fetchAllRows<{
+    id: string;
+    country_code: string;
+    country_name: string;
+    partner_type: string | null;
+    member_since: string | null;
+  }>((from, to) =>
+    supabase
+      .from("partners")
+      .select("id, country_code, country_name, partner_type, member_since")
+      .range(from, to)
+      .returns<
+        {
+          id: string;
+          country_code: string;
+          country_name: string;
+          partner_type: string | null;
+          member_since: string | null;
+        }[]
+      >(),
   );
 
   const totalPartners = partners.length;
@@ -347,20 +347,16 @@ export async function getPartnerStats() {
 
 /** Count active partners (head-only, no data transfer) */
 export async function countActivePartners() {
-  const { count, error } = await supabase
-    .from("partners")
-    .select("*", { count: "exact", head: true });
+  const { count, error } = await supabase.from("partners").select("*", { count: "exact", head: true });
   if (error) throw error;
   return count ?? 0;
 }
 
 /** Get distinct country codes from active partners */
 export async function getDistinctCountries() {
-  const { data, error } = await supabase
-    .from("partners")
-    .select("country_code");
+  const { data, error } = await supabase.from("partners").select("country_code");
   if (error) throw error;
-  const unique = new Set((data ?? []).map(r => r.country_code));
+  const unique = new Set((data ?? []).map((r) => r.country_code));
   return [...unique];
 }
 
@@ -375,7 +371,10 @@ export async function getCountryCodesBatched(): Promise<Record<string, number>> 
       .not("country_code", "is", null)
       .range(from, from + batchSize - 1);
     if (!data || data.length === 0) break;
-    data.forEach(r => { const cc = r.country_code!; counts[cc] = (counts[cc] || 0) + 1; });
+    data.forEach((r) => {
+      const cc = r.country_code!;
+      counts[cc] = (counts[cc] || 0) + 1;
+    });
     if (data.length < batchSize) break;
     from += batchSize;
   }
@@ -397,11 +396,7 @@ export async function searchPartners(term: string, limit = 10) {
 
 /** Find partner by WCA ID */
 export async function findPartnerByWcaId(wcaId: number) {
-  const { data, error } = await supabase
-    .from("partners")
-    .select("*")
-    .eq("wca_id", wcaId)
-    .maybeSingle();
+  const { data, error } = await supabase.from("partners").select("*").eq("wca_id", wcaId).maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -433,12 +428,9 @@ export async function getPartnersByIds(ids: string[], select = "id, company_name
   const results: Array<Record<string, unknown>> = [];
   for (let i = 0; i < ids.length; i += 100) {
     const batch = ids.slice(i, i + 100);
-    const { data, error } = await supabase
-      .from("partners")
-      .select(select)
-      .in("id", batch);
+    const { data, error } = await supabase.from("partners").select(select).in("id", batch);
     if (error) throw error;
-    if (data) results.push(...(toRecords(data)));
+    if (data) results.push(...toRecords(data));
   }
   return results;
 }
@@ -465,11 +457,7 @@ export async function deletePartnersByIds(ids: string[]) {
 
 /** Insert a new partner and return it */
 export async function createPartner(partner: PartnerInsert) {
-  const { data, error } = await supabase
-    .from("partners")
-    .insert(partner)
-    .select()
-    .single();
+  const { data, error } = await supabase.from("partners").insert(partner).select().single();
   if (error) throw error;
   return data;
 }
@@ -512,7 +500,7 @@ export async function getPartnersByIdsFiltered(ids: string[], select: string, fi
     }
     const { data, error } = await q;
     if (error) throw error;
-    if (data) results.push(...(toRecords(data)));
+    if (data) results.push(...toRecords(data));
   }
   return results;
 }
@@ -525,18 +513,24 @@ export async function searchPartnersByNameAlias(term: string, select: string, li
     .from("partners")
     .select(select)
     .or(`company_name.ilike.%${s}%,company_alias.ilike.%${s}%`)
-    .order("country_name").order("city").order("company_name")
+    .order("country_name")
+    .order("city")
+    .order("company_name")
     .limit(limit);
   if (error) throw error;
   return data ?? [];
 }
 
-export async function getPartnersByCountries(countryCodes: string[], select: string, options?: { noProfile?: boolean }): Promise<Array<Record<string, unknown>>> {
+export async function getPartnersByCountries(
+  countryCodes: string[],
+  select: string,
+  options?: { noProfile?: boolean },
+): Promise<Array<Record<string, unknown>>> {
   let q = supabase.from("partners").select(select).in("country_code", countryCodes).not("wca_id", "is", null);
   if (options?.noProfile) q = q.is("raw_profile_html", null);
   const { data, error } = await q.order("company_name");
   if (error) throw error;
-  return toRecords((data ?? []));
+  return toRecords(data ?? []);
 }
 
 /** Delete partners and all related data by IDs */
@@ -555,13 +549,16 @@ export async function deletePartnersWithRelations(ids: string[]) {
   }
 }
 
-export interface PartnerLeadResult { id: string; company_name?: string; email?: string | null; lead_status?: string; [k: string]: unknown }
+export interface PartnerLeadResult {
+  id: string;
+  company_name?: string;
+  email?: string | null;
+  lead_status?: string;
+  [k: string]: unknown;
+}
 
 export async function getPartnersByLeadStatus(statuses: string[], select = "id"): Promise<PartnerLeadResult[]> {
-  const { data, error } = await supabase
-    .from("partners")
-    .select(select)
-    .in("lead_status", statuses);
+  const { data, error } = await supabase.from("partners").select(select).in("lead_status", statuses);
   if (error) throw error;
   return (data ?? []) as unknown as PartnerLeadResult[];
 }
@@ -605,7 +602,7 @@ export interface PipelineLeadRow {
 
 export async function getPartnersByLeadStatusFromView(
   statuses: string[],
-  select = "partner_id, company_name, email, lead_status, touch_count, last_outbound_at, days_since_last_outbound"
+  select = "partner_id, company_name, email, lead_status, touch_count, last_outbound_at, days_since_last_outbound",
 ): Promise<PipelineLeadRow[]> {
   // P3.7: v_pipeline_lead view non esiste a DB. Query diretta a `partners`
   // mappata sulla shape PipelineLeadRow. I campi calcolati (touch_count,
@@ -614,7 +611,7 @@ export async function getPartnersByLeadStatusFromView(
   const { data, error } = await supabase
     .from("partners")
     .select(
-      "id, company_name, company_alias, country_code, city, email, phone, lead_status, is_active, is_favorite, rating, created_at, enriched_at, converted_at"
+      "id, company_name, company_alias, country_code, city, email, phone, lead_status, is_active, is_favorite, rating, created_at, enriched_at, converted_at",
     )
     .in("lead_status", statuses)
     .is("deleted_at", null);
@@ -635,36 +632,38 @@ export async function getPartnersByLeadStatusFromView(
     enriched_at: string | null;
     converted_at: string | null;
   };
-  return ((data ?? []) as PartnerBase[]).map((p): PipelineLeadRow => ({
-    partner_id: p.id,
-    user_id: "",
-    company_name: p.company_name ?? "",
-    company_alias: p.company_alias,
-    country_code: p.country_code ?? "",
-    country_name: "",
-    city: p.city ?? "",
-    email: p.email,
-    phone: p.phone,
-    lead_status: p.lead_status ?? "",
-    is_active: p.is_active,
-    is_favorite: p.is_favorite,
-    rating: p.rating,
-    interaction_count: 0,
-    last_interaction_at: null,
-    partner_created_at: p.created_at,
-    enriched_at: p.enriched_at,
-    converted_at: p.converted_at,
-    touch_count: 0,
-    last_outbound_at: null,
-    days_since_last_outbound: 0,
-    last_inbound_at: null,
-    last_inbound_category: null,
-    days_since_last_inbound: null,
-    pending_reminders: 0,
-    has_deep_search: false,
-    primary_contact_name: null,
-    primary_contact_email: null,
-  }));
+  return ((data ?? []) as PartnerBase[]).map(
+    (p): PipelineLeadRow => ({
+      partner_id: p.id,
+      user_id: "",
+      company_name: p.company_name ?? "",
+      company_alias: p.company_alias,
+      country_code: p.country_code ?? "",
+      country_name: "",
+      city: p.city ?? "",
+      email: p.email,
+      phone: p.phone,
+      lead_status: p.lead_status ?? "",
+      is_active: p.is_active,
+      is_favorite: p.is_favorite,
+      rating: p.rating,
+      interaction_count: 0,
+      last_interaction_at: null,
+      partner_created_at: p.created_at,
+      enriched_at: p.enriched_at,
+      converted_at: p.converted_at,
+      touch_count: 0,
+      last_outbound_at: null,
+      days_since_last_outbound: 0,
+      last_inbound_at: null,
+      last_inbound_category: null,
+      days_since_last_inbound: null,
+      pending_reminders: 0,
+      has_deep_search: false,
+      primary_contact_name: null,
+      primary_contact_email: null,
+    }),
+  );
 }
 
 export async function findPartnerByEmail(email: string) {
@@ -678,8 +677,15 @@ export async function findPartnerByEmail(email: string) {
   return data;
 }
 
-export async function findPartnersForEnrichment(filters: { country?: string; type?: string; onlyNotEnriched?: boolean }, limit = 500) {
-  let q = supabase.from("partners").select("id, company_name, city, country_code, website, enriched_at, partner_type, rating").not("website", "is", null).order("company_name");
+export async function findPartnersForEnrichment(
+  filters: { country?: string; type?: string; onlyNotEnriched?: boolean },
+  limit = 500,
+) {
+  let q = supabase
+    .from("partners")
+    .select("id, company_name, city, country_code, website, enriched_at, partner_type, rating")
+    .not("website", "is", null)
+    .order("company_name");
   if (filters.country) q = q.eq("country_code", filters.country);
   if (filters.type) q = q.eq("partner_type", filters.type as PartnerType);
   if (filters.onlyNotEnriched) q = q.is("enriched_at", null);
@@ -696,9 +702,10 @@ export async function getPartnerWebsite(id: string) {
 
 export async function updateLeadStatus(table: "partners" | "imported_contacts", id: string, status: string) {
   // P3.7: apply_lead_status_rpc non esiste a DB. UPDATE diretto sulla tabella.
-  const { error } = table === "partners"
-    ? await supabase.from("partners").update({ lead_status: status }).eq("id", id)
-    : await supabase.from("imported_contacts").update({ lead_status: status }).eq("id", id);
+  const { error } =
+    table === "partners"
+      ? await supabase.from("partners").update({ lead_status: status }).eq("id", id)
+      : await supabase.from("imported_contacts").update({ lead_status: status }).eq("id", id);
   if (error) throw error;
 }
 
@@ -787,10 +794,7 @@ export async function findPartnerWcaIdsByCountry(countryCode: string) {
 
 /** Coppie id/wca_id per un elenco di wca_id (scan directory). */
 export async function findPartnerIdsByWcaIds(wcaIds: number[]) {
-  const { data } = await supabase
-    .from("partners")
-    .select("id, wca_id")
-    .in("wca_id", wcaIds);
+  const { data } = await supabase.from("partners").select("id, wca_id").in("wca_id", wcaIds);
   return data;
 }
 
@@ -804,7 +808,9 @@ export async function createPartnerSafe(
 }
 
 /** Elenco minimale per matching blacklist (nome + paese). */
-export async function findPartnersForBlacklistMatch(): Promise<Array<{ id: string; company_name: string; country_name: string | null }>> {
+export async function findPartnersForBlacklistMatch(): Promise<
+  Array<{ id: string; company_name: string; country_name: string | null }>
+> {
   const { data } = await supabase.from("partners").select("id, company_name, country_name");
   return (data ?? []) as Array<{ id: string; company_name: string; country_name: string | null }>;
 }
@@ -815,12 +821,18 @@ export async function getPartnerEnrichmentData(id: string): Promise<Record<strin
 }
 
 /** Statistiche paginate partner attivi (country/email) per mission builder. */
-export async function findActivePartnersCountryEmailStats(): Promise<{ country_code: string | null; country_name: string | null; email: string | null }[]> {
+export async function findActivePartnersCountryEmailStats(): Promise<
+  { country_code: string | null; country_name: string | null; email: string | null }[]
+> {
   const all: { country_code: string | null; country_name: string | null; email: string | null }[] = [];
   const BATCH = 2000;
   let from = 0;
   while (true) {
-    const { data: batch } = await supabase.from("partners").select("country_code, country_name, email").eq("is_active", true).range(from, from + BATCH - 1);
+    const { data: batch } = await supabase
+      .from("partners")
+      .select("country_code, country_name, email")
+      .eq("is_active", true)
+      .range(from, from + BATCH - 1);
     if (!batch || batch.length === 0) break;
     all.push(...batch);
     if (batch.length < BATCH) break;
@@ -830,8 +842,16 @@ export async function findActivePartnersCountryEmailStats(): Promise<{ country_c
 }
 
 /** Id partner attivi filtrati per country_code, limitati. */
-export async function findActivePartnerIdsByCountries(countryCodes: string[], limit: number): Promise<{ id: string }[]> {
-  const { data } = await supabase.from("partners").select("id").in("country_code", countryCodes).eq("is_active", true).limit(limit);
+export async function findActivePartnerIdsByCountries(
+  countryCodes: string[],
+  limit: number,
+): Promise<{ id: string }[]> {
+  const { data } = await supabase
+    .from("partners")
+    .select("id")
+    .in("country_code", countryCodes)
+    .eq("is_active", true)
+    .limit(limit);
   return data ?? [];
 }
 
@@ -932,9 +952,7 @@ export interface PickerPartnerRow {
 
 /** Ricerca partner attivi per il picker contatti email (search + country). */
 export async function searchPartnersForPicker(search: string, countryCode: string | null): Promise<PickerPartnerRow[]> {
-  let q = supabase
-    .from("partners")
-    .select("id, company_name, company_alias, country_code, city, lead_status");
+  let q = supabase.from("partners").select("id, company_name, company_alias, country_code, city, lead_status");
   if (search.length >= 3) q = q.ilike("company_name", `%${search}%`);
   if (countryCode) q = q.eq("country_code", countryCode);
   q = q.eq("is_active", true);
@@ -980,11 +998,7 @@ export async function insertPartnersBatch(rows: CsvPartnerInsertRow[]) {
 
 /** Lead status + country di un partner, usato da usePreContext (Email Forge). */
 export async function findPartnerRelationshipSnapshot(partnerId: string) {
-  const { data } = await supabase
-    .from("partners")
-    .select("lead_status, country")
-    .eq("id", partnerId)
-    .maybeSingle();
+  const { data } = await supabase.from("partners").select("lead_status, country").eq("id", partnerId).maybeSingle();
   return data;
 }
 
@@ -1015,7 +1029,9 @@ export interface PartnerHeroSnapshot {
 export async function findPartnerHeroSnapshot(id: string): Promise<PartnerHeroSnapshot | null> {
   const { data } = await supabase
     .from("partners")
-    .select("company_name, company_alias, country_name, country_code, city, logo_url, last_interaction_at, interaction_count, enrichment_data, lead_status")
+    .select(
+      "company_name, company_alias, country_name, country_code, city, logo_url, last_interaction_at, interaction_count, enrichment_data, lead_status",
+    )
     .eq("id", id)
     .maybeSingle();
   if (!data) return null;
@@ -1068,10 +1084,7 @@ export async function findPartnersPaginated(
        office_type, is_active, is_favorite, rating, member_since, wca_id,
        raw_profile_html, enrichment_data, partner_type, lead_status`;
 
-  let query = supabase
-    .from("partners")
-    .select(selectFields, { count: "exact" })
-    .eq("is_active", true);
+  let query = supabase.from("partners").select(selectFields, { count: "exact" }).eq("is_active", true);
 
   if (filters?.search) {
     const s = sanitizeSearchTerm(filters.search);
@@ -1087,7 +1100,17 @@ export async function findPartnersPaginated(
   }
 
   if (filters?.partnerTypes && filters.partnerTypes.length > 0) {
-    query = query.in("partner_type", filters.partnerTypes as readonly ("3pl" | "carrier" | "courier" | "customs_broker" | "freight_forwarder" | "nvocc")[]);
+    query = query.in(
+      "partner_type",
+      filters.partnerTypes as readonly (
+        | "3pl"
+        | "carrier"
+        | "courier"
+        | "customs_broker"
+        | "freight_forwarder"
+        | "nvocc"
+      )[],
+    );
   }
 
   if (filters?.favorites) {

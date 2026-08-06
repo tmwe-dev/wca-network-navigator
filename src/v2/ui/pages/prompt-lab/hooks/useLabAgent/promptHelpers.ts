@@ -18,7 +18,9 @@ export function briefingToPromptSection(b: BriefingPayload | undefined): string 
   if (b.mustHave.trim()) lines.push(`DEVI INCLUDERE: ${b.mustHave.trim()}`);
   if (b.mustNotHave.trim()) lines.push(`NON DEVI MAI: ${b.mustNotHave.trim()}`);
   if (b.extraConstraints.trim()) lines.push(`VINCOLI EXTRA: ${b.extraConstraints.trim()}`);
-  lines.push("Se l'output non rispetta TUTTI questi punti, è invalido. Adatta la rubrica e la struttura a questo briefing.");
+  lines.push(
+    "Se l'output non rispetta TUTTI questi punti, è invalido. Adatta la rubrica e la struttura a questo briefing.",
+  );
   lines.push("=== FINE BRIEFING ===");
   return lines.join("\n");
 }
@@ -53,7 +55,9 @@ export function summarizeNearby(nearby: ReadonlyArray<Block>, currentId: string)
   if (others.length === 0) return "(nessun altro blocco nel tab)";
   return others
     .slice(0, 8)
-    .map((b) => `• ${b.label}: ${b.content.slice(0, 180).replace(/\s+/g, " ").trim()}${b.content.length > 180 ? "…" : ""}`)
+    .map(
+      (b) => `• ${b.label}: ${b.content.slice(0, 180).replace(/\s+/g, " ").trim()}${b.content.length > 180 ? "…" : ""}`,
+    )
     .join("\n");
 }
 

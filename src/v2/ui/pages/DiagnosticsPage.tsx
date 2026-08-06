@@ -13,7 +13,8 @@ import { PageShell } from "@/v2/ui/templates/PageShell";
 
 export function DiagnosticsPage() {
   const isAdmin = useRequireRole({ role: "admin" });
-  const { results, running, expandedCats, categories, summary, runAll, abort, toggleCat, byCat } = useDiagnosticsRunner();
+  const { results, running, expandedCats, categories, summary, runAll, abort, toggleCat, byCat } =
+    useDiagnosticsRunner();
 
   if (!isAdmin) {
     return (
@@ -34,7 +35,9 @@ export function DiagnosticsPage() {
       actions={
         <>
           {running && (
-            <Button variant="outline" size="sm" onClick={abort}>Stop</Button>
+            <Button variant="outline" size="sm" onClick={abort}>
+              Stop
+            </Button>
           )}
           <Button onClick={runAll} disabled={running} size="sm" className="gap-2">
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -45,7 +48,7 @@ export function DiagnosticsPage() {
     >
       <SystemHealthPanel />
       <DiagnosticsSummaryBar summary={summary} visible={results.length > 0} />
-      {categories.map(cat => (
+      {categories.map((cat) => (
         <DiagnosticsCategoryCard
           key={cat}
           category={cat}

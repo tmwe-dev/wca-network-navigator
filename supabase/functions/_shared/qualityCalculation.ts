@@ -8,7 +8,14 @@
  */
 
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { calculateSeniority, calculateIndustry, calculateGeography, calculateEngagement, type ClientData, type DimensionScore } from "./dimensionCalculators.ts";
+import {
+  calculateSeniority,
+  calculateIndustry,
+  calculateGeography,
+  calculateEngagement,
+  type ClientData,
+  type DimensionScore,
+} from "./dimensionCalculators.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;
@@ -38,11 +45,7 @@ export async function calculateClientQuality(
   // Load client data
   const table = sourceType === "imported_contact" ? "imported_contacts" : "business_cards";
 
-  const { data: clientData, error } = await supabase
-    .from(table)
-    .select("*")
-    .eq("id", clientId)
-    .maybeSingle();
+  const { data: clientData, error } = await supabase.from(table).select("*").eq("id", clientId).maybeSingle();
 
   if (error || !clientData) {
     throw new Error(`Failed to load ${sourceType} ${clientId}: ${error?.message ?? "Not found"}`);
@@ -58,10 +61,7 @@ export async function calculateClientQuality(
 
   // Weighted total score (each dimension: 25%)
   const totalScore = Math.round(
-    seniority.score * 0.25 +
-      industry.score * 0.25 +
-      geography.score * 0.25 +
-      engagement.score * 0.25,
+    seniority.score * 0.25 + industry.score * 0.25 + geography.score * 0.25 + engagement.score * 0.25,
   );
 
   // Determine tier

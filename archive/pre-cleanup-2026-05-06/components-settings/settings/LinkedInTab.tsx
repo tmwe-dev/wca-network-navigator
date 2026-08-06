@@ -4,9 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Save, Loader2, CheckCircle2, Download, KeyRound, Eye, EyeOff, Mail, Linkedin,
-} from "lucide-react";
+import { Save, Loader2, CheckCircle2, Download, KeyRound, Eye, EyeOff, Mail, Linkedin } from "lucide-react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { downloadLinkedInExtensionZip } from "@/lib/whatsappExtensionZip";
@@ -26,8 +24,14 @@ interface LinkedInTabProps {
 }
 
 export function LinkedInTab({
-  liHasCreds, liEmail, setLiEmail, liPass, setLiPass,
-  liAtCookie, setLiAtCookie, updateSetting,
+  liHasCreds,
+  liEmail,
+  setLiEmail,
+  liPass,
+  setLiPass,
+  liAtCookie,
+  setLiAtCookie,
+  updateSetting,
 }: LinkedInTabProps) {
   const [showLiPass, setShowLiPass] = useState(false);
   const [savingLiCreds, setSavingLiCreds] = useState(false);
@@ -42,7 +46,13 @@ export function LinkedInTab({
           <h2 className="text-lg font-semibold">LinkedIn</h2>
         </div>
         <Badge variant={liHasCreds ? "default" : "secondary"}>
-          {liHasCreds ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Configurato</> : "Non configurato"}
+          {liHasCreds ? (
+            <>
+              <CheckCircle2 className="mr-1 h-3 w-3" /> Configurato
+            </>
+          ) : (
+            "Non configurato"
+          )}
         </Badge>
       </div>
 
@@ -66,8 +76,18 @@ export function LinkedInTab({
           <div className="space-y-2">
             <Label>Password LinkedIn</Label>
             <div className="relative">
-              <Input type={showLiPass ? "text" : "password"} value={liPass} onChange={(e) => setLiPass(e.target.value)} placeholder="••••••••" className="pr-10" />
-              <button type="button" onClick={() => setShowLiPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <Input
+                type={showLiPass ? "text" : "password"}
+                value={liPass}
+                onChange={(e) => setLiPass(e.target.value)}
+                placeholder="••••••••"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowLiPass((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
                 {showLiPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
@@ -84,8 +104,12 @@ export function LinkedInTab({
                 });
                 if (error) throw error;
                 toast.success("Credenziali LinkedIn salvate!");
-              } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
-              finally { setSavingLiCreds(false); }
+              } catch (e) {
+                log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                toast.error("Errore nel salvataggio");
+              } finally {
+                setSavingLiCreds(false);
+              }
             }}
             disabled={savingLiCreds || !liEmail.trim() || !liPass.trim()}
           >
@@ -102,15 +126,20 @@ export function LinkedInTab({
         <div className="mt-3 space-y-3">
           <Card>
             <CardContent className="space-y-4 pt-6">
-              <Button className="w-full" size="sm" variant="outline" onClick={async () => {
-                try {
-                  await downloadLinkedInExtensionZip();
-                  toast.success("LinkedIn extension scaricata!");
-                } catch (e) {
-                  log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-                  toast.error("File non disponibile");
-                }
-              }}>
+              <Button
+                className="w-full"
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await downloadLinkedInExtensionZip();
+                    toast.success("LinkedIn extension scaricata!");
+                  } catch (e) {
+                    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                    toast.error("File non disponibile");
+                  }
+                }}
+              >
                 <Download className="mr-2 h-4 w-4" /> Scarica Estensione LinkedIn
               </Button>
               <ExtensionDownloadCatalog channel="linkedin" />
@@ -143,7 +172,11 @@ export function LinkedInTab({
                     placeholder="AQEDAx..."
                     className="pr-10 font-mono text-xs"
                   />
-                  <button type="button" onClick={() => setShowLiAt((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <button
+                    type="button"
+                    onClick={() => setShowLiAt((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
                     {showLiAt ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -155,8 +188,12 @@ export function LinkedInTab({
                   try {
                     await updateSetting.mutateAsync({ key: "linkedin_li_at", value: liAtCookie.trim() });
                     toast.success("Cookie LinkedIn salvato!");
-                  } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
-                  finally { setSavingLi(false); }
+                  } catch (e) {
+                    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                    toast.error("Errore nel salvataggio");
+                  } finally {
+                    setSavingLi(false);
+                  }
                 }}
                 disabled={savingLi || !liAtCookie.trim()}
               >

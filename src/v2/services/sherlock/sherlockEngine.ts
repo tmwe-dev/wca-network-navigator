@@ -15,20 +15,11 @@
  */
 import { fs as extFs } from "@/v2/io/extensions/bridge";
 import { getScrapeCacheEntry, upsertScrapeCacheEntry } from "@/data/scrapeCache";
-import {
-  updatePartnerWebsiteIfMissing,
-  updatePartnerLinkedinIfMissing,
-} from "@/data/sherlockPlaybooks";
+import { updatePartnerWebsiteIfMissing, updatePartnerLinkedinIfMissing } from "@/data/sherlockPlaybooks";
 import { persistSherlockFindings } from "@/data/partners";
 import { renderUrlTemplate, checkRequiredVars } from "./sherlockTemplates";
 import { throttle, estimateWaitMs } from "./rateLimiter";
-import type {
-  SherlockPlaybook,
-  SherlockStep,
-  SherlockStepResult,
-  SherlockProgressEvent,
-} from "./sherlockTypes";
-
+import type { SherlockPlaybook, SherlockStep, SherlockStepResult, SherlockProgressEvent } from "./sherlockTypes";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("sherlockEngine");
@@ -92,7 +83,12 @@ async function callExtractAI(args: {
   targetFields: string[];
   priorFindings: Record<string, unknown>;
   signal: AbortSignal;
-}): Promise<{ findings: Record<string, unknown>; confidence: number; suggestedNextUrl: string | null; summary: string }> {
+}): Promise<{
+  findings: Record<string, unknown>;
+  confidence: number;
+  suggestedNextUrl: string | null;
+  summary: string;
+}> {
   const { truncateMarkdownSmart, compactFindings } = await import("./aiIntegrations.ts");
   const safeMarkdown = truncateMarkdownSmart(args.markdown, args.targetFields);
   const compactPrior = compactFindings(args.priorFindings);
@@ -168,10 +164,27 @@ export interface SherlockRunResult {
 }
 
 const AGGREGATOR_DOMAINS = [
-  "google.", "linkedin.com", "facebook.com", "instagram.com", "twitter.com", "x.com",
-  "youtube.com", "wikipedia.org", "wikiwand.com", "yelp.com", "tripadvisor.",
-  "pagine", "europages.", "kompass.", "yellowpages.", "bing.com", "duckduckgo.",
-  "amazon.", "ebay.", "indeed.", "glassdoor.",
+  "google.",
+  "linkedin.com",
+  "facebook.com",
+  "instagram.com",
+  "twitter.com",
+  "x.com",
+  "youtube.com",
+  "wikipedia.org",
+  "wikiwand.com",
+  "yelp.com",
+  "tripadvisor.",
+  "pagine",
+  "europages.",
+  "kompass.",
+  "yellowpages.",
+  "bing.com",
+  "duckduckgo.",
+  "amazon.",
+  "ebay.",
+  "indeed.",
+  "glassdoor.",
 ];
 
 function pickFirstNonAggregatorUrl(markdown: string): string | null {
@@ -291,9 +304,7 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
   }
 
   // ── PRE-RUN DISCOVERY 2: linkedinCompanySlug via Google se manca e il playbook lo richiede.
-  const playbookNeedsLinkedin = playbook.steps.some((s) =>
-    (s.required_vars ?? []).includes("linkedinCompanySlug"),
-  );
+  const playbookNeedsLinkedin = playbook.steps.some((s) => (s.required_vars ?? []).includes("linkedinCompanySlug"));
   if (playbookNeedsLinkedin && !liveVars.linkedinCompanySlug && liveVars.companyName) {
     const liDiscovered = await discoverLinkedinSlugViaGoogle({
       companyName: liveVars.companyName,
@@ -477,7 +488,13 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
       cache_hit: cacheHit,
     };
     results[results.length - 1] = done;
-    onProgress({ step, result: done, totalSteps: playbook.steps.length, currentIndex: i, consolidated: { ...consolidated } });
+    onProgress({
+      step,
+      result: done,
+      totalSteps: playbook.steps.length,
+      currentIndex: i,
+      consolidated: { ...consolidated },
+    });
   }
 
   // Consolidamento finale: summary
@@ -490,7 +507,10 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
     try {
       await persistSherlockFindings(partnerId, consolidated);
     } catch (e) {
-      log.warn("[sherlock] persistSherlockFindings failed", { partnerId, err: e instanceof Error ? e.message : String(e) });
+      log.warn("[sherlock] persistSherlockFindings failed", {
+        partnerId,
+        err: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 

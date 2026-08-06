@@ -12,7 +12,19 @@ import BriefAccordion from "@/components/email/BriefAccordion";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/constants/defaultEmailTypes";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useComposeAiConfig } from "@/contexts/ComposeAiConfigContext";
-import { BookOpen, Briefcase, ClipboardList, GraduationCap, Globe, Handshake, Plane, RefreshCw, Smile, Target, type LucideIcon } from "lucide-react";
+import {
+  BookOpen,
+  Briefcase,
+  ClipboardList,
+  GraduationCap,
+  Globe,
+  Handshake,
+  Plane,
+  RefreshCw,
+  Smile,
+  Target,
+  type LucideIcon,
+} from "lucide-react";
 import { createLogger } from "@/lib/log";
 import { cn } from "@/lib/utils";
 
@@ -41,8 +53,7 @@ const TONE_ICONS: Record<string, LucideIcon> = {
 const TILE_BASE =
   "h-14 rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-muted/40 to-muted/10 text-foreground";
 const TILE_IDLE = "border-border/40 hover:border-primary/40 hover:text-foreground";
-const TILE_ACTIVE =
-  "border-primary border-2 text-primary ring-2 ring-primary/20 from-primary/15 to-primary/5";
+const TILE_ACTIVE = "border-primary border-2 text-primary ring-2 ring-primary/20 from-primary/15 to-primary/5";
 
 export function EmailComposeFiltersSection(): React.ReactElement {
   const { selectedType, setSelectedType, tone, setTone, useKB, setUseKB, brief, setBrief, customGoal, setCustomGoal } =
@@ -84,9 +95,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-          Tipo di email
-        </label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Tipo di email</label>
         <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
@@ -123,9 +132,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-          Tono
-        </label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Tono</label>
         <div className="grid grid-cols-4 gap-1.5">
           {TONE_OPTIONS.map((t) => {
             const Icon = TONE_ICONS[t.icon] ?? Target;
@@ -161,9 +168,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
           <BookOpen className="h-3.5 w-3.5 text-primary" />
           <div>
             <div className="text-xs font-medium">Knowledge Base</div>
-            <div className="text-[10px] text-muted-foreground">
-              Inietta documenti aziendali nel prompt
-            </div>
+            <div className="text-[10px] text-muted-foreground">Inietta documenti aziendali nel prompt</div>
           </div>
         </div>
         <Switch checked={useKB} onCheckedChange={setUseKB} />

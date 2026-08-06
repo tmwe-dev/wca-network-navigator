@@ -14,16 +14,11 @@
  * Dopo 3 fallimenti: SKIP graceful con needsHumanReview = true.
  */
 import { invokeAgenticMicroCall } from "@/v2/io/edge/agenticMicro";
-import {
-  AGENT_SYSTEM_PROMPT,
-  AgentDecisionSchema,
-  type AgentDecision,
-} from "./agentRules";
+import { AGENT_SYSTEM_PROMPT, AgentDecisionSchema, type AgentDecision } from "./agentRules";
 import type { EntityToParse } from "./entityParser";
 import type { MatchCandidate } from "./entityMatcher";
 import type { FullEntryContent } from "./entityRetriever";
 import type { FactEntry } from "@/data/harmonizerSessions";
-
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("agentReasoner");
@@ -68,29 +63,33 @@ function buildUserPrompt(input: ReasonerInput, strategy: RetryStrategy): string 
 
   const candById = new Map(input.candidateContents.map((c) => [c.id, c]));
 
-  const candidatesBlock = candidates.length === 0
-    ? "(nessun candidato di matching trovato)"
-    : candidates
-        .map((c, i) => {
-          const full = candById.get(c.entry.id);
-          const fullContent = full ? full.content : "(contenuto non disponibile)";
-          return `--- Candidato #${i + 1} (score ${c.score}) ---\nid: ${c.entry.id}\ntable: ${c.entry.table}\ntitle: ${c.entry.title}\nreason: ${c.reason}\ncontent:\n${fullContent.slice(0, 1200)}`;
-        })
-        .join("\n\n");
+  const candidatesBlock =
+    candidates.length === 0
+      ? "(nessun candidato di matching trovato)"
+      : candidates
+          .map((c, i) => {
+            const full = candById.get(c.entry.id);
+            const fullContent = full ? full.content : "(contenuto non disponibile)";
+            return `--- Candidato #${i + 1} (score ${c.score}) ---\nid: ${c.entry.id}\ntable: ${c.entry.table}\ntitle: ${c.entry.title}\nreason: ${c.reason}\ncontent:\n${fullContent.slice(0, 1200)}`;
+          })
+          .join("\n\n");
 
-  const recentDecBlock = input.recentDecisions.length === 0
-    ? "(prima entità della sessione)"
-    : input.recentDecisions.map((d) => `- ${d.entityTitle} → ${d.decision}`).join("\n");
+  const recentDecBlock =
+    input.recentDecisions.length === 0
+      ? "(prima entità della sessione)"
+      : input.recentDecisions.map((d) => `- ${d.entityTitle} → ${d.decision}`).join("\n");
 
-  const recentFactsBlock = input.recentFacts.length === 0
-    ? "(nessun fatto registrato)"
-    : input.recentFacts.map((f) => `- ${f.key}: ${f.value}`).join("\n");
+  const recentFactsBlock =
+    input.recentFacts.length === 0
+      ? "(nessun fatto registrato)"
+      : input.recentFacts.map((f) => `- ${f.key}: ${f.value}`).join("\n");
 
   const entityContent = input.entity.content.slice(0, contentMaxChars);
 
-  const strategyHint = strategy === "explicit_match"
-    ? "\n[NOTA: tentativo 3 — VALUTA CON ATTENZIONE il candidato fornito. Se è davvero la stessa cosa → UPDATE, altrimenti INSERT.]"
-    : "";
+  const strategyHint =
+    strategy === "explicit_match"
+      ? "\n[NOTA: tentativo 3 — VALUTA CON ATTENZIONE il candidato fornito. Se è davvero la stessa cosa → UPDATE, altrimenti INSERT.]"
+      : "";
 
   return `## ENTITÀ DA ANALIZZARE
 title: ${input.entity.title}
@@ -123,9 +122,7 @@ function validateCoherence(d: AgentDecision, input: ReasonerInput): string | nul
   }
   // INSERT con un candidato score 100 same-table → invalid
   if (d.decision === "INSERT") {
-    const exact = input.candidates.find(
-      (c) => c.score >= 100 && c.entry.table === input.entity.inferredTable,
-    );
+    const exact = input.candidates.find((c) => c.score >= 100 && c.entry.table === input.entity.inferredTable);
     if (exact) return "INSERT proposto ma esiste candidato esatto stessa tabella";
   }
   // confidence troppo bassa con decisione non-SKIP → invalid
@@ -137,16 +134,31 @@ function validateCoherence(d: AgentDecision, input: ReasonerInput): string | nul
 
 function tryParseJson(raw: string): unknown {
   // Prova diretto.
-  try { return JSON.parse(raw); } catch { /* fallthrough */ }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    /* fallthrough */
+  }
   // Prova a estrarre il primo {…} bilanciato.
   const firstBrace = raw.indexOf("{");
   const lastBrace = raw.lastIndexOf("}");
   if (firstBrace >= 0 && lastBrace > firstBrace) {
-    try { return JSON.parse(raw.slice(firstBrace, lastBrace + 1)); } catch { /* fallthrough */ }
+    try {
+      return JSON.parse(raw.slice(firstBrace, lastBrace + 1));
+    } catch {
+      /* fallthrough */
+    }
   }
   // Prova a rimuovere fence markdown.
-  const stripped = raw.replace(/```(?:json)?\s*/g, "").replace(/```/g, "").trim();
-  try { return JSON.parse(stripped); } catch { /* fallthrough */ }
+  const stripped = raw
+    .replace(/```(?:json)?\s*/g, "")
+    .replace(/```/g, "")
+    .trim();
+  try {
+    return JSON.parse(stripped);
+  } catch {
+    /* fallthrough */
+  }
   return null;
 }
 

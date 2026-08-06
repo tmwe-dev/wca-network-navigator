@@ -42,9 +42,9 @@ interface RequestBody {
 
 const ResultSchema = z.object({
   folder_slug: z.string().min(1).max(60),
-  suggested_action: z.enum(["none","archive","draft_reply","forward","escalate","notify_human"]),
+  suggested_action: z.enum(["none", "archive", "draft_reply", "forward", "escalate", "notify_human"]),
   goes_to_agenda: z.boolean(),
-  urgency: z.enum(["critical","high","normal","low"]),
+  urgency: z.enum(["critical", "high", "normal", "low"]),
   confidence: z.number().min(0).max(1),
   reasoning: z.string().max(400).default(""),
   commercial_handoff: z.boolean().default(false),
@@ -78,7 +78,9 @@ async function getActiveFolders(supabase: ReturnType<typeof createClient>): Prom
   return folders;
 }
 // Esportato per i test (reset cache fra Deno.test).
-export function _resetFoldersCacheForTest() { _foldersCache = null; }
+export function _resetFoldersCacheForTest() {
+  _foldersCache = null;
+}
 
 function fallback(folders: Folder[]): z.infer<typeof ResultSchema> {
   const hasToSort = folders.find((f) => f.slug === "to_sort");
@@ -121,11 +123,9 @@ Deno.serve(async (req) => {
       body.user_id = auth.userId;
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // Idempotenza: se esiste già, ritorna quella decisione
     const { data: existing } = await supabase
@@ -150,7 +150,10 @@ Deno.serve(async (req) => {
         ...dec,
       });
       endMetrics(metrics, true, 200);
-      return new Response(JSON.stringify({ ok: true, decision: dec, fallback: "no_folders" }), { status: 200, headers });
+      return new Response(JSON.stringify({ ok: true, decision: dec, fallback: "no_folders" }), {
+        status: 200,
+        headers,
+      });
     }
 
     // Prompt operativo "funnemail_classifier" dal Prompt Lab
@@ -163,12 +166,17 @@ Deno.serve(async (req) => {
           limit: 3,
         });
         if (op.block) operativeBlock = op.block;
-      } catch { /* non-fatal */ }
+      } catch {
+        /* non-fatal */
+      }
     }
 
-    const foldersList = folders.map((f) =>
-      `- ${f.slug} | ${f.label} | section=${f.section} | agenda=${f.accept_into_agenda} | hint: ${f.prompt_hint ?? ""}`,
-    ).join("\n");
+    const foldersList = folders
+      .map(
+        (f) =>
+          `- ${f.slug} | ${f.label} | section=${f.section} | agenda=${f.accept_into_agenda} | hint: ${f.prompt_hint ?? ""}`,
+      )
+      .join("\n");
 
     const subjNorm = normalizeContent(body.subject ?? "", { source: "email-inbound", maxChars: 300 }).text;
     const bodyNorm = normalizeContent(body.body_text ?? "", { source: "email-inbound", maxChars: 3000 });
@@ -178,14 +186,17 @@ Deno.serve(async (req) => {
       "Sei Funnemail, il classificatore inbound del client di posta.",
       "Devi smistare la mail in UNA cartella esistente e decidere azione/agenda/handoff commerciale.",
       operativeBlock || "",
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const senderIntelLine = body.sender_intel
       ? `SENDER_INTEL:\n- known_partner=${body.sender_intel.known ?? false}\n- company_type=${body.sender_intel.company_type ?? "unknown"}\n- role_guess=${body.sender_intel.role_guess ?? "unknown"}\n- country=${body.sender_intel.country ?? "n/a"}\n- website=${body.sender_intel.website ?? "n/a"}`
       : "SENDER_INTEL: (non disponibile)";
     const userPrompt = `FOLDERS:\n${foldersList}\n\n${senderIntelLine}\n\nMITTENTE: ${body.from_address}\nOGGETTO: ${subjNorm || "(vuoto)"}\nCORPO:\n${wrappedBody}\n\nClassifica usando lo strumento.`;
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     let decision: z.infer<typeof ResultSchema> = fallback(folders);
     const model = "google/gemini-3-flash-preview";
 
@@ -193,12 +204,13 @@ Deno.serve(async (req) => {
       const validSlugs = folders.map((f) => f.slug);
       try {
         const resp = await aiFetch({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            tools: [{
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
               type: "function",
               function: {
                 name: "classify_into_folder",
@@ -207,20 +219,32 @@ Deno.serve(async (req) => {
                   type: "object",
                   properties: {
                     folder_slug: { type: "string", enum: validSlugs },
-                    suggested_action: { type: "string", enum: ["none","archive","draft_reply","forward","escalate","notify_human"] },
+                    suggested_action: {
+                      type: "string",
+                      enum: ["none", "archive", "draft_reply", "forward", "escalate", "notify_human"],
+                    },
                     goes_to_agenda: { type: "boolean" },
-                    urgency: { type: "string", enum: ["critical","high","normal","low"] },
+                    urgency: { type: "string", enum: ["critical", "high", "normal", "low"] },
                     confidence: { type: "number", minimum: 0, maximum: 1 },
                     reasoning: { type: "string", maxLength: 400 },
                     commercial_handoff: { type: "boolean" },
                   },
-                  required: ["folder_slug","suggested_action","goes_to_agenda","urgency","confidence","reasoning","commercial_handoff"],
+                  required: [
+                    "folder_slug",
+                    "suggested_action",
+                    "goes_to_agenda",
+                    "urgency",
+                    "confidence",
+                    "reasoning",
+                    "commercial_handoff",
+                  ],
                   additionalProperties: false,
                 },
               },
-            }],
-            tool_choice: { type: "function", function: { name: "classify_into_folder" } },
-          });
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "classify_into_folder" } },
+        });
         if (resp.ok) {
           const data = await resp.json();
           const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
@@ -258,7 +282,8 @@ Deno.serve(async (req) => {
       model,
     };
     if (existing && body.force) {
-      const { error: updErr } = await supabase.from("funnemail_decisions")
+      const { error: updErr } = await supabase
+        .from("funnemail_decisions")
         .update(decisionRow)
         .eq("message_id", body.message_id);
       if (updErr) console.error("[funnemail-classify] update error", updErr);
@@ -272,9 +297,9 @@ Deno.serve(async (req) => {
   } catch (error: unknown) {
     logEdgeError("funnemail-classify", error);
     endMetrics(metrics, false, 500);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers },
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+      status: 500,
+      headers,
+    });
   }
 });

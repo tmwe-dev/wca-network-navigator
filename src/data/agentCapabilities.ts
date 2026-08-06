@@ -79,7 +79,9 @@ export async function findActiveAgentsForCapabilities(): Promise<AgentCapability
   return (data ?? []) as AgentCapabilityAgentRow[];
 }
 
-export async function findAgentTasksForCapabilities(): Promise<Array<{ agent_id: string; task_type: string; status: string }>> {
+export async function findAgentTasksForCapabilities(): Promise<
+  Array<{ agent_id: string; task_type: string; status: string }>
+> {
   const { data, error } = await supabase.from("agent_tasks").select("agent_id, task_type, status");
   if (error) throw error;
   return data ?? [];

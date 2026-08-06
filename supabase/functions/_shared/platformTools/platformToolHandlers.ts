@@ -10,7 +10,12 @@ import { handleSearchProspects } from "./prospectsHandler.ts";
 import { handleListActivities, handleCreateActivity, handleUpdateActivity } from "./activitiesHandler.ts";
 import { handleListReminders, handleCreateReminder } from "./remindersHandler.ts";
 import { handleSaveMemory, handleSearchMemory } from "./memoryHandler.ts";
-import { handleGenerateOutreach, handleSendEmail, handleScheduleEmail, handleQueueOutreach } from "./outreachHandler.ts";
+import {
+  handleGenerateOutreach,
+  handleSendEmail,
+  handleScheduleEmail,
+  handleQueueOutreach,
+} from "./outreachHandler.ts";
 import { handleGetInbox, handleGetEmailThread } from "./conversationsInboxHandler.ts";
 import { handleGetConversationHistory } from "./conversationsHistoryHandler.ts";
 import { handleGetHoldingPattern } from "./holdingPatternHandler.ts";
@@ -18,7 +23,12 @@ import { handleGetDirectoryStatus, handleDeepSearchPartner, handleDeepSearchCont
 import { handleSearchBusinessCards } from "./businessCardsHandler.ts";
 import { handleGetGlobalSummary, handleCheckBlacklist, handleGetOperationsDashboard } from "./systemHandler.ts";
 import { handleManagePartnerContact } from "./contactManagementHandler.ts";
-import { handleExecuteUIAction, handleCreateAgentTask, handleListAgentTasks, handleGetTeamStatus } from "./agentHandler.ts";
+import {
+  handleExecuteUIAction,
+  handleCreateAgentTask,
+  handleListAgentTasks,
+  handleGetTeamStatus,
+} from "./agentHandler.ts";
 import { handleCreateWorkPlan, handleListWorkPlans } from "./workPlansHandler.ts";
 import { handleGenerateAliases } from "./aliasesHandler.ts";
 import { handleDeleteRecords } from "./deleteHandler.ts";
@@ -27,7 +37,7 @@ export async function executePlatformTool(
   name: string,
   args: Record<string, unknown>,
   userId: string,
-  authHeader: string
+  authHeader: string,
 ): Promise<unknown> {
   switch (name) {
     // ── Partners ──

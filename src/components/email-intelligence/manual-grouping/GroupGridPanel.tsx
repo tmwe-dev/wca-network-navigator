@@ -15,7 +15,16 @@ export function GroupGridPanel(props: {
   onLetterRangeChange: (r: LetterRange) => void;
   hoveredGroupId: string | null;
   highlightedGroupName: string | null;
-  assignedByGroup: Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>;
+  assignedByGroup: Map<
+    string,
+    Array<{
+      id: string;
+      email_address: string;
+      display_name: string | null;
+      company_name: string | null;
+      domain: string | null;
+    }>
+  >;
   reloadAssignedRules: () => void;
   loadData: () => void;
   selectedCount: number;
@@ -25,17 +34,33 @@ export function GroupGridPanel(props: {
   onCreateGroup: () => void;
   onPartnerClick: (sender: SenderAnalysis) => void;
 }) {
-  const { groups, visibleGroups, groupSortOption, onGroupSortChange,
-    letterRange, onLetterRangeChange, hoveredGroupId, highlightedGroupName,
-    assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign,
-    onRefresh, isRefreshing, onCreateGroup, onPartnerClick } = props;
+  const {
+    groups,
+    visibleGroups,
+    groupSortOption,
+    onGroupSortChange,
+    letterRange,
+    onLetterRangeChange,
+    hoveredGroupId,
+    highlightedGroupName,
+    assignedByGroup,
+    reloadAssignedRules,
+    loadData,
+    selectedCount,
+    onBulkAssign,
+    onRefresh,
+    isRefreshing,
+    onCreateGroup,
+    onPartnerClick,
+  } = props;
   const sortMeta = GROUP_SORT_META[groupSortOption];
   const SortIcon = sortMeta.Icon;
   return (
     <div className="flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
       <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground">
-          Gruppi ({visibleGroups.length}{letterRange !== "all" ? `/${groups.length}` : ""})
+          Gruppi ({visibleGroups.length}
+          {letterRange !== "all" ? `/${groups.length}` : ""})
         </span>
         <TooltipProvider delayDuration={300}>
           <div className="flex items-center gap-1.5">
@@ -65,9 +90,7 @@ export function GroupGridPanel(props: {
                     aria-label="Aggiorna mittenti"
                     className="h-8 w-8"
                   >
-                    {isRefreshing
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <RefreshCw className="h-4 w-4" />}
+                    {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Aggiorna mittenti</TooltipContent>

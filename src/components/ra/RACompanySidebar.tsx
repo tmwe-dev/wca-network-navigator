@@ -12,12 +12,25 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("RACompanySidebar");
 
-const LEAD_STATUS_OPTIONS: RALeadStatus[] = ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted", "archived", "blacklisted"];
+const LEAD_STATUS_OPTIONS: RALeadStatus[] = [
+  "new",
+  "first_touch_sent",
+  "holding",
+  "engaged",
+  "qualified",
+  "negotiation",
+  "converted",
+  "archived",
+  "blacklisted",
+];
 
 function formatDate(dateString: string) {
   try {
     return new Date(dateString).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
-  } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return "—"; }
+  } catch (e) {
+    log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) });
+    return "—";
+  }
 }
 
 interface RACompanySidebarProps {
@@ -55,56 +68,75 @@ export function RACompanySidebar({ prospect, contacts, interactions, onLeadStatu
 
           {/* Contacts */}
           <section>
-            <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-4">Dirigenti ({contacts.length})</h2>
+            <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-4">
+              Dirigenti ({contacts.length})
+            </h2>
             <div className="space-y-3">
-              {contacts.length > 0 ? contacts.map((contact) => (
-                <div key={contact.id} onClick={() => setSelectedContactId(selectedContactId === contact.id ? null : contact.id)}
-                  className="p-4 rounded-lg border border-white/10 bg-gradient-to-br from-white/10 to-white/5 cursor-pointer transition-all hover:border-white/20 hover:bg-white/10">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-white/95 text-sm">{contact.name}</h3>
-                      {contact.role && <p className="text-xs text-white/50 mt-1">{contact.role}</p>}
-                    </div>
-                    <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${selectedContactId === contact.id ? "rotate-180" : ""}`} />
-                  </div>
-                  {selectedContactId === contact.id && (
-                    <>
-                      <Separator className="my-3 bg-white/10" />
-                      <div className="space-y-2">
-                        {contact.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-3.5 h-3.5 text-white/40" />
-                            <p className="text-xs text-white/70 font-mono break-all">{contact.email}</p>
-                          </div>
-                        )}
-                        {contact.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-3.5 h-3.5 text-white/40" />
-                            <p className="text-xs text-white/70 font-mono">{contact.phone}</p>
-                          </div>
-                        )}
-                        {contact.codice_fiscale && (
-                          <div className="flex items-center gap-2">
-                            <Briefcase className="w-3.5 h-3.5 text-white/40" />
-                            <p className="text-xs text-cyan-400 font-mono">{contact.codice_fiscale}</p>
-                          </div>
-                        )}
-                        <div className="flex gap-2 mt-3">
-                          {contact.email && (
-                            <Button size="sm" variant="outline" className="flex-1 h-7 text-xs border-white/10 hover:bg-white/10">Scrivi Email</Button>
-                          )}
-                          {contact.email && (
-                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 border-white/10 hover:bg-white/10"
-                              onClick={() => navigator.clipboard.writeText(contact.email!)}>
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
+              {contacts.length > 0 ? (
+                contacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    onClick={() => setSelectedContactId(selectedContactId === contact.id ? null : contact.id)}
+                    className="p-4 rounded-lg border border-white/10 bg-gradient-to-br from-white/10 to-white/5 cursor-pointer transition-all hover:border-white/20 hover:bg-white/10"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-white/95 text-sm">{contact.name}</h3>
+                        {contact.role && <p className="text-xs text-white/50 mt-1">{contact.role}</p>}
                       </div>
-                    </>
-                  )}
-                </div>
-              )) : (
+                      <ChevronDown
+                        className={`w-4 h-4 text-white/40 transition-transform ${selectedContactId === contact.id ? "rotate-180" : ""}`}
+                      />
+                    </div>
+                    {selectedContactId === contact.id && (
+                      <>
+                        <Separator className="my-3 bg-white/10" />
+                        <div className="space-y-2">
+                          {contact.email && (
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-3.5 h-3.5 text-white/40" />
+                              <p className="text-xs text-white/70 font-mono break-all">{contact.email}</p>
+                            </div>
+                          )}
+                          {contact.phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-3.5 h-3.5 text-white/40" />
+                              <p className="text-xs text-white/70 font-mono">{contact.phone}</p>
+                            </div>
+                          )}
+                          {contact.codice_fiscale && (
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="w-3.5 h-3.5 text-white/40" />
+                              <p className="text-xs text-cyan-400 font-mono">{contact.codice_fiscale}</p>
+                            </div>
+                          )}
+                          <div className="flex gap-2 mt-3">
+                            {contact.email && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 h-7 text-xs border-white/10 hover:bg-white/10"
+                              >
+                                Scrivi Email
+                              </Button>
+                            )}
+                            {contact.email && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0 border-white/10 hover:bg-white/10"
+                                onClick={() => navigator.clipboard.writeText(contact.email!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))
+              ) : (
                 <p className="text-xs text-white/40 text-center py-4">Nessun dirigente registrato</p>
               )}
             </div>
@@ -115,7 +147,9 @@ export function RACompanySidebar({ prospect, contacts, interactions, onLeadStatu
           {/* Interactions Timeline */}
           {interactions.length > 0 && (
             <section>
-              <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-4">Timeline Interazioni</h2>
+              <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-4">
+                Timeline Interazioni
+              </h2>
               <div className="space-y-3">
                 {interactions.map((interaction) => (
                   <div key={interaction.id} className="relative">
@@ -125,11 +159,19 @@ export function RACompanySidebar({ prospect, contacts, interactions, onLeadStatu
                         <div className="flex-1">
                           <p className="text-xs font-medium text-white/50">{formatDate(interaction.created_at)}</p>
                           <p className="text-sm font-medium text-white/90 mt-1">{interaction.title}</p>
-                          {interaction.description && <p className="text-xs text-white/60 mt-1.5">{interaction.description}</p>}
+                          {interaction.description && (
+                            <p className="text-xs text-white/60 mt-1.5">{interaction.description}</p>
+                          )}
                         </div>
-                        <Badge className="text-xs capitalize flex-shrink-0 bg-white/10 text-white/70 border-white/20">{interaction.interaction_type}</Badge>
+                        <Badge className="text-xs capitalize flex-shrink-0 bg-white/10 text-white/70 border-white/20">
+                          {interaction.interaction_type}
+                        </Badge>
                       </div>
-                      {interaction.outcome && <p className="text-xs text-white/50 mt-2 pt-2 border-t border-white/10">Esito: {interaction.outcome}</p>}
+                      {interaction.outcome && (
+                        <p className="text-xs text-white/50 mt-2 pt-2 border-t border-white/10">
+                          Esito: {interaction.outcome}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -141,7 +183,10 @@ export function RACompanySidebar({ prospect, contacts, interactions, onLeadStatu
 
       {/* Action Buttons */}
       <div className="flex-shrink-0 p-4 border-t border-white/5 space-y-2">
-        <Button className="w-full bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white border-0" size="sm">
+        <Button
+          className="w-full bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white border-0"
+          size="sm"
+        >
           <Briefcase className="w-4 h-4 mr-2" /> Deep Search
         </Button>
         <Button variant="outline" className="w-full border-white/10 hover:bg-white/10 text-white/90" size="sm">

@@ -16,13 +16,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 
 const CHANNEL_META: Record<Exclude<DraftChannel, null>, { label: string; icon: React.ElementType; color: string }> = {
-  email:    { label: "Email",       icon: Mail,           color: "text-primary" },
-  linkedin: { label: "LinkedIn",    icon: Linkedin,       color: "text-[hsl(210,80%,55%)]" },
-  whatsapp: { label: "WhatsApp",    icon: MessageCircle,  color: "text-[hsl(142,71%,45%)]" },
-  sms:      { label: "SMS / Chat",  icon: Smartphone,     color: "text-accent-foreground" },
+  email: { label: "Email", icon: Mail, color: "text-primary" },
+  linkedin: { label: "LinkedIn", icon: Linkedin, color: "text-[hsl(210,80%,55%)]" },
+  whatsapp: { label: "WhatsApp", icon: MessageCircle, color: "text-[hsl(142,71%,45%)]" },
+  sms: { label: "SMS / Chat", icon: Smartphone, color: "text-accent-foreground" },
 };
 
-interface QueueItem { contactId: string; contactName: string }
+interface QueueItem {
+  contactId: string;
+  contactName: string;
+}
 
 interface Props {
   draftState: DraftState;
@@ -53,12 +56,26 @@ interface Props {
 
 export function CockpitWorkspace(props: Props) {
   const {
-    draftState, setDraftState, recipientPartnerId,
-    onOracleGenerate, onOracleImprove, onLoadTemplate, onInsertImage,
-    onRegenerate, onGenerateAfterReview, onStartGeneration, pendingBulkCount,
-    isDragging, draggedContactId, dragCount, onDrop,
-    onReadProfile, onDeepSearch, contactAvailability,
-    draftQueue, showQueuedDraft,
+    draftState,
+    setDraftState,
+    recipientPartnerId,
+    onOracleGenerate,
+    onOracleImprove,
+    onLoadTemplate,
+    onInsertImage,
+    onRegenerate,
+    onGenerateAfterReview,
+    onStartGeneration,
+    pendingBulkCount,
+    isDragging,
+    draggedContactId,
+    dragCount,
+    onDrop,
+    onReadProfile,
+    onDeepSearch,
+    contactAvailability,
+    draftQueue,
+    showQueuedDraft,
   } = props;
 
   // Carosello (flip): Faccia A = 4 casellone canali; Faccia B = Oracolo + bozza.
@@ -163,10 +180,8 @@ export function CockpitWorkspace(props: Props) {
               )}
               {draftQueue.length > 0 && (
                 <div className="ml-auto flex items-center gap-1.5 overflow-x-auto">
-                  <span className="text-[10px] text-muted-foreground shrink-0">
-                    Bulk 1/{draftQueue.length + 1}
-                  </span>
-                  {draftQueue.map(q => (
+                  <span className="text-[10px] text-muted-foreground shrink-0">Bulk 1/{draftQueue.length + 1}</span>
+                  {draftQueue.map((q) => (
                     <button
                       key={q.contactId}
                       onClick={() => showQueuedDraft(q.contactId)}
@@ -218,7 +233,10 @@ export function CockpitWorkspace(props: Props) {
             animate={{ opacity: 1, rotateY: 0 }}
             exit={{ opacity: 0, rotateY: 90 }}
             transition={{ duration: isDragging ? 0 : 0.35, ease: "easeOut" }}
-            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }}
             onDrop={(e) => {
               // Fallback: se il drop avviene nello spazio vuoto tra le casellone,
               // intercettiamo qui per evitare che il browser annulli l'operazione.

@@ -23,9 +23,16 @@ export function useAgentTasks(agentId?: string) {
 
   const createTask = useMutation({
     mutationFn: async (task: Partial<AgentTaskInsert>) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
-      return insertAgentTaskReturning({ ...task, user_id: user.id, agent_id: task.agent_id ?? agentId! } satisfies AgentTaskInsert);
+      return insertAgentTaskReturning({
+        ...task,
+        user_id: user.id,
+        agent_id: task.agent_id ?? agentId!,
+      } satisfies AgentTaskInsert);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });

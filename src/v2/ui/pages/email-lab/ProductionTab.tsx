@@ -52,7 +52,9 @@ const SCENARIOS: Array<{
 function StepHeader({ n, title, hint }: { n: number; title: string; hint?: string }) {
   return (
     <div className="mb-2 flex items-center gap-2">
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">{n}</span>
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+        {n}
+      </span>
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {hint ? <span className="text-xs text-foreground">— {hint}</span> : null}
     </div>
@@ -87,16 +89,17 @@ export function ProductionTab(): React.ReactElement {
     };
   }, [lab]);
 
-  const handleGenerate = React.useCallback((_cfg?: ForgeConfig) => {
-    void iter.generate(buildParams());
-  }, [iter, buildParams]);
+  const handleGenerate = React.useCallback(
+    (_cfg?: ForgeConfig) => {
+      void iter.generate(buildParams());
+    },
+    [iter, buildParams],
+  );
 
   const applyScenario = React.useCallback((id: string) => {
     const s = SCENARIOS.find((x) => x.id === id);
     if (!s) return;
-    const et = s.emailTypeId
-      ? DEFAULT_EMAIL_TYPES.find((t) => t.id === s.emailTypeId) ?? null
-      : null;
+    const et = s.emailTypeId ? (DEFAULT_EMAIL_TYPES.find((t) => t.id === s.emailTypeId) ?? null) : null;
     forgeLabStore.set({
       customGoal: s.goal,
       tone: s.tone,
@@ -140,8 +143,13 @@ export function ProductionTab(): React.ReactElement {
         </div>
         {activeScenario ? (
           <div className="mt-2 flex items-center gap-2 text-xs text-foreground">
-            <span>Scenario attivo: <strong className="text-foreground">{SCENARIOS.find((s) => s.id === activeScenario)?.label}</strong></span>
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearScenario}>Pulisci</Button>
+            <span>
+              Scenario attivo:{" "}
+              <strong className="text-foreground">{SCENARIOS.find((s) => s.id === activeScenario)?.label}</strong>
+            </span>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearScenario}>
+              Pulisci
+            </Button>
           </div>
         ) : (
           <p className="mt-2 text-[11px] text-foreground">
@@ -153,14 +161,22 @@ export function ProductionTab(): React.ReactElement {
       {/* STEP 2 — Configurazione */}
       <section className="rounded-lg border border-border/60 bg-card/40">
         <div className="px-4 pt-4">
-          <StepHeader n={2} title="Configura destinatario e tipo email" hint="serve almeno il destinatario per generare" />
+          <StepHeader
+            n={2}
+            title="Configura destinatario e tipo email"
+            hint="serve almeno il destinatario per generare"
+          />
         </div>
         <ForgeOraclePanel onRun={handleGenerate} isLoading={iter.isGenerating} />
       </section>
 
       {/* STEP 3 — Esecuzione + iterazioni */}
       <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border/60 bg-card/40 p-4">
-        <StepHeader n={3} title="Lancia e confronta le iterazioni" hint="ogni clic crea una nuova versione affiancata" />
+        <StepHeader
+          n={3}
+          title="Lancia e confronta le iterazioni"
+          hint="ogni clic crea una nuova versione affiancata"
+        />
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Button
@@ -169,7 +185,11 @@ export function ProductionTab(): React.ReactElement {
             disabled={!canGenerate || !hasRecipient}
             className="gap-1.5"
           >
-            {iter.isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {iter.isGenerating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
             Genera bozza (v{iter.iterations.length + 1})
           </Button>
           <Button

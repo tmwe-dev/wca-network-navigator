@@ -27,18 +27,9 @@ function n(count: number | null | undefined): number {
 
 export async function fetchCampaignStatsCounts(): Promise<CampaignStatsCounts> {
   const [sentRes, pendingRes, completedRes] = await Promise.all([
-    supabase
-      .from("email_campaign_queue")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "sent"),
-    supabase
-      .from("email_campaign_queue")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending"),
-    supabase
-      .from("email_drafts")
-      .select("id", { count: "exact", head: true })
-      .eq("queue_status", "completed"),
+    supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "sent"),
+    supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("email_drafts").select("id", { count: "exact", head: true }).eq("queue_status", "completed"),
   ]);
 
   // Semantica originaria: `count ?? 0` anche in presenza di `error`.

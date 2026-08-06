@@ -90,44 +90,39 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
     },
   });
 
-  const fromEnrichment = React.useMemo(
-    () => extractFromEnrichment(enrichmentData),
-    [enrichmentData],
-  );
+  const fromEnrichment = React.useMemo(() => extractFromEnrichment(enrichmentData), [enrichmentData]);
 
   const fromCache: ScrapeEntry[] = React.useMemo(() => {
     const rows = cacheQuery.data ?? [];
     return rows.flatMap((r, i) => {
       const payload = r.payload as Record<string, unknown> | null;
-      const md = payload && typeof payload === "object" && typeof payload.markdown === "string"
-        ? payload.markdown
-        : null;
+      const md =
+        payload && typeof payload === "object" && typeof payload.markdown === "string" ? payload.markdown : null;
       if (!md || !md.trim()) return [];
-      return [{
-        id: `cache-${i}`,
-        source: `scrape_cache.${r.mode}`,
-        url: r.url,
-        scrapedAt: r.scraped_at,
-        markdown: md,
-      }];
+      return [
+        {
+          id: `cache-${i}`,
+          source: `scrape_cache.${r.mode}`,
+          url: r.url,
+          scrapedAt: r.scraped_at,
+          markdown: md,
+        },
+      ];
     });
   }, [cacheQuery.data]);
 
-  const legacyEntry: ScrapeEntry | null = rawProfileMarkdown && rawProfileMarkdown.trim()
-    ? {
-        id: "legacy-profile",
-        source: "partners.raw_profile_markdown",
-        url: null,
-        scrapedAt: null,
-        markdown: rawProfileMarkdown,
-      }
-    : null;
+  const legacyEntry: ScrapeEntry | null =
+    rawProfileMarkdown && rawProfileMarkdown.trim()
+      ? {
+          id: "legacy-profile",
+          source: "partners.raw_profile_markdown",
+          url: null,
+          scrapedAt: null,
+          markdown: rawProfileMarkdown,
+        }
+      : null;
 
-  const allEntries = [
-    ...fromEnrichment,
-    ...(legacyEntry ? [legacyEntry] : []),
-    ...fromCache,
-  ];
+  const allEntries = [...fromEnrichment, ...(legacyEntry ? [legacyEntry] : []), ...fromCache];
 
   const toggle = (id: string) => {
     setExpanded((prev) => {
@@ -157,8 +152,9 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
               Nessun markdown grezzo disponibile
             </div>
             <div className="text-[10px] text-warning dark:text-warning mt-0.5">
-              Lancia una Deep Search per popolare i markdown da FireScrape, oppure verifica che la pipeline V2 stia salvando i risultati.
-              Per ispezionare gli scrape manuali apri <span className="font-mono">chrome://extensions</span> → Partner Connect → "service worker" → tab Console.
+              Lancia una Deep Search per popolare i markdown da FireScrape, oppure verifica che la pipeline V2 stia
+              salvando i risultati. Per ispezionare gli scrape manuali apri{" "}
+              <span className="font-mono">chrome://extensions</span> → Partner Connect → "service worker" → tab Console.
             </div>
           </div>
         </div>
@@ -181,10 +177,16 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
               onClick={() => toggle(entry.id)}
               className="w-full flex items-start gap-2 p-2 text-left hover:bg-muted/40 transition-colors"
             >
-              {isOpen ? <ChevronDown className="w-3 h-3 shrink-0 mt-0.5" /> : <ChevronRight className="w-3 h-3 shrink-0 mt-0.5" />}
+              {isOpen ? (
+                <ChevronDown className="w-3 h-3 shrink-0 mt-0.5" />
+              ) : (
+                <ChevronRight className="w-3 h-3 shrink-0 mt-0.5" />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <Badge variant="secondary" className="text-[9px] py-0 px-1.5 h-4 font-mono">{entry.source}</Badge>
+                  <Badge variant="secondary" className="text-[9px] py-0 px-1.5 h-4 font-mono">
+                    {entry.source}
+                  </Badge>
                   <span className="text-[11px] text-foreground font-mono">{entry.markdown.length} char</span>
                   {entry.scrapedAt && (
                     <span className="text-[11px] text-foreground">
@@ -192,12 +194,8 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
                     </span>
                   )}
                 </div>
-                {entry.url && (
-                  <div className="text-[10px] text-primary truncate font-mono mt-0.5">{entry.url}</div>
-                )}
-                {!isOpen && (
-                  <div className="text-xs text-foreground mt-1 line-clamp-2">{preview}…</div>
-                )}
+                {entry.url && <div className="text-[10px] text-primary truncate font-mono mt-0.5">{entry.url}</div>}
+                {!isOpen && <div className="text-xs text-foreground mt-1 line-clamp-2">{preview}…</div>}
               </div>
             </button>
             {isOpen && (
@@ -207,7 +205,10 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
                     size="sm"
                     variant="ghost"
                     className="h-6 text-[10px]"
-                    onClick={(e) => { e.stopPropagation(); copyMd(entry.markdown); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyMd(entry.markdown);
+                    }}
                   >
                     <Copy className="w-3 h-3 mr-1" /> Copia
                   </Button>

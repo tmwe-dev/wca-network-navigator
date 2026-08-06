@@ -35,13 +35,13 @@ Ogni agente è concepito come un microservizio indipendente, con funzioni isolat
 
 ### 1.3 Componenti base degli agenti
 
-| Componente | Descrizione | Responsabilità |
-|------------|-------------|----------------|
-| Modello | Nucleo di ragionamento (LLM o modelli ibridi) | Generazione, analisi, decisione |
-| Sensing | Interfacce con API, database, sensori | Acquisizione dati dall'ambiente |
-| Memoria | Contesto a breve e lungo termine | Persistenza dello stato e apprendimento |
-| Pianificazione | Scomposizione obiettivi e adattamento dinamico | Strategia e decomposizione task |
-| Tool Integration | Invocazione di funzioni esterne o di altri agenti | Estensione delle capacità operative |
+| Componente       | Descrizione                                       | Responsabilità                          |
+| ---------------- | ------------------------------------------------- | --------------------------------------- |
+| Modello          | Nucleo di ragionamento (LLM o modelli ibridi)     | Generazione, analisi, decisione         |
+| Sensing          | Interfacce con API, database, sensori             | Acquisizione dati dall'ambiente         |
+| Memoria          | Contesto a breve e lungo termine                  | Persistenza dello stato e apprendimento |
+| Pianificazione   | Scomposizione obiettivi e adattamento dinamico    | Strategia e decomposizione task         |
+| Tool Integration | Invocazione di funzioni esterne o di altri agenti | Estensione delle capacità operative     |
 
 ### 1.4 Pattern di orchestrazione
 
@@ -101,22 +101,22 @@ Questa gerarchia isola le responsabilità e separa errori di logica da errori di
 
 #### 3.1.2 Perfection Matrix
 
-| Fase | Output richiesto | Criterio di accettazione |
-|------|-----------------|-------------------------|
-| Definizione | JSON Schema dei dati | Nessun campo opzionale senza valore di default |
-| Architettura | Grafo delle dipendenze | Nessun ciclo; percorso lineare |
-| Logica | Pseudocodice in Markdown | Nessun ciclo infinito; preferire map/filter |
+| Fase           | Output richiesto          | Criterio di accettazione                                 |
+| -------------- | ------------------------- | -------------------------------------------------------- |
+| Definizione    | JSON Schema dei dati      | Nessun campo opzionale senza valore di default           |
+| Architettura   | Grafo delle dipendenze    | Nessun ciclo; percorso lineare                           |
+| Logica         | Pseudocodice in Markdown  | Nessun ciclo infinito; preferire map/filter              |
 | Output Lovable | Prompt di implementazione | Deve includere: "Se vedi un'ambiguità, fermati e chiedi" |
 
 ### 3.2 Ruoli e vincoli di perfezione
 
-| Agente | Ruolo | Vincolo |
-|--------|-------|---------|
-| Cloud | Definisce user stories atomiche | Nessuna ambiguità; user stories granulari |
-| ChatGPT | Definisce state machine dei dati | Deve disegnare un grafo senza cicli |
-| Gemini | Ricerca librerie | Deve scegliere librerie leggere e aggiornate |
-| Queen/Claude | Generazione codice | Codice auto-documentante; nomi descrittivi |
-| Grok | Revisore (Avvocato del Diavolo) | Boccia ogni violazione del Glossario, della Legge del Disaccoppiamento o della Perfection Matrix |
+| Agente       | Ruolo                            | Vincolo                                                                                          |
+| ------------ | -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Cloud        | Definisce user stories atomiche  | Nessuna ambiguità; user stories granulari                                                        |
+| ChatGPT      | Definisce state machine dei dati | Deve disegnare un grafo senza cicli                                                              |
+| Gemini       | Ricerca librerie                 | Deve scegliere librerie leggere e aggiornate                                                     |
+| Queen/Claude | Generazione codice               | Codice auto-documentante; nomi descrittivi                                                       |
+| Grok         | Revisore (Avvocato del Diavolo)  | Boccia ogni violazione del Glossario, della Legge del Disaccoppiamento o della Perfection Matrix |
 
 ### 3.3 Vincoli inviolabili
 
@@ -151,22 +151,22 @@ Un sistema multi-agente basato su LLM introduce categorie di errore assenti nei 
 
 Il Circuit Breaker è un pattern mutuato dall'ingegneria dei microservizi che previene il cascading failure:
 
-| Stato | Comportamento | Transizione |
-|-------|--------------|-------------|
-| **Closed** (normale) | Le richieste all'agente passano normalmente. Un contatore traccia i fallimenti consecutivi. | Se i fallimenti superano la soglia (default: 3), transizione a Open. |
-| **Open** (interrotto) | Le richieste vengono deviate al fallback. L'agente non viene contattato. | Dopo un timeout di cooldown (default: 60s), transizione a Half-Open. |
-| **Half-Open** (test) | Una singola richiesta di prova viene inviata all'agente. | Se ha successo, torna a Closed. Se fallisce, torna a Open. |
+| Stato                 | Comportamento                                                                               | Transizione                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Closed** (normale)  | Le richieste all'agente passano normalmente. Un contatore traccia i fallimenti consecutivi. | Se i fallimenti superano la soglia (default: 3), transizione a Open. |
+| **Open** (interrotto) | Le richieste vengono deviate al fallback. L'agente non viene contattato.                    | Dopo un timeout di cooldown (default: 60s), transizione a Half-Open. |
+| **Half-Open** (test)  | Una singola richiesta di prova viene inviata all'agente.                                    | Se ha successo, torna a Closed. Se fallisce, torna a Open.           |
 
 Ogni agente ha il proprio circuit breaker indipendente.
 
 ### 5.3 Strategie di fallback
 
-| Strategia | Descrizione | Caso d'uso |
-|-----------|-------------|------------|
-| Agent Substitution | Un agente secondario assume il ruolo. | Grok non risponde → Queen/Claude assume temporaneamente il ruolo di revisore. |
-| Cached Response | Si utilizza l'ultimo output valido dell'agente. | Il glossario non è cambiato → si riusa la validazione precedente. |
-| Degraded Mode | La fase viene saltata con un warning esplicito. | Gemini non risponde → si procede con le librerie già note. |
-| Escalation | Segnalazione all'operatore umano. | Fallimento persistente dopo 3 tentativi su tutti i fallback. |
+| Strategia          | Descrizione                                     | Caso d'uso                                                                    |
+| ------------------ | ----------------------------------------------- | ----------------------------------------------------------------------------- |
+| Agent Substitution | Un agente secondario assume il ruolo.           | Grok non risponde → Queen/Claude assume temporaneamente il ruolo di revisore. |
+| Cached Response    | Si utilizza l'ultimo output valido dell'agente. | Il glossario non è cambiato → si riusa la validazione precedente.             |
+| Degraded Mode      | La fase viene saltata con un warning esplicito. | Gemini non risponde → si procede con le librerie già note.                    |
+| Escalation         | Segnalazione all'operatore umano.               | Fallimento persistente dopo 3 tentativi su tutti i fallback.                  |
 
 ### 5.4 Gestione degli output malformati
 
@@ -180,13 +180,13 @@ In caso di output malformato: registrazione dell'errore, prompt di correzione, a
 
 ### 5.5 Timeout e backpressure
 
-| Fase | Timeout default | Azione allo scadere |
-|------|----------------|---------------------|
-| Analisi (Cloud) | 120 secondi | Retry con prompt semplificato |
-| Glossario (ChatGPT + Gemini) | 90 secondi ciascuno | Procedere con output parziale + warning |
-| Architettura (ChatGPT) | 180 secondi | Retry con scope ridotto |
-| Generazione codice (Queen/Claude) | 300 secondi | Segmentare in sotto-task più piccoli |
-| Revisione (Grok) | 120 secondi | Approvazione condizionale con flag di review pendente |
+| Fase                              | Timeout default     | Azione allo scadere                                   |
+| --------------------------------- | ------------------- | ----------------------------------------------------- |
+| Analisi (Cloud)                   | 120 secondi         | Retry con prompt semplificato                         |
+| Glossario (ChatGPT + Gemini)      | 90 secondi ciascuno | Procedere con output parziale + warning               |
+| Architettura (ChatGPT)            | 180 secondi         | Retry con scope ridotto                               |
+| Generazione codice (Queen/Claude) | 300 secondi         | Segmentare in sotto-task più piccoli                  |
+| Revisione (Grok)                  | 120 secondi         | Approvazione condizionale con flag di review pendente |
 
 Se più di due agenti sono simultaneamente in stato di timeout o Open, l'orchestratore sospende l'elaborazione e notifica l'operatore umano.
 
@@ -202,19 +202,19 @@ Il consensus loop, se non limitato, può generare cicli infiniti. Questo scenari
 
 Il sistema implementa una politica di convergenza a tre livelli:
 
-| Livello | Criterio | Azione |
-|---------|----------|--------|
-| **L1 — Consenso unanime** | Tutti e 5 gli agenti approvano il deliverable. | Procede alla fase successiva. |
-| **L2 — Consenso a maggioranza qualificata** | Almeno 4 su 5 approvano. L'agente dissenziente ha sollevato solo obiezioni "minor". | Procede con annotation di review pendente. |
-| **L3 — Escalation con deadline** | Dopo N iterazioni (default: 5) senza raggiungere L1 o L2. | Congela lo stato, produce report di disaccordo, attende decisione umana. |
+| Livello                                     | Criterio                                                                            | Azione                                                                   |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **L1 — Consenso unanime**                   | Tutti e 5 gli agenti approvano il deliverable.                                      | Procede alla fase successiva.                                            |
+| **L2 — Consenso a maggioranza qualificata** | Almeno 4 su 5 approvano. L'agente dissenziente ha sollevato solo obiezioni "minor". | Procede con annotation di review pendente.                               |
+| **L3 — Escalation con deadline**            | Dopo N iterazioni (default: 5) senza raggiungere L1 o L2.                           | Congela lo stato, produce report di disaccordo, attende decisione umana. |
 
 ### 6.3 Classificazione della severità delle obiezioni
 
-| Severità | Definizione | Effetto sul consenso |
-|----------|-------------|---------------------|
-| **Critical** | Violazione di un vincolo inviolabile o bug logico dimostrabile. | Blocca il consenso. Il ciclo deve ripartire. |
-| **Major** | Violazione di una best practice o incoerenza con il glossario. | Blocca L1 ma non L2 se è l'unica obiezione. |
-| **Minor** | Suggerimento stilistico, ottimizzazione non critica, preferenza soggettiva. | Non blocca il consenso. |
+| Severità     | Definizione                                                                 | Effetto sul consenso                         |
+| ------------ | --------------------------------------------------------------------------- | -------------------------------------------- |
+| **Critical** | Violazione di un vincolo inviolabile o bug logico dimostrabile.             | Blocca il consenso. Il ciclo deve ripartire. |
+| **Major**    | Violazione di una best practice o incoerenza con il glossario.              | Blocca L1 ma non L2 se è l'unica obiezione.  |
+| **Minor**    | Suggerimento stilistico, ottimizzazione non critica, preferenza soggettiva. | Non blocca il consenso.                      |
 
 ### 6.4 Rilassamento pragmatico dei vincoli
 
@@ -238,12 +238,12 @@ Un sistema che non prevede meccanismi di evoluzione diventa obsoleto rapidamente
 
 Il glossario segue un versionamento semantico (SemVer) adattato:
 
-| Tipo di modifica | Incremento versione | Procedura |
-|------------------|--------------------|-----------| 
-| Aggiunta di nuovi termini | MINOR (1.0 → 1.1) | Proposta da qualsiasi agente, approvazione di Grok. |
-| Rinomina di termine esistente | MAJOR (1.x → 2.0) | Consensus unanime. Migrazione automatica di tutti i riferimenti. |
-| Deprecazione di termine | MINOR con flag deprecated | Il termine resta valido per 2 cicli di rilascio, poi rimosso in un MAJOR. |
-| Modifica di tipo/schema | MAJOR (1.x → 2.0) | Consensus unanime. Generazione automatica di migration script. |
+| Tipo di modifica              | Incremento versione       | Procedura                                                                 |
+| ----------------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| Aggiunta di nuovi termini     | MINOR (1.0 → 1.1)         | Proposta da qualsiasi agente, approvazione di Grok.                       |
+| Rinomina di termine esistente | MAJOR (1.x → 2.0)         | Consensus unanime. Migrazione automatica di tutti i riferimenti.          |
+| Deprecazione di termine       | MINOR con flag deprecated | Il termine resta valido per 2 cicli di rilascio, poi rimosso in un MAJOR. |
+| Modifica di tipo/schema       | MAJOR (1.x → 2.0)         | Consensus unanime. Generazione automatica di migration script.            |
 
 Ogni versione del glossario è immutabile una volta pubblicata.
 
@@ -271,18 +271,18 @@ Il sistema prevede che i ruoli non siano statici:
 
 Ogni interazione tra orchestratore e agente produce un log strutturato JSON con i campi obbligatori:
 
-| Campo | Tipo | Descrizione |
-|-------|------|-------------|
-| timestamp | ISO 8601 | Momento esatto dell'interazione |
-| phase | enum | Fase del flusso (analysis, glossary, architecture, codegen, review, blueprint) |
-| agent | string | Nome dell'agente coinvolto |
-| action | enum | Tipo di azione (request, response, validation, objection, approval) |
-| iteration | integer | Numero dell'iterazione corrente nel consensus loop |
-| input_hash | SHA-256 | Hash dell'input fornito all'agente |
-| output_hash | SHA-256 | Hash dell'output ricevuto |
-| duration_ms | integer | Tempo di risposta in millisecondi |
-| status | enum | success, failure, timeout, malformed |
-| severity | enum \| null | Severità dell'obiezione (se action = objection) |
+| Campo       | Tipo         | Descrizione                                                                    |
+| ----------- | ------------ | ------------------------------------------------------------------------------ |
+| timestamp   | ISO 8601     | Momento esatto dell'interazione                                                |
+| phase       | enum         | Fase del flusso (analysis, glossary, architecture, codegen, review, blueprint) |
+| agent       | string       | Nome dell'agente coinvolto                                                     |
+| action      | enum         | Tipo di azione (request, response, validation, objection, approval)            |
+| iteration   | integer      | Numero dell'iterazione corrente nel consensus loop                             |
+| input_hash  | SHA-256      | Hash dell'input fornito all'agente                                             |
+| output_hash | SHA-256      | Hash dell'output ricevuto                                                      |
+| duration_ms | integer      | Tempo di risposta in millisecondi                                              |
+| status      | enum         | success, failure, timeout, malformed                                           |
+| severity    | enum \| null | Severità dell'obiezione (se action = objection)                                |
 
 ### 8.2 Metriche di sistema
 
@@ -307,13 +307,13 @@ Il sistema è progettato per ridurre drasticamente la necessità di testing post
 
 ### 9.2 Livelli di testing
 
-| Livello | Responsabile | Quando | Cosa verifica |
-|---------|-------------|--------|---------------|
-| Schema validation | Orchestratore | Dopo ogni fase | Output conforme allo schema atteso |
-| Static analysis | Grok | Fase di revisione | Aderenza al glossario, complessità ciclomatica, nesting depth |
-| Contract testing | Orchestratore | Dopo codegen | Le interfacce tra moduli /core, /io e /bridge rispettano i contratti |
-| Smoke testing | Queen/Claude | Dopo blueprint | Il codice generato compila e i percorsi principali funzionano |
-| Regression testing | Orchestratore | Dopo ogni modifica allo schema | I deliverable precedenti restano validi con il nuovo schema |
+| Livello            | Responsabile  | Quando                         | Cosa verifica                                                        |
+| ------------------ | ------------- | ------------------------------ | -------------------------------------------------------------------- |
+| Schema validation  | Orchestratore | Dopo ogni fase                 | Output conforme allo schema atteso                                   |
+| Static analysis    | Grok          | Fase di revisione              | Aderenza al glossario, complessità ciclomatica, nesting depth        |
+| Contract testing   | Orchestratore | Dopo codegen                   | Le interfacce tra moduli /core, /io e /bridge rispettano i contratti |
+| Smoke testing      | Queen/Claude  | Dopo blueprint                 | Il codice generato compila e i percorsi principali funzionano        |
+| Regression testing | Orchestratore | Dopo ogni modifica allo schema | I deliverable precedenti restano validi con il nuovo schema          |
 
 ### 9.3 Validazione del glossario
 
@@ -356,13 +356,13 @@ Ogni messaggio scambiato tra orchestratore e agenti segue un formato standardizz
 
 L'event bus centralizzato supporta i seguenti tipi di eventi:
 
-| Tipo evento | Payload | Consumer |
-|-------------|---------|----------|
-| DataCreated | Entità creata conforme allo schema | Funzioni /bridge che necessitano del dato |
-| DataValidated | Risultato della validazione (pass/fail + dettagli) | Funzioni /core che dipendono dalla validazione |
-| DataTransformed | Dato trasformato + mapping di origine | Funzioni /io che devono persistere il risultato |
-| ErrorOccurred | Tipo errore + contesto + stack minimo | Logger centralizzato + circuit breaker |
-| PhaseCompleted | ID fase + deliverable + metriche | Orchestratore per avanzamento pipeline |
+| Tipo evento     | Payload                                            | Consumer                                        |
+| --------------- | -------------------------------------------------- | ----------------------------------------------- |
+| DataCreated     | Entità creata conforme allo schema                 | Funzioni /bridge che necessitano del dato       |
+| DataValidated   | Risultato della validazione (pass/fail + dettagli) | Funzioni /core che dipendono dalla validazione  |
+| DataTransformed | Dato trasformato + mapping di origine              | Funzioni /io che devono persistere il risultato |
+| ErrorOccurred   | Tipo errore + contesto + stack minimo              | Logger centralizzato + circuit breaker          |
+| PhaseCompleted  | ID fase + deliverable + metriche                   | Orchestratore per avanzamento pipeline          |
 
 Ogni evento è immutabile, ha un ID univoco e include un correlation ID che consente di tracciare l'intera catena causale.
 

@@ -8,9 +8,7 @@ import { z } from "https://esm.sh/zod@3.23.8";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
-import {
-  TMWE_OPS, callTmwe, getUserToken, getSystemToken, serviceClient,
-} from "../_shared/tmweClient.ts";
+import { TMWE_OPS, callTmwe, getUserToken, getSystemToken, serviceClient } from "../_shared/tmweClient.ts";
 import { logTmweAudit, notConnectedResponse } from "../_shared/tmweAudit.ts";
 
 const InputSchema = z.union([
@@ -54,20 +52,31 @@ async function syncOne(svc: ReturnType<typeof serviceClient>, token: string, tmw
   const ass = await callTmwe(TMWE_OPS["listini.assignments"], token, { client_id: tmweClientId, limit: 1 });
   const assRow = extractRows(ass.data)[0] ?? {};
 
-  await svc.from("tmwe_customer_snapshot").upsert({
-    tmwe_client_id: tmweClientId,
-    denomination: pick(anaRow as Record<string, unknown>, ["denomination", "denominazione", "name", "ragione_sociale"]),
-    vat: pick(anaRow as Record<string, unknown>, ["vat", "vat_number", "piva", "partita_iva"]),
-    is_active: ((): boolean => {
-      const v = (anaRow as Record<string, unknown>)["is_active"] ?? (anaRow as Record<string, unknown>)["attivo"] ?? (anaRow as Record<string, unknown>)["active"];
-      if (v === false || v === 0 || v === "0" || v === "false") return false;
-      return true;
-    })(),
-    assigned_price_list_id: pick(assRow as Record<string, unknown>, ["price_list_id", "listino_id", "id"]),
-    assigned_price_list_name: pick(assRow as Record<string, unknown>, ["price_list_name", "listino", "name"]),
-    raw_payload: { ana: anaRow, assignment: assRow },
-    last_synced_at: new Date().toISOString(),
-  }, { onConflict: "tmwe_client_id" });
+  await svc.from("tmwe_customer_snapshot").upsert(
+    {
+      tmwe_client_id: tmweClientId,
+      denomination: pick(anaRow as Record<string, unknown>, [
+        "denomination",
+        "denominazione",
+        "name",
+        "ragione_sociale",
+      ]),
+      vat: pick(anaRow as Record<string, unknown>, ["vat", "vat_number", "piva", "partita_iva"]),
+      is_active: ((): boolean => {
+        const v =
+          (anaRow as Record<string, unknown>)["is_active"] ??
+          (anaRow as Record<string, unknown>)["attivo"] ??
+          (anaRow as Record<string, unknown>)["active"];
+        if (v === false || v === 0 || v === "0" || v === "false") return false;
+        return true;
+      })(),
+      assigned_price_list_id: pick(assRow as Record<string, unknown>, ["price_list_id", "listino_id", "id"]),
+      assigned_price_list_name: pick(assRow as Record<string, unknown>, ["price_list_name", "listino", "name"]),
+      raw_payload: { ana: anaRow, assignment: assRow },
+      last_synced_at: new Date().toISOString(),
+    },
+    { onConflict: "tmwe_client_id" },
+  );
 
   // 3) Fatture ultimi 12 mesi
   const inv = await callTmwe(TMWE_OPS["invoices.byClient"], token, {
@@ -84,7 +93,8 @@ async function syncOne(svc: ReturnType<typeof serviceClient>, token: string, tmw
     if (!dateStr) continue;
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) continue;
-    const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
+    const y = d.getUTCFullYear(),
+      m = d.getUTCMonth() + 1;
     const key = `${y}-${m}`;
     const amount = Number(pick(r, ["total", "amount", "totale", "imponibile"]) ?? 0);
     const svcType = (pick(r, ["service_type", "servizio", "type"]) ?? "other").toLowerCase();
@@ -98,10 +108,14 @@ async function syncOne(svc: ReturnType<typeof serviceClient>, token: string, tmw
     const rows = Array.from(buckets.entries()).map(([k, v]) => {
       const [y, m] = k.split("-").map(Number);
       return {
-        tmwe_client_id: tmweClientId, year: y, month: m,
+        tmwe_client_id: tmweClientId,
+        year: y,
+        month: m,
         revenue_amount: Math.round(v.revenue * 100) / 100,
-        currency: "EUR", invoices_count: v.count,
-        services_breakdown: v.services, updated_at: new Date().toISOString(),
+        currency: "EUR",
+        invoices_count: v.count,
+        services_breakdown: v.services,
+        updated_at: new Date().toISOString(),
       };
     });
     await svc.from("tmwe_revenue_monthly").upsert(rows, { onConflict: "tmwe_client_id,year,month" });
@@ -121,7 +135,8 @@ Deno.serve(async (req) => {
     const parsed = InputSchema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) {
       return new Response(JSON.stringify({ error: "VALIDATION_ERROR", details: parsed.error.flatten() }), {
-        status: 400, headers: { ...headers, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
@@ -159,12 +174,11 @@ Deno.serve(async (req) => {
     } else {
       const limit = parsed.data.limit ?? 50;
       // Prendi i client linkati da più tempo non sincronizzati (LRU)
-      const { data: links } = await svc.from("tmwe_partner_links")
+      const { data: links } = await svc
+        .from("tmwe_partner_links")
         .select("tmwe_client_id, tmwe_customer_snapshot:tmwe_customer_snapshot(last_synced_at)")
         .limit(limit);
-      const ids = (links ?? [])
-        .map((r) => (r as { tmwe_client_id: string }).tmwe_client_id)
-        .filter(Boolean);
+      const ids = (links ?? []).map((r) => (r as { tmwe_client_id: string }).tmwe_client_id).filter(Boolean);
       for (const id of ids) {
         try {
           await syncOne(svc, token, id);
@@ -176,19 +190,31 @@ Deno.serve(async (req) => {
     }
 
     await logTmweAudit(svc, {
-      op_name: "customer-sync", identity, caller_user_id: callerUserId,
-      status: 200, latency_ms: Math.round(performance.now() - t0),
+      op_name: "customer-sync",
+      identity,
+      caller_user_id: callerUserId,
+      status: 200,
+      latency_ms: Math.round(performance.now() - t0),
       error_message: errors.length ? `partial: ${errors.length} failed` : null,
     });
 
     return new Response(JSON.stringify({ ok: true, synced, errors }), {
-      status: 200, headers: { ...headers, "Content-Type": "application/json" },
+      status: 200,
+      headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    await logTmweAudit(svc, { op_name: "customer-sync", identity: "system", caller_user_id: null, status: 500, latency_ms: Math.round(performance.now() - t0), error_message: message });
+    await logTmweAudit(svc, {
+      op_name: "customer-sync",
+      identity: "system",
+      caller_user_id: null,
+      status: 500,
+      latency_ms: Math.round(performance.now() - t0),
+      error_message: message,
+    });
     return new Response(JSON.stringify({ error: "INTERNAL", message }), {
-      status: 500, headers: { ...headers, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...headers, "Content-Type": "application/json" },
     });
   }
 });

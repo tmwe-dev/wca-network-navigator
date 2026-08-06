@@ -45,17 +45,13 @@ export function AcquisitionToolbar({
 
   const toggleCountry = (code: string) => {
     onCountriesChange(
-      selectedCountries.includes(code)
-        ? selectedCountries.filter((c) => c !== code)
-        : [...selectedCountries, code]
+      selectedCountries.includes(code) ? selectedCountries.filter((c) => c !== code) : [...selectedCountries, code],
     );
   };
 
   const toggleNetwork = (net: string) => {
     onNetworksChange(
-      selectedNetworks.includes(net)
-        ? selectedNetworks.filter((n) => n !== net)
-        : [...selectedNetworks, net]
+      selectedNetworks.includes(net) ? selectedNetworks.filter((n) => n !== net) : [...selectedNetworks, net],
     );
   };
 
@@ -82,16 +78,9 @@ export function AcquisitionToolbar({
                 <CommandEmpty>Nessun paese trovato</CommandEmpty>
                 <CommandGroup>
                   {WCA_COUNTRIES.map((c) => (
-                    <CommandItem
-                      key={c.code}
-                      value={`${c.name} ${c.code}`}
-                      onSelect={() => toggleCountry(c.code)}
-                    >
+                    <CommandItem key={c.code} value={`${c.name} ${c.code}`} onSelect={() => toggleCountry(c.code)}>
                       <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedCountries.includes(c.code) ? "opacity-100" : "opacity-0"
-                        )}
+                        className={cn("mr-2 h-4 w-4", selectedCountries.includes(c.code) ? "opacity-100" : "opacity-0")}
                       />
                       <span className="mr-2">{getCountryFlag(c.code)}</span>
                       {c.name}
@@ -108,9 +97,7 @@ export function AcquisitionToolbar({
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2 w-full justify-between text-xs">
               <span className="truncate">
-                {selectedNetworks.length === 0
-                  ? "Tutti i Network"
-                  : `${selectedNetworks.length} network`}
+                {selectedNetworks.length === 0 ? "Tutti i Network" : `${selectedNetworks.length} network`}
               </span>
               <ChevronDown className="w-3.5 h-3.5 opacity-50" />
             </Button>
@@ -122,16 +109,9 @@ export function AcquisitionToolbar({
                 <CommandEmpty>Nessun network trovato</CommandEmpty>
                 <CommandGroup>
                   {WCA_NETWORKS.map((net) => (
-                    <CommandItem
-                      key={net}
-                      value={net}
-                      onSelect={() => toggleNetwork(net)}
-                    >
+                    <CommandItem key={net} value={net} onSelect={() => toggleNetwork(net)}>
                       <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedNetworks.includes(net) ? "opacity-100" : "opacity-0"
-                        )}
+                        className={cn("mr-2 h-4 w-4", selectedNetworks.includes(net) ? "opacity-100" : "opacity-0")}
                       />
                       {net}
                     </CommandItem>

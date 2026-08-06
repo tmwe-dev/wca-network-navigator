@@ -11,14 +11,7 @@
  */
 
 export type GuardChannel = "whatsapp" | "linkedin";
-export type GuardStepKind =
-  | "ping"
-  | "cookie"
-  | "open"
-  | "read"
-  | "scroll"
-  | "betweenThreads"
-  | "close";
+export type GuardStepKind = "ping" | "cookie" | "open" | "read" | "scroll" | "betweenThreads" | "close";
 
 export type GuardState = "idle" | "active" | "waiting";
 
@@ -33,24 +26,27 @@ export interface GuardSnapshot {
 
 const SETTINGS_KEY = "sync_guard_settings_v1";
 
-interface StepRange { min: number; max: number }
-interface Settings { [k: string]: StepRange }
+interface StepRange {
+  min: number;
+  max: number;
+}
+interface Settings {
+  [k: string]: StepRange;
+}
 
 const DEFAULTS: Record<GuardStepKind, StepRange> = {
-  ping:           { min: 300,    max: 300 },
-  cookie:         { min: 5_000,  max: 5_000 },
-  open:           { min: 4_000,  max: 6_000 },
-  read:           { min: 2_000,  max: 3_000 },
-  scroll:         { min: 2_000,  max: 4_000 },
+  ping: { min: 300, max: 300 },
+  cookie: { min: 5_000, max: 5_000 },
+  open: { min: 4_000, max: 6_000 },
+  read: { min: 2_000, max: 3_000 },
+  scroll: { min: 2_000, max: 4_000 },
   betweenThreads: { min: 15_000, max: 20_000 },
-  close:          { min: 3_000,  max: 3_000 },
+  close: { min: 3_000, max: 3_000 },
 };
 
 function loadSettings(): Record<GuardStepKind, StepRange> {
   try {
-    const raw = typeof localStorage !== "undefined"
-      ? localStorage.getItem(SETTINGS_KEY)
-      : null;
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(SETTINGS_KEY) : null;
     if (!raw) return DEFAULTS;
     const parsed = JSON.parse(raw) as Settings;
     const merged = { ...DEFAULTS };
@@ -88,9 +84,11 @@ const state: Record<GuardChannel, GuardSnapshot> = {
 
 function emit(channel: GuardChannel) {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent("sync-guard-state", {
-    detail: { ...state[channel] },
-  }));
+  window.dispatchEvent(
+    new CustomEvent("sync-guard-state", {
+      detail: { ...state[channel] },
+    }),
+  );
 }
 
 export function getGuardSnapshot(channel: GuardChannel): GuardSnapshot {
@@ -98,7 +96,10 @@ export function getGuardSnapshot(channel: GuardChannel): GuardSnapshot {
 }
 
 export class SyncGuardBusyError extends Error {
-  constructor(public channel: GuardChannel, public currentOp: string) {
+  constructor(
+    public channel: GuardChannel,
+    public currentOp: string,
+  ) {
     super(`Operazione ${channel} già in corso (${currentOp})`);
     this.name = "SyncGuardBusyError";
   }
@@ -116,8 +117,12 @@ export function tryAcquire(channel: GuardChannel, opName: string): GuardToken {
   const token = Symbol(opName);
   locks[channel] = { token, opName };
   state[channel] = {
-    channel, state: "active", step: opName,
-    waitMsRemaining: 0, waitMsTotal: 0, startedAt: Date.now(),
+    channel,
+    state: "active",
+    step: opName,
+    waitMsRemaining: 0,
+    waitMsTotal: 0,
+    startedAt: Date.now(),
   };
   emit(channel);
   let released = false;
@@ -129,8 +134,12 @@ export function tryAcquire(channel: GuardChannel, opName: string): GuardToken {
       released = true;
       if (locks[channel]?.token === token) locks[channel] = null;
       state[channel] = {
-        channel, state: "idle", step: null,
-        waitMsRemaining: 0, waitMsTotal: 0, startedAt: null,
+        channel,
+        state: "idle",
+        step: null,
+        waitMsRemaining: 0,
+        waitMsTotal: 0,
+        startedAt: null,
       };
       emit(channel);
     },
@@ -145,11 +154,7 @@ export function isBusy(channel: GuardChannel): boolean {
  * Attesa cooldown obbligatoria. Da chiamare PRIMA di ogni azione bridge.
  * Aggiorna lo stato "waiting" con countdown live (tick ogni 200ms).
  */
-export async function throttle(
-  channel: GuardChannel,
-  kind: GuardStepKind,
-  stepLabel?: string,
-): Promise<void> {
+export async function throttle(channel: GuardChannel, kind: GuardStepKind, stepLabel?: string): Promise<void> {
   const settings = loadSettings();
   const ms = jitter(settings[kind]);
   const startedAt = Date.now();

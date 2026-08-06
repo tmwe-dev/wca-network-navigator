@@ -88,10 +88,10 @@ Deno.serve(async (req) => {
       threadId: body.thread_id,
     });
 
-    return new Response(
-      JSON.stringify({ success: true, pipeline: result }),
-      { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ success: true, pipeline: result }), {
+      status: 200,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (e: unknown) {
     console.error("[log-action] Error:", e);
     return new Response(

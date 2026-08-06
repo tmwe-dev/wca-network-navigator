@@ -11,7 +11,11 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { insertPendingAction } from "@/data/aiPendingActions";
-import { sendWhatsApp as sendWhatsAppUnified, type SendResult, type WhatsAppBridgeSender } from "@/lib/inbox/sendMessage";
+import {
+  sendWhatsApp as sendWhatsAppUnified,
+  type SendResult,
+  type WhatsAppBridgeSender,
+} from "@/lib/inbox/sendMessage";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("whatsappSender");
@@ -70,7 +74,9 @@ export interface QueueWhatsAppArgs {
  * Accoda invii WhatsApp in `ai_pending_actions` per approvazione umana.
  */
 export async function queueWhatsAppForApproval(args: QueueWhatsAppArgs): Promise<{ queued: number; failed: number }> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   if (!userId) return { queued: 0, failed: args.targets.length };
 
@@ -79,7 +85,10 @@ export async function queueWhatsAppForApproval(args: QueueWhatsAppArgs): Promise
 
   for (const t of args.targets) {
     const phone = cleanPhone(t.phone);
-    if (!phone) { failed++; continue; }
+    if (!phone) {
+      failed++;
+      continue;
+    }
 
     const personalized = args.messageOrTemplate
       .replace(/\{\{name\}\}/gi, t.contactName || "")
@@ -103,8 +112,10 @@ export async function queueWhatsAppForApproval(args: QueueWhatsAppArgs): Promise
       source: args.source,
       status: "pending",
     });
-    if (error) { log.warn("queue.insert_failed", { error: error.message, source: args.source }); failed++; }
-    else queued++;
+    if (error) {
+      log.warn("queue.insert_failed", { error: error.message, source: args.source });
+      failed++;
+    } else queued++;
   }
 
   log.info("queue.batch", { source: args.source, queued, failed });

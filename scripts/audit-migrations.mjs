@@ -14,7 +14,9 @@ const NAME_RX = /^\d{14}_[\w.-]+\.sql$/;
 
 export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
   const files = existsSync(dir)
-    ? readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()
+    ? readdirSync(dir)
+        .filter((f) => f.endsWith(".sql"))
+        .sort()
     : [];
 
   const badNames = files.filter((f) => !NAME_RX.test(f));
@@ -47,10 +49,14 @@ export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
     const sql = readFileSync(join(dir, f), "utf8");
     const stripped = sql.replace(/--[^\n]*/g, "");
 
-    for (const m of stripped.matchAll(/create\s+(?:or\s+replace\s+)?(?:unlogged\s+|temp\s+|temporary\s+)?table\s+(?:if\s+not\s+exists\s+)?([\w."]+)/gi)) {
+    for (const m of stripped.matchAll(
+      /create\s+(?:or\s+replace\s+)?(?:unlogged\s+|temp\s+|temporary\s+)?table\s+(?:if\s+not\s+exists\s+)?([\w."]+)/gi,
+    )) {
       created.add(norm(m[1]));
     }
-    for (const m of stripped.matchAll(/create\s+(?:or\s+replace\s+)?(?:materialized\s+)?view\s+(?:if\s+not\s+exists\s+)?([\w."]+)/gi)) {
+    for (const m of stripped.matchAll(
+      /create\s+(?:or\s+replace\s+)?(?:materialized\s+)?view\s+(?:if\s+not\s+exists\s+)?([\w."]+)/gi,
+    )) {
       created.add(norm(m[1]));
     }
     for (const m of stripped.matchAll(/alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?([\w."]+)/gi)) {
@@ -60,7 +66,9 @@ export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
       }
     }
 
-    for (const m of stripped.matchAll(/create\s+(?:or\s+replace\s+)?function\s+([\w."]+)[\s\S]*?(?=\bcreate\s+(?:or\s+replace\s+)?function\b|$)/gi)) {
+    for (const m of stripped.matchAll(
+      /create\s+(?:or\s+replace\s+)?function\s+([\w."]+)[\s\S]*?(?=\bcreate\s+(?:or\s+replace\s+)?function\b|$)/gi,
+    )) {
       const body = m[0];
       if (/security\s+definer/i.test(body) && !/set\s+search_path/i.test(body)) {
         definerFunctionsWithoutSearchPath.push({ file: f, fn: norm(m[1]) });
@@ -104,13 +112,21 @@ export function auditMigrations({ dir = DIR, typesFile = TYPES } = {}) {
     definerFunctionsWithoutSearchPath,
     securityDefinerViews,
     tablesWithoutGrant,
-    schemaDrift: { typeTables: typeTables.length, createdTables: createdTables.length, missingInTypes, missingInMigrations },
+    schemaDrift: {
+      typeTables: typeTables.length,
+      createdTables: createdTables.length,
+      missingInTypes,
+      missingInMigrations,
+    },
   };
 }
 
 function norm(id) {
   // Schema-insensitive: le migrazioni storiche alternano `public.x` e `x`.
-  return id.replace(/"/g, "").toLowerCase().replace(/^public\./, "");
+  return id
+    .replace(/"/g, "")
+    .toLowerCase()
+    .replace(/^public\./, "");
 }
 
 if (process.argv[1] && process.argv[1].endsWith("audit-migrations.mjs")) {

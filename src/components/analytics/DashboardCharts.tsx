@@ -10,8 +10,18 @@ import {
 } from "@/data/dashboardCharts";
 import { queryKeys } from "@/lib/queryKeys";
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
 } from "recharts";
 
 const CHANNEL_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#8b5cf6"];
@@ -84,7 +94,7 @@ function useResponseByCountry() {
     queryFn: async () => {
       const data = await findTopResponsePatterns();
 
-      return (data || []).map(r => ({
+      return (data || []).map((r) => ({
         country: r.country_code || "??",
         rate: Math.round((r.response_rate || 0) * 100),
         sent: r.total_sent || 0,
@@ -108,7 +118,7 @@ function useLeadScoreDist() {
       ];
       for (const c of data || []) {
         const s = c.lead_score ?? 0;
-        const b = buckets.find(b => s >= b.min && s <= b.max);
+        const b = buckets.find((b) => s >= b.min && s <= b.max);
         if (b) b.count++;
       }
       return buckets;
@@ -141,9 +151,33 @@ export function DashboardCharts() {
             <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
             <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
             <Tooltip contentStyle={tooltipStyle} />
-            <Area type="monotone" dataKey="email" stackId="1" fill="#3b82f6" stroke="#3b82f6" fillOpacity={0.3} name="Email" />
-            <Area type="monotone" dataKey="whatsapp" stackId="1" fill="#22c55e" stroke="#22c55e" fillOpacity={0.3} name="WhatsApp" />
-            <Area type="monotone" dataKey="phone" stackId="1" fill="#f59e0b" stroke="#f59e0b" fillOpacity={0.3} name="Telefono" />
+            <Area
+              type="monotone"
+              dataKey="email"
+              stackId="1"
+              fill="#3b82f6"
+              stroke="#3b82f6"
+              fillOpacity={0.3}
+              name="Email"
+            />
+            <Area
+              type="monotone"
+              dataKey="whatsapp"
+              stackId="1"
+              fill="#22c55e"
+              stroke="#22c55e"
+              fillOpacity={0.3}
+              name="WhatsApp"
+            />
+            <Area
+              type="monotone"
+              dataKey="phone"
+              stackId="1"
+              fill="#f59e0b"
+              stroke="#f59e0b"
+              fillOpacity={0.3}
+              name="Telefono"
+            />
           </AreaChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -152,7 +186,17 @@ export function DashboardCharts() {
       <ChartCard title="Distribuzione canali">
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
-            <Pie data={channels || []} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+            <Pie
+              data={channels || []}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={70}
+              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              labelLine={false}
+              fontSize={10}
+            >
               {(channels || []).map((_, i) => (
                 <Cell key={i} fill={CHANNEL_COLORS[i % CHANNEL_COLORS.length]} />
               ))}
@@ -169,7 +213,13 @@ export function DashboardCharts() {
             <BarChart data={responseCountry} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis type="number" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" unit="%" />
-              <YAxis type="category" dataKey="country" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" width={40} />
+              <YAxis
+                type="category"
+                dataKey="country"
+                tick={{ fontSize: 10 }}
+                stroke="hsl(var(--muted-foreground))"
+                width={40}
+              />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v}%`} />
               <Bar dataKey="rate" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Tasso %" />
             </BarChart>

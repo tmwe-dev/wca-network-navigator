@@ -26,13 +26,19 @@ const eventSubscribers = new Set<(e: OptimusEvent) => void>();
 
 function emit(e: OptimusEvent) {
   for (const fn of eventSubscribers) {
-    try { fn(e); } catch { /* ignore */ }
+    try {
+      fn(e);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
 export function subscribeOptimusEvents(cb: (e: OptimusEvent) => void): () => void {
   eventSubscribers.add(cb);
-  return () => { eventSubscribers.delete(cb); };
+  return () => {
+    eventSubscribers.delete(cb);
+  };
 }
 
 /**
@@ -58,8 +64,12 @@ export function useOptimusBridgeListener() {
       try {
         const t0 = performance.now();
         let result: {
-          stale?: boolean; cached?: boolean; plan_version?: number;
-          ai_latency_ms?: number; confidence?: number; plan?: unknown;
+          stale?: boolean;
+          cached?: boolean;
+          plan_version?: number;
+          ai_latency_ms?: number;
+          confidence?: number;
+          plan?: unknown;
         } | null = null;
         let error: { message: string } | null = null;
         try {
@@ -89,7 +99,12 @@ export function useOptimusBridgeListener() {
         if (result?.stale) {
           emit({ kind: "stale", channel: data.channel, pageType: data.pageType });
         } else if (result?.cached) {
-          emit({ kind: "cache-hit", channel: data.channel, pageType: data.pageType, planVersion: result.plan_version || 0 });
+          emit({
+            kind: "cache-hit",
+            channel: data.channel,
+            pageType: data.pageType,
+            planVersion: result.plan_version || 0,
+          });
         } else {
           emit({
             kind: "ai-fresh",
@@ -132,6 +147,6 @@ function replyToExtension(requestId: string, payload: Record<string, unknown>) {
       requestId,
       payload,
     },
-    window.location.origin
+    window.location.origin,
   );
 }

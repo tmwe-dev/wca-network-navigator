@@ -20,9 +20,7 @@ export interface CreateAgentInput {
   readonly avatar_emoji?: string;
 }
 
-export async function createAgent(
-  input: CreateAgentInput,
-): Promise<Result<Agent, AppError>> {
+export async function createAgent(input: CreateAgentInput): Promise<Result<Agent, AppError>> {
   try {
     const row = await dalCreateAgent(input);
     return mapAgentRow(row);
@@ -39,9 +37,18 @@ export async function updateAgent(
     await dalUpdateAgent(agentId, updates);
     const row = await getAgentById(agentId);
     if (!row) {
-      return err(ioError("NOT_FOUND", `Agent ${agentId} non trovato`, {
-        table: "agents", agentId, operation: "update",
-      }, "updateAgent"));
+      return err(
+        ioError(
+          "NOT_FOUND",
+          `Agent ${agentId} non trovato`,
+          {
+            table: "agents",
+            agentId,
+            operation: "update",
+          },
+          "updateAgent",
+        ),
+      );
     }
     return mapAgentRow(row);
   } catch (caught: unknown) {
@@ -49,9 +56,7 @@ export async function updateAgent(
   }
 }
 
-export async function deleteAgent(
-  agentId: string,
-): Promise<Result<void, AppError>> {
+export async function deleteAgent(agentId: string): Promise<Result<void, AppError>> {
   try {
     await dalDeleteAgent(agentId);
     return ok(undefined);

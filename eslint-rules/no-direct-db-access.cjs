@@ -35,18 +35,15 @@ module.exports = {
   meta: {
     type: "problem",
     docs: {
-      description:
-        "Vieta l'accesso diretto alle tabelle del database fuori dal data layer.",
+      description: "Vieta l'accesso diretto alle tabelle del database fuori dal data layer.",
     },
     schema: [],
     messages: {
-      from:
-        "[dal] Accesso diretto alla tabella '{{ table }}': passa dal data layer (src/data/ o src/v2/io/supabase/). Sessione, edge functions e storage restano consentiti.",
+      from: "[dal] Accesso diretto alla tabella '{{ table }}': passa dal data layer (src/data/ o src/v2/io/supabase/). Sessione, edge functions e storage restano consentiti.",
     },
   },
   create(context) {
-    const filename =
-      typeof context.getFilename === "function" ? context.getFilename() : context.filename;
+    const filename = typeof context.getFilename === "function" ? context.getFilename() : context.filename;
     if (isAllowed(filename)) return {};
 
     // Nomi locali legati al client del database importato in questo file.
@@ -55,10 +52,7 @@ module.exports = {
     return {
       ImportDeclaration(node) {
         const source = String(node.source.value || "");
-        if (
-          source === "@/integrations/supabase/client" ||
-          source.endsWith("/integrations/supabase/client")
-        ) {
+        if (source === "@/integrations/supabase/client" || source.endsWith("/integrations/supabase/client")) {
           for (const spec of node.specifiers) {
             if (spec.local && spec.local.name) clientLocals.add(spec.local.name);
           }
@@ -72,8 +66,7 @@ module.exports = {
         if (obj.type !== "Identifier" || !clientLocals.has(obj.name)) return;
 
         const arg = node.arguments[0];
-        const table =
-          arg && arg.type === "Literal" && typeof arg.value === "string" ? arg.value : "?";
+        const table = arg && arg.type === "Literal" && typeof arg.value === "string" ? arg.value : "?";
         context.report({ node, messageId: "from", data: { table } });
       },
     };

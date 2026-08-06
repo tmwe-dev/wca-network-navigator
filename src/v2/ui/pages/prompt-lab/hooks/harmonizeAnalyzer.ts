@@ -45,8 +45,14 @@ export interface AnalyzerContext {
 const ProposalSchema = z.object({
   action_type: z.enum(["UPDATE", "INSERT", "MOVE", "DELETE"]),
   target_table: z.enum([
-    "kb_entries", "agents", "agent_personas", "operative_prompts",
-    "email_prompts", "email_address_rules", "commercial_playbooks", "app_settings",
+    "kb_entries",
+    "agents",
+    "agent_personas",
+    "operative_prompts",
+    "email_prompts",
+    "email_address_rules",
+    "commercial_playbooks",
+    "app_settings",
   ]),
   target_id: z.string().nullable().optional(),
   target_field: z.string().nullable().optional(),
@@ -68,11 +74,13 @@ const ProposalSchema = z.object({
   tests_required: z.array(z.string()).nullable().default([]),
   resolution_layer: z.enum(["text", "kb_governance", "contract", "code_policy"]).default("text"),
   missing_contracts: z
-    .array(z.object({
-      contract_name: z.string(),
-      field: z.string().optional(),
-      why_needed: z.string(),
-    }))
+    .array(
+      z.object({
+        contract_name: z.string(),
+        field: z.string().optional(),
+        why_needed: z.string(),
+      }),
+    )
     .nullable()
     .optional(),
   apply_recommended: z.boolean().optional(),
@@ -105,11 +113,12 @@ function buildUserPrompt(
   chunk: GapCandidate[],
   ctx: AnalyzerContext,
 ): string {
-  const gapsText = chunk.map((g, i) => {
-    const matchedInfo = g.matched
-      ? `MATCH ESISTENTE (id=${g.matched.id ?? "n/d"}, tabella=${g.matched.table}, titolo="${g.matched.title}")\nCONTENUTO ATTUALE: ${g.matched.content.slice(0, 600)}`
-      : "MATCH ESISTENTE: nessuno (candidato a INSERT)";
-    return `--- GAP #${i + 1} ---
+  const gapsText = chunk
+    .map((g, i) => {
+      const matchedInfo = g.matched
+        ? `MATCH ESISTENTE (id=${g.matched.id ?? "n/d"}, tabella=${g.matched.table}, titolo="${g.matched.title}")\nCONTENUTO ATTUALE: ${g.matched.content.slice(0, 600)}`
+        : "MATCH ESISTENTE: nessuno (candidato a INSERT)";
+      return `--- GAP #${i + 1} ---
 BUCKET: ${g.bucket}
 RAGIONE: ${g.reason}
 
@@ -125,7 +134,8 @@ ${g.desired.content.slice(0, 1200)}
 
 ${matchedInfo}
 --- FINE GAP #${i + 1} ---`;
-  }).join("\n\n");
+    })
+    .join("\n\n");
 
   return `=== CONTESTO RUN ===
 goal: ${ctx.goal || "(non specificato — applica gerarchia di verità standard)"}
@@ -217,8 +227,14 @@ export function repairTruncatedJson(s: string): string {
   let escape = false;
   for (let i = 0; i < out.length; i++) {
     const ch = out[i];
-    if (escape) { escape = false; continue; }
-    if (ch === "\\") { escape = true; continue; }
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
     if (ch === '"') inString = !inString;
   }
   if (inString) out += '"';
@@ -228,9 +244,18 @@ export function repairTruncatedJson(s: string): string {
   inString = false;
   escape = false;
   for (const ch of out) {
-    if (escape) { escape = false; continue; }
-    if (ch === "\\") { escape = true; continue; }
-    if (ch === '"') { inString = !inString; continue; }
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
     if (inString) continue;
     if (ch === "{") openObj++;
     else if (ch === "}") openObj--;
@@ -286,9 +311,7 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
   }
 
   // Validazione INDIVIDUALE per proposta (resilienza all-or-nothing Zod).
-  const rawObj = (parsedRaw && typeof parsedRaw === "object")
-    ? (parsedRaw as Record<string, unknown>)
-    : {};
+  const rawObj = parsedRaw && typeof parsedRaw === "object" ? (parsedRaw as Record<string, unknown>) : {};
   const rawProposals = Array.isArray(rawObj.proposals) ? rawObj.proposals : [];
   const validProposals: z.infer<typeof ProposalSchema>[] = [];
   let skipped = 0;
@@ -300,14 +323,17 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
       skipped++;
       log.warn(`[harmonizeAnalyzer] proposal #${i} skipped`, {
         firstIssue: r.error.issues[0],
-        proposalKeys: typeof rawProposals[i] === "object" && rawProposals[i] != null
-          ? Object.keys(rawProposals[i] as object)
-          : typeof rawProposals[i],
+        proposalKeys:
+          typeof rawProposals[i] === "object" && rawProposals[i] != null
+            ? Object.keys(rawProposals[i] as object)
+            : typeof rawProposals[i],
       });
     }
   }
   if (skipped > 0) {
-    log.warn(`[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate per validazione, ${validProposals.length} valide recuperate`);
+    log.warn(
+      `[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate per validazione, ${validProposals.length} valide recuperate`,
+    );
   }
 
   return validProposals.map((p, idx): HarmonizeProposal => {
@@ -360,25 +386,27 @@ function buildReadOnlyProposals(
   candidates: GapCandidate[],
 ): HarmonizeProposal[] {
   const layer: HarmonizeResolutionLayer = bucket === "needs_contract" ? "contract" : "code_policy";
-  return candidates.map((g): HarmonizeProposal => ({
-    id: uid(),
-    action: "INSERT",
-    target: { table: "kb_entries" }, // placeholder, NON verrà eseguita
-    before: null,
-    after: null,
-    payload: { read_only: true, bucket },
-    evidence: { source: "library", excerpt: g.desired.content.slice(0, 300) },
-    dependencies: [],
-    impact: "high",
-    severity: "high",
-    impact_score: 8,
-    test_urgency: "manual_smoke",
-    tests_required: [],
-    resolution_layer: layer,
-    reasoning: `${g.reason} Richiede intervento sviluppatore (${layer}). NON eseguibile dall'Harmonizer.`,
-    block_label: `[follow-up sviluppatore] ${g.desired.title}`,
-    status: "pending",
-  }));
+  return candidates.map(
+    (g): HarmonizeProposal => ({
+      id: uid(),
+      action: "INSERT",
+      target: { table: "kb_entries" }, // placeholder, NON verrà eseguita
+      before: null,
+      after: null,
+      payload: { read_only: true, bucket },
+      evidence: { source: "library", excerpt: g.desired.content.slice(0, 300) },
+      dependencies: [],
+      impact: "high",
+      severity: "high",
+      impact_score: 8,
+      test_urgency: "manual_smoke",
+      tests_required: [],
+      resolution_layer: layer,
+      reasoning: `${g.reason} Richiede intervento sviluppatore (${layer}). NON eseguibile dall'Harmonizer.`,
+      block_label: `[follow-up sviluppatore] ${g.desired.title}`,
+      status: "pending",
+    }),
+  );
 }
 
 /** Pipeline analyzer completa. Callback per persistenza incrementale. */
@@ -396,8 +424,12 @@ export async function runHarmonizeAnalyzer(
     mode: "first_run",
   };
 
-  const realSummary = `Tabelle: ${Object.entries(collector.realSummary.by_table).map(([k, v]) => `${k}=${v}`).join(", ")}. Totale: ${collector.realSummary.total}`;
-  const desiredSummary = `Tabelle: ${Object.entries(collector.desiredSummary.by_table).map(([k, v]) => `${k}=${v}`).join(", ")}. Totale: ${collector.desiredSummary.total}`;
+  const realSummary = `Tabelle: ${Object.entries(collector.realSummary.by_table)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(", ")}. Totale: ${collector.realSummary.total}`;
+  const desiredSummary = `Tabelle: ${Object.entries(collector.desiredSummary.by_table)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(", ")}. Totale: ${collector.desiredSummary.total}`;
 
   const actionable = [...collector.gaps.text_only, ...collector.gaps.needs_kb_governance];
   const chunks: GapCandidate[][] = [];
@@ -432,14 +464,18 @@ export async function runHarmonizeAnalyzer(
 
   // Bucket read-only
   for (const p of buildReadOnlyProposals("needs_contract", collector.gaps.needs_contract)) {
-    all.push(p); await onProposal(p);
+    all.push(p);
+    await onProposal(p);
   }
-  done++; onProgress?.(done, total);
+  done++;
+  onProgress?.(done, total);
 
   for (const p of buildReadOnlyProposals("needs_code_policy", collector.gaps.needs_code_policy)) {
-    all.push(p); await onProposal(p);
+    all.push(p);
+    await onProposal(p);
   }
-  done++; onProgress?.(done, total);
+  done++;
+  onProgress?.(done, total);
 
   return all;
 }

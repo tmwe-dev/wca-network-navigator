@@ -8,7 +8,7 @@ import { describe, it, expect } from "vitest";
 // Replicate the validation schema inline (since Zod runs in browser)
 function validatePartnerData(data: any): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
-  
+
   if (!data.company_name || typeof data.company_name !== "string" || data.company_name.length < 2) {
     errors.push("company_name: required, min 2 chars");
   }
@@ -35,7 +35,7 @@ function validatePartnerData(data: any): { valid: boolean; errors: string[] } {
   if (data.wca_id && (typeof data.wca_id !== "number" || data.wca_id <= 0)) {
     errors.push("wca_id: must be positive integer");
   }
-  
+
   // Contacts validation
   if (data.contacts && Array.isArray(data.contacts)) {
     for (let i = 0; i < data.contacts.length; i++) {
@@ -51,7 +51,7 @@ function validatePartnerData(data: any): { valid: boolean; errors: string[] } {
       }
     }
   }
-  
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -65,9 +65,7 @@ describe("Partner Data Schema Validation (OWASP)", () => {
       phone: "+39 02 1234567",
       website: "https://www.acme.com",
       wca_id: 12345,
-      contacts: [
-        { name: "John Doe", title: "Manager", email: "john@acme.com" },
-      ],
+      contacts: [{ name: "John Doe", title: "Manager", email: "john@acme.com" }],
     });
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
@@ -76,19 +74,23 @@ describe("Partner Data Schema Validation (OWASP)", () => {
   it("rejects missing company name", () => {
     const result = validatePartnerData({ company_name: "", country_code: "IT" });
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes("company_name"))).toBe(true);
+    expect(result.errors.some((e) => e.includes("company_name"))).toBe(true);
   });
 
   it("rejects invalid country code", () => {
     const result = validatePartnerData({ company_name: "Test", country_code: "italy" });
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes("country_code"))).toBe(true);
+    expect(result.errors.some((e) => e.includes("country_code"))).toBe(true);
   });
 
   it("rejects wcaworld.com as website", () => {
-    const result = validatePartnerData({ company_name: "Test", country_code: "IT", website: "https://www.wcaworld.com" });
+    const result = validatePartnerData({
+      company_name: "Test",
+      country_code: "IT",
+      website: "https://www.wcaworld.com",
+    });
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes("wcaworld.com"))).toBe(true);
+    expect(result.errors.some((e) => e.includes("wcaworld.com"))).toBe(true);
   });
 
   it("rejects garbage contact names", () => {
@@ -98,7 +100,7 @@ describe("Partner Data Schema Validation (OWASP)", () => {
       contacts: [{ name: "Members only", title: "Login to view" }],
     });
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes("garbage text"))).toBe(true);
+    expect(result.errors.some((e) => e.includes("garbage text"))).toBe(true);
   });
 
   it("rejects invalid email format", () => {

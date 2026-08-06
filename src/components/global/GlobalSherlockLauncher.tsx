@@ -53,7 +53,10 @@ export function GlobalSherlockLauncher(): React.ReactElement | null {
       setAutoLevel(level);
       setOpen(true);
     } catch (err) {
-      log.warn("getPartner failed for sherlock-launch", { partnerId, err: err instanceof Error ? err.message : String(err) });
+      log.warn("getPartner failed for sherlock-launch", {
+        partnerId,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }, []);
 
@@ -105,10 +108,15 @@ export function GlobalSherlockLauncher(): React.ReactElement | null {
   // Quando una run termina, se c'è una coda, lancia la successiva.
   const handleComplete = React.useCallback(() => {
     const q = queueRef.current;
-    if (!q || q.ids.length === 0) { queueRef.current = null; return; }
+    if (!q || q.ids.length === 0) {
+      queueRef.current = null;
+      return;
+    }
     const next = q.ids.shift()!;
     // Piccolo delay per lasciare al dialog il tempo di chiudersi/aprirsi pulito.
-    setTimeout(() => { void loadAndOpen(next, q.level); }, 400);
+    setTimeout(() => {
+      void loadAndOpen(next, q.level);
+    }, 400);
   }, [loadAndOpen]);
 
   return (

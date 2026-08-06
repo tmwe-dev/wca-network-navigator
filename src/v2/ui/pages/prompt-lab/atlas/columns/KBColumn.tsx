@@ -20,31 +20,33 @@ export function KBColumn({ agent }: { agent: AgentRegistryEntry }) {
               <span className="text-muted-foreground text-[11px] italic">nessuna</span>
             )}
             {agent.kbCategories.map((c) => (
-              <Badge key={c} variant="secondary" className="text-[10px]">{c}</Badge>
+              <Badge key={c} variant="secondary" className="text-[10px]">
+                {c}
+              </Badge>
             ))}
           </div>
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-wider">
-            Procedure critiche iniettate
-          </p>
+          <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Procedure critiche iniettate</p>
           <ul className="mt-1 space-y-0.5">
             {agent.criticalProcedures.length === 0 && (
               <li className="text-muted-foreground text-[11px] italic">nessuna</li>
             )}
             {agent.criticalProcedures.map((p, i) => (
-              <li key={i} className="text-[11px] leading-snug">· {p}</li>
+              <li key={i} className="text-[11px] leading-snug">
+                · {p}
+              </li>
             ))}
           </ul>
         </div>
         {agent.requiredVars.length > 0 && (
           <div>
-            <p className="text-muted-foreground text-[10px] uppercase tracking-wider">
-              Variabili richieste
-            </p>
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Variabili richieste</p>
             <div className="mt-1 flex flex-wrap gap-1">
               {agent.requiredVars.map((v) => (
-                <code key={v} className="bg-muted rounded px-1 py-0.5 text-[10px]">{v}</code>
+                <code key={v} className="bg-muted rounded px-1 py-0.5 text-[10px]">
+                  {v}
+                </code>
               ))}
             </div>
           </div>

@@ -66,11 +66,13 @@ export async function withCircuitBreaker<T>(
     if (elapsed >= config.cooldownMs) {
       transition(state, "half-open", name);
     } else {
-      return err(infraError(
-        "CIRCUIT_OPEN",
-        `Circuit "${name}" is open. Retry in ${Math.ceil((config.cooldownMs - elapsed) / 1000)}s.`,
-        { circuitName: name },
-      ));
+      return err(
+        infraError(
+          "CIRCUIT_OPEN",
+          `Circuit "${name}" is open. Retry in ${Math.ceil((config.cooldownMs - elapsed) / 1000)}s.`,
+          { circuitName: name },
+        ),
+      );
     }
   }
 
@@ -114,11 +116,7 @@ export function resetAllCircuits(): void {
 
 // ── Internal ─────────────────────────────────────────────────────────
 
-function transition(
-  state: CircuitBreakerState,
-  newState: CircuitState,
-  name: string,
-): void {
+function transition(state: CircuitBreakerState, newState: CircuitState, name: string): void {
   const oldState = state.state;
   state.state = newState;
   if (newState === "closed") state.failureCount = 0;

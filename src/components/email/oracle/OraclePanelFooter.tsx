@@ -1,9 +1,7 @@
 import { Loader2, Sparkles, Wand2, BookOpen, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
-import OracleContextPanel, {
-  type OracleContextSummary,
-} from "../OracleContextPanel";
+import OracleContextPanel, { type OracleContextSummary } from "../OracleContextPanel";
 
 interface FooterProps {
   generating: boolean;
@@ -39,17 +37,8 @@ export function OraclePanelFooter({
         <ExternalLink className="w-2.5 h-2.5" />
       </button>
 
-      <Button
-        size="sm"
-        className="w-full h-10 text-xs gap-1.5"
-        onClick={onGenerate}
-        disabled={generating || improving}
-      >
-        {generating ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : (
-          <Sparkles className="w-3.5 h-3.5" />
-        )}
+      <Button size="sm" className="w-full h-10 text-xs gap-1.5" onClick={onGenerate} disabled={generating || improving}>
+        {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
         {generating ? "Generazione..." : "Genera"}
       </Button>
 
@@ -60,20 +49,11 @@ export function OraclePanelFooter({
         onClick={onImprove}
         disabled={improving || generating || !hasBody}
       >
-        {improving ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : (
-          <Wand2 className="w-3.5 h-3.5 text-warning" />
-        )}
+        {improving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-warning" />}
         {improving ? "Miglioramento..." : "Migliora"}
       </Button>
 
-      {showContext && (
-        <OracleContextPanel
-          summary={contextSummary}
-          hasRecipient={recipientCount > 0}
-        />
-      )}
+      {showContext && <OracleContextPanel summary={contextSummary} hasRecipient={recipientCount > 0} />}
     </div>
   );
 }

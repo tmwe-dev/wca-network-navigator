@@ -5,10 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { assemblePrompt } from "../_shared/prompts/assembler.ts";
 
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-);
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -44,50 +41,92 @@ serve(async (req) => {
       pendingReviewsRes,
       strategyRes,
     ] = await Promise.all([
-      supabase.from("download_jobs").select("id, status, country_name, contacts_found_count, error_message").gte("created_at", h24ago).order("created_at", { ascending: false }).limit(20),
+      supabase
+        .from("download_jobs")
+        .select("id, status, country_name, contacts_found_count, error_message")
+        .gte("created_at", h24ago)
+        .order("created_at", { ascending: false })
+        .limit(20),
       supabase.from("partners").select("*", { count: "exact", head: true }).is("email", null),
-      supabase.from("partners").select("*", { count: "exact", head: true }).or("profile_description.is.null,profile_description.eq."),
-      supabase.from("activities").select("id, title, due_date, status, priority").lte("due_date", tomorrow).not("status", "in", '("completed","cancelled")').order("due_date").limit(20),
-      supabase.from("agent_tasks").select("id, agent_id, status, description, completed_at").gte("created_at", h24ago).order("created_at", { ascending: false }).limit(50),
+      supabase
+        .from("partners")
+        .select("*", { count: "exact", head: true })
+        .or("profile_description.is.null,profile_description.eq."),
+      supabase
+        .from("activities")
+        .select("id, title, due_date, status, priority")
+        .lte("due_date", tomorrow)
+        .not("status", "in", '("completed","cancelled")')
+        .order("due_date")
+        .limit(20),
+      supabase
+        .from("agent_tasks")
+        .select("id, agent_id, status, description, completed_at")
+        .gte("created_at", h24ago)
+        .order("created_at", { ascending: false })
+        .limit(50),
       supabase.from("agents").select("id, name, avatar_emoji, is_active").eq("is_active", true),
       supabase.from("email_campaign_queue").select("*", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("email_campaign_queue").select("*", { count: "exact", head: true }).eq("status", "sent").gte("sent_at", h24ago),
-      supabase.from("partners").select("*", { count: "exact", head: true }).in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
-      supabase.from("imported_contacts").select("*", { count: "exact", head: true }).in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
+      supabase
+        .from("email_campaign_queue")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "sent")
+        .gte("sent_at", h24ago),
+      supabase
+        .from("partners")
+        .select("*", { count: "exact", head: true })
+        .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
+      supabase
+        .from("imported_contacts")
+        .select("*", { count: "exact", head: true })
+        .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"]),
       supabase.from("partners").select("*", { count: "exact", head: true }).eq("lead_status", "new"),
       supabase.from("imported_contacts").select("*", { count: "exact", head: true }).eq("lead_status", "new"),
       supabase.from("partners").select("*", { count: "exact", head: true }),
       supabase.from("imported_contacts").select("*", { count: "exact", head: true }),
-      supabase.from("agent_tasks").select("*", { count: "exact", head: true }).gte("scheduled_at", today).lt("scheduled_at", tomorrow).in("status", ["pending", "running"]),
-      supabase.from("channel_messages").select("*", { count: "exact", head: true }).is("read_at", null).eq("direction", "inbound"),
-      supabase.from("agent_tasks").select("*", { count: "exact", head: true }).eq("task_type", "supervisor_review").eq("status", "pending"),
+      supabase
+        .from("agent_tasks")
+        .select("*", { count: "exact", head: true })
+        .gte("scheduled_at", today)
+        .lt("scheduled_at", tomorrow)
+        .in("status", ["pending", "running"]),
+      supabase
+        .from("channel_messages")
+        .select("*", { count: "exact", head: true })
+        .is("read_at", null)
+        .eq("direction", "inbound"),
+      supabase
+        .from("agent_tasks")
+        .select("*", { count: "exact", head: true })
+        .eq("task_type", "supervisor_review")
+        .eq("status", "pending"),
       supabase.from("app_settings").select("value").eq("key", "operative_strategy").maybeSingle(),
     ]);
 
     const recentJobs = recentJobsRes.data ?? [];
-    const activeJobs = recentJobs.filter(j => ["running", "pending"].includes(j.status));
-    const completedJobs = recentJobs.filter(j => j.status === "completed");
-    const failedJobs = recentJobs.filter(j => j.status === "failed");
+    const activeJobs = recentJobs.filter((j) => ["running", "pending"].includes(j.status));
+    const completedJobs = recentJobs.filter((j) => j.status === "completed");
+    const failedJobs = recentJobs.filter((j) => j.status === "failed");
 
     const noEmailCount = noEmailRes.count ?? 0;
     const noProfileCount = noProfileRes.count ?? 0;
 
     const dueActivities = dueActivitiesRes.data ?? [];
-    const overdue = dueActivities.filter(a => a.due_date && a.due_date < today);
-    const dueToday = dueActivities.filter(a => a.due_date === today);
+    const overdue = dueActivities.filter((a) => a.due_date && a.due_date < today);
+    const dueToday = dueActivities.filter((a) => a.due_date === today);
 
     const agentTasks = agentTasksRes.data ?? [];
     const agents = agentsRes.data ?? [];
 
-    const agentStatus = agents.map(agent => {
-      const tasks = agentTasks.filter(t => t.agent_id === agent.id);
+    const agentStatus = agents.map((agent) => {
+      const tasks = agentTasks.filter((t) => t.agent_id === agent.id);
       return {
         id: agent.id,
         name: agent.name,
         emoji: agent.avatar_emoji,
-        activeTasks: tasks.filter(t => ["pending", "running"].includes(t.status)).length,
-        completedToday: tasks.filter(t => t.status === "completed").length,
-        lastTask: tasks.find(t => t.status === "completed")?.description || null,
+        activeTasks: tasks.filter((t) => ["pending", "running"].includes(t.status)).length,
+        completedToday: tasks.filter((t) => t.status === "completed").length,
+        lastTask: tasks.find((t) => t.status === "completed")?.description || null,
       };
     });
 
@@ -105,7 +144,9 @@ serve(async (req) => {
       try {
         const s = JSON.parse(strategyRes.data.value);
         strategyHint = `Regole operative: max ${s.dailyContactLimit} contatti/giorno, follow-up a +${s.followUpDays}gg, escalation a +${s.escalationDays}gg, max ${s.messageMaxLines} righe per messaggio, tono: ${s.toneOfVoice?.slice(0, 80)}`;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     const stats = { totalContacts, inHolding, notContacted, scheduledToday };
@@ -116,12 +157,16 @@ serve(async (req) => {
         completed24h: completedJobs.length,
         failed24h: failedJobs.length,
         totalContactsFound: completedJobs.reduce((s, j) => s + (j.contacts_found_count || 0), 0),
-        failedCountries: failedJobs.map(j => j.country_name).join(", "),
+        failedCountries: failedJobs.map((j) => j.country_name).join(", "),
       },
       partners: { total: totalContacts, withoutEmail: noEmailCount, withoutProfile: noProfileCount },
       holdingPattern: { inHolding, notContacted, unreadMessages },
-      activities: { overdue: overdue.length, dueToday: dueToday.length, topOverdue: overdue.slice(0, 3).map(a => a.title) },
-      agents: agentStatus.filter(a => a.activeTasks > 0 || a.completedToday > 0),
+      activities: {
+        overdue: overdue.length,
+        dueToday: dueToday.length,
+        topOverdue: overdue.slice(0, 3).map((a) => a.title),
+      },
+      agents: agentStatus.filter((a) => a.activeTasks > 0 || a.completedToday > 0),
       email: { pending: pendingEmails, sent24h: sentEmails },
       supervisorReviews: pendingReviews,
       scheduledToday,
@@ -131,7 +176,7 @@ serve(async (req) => {
     const systemPrompt = await assemblePrompt({
       agentId: "daily-briefing",
       variables: {
-        available_tools: agents.map(a => a.name).join(", "),
+        available_tools: agents.map((a) => a.name).join(", "),
       },
       kbCategories: ["procedures", "doctrine"],
     });
@@ -156,34 +201,48 @@ serve(async (req) => {
       content = r.content || "{}";
     } catch (err) {
       console.error("daily-briefing LLM error:", err instanceof AiGatewayError ? err.kind : err);
-      return new Response(JSON.stringify({
-        completed: `• **${completedJobs.length}** download completati\n• **${sentEmails}** email inviate`,
-        todo: `• **${dueToday.length}** attività in scadenza oggi\n• **${notContacted}** contatti da contattare\n• **${scheduledToday}** task programmati`,
-        suspended: `• **${overdue.length}** attività scadute\n• **${pendingReviews}** revisioni in attesa\n• **${unreadMessages}** messaggi non letti`,
-        actions: [],
-        agentStatus,
-        stats,
-      }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          completed: `• **${completedJobs.length}** download completati\n• **${sentEmails}** email inviate`,
+          todo: `• **${dueToday.length}** attività in scadenza oggi\n• **${notContacted}** contatti da contattare\n• **${scheduledToday}** task programmati`,
+          suspended: `• **${overdue.length}** attività scadute\n• **${pendingReviews}** revisioni in attesa\n• **${unreadMessages}** messaggi non letti`,
+          actions: [],
+          agentStatus,
+          stats,
+        }),
+        { headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
     }
 
-    let parsed: { completed?: string; todo?: string; suspended?: string; summary?: string; actions: Array<Record<string, unknown>> };
+    let parsed: {
+      completed?: string;
+      todo?: string;
+      suspended?: string;
+      summary?: string;
+      actions: Array<Record<string, unknown>>;
+    };
     try {
-      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const cleaned = content
+        .replace(/```json\n?/g, "")
+        .replace(/```\n?/g, "")
+        .trim();
       parsed = JSON.parse(cleaned);
     } catch {
       parsed = { completed: content, todo: "", suspended: "", actions: [] };
     }
 
-    return new Response(JSON.stringify({
-      completed: parsed.completed || "",
-      todo: parsed.todo || "",
-      suspended: parsed.suspended || "",
-      summary: parsed.summary || "",
-      actions: parsed.actions || [],
-      agentStatus,
-      stats,
-    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
-
+    return new Response(
+      JSON.stringify({
+        completed: parsed.completed || "",
+        todo: parsed.todo || "",
+        suspended: parsed.suspended || "",
+        summary: parsed.summary || "",
+        actions: parsed.actions || [],
+        agentStatus,
+        stats,
+      }),
+      { headers: { ...dynCors, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     console.error("daily-briefing error:", e);
     return new Response(JSON.stringify({ error: e.message }), {

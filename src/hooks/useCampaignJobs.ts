@@ -3,7 +3,6 @@ import { queryKeys } from "@/lib/queryKeys";
 import { findCampaignJobsByBatch, updateCampaignJobById, deleteCampaignJobsByIds } from "@/data/campaignJobs";
 import { findAllEmailTemplates } from "@/data/emailTemplates";
 
-
 export interface CampaignJob {
   id: string;
   partner_id: string;

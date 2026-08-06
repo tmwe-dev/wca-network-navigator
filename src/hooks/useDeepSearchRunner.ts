@@ -47,10 +47,30 @@ export function useDeepSearch(): DeepSearchState {
 
 const STEP_TIMEOUT_MS = 60_000;
 
-interface PartnerFilterRow { id: string; profile_description?: string | null; raw_profile_html?: string | null; raw_profile_markdown?: string | null; enrichment_data?: Record<string, unknown> | null }
-interface PartnerInfoRow { id: string; company_name?: string; country_code?: string; logo_url?: string }
-interface ContactInfoRow { id: string; company_name?: string | null; name?: string | null; country?: string | null }
-interface DeepSearchAlreadyDoneRow { id: string; deep_search_at?: string | null; enrichment_data?: Record<string, unknown> | null }
+interface PartnerFilterRow {
+  id: string;
+  profile_description?: string | null;
+  raw_profile_html?: string | null;
+  raw_profile_markdown?: string | null;
+  enrichment_data?: Record<string, unknown> | null;
+}
+interface PartnerInfoRow {
+  id: string;
+  company_name?: string;
+  country_code?: string;
+  logo_url?: string;
+}
+interface ContactInfoRow {
+  id: string;
+  company_name?: string | null;
+  name?: string | null;
+  country?: string | null;
+}
+interface DeepSearchAlreadyDoneRow {
+  id: string;
+  deep_search_at?: string | null;
+  enrichment_data?: Record<string, unknown> | null;
+}
 
 function toPartnerFilterRow(r: Record<string, unknown>): PartnerFilterRow {
   return {
@@ -87,11 +107,23 @@ function toContactInfoRow(r: Record<string, unknown>): ContactInfoRow {
     country: (r.country as string | null | undefined) ?? null,
   };
 }
-interface LocalSearchResult { success: boolean; error?: string; companyName?: string; socialLinksFound?: number; logoFound?: boolean; contactProfilesFound?: number; companyProfileFound?: boolean; rating?: number; rateLimited?: boolean }
+interface LocalSearchResult {
+  success: boolean;
+  error?: string;
+  companyName?: string;
+  socialLinksFound?: number;
+  logoFound?: boolean;
+  contactProfilesFound?: number;
+  companyProfileFound?: boolean;
+  rating?: number;
+  rateLimited?: boolean;
+}
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   let timer: ReturnType<typeof setTimeout>;
-  const timeout = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), ms); });
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
   try {
     return await Promise.race([promise, timeout]);
   } finally {
@@ -108,200 +140,219 @@ export function useDeepSearchRunner(): DeepSearchState {
   const queryClient = useQueryClient();
   const localSearch = useBulkDeepSearchLocal();
 
-  const start = useCallback(async (ids: string[], force = false, mode: DeepSearchMode = "partner") => {
-    if (running || ids.length === 0) return;
+  const start = useCallback(
+    async (ids: string[], force = false, mode: DeepSearchMode = "partner") => {
+      if (running || ids.length === 0) return;
 
-    if (!localSearch.isAvailable) {
-      toast.warning(
-        "Deep Search batch (legacy) richiede Partner Connect. Per indagini singole usa Sherlock (Scout / Detective / Sherlock) da Email Forge → tab Deep Search.",
-        { id: "deep-search-global", duration: 9000 }
-      );
-      return;
-    }
-
-    // Pre-check: for partners, detect missing profiles
-    let noProfileIds: string[] = [];
-    if (mode === "partner") {
-      const allPartnerData = (await getPartnersByIds(ids, "id, profile_description, raw_profile_html, raw_profile_markdown, enrichment_data")).map(toPartnerFilterRow);
-
-      noProfileIds = allPartnerData
-        .filter((p) => !p.profile_description && !p.raw_profile_html && !p.raw_profile_markdown)
-        .map((p) => p.id);
-
-      if (noProfileIds.length > 0 && noProfileIds.length === ids.length) {
+      if (!localSearch.isAvailable) {
         toast.warning(
-          `Tutti i ${ids.length} partner sono senza profilo sincronizzato. Esegui prima la sincronizzazione del paese dalla pagina Network.`,
-          { id: "deep-search-global", duration: 8000 }
+          "Deep Search batch (legacy) richiede Partner Connect. Per indagini singole usa Sherlock (Scout / Detective / Sherlock) da Email Forge → tab Deep Search.",
+          { id: "deep-search-global", duration: 9000 },
         );
         return;
       }
 
-      if (noProfileIds.length > 0) {
-        const withProfile = ids.length - noProfileIds.length;
-        toast.warning(
-          `${noProfileIds.length} partner senza profilo sincronizzato (saltati). Deep Search su ${withProfile} con profilo.`,
-          { id: "deep-search-global", duration: 6000 }
-        );
+      // Pre-check: for partners, detect missing profiles
+      let noProfileIds: string[] = [];
+      if (mode === "partner") {
+        const allPartnerData = (
+          await getPartnersByIds(
+            ids,
+            "id, profile_description, raw_profile_html, raw_profile_markdown, enrichment_data",
+          )
+        ).map(toPartnerFilterRow);
+
+        noProfileIds = allPartnerData
+          .filter((p) => !p.profile_description && !p.raw_profile_html && !p.raw_profile_markdown)
+          .map((p) => p.id);
+
+        if (noProfileIds.length > 0 && noProfileIds.length === ids.length) {
+          toast.warning(
+            `Tutti i ${ids.length} partner sono senza profilo sincronizzato. Esegui prima la sincronizzazione del paese dalla pagina Network.`,
+            { id: "deep-search-global", duration: 8000 },
+          );
+          return;
+        }
+
+        if (noProfileIds.length > 0) {
+          const withProfile = ids.length - noProfileIds.length;
+          toast.warning(
+            `${noProfileIds.length} partner senza profilo sincronizzato (saltati). Deep Search su ${withProfile} con profilo.`,
+            { id: "deep-search-global", duration: 6000 },
+          );
+        }
       }
-    }
 
-    // Smart filter: check which already have deep_search_at
-    let toProcess = mode === "partner"
-      ? ids.filter(id => !noProfileIds.includes(id))
-      : [...ids];
+      // Smart filter: check which already have deep_search_at
+      let toProcess = mode === "partner" ? ids.filter((id) => !noProfileIds.includes(id)) : [...ids];
 
-    if (!force) {
-      let alreadyDone: DeepSearchAlreadyDoneRow[] = [];
-      if (mode === "contact") {
-        const allContacts = (await getContactsByIds(toProcess, "id, deep_search_at")).map(toDeepSearchAlreadyDoneRow);
-        alreadyDone = allContacts.filter((c) => c.deep_search_at);
-      } else {
-        const partnerData = (await getPartnersByIds(toProcess, "id, enrichment_data")).map(toDeepSearchAlreadyDoneRow);
-        alreadyDone = partnerData.filter((p) => p.enrichment_data?.deep_search_at);
-      }
-
-      const doneSet = new Set(alreadyDone.map((p) => p.id));
-      const beforeCount = toProcess.length;
-      toProcess = toProcess.filter(id => !doneSet.has(id));
-      const skipped = beforeCount - toProcess.length;
-
-      if (toProcess.length === 0) {
-        const noProfileMsg = noProfileIds.length > 0 ? ` (${noProfileIds.length} senza profilo)` : "";
-        toast.info(`Tutti i record hanno già la Deep Search${noProfileMsg}`, { id: "deep-search-global" });
-        return;
-      }
-      if (skipped > 0) {
-        toast.info(`${skipped} già arricchiti, ${toProcess.length} da processare`, { id: "deep-search-global" });
-      }
-    }
-
-    setRunning(true);
-    setResults([]);
-    setCanvasOpen(true);
-    abortRef.current = false;
-    let done = 0;
-    let processed = 0;
-
-    toast.info("🔌 Partner Connect attivo — Deep Search client-side (zero costi API)", { id: "deep-search-global", duration: 4000 });
-
-    try {
-      for (const id of toProcess) {
-        if (abortRef.current) break;
-        done++;
-
-        // Get record info
-        let cached: PartnerInfoRow | ContactInfoRow | null = null;
-        if (mode === "partner") {
-          const allCached = queryClient.getQueriesData<PartnerInfoRow[]>({ queryKey: queryKeys.partners.all });
-          for (const [, data] of allCached) {
-            if (Array.isArray(data)) {
-              const flat = (data as PartnerInfoRow[]).flat();
-              cached = flat.find((p) => p.id === id) || null;
-              if (cached) break;
-            }
-          }
-          if (!cached) {
-            const partnerResults = (await getPartnersByIds([id], "id, company_name, country_code, logo_url")).map(toPartnerInfoRow);
-            cached = partnerResults[0] || null;
-          }
+      if (!force) {
+        let alreadyDone: DeepSearchAlreadyDoneRow[] = [];
+        if (mode === "contact") {
+          const allContacts = (await getContactsByIds(toProcess, "id, deep_search_at")).map(toDeepSearchAlreadyDoneRow);
+          alreadyDone = allContacts.filter((c) => c.deep_search_at);
         } else {
-          const contactResults = (await getContactsByIds([id], "id, company_name, name, country")).map(toContactInfoRow);
-          const data = contactResults[0] || null;
-          cached = data ? { id: data.id, company_name: data.name || data.company_name || undefined, country_code: data.country || undefined } as PartnerInfoRow : null;
+          const partnerData = (await getPartnersByIds(toProcess, "id, enrichment_data")).map(
+            toDeepSearchAlreadyDoneRow,
+          );
+          alreadyDone = partnerData.filter((p) => p.enrichment_data?.deep_search_at);
         }
 
-        if (abortRef.current) break;
+        const doneSet = new Set(alreadyDone.map((p) => p.id));
+        const beforeCount = toProcess.length;
+        toProcess = toProcess.filter((id) => !doneSet.has(id));
+        const skipped = beforeCount - toProcess.length;
 
-        setCurrent({
-          partnerId: id,
-          companyName: (cached as PartnerInfoRow | null)?.company_name || `Record ${done}`,
-          countryCode: (cached as PartnerInfoRow | null)?.country_code,
-          logoUrl: (cached as PartnerInfoRow | null)?.logo_url,
-          index: done,
-          total: toProcess.length,
-        });
+        if (toProcess.length === 0) {
+          const noProfileMsg = noProfileIds.length > 0 ? ` (${noProfileIds.length} senza profilo)` : "";
+          toast.info(`Tutti i record hanno già la Deep Search${noProfileMsg}`, { id: "deep-search-global" });
+          return;
+        }
+        if (skipped > 0) {
+          toast.info(`${skipped} già arricchiti, ${toProcess.length} da processare`, { id: "deep-search-global" });
+        }
+      }
 
-        toast.loading(`Deep Search ${done}/${toProcess.length} 🔥...`, { id: "deep-search-global" });
+      setRunning(true);
+      setResults([]);
+      setCanvasOpen(true);
+      abortRef.current = false;
+      let done = 0;
+      let processed = 0;
 
-        let data: LocalSearchResult | null = null;
-        let error: string | null = null;
+      toast.info("🔌 Partner Connect attivo — Deep Search client-side (zero costi API)", {
+        id: "deep-search-global",
+        duration: 4000,
+      });
 
-        try {
-          const searchPromise = mode === "contact"
-            ? localSearch.searchContact(id)
-            : localSearch.searchPartner(id);
-          
-          const rawResult = await withTimeout(searchPromise, STEP_TIMEOUT_MS);
-          if (rawResult == null) {
-            error = `Timeout after ${STEP_TIMEOUT_MS / 1000}s`;
+      try {
+        for (const id of toProcess) {
+          if (abortRef.current) break;
+          done++;
+
+          // Get record info
+          let cached: PartnerInfoRow | ContactInfoRow | null = null;
+          if (mode === "partner") {
+            const allCached = queryClient.getQueriesData<PartnerInfoRow[]>({ queryKey: queryKeys.partners.all });
+            for (const [, data] of allCached) {
+              if (Array.isArray(data)) {
+                const flat = (data as PartnerInfoRow[]).flat();
+                cached = flat.find((p) => p.id === id) || null;
+                if (cached) break;
+              }
+            }
+            if (!cached) {
+              const partnerResults = (await getPartnersByIds([id], "id, company_name, country_code, logo_url")).map(
+                toPartnerInfoRow,
+              );
+              cached = partnerResults[0] || null;
+            }
           } else {
-            data = rawResult as LocalSearchResult;
-            if (!data.success) error = data.error || "Search failed";
+            const contactResults = (await getContactsByIds([id], "id, company_name, name, country")).map(
+              toContactInfoRow,
+            );
+            const data = contactResults[0] || null;
+            cached = data
+              ? ({
+                  id: data.id,
+                  company_name: data.name || data.company_name || undefined,
+                  country_code: data.country || undefined,
+                } as PartnerInfoRow)
+              : null;
           }
-        } catch (e: unknown) {
-          error = e instanceof Error ? e.message : "Partner Connect error";
-        }
 
-        if (abortRef.current) {
+          if (abortRef.current) break;
+
+          setCurrent({
+            partnerId: id,
+            companyName: (cached as PartnerInfoRow | null)?.company_name || `Record ${done}`,
+            countryCode: (cached as PartnerInfoRow | null)?.country_code,
+            logoUrl: (cached as PartnerInfoRow | null)?.logo_url,
+            index: done,
+            total: toProcess.length,
+          });
+
+          toast.loading(`Deep Search ${done}/${toProcess.length} 🔥...`, { id: "deep-search-global" });
+
+          let data: LocalSearchResult | null = null;
+          let error: string | null = null;
+
+          try {
+            const searchPromise = mode === "contact" ? localSearch.searchContact(id) : localSearch.searchPartner(id);
+
+            const rawResult = await withTimeout(searchPromise, STEP_TIMEOUT_MS);
+            if (rawResult == null) {
+              error = `Timeout after ${STEP_TIMEOUT_MS / 1000}s`;
+            } else {
+              data = rawResult as LocalSearchResult;
+              if (!data.success) error = data.error || "Search failed";
+            }
+          } catch (e: unknown) {
+            error = e instanceof Error ? e.message : "Partner Connect error";
+          }
+
+          if (abortRef.current) {
+            processed = done;
+            break;
+          }
+
           processed = done;
-          break;
+
+          const result: DeepSearchResult = {
+            partnerId: id,
+            companyName: data?.companyName || (cached as PartnerInfoRow | null)?.company_name || `Record ${done}`,
+            countryCode: (cached as PartnerInfoRow | null)?.country_code,
+            logoUrl: (cached as PartnerInfoRow | null)?.logo_url,
+            socialLinksFound: data?.socialLinksFound || 0,
+            logoFound: data?.logoFound || false,
+            contactProfilesFound: data?.contactProfilesFound || 0,
+            companyProfileFound: data?.companyProfileFound || false,
+            rating: data?.rating || 0,
+            rateLimited: data?.rateLimited,
+            error: error || undefined,
+          };
+          setResults((prev) => [...prev, result]);
+          if (error) log.error("deep search failed", { id, message: error });
+
+          // Live update caches
+          if (mode === "contact") {
+            queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupItems() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+          } else {
+            queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+            // Settings → Arricchimento + OraclePanel snapshot real-time
+            invalidateEnrichmentCaches(queryClient, id);
+          }
         }
 
-        processed = done;
+        const label = mode === "contact" ? "contatti" : "partner";
+        const msg = abortRef.current
+          ? `Deep Search interrotta: ${processed} ${label} processati`
+          : `Deep Search completata: ${processed} ${label}`;
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        abortRef.current
+          ? toast.info(msg, { id: "deep-search-global" })
+          : toast.success(msg, { id: "deep-search-global" });
 
-        const result: DeepSearchResult = {
-          partnerId: id,
-          companyName: data?.companyName || (cached as PartnerInfoRow | null)?.company_name || `Record ${done}`,
-          countryCode: (cached as PartnerInfoRow | null)?.country_code,
-          logoUrl: (cached as PartnerInfoRow | null)?.logo_url,
-          socialLinksFound: data?.socialLinksFound || 0,
-          logoFound: data?.logoFound || false,
-          contactProfilesFound: data?.contactProfilesFound || 0,
-          companyProfileFound: data?.companyProfileFound || false,
-          rating: data?.rating || 0,
-          rateLimited: data?.rateLimited,
-          error: error || undefined,
-        };
-        setResults(prev => [...prev, result]);
-        if (error) log.error("deep search failed", { id, message: error });
-
-        // Live update caches
         if (mode === "contact") {
           queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
-          queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupItems() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+          queryClient.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
         } else {
           queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
-          // Settings → Arricchimento + OraclePanel snapshot real-time
-          invalidateEnrichmentCaches(queryClient, id);
+          queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
+          // Refresh complessivo dopo batch deep search
+          invalidateEnrichmentCaches(queryClient, null);
         }
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : "Errore Deep Search", { id: "deep-search-global" });
+      } finally {
+        setRunning(false);
+        setCurrent(null);
       }
-
-      const label = mode === "contact" ? "contatti" : "partner";
-      const msg = abortRef.current
-        ? `Deep Search interrotta: ${processed} ${label} processati`
-        : `Deep Search completata: ${processed} ${label}`;
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      abortRef.current
-        ? toast.info(msg, { id: "deep-search-global" })
-        : toast.success(msg, { id: "deep-search-global" });
-
-      if (mode === "contact") {
-        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
-        queryClient.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
-      } else {
-        queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
-        queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
-        // Refresh complessivo dopo batch deep search
-        invalidateEnrichmentCaches(queryClient, null);
-      }
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Errore Deep Search", { id: "deep-search-global" });
-    } finally {
-      setRunning(false);
-      setCurrent(null);
-    }
-  }, [running, queryClient, localSearch]);
+    },
+    [running, queryClient, localSearch],
+  );
 
   const stop = useCallback(() => {
     abortRef.current = true;

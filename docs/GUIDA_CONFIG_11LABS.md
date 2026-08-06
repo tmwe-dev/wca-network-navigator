@@ -1,4 +1,5 @@
 # Guida Configurazione ElevenLabs
+
 ## TMWE / FINDAIR — Aurora, Bruce, Robin
 
 > Guida operativa passo-passo per configurare i 3 agenti in ElevenLabs.
@@ -11,47 +12,47 @@
 
 ### 1.1 Secrets (Dashboard → Agent → Secrets)
 
-| Nome | Valore |
-|---|---|
+| Nome                  | Valore                                                                          |
+| --------------------- | ------------------------------------------------------------------------------- |
 | `VOICE_BRIDGE_SECRET` | stringa random ≥32 char, **uguale** a quella in Supabase Edge Functions Secrets |
 
 ### 1.2 Tool custom `wca_brain_consult` (Dashboard → Agent → Tools → Add)
 
-| Campo | Valore |
-|---|---|
-| **Name** | `wca_brain_consult` |
-| **Description** | `Consulta il cervello WCA per decidere cosa dire. Chiamalo ad ogni turno utile. Restituisce {say, end_call, transfer_to_human}. Devi pronunciare esattamente say.` |
-| **Method** | `POST` |
-| **URL** | `https://<PROJECT_REF>.functions.supabase.co/voice-brain-bridge` |
-| **Headers** | `Content-Type: application/json`<br>`x-bridge-secret: {{secrets.VOICE_BRIDGE_SECRET}}` |
-| **Timeout** | 15 s |
-| **Body parameters** | `intent` (string, required)<br>`utterance` (string)<br>`transcript` (array)<br>`external_call_id` (string, required, `{{conversation_id}}`)<br>`agent_id` (string, `{{agent_id}}`)<br>`caller_context` (object)<br>`direction` (string) |
-| **Response — speak field** | `say` |
-| **Response — end call field** | `end_call` |
-| **Response — transfer field** | `transfer_to_human` |
+| Campo                         | Valore                                                                                                                                                                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**                      | `wca_brain_consult`                                                                                                                                                                                                                     |
+| **Description**               | `Consulta il cervello WCA per decidere cosa dire. Chiamalo ad ogni turno utile. Restituisce {say, end_call, transfer_to_human}. Devi pronunciare esattamente say.`                                                                      |
+| **Method**                    | `POST`                                                                                                                                                                                                                                  |
+| **URL**                       | `https://<PROJECT_REF>.functions.supabase.co/voice-brain-bridge`                                                                                                                                                                        |
+| **Headers**                   | `Content-Type: application/json`<br>`x-bridge-secret: {{secrets.VOICE_BRIDGE_SECRET}}`                                                                                                                                                  |
+| **Timeout**                   | 15 s                                                                                                                                                                                                                                    |
+| **Body parameters**           | `intent` (string, required)<br>`utterance` (string)<br>`transcript` (array)<br>`external_call_id` (string, required, `{{conversation_id}}`)<br>`agent_id` (string, `{{agent_id}}`)<br>`caller_context` (object)<br>`direction` (string) |
+| **Response — speak field**    | `say`                                                                                                                                                                                                                                   |
+| **Response — end call field** | `end_call`                                                                                                                                                                                                                              |
+| **Response — transfer field** | `transfer_to_human`                                                                                                                                                                                                                     |
 
 ### 1.3 LLM (comune a tutti)
 
-| Campo | Valore |
-|---|---|
-| **Model** | `gpt-4o-mini` (o `claude-haiku-3.5`) |
-| **Temperature** | `0.2` |
-| **Max tokens** | `120` |
-| **Prompt caching** | ON |
+| Campo              | Valore                               |
+| ------------------ | ------------------------------------ |
+| **Model**          | `gpt-4o-mini` (o `claude-haiku-3.5`) |
+| **Temperature**    | `0.2`                                |
+| **Max tokens**     | `120`                                |
+| **Prompt caching** | ON                                   |
 
 > L'LLM dell'agente 11Labs non deve pensare al dominio: deve solo orchestrare turni e chiamare il tool. Il cervello vive nel Brain WCA.
 
 ### 1.4 ASR / Turn-taking / Interruptions
 
-| Campo | Valore |
-|---|---|
-| **ASR model** | Multilingual v2 |
-| **Language detection** | Auto (fallback IT) |
-| **Turn-taking mode** | Server VAD |
-| **User silence timeout** | 4 s (prima di `intent: silence`) |
-| **Interruption sensitivity** | High |
-| **End-of-utterance silence** | 700 ms |
-| **Max response duration** | 6 s (hard cap TTS) |
+| Campo                        | Valore                           |
+| ---------------------------- | -------------------------------- |
+| **ASR model**                | Multilingual v2                  |
+| **Language detection**       | Auto (fallback IT)               |
+| **Turn-taking mode**         | Server VAD                       |
+| **User silence timeout**     | 4 s (prima di `intent: silence`) |
+| **Interruption sensitivity** | High                             |
+| **End-of-utterance silence** | 700 ms                           |
+| **Max response duration**    | 6 s (hard cap TTS)               |
 
 ---
 
@@ -61,20 +62,20 @@
 
 ### 2.1 Settings
 
-| Parametro | Valore |
-|---|---|
-| **System prompt** | incolla `PROMPT_11LABS_AURORA.md` (~280 parole, solo il blocco testo) |
-| **Voice** | `Bella ITA` o `Giulia` (italiana femminile calma) — idealmente clonata da voce interna |
-| **Stability** | 0.50 |
-| **Similarity boost** | 0.78 |
-| **Style exaggeration** | 0.10 |
-| **Speaker boost** | ON |
-| **Optimize streaming latency** | 3 |
-| **Output format** | `pcm_16000` (widget web) |
-| **First message** | `Ciao, sono Aurora. Cosa ti serve?` |
-| **Max conversation duration** | 20 min |
-| **Knowledge base 11Labs** | VUOTA (il Brain gestisce tutto) |
-| **Tools abilitati** | `wca_brain_consult` + `end_call` + `transfer_to_human` |
+| Parametro                      | Valore                                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| **System prompt**              | incolla `PROMPT_11LABS_AURORA.md` (~280 parole, solo il blocco testo)                  |
+| **Voice**                      | `Bella ITA` o `Giulia` (italiana femminile calma) — idealmente clonata da voce interna |
+| **Stability**                  | 0.50                                                                                   |
+| **Similarity boost**           | 0.78                                                                                   |
+| **Style exaggeration**         | 0.10                                                                                   |
+| **Speaker boost**              | ON                                                                                     |
+| **Optimize streaming latency** | 3                                                                                      |
+| **Output format**              | `pcm_16000` (widget web)                                                               |
+| **First message**              | `Ciao, sono Aurora. Cosa ti serve?`                                                    |
+| **Max conversation duration**  | 20 min                                                                                 |
+| **Knowledge base 11Labs**      | VUOTA (il Brain gestisce tutto)                                                        |
+| **Tools abilitati**            | `wca_brain_consult` + `end_call` + `transfer_to_human`                                 |
 
 ### 2.2 Dynamic variables (iniettate dal widget web al boot)
 
@@ -89,7 +90,8 @@
 ```html
 <elevenlabs-convai
   agent-id="AURORA_AGENT_ID"
-  dynamic-variables='{"operator_user_id":"{{user.id}}","current_page":"{{location.pathname}}","current_partner_id":"{{ctx.partnerId}}","current_workflow_state_id":"{{ctx.workflowStateId}}","org":"TMWE"}'>
+  dynamic-variables='{"operator_user_id":"{{user.id}}","current_page":"{{location.pathname}}","current_partner_id":"{{ctx.partnerId}}","current_workflow_state_id":"{{ctx.workflowStateId}}","org":"TMWE"}'
+>
 </elevenlabs-convai>
 <script src="https://elevenlabs.io/convai-widget/index.js" async></script>
 ```
@@ -102,19 +104,19 @@
 
 ### 3.1 Settings
 
-| Parametro | Valore |
-|---|---|
-| **System prompt** | incolla `PROMPT_11LABS_BRUCE.md` (~290 parole) |
-| **Voice** | `Antoni` adattato o voce maschile italiana profonda autorevole (idealmente custom clonata) |
-| **Stability** | 0.55 |
-| **Similarity boost** | 0.80 |
-| **Style exaggeration** | 0.10 |
-| **Speaker boost** | ON |
-| **Optimize streaming latency** | 3 |
-| **Output format** | `ulaw_8000` (Twilio phone) / `mp3_44100` (web) |
-| **First message** | `Buongiorno, sono Bruce di TMWE. Come posso aiutarla?` |
-| **Max conversation duration** | 20 min |
-| **Knowledge base 11Labs** | VUOTA |
+| Parametro                      | Valore                                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| **System prompt**              | incolla `PROMPT_11LABS_BRUCE.md` (~290 parole)                                             |
+| **Voice**                      | `Antoni` adattato o voce maschile italiana profonda autorevole (idealmente custom clonata) |
+| **Stability**                  | 0.55                                                                                       |
+| **Similarity boost**           | 0.80                                                                                       |
+| **Style exaggeration**         | 0.10                                                                                       |
+| **Speaker boost**              | ON                                                                                         |
+| **Optimize streaming latency** | 3                                                                                          |
+| **Output format**              | `ulaw_8000` (Twilio phone) / `mp3_44100` (web)                                             |
+| **First message**              | `Buongiorno, sono Bruce di TMWE. Come posso aiutarla?`                                     |
+| **Max conversation duration**  | 20 min                                                                                     |
+| **Knowledge base 11Labs**      | VUOTA                                                                                      |
 
 ### 3.2 Dynamic variables (da webhook Twilio inbound)
 
@@ -138,19 +140,19 @@
 
 ### 4.1 Settings
 
-| Parametro | Valore |
-|---|---|
-| **System prompt** | incolla `PROMPT_11LABS_ROBIN.md` (~300 parole) |
-| **Voice** | maschile italiana profonda decisa, calda ma autorevole. Consiglio: clona una voce umana del team commerciale (signature brand) |
-| **Stability** | 0.55 |
-| **Similarity boost** | 0.80 |
-| **Style exaggeration** | 0.15 |
-| **Speaker boost** | ON |
-| **Optimize streaming latency** | 3 |
-| **Output format** | `ulaw_8000` (Twilio outbound) |
-| **First message** | **VUOTO** (la prima frase esce dal Brain con `intent: opening`) |
-| **Max conversation duration** | 15 min (hard cap outbound) |
-| **Knowledge base 11Labs** | VUOTA |
+| Parametro                      | Valore                                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| **System prompt**              | incolla `PROMPT_11LABS_ROBIN.md` (~300 parole)                                                                                 |
+| **Voice**                      | maschile italiana profonda decisa, calda ma autorevole. Consiglio: clona una voce umana del team commerciale (signature brand) |
+| **Stability**                  | 0.55                                                                                                                           |
+| **Similarity boost**           | 0.80                                                                                                                           |
+| **Style exaggeration**         | 0.15                                                                                                                           |
+| **Speaker boost**              | ON                                                                                                                             |
+| **Optimize streaming latency** | 3                                                                                                                              |
+| **Output format**              | `ulaw_8000` (Twilio outbound)                                                                                                  |
+| **First message**              | **VUOTO** (la prima frase esce dal Brain con `intent: opening`)                                                                |
+| **Max conversation duration**  | 15 min (hard cap outbound)                                                                                                     |
+| **Knowledge base 11Labs**      | VUOTA                                                                                                                          |
 
 ### 4.2 Dynamic variables (da sistema campagne TMWE)
 
@@ -223,6 +225,7 @@ FindAir,Find Air
 ### 6.1 Override security (Dashboard → Agent → Security → Overrides)
 
 DISABILITA gli override client-side di:
+
 - System prompt
 - First message
 - Voice ID
@@ -234,6 +237,7 @@ Consenti override SOLO di `dynamic_variables`. Impedisce tampering lato browser/
 ### 6.2 Allowed domains
 
 Nel tab **Security → Allowed domains**, metti SOLO i domini della piattaforma:
+
 - `*.tmwe.it`
 - `*.findair.com`
 - `app.wca-nav.com`
@@ -258,6 +262,7 @@ Per Bruce e Robin (telefono reale), aggiungi in KB `voice_rules` una categoria `
 ### 6.6 End call hard cap
 
 Oltre il limite max conversation duration, 11Labs chiude la chiamata a prescindere. Limiti consigliati:
+
 - Aurora: 20 min
 - Bruce: 20 min
 - Robin: 15 min
@@ -270,13 +275,13 @@ Evita "cammellate" costose e loop.
 
 In **Supabase → Edge Functions → voice-brain-bridge → Secrets**:
 
-| Secret | Descrizione |
-|---|---|
-| `VOICE_BRIDGE_SECRET` | Stessa stringa di 11Labs (≥32 char random) |
-| `VOICE_BRIDGE_USER_ID` | UUID del service user dell'organizzazione (owner `voice_call_sessions` e memorie) |
-| `LOVABLE_API_KEY` | già presente per il Brain |
-| `SUPABASE_URL` | già presente |
-| `SUPABASE_SERVICE_ROLE_KEY` | già presente |
+| Secret                      | Descrizione                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| `VOICE_BRIDGE_SECRET`       | Stessa stringa di 11Labs (≥32 char random)                                        |
+| `VOICE_BRIDGE_USER_ID`      | UUID del service user dell'organizzazione (owner `voice_call_sessions` e memorie) |
+| `LOVABLE_API_KEY`           | già presente per il Brain                                                         |
+| `SUPABASE_URL`              | già presente                                                                      |
+| `SUPABASE_SERVICE_ROLE_KEY` | già presente                                                                      |
 
 ---
 
@@ -335,11 +340,11 @@ Atteso: HTTP 200 con JSON `{"say":"...","end_call":false,...}`
 
 ## 10. Costi stimati ElevenLabs (riferimento)
 
-| Agente | Minuti/mese previsti | Piano consigliato |
-|---|---|---|
-| Aurora (interno) | 200-500 min | Creator o Pro |
-| Bruce (inbound) | 1000-3000 min | Pro o Scale |
-| Robin (outbound) | 2000-5000 min | Scale o Enterprise |
+| Agente           | Minuti/mese previsti | Piano consigliato  |
+| ---------------- | -------------------- | ------------------ |
+| Aurora (interno) | 200-500 min          | Creator o Pro      |
+| Bruce (inbound)  | 1000-3000 min        | Pro o Scale        |
+| Robin (outbound) | 2000-5000 min        | Scale o Enterprise |
 
 > Il costo dell'LLM dell'agente 11Labs è incluso; il costo del Brain (aiChat su Lovable Gateway) è separato e a carico di Supabase/Lovable. Monitora entrambi da dashboard.
 
@@ -359,5 +364,5 @@ Monitora questi KPI settimanalmente (Mira li raccoglierà in automatico quando l
 
 ---
 
-*Documento vivo. Versione 1.0 — Aprile 2026.*
-*Aggiornare quando si aggiungono nuovi agenti o si modificano i parametri in produzione.*
+_Documento vivo. Versione 1.0 — Aprile 2026._
+_Aggiornare quando si aggiungono nuovi agenti o si modificano i parametri in produzione._

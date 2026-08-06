@@ -12,7 +12,12 @@ import { createLogger } from "@/lib/log";
 import type { QueueItem } from "@/components/acquisition/types";
 import type { ScanStats } from "@/hooks/useAcquisitionPipeline";
 import { upsertDirectoryCache } from "@/data/directoryCache";
-import { findPartnerContacts, findPartnerNetworks, findPartnerServices, findPartnerSocialLinks } from "@/data/partnerRelations";
+import {
+  findPartnerContacts,
+  findPartnerNetworks,
+  findPartnerServices,
+  findPartnerSocialLinks,
+} from "@/data/partnerRelations";
 import { asEnrichment } from "@/lib/partnerUtils";
 
 const log = createLogger("scanDirectory");
@@ -23,10 +28,7 @@ export interface ScanResult {
   selectedIds: Set<number>;
 }
 
-export async function scanDirectory(
-  selectedCountries: string[],
-  selectedNetworks: string[],
-): Promise<ScanResult> {
+export async function scanDirectory(selectedCountries: string[], selectedNetworks: string[]): Promise<ScanResult> {
   const allMembers: QueueItem[] = [];
   const existingWcaIds = new Set<number>();
 
@@ -89,13 +91,13 @@ export async function scanDirectory(
             wca_id: m.wca_id,
           }));
           await upsertDirectoryCache({
-              country_code: code,
-              network_name: net,
-              members: toJsonValue(membersJson),
-              total_results: scanResult.members.length,
-              scanned_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
+            country_code: code,
+            network_name: net,
+            members: toJsonValue(membersJson),
+            total_results: scanResult.members.length,
+            scanned_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
 
           scanResult.members.forEach((m) => {
             if (m.wca_id && !allMembers.find((x) => x.wca_id === m.wca_id)) {
@@ -124,10 +126,8 @@ export async function scanDirectory(
 /**
  * Enrich queue items with network data from existing partners.
  */
-export async function enrichQueueWithNetworks(
-  queue: QueueItem[],
-): Promise<Record<number, string[]>> {
-  const wcaIdsInDb = queue.filter(m => m.alreadyDownloaded).map(m => m.wca_id);
+export async function enrichQueueWithNetworks(queue: QueueItem[]): Promise<Record<number, string[]>> {
+  const wcaIdsInDb = queue.filter((m) => m.alreadyDownloaded).map((m) => m.wca_id);
   if (wcaIdsInDb.length === 0) return {};
 
   try {
@@ -135,14 +135,14 @@ export async function enrichQueueWithNetworks(
 
     if (!partnersWithIds || partnersWithIds.length === 0) return {};
 
-    const partnerIds = partnersWithIds.map(p => p.id);
+    const partnerIds = partnersWithIds.map((p) => p.id);
     const networkRows = await findPartnerNetworksByPartnerIds(partnerIds);
 
     if (!networkRows) return {};
 
     const wcaIdToNetworks: Record<number, string[]> = {};
     for (const nr of networkRows) {
-      const p = partnersWithIds.find(pp => pp.id === nr.partner_id);
+      const p = partnersWithIds.find((pp) => pp.id === nr.partner_id);
       if (p?.wca_id) {
         if (!wcaIdToNetworks[p.wca_id]) wcaIdToNetworks[p.wca_id] = [];
         wcaIdToNetworks[p.wca_id].push(nr.network_name);
@@ -170,7 +170,11 @@ export async function loadPartnerPreview(wcaId: number) {
     findPartnerSocialLinks(partner.id),
   ]);
 
-  interface SocialLinkRow { platform?: string; url?: string; [key: string]: unknown }
+  interface SocialLinkRow {
+    platform?: string;
+    url?: string;
+    [key: string]: unknown;
+  }
   const ed = asEnrichment(partner.enrichment_data);
 
   return {
@@ -179,19 +183,33 @@ export async function loadPartnerPreview(wcaId: number) {
     country_code: partner.country_code,
     country_name: partner.country_name,
     logo_url: partner.logo_url || undefined,
-    contacts: (contacts || []).map(c => ({ name: c.name, title: c.title || undefined, email: c.email || undefined, direct_phone: c.direct_phone || undefined, mobile: c.mobile || undefined })),
-    services: (svcs || []).map(s => s.service_category),
-    key_markets: (ed as Record<string, unknown>)?.key_markets as string[] || [],
-    key_routes: ((ed as Record<string, unknown>)?.key_routes as Array<{ from: string; to: string }> | string[] || []).map(r => typeof r === "string" ? { from: r, to: "" } : r),
-    networks: (nets || []).map(n => n.network_name),
+    contacts: (contacts || []).map((c) => ({
+      name: c.name,
+      title: c.title || undefined,
+      email: c.email || undefined,
+      direct_phone: c.direct_phone || undefined,
+      mobile: c.mobile || undefined,
+    })),
+    services: (svcs || []).map((s) => s.service_category),
+    key_markets: ((ed as Record<string, unknown>)?.key_markets as string[]) || [],
+    key_routes: (
+      ((ed as Record<string, unknown>)?.key_routes as Array<{ from: string; to: string }> | string[]) || []
+    ).map((r) => (typeof r === "string" ? { from: r, to: "" } : r)),
+    networks: (nets || []).map((n) => n.network_name),
     rating: partner.rating ? Number(partner.rating) : undefined,
     website: partner.website || undefined,
     profile_description: partner.profile_description || undefined,
-    linkedin_links: ((socialLinks || []) as SocialLinkRow[]).filter((l) => l.platform === "linkedin" && l.url).map((l) => ({ name: "LinkedIn", url: l.url! })),
+    linkedin_links: ((socialLinks || []) as SocialLinkRow[])
+      .filter((l) => l.platform === "linkedin" && l.url)
+      .map((l) => ({ name: "LinkedIn", url: l.url! })),
     warehouse_sqm: (ed as Record<string, unknown>)?.warehouse_sqm as number | undefined,
     employees: (ed as Record<string, unknown>)?.employee_count as number | undefined,
-    founded: (ed as Record<string, unknown>)?.founding_year ? String((ed as Record<string, unknown>).founding_year) : undefined,
-    fleet: (ed as Record<string, unknown>)?.has_own_fleet ? ((ed as Record<string, unknown>).fleet_details as string || "Sì") : undefined,
+    founded: (ed as Record<string, unknown>)?.founding_year
+      ? String((ed as Record<string, unknown>).founding_year)
+      : undefined,
+    fleet: (ed as Record<string, unknown>)?.has_own_fleet
+      ? ((ed as Record<string, unknown>).fleet_details as string) || "Sì"
+      : undefined,
     contactSource: "extension" as const,
   };
 }

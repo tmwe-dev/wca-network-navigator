@@ -9,9 +9,16 @@ import { type Prospect, prospectId } from "../domain/entities";
 export function mapProspectRow(row: unknown): Result<Prospect, AppError> {
   const parsed = ProspectRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `Prospect row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "prospect-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `Prospect row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "prospect-mapper",
+      ),
+    );
   }
   const r = parsed.data;
   return ok({

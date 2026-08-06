@@ -33,53 +33,56 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const state = useFiltersDrawerState(onOpenChange);
   const resizeRef = useRef<HTMLDivElement>(null);
 
-  const defaultWidthClass = state.isEmailComposer || state.isEmailForge
-    ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]"
-    : "w-[90vw] sm:w-[400px] sm:max-w-[420px]";
+  const defaultWidthClass =
+    state.isEmailComposer || state.isEmailForge
+      ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]"
+      : "w-[90vw] sm:w-[400px] sm:max-w-[420px]";
 
   const bannerKey: SidebarContextKey | null = state.isFunnemailInbox
     ? "funnemail-inbox"
     : state.isCockpit
-    ? "cockpit"
-    : state.isWorkspace
-      ? "workspace"
-      : state.isInUscita
-        ? "outgoing"
-        : state.isCircuito
-          ? "circuit"
-          : state.isAttivita
-            ? "attivita"
-            : state.isInreach
-              ? "inreach"
-              : state.isEmail
-                ? "inbox-email"
-                : state.isWhatsApp
-                  ? "inbox-whatsapp"
-                  : state.isLinkedIn
-                    ? "inbox-linkedin"
-                    : state.isNetwork
-                      ? "network"
-                      : state.isCRM
-                        ? state.crmDrawerTab === "biglietti" ? "bca" : "crm-contacts"
-                        : state.isAgenda
-                          ? "agenda"
-                          : state.isCampaigns
-                            ? "campaigns"
-                            : state.isEmailForge
-                              ? "email-forge"
-                              : state.isSorting
-                                ? "sorting"
-                                : state.isCodaAI
-                                  ? "coda-ai"
-                                  : state.isABTest
-                                    ? "ab-test"
-                                    : state.isArena
-                                      ? "arena"
-                                      : state.isEmailIntelligence
-                                        ? "email-intelligence"
-                                        : state.isEmailComposer
-                                          ? "email-composer"
-                                          : null;
+      ? "cockpit"
+      : state.isWorkspace
+        ? "workspace"
+        : state.isInUscita
+          ? "outgoing"
+          : state.isCircuito
+            ? "circuit"
+            : state.isAttivita
+              ? "attivita"
+              : state.isInreach
+                ? "inreach"
+                : state.isEmail
+                  ? "inbox-email"
+                  : state.isWhatsApp
+                    ? "inbox-whatsapp"
+                    : state.isLinkedIn
+                      ? "inbox-linkedin"
+                      : state.isNetwork
+                        ? "network"
+                        : state.isCRM
+                          ? state.crmDrawerTab === "biglietti"
+                            ? "bca"
+                            : "crm-contacts"
+                          : state.isAgenda
+                            ? "agenda"
+                            : state.isCampaigns
+                              ? "campaigns"
+                              : state.isEmailForge
+                                ? "email-forge"
+                                : state.isSorting
+                                  ? "sorting"
+                                  : state.isCodaAI
+                                    ? "coda-ai"
+                                    : state.isABTest
+                                      ? "ab-test"
+                                      : state.isArena
+                                        ? "arena"
+                                        : state.isEmailIntelligence
+                                          ? "email-intelligence"
+                                          : state.isEmailComposer
+                                            ? "email-composer"
+                                            : null;
   const banner = bannerKey ? SIDEBAR_BANNER_REGISTRY[bannerKey] : null;
 
   return (
@@ -87,7 +90,10 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="left"
-          className={cn("p-0 flex flex-col border-r border-primary/10 backdrop-blur-xl", !state.drawerWidth && defaultWidthClass)}
+          className={cn(
+            "p-0 flex flex-col border-r border-primary/10 backdrop-blur-xl",
+            !state.drawerWidth && defaultWidthClass,
+          )}
           style={{
             ...(state.drawerWidth ? { width: state.drawerWidth, maxWidth: "80vw" } : {}),
             background: "linear-gradient(to right, hsl(0 0% 0%) 0%, hsl(0 0% 0%) 20%, hsl(var(--background)) 40%)",
@@ -104,7 +110,9 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
                 <p className="text-[11px] text-muted-foreground">{state.sectionTitle}</p>
               </div>
               {state.activeCount > 0 && (
-                <span className="text-xs bg-primary/15 text-primary px-2.5 py-1 rounded-full font-semibold">{state.activeCount}</span>
+                <span className="text-xs bg-primary/15 text-primary px-2.5 py-1 rounded-full font-semibold">
+                  {state.activeCount}
+                </span>
               )}
             </div>
           </div>
@@ -171,17 +179,35 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             {state.isFunnemailInbox && <FunnemailInboxFiltersSection />}
             {state.isEmailComposer && <EmailComposerWizard onConfirm={() => onOpenChange(false)} />}
 
-            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && !state.isEmailForge && !state.isSorting && !state.isCodaAI && !state.isABTest && !state.isArena && !state.isEmailIntelligence && !state.isFunnemailInbox && (
-              <div className="text-center py-8 text-muted-foreground">
-                <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Nessun filtro per questa sezione</p>
-              </div>
-            )}
+            {!state.isOutreach &&
+              !state.isNetwork &&
+              !state.isCRM &&
+              !state.isAgenda &&
+              !state.isEmailComposer &&
+              !state.isCampaigns &&
+              !state.isInreach &&
+              !state.isEmailForge &&
+              !state.isSorting &&
+              !state.isCodaAI &&
+              !state.isABTest &&
+              !state.isArena &&
+              !state.isEmailIntelligence &&
+              !state.isFunnemailInbox && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Nessun filtro per questa sezione</p>
+                </div>
+              )}
           </div>
 
           {/* Footer */}
           <div className="px-4 py-3 border-t border-border/50 bg-muted/20 flex gap-2">
-            <Button variant="outline" className="flex-1 h-9 gap-2 text-xs" onClick={state.handleResetAll} disabled={state.activeCount === 0}>
+            <Button
+              variant="outline"
+              className="flex-1 h-9 gap-2 text-xs"
+              onClick={state.handleResetAll}
+              disabled={state.activeCount === 0}
+            >
               <RotateCcw className="w-3.5 h-3.5" /> Reset ({state.activeCount})
             </Button>
             <Button className="flex-1 h-9 gap-2 text-xs" onClick={() => onOpenChange(false)}>

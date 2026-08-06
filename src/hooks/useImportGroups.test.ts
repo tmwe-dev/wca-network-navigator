@@ -3,8 +3,22 @@ import { waitFor } from "@testing-library/react";
 import { renderHookWithProviders } from "@/test/hookTestUtils";
 
 const MOCK_LOGS = [
-  { id: "l1", group_name: "Batch A", file_name: "contacts.csv", created_at: "2024-06-01", imported_rows: 100, status: "completed" },
-  { id: "l2", group_name: null, file_name: "leads.xlsx", created_at: "2024-06-02", imported_rows: 50, status: "pending" },
+  {
+    id: "l1",
+    group_name: "Batch A",
+    file_name: "contacts.csv",
+    created_at: "2024-06-01",
+    imported_rows: 100,
+    status: "completed",
+  },
+  {
+    id: "l2",
+    group_name: null,
+    file_name: "leads.xlsx",
+    created_at: "2024-06-02",
+    imported_rows: 50,
+    status: "pending",
+  },
   { id: "l3", group_name: "", file_name: null, created_at: "2024-06-03", imported_rows: 0, status: "error" },
 ];
 

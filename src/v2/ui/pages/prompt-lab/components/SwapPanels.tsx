@@ -87,9 +87,7 @@ export function SwapPanels({ panels, order, onReorder, expandedId = null, classN
             >
               <GripVertical className="h-3.5 w-3.5" />
             </button>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-primary truncate">
-              {p.title}
-            </div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-primary truncate">{p.title}</div>
           </div>
           {p.toolbar && <div className="flex items-center gap-1 flex-shrink-0">{p.toolbar}</div>}
         </header>

@@ -32,7 +32,9 @@ export interface EmailSendLogStats {
   bounced: number;
   rejected: number;
   failureRate: number;
-  recentErrors: Array<Pick<EmailSendLogRow, "id" | "recipient_email" | "subject" | "status" | "error_message" | "sent_at" | "send_method">>;
+  recentErrors: Array<
+    Pick<EmailSendLogRow, "id" | "recipient_email" | "subject" | "status" | "error_message" | "sent_at" | "send_method">
+  >;
 }
 
 /**
@@ -52,7 +54,12 @@ export async function fetchEmailSendLogStats(sinceIso: string, untilIso?: string
   const { data, error } = await query;
   if (error) throw error;
 
-  const rows = (data ?? []) as Array<Pick<EmailSendLogRow, "id" | "message_id" | "recipient_email" | "subject" | "status" | "error_message" | "sent_at" | "send_method">>;
+  const rows = (data ?? []) as Array<
+    Pick<
+      EmailSendLogRow,
+      "id" | "message_id" | "recipient_email" | "subject" | "status" | "error_message" | "sent_at" | "send_method"
+    >
+  >;
 
   // Dedupe by message_id (keep latest = first because ordered DESC).
   const seen = new Set<string>();
@@ -72,9 +79,7 @@ export async function fetchEmailSendLogStats(sinceIso: string, untilIso?: string
   const failures = counters.failed + counters.bounced + counters.rejected;
   const failureRate = total > 0 ? failures / total : 0;
 
-  const recentErrors = dedup
-    .filter((r) => r.status !== "sent")
-    .slice(0, 10);
+  const recentErrors = dedup.filter((r) => r.status !== "sent").slice(0, 10);
 
   return {
     total,

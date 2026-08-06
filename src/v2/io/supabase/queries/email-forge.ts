@@ -69,7 +69,9 @@ export async function fetchForgeBusinessCards(params: {
     .order("company_name", { ascending: true })
     .limit(params.limit);
   if (params.search.length >= 2) {
-    q = q.or(`contact_name.ilike.%${params.search}%,company_name.ilike.%${params.search}%,email.ilike.%${params.search}%`);
+    q = q.or(
+      `contact_name.ilike.%${params.search}%,company_name.ilike.%${params.search}%,email.ilike.%${params.search}%`,
+    );
   }
   return q;
 }
@@ -79,7 +81,9 @@ export type ForgePartnerEnrichmentRow = Pick<
   "id" | "enrichment_data" | "profile_description" | "raw_profile_html" | "raw_profile_markdown" | "ai_parsed_at"
 >;
 
-export async function fetchForgePartnerEnrichment(partnerId: string): Promise<PostgrestSingleResult<ForgePartnerEnrichmentRow>> {
+export async function fetchForgePartnerEnrichment(
+  partnerId: string,
+): Promise<PostgrestSingleResult<ForgePartnerEnrichmentRow>> {
   return supabase
     .from("partners")
     .select("id, enrichment_data, profile_description, raw_profile_html, raw_profile_markdown, ai_parsed_at")
@@ -92,7 +96,9 @@ export type ForgeContactEnrichmentRow = Pick<
   "id" | "enrichment_data" | "deep_search_at"
 >;
 
-export async function fetchForgeContactEnrichment(contactId: string): Promise<PostgrestSingleResult<ForgeContactEnrichmentRow>> {
+export async function fetchForgeContactEnrichment(
+  contactId: string,
+): Promise<PostgrestSingleResult<ForgeContactEnrichmentRow>> {
   return supabase
     .from("imported_contacts")
     .select("id, enrichment_data, deep_search_at")
@@ -106,9 +112,5 @@ export type ForgeBcaEnrichmentRow = Pick<
 >;
 
 export async function fetchForgeBcaEnrichment(bcaId: string): Promise<PostgrestSingleResult<ForgeBcaEnrichmentRow>> {
-  return supabase
-    .from("business_cards")
-    .select("id, raw_data, ocr_confidence")
-    .eq("id", bcaId)
-    .maybeSingle();
+  return supabase.from("business_cards").select("id, raw_data, ocr_confidence").eq("id", bcaId).maybeSingle();
 }

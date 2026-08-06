@@ -7,7 +7,10 @@ import type { Database } from "@/integrations/supabase/types";
 type DocInsert = Database["public"]["Tables"]["workspace_documents"]["Insert"];
 
 export async function findWorkspaceDocs() {
-  const { data, error } = await supabase.from("workspace_documents").select("*").order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("workspace_documents")
+    .select("*")
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }

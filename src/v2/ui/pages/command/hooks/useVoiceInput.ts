@@ -35,9 +35,7 @@ export function useVoiceInput({
   const finalTranscriptRef = useRef<string>("");
 
   const SpeechRecognitionCtor =
-    typeof window !== "undefined"
-      ? (window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null)
-      : null;
+    typeof window !== "undefined" ? (window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null) : null;
 
   const supported = Boolean(SpeechRecognitionCtor);
 

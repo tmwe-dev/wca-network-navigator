@@ -20,7 +20,11 @@ const statusConfig: Record<PlanStepStatus, { icon: React.ReactNode; color: strin
   pending: { icon: <Clock className="w-3.5 h-3.5" />, color: "text-muted-foreground", label: "In attesa" },
   running: { icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />, color: "text-primary", label: "In esecuzione" },
   done: { icon: <Check className="w-3.5 h-3.5" />, color: "text-success", label: "Completato" },
-  "blocked-on-approval": { icon: <ShieldAlert className="w-3.5 h-3.5" />, color: "text-warning", label: "Approvazione richiesta" },
+  "blocked-on-approval": {
+    icon: <ShieldAlert className="w-3.5 h-3.5" />,
+    color: "text-warning",
+    label: "Approvazione richiesta",
+  },
   error: { icon: <AlertCircle className="w-3.5 h-3.5" />, color: "text-destructive", label: "Errore" },
 };
 
@@ -47,18 +51,26 @@ export default function PlanTimeline({ stepStates, visible, onApproveStep, onRej
           <div key={ss.step.stepNumber} className="relative flex gap-3">
             {/* Vertical line */}
             {!isLast && (
-              <div className="absolute left-[13px] top-[28px] w-px h-[calc(100%-12px)]" style={{ background: ss.status === "done" ? "hsl(var(--success) / 0.3)" : "hsl(0 0% 100% / 0.08)" }} />
+              <div
+                className="absolute left-[13px] top-[28px] w-px h-[calc(100%-12px)]"
+                style={{ background: ss.status === "done" ? "hsl(var(--success) / 0.3)" : "hsl(0 0% 100% / 0.08)" }}
+              />
             )}
 
             {/* Status icon */}
             <motion.div
               className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${cfg.color}`}
               style={{
-                background: ss.status === "done" ? "hsl(var(--success) / 0.12)"
-                  : ss.status === "blocked-on-approval" ? "hsl(45 100% 50% / 0.12)"
-                  : ss.status === "error" ? "hsl(var(--destructive) / 0.12)"
-                  : ss.status === "running" ? "hsl(var(--primary) / 0.12)"
-                  : "hsl(0 0% 100% / 0.04)",
+                background:
+                  ss.status === "done"
+                    ? "hsl(var(--success) / 0.12)"
+                    : ss.status === "blocked-on-approval"
+                      ? "hsl(45 100% 50% / 0.12)"
+                      : ss.status === "error"
+                        ? "hsl(var(--destructive) / 0.12)"
+                        : ss.status === "running"
+                          ? "hsl(var(--primary) / 0.12)"
+                          : "hsl(0 0% 100% / 0.04)",
               }}
               animate={ss.status === "running" ? { scale: [1, 1.05, 1] } : {}}
               transition={{ duration: 1.5, repeat: Infinity }}
@@ -79,14 +91,19 @@ export default function PlanTimeline({ stepStates, visible, onApproveStep, onRej
                   <span className="text-[10px] text-muted-foreground font-mono">{ss.step.stepNumber}</span>
                   <span className="text-[12px] font-light text-foreground">{toolLabel}</span>
                   {ss.requiresApproval && ss.status !== "done" && (
-                    <span className="px-1.5 py-0.5 rounded text-[7px] font-mono tracking-wider bg-warning/10 text-warning border border-warning/20">WRITE</span>
+                    <span className="px-1.5 py-0.5 rounded text-[7px] font-mono tracking-wider bg-warning/10 text-warning border border-warning/20">
+                      WRITE
+                    </span>
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground font-light mt-0.5">{ss.step.reasoning}</p>
 
                 {ss.status === "done" && ss.result && (
                   <div className="text-[10px] text-success font-mono mt-1">
-                    ✓ {ss.result.kind === "result" ? ss.result.message?.slice(0, 80) : `${ss.result.meta?.count ?? 0} risultati`}
+                    ✓{" "}
+                    {ss.result.kind === "result"
+                      ? ss.result.message?.slice(0, 80)
+                      : `${ss.result.meta?.count ?? 0} risultati`}
                   </div>
                 )}
 

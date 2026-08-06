@@ -8,7 +8,7 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 vi.mock("@/v2/core/domain/errors", () => ({
-  extractErrorMessage: (e: any) => e instanceof Error ? e.message : String(e),
+  extractErrorMessage: (e: any) => (e instanceof Error ? e.message : String(e)),
 }));
 
 import { useErrorToast } from "./useErrorToast";
@@ -20,22 +20,18 @@ describe("useErrorToast", () => {
     const { result } = renderHookWithProviders(() => useErrorToast());
     result.current.showError("Something failed");
     expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Something failed", variant: "destructive" })
+      expect.objectContaining({ title: "Something failed", variant: "destructive" }),
     );
   });
   it("includes error description from Error object", () => {
     const { result } = renderHookWithProviders(() => useErrorToast());
     result.current.showError("Upload failed", new Error("Network timeout"));
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ description: "Network timeout" })
-    );
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ description: "Network timeout" }));
   });
   it("includes error description from string", () => {
     const { result } = renderHookWithProviders(() => useErrorToast());
     result.current.showError("Error", "Custom message");
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ description: "Custom message" })
-    );
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ description: "Custom message" }));
   });
   it("omits description when no error provided", () => {
     const { result } = renderHookWithProviders(() => useErrorToast());

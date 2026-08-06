@@ -21,7 +21,11 @@ const gridCols = {
 };
 
 export function FormSection({
-  title, description, children, columns = 2, className,
+  title,
+  description,
+  children,
+  columns = 2,
+  className,
 }: FormSectionProps): React.ReactElement {
   return (
     <Card className={cn(className)}>
@@ -30,9 +34,7 @@ export function FormSection({
         {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </CardHeader>
       <CardContent>
-        <div className={cn("grid gap-4", gridCols[columns])}>
-          {children}
-        </div>
+        <div className={cn("grid gap-4", gridCols[columns])}>{children}</div>
       </CardContent>
     </Card>
   );

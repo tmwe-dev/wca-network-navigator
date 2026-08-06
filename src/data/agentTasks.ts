@@ -8,7 +8,10 @@ type AgentTaskInsert = Database["public"]["Tables"]["agent_tasks"]["Insert"];
 type AgentTaskDbRow = Database["public"]["Tables"]["agent_tasks"]["Row"];
 
 export async function countCompletedAgentTasks() {
-  const { count, error } = await supabase.from("agent_tasks").select("id", { count: "planned", head: true }).eq("status", "completed");
+  const { count, error } = await supabase
+    .from("agent_tasks")
+    .select("id", { count: "planned", head: true })
+    .eq("status", "completed");
   if (error) throw error;
   return count ?? 0;
 }
@@ -134,9 +137,6 @@ export async function findPendingAgentTasksFull(limit = 200): Promise<PendingAge
 
 /** Aggiorna lo stato di un agent_task (approvazione/rifiuto in AgentTasksPage). */
 export async function updateAgentTaskStatus(id: string, status: string, startedAt?: string): Promise<void> {
-  const { error } = await supabase
-    .from("agent_tasks")
-    .update({ status, started_at: startedAt })
-    .eq("id", id);
+  const { error } = await supabase.from("agent_tasks").update({ status, started_at: startedAt }).eq("id", id);
   if (error) throw error;
 }

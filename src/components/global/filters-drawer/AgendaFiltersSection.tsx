@@ -1,4 +1,15 @@
-import { Search, Zap, Calendar as CalendarIcon, Mail, MessageCircle, Linkedin, Phone, StickyNote, MessageSquare, ListTodo } from "lucide-react";
+import {
+  Search,
+  Zap,
+  Calendar as CalendarIcon,
+  Mail,
+  MessageCircle,
+  Linkedin,
+  Phone,
+  StickyNote,
+  MessageSquare,
+  ListTodo,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -7,9 +18,18 @@ import { FilterSection, ChipGroup, Chip } from "./shared";
 import { ATTIVITA_PRIORITY } from "./constants";
 import { useState, useMemo } from "react";
 import {
-  format, startOfMonth, endOfMonth, eachDayOfInterval,
-  isSameMonth, isSameDay, addMonths, subMonths,
-  startOfWeek, endOfWeek, isToday, parseISO,
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  addMonths,
+  subMonths,
+  startOfWeek,
+  endOfWeek,
+  isToday,
+  parseISO,
 } from "date-fns";
 import { it } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -44,14 +64,11 @@ function MiniCalendar() {
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const getRemindersCount = (day: Date) =>
-    reminders?.filter((r) => isSameDay(new Date(r.due_date), day)).length || 0;
+  const getRemindersCount = (day: Date) => reminders?.filter((r) => isSameDay(new Date(r.due_date), day)).length || 0;
 
   const toggleDay = (d: Date) => {
     const key = format(d, "yyyy-MM-dd");
-    const next = selectedSet.has(key)
-      ? selectedDays.filter(x => x !== key)
-      : [...selectedDays, key].sort();
+    const next = selectedSet.has(key) ? selectedDays.filter((x) => x !== key) : [...selectedDays, key].sort();
     g.setFilter("agendaDays", next);
   };
   const goToday = () => {
@@ -66,13 +83,25 @@ function MiniCalendar() {
           {format(currentMonth, "MMMM yyyy", { locale: it })}
         </h4>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} aria-label="Mese precedente">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            aria-label="Mese precedente"
+          >
             <ChevronLeft className="w-3 h-3" />
           </Button>
           <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={goToday}>
             Oggi
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} aria-label="Mese successivo">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            aria-label="Mese successivo"
+          >
             <ChevronRight className="w-3 h-3" />
           </Button>
         </div>
@@ -80,20 +109,22 @@ function MiniCalendar() {
 
       <div className="grid grid-cols-7 gap-px mb-1">
         {["Lu", "Ma", "Me", "Gi", "Ve", "Sa", "Do"].map((d) => (
-          <div key={d} className="text-center text-[9px] font-medium text-muted-foreground py-1">{d}</div>
+          <div key={d} className="text-center text-[9px] font-medium text-muted-foreground py-1">
+            {d}
+          </div>
         ))}
       </div>
 
       <div className="grid grid-cols-7 gap-px">
-          {days.map((day) => {
-            const key = format(day, "yyyy-MM-dd");
-            const isSelected = selectedSet.has(key) || (selectedDays.length === 0 && isToday(day));
+        {days.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
+          const isSelected = selectedSet.has(key) || (selectedDays.length === 0 && isToday(day));
           const isCurrent = isSameMonth(day, currentMonth);
           const count = getRemindersCount(day);
           return (
             <button
               key={day.toISOString()}
-                onClick={() => toggleDay(day)}
+              onClick={() => toggleDay(day)}
               className={cn(
                 "relative flex flex-col items-center py-1.5 rounded-md transition-all text-[11px]",
                 !isCurrent && "opacity-30",
@@ -104,7 +135,9 @@ function MiniCalendar() {
             >
               <span className="font-medium">{format(day, "d")}</span>
               {count > 0 && (
-                <div className={cn("w-1 h-1 rounded-full mt-0.5", isSelected ? "bg-primary-foreground" : "bg-primary")} />
+                <div
+                  className={cn("w-1 h-1 rounded-full mt-0.5", isSelected ? "bg-primary-foreground" : "bg-primary")}
+                />
               )}
             </button>
           );
@@ -129,13 +162,22 @@ export function AgendaFiltersSection() {
       </FilterSection>
 
       <FilterSection icon={Search} label="Cerca">
-        <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca attività, evento..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        <Input
+          value={g.filters.search}
+          onChange={(e) => g.setSearch(e.target.value)}
+          placeholder="Cerca attività, evento..."
+          className="h-8 text-xs bg-muted/30 border-border/40"
+        />
       </FilterSection>
 
       <FilterSection icon={MessageSquare} label="Canale">
         <ChipGroup>
-          {CHANNEL_OPTIONS.map(o => (
-            <Chip key={o.value} active={g.filters.agendaChannel === o.value} onClick={() => g.setFilter("agendaChannel", o.value)}>
+          {CHANNEL_OPTIONS.map((o) => (
+            <Chip
+              key={o.value}
+              active={g.filters.agendaChannel === o.value}
+              onClick={() => g.setFilter("agendaChannel", o.value)}
+            >
               {o.label}
             </Chip>
           ))}
@@ -144,8 +186,12 @@ export function AgendaFiltersSection() {
 
       <FilterSection icon={ListTodo} label="Stato risposta">
         <ChipGroup>
-          {RESPONSE_OPTIONS.map(o => (
-            <Chip key={o.value} active={g.filters.agendaResponse === o.value} onClick={() => g.setFilter("agendaResponse", o.value)}>
+          {RESPONSE_OPTIONS.map((o) => (
+            <Chip
+              key={o.value}
+              active={g.filters.agendaResponse === o.value}
+              onClick={() => g.setFilter("agendaResponse", o.value)}
+            >
               {o.label}
             </Chip>
           ))}
@@ -153,7 +199,17 @@ export function AgendaFiltersSection() {
       </FilterSection>
 
       <FilterSection icon={Zap} label="Priorità">
-        <ChipGroup>{ATTIVITA_PRIORITY.map(o => <Chip key={o.value} active={g.filters.agendaPriority === o.value} onClick={() => g.setAgendaPriority(o.value)}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>
+          {ATTIVITA_PRIORITY.map((o) => (
+            <Chip
+              key={o.value}
+              active={g.filters.agendaPriority === o.value}
+              onClick={() => g.setAgendaPriority(o.value)}
+            >
+              {o.label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
     </>
   );

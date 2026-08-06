@@ -15,7 +15,18 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, ChevronRight, Activity, GitBranch, BarChart3, AlertCircle, CheckCircle2, SkipForward, Loader2 } from "lucide-react";
+import {
+  RefreshCw,
+  Search,
+  ChevronRight,
+  Activity,
+  GitBranch,
+  BarChart3,
+  AlertCircle,
+  CheckCircle2,
+  SkipForward,
+  Loader2,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { PageShell } from "@/v2/ui/templates/PageShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,10 +48,14 @@ const STATUS_ICON: Record<PipelineTraceStatus, JSX.Element> = {
 
 function statusVariant(s: PipelineTraceStatus): "default" | "secondary" | "destructive" | "outline" {
   switch (s) {
-    case "success": return "default";
-    case "error": return "destructive";
-    case "skipped": return "secondary";
-    default: return "outline";
+    case "success":
+      return "default";
+    case "error":
+      return "destructive";
+    case "skipped":
+      return "secondary";
+    default:
+      return "outline";
   }
 }
 
@@ -50,7 +65,11 @@ function fmtTime(iso: string) {
 
 function fmtJson(v: unknown): string {
   if (v == null) return "—";
-  try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+  try {
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return String(v);
+  }
 }
 
 export default function PipelineTracesPage() {
@@ -79,12 +98,18 @@ export default function PipelineTracesPage() {
     }
   }, [search, entityType, stepName, status]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   // Caricamento liste filtri
   useEffect(() => {
-    void listDistinctEntityTypes().then(setEntityTypes).catch(() => undefined);
-    void listDistinctStepNames().then(setStepNames).catch(() => undefined);
+    void listDistinctEntityTypes()
+      .then(setEntityTypes)
+      .catch(() => undefined);
+    void listDistinctStepNames()
+      .then(setStepNames)
+      .catch(() => undefined);
   }, []);
 
   // Realtime per la vista Live
@@ -97,7 +122,9 @@ export default function PipelineTracesPage() {
         setRows((prev) => [row, ...prev].slice(0, 200));
       })
       .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, [tab]);
 
   const loadTimeline = async () => {
@@ -115,7 +142,10 @@ export default function PipelineTracesPage() {
   };
 
   const stepStats = useMemo(() => {
-    const map = new Map<string, { total: number; success: number; error: number; skipped: number; durations: number[] }>();
+    const map = new Map<
+      string,
+      { total: number; success: number; error: number; skipped: number; durations: number[] }
+    >();
     for (const r of rows) {
       const cur = map.get(r.step_name) ?? { total: 0, success: 0, error: 0, skipped: 0, durations: [] };
       cur.total++;
@@ -155,41 +185,93 @@ export default function PipelineTracesPage() {
       }
     >
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Step recenti</div><div className="text-2xl font-bold">{summaryStats.total}</div></CardContent></Card>
-        <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Trace univoci</div><div className="text-2xl font-bold">{summaryStats.traces}</div></CardContent></Card>
-        <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Success</div><div className="text-2xl font-bold text-green-600">{summaryStats.success}</div></CardContent></Card>
-        <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Errori</div><div className="text-2xl font-bold text-destructive">{summaryStats.error}</div></CardContent></Card>
-        <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Skip</div><div className="text-2xl font-bold text-muted-foreground">{summaryStats.skipped}</div></CardContent></Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-xs text-muted-foreground">Step recenti</div>
+            <div className="text-2xl font-bold">{summaryStats.total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-xs text-muted-foreground">Trace univoci</div>
+            <div className="text-2xl font-bold">{summaryStats.traces}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-xs text-muted-foreground">Success</div>
+            <div className="text-2xl font-bold text-green-600">{summaryStats.success}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-xs text-muted-foreground">Errori</div>
+            <div className="text-2xl font-bold text-destructive">{summaryStats.error}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-xs text-muted-foreground">Skip</div>
+            <div className="text-2xl font-bold text-muted-foreground">{summaryStats.skipped}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "live" | "trace" | "step")} className="w-full">
         <TabsList>
-          <TabsTrigger value="live"><Activity className="h-4 w-4 mr-1" /> Live</TabsTrigger>
-          <TabsTrigger value="trace"><GitBranch className="h-4 w-4 mr-1" /> Per Trace</TabsTrigger>
-          <TabsTrigger value="step"><BarChart3 className="h-4 w-4 mr-1" /> Per Step</TabsTrigger>
+          <TabsTrigger value="live">
+            <Activity className="h-4 w-4 mr-1" /> Live
+          </TabsTrigger>
+          <TabsTrigger value="trace">
+            <GitBranch className="h-4 w-4 mr-1" /> Per Trace
+          </TabsTrigger>
+          <TabsTrigger value="step">
+            <BarChart3 className="h-4 w-4 mr-1" /> Per Step
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="live" className="space-y-3 mt-4">
           <Card>
-            <CardHeader><CardTitle className="text-sm">Filtri</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-sm">Filtri</CardTitle>
+            </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Input placeholder="Cerca…" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void load()} />
+              <Input
+                placeholder="Cerca…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void load()}
+              />
               <Select value={entityType} onValueChange={setEntityType}>
-                <SelectTrigger><SelectValue placeholder="Tipo entità" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo entità" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tutti i tipi</SelectItem>
-                  {entityTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  {entityTypes.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={stepName} onValueChange={setStepName}>
-                <SelectTrigger><SelectValue placeholder="Step" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Step" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tutti gli step</SelectItem>
-                  {stepNames.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {stepNames.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={status} onValueChange={(v) => setStatus(v as PipelineTraceStatus | "all")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tutti gli stati</SelectItem>
                   <SelectItem value="success">Success</SelectItem>
@@ -198,37 +280,56 @@ export default function PipelineTracesPage() {
                   <SelectItem value="started">Started</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={() => void load()} disabled={loading}>Applica</Button>
+              <Button onClick={() => void load()} disabled={loading}>
+                Applica
+              </Button>
             </CardContent>
           </Card>
 
           {rows.length === 0 && !loading && (
-            <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">
-              Nessun trace ancora. Le edge function inizieranno a popolare questa lista appena emettono step (vedi <code>_shared/pipelineTrace.ts</code>).
-            </CardContent></Card>
+            <Card>
+              <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                Nessun trace ancora. Le edge function inizieranno a popolare questa lista appena emettono step (vedi{" "}
+                <code>_shared/pipelineTrace.ts</code>).
+              </CardContent>
+            </Card>
           )}
           <div className="space-y-1">
             {rows.map((r) => (
-              <Card key={r.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}>
+              <Card
+                key={r.id}
+                className="hover:bg-muted/30 cursor-pointer"
+                onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)}
+              >
                 <CardContent className="py-2 px-3">
                   <div className="flex items-center gap-2 text-xs">
-                    <Badge variant={statusVariant(r.status)} className="gap-1">{STATUS_ICON[r.status]} {r.status}</Badge>
+                    <Badge variant={statusVariant(r.status)} className="gap-1">
+                      {STATUS_ICON[r.status]} {r.status}
+                    </Badge>
                     <Badge variant="outline">{r.entity_type}</Badge>
                     <span className="font-medium">{r.step_name}</span>
-                    {r.entity_label && <span className="text-muted-foreground truncate max-w-[300px]">→ {r.entity_label}</span>}
+                    {r.entity_label && (
+                      <span className="text-muted-foreground truncate max-w-[300px]">→ {r.entity_label}</span>
+                    )}
                     {r.duration_ms != null && <span className="text-muted-foreground ml-auto">{r.duration_ms}ms</span>}
                     <span className="text-muted-foreground">{fmtTime(r.created_at)}</span>
-                    <ChevronRight className={`h-3 w-3 transition-transform ${expandedRow === r.id ? "rotate-90" : ""}`} />
+                    <ChevronRight
+                      className={`h-3 w-3 transition-transform ${expandedRow === r.id ? "rotate-90" : ""}`}
+                    />
                   </div>
                   {expandedRow === r.id && (
                     <div className="mt-3 pt-3 border-t grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                       <div>
                         <div className="font-semibold mb-1">Input</div>
-                        <pre className="bg-muted/50 p-2 rounded text-[11px] overflow-auto max-h-60">{fmtJson(r.input_summary)}</pre>
+                        <pre className="bg-muted/50 p-2 rounded text-[11px] overflow-auto max-h-60">
+                          {fmtJson(r.input_summary)}
+                        </pre>
                       </div>
                       <div>
                         <div className="font-semibold mb-1">Output</div>
-                        <pre className="bg-muted/50 p-2 rounded text-[11px] overflow-auto max-h-60">{fmtJson(r.output_summary)}</pre>
+                        <pre className="bg-muted/50 p-2 rounded text-[11px] overflow-auto max-h-60">
+                          {fmtJson(r.output_summary)}
+                        </pre>
                       </div>
                       {r.error_message && (
                         <div className="md:col-span-2">
@@ -237,7 +338,19 @@ export default function PipelineTracesPage() {
                         </div>
                       )}
                       <div className="md:col-span-2 flex flex-wrap gap-2 text-muted-foreground">
-                        <span>trace: <button className="underline" onClick={(e) => { e.stopPropagation(); setTraceIdInput(r.trace_id); setTab("trace"); }}>{r.trace_id.slice(0, 8)}…</button></span>
+                        <span>
+                          trace:{" "}
+                          <button
+                            className="underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTraceIdInput(r.trace_id);
+                              setTab("trace");
+                            }}
+                          >
+                            {r.trace_id.slice(0, 8)}…
+                          </button>
+                        </span>
                         {r.ai_model && <span>· model: {r.ai_model}</span>}
                         {r.ai_scope && <span>· scope: {r.ai_scope}</span>}
                         {r.entity_id && <span>· entity_id: {r.entity_id}</span>}
@@ -253,42 +366,61 @@ export default function PipelineTracesPage() {
         <TabsContent value="trace" className="space-y-3 mt-4">
           <Card>
             <CardContent className="pt-4 flex gap-2">
-              <Input placeholder="Inserisci trace_id (UUID)…" value={traceIdInput} onChange={(e) => setTraceIdInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void loadTimeline()} />
+              <Input
+                placeholder="Inserisci trace_id (UUID)…"
+                value={traceIdInput}
+                onChange={(e) => setTraceIdInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void loadTimeline()}
+              />
               <Button onClick={() => void loadTimeline()} disabled={loading || !traceIdInput.trim()}>
                 <Search className="h-4 w-4 mr-1" /> Cerca
               </Button>
             </CardContent>
           </Card>
           {timeline.length === 0 ? (
-            <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">
-              Inserisci un trace_id per vedere la timeline cronologica completa di una procedura.
-            </CardContent></Card>
+            <Card>
+              <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                Inserisci un trace_id per vedere la timeline cronologica completa di una procedura.
+              </CardContent>
+            </Card>
           ) : (
             <div className="relative pl-8 space-y-3">
               <div className="absolute left-3 top-0 bottom-0 w-px bg-border" />
               {timeline.map((r) => (
                 <div key={r.id} className="relative">
-                  <div className={`absolute -left-[22px] top-3 h-3 w-3 rounded-full ${r.status === "success" ? "bg-green-500" : r.status === "error" ? "bg-destructive" : r.status === "skipped" ? "bg-muted-foreground" : "bg-primary animate-pulse"}`} />
+                  <div
+                    className={`absolute -left-[22px] top-3 h-3 w-3 rounded-full ${r.status === "success" ? "bg-green-500" : r.status === "error" ? "bg-destructive" : r.status === "skipped" ? "bg-muted-foreground" : "bg-primary animate-pulse"}`}
+                  />
                   <Card>
                     <CardContent className="py-3">
                       <div className="flex items-center gap-2 text-sm">
                         <Badge variant="outline">#{r.step_order}</Badge>
                         <span className="font-semibold">{r.step_name}</span>
-                        <Badge variant={statusVariant(r.status)} className="gap-1">{STATUS_ICON[r.status]} {r.status}</Badge>
-                        {r.duration_ms != null && <span className="text-xs text-muted-foreground">{r.duration_ms}ms</span>}
+                        <Badge variant={statusVariant(r.status)} className="gap-1">
+                          {STATUS_ICON[r.status]} {r.status}
+                        </Badge>
+                        {r.duration_ms != null && (
+                          <span className="text-xs text-muted-foreground">{r.duration_ms}ms</span>
+                        )}
                         <span className="text-xs text-muted-foreground ml-auto">{fmtTime(r.created_at)}</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-xs">
                         <div>
                           <div className="font-semibold mb-1">Input</div>
-                          <pre className="bg-muted/50 p-2 rounded text-[11px] overflow-auto max-h-40">{fmtJson(r.input_summary)}</pre>
+                          <pre className="bg-muted/50 p-2 rounded text-[11px] overflow-auto max-h-40">
+                            {fmtJson(r.input_summary)}
+                          </pre>
                         </div>
                         <div>
                           <div className="font-semibold mb-1">Output</div>
-                          <pre className="bg-muted/50 p-2 rounded text-[11px] overflow-auto max-h-40">{fmtJson(r.output_summary)}</pre>
+                          <pre className="bg-muted/50 p-2 rounded text-[11px] overflow-auto max-h-40">
+                            {fmtJson(r.output_summary)}
+                          </pre>
                         </div>
                       </div>
-                      {r.error_message && <pre className="bg-destructive/10 p-2 rounded text-[11px] mt-2">{r.error_message}</pre>}
+                      {r.error_message && (
+                        <pre className="bg-destructive/10 p-2 rounded text-[11px] mt-2">{r.error_message}</pre>
+                      )}
                       {(r.ai_model || r.ai_scope) && (
                         <div className="mt-2 text-xs text-muted-foreground">
                           {r.ai_model && <span>model: {r.ai_model} </span>}
@@ -306,18 +438,40 @@ export default function PipelineTracesPage() {
         <TabsContent value="step" className="space-y-3 mt-4">
           <Card>
             <CardContent className="pt-4">
-              <div className="text-xs text-muted-foreground mb-2">Aggregato sugli ultimi {rows.length} step caricati. Ordinato per frequenza.</div>
+              <div className="text-xs text-muted-foreground mb-2">
+                Aggregato sugli ultimi {rows.length} step caricati. Ordinato per frequenza.
+              </div>
               <div className="space-y-1">
-                {stepStats.length === 0 && <div className="text-sm text-muted-foreground py-8 text-center">Nessun dato.</div>}
+                {stepStats.length === 0 && (
+                  <div className="text-sm text-muted-foreground py-8 text-center">Nessun dato.</div>
+                )}
                 {stepStats.map((s) => (
                   <div key={s.name} className="flex items-center gap-3 py-2 border-b last:border-0">
                     <span className="font-medium text-sm flex-1">{s.name}</span>
                     <Badge variant="outline">{s.total} run</Badge>
-                    <Badge variant={s.successRate >= 90 ? "default" : s.successRate >= 50 ? "secondary" : "destructive"}>{s.successRate}% ok</Badge>
+                    <Badge
+                      variant={s.successRate >= 90 ? "default" : s.successRate >= 50 ? "secondary" : "destructive"}
+                    >
+                      {s.successRate}% ok
+                    </Badge>
                     {s.error > 0 && <Badge variant="destructive">{s.error} err</Badge>}
                     {s.skipped > 0 && <Badge variant="secondary">{s.skipped} skip</Badge>}
-                    {s.durations.length > 0 && <span className="text-xs text-muted-foreground tabular-nums">p50 {s.p50}ms · p95 {s.p95}ms</span>}
-                    <Button size="sm" variant="ghost" onClick={() => { setStepName(s.name); setTab("live"); void load(); }}>Filtra</Button>
+                    {s.durations.length > 0 && (
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        p50 {s.p50}ms · p95 {s.p95}ms
+                      </span>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setStepName(s.name);
+                        setTab("live");
+                        void load();
+                      }}
+                    >
+                      Filtra
+                    </Button>
                   </div>
                 ))}
               </div>

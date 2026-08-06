@@ -9,12 +9,7 @@
  * Callers only need `evaluatePartner()`. No more conflicting decisions.
  */
 
-import {
-  AutonomyLevel,
-  NextAction,
-  PartnerState,
-  SupabaseClient,
-} from "./types.ts";
+import { AutonomyLevel, NextAction, PartnerState, SupabaseClient } from "./types.ts";
 import { decideNextActions } from "./decider.ts";
 import { checkCadence, type CadenceCheckResult } from "../cadenceEngine.ts";
 import { LeadProcessManager } from "../processManagers/leadProcessManager.ts";
@@ -81,13 +76,15 @@ export async function evaluatePartner(
         hasInboundWhatsApp: false,
         isWhitelisted: false,
       },
-      actions: [{
-        action: "no_action",
-        autonomy: "suggest",
-        due_in_days: 0,
-        reasoning: "Partner non trovato",
-        priority: 5,
-      }],
+      actions: [
+        {
+          action: "no_action",
+          autonomy: "suggest",
+          due_in_days: 0,
+          reasoning: "Partner non trovato",
+          priority: 5,
+        },
+      ],
       appliedTransitions,
       cadenceAnnotations: [],
     };
@@ -171,10 +168,7 @@ export async function evaluatePartner(
       .eq("user_id", userId)
       .eq("key", "decision_engine_autonomy")
       .maybeSingle();
-    if (
-      prefSetting?.value &&
-      ["suggest", "prepare", "execute", "autopilot"].includes(prefSetting.value)
-    ) {
+    if (prefSetting?.value && ["suggest", "prepare", "execute", "autopilot"].includes(prefSetting.value)) {
       userPref = prefSetting.value as AutonomyLevel;
     }
   }
@@ -215,19 +209,22 @@ export async function evaluatePartner(
 
   // Last channel used
   const lastChannel = lastOutbound?.[0]
-    ? (await supabase
-        .from("activities")
-        .select("activity_type")
-        .eq("partner_id", partnerId)
-        .eq("user_id", userId)
-        .in("activity_type", ["send_email", "whatsapp_message", "linkedin_message"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-      ).data?.[0]?.activity_type ?? null
+    ? ((
+        await supabase
+          .from("activities")
+          .select("activity_type")
+          .eq("partner_id", partnerId)
+          .eq("user_id", userId)
+          .in("activity_type", ["send_email", "whatsapp_message", "linkedin_message"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+      ).data?.[0]?.activity_type ?? null)
     : null;
 
   const channelMap: Record<string, "email" | "linkedin" | "whatsapp"> = {
-    send_email: "email", whatsapp_message: "whatsapp", linkedin_message: "linkedin",
+    send_email: "email",
+    whatsapp_message: "whatsapp",
+    linkedin_message: "linkedin",
   };
 
   const actions: NextAction[] = [];
@@ -237,7 +234,7 @@ export async function evaluatePartner(
       const cadenceResult = checkCadence(
         state.leadStatus,
         lastContactDate,
-        lastChannel ? (channelMap[lastChannel] || lastChannel) : null,
+        lastChannel ? channelMap[lastChannel] || lastChannel : null,
         touchesThisWeek ?? 0,
         channel,
         state.hasInboundWhatsApp || state.isWhitelisted,

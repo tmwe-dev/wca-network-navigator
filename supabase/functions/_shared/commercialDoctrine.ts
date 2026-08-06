@@ -50,10 +50,7 @@ export interface DoctrineLoadResult {
  *   3. Always returns a non-empty doctrine text wrapped in the
  *      "LEGGE SUPREMA" banner.
  */
-export async function loadCommercialDoctrine(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<DoctrineLoadResult> {
+export async function loadCommercialDoctrine(supabase: SupabaseClient, userId: string): Promise<DoctrineLoadResult> {
   let kbText = "";
   let entriesLoaded = 0;
 
@@ -70,8 +67,10 @@ export async function loadCommercialDoctrine(
     if (!error && Array.isArray(data) && data.length > 0) {
       entriesLoaded = data.length;
       kbText = data
-        .map((d: { title: string; chapter: string | null; content: string }) =>
-          `### ${d.chapter ? `[${d.chapter}] ` : ""}${d.title}\n${d.content}`)
+        .map(
+          (d: { title: string; chapter: string | null; content: string }) =>
+            `### ${d.chapter ? `[${d.chapter}] ` : ""}${d.title}\n${d.content}`,
+        )
         .join("\n\n---\n\n");
     }
   } catch (e) {

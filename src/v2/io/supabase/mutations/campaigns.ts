@@ -11,20 +11,22 @@ import type { Database } from "@/integrations/supabase/types";
 type CampaignJobInsert = Database["public"]["Tables"]["campaign_jobs"]["Insert"];
 type CampaignJobUpdate = Database["public"]["Tables"]["campaign_jobs"]["Update"];
 
-export async function createCampaignJob(
-  input: CampaignJobInsert,
-): Promise<Result<CampaignJob, AppError>> {
+export async function createCampaignJob(input: CampaignJobInsert): Promise<Result<CampaignJob, AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("campaign_jobs")
-      .insert(input)
-      .select()
-      .single();
+    const { data, error } = await supabase.from("campaign_jobs").insert(input).select().single();
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "campaign_jobs", operation: "insert",
-      }, "createCampaignJob"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "campaign_jobs",
+            operation: "insert",
+          },
+          "createCampaignJob",
+        ),
+      );
     }
 
     return mapCampaignJobRow(data);
@@ -33,20 +35,23 @@ export async function createCampaignJob(
   }
 }
 
-export async function updateCampaignJob(
-  jobId: string,
-  updates: CampaignJobUpdate,
-): Promise<Result<void, AppError>> {
+export async function updateCampaignJob(jobId: string, updates: CampaignJobUpdate): Promise<Result<void, AppError>> {
   try {
-    const { error } = await supabase
-      .from("campaign_jobs")
-      .update(updates)
-      .eq("id", jobId);
+    const { error } = await supabase.from("campaign_jobs").update(updates).eq("id", jobId);
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "campaign_jobs", jobId, operation: "update",
-      }, "updateCampaignJob"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "campaign_jobs",
+            jobId,
+            operation: "update",
+          },
+          "updateCampaignJob",
+        ),
+      );
     }
 
     return ok(undefined);

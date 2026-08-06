@@ -42,10 +42,7 @@ serve(async (req: Request) => {
   const cors = getCorsHeaders(origin);
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
     const body = await req.json().catch(() => ({}));
     const userId: string | undefined = body.user_id;
@@ -74,9 +71,17 @@ serve(async (req: Request) => {
 
       // 1c. Required tags (from commercial doctrine)
       const requiredTags = [
-        "commercial_doctrine", "holding_pattern", "relationship_progression",
-        "tone_modulation", "exit_rules", "multichannel", "commercial_learning",
-        "system_core", "cold_outreach", "follow_up", "closing",
+        "commercial_doctrine",
+        "holding_pattern",
+        "relationship_progression",
+        "tone_modulation",
+        "exit_rules",
+        "multichannel",
+        "commercial_learning",
+        "system_core",
+        "cold_outreach",
+        "follow_up",
+        "closing",
       ];
       for (const tag of requiredTags) {
         const hasEntry = kbEntries.some((e) => (e.tags || []).includes(tag));
@@ -94,9 +99,7 @@ serve(async (req: Request) => {
       }
 
       // 1d. Required categories
-      const requiredCategories = [
-        "system_doctrine", "sales_doctrine", "country_culture", "communication_pattern",
-      ];
+      const requiredCategories = ["system_doctrine", "sales_doctrine", "country_culture", "communication_pattern"];
       for (const cat of requiredCategories) {
         const hasEntry = kbEntries.some((e) => e.category === cat);
         if (!hasEntry) {
@@ -114,13 +117,19 @@ serve(async (req: Request) => {
 
       // 1e. Commercial states with doctrine (tassonomia canonica DB — 9 stati)
       const commercialStates = [
-        "new", "first_touch_sent", "holding", "engaged", "qualified",
-        "negotiation", "converted", "archived", "blacklisted",
+        "new",
+        "first_touch_sent",
+        "holding",
+        "engaged",
+        "qualified",
+        "negotiation",
+        "converted",
+        "archived",
+        "blacklisted",
       ];
       for (const state of commercialStates) {
-        const hasEntry = kbEntries.some((e) =>
-          (e.tags || []).includes(state) ||
-          (e.content || "").toLowerCase().includes(state)
+        const hasEntry = kbEntries.some(
+          (e) => (e.tags || []).includes(state) || (e.content || "").toLowerCase().includes(state),
         );
         if (!hasEntry) {
           results.push({

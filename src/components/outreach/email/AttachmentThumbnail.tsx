@@ -33,8 +33,10 @@ export function AttachmentThumbnail({ att, onDownload }: Props) {
   const Icon = getAttachmentIcon(att.content_type);
 
   return (
-    <button onClick={onDownload}
-      className="flex flex-col items-center gap-1.5 p-2 border border-border rounded-lg hover:bg-muted/50 transition-colors text-xs w-[140px]">
+    <button
+      onClick={onDownload}
+      className="flex flex-col items-center gap-1.5 p-2 border border-border rounded-lg hover:bg-muted/50 transition-colors text-xs w-[140px]"
+    >
       {isImage && imgUrl ? (
         <OptimizedImage src={imgUrl} alt={att.filename} className="w-full h-16 object-cover rounded" />
       ) : (

@@ -52,11 +52,11 @@ function CountrySelectWidget({ countries, selected, onSelect }: CountrySelectPro
   const [open, setOpen] = useState(true);
 
   const _toggle = (code: string) => {
-    const updated = selected.includes(code) ? selected.filter(c => c !== code) : [...selected, code];
+    const updated = selected.includes(code) ? selected.filter((c) => c !== code) : [...selected, code];
     onSelect(updated);
   };
 
-  const totalSelected = countries.filter(c => selected.includes(c.code)).reduce((s, c) => s + c.count, 0);
+  const totalSelected = countries.filter((c) => selected.includes(c.code)).reduce((s, c) => s + c.count, 0);
 
   return (
     <div className="mt-2 bg-muted/30 rounded-lg border border-border p-3 space-y-2">
@@ -64,16 +64,23 @@ function CountrySelectWidget({ countries, selected, onSelect }: CountrySelectPro
         <ChevronDown className={`w-4 h-4 transition-transform ${open ? "" : "-rotate-90"}`} />
         <span className="text-sm font-medium">Seleziona paesi</span>
         {selected.length > 0 && (
-          <Badge variant="secondary" className="ml-auto text-xs">{selected.length} paesi — {totalSelected} partner</Badge>
+          <Badge variant="secondary" className="ml-auto text-xs">
+            {selected.length} paesi — {totalSelected} partner
+          </Badge>
         )}
       </button>
       {open && (
         <div className="max-h-[200px] overflow-y-auto space-y-1">
-          {countries.map(c => (
-            <label key={c.code} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm">
-              <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                selected.includes(c.code) ? "bg-primary border-primary" : "border-muted-foreground/30"
-              }`}>
+          {countries.map((c) => (
+            <label
+              key={c.code}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm"
+            >
+              <div
+                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                  selected.includes(c.code) ? "bg-primary border-primary" : "border-muted-foreground/30"
+                }`}
+              >
                 {selected.includes(c.code) && <Check className="w-3 h-3 text-primary-foreground" />}
               </div>
               <span className="flex-1">{c.name}</span>
@@ -109,12 +116,14 @@ function ChannelSelectWidget({ value, onChange }: ChannelSelectProps) {
 
   return (
     <div className="mt-2 grid grid-cols-2 gap-2">
-      {channels.map(ch => (
+      {channels.map((ch) => (
         <button
           key={ch.key}
           onClick={() => onChange(ch.key)}
           className={`p-3 rounded-lg border text-left transition-all text-xs ${
-            value === ch.key ? "bg-primary/10 border-primary ring-1 ring-primary/30" : "bg-muted/30 border-border hover:border-primary/50"
+            value === ch.key
+              ? "bg-primary/10 border-primary ring-1 ring-primary/30"
+              : "bg-muted/30 border-border hover:border-primary/50"
           }`}
         >
           <div className="font-medium">{ch.label}</div>
@@ -134,16 +143,23 @@ interface SliderBatchProps {
 
 function SliderBatchWidget({ batches, onChange }: SliderBatchProps) {
   const update = (country: string, count: number) => {
-    onChange(batches.map(b => b.country === country ? { ...b, count } : b));
+    onChange(batches.map((b) => (b.country === country ? { ...b, count } : b)));
   };
 
   return (
     <div className="mt-2 bg-muted/30 rounded-lg border border-border p-3 space-y-3">
       <p className="text-xs text-muted-foreground font-medium">Contatti per batch:</p>
-      {batches.map(b => (
+      {batches.map((b) => (
         <div key={b.country} className="flex items-center gap-3">
           <span className="text-xs w-20 truncate">{b.name}</span>
-          <Slider value={[b.count]} onValueChange={([v]) => update(b.country, v)} max={b.max} min={1} step={1} className="flex-1" />
+          <Slider
+            value={[b.count]}
+            onValueChange={([v]) => update(b.country, v)}
+            max={b.max}
+            min={1}
+            step={1}
+            className="flex-1"
+          />
           <span className="text-xs font-mono w-10 text-right">{b.count}</span>
         </div>
       ))}
@@ -162,9 +178,9 @@ interface ToggleGroupProps {
 function ToggleGroupWidget({ options, onChange }: ToggleGroupProps) {
   return (
     <div className="mt-2 bg-muted/30 rounded-lg border border-border p-3 space-y-2">
-      {options.map(opt => (
+      {options.map((opt) => (
         <label key={opt.key} className="flex items-center gap-3 py-1 cursor-pointer">
-          <Switch checked={opt.checked} onCheckedChange={v => onChange(opt.key, v)} />
+          <Switch checked={opt.checked} onCheckedChange={(v) => onChange(opt.key, v)} />
           <div className="flex-1">
             <div className="text-xs font-medium">{opt.label}</div>
             <div className="text-xs text-muted-foreground">{opt.desc}</div>
@@ -189,18 +205,32 @@ function ConfirmSummaryWidget({ data, countryStats, onLaunch }: ConfirmSummaryPr
 
   return (
     <div className="mt-2 bg-card border border-primary/30 rounded-lg p-4 space-y-3">
-      <h4 className="text-sm font-semibold flex items-center gap-2"><Rocket className="w-4 h-4 text-primary" /> Riepilogo Missione</h4>
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        <Rocket className="w-4 h-4 text-primary" /> Riepilogo Missione
+      </h4>
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div><span className="text-muted-foreground">Paesi:</span> {countries.length}</div>
-        <div><span className="text-muted-foreground">Contatti:</span> {total}</div>
-        <div><span className="text-muted-foreground">Canale:</span> {data.channel || "email"}</div>
-        <div><span className="text-muted-foreground">Deep Search:</span> {data.deepSearch?.enabled ? "Sì" : "No"}</div>
+        <div>
+          <span className="text-muted-foreground">Paesi:</span> {countries.length}
+        </div>
+        <div>
+          <span className="text-muted-foreground">Contatti:</span> {total}
+        </div>
+        <div>
+          <span className="text-muted-foreground">Canale:</span> {data.channel || "email"}
+        </div>
+        <div>
+          <span className="text-muted-foreground">Deep Search:</span> {data.deepSearch?.enabled ? "Sì" : "No"}
+        </div>
       </div>
       {countries.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {countries.map(c => {
-            const stat = countryStats.find(s => s.code === c);
-            return <Badge key={c} variant="secondary" className="text-xs">{stat?.name || c}</Badge>;
+          {countries.map((c) => {
+            const stat = countryStats.find((s) => s.code === c);
+            return (
+              <Badge key={c} variant="secondary" className="text-xs">
+                {stat?.name || c}
+              </Badge>
+            );
           })}
         </div>
       )}
@@ -224,7 +254,16 @@ interface MissionWidgetRendererProps {
   planReviewProps?: { plan: MissionPlan; isApproving: boolean };
 }
 
-export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStats, onLaunch, onPlanApprove, onPlanCancel, planReviewProps }: MissionWidgetRendererProps) {
+export function MissionWidgetRenderer({
+  widgets,
+  stepData,
+  onChange,
+  countryStats,
+  onLaunch,
+  onPlanApprove,
+  onPlanCancel,
+  planReviewProps,
+}: MissionWidgetRendererProps) {
   if (widgets.length === 0) return null;
 
   return (
@@ -237,10 +276,18 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
                 key={i}
                 countries={countryStats}
                 selected={stepData.targets?.countries || []}
-                onSelect={codes => onChange({
-                  ...stepData,
-                  targets: { ...stepData.targets, countries: codes, types: stepData.targets?.types || [], ratings: stepData.targets?.ratings || [], hasEmail: stepData.targets?.hasEmail ?? true },
-                })}
+                onSelect={(codes) =>
+                  onChange({
+                    ...stepData,
+                    targets: {
+                      ...stepData.targets,
+                      countries: codes,
+                      types: stepData.targets?.types || [],
+                      ratings: stepData.targets?.ratings || [],
+                      hasEmail: stepData.targets?.hasEmail ?? true,
+                    },
+                  })
+                }
               />
             );
 
@@ -249,15 +296,15 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
               <ChannelSelectWidget
                 key={i}
                 value={stepData.channel || "email"}
-                onChange={v => onChange({ ...stepData, channel: v as MissionStepData["channel"] })}
+                onChange={(v) => onChange({ ...stepData, channel: v as MissionStepData["channel"] })}
               />
             );
 
           case "slider_batch": {
             const selected = stepData.targets?.countries || [];
-            const batches = selected.map(code => {
-              const stat = countryStats.find(c => c.code === code);
-              const existing = stepData.batching?.batches.find(b => b.country === code);
+            const batches = selected.map((code) => {
+              const stat = countryStats.find((c) => c.code === code);
+              const existing = stepData.batching?.batches.find((b) => b.country === code);
               return {
                 country: code,
                 name: stat?.name || code,
@@ -269,10 +316,12 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
               <SliderBatchWidget
                 key={i}
                 batches={batches}
-                onChange={updated => onChange({
-                  ...stepData,
-                  batching: { batches: updated.map(b => ({ country: b.country, count: b.count })) },
-                })}
+                onChange={(updated) =>
+                  onChange({
+                    ...stepData,
+                    batching: { batches: updated.map((b) => ({ country: b.country, count: b.count })) },
+                  })
+                }
               />
             );
           }
@@ -282,27 +331,47 @@ export function MissionWidgetRenderer({ widgets, stepData, onChange, countryStat
               <ToggleGroupWidget
                 key={i}
                 options={[
-                  { key: "scrapeWebsite", label: "🌐 Scrape sito web", desc: "Analizza il sito per servizi e specializzazioni", checked: stepData.deepSearch?.scrapeWebsite ?? true },
-                  { key: "scrapeLinkedIn", label: "🔗 Scrape LinkedIn", desc: "Raccoglie dati professionali", checked: stepData.deepSearch?.scrapeLinkedIn ?? true },
-                  { key: "verifyWhatsApp", label: "💬 Verifica WhatsApp", desc: "Controlla disponibilità WhatsApp", checked: stepData.deepSearch?.verifyWhatsApp ?? false },
-                  { key: "aiAnalysis", label: "🤖 Analisi AI", desc: "Riepilogo intelligente del profilo", checked: stepData.deepSearch?.aiAnalysis ?? true },
+                  {
+                    key: "scrapeWebsite",
+                    label: "🌐 Scrape sito web",
+                    desc: "Analizza il sito per servizi e specializzazioni",
+                    checked: stepData.deepSearch?.scrapeWebsite ?? true,
+                  },
+                  {
+                    key: "scrapeLinkedIn",
+                    label: "🔗 Scrape LinkedIn",
+                    desc: "Raccoglie dati professionali",
+                    checked: stepData.deepSearch?.scrapeLinkedIn ?? true,
+                  },
+                  {
+                    key: "verifyWhatsApp",
+                    label: "💬 Verifica WhatsApp",
+                    desc: "Controlla disponibilità WhatsApp",
+                    checked: stepData.deepSearch?.verifyWhatsApp ?? false,
+                  },
+                  {
+                    key: "aiAnalysis",
+                    label: "🤖 Analisi AI",
+                    desc: "Riepilogo intelligente del profilo",
+                    checked: stepData.deepSearch?.aiAnalysis ?? true,
+                  },
                 ]}
                 onChange={(key, checked) => {
-                  const base = { scrapeWebsite: true, scrapeLinkedIn: true, verifyWhatsApp: false, aiAnalysis: true, ...stepData.deepSearch, enabled: true as const };
+                  const base = {
+                    scrapeWebsite: true,
+                    scrapeLinkedIn: true,
+                    verifyWhatsApp: false,
+                    aiAnalysis: true,
+                    ...stepData.deepSearch,
+                    enabled: true as const,
+                  };
                   onChange({ ...stepData, deepSearch: { ...base, [key]: checked } });
                 }}
               />
             );
 
           case "confirm_summary":
-            return (
-              <ConfirmSummaryWidget
-                key={i}
-                data={stepData}
-                countryStats={countryStats}
-                onLaunch={onLaunch}
-              />
-            );
+            return <ConfirmSummaryWidget key={i} data={stepData} countryStats={countryStats} onLaunch={onLaunch} />;
 
           case "plan_review":
             if (planReviewProps && onPlanApprove && onPlanCancel) {

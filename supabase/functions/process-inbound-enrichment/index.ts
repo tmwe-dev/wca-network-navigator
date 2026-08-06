@@ -32,12 +32,7 @@ Per ogni mail rispondi SOLO con JSON che rispetta lo schema fornito.
 Categorie ammesse: "commerciale", "amministrativa", "tecnica", "spam", "newsletter", "personale", "altro".
 Confidence: 0.0-1.0. suggested_group: nome breve (es. "Fornitori", "Clienti potenziali", "Marketing") o null.`;
 
-function buildUserPrompt(input: {
-  from: string;
-  domain: string;
-  subject: string;
-  snippet: string;
-}): string {
+function buildUserPrompt(input: { from: string; domain: string; subject: string; snippet: string }): string {
   return `Mittente: ${input.from}
 Dominio: ${input.domain}
 Oggetto: ${input.subject || "(vuoto)"}
@@ -94,7 +89,9 @@ Deno.serve(async (req) => {
     if (block && block.length > 80) {
       systemPrompt = `${PROMPT_SYSTEM_FALLBACK}\n\n${block}`;
     }
-  } catch { /* keep fallback */ }
+  } catch {
+    /* keep fallback */
+  }
 
   for (const job of jobs as Array<{
     id: string;

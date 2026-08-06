@@ -28,10 +28,7 @@ async function resolveUserFromBridgeToken(
 ): Promise<string | null> {
   if (!rawToken) return null;
   try {
-    const hashBuf = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(rawToken),
-    );
+    const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawToken));
     const tokenHash = Array.from(new Uint8Array(hashBuf))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
@@ -85,22 +82,19 @@ serve(async (req) => {
 
   const question = (body.question || "").trim();
   if (!question) {
-    return new Response(
-      JSON.stringify({ answer: "Non ho ricevuto la domanda, puoi ripetere?" }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ answer: "Non ho ricevuto la domanda, puoi ripetere?" }), {
+      status: 200,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-  const userId = body.bridge_token
-    ? await resolveUserFromBridgeToken(supabase, body.bridge_token)
-    : null;
+  const userId = body.bridge_token ? await resolveUserFromBridgeToken(supabase, body.bridge_token) : null;
 
   if (!userId) {
     return new Response(
       JSON.stringify({
-        answer:
-          "Non riesco ad autenticare la sessione vocale. Chiudi e riapri la conversazione, per favore.",
+        answer: "Non riesco ad autenticare la sessione vocale. Chiudi e riapri la conversazione, per favore.",
       }),
       { status: 401, headers: { ...cors, "Content-Type": "application/json" } },
     );
@@ -144,20 +138,15 @@ serve(async (req) => {
       console.warn("command-ask-brain ai-assistant error", resp.status, detail);
       return new Response(
         JSON.stringify({
-          answer:
-            "Ho avuto un problema a recuperare l'informazione. Riprova tra qualche secondo.",
+          answer: "Ho avuto un problema a recuperare l'informazione. Riprova tra qualche secondo.",
         }),
         { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
     const data = await resp.json();
-    const raw =
-      (data?.content as string) ||
-      (data?.response as string) ||
-      (data?.message as string) ||
-      "";
-    const answer = sanitizeForTts(raw) ||
-      "Non ho una risposta utile in questo momento. Vuoi che approfondisca un tema specifico?";
+    const raw = (data?.content as string) || (data?.response as string) || (data?.message as string) || "";
+    const answer =
+      sanitizeForTts(raw) || "Non ho una risposta utile in questo momento. Vuoi che approfondisca un tema specifico?";
 
     return new Response(JSON.stringify({ answer }), {
       status: 200,
@@ -167,8 +156,7 @@ serve(async (req) => {
     console.warn("command-ask-brain failed", (e as Error).message);
     return new Response(
       JSON.stringify({
-        answer:
-          "Connessione lenta verso il sistema. Posso riprovare se ripeti la domanda.",
+        answer: "Connessione lenta verso il sistema. Posso riprovare se ripeti la domanda.",
       }),
       { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
     );

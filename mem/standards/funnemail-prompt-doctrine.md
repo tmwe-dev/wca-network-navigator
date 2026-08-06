@@ -3,6 +3,7 @@ name: Funnemail Prompt Doctrine — regolefunnymail.docx
 description: Doctrine ufficiale per i prompt operativi email/WA/LinkedIn/funnemail. Batteria di prompt specializzati (no monolite), con name/context/tags/priority/objective/procedure/criteria/examples. Tag OBBLIGATORIA vince. Stile "scrittore commerciale da bestseller": umano, asciutto, una sola CTA, niente AI smell.
 type: feature
 ---
+
 Fonte: regolefunnymail.docx (utente, 2026-05-10).
 
 Architettura: NON un prompt gigante. Batteria di prompt operativi in `operative_prompts`, ognuno con: name, context, tags (incluso OBBLIGATORIA dove serve), priority, objective, procedure, criteria, examples. Loader esistente (`_shared/operativePromptsLoader.ts`) li inietta per scope/tag; OBBLIGATORIA vince.
@@ -10,6 +11,7 @@ Architettura: NON un prompt gigante. Batteria di prompt operativi in `operative_
 Contesti supportati (mappare scope): email, email-quality, outreach, whatsapp, linkedin, multi-channel, lead-status, post-send, classification, agent-loop, command, funnemail_classifier, content-intelligence, conversation-summary, general.
 
 Prompt da inserire (con priorità):
+
 1. Scrittore commerciale da bestseller — email-quality, OBBLIGATORIA, p100 (universale qualità)
 2. LinkedIn DM — relazione prima della vendita — linkedin, OBBLIGATORIA, p98 (3-5 frasi, no pitch, CTA leggera)
 3. WhatsApp — messaggio operativo breve — whatsapp, OBBLIGATORIA + gate-hard, p98 (2-4 righe, solo se canale appropriato)
@@ -27,6 +29,7 @@ Prompt da inserire (con priorità):
 15. Outreach strategy/psychology — outreach, OBBLIGATORIA, p97
 
 Regole stile (universali, da applicare in journalistReview e generatori):
+
 - Sembrare scritto da persona reale, una sola CTA, frasi brevi, ritmo pulito.
 - VIETATO: "I hope this email finds you well", superlativi vuoti (best/amazing/unbeatable), pitch lunghi LinkedIn, WhatsApp freddo non autorizzato, follow-up ravvicinati, promesse non verificabili.
 - Subject email: corto, specifico, non promozionale, max 6-8 parole.

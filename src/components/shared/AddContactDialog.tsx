@@ -11,11 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
-import {
-  getOrCreateManualImportLog,
-  insertManualContact,
-  insertManualPartnerContact,
-} from "@/data/manualContacts";
+import { getOrCreateManualImportLog, insertManualContact, insertManualPartnerContact } from "@/data/manualContacts";
 import { queryKeys } from "@/lib/queryKeys";
 
 type Destination = "contacts" | "network" | "cockpit";
@@ -32,7 +28,11 @@ interface AddContactDialogProps {
 }
 
 export default function AddContactDialog({
-  open, onOpenChange, defaultDestination = "contacts", partnerId, partnerName,
+  open,
+  onOpenChange,
+  defaultDestination = "contacts",
+  partnerId,
+  partnerName,
 }: AddContactDialogProps) {
   const navigate = useAppNavigate();
   const queryClient = useQueryClient();
@@ -40,15 +40,31 @@ export default function AddContactDialog({
   const [destination, setDestination] = useState<Destination>(defaultDestination);
 
   const [form, setForm] = useState({
-    name: "", company: "", email: "", phone: "", mobile: "",
-    country: "", city: "", position: "", notes: "",
+    name: "",
+    company: "",
+    email: "",
+    phone: "",
+    mobile: "",
+    country: "",
+    city: "",
+    position: "",
+    notes: "",
   });
 
-  const update = (field: string, value: string) =>
-    setForm(prev => ({ ...prev, [field]: value }));
+  const update = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const resetForm = () => {
-    setForm({ name: "", company: "", email: "", phone: "", mobile: "", country: "", city: "", position: "", notes: "" });
+    setForm({
+      name: "",
+      company: "",
+      email: "",
+      phone: "",
+      mobile: "",
+      country: "",
+      city: "",
+      position: "",
+      notes: "",
+    });
   };
 
   const handleSave = async () => {
@@ -59,7 +75,10 @@ export default function AddContactDialog({
     setSaving(true);
 
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       let sourceId: string | null = null;
@@ -86,7 +105,6 @@ export default function AddContactDialog({
         sourceType = "contact";
         queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
         queryClient.invalidateQueries({ queryKey: queryKeys.contacts.byGroup() });
-
       } else if (destination === "network") {
         if (!partnerId) {
           toast({ title: "Seleziona un partner dal Network", variant: "destructive" });
@@ -108,12 +126,14 @@ export default function AddContactDialog({
 
       // If cockpit destination OR user wants it queued
       if (destination === "cockpit" && sourceId && sourceType) {
-        await insertCockpitQueueItems([{
-          user_id: user.id,
-          source_id: sourceId,
-          source_type: sourceType,
-          partner_id: partnerId || null,
-        }]);
+        await insertCockpitQueueItems([
+          {
+            user_id: user.id,
+            source_id: sourceId,
+            source_type: sourceType,
+            partner_id: partnerId || null,
+          },
+        ]);
         queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
       } else if (destination === "cockpit" && !sourceId) {
         // Create as imported_contact first, then queue
@@ -133,16 +153,21 @@ export default function AddContactDialog({
           note: form.notes.trim() || null,
         });
 
-        await insertCockpitQueueItems([{
-          user_id: user.id,
-          source_id: contactId,
-          source_type: "contact",
-        }]);
+        await insertCockpitQueueItems([
+          {
+            user_id: user.id,
+            source_id: contactId,
+            source_type: "contact",
+          },
+        ]);
         queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
         queryClient.invalidateQueries({ queryKey: queryKeys.contacts.groupCounts });
       }
 
-      toast({ title: "✅ Contatto aggiunto", description: `${form.name || form.company} → ${destination === "contacts" ? "Contatti" : destination === "network" ? "Network" : "Cockpit"}` });
+      toast({
+        title: "✅ Contatto aggiunto",
+        description: `${form.name || form.company} → ${destination === "contacts" ? "Contatti" : destination === "network" ? "Network" : "Cockpit"}`,
+      });
       resetForm();
       onOpenChange(false);
     } catch (err: unknown) {
@@ -167,10 +192,14 @@ export default function AddContactDialog({
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Destinazione</Label>
             <Select value={destination} onValueChange={(v) => setDestination(v as Destination)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="contacts">📋 Contatti (imported_contacts)</SelectItem>
-                <SelectItem value="network" disabled={!partnerId}>🌐 Network (partner_contacts){partnerId ? ` → ${partnerName}` : ""}</SelectItem>
+                <SelectItem value="network" disabled={!partnerId}>
+                  🌐 Network (partner_contacts){partnerId ? ` → ${partnerName}` : ""}
+                </SelectItem>
                 <SelectItem value="cockpit">🎯 Cockpit (coda lavoro)</SelectItem>
               </SelectContent>
             </Select>
@@ -180,41 +209,64 @@ export default function AddContactDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Nome</Label>
-              <Input value={form.name} onChange={e => update("name", e.target.value)} placeholder="Mario Rossi" />
+              <Input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Mario Rossi" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Azienda</Label>
-              <Input value={form.company} onChange={e => update("company", e.target.value)} placeholder="Acme Srl" />
+              <Input value={form.company} onChange={(e) => update("company", e.target.value)} placeholder="Acme Srl" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Email</Label>
-              <Input type="email" value={form.email} onChange={e => update("email", e.target.value)} placeholder="mario@acme.it" />
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => update("email", e.target.value)}
+                placeholder="mario@acme.it"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Ruolo / Posizione</Label>
-              <Input value={form.position} onChange={e => update("position", e.target.value)} placeholder="Sales Manager" />
+              <Input
+                value={form.position}
+                onChange={(e) => update("position", e.target.value)}
+                placeholder="Sales Manager"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Telefono</Label>
-              <Input value={form.phone} onChange={e => update("phone", e.target.value)} placeholder="+39 02 1234567" />
+              <Input
+                value={form.phone}
+                onChange={(e) => update("phone", e.target.value)}
+                placeholder="+39 02 1234567"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Cellulare</Label>
-              <Input value={form.mobile} onChange={e => update("mobile", e.target.value)} placeholder="+39 333 1234567" />
+              <Input
+                value={form.mobile}
+                onChange={(e) => update("mobile", e.target.value)}
+                placeholder="+39 333 1234567"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Paese</Label>
-              <Input value={form.country} onChange={e => update("country", e.target.value)} placeholder="IT" />
+              <Input value={form.country} onChange={(e) => update("country", e.target.value)} placeholder="IT" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Città</Label>
-              <Input value={form.city} onChange={e => update("city", e.target.value)} placeholder="Milano" />
+              <Input value={form.city} onChange={(e) => update("city", e.target.value)} placeholder="Milano" />
             </div>
           </div>
 
           <div className="space-y-1">
             <Label className="text-xs">Note</Label>
-            <Textarea value={form.notes} onChange={e => update("notes", e.target.value)} placeholder="Appunti sul contatto..." rows={2} className="resize-none" />
+            <Textarea
+              value={form.notes}
+              onChange={(e) => update("notes", e.target.value)}
+              placeholder="Appunti sul contatto..."
+              rows={2}
+              className="resize-none"
+            />
           </div>
         </div>
 
@@ -243,8 +295,15 @@ export default function AddContactDialog({
             Scrivi email
           </Button>
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
-            <Button onClick={handleSave} disabled={saving || (!form.name.trim() && !form.company.trim())} size="sm" className="gap-1.5">
+            <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">
+              Annulla
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving || (!form.name.trim() && !form.company.trim())}
+              size="sm"
+              className="gap-1.5"
+            >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
               Salva
             </Button>

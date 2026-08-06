@@ -65,9 +65,10 @@ function mapTestCaseRow(row: Database["public"]["Tables"]["prompt_test_cases"]["
     user_id: row.user_id,
     name: row.name,
     description: row.description,
-    input_payload: (typeof row.input_payload === "object" && row.input_payload !== null && !Array.isArray(row.input_payload)
-      ? row.input_payload as Record<string, unknown>
-      : {}),
+    input_payload:
+      typeof row.input_payload === "object" && row.input_payload !== null && !Array.isArray(row.input_payload)
+        ? (row.input_payload as Record<string, unknown>)
+        : {},
     expected_contains: row.expected_contains,
     expected_not_contains: row.expected_not_contains,
     expected_regex: row.expected_regex,
@@ -126,7 +127,9 @@ export interface UpsertTestCaseInput {
 }
 
 export async function upsertTestCase(input: UpsertTestCaseInput): Promise<PromptTestCase> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) throw new Error("Not authenticated");
 
@@ -217,7 +220,9 @@ export async function runTests(args: {
 export async function listVersionsForPrompt(promptId: string, limit = 20): Promise<PromptVersion[]> {
   const { data, error } = await supabase
     .from("prompt_versions")
-    .select("id, prompt_id, version_number, name, context, objective, procedure, criteria, examples, change_reason, created_at")
+    .select(
+      "id, prompt_id, version_number, name, context, objective, procedure, criteria, examples, change_reason, created_at",
+    )
     .eq("prompt_id", promptId)
     .order("version_number", { ascending: false })
     .limit(limit);

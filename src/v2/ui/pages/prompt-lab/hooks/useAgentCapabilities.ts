@@ -5,11 +5,7 @@
  */
 import { useEffect, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  getAgentCapabilities,
-  updateAgentCapabilities,
-  type AgentCapabilities,
-} from "@/data/agentCapabilities";
+import { getAgentCapabilities, updateAgentCapabilities, type AgentCapabilities } from "@/data/agentCapabilities";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -39,12 +35,12 @@ export function useAgentCapabilities(agentId: string) {
         toast.error(`Impossibile caricare capacità: ${(e as Error).message}`);
       })
       .finally(() => !cancelled && setLoading(false));
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [agentId]);
 
-  const dirty = Boolean(
-    capabilities && draft && JSON.stringify(capabilities) !== JSON.stringify(draft),
-  );
+  const dirty = Boolean(capabilities && draft && JSON.stringify(capabilities) !== JSON.stringify(draft));
 
   const save = useCallback(async () => {
     if (!draft || !capabilities) return;

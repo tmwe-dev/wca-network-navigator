@@ -9,9 +9,16 @@ import { type Contact, contactId, importLogId, partnerId, userId } from "../doma
 export function mapContactRow(row: unknown): Result<Contact, AppError> {
   const parsed = ContactRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `Contact row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "contact-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `Contact row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "contact-mapper",
+      ),
+    );
   }
 
   const r = parsed.data;

@@ -11,10 +11,7 @@ export interface AppSettingKV {
 
 /** Tutte le app_settings di un utente. */
 export async function findAppSettingsForUser(userId: string): Promise<AppSettingKV[]> {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("*")
-    .eq("user_id", userId);
+  const { data, error } = await supabase.from("app_settings").select("*").eq("user_id", userId);
   if (error) throw error;
   return data ?? [];
 }

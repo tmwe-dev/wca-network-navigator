@@ -140,9 +140,7 @@ describe("ApiError", () => {
     });
 
     it("conserva l'intero body JSON nei details", async () => {
-      const e = await ApiError.fromResponse(
-        mockResponse(422, { error: "x", field: "email", code: "EMPTY" })
-      );
+      const e = await ApiError.fromResponse(mockResponse(422, { error: "x", field: "email", code: "EMPTY" }));
       expect(e.details?.field).toBe("email");
       expect(e.details?.code).toBe("EMPTY");
     });

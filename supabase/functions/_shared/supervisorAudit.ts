@@ -16,7 +16,14 @@ export interface AuditEntry {
   partner_id?: string;
   contact_id?: string;
   email_address?: string;
-  decision_origin: "manual" | "ai_auto" | "ai_approved" | "ai_rejected" | "ai_modified" | "system_cron" | "system_trigger";
+  decision_origin:
+    | "manual"
+    | "ai_auto"
+    | "ai_approved"
+    | "ai_rejected"
+    | "ai_modified"
+    | "system_cron"
+    | "system_trigger";
   ai_decision_log_id?: string;
   metadata?: Record<string, unknown>;
 }
@@ -40,9 +47,9 @@ export async function logBatchAudit(
   entries: AuditEntry[],
 ): Promise<void> {
   try {
-    await supabase.from("supervisor_audit_log").insert(
-      entries.map((e) => ({ ...e, created_at: new Date().toISOString() })),
-    );
+    await supabase
+      .from("supervisor_audit_log")
+      .insert(entries.map((e) => ({ ...e, created_at: new Date().toISOString() })));
   } catch (err) {
     console.error("[SUPERVISOR] Batch audit log failed:", err);
   }

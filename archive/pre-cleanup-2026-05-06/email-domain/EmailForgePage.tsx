@@ -50,13 +50,19 @@ export function EmailForgePage(): React.ReactElement {
   }, [lab.runCounter, forge, buildBaseParams]);
 
   // CTA del pannello sinistro: usa la config corrente (già sincronizzata con lo store)
-  const handleRun = React.useCallback((_config?: ForgeConfig) => {
-    forge.run(buildBaseParams());
-  }, [forge, buildBaseParams]);
+  const handleRun = React.useCallback(
+    (_config?: ForgeConfig) => {
+      forge.run(buildBaseParams());
+    },
+    [forge, buildBaseParams],
+  );
 
-  const handleRerunWithOverrides = React.useCallback((systemPrompt: string, userPrompt: string) => {
-    forge.run({ ...buildBaseParams(), system_prompt_override: systemPrompt, user_prompt_override: userPrompt });
-  }, [forge, buildBaseParams]);
+  const handleRerunWithOverrides = React.useCallback(
+    (systemPrompt: string, userPrompt: string) => {
+      forge.run({ ...buildBaseParams(), system_prompt_override: systemPrompt, user_prompt_override: userPrompt });
+    },
+    [forge, buildBaseParams],
+  );
 
   const openDrawer = React.useCallback(() => {
     window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }));
@@ -67,9 +73,7 @@ export function EmailForgePage(): React.ReactElement {
   const tokensIn = dbg?.tokens_in ?? null;
   const tokensOut = dbg?.tokens_out ?? null;
   const totalTokens = (tokensIn ?? 0) + (tokensOut ?? 0);
-  const credits = totalTokens > 0
-    ? Math.max(1, Math.ceil(((tokensIn ?? 0) + (tokensOut ?? 0) * 2) / 1000))
-    : null;
+  const credits = totalTokens > 0 ? Math.max(1, Math.ceil(((tokensIn ?? 0) + (tokensOut ?? 0) * 2) / 1000)) : null;
 
   return (
     <div data-testid="page-email-forge" className="h-full flex flex-col bg-background">
@@ -78,9 +82,7 @@ export function EmailForgePage(): React.ReactElement {
           <Wand2 className="w-4 h-4 text-primary" />
           <div>
             <h1 className="text-sm font-semibold">Email Forge — Lab AI</h1>
-            <p className="text-xs text-foreground/70">
-              Seleziona destinatario, scegli il tipo email e clicca Genera.
-            </p>
+            <p className="text-xs text-foreground/70">Seleziona destinatario, scegli il tipo email e clicca Genera.</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -119,13 +121,17 @@ export function EmailForgePage(): React.ReactElement {
       <footer className="border-t border-border/60 px-3 py-1.5 text-xs text-foreground/60 flex items-center gap-3 shrink-0 bg-card/30">
         {forge.result ? (
           <>
-            <span className="flex items-center gap-1"><Cpu className="w-3 h-3" /> {forge.result.model}</span>
+            <span className="flex items-center gap-1">
+              <Cpu className="w-3 h-3" /> {forge.result.model}
+            </span>
             <span>·</span>
             <span>{forge.result.quality}</span>
             {dbg?.ai_latency_ms != null && (
               <>
                 <span>·</span>
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {dbg.ai_latency_ms}ms</span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {dbg.ai_latency_ms}ms
+                </span>
               </>
             )}
             {forge.elapsedMs != null && (
@@ -137,13 +143,17 @@ export function EmailForgePage(): React.ReactElement {
             {totalTokens > 0 && (
               <>
                 <span>·</span>
-                <span>{totalTokens} tok ({tokensIn ?? 0}↓ / {tokensOut ?? 0}↑)</span>
+                <span>
+                  {totalTokens} tok ({tokensIn ?? 0}↓ / {tokensOut ?? 0}↑)
+                </span>
               </>
             )}
             {credits != null && (
               <>
                 <span>·</span>
-                <span className="flex items-center gap-1"><Coins className="w-3 h-3" /> {credits} crediti</span>
+                <span className="flex items-center gap-1">
+                  <Coins className="w-3 h-3" /> {credits} crediti
+                </span>
               </>
             )}
           </>

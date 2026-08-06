@@ -63,8 +63,13 @@ function firstConfiguredUserProvider(preferred?: ProviderKey | null): ProviderKe
   return USER_PROVIDER_PRIORITY.find((provider) => hasProviderKey(provider)) ?? null;
 }
 
-function selectProvider(routeProvider: ProviderKey | null, envProvider: ProviderKey | null, hasOverrideKey: boolean): ProviderKey {
-  if (routeProvider && routeProvider !== "lovable" && (hasOverrideKey || hasProviderKey(routeProvider))) return routeProvider;
+function selectProvider(
+  routeProvider: ProviderKey | null,
+  envProvider: ProviderKey | null,
+  hasOverrideKey: boolean,
+): ProviderKey {
+  if (routeProvider && routeProvider !== "lovable" && (hasOverrideKey || hasProviderKey(routeProvider)))
+    return routeProvider;
   if (envProvider && envProvider !== "lovable" && (hasOverrideKey || hasProviderKey(envProvider))) return envProvider;
   return firstConfiguredUserProvider(null) || "lovable";
 }
@@ -97,10 +102,7 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
     (provider === "lovable" ? Deno.env.get("LOVABLE_API_KEY") : undefined);
 
   if (!apiKey) {
-    throw new AiGatewayError(
-      "no_api_key",
-      `${config.envKey} not configured for provider '${provider}'`,
-    );
+    throw new AiGatewayError("no_api_key", `${config.envKey} not configured for provider '${provider}'`);
   }
   if (!opts.models.length) {
     throw new AiGatewayError("invalid_model", "models[] cannot be empty");
@@ -113,7 +115,10 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
 
   for (const m of modelChain) {
     if (!ALLOWED_MODELS.has(m)) {
-      logLine("warn", "ai_gateway.unknown_model", { model: m, hint: "Model not in ALLOWED_MODELS set, proceeding anyway" });
+      logLine("warn", "ai_gateway.unknown_model", {
+        model: m,
+        hint: "Model not in ALLOWED_MODELS set, proceeding anyway",
+      });
     }
   }
 
@@ -201,7 +206,11 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
           }
 
           logLine("info", "ai_gateway.success", {
-            ctx, provider, model, nativeModel, attempts: totalAttempts,
+            ctx,
+            provider,
+            model,
+            nativeModel,
+            attempts: totalAttempts,
             latencyMs: Date.now() - t0,
             tokens: usage.totalTokens,
             toolCalls: toolCalls.length,
@@ -210,7 +219,9 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
             duration_ms: Date.now() - startedAt,
             status_code: 200,
             tags: ["ai", provider, model, "ok"],
-            provider, model, nativeModel,
+            provider,
+            model,
+            nativeModel,
             tokens_in: usage.promptTokens,
             tokens_out: usage.completionTokens,
             attempts: totalAttempts,
@@ -230,7 +241,7 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
                 nativeModel,
                 usage.promptTokens,
                 usage.completionTokens,
-                0
+                0,
               );
             } catch (tokenErr) {
               logLine("warn", "ai_gateway.token_logging_failed", {
@@ -326,7 +337,12 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
           }
         }
         logLine("warn", "ai_gateway.non_ok", {
-          ctx, provider, model, attempt, status, retryAfterMs,
+          ctx,
+          provider,
+          model,
+          attempt,
+          status,
+          retryAfterMs,
           snippet: errText.substring(0, 200),
         });
 
@@ -350,9 +366,8 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
         if (attempt < maxRetries) {
           // Su 429 rispetta Retry-After (se assente usa backoff aggressivo:
           // 2s, 5s, 10s) per non consumare quota inutilmente.
-          const waitMs = status === 429
-            ? (retryAfterMs ?? Math.min(2000 * Math.pow(2, attempt), 10000))
-            : backoffMs(attempt);
+          const waitMs =
+            status === 429 ? (retryAfterMs ?? Math.min(2000 * Math.pow(2, attempt), 10000)) : backoffMs(attempt);
           await sleep(waitMs);
         }
       } catch (err) {
@@ -375,14 +390,19 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
   }
 
   logLine("error", "ai_gateway.all_failed", {
-    ctx, provider, models: modelChain, attempts: totalAttempts,
+    ctx,
+    provider,
+    models: modelChain,
+    attempts: totalAttempts,
     lastError: lastError?.kind,
   });
   metricsLog.error("ai_gateway_all_failed", lastError ?? new Error("all_models_failed"), {
     duration_ms: Date.now() - startedAt,
     status_code: lastError?.status ?? 500,
     tags: ["ai", provider, "error", lastError?.kind ?? "unknown"],
-    provider, models: modelChain, attempts: totalAttempts,
+    provider,
+    models: modelChain,
+    attempts: totalAttempts,
   });
   await metricsLog.flush().catch(() => undefined);
   throw lastError ?? new AiGatewayError("all_models_failed", "All models exhausted");

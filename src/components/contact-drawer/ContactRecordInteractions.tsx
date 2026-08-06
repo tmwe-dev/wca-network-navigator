@@ -21,16 +21,18 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
     queryFn: async (): Promise<ContactInteraction[]> => {
       if (sourceType === "partner" && partnerId) {
         const data = await findInteractionsForPartnerRecord(partnerId, 20);
-        return (data || []).map((i): ContactInteraction => ({
-          id: i.id,
-          contact_id: partnerId,
-          interaction_type: i.interaction_type,
-          title: i.subject ?? "",
-          description: i.notes,
-          outcome: null,
-          created_by: null,
-          created_at: i.interaction_date || i.created_at || new Date().toISOString(),
-        }));
+        return (data || []).map(
+          (i): ContactInteraction => ({
+            id: i.id,
+            contact_id: partnerId,
+            interaction_type: i.interaction_type,
+            title: i.subject ?? "",
+            description: i.notes,
+            outcome: null,
+            created_by: null,
+            created_at: i.interaction_date || i.created_at || new Date().toISOString(),
+          }),
+        );
       }
       if (sourceType === "contact") {
         const data = await findContactInteractionsForRecord(sourceId, 20);
@@ -92,14 +94,22 @@ export function ContactRecordInteractions({ sourceType, sourceId, partnerId }: P
           <div className="text-[11px] font-medium text-muted-foreground">Attività programmate</div>
           {activities.map((a) => (
             <div key={a.id} className="flex items-center gap-2 text-xs bg-muted/30 rounded-lg p-2">
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                a.status === "completed" ? "bg-success" :
-                a.status === "in_progress" ? "bg-warning" :
-                a.status === "cancelled" ? "bg-destructive" : "bg-muted-foreground"
-              }`} />
+              <span
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  a.status === "completed"
+                    ? "bg-success"
+                    : a.status === "in_progress"
+                      ? "bg-warning"
+                      : a.status === "cancelled"
+                        ? "bg-destructive"
+                        : "bg-muted-foreground"
+                }`}
+              />
               <span className="font-medium truncate flex-1">{a.title}</span>
               <span className="text-muted-foreground text-[10px] flex-shrink-0">
-                {a.due_date || a.scheduled_at ? new Date((a.due_date || a.scheduled_at)!).toLocaleDateString("it-IT") : ""}
+                {a.due_date || a.scheduled_at
+                  ? new Date((a.due_date || a.scheduled_at)!).toLocaleDateString("it-IT")
+                  : ""}
               </span>
             </div>
           ))}

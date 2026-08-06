@@ -44,9 +44,7 @@ function AgentDetail({ agent }: { agent: AgentCapability }) {
                 {roleInfo.emoji} {roleInfo.label}
               </Badge>
             )}
-            <Badge variant={agent.isActive ? "default" : "secondary"}>
-              {agent.isActive ? "Attivo" : "Inattivo"}
-            </Badge>
+            <Badge variant={agent.isActive ? "default" : "secondary"}>{agent.isActive ? "Attivo" : "Inattivo"}</Badge>
           </div>
         </div>
       </div>
@@ -64,9 +62,7 @@ function AgentDetail({ agent }: { agent: AgentCapability }) {
             <span className="text-muted-foreground">
               {agent.assignedCount} / {agent.totalTools} tool
             </span>
-            <span className={`font-bold ${coverageColor(agent.coveragePercent)}`}>
-              {agent.coveragePercent}%
-            </span>
+            <span className={`font-bold ${coverageColor(agent.coveragePercent)}`}>{agent.coveragePercent}%</span>
           </div>
           <Progress value={agent.coveragePercent} className={`h-3 ${progressColor(agent.coveragePercent)}`} />
           {agent.assignedTools.length > 0 && (
@@ -165,36 +161,28 @@ export function AgentCapabilitiesPage() {
           <Bot className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold text-foreground">Capacità Agenti AI</h1>
-            <p className="text-sm text-muted-foreground">
-              Copertura tool, utilizzo e gap operativi per ogni agente
-            </p>
+            <p className="text-sm text-muted-foreground">Copertura tool, utilizzo e gap operativi per ogni agente</p>
           </div>
         </div>
         <div className="flex gap-4 text-sm text-muted-foreground">
-          <span>Tool totali: <strong className="text-foreground">{agents?.[0]?.totalTools ?? 0}</strong></span>
-          <span>Agenti attivi: <strong className="text-foreground">{activeAgents.length}</strong></span>
+          <span>
+            Tool totali: <strong className="text-foreground">{agents?.[0]?.totalTools ?? 0}</strong>
+          </span>
+          <span>
+            Agenti attivi: <strong className="text-foreground">{activeAgents.length}</strong>
+          </span>
         </div>
       </div>
 
       {/* Agent Tabs + Detail */}
       {agents && agents.length > 0 ? (
-        <Tabs
-          value={selected?.id ?? ""}
-          onValueChange={setSelectedId}
-          className="space-y-4"
-        >
+        <Tabs value={selected?.id ?? ""} onValueChange={setSelectedId} className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1 bg-muted/50 p-1.5">
             {agents.map((a) => (
-              <TabsTrigger
-                key={a.id}
-                value={a.id}
-                className="flex items-center gap-1.5 text-xs"
-              >
+              <TabsTrigger key={a.id} value={a.id} className="flex items-center gap-1.5 text-xs">
                 <span>{a.avatarEmoji}</span>
                 <span>{a.name}</span>
-                <span className={`font-bold ${coverageColor(a.coveragePercent)}`}>
-                  {a.coveragePercent}%
-                </span>
+                <span className={`font-bold ${coverageColor(a.coveragePercent)}`}>{a.coveragePercent}%</span>
               </TabsTrigger>
             ))}
           </TabsList>

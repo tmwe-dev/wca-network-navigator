@@ -20,7 +20,9 @@ export function ToolsColumn({ agent }: { agent: AgentRegistryEntry }) {
         ) : (
           <div className="flex flex-wrap gap-1">
             {agent.tools.map((t) => (
-              <Badge key={t} variant="outline" className="font-mono text-[10px]">{t}</Badge>
+              <Badge key={t} variant="outline" className="font-mono text-[10px]">
+                {t}
+              </Badge>
             ))}
           </div>
         )}

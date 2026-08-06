@@ -68,6 +68,7 @@ Priorità: tool interni prima, poi ricerca esterna come fallback.
 ## # When to end the call
 
 ALWAYS call `end_call` tool when:
+
 - Il cliente dice "grazie arrivederci", "ok basta", "è tutto"
 - Il cliente chiede esplicitamente di chiudere
 

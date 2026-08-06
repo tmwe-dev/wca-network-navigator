@@ -42,19 +42,29 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
   const ocrConf = cardRec.ocr_confidence as Record<string, number> | null;
   const manuallyCorrected = cardRec.manually_corrected as boolean | null;
 
-  const startEdit = useCallback((field: OcrFieldKey) => {
-    setEditing(field);
-    setEditValue((card[field as keyof typeof card] as string) ?? "");
-  }, [card]);
+  const startEdit = useCallback(
+    (field: OcrFieldKey) => {
+      setEditing(field);
+      setEditValue((card[field as keyof typeof card] as string) ?? "");
+    },
+    [card],
+  );
 
   const saveEdit = useCallback(async () => {
     if (!editing) return;
     const oldValue = (card[editing as keyof typeof card] as string) ?? "";
-    if (editValue === oldValue) { setEditing(null); return; }
+    if (editValue === oldValue) {
+      setEditing(null);
+      return;
+    }
 
     const existingNotes = cardRec.correction_notes as string | null;
     let notes: Array<Record<string, unknown>> = [];
-    try { notes = existingNotes ? JSON.parse(existingNotes) : []; } catch { notes = []; }
+    try {
+      notes = existingNotes ? JSON.parse(existingNotes) : [];
+    } catch {
+      notes = [];
+    }
     notes.push({ field: editing, old_value: oldValue, new_value: editValue, corrected_at: new Date().toISOString() });
 
     try {
@@ -67,7 +77,11 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
       toast({ title: "✓ Campo corretto" });
       setEditing(null);
     } catch (e: unknown) {
-      toast({ title: "Errore", description: e instanceof Error ? (e instanceof Error ? e.message : String(e)) : String(e), variant: "destructive" });
+      toast({
+        title: "Errore",
+        description: e instanceof Error ? (e instanceof Error ? e.message : String(e)) : String(e),
+        variant: "destructive",
+      });
     }
   }, [editing, editValue, card, updateCard]);
 
@@ -90,10 +104,13 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
           const isEditing = editing === key;
 
           return (
-            <div key={key} className={cn(
-              "flex items-center gap-2 px-2 py-1 rounded-md text-xs transition-colors",
-              isLow && !isEditing && "bg-amber-500/10 border border-amber-500/20",
-            )}>
+            <div
+              key={key}
+              className={cn(
+                "flex items-center gap-2 px-2 py-1 rounded-md text-xs transition-colors",
+                isLow && !isEditing && "bg-amber-500/10 border border-amber-500/20",
+              )}
+            >
               <span className="text-[10px] text-muted-foreground w-16 shrink-0">{label}</span>
               <ConfidenceDot confidence={confidence} />
 
@@ -104,7 +121,10 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
                     onChange={(e) => setEditValue(e.target.value)}
                     className="h-6 text-xs flex-1"
                     autoFocus
-                    onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditing(null); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveEdit();
+                      if (e.key === "Escape") setEditing(null);
+                    }}
                   />
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={saveEdit}>
                     <Save className="w-3 h-3 text-emerald-500" />
@@ -120,7 +140,10 @@ export function BCAOcrConfidence({ card }: { card: BusinessCardWithPartner }) {
                   </span>
                   <button
                     onClick={() => startEdit(key)}
-                    className={cn("p-0.5 rounded hover:bg-muted/50 transition-colors shrink-0", isLow && "animate-pulse")}
+                    className={cn(
+                      "p-0.5 rounded hover:bg-muted/50 transition-colors shrink-0",
+                      isLow && "animate-pulse",
+                    )}
                   >
                     <Pencil className={cn("w-3 h-3", isLow ? "text-amber-500" : "text-muted-foreground")} />
                   </button>

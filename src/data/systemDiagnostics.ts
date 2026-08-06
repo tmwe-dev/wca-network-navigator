@@ -19,9 +19,7 @@ export interface DiagnosticsPayload {
 
 /** Json → record navigabile senza cast di fuga. */
 function asRecord(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function num(value: unknown): number {

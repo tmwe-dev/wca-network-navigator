@@ -19,7 +19,11 @@ export const browserNavigateAndExtractTool: Tool = {
     // Extract URL from prompt
     const urlMatch = prompt.match(/(https?:\/\/[^\s,)]+)/);
     if (!urlMatch) {
-      return { kind: "result", title: "Errore", message: "Nessun URL trovato nel prompt. Specifica un URL valido (https://...)." };
+      return {
+        kind: "result",
+        title: "Errore",
+        message: "Nessun URL trovato nel prompt. Specifica un URL valido (https://...).",
+      };
     }
     const url = urlMatch[1];
 
@@ -45,7 +49,11 @@ export const browserNavigateAndExtractTool: Tool = {
       }
 
       if (data?.fallback) {
-        return { kind: "result", title: "Browser Non Disponibile", message: "Il browser headless non è configurato. Configura BROWSERLESS_URL e BROWSERLESS_TOKEN." };
+        return {
+          kind: "result",
+          title: "Browser Non Disponibile",
+          message: "Il browser headless non è configurato. Configura BROWSERLESS_URL e BROWSERLESS_TOKEN.",
+        };
       }
 
       const textResult = data?.results?.find((r: Record<string, unknown>) => r?.type === "readText");

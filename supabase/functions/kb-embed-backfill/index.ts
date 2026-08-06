@@ -69,9 +69,16 @@ serve(async (req) => {
       throw new Error(`Fetch KB rows: ${fetchErr.message}`);
     }
     if (!rows || rows.length === 0) {
-      return new Response(JSON.stringify({
-        processed: 0, skipped: 0, failed: 0, batchSize, hasMore: false,
-      }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          processed: 0,
+          skipped: 0,
+          failed: 0,
+          batchSize,
+          hasMore: false,
+        }),
+        { headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
     }
 
     // ── Compose testi per embedding (titolo + contenuto, troncato) ──
@@ -119,18 +126,24 @@ serve(async (req) => {
       .eq("is_active", true)
       .is("embedding", null);
 
-    return new Response(JSON.stringify({
-      processed,
-      skipped: 0,
-      failed,
-      batchSize,
-      hasMore: (count ?? 0) > 0,
-      remaining: count ?? 0,
-    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({
+        processed,
+        skipped: 0,
+        failed,
+        batchSize,
+        hasMore: (count ?? 0) > 0,
+        remaining: count ?? 0,
+      }),
+      { headers: { ...dynCors, "Content-Type": "application/json" } },
+    );
   } catch (err) {
     console.error("kb-embed-backfill error:", err);
-    return new Response(JSON.stringify({
-      error: err instanceof Error ? err.message : "Unknown error",
-    }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({
+        error: err instanceof Error ? err.message : "Unknown error",
+      }),
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
+    );
   }
 });

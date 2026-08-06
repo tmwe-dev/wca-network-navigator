@@ -26,11 +26,39 @@ interface ContactCard3DProps {
 }
 
 const FLAG_MAP: Record<string, string> = {
-  IT: "🇮🇹", DE: "🇩🇪", FR: "🇫🇷", ES: "🇪🇸", GB: "🇬🇧", US: "🇺🇸", NL: "🇳🇱",
-  PT: "🇵🇹", BR: "🇧🇷", PL: "🇵🇱", RO: "🇷🇴", CN: "🇨🇳", JP: "🇯🇵", KR: "🇰🇷",
-  IN: "🇮🇳", AU: "🇦🇺", CA: "🇨🇦", TR: "🇹🇷", RU: "🇷🇺", SE: "🇸🇪", NO: "🇳🇴",
-  DK: "🇩🇰", FI: "🇫🇮", GR: "🇬🇷", AT: "🇦🇹", CH: "🇨🇭", BE: "🇧🇪",
-  TH: "🇹🇭", VN: "🇻🇳", SA: "🇸🇦", AE: "🇦🇪", MX: "🇲🇽", AR: "🇦🇷",
+  IT: "🇮🇹",
+  DE: "🇩🇪",
+  FR: "🇫🇷",
+  ES: "🇪🇸",
+  GB: "🇬🇧",
+  US: "🇺🇸",
+  NL: "🇳🇱",
+  PT: "🇵🇹",
+  BR: "🇧🇷",
+  PL: "🇵🇱",
+  RO: "🇷🇴",
+  CN: "🇨🇳",
+  JP: "🇯🇵",
+  KR: "🇰🇷",
+  IN: "🇮🇳",
+  AU: "🇦🇺",
+  CA: "🇨🇦",
+  TR: "🇹🇷",
+  RU: "🇷🇺",
+  SE: "🇸🇪",
+  NO: "🇳🇴",
+  DK: "🇩🇰",
+  FI: "🇫🇮",
+  GR: "🇬🇷",
+  AT: "🇦🇹",
+  CH: "🇨🇭",
+  BE: "🇧🇪",
+  TH: "🇹🇭",
+  VN: "🇻🇳",
+  SA: "🇸🇦",
+  AE: "🇦🇪",
+  MX: "🇲🇽",
+  AR: "🇦🇷",
 };
 
 function FloatingCard({ contact, animState }: ContactCard3DProps) {
@@ -82,7 +110,8 @@ function FloatingCard({ contact, animState }: ContactCard3DProps) {
             </p>
           )}
           <p className="text-xs text-gray-400 mt-2">
-            {flag} {contact.city ? `${contact.city}, ` : ""}{contact.country_name || contact.country_code}
+            {flag} {contact.city ? `${contact.city}, ` : ""}
+            {contact.country_name || contact.country_code}
           </p>
           <p className="text-xs text-gray-500 mt-1 font-mono">{contact.email}</p>
           <div className="mt-2 flex justify-center gap-2">

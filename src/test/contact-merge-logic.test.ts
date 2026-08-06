@@ -7,11 +7,7 @@ import { describe, it, expect } from "vitest";
 // P001-025 (batch F20-P0.2): la reimplementazione locale di levenshteinDistance /
 // extractDomain / calculateSimilarity è stata rimossa. Le funzioni vengono ora
 // importate dal modulo puro condiviso con src/hooks/useContactMerge.ts.
-import {
-  levenshteinDistance,
-  extractDomain,
-  calculateSimilarity,
-} from "@/lib/contactSimilarity";
+import { levenshteinDistance, extractDomain, calculateSimilarity } from "@/lib/contactSimilarity";
 
 // ─── Test Data ──────────────────────────────────────────
 

@@ -14,7 +14,8 @@ export async function fetchCreditTransactions(): Promise<Result<CreditTransactio
       .select("*")
       .order("created_at", { ascending: false })
       .limit(200);
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "credit_transactions" }, "fetchCreditTransactions"));
+    if (error)
+      return err(ioError("DATABASE_ERROR", error.message, { table: "credit_transactions" }, "fetchCreditTransactions"));
     if (!data) return ok([]);
     const txns: CreditTransaction[] = [];
     for (const row of data) {
@@ -30,11 +31,7 @@ export async function fetchCreditTransactions(): Promise<Result<CreditTransactio
 
 export async function fetchCreditBalance(userIdVal: string): Promise<Result<number, AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("user_credits")
-      .select("balance")
-      .eq("user_id", userIdVal)
-      .single();
+    const { data, error } = await supabase.from("user_credits").select("balance").eq("user_id", userIdVal).single();
     if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "user_credits" }, "fetchCreditBalance"));
     return ok(data?.balance ?? 0);
   } catch (caught: unknown) {

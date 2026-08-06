@@ -6,21 +6,25 @@ tags: [support, procedures, email, feedback, customer-satisfaction, improvement]
 # Feedback clienti
 
 ## Obiettivo
+
 Raccogliere, elaborare e agire sul feedback dei clienti per miglioramento continuo e customer satisfaction.
 
 ## Tipi di feedback
 
 ### Feedback POSITIVO
+
 - Complimenti, ringraziamenti
 - Raccomandazioni (referral)
 - Testimonianze di soddisfazione
 
 ### Feedback NEUTRO
+
 - Suggerimenti di miglioramento
 - Segnalazioni di piccoli disagi
 - Domande su feature/servizi
 
 ### Feedback NEGATIVO
+
 - Lamentele su servizio
 - Critiche su qualità/prezzo
 - Richieste di rimborso/rettifica
@@ -30,6 +34,7 @@ Raccogliere, elaborare e agire sul feedback dei clienti per miglioramento contin
 ## FEEDBACK POSITIVO
 
 ### Step 1: Ricezione
+
 Cliente invia un complimento, raccomandazione, testimonianza.
 
 ### Step 2: Risposta OBBLIGATORIA
@@ -62,9 +67,11 @@ Cordiali saluti,
 ## FEEDBACK NEUTRO (Miglioramenti/Suggerimenti)
 
 ### Step 1: Ricezione
+
 Cliente suggerisce miglioramento, non è lamentela acuta.
 
 Esempi:
+
 - "Sarebbe bello se aveste un'app mobile"
 - "Perché non offrite consegna domenicale?"
 - "Potete semplificare il processo di ordine?"
@@ -72,6 +79,7 @@ Esempi:
 ### Step 2: Valutazione
 
 Domandati:
+
 - È un'idea valida per il nostro business model?
 - È fattibile con i nostri resources?
 - Quanti clienti ne beneficerebbero?
@@ -79,6 +87,7 @@ Domandati:
 ### Step 3: Risposta
 
 **Se è idea buona e fattibile:**
+
 ```
 Caro [Nome],
 
@@ -92,6 +101,7 @@ Grazie per il suggerimento!
 ```
 
 **Se non è fattibile (ma apprezzato):**
+
 ```
 Caro [Nome],
 
@@ -103,6 +113,7 @@ Apprezzo molto che pensiate a come migliorarci!
 ```
 
 **Se non è nel nostro scope:**
+
 ```
 Caro [Nome],
 
@@ -114,6 +125,7 @@ Rimango disponibile per i servizi che offriamo!
 ```
 
 ### Step 4: Documentazione
+
 - Crea feature request nel backlog
 - Taggalo con "Customer Suggestion"
 - Traccia numero di clienti che la chiedono
@@ -125,6 +137,7 @@ Rimango disponibile per i servizi che offriamo!
 **VEDI KB "Gestione reclami"** per procedura completa.
 
 Breve sintesi:
+
 1. Rispondi entro 4 ore con empatia
 2. Investigare completamente
 3. Offri soluzione concreta
@@ -156,21 +169,23 @@ Se persiste: escalation a management.
 
 Per tracciare pattern e miglioramenti:
 
-| Categoria | Sottocategoria | Azione |
-|-----------|-----------------|--------|
-| Prodotto | Qualità | Se > 3 feedback stesso tema: escalation Quality |
-| Prodotto | Feature | Aggiungi a backlog |
-| Servizio | Timing | Se > 2 feedback: revisione process |
-| Servizio | Comunicazione | Se > 2 feedback: training team |
-| Prezzo | "Troppo caro" | Analizza vs competitor, valuta sconto strategico |
-| Supporto | Tempo risposta | Se > 1 feedback: revisione SLA |
+| Categoria | Sottocategoria | Azione                                           |
+| --------- | -------------- | ------------------------------------------------ |
+| Prodotto  | Qualità        | Se > 3 feedback stesso tema: escalation Quality  |
+| Prodotto  | Feature        | Aggiungi a backlog                               |
+| Servizio  | Timing         | Se > 2 feedback: revisione process               |
+| Servizio  | Comunicazione  | Se > 2 feedback: training team                   |
+| Prezzo    | "Troppo caro"  | Analizza vs competitor, valuta sconto strategico |
+| Supporto  | Tempo risposta | Se > 1 feedback: revisione SLA                   |
 
 ---
 
 ## Azioni Proattive
 
 ### Post-acquisto (7-14 giorni dopo consegna)
+
 Email survey:
+
 ```
 Caro [Nome],
 
@@ -185,6 +200,7 @@ Ogni feedback ci aiuta!
 ```
 
 ### Post-problema risolto
+
 ```
 Caro [Nome],
 
@@ -195,6 +211,7 @@ Se no: parliamone di nuovo!
 ```
 
 ### Survey trimestrale
+
 Invia breve sondaggio (5 domande max) a campione casuale di clienti attivi.
 
 ---
@@ -202,12 +219,14 @@ Invia breve sondaggio (5 domande max) a campione casuale di clienti attivi.
 ## Follow-up su Feedback Importante
 
 Se feedback evidenzia un problema serio:
+
 1. **Registra**: crea ticket interno
 2. **Comunica**: spiega al cliente cosa farai
 3. **Agisci**: implementa la soluzione
 4. **Comunica di nuovo**: fatto! Grazie per aver segnalato
 
 Esempio:
+
 ```
 Caro [Nome],
 

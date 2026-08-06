@@ -33,7 +33,13 @@ export function OutreachStatusTimeline({ steps }: Props) {
         return (
           <div key={i} className="flex items-center">
             <div className="flex flex-col items-center gap-0.5">
-              <div className={cn("w-5 h-5 rounded-full flex items-center justify-center", cfg.bg, step.status === "pending" && "border border-border")}>
+              <div
+                className={cn(
+                  "w-5 h-5 rounded-full flex items-center justify-center",
+                  cfg.bg,
+                  step.status === "pending" && "border border-border",
+                )}
+              >
                 <Icon className={cn("w-3 h-3", step.status === "pending" ? "text-muted-foreground" : "text-white")} />
               </div>
               <span className={cn("text-[9px] whitespace-nowrap", cfg.color)}>{step.label}</span>
@@ -43,9 +49,7 @@ export function OutreachStatusTimeline({ steps }: Props) {
                 </span>
               )}
             </div>
-            {i < steps.length - 1 && (
-              <div className={cn("w-6 h-0.5 mx-0.5 mt-[-12px]", cfg.line)} />
-            )}
+            {i < steps.length - 1 && <div className={cn("w-6 h-0.5 mx-0.5 mt-[-12px]", cfg.line)} />}
           </div>
         );
       })}

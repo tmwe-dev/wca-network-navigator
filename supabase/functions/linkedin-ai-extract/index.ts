@@ -42,7 +42,9 @@ REGOLE:
 - LinkedIn in italiano usa label come "Messaggistica", "Connetti", "Altro", "Invia"
 
 Per pagina ${pageType || "profile"}, restituisci:
-${(pageType === "messaging" || pageType === "inbox") ? `{
+${
+  pageType === "messaging" || pageType === "inbox"
+    ? `{
   "threadItem": "selettore per UNA SINGOLA riga conversazione nella lista inbox (CRITICO — deve matchare righe individuali, es. li[class*='msg-conversation-card'], [data-control-name*='conversation'])",
   "contactName": "nome contatto dentro una riga conversazione (es. h3, span[class*='participant'])",
   "lastMessage": "anteprima ultimo messaggio (es. p[class*='body'], span[class*='snippet'])",
@@ -51,7 +53,9 @@ ${(pageType === "messaging" || pageType === "inbox") ? `{
   "threadUrl": "link alla conversazione (es. a[href*='/messaging/thread/'])",
   "messageInputSelector": "campo input messaggio (quando un thread è aperto)",
   "sendButtonSelector": "pulsante invio"
-}` : (pageType === "thread") ? `{
+}`
+    : pageType === "thread"
+      ? `{
   "messageItem": "selettore per UN SINGOLO messaggio/bubble nel thread (CRITICO, es. li[class*='msg-s-event'], [class*='msg-s-message'])",
   "senderName": "nome mittente dentro un messaggio (es. h3[class*='name'], span[class*='sender'])",
   "messageText": "testo del messaggio (es. p[class*='body'], [class*='msg-s-event-body'] p)",
@@ -59,7 +63,8 @@ ${(pageType === "messaging" || pageType === "inbox") ? `{
   "direction": "indicatore se il messaggio è mio o dell'altro (es. classe 'msg-s-event--outbound' vs non presente)",
   "messageInputSelector": "campo input messaggio",
   "sendButtonSelector": "pulsante invio"
-}` : `{
+}`
+      : `{
   "nameSelector": "nome della persona (es. h1)",
   "headlineSelector": "headline/titolo professionale",
   "locationSelector": "località",
@@ -68,7 +73,8 @@ ${(pageType === "messaging" || pageType === "inbox") ? `{
   "connectButtonSelector": "pulsante Connetti/Connect",
   "messageButtonSelector": "pulsante Messaggio/Message",
   "moreButtonSelector": "pulsante Altro/More dropdown"
-}`}
+}`
+}
 
 Restituisci SOLO JSON valido. Nessuna spiegazione, nessun markdown.`;
 
@@ -89,7 +95,9 @@ Visible buttons: ${JSON.stringify(snapshot.buttons?.slice(0, 15) || [])}
 Textboxes: ${JSON.stringify(snapshot.textboxes || [])}
 
 HTML samples:
-${Object.entries(snapshot.htmlSamples || {}).map(([k, v]) => `--- ${k} ---\n${(v as string).substring(0, 800)}`).join("\n\n")}`;
+${Object.entries(snapshot.htmlSamples || {})
+  .map(([k, v]) => `--- ${k} ---\n${(v as string).substring(0, 800)}`)
+  .join("\n\n")}`;
 
     // Migrato al gateway multi-provider (scope routing via ai_routing_config).
     let content = "";
@@ -112,10 +120,10 @@ ${Object.entries(snapshot.htmlSamples || {}).map(([k, v]) => `--- ${k} ---\n${(v
       const status = aiErr instanceof AiGatewayError ? (aiErr.status ?? 502) : 502;
       const kind = aiErr instanceof AiGatewayError ? aiErr.kind : "ai_error";
       console.error("linkedin-ai-extract AI error:", kind, status, aiErr);
-      return new Response(
-        JSON.stringify({ error: "AI call failed", kind, status, fallback: true }),
-        { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "AI call failed", kind, status, fallback: true }), {
+        status: 200,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // Parse JSON from AI response (may be wrapped in markdown code block)

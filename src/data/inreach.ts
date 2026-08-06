@@ -16,7 +16,11 @@ export interface InboundMessageRow {
   readonly category: string | null;
 }
 
-export async function findInboundMessages(search: string, catFilter: string, limit = 100): Promise<InboundMessageRow[]> {
+export async function findInboundMessages(
+  search: string,
+  catFilter: string,
+  limit = 100,
+): Promise<InboundMessageRow[]> {
   let q = supabase
     .from("channel_messages")
     .select("id, from_address, subject, body_text, body_html, channel, direction, created_at, read_at, category")
@@ -31,8 +35,6 @@ export async function findInboundMessages(search: string, catFilter: string, lim
 }
 
 export async function markChannelMessageRead(id: string): Promise<void> {
-  const { error } = await supabase.from("channel_messages")
-    .update({ read_at: new Date().toISOString() })
-    .eq("id", id);
+  const { error } = await supabase.from("channel_messages").update({ read_at: new Date().toISOString() }).eq("id", id);
   if (error) throw error;
 }

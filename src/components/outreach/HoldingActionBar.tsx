@@ -15,7 +15,12 @@ interface HoldingActionBarProps {
 }
 
 export function HoldingActionBar({
-  selectedMessage, selectedGroup, onApprove, onIgnore, onEscalate, onRegenerate,
+  selectedMessage,
+  selectedGroup,
+  onApprove,
+  onIgnore,
+  onEscalate,
+  onRegenerate,
 }: HoldingActionBarProps) {
   if (!selectedMessage) {
     return (
@@ -47,35 +52,67 @@ export function HoldingActionBar({
       <div className="px-4 py-2 border-b border-border/40 flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10" onClick={onApprove} aria-label="Conferma">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10"
+              onClick={onApprove}
+              aria-label="Conferma"
+            >
               <CheckCircle2 className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom"><p className="text-xs">Approva e Invia</p></TooltipContent>
+          <TooltipContent side="bottom">
+            <p className="text-xs">Approva e Invia</p>
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:bg-muted/40" onClick={onIgnore} aria-label="Chiudi">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-muted-foreground hover:bg-muted/40"
+              onClick={onIgnore}
+              aria-label="Chiudi"
+            >
               <XCircle className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom"><p className="text-xs">Ignora</p></TooltipContent>
+          <TooltipContent side="bottom">
+            <p className="text-xs">Ignora</p>
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={onEscalate} aria-label="Escalate">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-primary hover:bg-primary/10"
+              onClick={onEscalate}
+              aria-label="Escalate"
+            >
               <PhoneForwarded className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom"><p className="text-xs">Escalation Chiamata</p></TooltipContent>
+          <TooltipContent side="bottom">
+            <p className="text-xs">Escalation Chiamata</p>
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={onRegenerate} aria-label="AI">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-primary hover:bg-primary/10"
+              onClick={onRegenerate}
+              aria-label="AI"
+            >
               <Sparkles className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom"><p className="text-xs">Rigenera AI</p></TooltipContent>
+          <TooltipContent side="bottom">
+            <p className="text-xs">Rigenera AI</p>
+          </TooltipContent>
         </Tooltip>
       </div>
     </>

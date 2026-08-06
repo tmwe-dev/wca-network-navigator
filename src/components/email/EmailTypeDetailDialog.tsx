@@ -15,7 +15,10 @@ interface Props {
 }
 
 function parsePrompt(prompt: string) {
-  const lines = prompt.split("\n").map(l => l.trim()).filter(Boolean);
+  const lines = prompt
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   let obiettivo = "";
   const struttura: string[] = [];
@@ -117,13 +120,17 @@ export default function EmailTypeDetailDialog({ emailType, open, onOpenChange, o
                   {emailType.structure?.split("→").map((s, i) => (
                     <span key={i} className="flex items-center gap-1">
                       {i > 0 && <span className="text-muted-foreground text-xs">→</span>}
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{s.trim()}</Badge>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {s.trim()}
+                      </Badge>
                     </span>
                   ))}
                 </div>
                 <ol className="space-y-1.5 list-decimal list-inside text-foreground">
                   {struttura.map((s, i) => (
-                    <li key={i} className="text-xs leading-relaxed">{s.replace(/^\d+\.\s*/, "")}</li>
+                    <li key={i} className="text-xs leading-relaxed">
+                      {s.replace(/^\d+\.\s*/, "")}
+                    </li>
                   ))}
                 </ol>
               </div>
@@ -135,7 +142,9 @@ export default function EmailTypeDetailDialog({ emailType, open, onOpenChange, o
                 <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1.5">Vincoli</h4>
                 <ul className="space-y-1 list-disc list-inside text-foreground">
                   {vincoli.map((v, i) => (
-                    <li key={i} className="text-xs leading-relaxed">{v}</li>
+                    <li key={i} className="text-xs leading-relaxed">
+                      {v}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -144,7 +153,9 @@ export default function EmailTypeDetailDialog({ emailType, open, onOpenChange, o
             {/* Tono */}
             <div className="flex items-center gap-2">
               <h4 className="text-xs font-semibold uppercase text-muted-foreground">Tono</h4>
-              <Badge variant="outline" className="text-[10px]">{emailType.tone}</Badge>
+              <Badge variant="outline" className="text-[10px]">
+                {emailType.tone}
+              </Badge>
             </div>
 
             {/* Duplica e modifica */}
@@ -155,12 +166,22 @@ export default function EmailTypeDetailDialog({ emailType, open, onOpenChange, o
         ) : (
           <div className="space-y-3">
             <div className="flex gap-2">
-              <Input value={editIcon} onChange={e => setEditIcon(e.target.value)} className="w-12 text-center text-sm" maxLength={2} />
-              <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome tipo" className="flex-1 text-sm" />
+              <Input
+                value={editIcon}
+                onChange={(e) => setEditIcon(e.target.value)}
+                className="w-12 text-center text-sm"
+                maxLength={2}
+              />
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Nome tipo"
+                className="flex-1 text-sm"
+              />
             </div>
             <Textarea
               value={editPrompt}
-              onChange={e => setEditPrompt(e.target.value)}
+              onChange={(e) => setEditPrompt(e.target.value)}
               className="text-xs min-h-[200px] font-mono"
               rows={10}
             />
@@ -168,7 +189,9 @@ export default function EmailTypeDetailDialog({ emailType, open, onOpenChange, o
               <Button size="sm" className="flex-1 gap-1.5 text-xs" onClick={handleSave}>
                 <Save className="w-3.5 h-3.5" /> Salva come nuovo tipo
               </Button>
-              <Button size="sm" variant="ghost" className="text-xs" onClick={() => setEditing(false)}>Annulla</Button>
+              <Button size="sm" variant="ghost" className="text-xs" onClick={() => setEditing(false)}>
+                Annulla
+              </Button>
             </div>
           </div>
         )}

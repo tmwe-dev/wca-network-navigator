@@ -34,7 +34,9 @@ export function BrainPage() {
   React.useEffect(() => {
     const prev = document.title;
     document.title = "Cervello AI — Configuratore unificato";
-    return () => { document.title = prev; };
+    return () => {
+      document.title = prev;
+    };
   }, []);
 
   return (
@@ -42,8 +44,8 @@ export function BrainPage() {
       <header className="mb-6">
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Cervello AI</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Una sola pagina per leggere — e in futuro modificare — come il sistema parla. Scegli un canale per vedere
-          gli agenti, i prompt vivi e il tono attivo.
+          Una sola pagina per leggere — e in futuro modificare — come il sistema parla. Scegli un canale per vedere gli
+          agenti, i prompt vivi e il tono attivo.
         </p>
       </header>
 
@@ -63,7 +65,9 @@ export function BrainPage() {
                 className="group flex flex-col items-center gap-2 rounded-2xl border border-border/60 bg-card/60 px-4 py-5 transition-all hover:border-primary/60 hover:bg-card hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={`Apri canale ${c.label}`}
               >
-                <span className="text-3xl select-none" aria-hidden>{c.emoji}</span>
+                <span className="text-3xl select-none" aria-hidden>
+                  {c.emoji}
+                </span>
                 <span className="text-sm font-medium">{c.label}</span>
                 <Badge variant="secondary" className="text-[10px] font-normal">
                   {agentsQ.isLoading ? "…" : `${count} agenti`}
@@ -98,8 +102,14 @@ export function BrainPage() {
           </p>
           <p>
             Per modificare prompt, persona o capabilities, vai al{" "}
-            <Link to="/v2/lab?group=tests&tab=prompt-lab" className="underline underline-offset-2">Prompt Lab</Link>{" "}
-            o all'<Link to="/v2/agents/persona" className="underline underline-offset-2">editor persona</Link>.
+            <Link to="/v2/lab?group=tests&tab=prompt-lab" className="underline underline-offset-2">
+              Prompt Lab
+            </Link>{" "}
+            o all'
+            <Link to="/v2/agents/persona" className="underline underline-offset-2">
+              editor persona
+            </Link>
+            .
           </p>
         </CardContent>
       </Card>
@@ -111,7 +121,9 @@ export function BrainPage() {
             <div className="flex h-full flex-col">
               <SheetHeader className="p-6 pb-4 border-b">
                 <SheetTitle className="flex items-center gap-3">
-                  <span className="text-2xl" aria-hidden>{selectedChannel.emoji}</span>
+                  <span className="text-2xl" aria-hidden>
+                    {selectedChannel.emoji}
+                  </span>
                   <span>Canale {selectedChannel.label}</span>
                 </SheetTitle>
                 <SheetDescription>
@@ -138,7 +150,13 @@ export function BrainPage() {
   );
 }
 
-function ToneRow({ agents, loading }: { agents: ReturnType<typeof useBrainAgents>["data"] extends infer T ? T extends undefined ? never : T : never; loading: boolean }) {
+function ToneRow({
+  agents,
+  loading,
+}: {
+  agents: ReturnType<typeof useBrainAgents>["data"] extends infer T ? (T extends undefined ? never : T) : never;
+  loading: boolean;
+}) {
   const counts = React.useMemo(() => {
     const map = new Map<string, number>();
     for (const t of BRAIN_TONES) map.set(t.id, 0);
@@ -156,7 +174,9 @@ function ToneRow({ agents, loading }: { agents: ReturnType<typeof useBrainAgents
           key={t.id}
           className="flex flex-col items-center gap-2 rounded-2xl border border-border/60 bg-card/40 px-4 py-5"
         >
-          <span className="text-3xl select-none" aria-hidden>{t.emoji}</span>
+          <span className="text-3xl select-none" aria-hidden>
+            {t.emoji}
+          </span>
           <span className="text-sm font-medium">{t.label}</span>
           <Badge variant="outline" className="text-[10px] font-normal">
             {loading ? "…" : `${counts.get(t.id) ?? 0} agenti`}
@@ -173,7 +193,7 @@ function ChannelAgents({
   loading,
 }: {
   channel: BrainChannelDef;
-  agents: ReturnType<typeof useBrainAgents>["data"] extends infer T ? T extends undefined ? never : T : never;
+  agents: ReturnType<typeof useBrainAgents>["data"] extends infer T ? (T extends undefined ? never : T) : never;
   loading: boolean;
 }) {
   const list = React.useMemo(() => agentsForChannel(agents ?? [], channel), [agents, channel]);
@@ -195,15 +215,18 @@ function ChannelAgents({
           {list.map((a) => {
             const tone = classifyTone(a.tone) ?? classifyTone(a.custom_tone_prompt);
             return (
-              <li
-                key={a.agent_id}
-                className="flex items-start gap-3 rounded-lg border border-border/60 bg-card/40 p-3"
-              >
-                <span className="text-2xl select-none" aria-hidden>{a.avatar_emoji ?? "🤖"}</span>
+              <li key={a.agent_id} className="flex items-start gap-3 rounded-lg border border-border/60 bg-card/40 p-3">
+                <span className="text-2xl select-none" aria-hidden>
+                  {a.avatar_emoji ?? "🤖"}
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm truncate">{a.name ?? "Agente senza nome"}</span>
-                    {a.role && <Badge variant="secondary" className="text-[10px] font-normal">{a.role}</Badge>}
+                    {a.role && (
+                      <Badge variant="secondary" className="text-[10px] font-normal">
+                        {a.role}
+                      </Badge>
+                    )}
                     {tone && (
                       <Badge variant="outline" className="text-[10px] font-normal">
                         {tone.emoji} {tone.label}
@@ -232,9 +255,7 @@ function ChannelPrompts({
 }) {
   return (
     <section>
-      <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
-        Prompt vivi ({prompts.length})
-      </h3>
+      <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Prompt vivi ({prompts.length})</h3>
       {loading ? (
         <div className="space-y-2">
           <Skeleton className="h-10 w-full" />
@@ -249,14 +270,14 @@ function ChannelPrompts({
             <li key={p.id} className="rounded-lg border border-border/60 bg-card/40 p-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm">{p.name}</span>
-                <Badge variant="outline" className="text-[10px] font-normal">{p.context}</Badge>
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  {p.context}
+                </Badge>
                 {typeof p.priority === "number" && (
                   <span className="text-[10px] text-muted-foreground font-mono">p{p.priority}</span>
                 )}
               </div>
-              {p.objective && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{p.objective}</p>
-              )}
+              {p.objective && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{p.objective}</p>}
             </li>
           ))}
         </ul>

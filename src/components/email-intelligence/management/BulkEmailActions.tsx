@@ -1,12 +1,12 @@
 /**
  * BulkEmailActions — Buttons for bulk operations on emails with double-confirmation
  */
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
-import { Trash2, Archive, Check } from 'lucide-react';
-import { useChannelMessagesRepo } from '@/hooks/emailIntelligence/useChannelMessagesRepo';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { Trash2, Archive, Check } from "lucide-react";
+import { useChannelMessagesRepo } from "@/hooks/emailIntelligence/useChannelMessagesRepo";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("BulkEmailActions");
@@ -16,7 +16,7 @@ interface BulkEmailActionsProps {
   onActionsComplete?: () => void;
 }
 
-type ActionType = 'delete' | 'archive' | 'mark-read' | null;
+type ActionType = "delete" | "archive" | "mark-read" | null;
 
 export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailActionsProps) {
   const {
@@ -40,7 +40,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
         const count = await countChannelMessagesFromSender(senderEmail);
         setTotalEmails(count || 0);
       } catch (err) {
-        log.error('Error fetching email count:', { error: err });
+        log.error("Error fetching email count:", { error: err });
       }
     };
 
@@ -93,7 +93,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
       const total = emailIds.length;
 
       if (total === 0) {
-        toast.info('Nessuna email trovata');
+        toast.info("Nessuna email trovata");
         setProgress(null);
         setIsLoading(false);
         return;
@@ -104,13 +104,13 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
         const emailId = emailIds[i];
 
         try {
-          if (action === 'delete') {
+          if (action === "delete") {
             // Soft delete
             await softDeleteChannelMessageById(emailId);
-          } else if (action === 'archive') {
+          } else if (action === "archive") {
             // Set folder to ARCHIVE
             await archiveChannelMessageById(emailId);
-          } else if (action === 'mark-read') {
+          } else if (action === "mark-read") {
             // Mark as read
             await markChannelMessageIsReadFlag(emailId);
           }
@@ -125,11 +125,11 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
 
       // Show success message
       const actionLabels: Record<Exclude<ActionType, null>, string> = {
-        delete: 'eliminate',
-        archive: 'archiviate',
-        'mark-read': 'marked as read',
+        delete: "eliminate",
+        archive: "archiviate",
+        "mark-read": "marked as read",
       };
-      const label = action ? actionLabels[action] : '';
+      const label = action ? actionLabels[action] : "";
       toast.success(`${total} email ${label} da ${senderEmail}`);
 
       // Reset UI
@@ -140,7 +140,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
       // Call callback
       onActionsComplete?.();
     } catch (err) {
-      toast.error('Errore durante l\'operazione');
+      toast.error("Errore durante l'operazione");
       log.error("error", { error: err });
     } finally {
       setIsLoading(false);
@@ -150,25 +150,17 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
 
   const getButtonLabel = (action: ActionType): string => {
     if (pendingAction === action && confirmationCount === 1) {
-      return action === 'delete'
-        ? 'Sei sicuro?'
-        : action === 'archive'
-          ? 'Conferma archiviazione?'
-          : 'Conferma?';
+      return action === "delete" ? "Sei sicuro?" : action === "archive" ? "Conferma archiviazione?" : "Conferma?";
     }
 
-    return action === 'delete'
-      ? 'Elimina tutte'
-      : action === 'archive'
-        ? 'Archivia tutte'
-        : 'Segna come letto';
+    return action === "delete" ? "Elimina tutte" : action === "archive" ? "Archivia tutte" : "Segna come letto";
   };
 
   const getButtonVariant = (action: ActionType) => {
     if (pendingAction === action && confirmationCount === 1) {
-      return action === 'delete' ? 'destructive' : 'secondary';
+      return action === "delete" ? "destructive" : "secondary";
     }
-    return 'outline';
+    return "outline";
   };
 
   const disabledState = isLoading || totalEmails === 0;
@@ -179,37 +171,37 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
         {/* Delete button */}
         <Button
           size="sm"
-          variant={getButtonVariant('delete')}
-          onClick={() => handleActionClick('delete')}
+          variant={getButtonVariant("delete")}
+          onClick={() => handleActionClick("delete")}
           disabled={disabledState}
           className="text-xs"
         >
           <Trash2 className="h-3.5 w-3.5 mr-1" />
-          {getButtonLabel('delete')}
+          {getButtonLabel("delete")}
         </Button>
 
         {/* Archive button */}
         <Button
           size="sm"
-          variant={getButtonVariant('archive')}
-          onClick={() => handleActionClick('archive')}
+          variant={getButtonVariant("archive")}
+          onClick={() => handleActionClick("archive")}
           disabled={disabledState}
           className="text-xs"
         >
           <Archive className="h-3.5 w-3.5 mr-1" />
-          {getButtonLabel('archive')}
+          {getButtonLabel("archive")}
         </Button>
 
         {/* Mark as read button */}
         <Button
           size="sm"
-          variant={getButtonVariant('mark-read')}
-          onClick={() => handleActionClick('mark-read')}
+          variant={getButtonVariant("mark-read")}
+          onClick={() => handleActionClick("mark-read")}
           disabled={disabledState}
           className="text-xs"
         >
           <Check className="h-3.5 w-3.5 mr-1" />
-          {getButtonLabel('mark-read')}
+          {getButtonLabel("mark-read")}
         </Button>
       </div>
 
@@ -225,16 +217,10 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
 
       {/* Email count info */}
       {totalEmails != null && totalEmails > 0 && !isLoading && (
-        <div className="text-xs text-muted-foreground">
-          {totalEmails} email da questo mittente
-        </div>
+        <div className="text-xs text-muted-foreground">{totalEmails} email da questo mittente</div>
       )}
 
-      {totalEmails === 0 && (
-        <div className="text-xs text-muted-foreground">
-          Nessuna email da questo mittente
-        </div>
-      )}
+      {totalEmails === 0 && <div className="text-xs text-muted-foreground">Nessuna email da questo mittente</div>}
     </div>
   );
 }

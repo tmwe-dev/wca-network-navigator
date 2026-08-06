@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getEmailDomain, isLinkedInProfileUrl, normalizeLinkedInProfileUrl, cleanGoogleLinkedInTitle } from "@/lib/linkedinSearch";
+import {
+  getEmailDomain,
+  isLinkedInProfileUrl,
+  normalizeLinkedInProfileUrl,
+  cleanGoogleLinkedInTitle,
+} from "@/lib/linkedinSearch";
 
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 

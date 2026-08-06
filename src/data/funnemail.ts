@@ -11,7 +11,11 @@ export interface FunnemailPolicy {
   enabled?: boolean;
   actions?: Array<"tag_only" | "deep_search" | "draft_reply" | "crm_update" | "imap_action">;
   min_confidence?: number;
-  deep_search?: { trigger?: "always" | "if_unknown_or_stale" | "never"; stale_days?: number; level?: "scout" | "detective" | "sherlock" };
+  deep_search?: {
+    trigger?: "always" | "if_unknown_or_stale" | "never";
+    stale_days?: number;
+    level?: "scout" | "detective" | "sherlock";
+  };
   draft_reply?: { tone?: string; agent_id?: string | null };
   crm_update?: { set_lead_status?: string | null; create_task?: boolean };
   imap_action?: { type?: string; params?: Record<string, unknown> };
@@ -71,9 +75,7 @@ export interface FunnemailActionLogRow {
 }
 
 function toRecord(json: unknown): Record<string, unknown> {
-  return typeof json === "object" && json !== null && !Array.isArray(json)
-    ? (json as Record<string, unknown>)
-    : {};
+  return typeof json === "object" && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>) : {};
 }
 
 export async function listFunnemailActions(limit = 50): Promise<FunnemailActionLogRow[]> {

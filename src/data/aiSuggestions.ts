@@ -37,8 +37,7 @@ export async function findSuggestionAddressRules(params: {
     .limit(500);
 
   if (params.statusFilter === "uncategorized") q = q.is("group_id", null).is("group_name", null);
-  else if (params.statusFilter === "categorized")
-    q = q.or("group_id.not.is.null,group_name.not.is.null");
+  else if (params.statusFilter === "categorized") q = q.or("group_id.not.is.null,group_name.not.is.null");
 
   const { data, error } = await q;
   if (error) throw error;
@@ -54,10 +53,7 @@ export interface SuggestionGroupAssignment {
 }
 
 /** Assegna il gruppo (accettazione suggerimento o scelta manuale). */
-export async function assignSuggestionGroup(
-  ruleId: string,
-  patch: SuggestionGroupAssignment,
-): Promise<void> {
+export async function assignSuggestionGroup(ruleId: string, patch: SuggestionGroupAssignment): Promise<void> {
   await supabase.from("email_address_rules").update(patch).eq("id", ruleId);
 }
 

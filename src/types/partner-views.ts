@@ -4,10 +4,14 @@
  */
 
 /** Service relation from Supabase join */
-export interface PartnerServiceView { service_category: string }
+export interface PartnerServiceView {
+  service_category: string;
+}
 
 /** Certification relation from Supabase join */
-export interface PartnerCertificationView { certification: string }
+export interface PartnerCertificationView {
+  certification: string;
+}
 
 /** Network relation from Supabase join */
 export interface PartnerNetworkView {

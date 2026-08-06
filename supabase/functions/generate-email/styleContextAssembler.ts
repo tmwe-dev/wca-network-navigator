@@ -22,10 +22,7 @@ export interface StyleContext {
 /**
  * Load style preferences from ai_memory table.
  */
-async function loadStylePreferences(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<string> {
+async function loadStylePreferences(supabase: SupabaseClient, userId: string): Promise<string> {
   const { data: styleMemories } = await supabase
     .from("ai_memory")
     .select("content, confidence, access_count")
@@ -97,11 +94,7 @@ async function loadEditPatterns(
 /**
  * Load response patterns (historical email response data).
  */
-async function loadResponsePatterns(
-  supabase: SupabaseClient,
-  userId: string,
-  partner: PartnerData,
-): Promise<string> {
+async function loadResponsePatterns(supabase: SupabaseClient, userId: string, partner: PartnerData): Promise<string> {
   let rpQuery = supabase
     .from("response_patterns")
     .select(
@@ -136,13 +129,11 @@ export async function assembleStyleContext(
   partner: PartnerData,
   emailCategory: string | null,
 ): Promise<StyleContext> {
-  const [stylePreferencesContext, editPatternsContext, responseInsightsContext] = await Promise.all(
-    [
-      loadStylePreferences(supabase, userId),
-      loadEditPatterns(supabase, userId, partner, emailCategory),
-      loadResponsePatterns(supabase, userId, partner),
-    ],
-  );
+  const [stylePreferencesContext, editPatternsContext, responseInsightsContext] = await Promise.all([
+    loadStylePreferences(supabase, userId),
+    loadEditPatterns(supabase, userId, partner, emailCategory),
+    loadResponsePatterns(supabase, userId, partner),
+  ]);
 
   return {
     stylePreferencesContext,

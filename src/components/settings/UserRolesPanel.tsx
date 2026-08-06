@@ -63,7 +63,7 @@ export default function UserRolesPanel() {
   const filteredUsers = allUsers.filter(
     (u) =>
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+      (u.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false),
   );
 
   const usersWithRoles: UserWithRoles[] = filteredUsers.map((u) => ({

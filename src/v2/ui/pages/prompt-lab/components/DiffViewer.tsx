@@ -29,9 +29,7 @@ export function DiffViewer({ before, after, className, compact = false }: Props)
         if (i < lines.length - 1) keep.add(i + 1);
       }
     });
-    return lines
-      .map((l, i) => ({ ...l, idx: i }))
-      .filter((l) => keep.has(l.idx));
+    return lines.map((l, i) => ({ ...l, idx: i })).filter((l) => keep.has(l.idx));
   }, [lines, compact]);
 
   const stats = useMemo(() => {
@@ -46,9 +44,7 @@ export function DiffViewer({ before, after, className, compact = false }: Props)
 
   if (stats.add === 0 && stats.rem === 0) {
     return (
-      <div className={cn("text-[11px] text-muted-foreground italic px-2 py-1", className)}>
-        Nessuna differenza.
-      </div>
+      <div className={cn("text-[11px] text-muted-foreground italic px-2 py-1", className)}>Nessuna differenza.</div>
     );
   }
 

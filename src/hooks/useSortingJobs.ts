@@ -102,7 +102,9 @@ export function useSendJob() {
       if (!job.email_subject || !job.email_body) throw new Error("Subject o body mancante");
 
       // SSOT v3.9.56: enqueue in ai_pending_actions; dispatch reale via useApproveAndDispatch.
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       if (!userId) throw new Error("Sessione non valida");
 
@@ -143,7 +145,15 @@ export function useSendJob() {
 export function useUpdateJobEmail() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, email_subject, email_body }: { id: string; email_subject: string; email_body: string }) => {
+    mutationFn: async ({
+      id,
+      email_subject,
+      email_body,
+    }: {
+      id: string;
+      email_subject: string;
+      email_body: string;
+    }) => {
       await updateActivityEmail(id, email_subject, email_body);
     },
     onSuccess: () => {

@@ -1,6 +1,6 @@
 /**
  * Operations Procedures Knowledge Base
- * 
+ *
  * Catalogo completo di tutte le procedure operative del sistema.
  * L'AI consulta questa KB per guidare l'utente step-by-step.
  */

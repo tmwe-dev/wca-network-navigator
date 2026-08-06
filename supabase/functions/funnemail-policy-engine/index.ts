@@ -34,8 +34,14 @@ interface PlannedAction {
 }
 
 const ALLOWED_ACTIONS = new Set([
-  "tag_only", "deep_search", "draft_reply", "crm_update",
-  "imap_action", "escalate", "autoresponder", "snooze",
+  "tag_only",
+  "deep_search",
+  "draft_reply",
+  "crm_update",
+  "imap_action",
+  "escalate",
+  "autoresponder",
+  "snooze",
 ]);
 
 function buildPlanFromPolicy(policy: Record<string, unknown> | null, body: ReqBody): PlannedAction[] {
@@ -78,20 +84,20 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "missing message_id or from_address" }), { status: 400, headers });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // 1) Per-user override
     let effective: { scope: string; policy: Record<string, unknown> | null } | null = null;
     if (effectiveUserId) {
-      const { data } = await supabase.rpc("resolve_funnemail_policy", {
-        p_user_id: effectiveUserId,
-        p_from_address: body.from_address,
-        p_group_id: null,
-      }).maybeSingle();
+      const { data } = await supabase
+        .rpc("resolve_funnemail_policy", {
+          p_user_id: effectiveUserId,
+          p_from_address: body.from_address,
+          p_group_id: null,
+        })
+        .maybeSingle();
       if (data) effective = { scope: data.scope, policy: data.policy as Record<string, unknown> };
     }
 
@@ -121,12 +127,15 @@ Deno.serve(async (req) => {
     const plan = buildPlanFromPolicy(effective?.policy ?? null, body);
 
     endMetrics(metrics, true, 200);
-    return new Response(JSON.stringify({
-      message_id: body.message_id,
-      effective_scope: effective?.scope ?? "none",
-      group_id: groupId,
-      plan,
-    }), { status: 200, headers });
+    return new Response(
+      JSON.stringify({
+        message_id: body.message_id,
+        effective_scope: effective?.scope ?? "none",
+        group_id: groupId,
+        plan,
+      }),
+      { status: 200, headers },
+    );
   } catch (e) {
     logEdgeError("funnemail-policy-engine", e);
     endMetrics(metrics, false, 500);

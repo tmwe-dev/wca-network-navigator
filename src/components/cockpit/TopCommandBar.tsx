@@ -3,14 +3,20 @@ import { LayoutGrid, List, Building2, FileSearch, Users, CreditCard, UserPlus, F
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/types/cockpit";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export type SourceTab = "all" | "wca" | "prospect" | "contact" | "bca";
 
 export interface CockpitAIAction {
-  type: "filter" | "select_all" | "clear_selection" | "select_where" | "bulk_action" | "single_action" | "view_mode" | "auto_outreach";
+  type:
+    | "filter"
+    | "select_all"
+    | "clear_selection"
+    | "select_where"
+    | "bulk_action"
+    | "single_action"
+    | "view_mode"
+    | "auto_outreach";
   filters?: import("@/types/cockpit").CockpitFilter[];
   field?: string;
   operator?: string;
@@ -28,7 +34,15 @@ interface TopCommandBarProps {
   onViewChange: (mode: ViewMode) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  contacts: Array<{ id: string; name: string; company: string; country: string; priority: number; language: string; channels: string[] }>;
+  contacts: Array<{
+    id: string;
+    name: string;
+    company: string;
+    country: string;
+    priority: number;
+    language: string;
+    channels: string[];
+  }>;
   sourceTab: SourceTab;
   onSourceTabChange: (tab: SourceTab) => void;
 }
@@ -55,7 +69,7 @@ export function TopCommandBar({ viewMode, onViewChange, sourceTab, onSourceTabCh
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SOURCE_TABS.map(st => (
+                {SOURCE_TABS.map((st) => (
                   <SelectItem key={st.value} value={st.value} className="text-xs">
                     <span className="flex items-center gap-2">
                       <st.icon className="w-3 h-3" />
@@ -80,7 +94,7 @@ export function TopCommandBar({ viewMode, onViewChange, sourceTab, onSourceTabCh
               onClick={() => onViewChange("card")}
               className={cn(
                 "p-1 rounded transition-all duration-200",
-                viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
+                viewMode === "card" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground",
               )}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -90,7 +104,7 @@ export function TopCommandBar({ viewMode, onViewChange, sourceTab, onSourceTabCh
               onClick={() => onViewChange("list")}
               className={cn(
                 "p-1 rounded transition-all duration-200",
-                viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
+                viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground",
               )}
             >
               <List className="w-3.5 h-3.5" />

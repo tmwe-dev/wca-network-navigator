@@ -11,13 +11,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { invalidateOptimusMemoryPlan, deleteOptimusMemory } from "@/data/optimusMemoryAdmin";
@@ -26,7 +30,10 @@ import { cn } from "@/lib/utils";
 
 const CHANNEL_LABELS: Record<string, string> = { whatsapp: "WhatsApp", linkedin: "LinkedIn" };
 const PAGETYPE_LABELS: Record<string, string> = {
-  sidebar: "Sidebar chat", thread: "Conversazione", inbox: "Inbox", messaging: "Messaging",
+  sidebar: "Sidebar chat",
+  thread: "Conversazione",
+  inbox: "Inbox",
+  messaging: "Messaging",
 };
 
 function formatDate(s: string | null): string {
@@ -36,12 +43,27 @@ function formatDate(s: string | null): string {
 
 function statusBadge(row: OptimusOverviewRow) {
   if (row.consecutive_failures >= 3) {
-    return <Badge variant="outline" className="border-red-500 text-red-600 bg-red-500/10 gap-1"><AlertTriangle className="w-3 h-3" />Errore</Badge>;
+    return (
+      <Badge variant="outline" className="border-red-500 text-red-600 bg-red-500/10 gap-1">
+        <AlertTriangle className="w-3 h-3" />
+        Errore
+      </Badge>
+    );
   }
   if (row.consecutive_failures > 0 || row.confidence <= 0.8) {
-    return <Badge variant="outline" className="border-yellow-500 text-yellow-600 bg-yellow-500/10 gap-1"><Clock className="w-3 h-3" />DOM cambiato</Badge>;
+    return (
+      <Badge variant="outline" className="border-yellow-500 text-yellow-600 bg-yellow-500/10 gap-1">
+        <Clock className="w-3 h-3" />
+        DOM cambiato
+      </Badge>
+    );
   }
-  return <Badge variant="outline" className="border-green-500 text-green-600 bg-green-500/10 gap-1"><CheckCircle2 className="w-3 h-3" />OK</Badge>;
+  return (
+    <Badge variant="outline" className="border-green-500 text-green-600 bg-green-500/10 gap-1">
+      <CheckCircle2 className="w-3 h-3" />
+      OK
+    </Badge>
+  );
 }
 
 function resultBadge(result: string | null) {
@@ -52,7 +74,11 @@ function resultBadge(result: string | null) {
     partial: "border-yellow-500 text-yellow-600 bg-yellow-500/10",
     failure: "border-red-500 text-red-600 bg-red-500/10",
   };
-  return <Badge variant="outline" className={cn(colors[result] || "")}>{result}</Badge>;
+  return (
+    <Badge variant="outline" className={cn(colors[result] || "")}>
+      {result}
+    </Badge>
+  );
 }
 
 export function OptimusAgentPanel() {
@@ -63,7 +89,11 @@ export function OptimusAgentPanel() {
 
   const [filterChannel, setFilterChannel] = useState<string>("all");
   const [filterResult, setFilterResult] = useState<string>("all");
-  const { data: logs = [], isLoading: logsLoading } = useOptimusLogs({ channel: filterChannel, result: filterResult, limit: 50 });
+  const { data: logs = [], isLoading: logsLoading } = useOptimusLogs({
+    channel: filterChannel,
+    result: filterResult,
+    limit: 50,
+  });
 
   const [busy, setBusy] = useState<string | null>(null);
   const [resetTarget, setResetTarget] = useState<{ channel: string; pageType: string } | null>(null);
@@ -75,7 +105,10 @@ export function OptimusAgentPanel() {
       // Note: requires an active DOM snapshot from the extension; without it,
       // we can only mark the memory as stale and let the next "Leggi" rebuild.
       await invalidateOptimusMemoryPlan(channel, pageType);
-      toast({ title: "Piano marcato come scaduto", description: `Al prossimo "Leggi" Optimus rigenererà il piano per ${CHANNEL_LABELS[channel]} · ${PAGETYPE_LABELS[pageType]}.` });
+      toast({
+        title: "Piano marcato come scaduto",
+        description: `Al prossimo "Leggi" Optimus rigenererà il piano per ${CHANNEL_LABELS[channel]} · ${PAGETYPE_LABELS[pageType]}.`,
+      });
       qc.invalidateQueries({ queryKey: ["optimus-overview"] });
       qc.invalidateQueries({ queryKey: ["optimus-status"] });
     } catch (e) {
@@ -90,7 +123,10 @@ export function OptimusAgentPanel() {
     setBusy(key);
     try {
       await deleteOptimusMemory(channel, pageType);
-      toast({ title: "Memoria azzerata", description: `Optimus ripartirà da zero al prossimo "Leggi" per ${CHANNEL_LABELS[channel]} · ${PAGETYPE_LABELS[pageType]}.` });
+      toast({
+        title: "Memoria azzerata",
+        description: `Optimus ripartirà da zero al prossimo "Leggi" per ${CHANNEL_LABELS[channel]} · ${PAGETYPE_LABELS[pageType]}.`,
+      });
       qc.invalidateQueries({ queryKey: ["optimus-overview"] });
       qc.invalidateQueries({ queryKey: ["optimus-status"] });
       qc.invalidateQueries({ queryKey: ["optimus-logs"] });
@@ -110,19 +146,24 @@ export function OptimusAgentPanel() {
         </div>
         <div>
           <h2 className="text-lg font-bold text-foreground">Optimus Agent</h2>
-          <p className="text-xs text-muted-foreground">Agente AI che genera dinamicamente i piani di estrazione DOM per WhatsApp e LinkedIn</p>
+          <p className="text-xs text-muted-foreground">
+            Agente AI che genera dinamicamente i piani di estrazione DOM per WhatsApp e LinkedIn
+          </p>
         </div>
       </div>
 
       {/* Overview */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {ovLoading && (
-          <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">Caricamento…</CardContent></Card>
+          <Card>
+            <CardContent className="p-6 text-center text-sm text-muted-foreground">Caricamento…</CardContent>
+          </Card>
         )}
         {!ovLoading && overview.length === 0 && (
           <Card className="md:col-span-2 lg:col-span-3">
             <CardContent className="p-6 text-center text-sm text-muted-foreground">
-              Nessuna invocazione Optimus ancora registrata. Apri la sezione "In arrivo" e clicca "Leggi" su WhatsApp o LinkedIn.
+              Nessuna invocazione Optimus ancora registrata. Apri la sezione "In arrivo" e clicca "Leggi" su WhatsApp o
+              LinkedIn.
             </CardContent>
           </Card>
         )}
@@ -137,7 +178,9 @@ export function OptimusAgentPanel() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <CardTitle className="text-sm">{CHANNEL_LABELS[row.channel] ?? row.channel}</CardTitle>
-                    <CardDescription className="text-[11px]">{PAGETYPE_LABELS[row.page_type] ?? row.page_type}</CardDescription>
+                    <CardDescription className="text-[11px]">
+                      {PAGETYPE_LABELS[row.page_type] ?? row.page_type}
+                    </CardDescription>
                   </div>
                   {statusBadge(row)}
                 </div>
@@ -176,10 +219,22 @@ export function OptimusAgentPanel() {
                 </div>
 
                 <div className="flex gap-2 pt-1">
-                  <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1" disabled={busy === refreshKey} onClick={() => forceRefresh(row.channel, row.page_type)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 h-7 text-[10px] gap-1"
+                    disabled={busy === refreshKey}
+                    onClick={() => forceRefresh(row.channel, row.page_type)}
+                  >
                     <RefreshCw className={cn("w-3 h-3", busy === refreshKey && "animate-spin")} /> Forza rinnovo
                   </Button>
-                  <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1 text-red-600 hover:bg-red-500/10" disabled={busy === resetKey} onClick={() => setResetTarget({ channel: row.channel, pageType: row.page_type })}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 h-7 text-[10px] gap-1 text-red-600 hover:bg-red-500/10"
+                    disabled={busy === resetKey}
+                    onClick={() => setResetTarget({ channel: row.channel, pageType: row.page_type })}
+                  >
                     <Trash2 className="w-3 h-3" /> Reset
                   </Button>
                 </div>
@@ -195,11 +250,15 @@ export function OptimusAgentPanel() {
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <CardTitle className="text-sm">Log invocazioni</CardTitle>
-              <CardDescription className="text-[11px]">Ultime 50 chiamate a Optimus, in ordine cronologico</CardDescription>
+              <CardDescription className="text-[11px]">
+                Ultime 50 chiamate a Optimus, in ordine cronologico
+              </CardDescription>
             </div>
             <div className="flex gap-2">
               <Select value={filterChannel} onValueChange={setFilterChannel}>
-                <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-[130px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tutti i canali</SelectItem>
                   <SelectItem value="whatsapp">WhatsApp</SelectItem>
@@ -207,7 +266,9 @@ export function OptimusAgentPanel() {
                 </SelectContent>
               </Select>
               <Select value={filterResult} onValueChange={setFilterResult}>
-                <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-[130px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tutti gli esiti</SelectItem>
                   <SelectItem value="success">Success</SelectItem>
@@ -235,10 +296,18 @@ export function OptimusAgentPanel() {
               </TableHeader>
               <TableBody>
                 {logsLoading && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-6">Caricamento…</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-6">
+                      Caricamento…
+                    </TableCell>
+                  </TableRow>
                 )}
                 {!logsLoading && logs.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-6">Nessun log disponibile</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-6">
+                      Nessun log disponibile
+                    </TableCell>
+                  </TableRow>
                 )}
                 {logs.map((l) => (
                   <TableRow key={l.id} className="text-xs">
@@ -246,9 +315,15 @@ export function OptimusAgentPanel() {
                     <TableCell>{CHANNEL_LABELS[l.channel] ?? l.channel}</TableCell>
                     <TableCell>{PAGETYPE_LABELS[l.page_type] ?? l.page_type}</TableCell>
                     <TableCell>
-                      {l.used_cached_plan
-                        ? <Badge variant="outline" className="text-[9px] border-green-500 text-green-600 bg-green-500/10">cache</Badge>
-                        : <Badge variant="outline" className="text-[9px] border-blue-500 text-blue-600 bg-blue-500/10">AI</Badge>}
+                      {l.used_cached_plan ? (
+                        <Badge variant="outline" className="text-[9px] border-green-500 text-green-600 bg-green-500/10">
+                          cache
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] border-blue-500 text-blue-600 bg-blue-500/10">
+                          AI
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>{resultBadge(l.execution_result)}</TableCell>
                     <TableCell className="text-right">
@@ -257,7 +332,9 @@ export function OptimusAgentPanel() {
                         <span className="text-muted-foreground"> / {l.items_found}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right text-[10px]">{l.ai_latency_ms ? `${l.ai_latency_ms}ms` : "—"}</TableCell>
+                    <TableCell className="text-right text-[10px]">
+                      {l.ai_latency_ms ? `${l.ai_latency_ms}ms` : "—"}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -273,7 +350,13 @@ export function OptimusAgentPanel() {
             <AlertDialogTitle>Resettare la memoria di Optimus?</AlertDialogTitle>
             <AlertDialogDescription>
               {resetTarget && (
-                <>Stai per cancellare il piano corrente per <strong>{CHANNEL_LABELS[resetTarget.channel]} · {PAGETYPE_LABELS[resetTarget.pageType]}</strong>. Al prossimo "Leggi", Optimus ripartirà da zero generando un nuovo piano AI. Sei sicuro?</>
+                <>
+                  Stai per cancellare il piano corrente per{" "}
+                  <strong>
+                    {CHANNEL_LABELS[resetTarget.channel]} · {PAGETYPE_LABELS[resetTarget.pageType]}
+                  </strong>
+                  . Al prossimo "Leggi", Optimus ripartirà da zero generando un nuovo piano AI. Sei sicuro?
+                </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>

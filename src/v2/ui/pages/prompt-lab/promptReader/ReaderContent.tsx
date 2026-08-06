@@ -26,11 +26,17 @@ export function ReaderContent({ selected, data, loadingId, errorMsg, kbAll, kbCu
           <header className="border-b pb-3 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-lg font-semibold">{selected.displayName}</h2>
-              <Badge variant="outline" className="text-[10px]">{CATEGORY_LABEL[selected.category]}</Badge>
+              <Badge variant="outline" className="text-[10px]">
+                {CATEGORY_LABEL[selected.category]}
+              </Badge>
               {selected.runtime.edgeFunction && (
-                <Badge variant="secondary" className="text-[10px] font-mono">{selected.runtime.edgeFunction}</Badge>
+                <Badge variant="secondary" className="text-[10px] font-mono">
+                  {selected.runtime.edgeFunction}
+                </Badge>
               )}
-              <Badge variant="secondary" className="text-[10px] font-mono">{selected.runtime.modelDefault}</Badge>
+              <Badge variant="secondary" className="text-[10px] font-mono">
+                {selected.runtime.modelDefault}
+              </Badge>
             </div>
             {selected.description && (
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{selected.description}</p>
@@ -65,7 +71,11 @@ export function ReaderContent({ selected, data, loadingId, errorMsg, kbAll, kbCu
 
             <Section
               title="Persona"
-              meta={data.persona.loaded ? `tono: ${data.persona.tone ?? "—"} · lingua: ${data.persona.language ?? "—"}` : "non caricata"}
+              meta={
+                data.persona.loaded
+                  ? `tono: ${data.persona.tone ?? "—"} · lingua: ${data.persona.language ?? "—"}`
+                  : "non caricata"
+              }
               onCopy={data.persona.block_preview ? () => copy(data.persona.block_preview ?? "", "Persona") : undefined}
             >
               {data.persona.loaded ? (
@@ -73,14 +83,20 @@ export function ReaderContent({ selected, data, loadingId, errorMsg, kbAll, kbCu
                   {data.persona.block_preview || "(blocco persona vuoto)"}
                 </pre>
               ) : (
-                <p className="text-xs text-muted-foreground italic">{data.persona.note || "Nessuna persona definita per questo agente."}</p>
+                <p className="text-xs text-muted-foreground italic">
+                  {data.persona.note || "Nessuna persona definita per questo agente."}
+                </p>
               )}
             </Section>
 
             <Section
               title="Prompt operativi applicati (Prompt Lab)"
               meta={`${data.operative_prompts.applied.length} blocchi · contesti: ${data.operative_prompts.matched.contexts.join(", ") || "—"}`}
-              onCopy={data.operative_prompts.block_preview ? () => copy(data.operative_prompts.block_preview, "Operative prompts") : undefined}
+              onCopy={
+                data.operative_prompts.block_preview
+                  ? () => copy(data.operative_prompts.block_preview, "Operative prompts")
+                  : undefined
+              }
             >
               {data.operative_prompts.applied.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">Nessun prompt operativo applicato.</p>
@@ -88,7 +104,9 @@ export function ReaderContent({ selected, data, loadingId, errorMsg, kbAll, kbCu
                 <>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {data.operative_prompts.applied.map((n) => (
-                      <Badge key={n} variant="outline" className="text-[10px]">{n}</Badge>
+                      <Badge key={n} variant="outline" className="text-[10px]">
+                        {n}
+                      </Badge>
                     ))}
                   </div>
                   <pre className="whitespace-pre-wrap break-words text-[12px] leading-relaxed bg-muted/40 rounded p-3 max-h-[400px] overflow-auto">
@@ -100,33 +118,62 @@ export function ReaderContent({ selected, data, loadingId, errorMsg, kbAll, kbCu
 
             <Section title="Capabilities runtime" meta={data.capabilities.loaded ? "caricate da DB" : "default"}>
               <ul className="text-xs grid grid-cols-2 gap-x-4 gap-y-1">
-                <li><span className="text-muted-foreground">Modalità:</span> <span className="font-mono">{data.capabilities.execution_mode}</span></li>
-                <li><span className="text-muted-foreground">Modello:</span> <span className="font-mono">{data.capabilities.preferred_model ?? "—"}</span></li>
-                <li><span className="text-muted-foreground">Temperature:</span> <span className="font-mono">{data.capabilities.temperature}</span></li>
-                <li><span className="text-muted-foreground">Max token/call:</span> <span className="font-mono">{data.capabilities.max_tokens_per_call}</span></li>
-                <li><span className="text-muted-foreground">Max iterazioni:</span> <span className="font-mono">{data.capabilities.max_iterations}</span></li>
-                <li><span className="text-muted-foreground">Tool concorrenti:</span> <span className="font-mono">{data.capabilities.max_concurrent_tools}</span></li>
+                <li>
+                  <span className="text-muted-foreground">Modalità:</span>{" "}
+                  <span className="font-mono">{data.capabilities.execution_mode}</span>
+                </li>
+                <li>
+                  <span className="text-muted-foreground">Modello:</span>{" "}
+                  <span className="font-mono">{data.capabilities.preferred_model ?? "—"}</span>
+                </li>
+                <li>
+                  <span className="text-muted-foreground">Temperature:</span>{" "}
+                  <span className="font-mono">{data.capabilities.temperature}</span>
+                </li>
+                <li>
+                  <span className="text-muted-foreground">Max token/call:</span>{" "}
+                  <span className="font-mono">{data.capabilities.max_tokens_per_call}</span>
+                </li>
+                <li>
+                  <span className="text-muted-foreground">Max iterazioni:</span>{" "}
+                  <span className="font-mono">{data.capabilities.max_iterations}</span>
+                </li>
+                <li>
+                  <span className="text-muted-foreground">Tool concorrenti:</span>{" "}
+                  <span className="font-mono">{data.capabilities.max_concurrent_tools}</span>
+                </li>
               </ul>
             </Section>
 
-            <Section title="Tool effettivi" meta={`${data.tools.effective.length}/${data.tools.all_registered.length} consentiti`}>
+            <Section
+              title="Tool effettivi"
+              meta={`${data.tools.effective.length}/${data.tools.all_registered.length} consentiti`}
+            >
               <div className="space-y-2 text-xs">
                 <div>
                   <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Consentiti</p>
                   <div className="flex flex-wrap gap-1">
-                    {data.tools.effective.length === 0
-                      ? <span className="text-muted-foreground italic text-[11px]">nessuno</span>
-                      : data.tools.effective.map((t) => (
-                          <Badge key={t} variant="outline" className="text-[10px] font-mono">{t}</Badge>
-                        ))}
+                    {data.tools.effective.length === 0 ? (
+                      <span className="text-muted-foreground italic text-[11px]">nessuno</span>
+                    ) : (
+                      data.tools.effective.map((t) => (
+                        <Badge key={t} variant="outline" className="text-[10px] font-mono">
+                          {t}
+                        </Badge>
+                      ))
+                    )}
                   </div>
                 </div>
                 {data.tools.filtered_out.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Filtrati dalle capabilities</p>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">
+                      Filtrati dalle capabilities
+                    </p>
                     <div className="flex flex-wrap gap-1">
                       {data.tools.filtered_out.map((t) => (
-                        <Badge key={t} variant="secondary" className="text-[10px] font-mono opacity-60">{t}</Badge>
+                        <Badge key={t} variant="secondary" className="text-[10px] font-mono opacity-60">
+                          {t}
+                        </Badge>
                       ))}
                     </div>
                   </div>
@@ -162,7 +209,8 @@ export function ReaderContent({ selected, data, loadingId, errorMsg, kbAll, kbCu
           >
             {kbCurrent.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">
-                Nessuna entry attiva nelle categorie consultate ({selected.kbCategories.join(", ") || "nessuna categoria dichiarata"}).
+                Nessuna entry attiva nelle categorie consultate (
+                {selected.kbCategories.join(", ") || "nessuna categoria dichiarata"}).
               </p>
             ) : (
               <div className="space-y-3 max-h-[600px] overflow-auto">
@@ -173,7 +221,10 @@ export function ReaderContent({ selected, data, loadingId, errorMsg, kbAll, kbCu
                   kbCurrent.forEach((e) => {
                     if (e.category !== lastCat) {
                       out.push(
-                        <h4 key={`cat-${e.id}`} className="text-[11px] font-semibold uppercase tracking-wider text-primary border-b pb-1 pt-2">
+                        <h4
+                          key={`cat-${e.id}`}
+                          className="text-[11px] font-semibold uppercase tracking-wider text-primary border-b pb-1 pt-2"
+                        >
                           Categoria: <span className="font-mono">{e.category}</span>
                         </h4>,
                       );
@@ -197,14 +248,16 @@ export function ReaderContent({ selected, data, loadingId, errorMsg, kbAll, kbCu
                       >
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-xs font-medium">{e.title}</span>
-                          <Badge variant="outline" className="text-[9px]">prio {e.priority}</Badge>
+                          <Badge variant="outline" className="text-[9px]">
+                            prio {e.priority}
+                          </Badge>
                           {(e.tags ?? []).slice(0, 4).map((t) => (
-                            <Badge key={t} variant="secondary" className="text-[9px]">{t}</Badge>
+                            <Badge key={t} variant="secondary" className="text-[9px]">
+                              {t}
+                            </Badge>
                           ))}
                         </div>
-                        <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed">
-                          {e.content}
-                        </pre>
+                        <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed">{e.content}</pre>
                       </div>,
                     );
                   });

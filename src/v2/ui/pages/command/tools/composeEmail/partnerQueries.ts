@@ -24,7 +24,11 @@ export async function searchPartner(company: string | null, email: string | null
   return (await _searchPartner(company, email)) as PartnerRow[];
 }
 
-export async function findContact(partnerId: string, person: string | null, email: string | null): Promise<ContactRow | null> {
+export async function findContact(
+  partnerId: string,
+  person: string | null,
+  email: string | null,
+): Promise<ContactRow | null> {
   return (await findPartnerContact(partnerId, person, email)) as ContactRow | null;
 }
 

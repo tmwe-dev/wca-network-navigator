@@ -49,7 +49,9 @@ Deno.serve(async (req) => {
     let userId: string;
 
     if (isServiceRoleCall) {
-      supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+      supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
       supabase = supabaseAdmin;
       userId = syncUserId;
     } else {
@@ -79,10 +81,7 @@ Deno.serve(async (req) => {
     // ── IMAP config — BOOKING ONLY (hardcoded, ignora env IMAP_HOST/USER) ──
     const imapHost = "mx01.vmteca.net";
     const imapUser = "booking@tmwe.it";
-    const imapPassword =
-      Deno.env.get("IMAP_PASSWORD_BOOKING") ||
-      Deno.env.get("SMTP_PASSWORD_BOOKING") ||
-      "";
+    const imapPassword = Deno.env.get("IMAP_PASSWORD_BOOKING") || Deno.env.get("SMTP_PASSWORD_BOOKING") || "";
     if (!imapPassword) throw new Error("IMAP_PASSWORD_BOOKING not configured");
 
     // ── Get sync state ──
@@ -109,13 +108,11 @@ Deno.serve(async (req) => {
     const batch = await fetchUidBatch(imapExec, lastUid);
     const { uids, remainingCount, hasMore } = batch;
 
-
     const messages: Record<string, unknown>[] = [];
     let maxUid = lastUid;
 
     // ── Process each UID ──
     for (const uid of uids) {
-
       // Skip if already in DB
       if (await skipDuplicateUid(supabase, userId, uid)) {
         maxUid = uid;
@@ -170,12 +167,14 @@ Deno.serve(async (req) => {
     try {
       const resync = await resyncUnreadFlags(supabase, imapExec, userId);
       if (resync.checked > 0) {
-        console.log(JSON.stringify({
-          fn: "check-inbox-booking",
-          step: "flag_resync",
-          checked: resync.checked,
-          marked_read: resync.markedRead,
-        }));
+        console.log(
+          JSON.stringify({
+            fn: "check-inbox-booking",
+            step: "flag_resync",
+            checked: resync.checked,
+            marked_read: resync.markedRead,
+          }),
+        );
       }
     } catch (resyncErr: unknown) {
       console.warn("flag_resync skipped:", extractErrorMessage(resyncErr));
@@ -195,12 +194,14 @@ Deno.serve(async (req) => {
     try {
       const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
       if (enq.enqueued > 0) {
-        console.log(JSON.stringify({
-          fn: "check-inbox-booking",
-          step: "enrichment_enqueue",
-          enqueued: enq.enqueued,
-          skipped: enq.skipped,
-        }));
+        console.log(
+          JSON.stringify({
+            fn: "check-inbox-booking",
+            step: "enrichment_enqueue",
+            enqueued: enq.enqueued,
+            skipped: enq.skipped,
+          }),
+        );
       }
     } catch (enqErr: unknown) {
       console.warn("enrichment_enqueue skipped:", extractErrorMessage(enqErr));

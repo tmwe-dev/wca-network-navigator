@@ -18,8 +18,7 @@ export function useContinuousSpeech(onFinalText?: (text: string) => void, langCo
   const accumulatedRef = useRef("");
 
   const hasSpeechAPI =
-    typeof window !== "undefined" &&
-    ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+    typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
   const createRecognition = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;

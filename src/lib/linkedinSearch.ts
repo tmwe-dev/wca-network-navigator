@@ -59,12 +59,7 @@ export const unwrapGoogleResultUrl = (url?: string | null): string | null => {
   try {
     const parsed = new URL(url);
     if (isGoogleRedirectHost(parsed.hostname) && (parsed.pathname === "/url" || parsed.pathname === "/imgres")) {
-      return (
-        parsed.searchParams.get("url") ||
-        parsed.searchParams.get("q") ||
-        parsed.searchParams.get("imgurl") ||
-        url
-      );
+      return parsed.searchParams.get("url") || parsed.searchParams.get("q") || parsed.searchParams.get("imgurl") || url;
     }
     return parsed.href;
   } catch (e) {
@@ -81,9 +76,7 @@ export const isLinkedInProfileUrl = (url?: string | null): boolean => {
     const parsed = new URL(unwrapped);
     const hostname = parsed.hostname.toLowerCase();
     const isLinkedInHost =
-      hostname === "linkedin.com" ||
-      hostname === "www.linkedin.com" ||
-      hostname.endsWith(".linkedin.com");
+      hostname === "linkedin.com" || hostname === "www.linkedin.com" || hostname.endsWith(".linkedin.com");
 
     return isLinkedInHost && LINKEDIN_PROFILE_PATH_RE.test(parsed.pathname);
   } catch (e) {
@@ -115,7 +108,7 @@ export const cleanGoogleLinkedInTitle = (title?: string | null): string => {
 };
 
 export const extractLinkedInCandidateFromGoogleResult = (
-  item: GoogleSearchResultLike
+  item: GoogleSearchResultLike,
 ): LinkedInProfileCandidate | null => {
   const profileUrl = normalizeLinkedInProfileUrl(item.url);
   if (!profileUrl) return null;
@@ -123,10 +116,7 @@ export const extractLinkedInCandidateFromGoogleResult = (
   const cleanedTitle = cleanGoogleLinkedInTitle(item.title);
   const name = cleanedTitle.split(/\s+[|–—-]\s+/)[0]?.trim() || cleanedTitle;
   const description = item.description?.trim() || item.snippet?.trim() || "";
-  const headlineParts = [
-    cleanedTitle && cleanedTitle !== name ? cleanedTitle : "",
-    description,
-  ].filter(Boolean);
+  const headlineParts = [cleanedTitle && cleanedTitle !== name ? cleanedTitle : "", description].filter(Boolean);
 
   return {
     name: name || undefined,
@@ -137,7 +127,7 @@ export const extractLinkedInCandidateFromGoogleResult = (
 
 export const scoreLinkedInCandidate = (
   found: { name?: string | null; headline?: string | null; profileUrl?: string | null },
-  expected: { name: string; company?: string | null; role?: string | null }
+  expected: { name: string; company?: string | null; role?: string | null },
 ): number => {
   if (!found.profileUrl) return 0;
 
@@ -171,7 +161,7 @@ export const scoreLinkedInCandidate = (
 
 export const pickBestLinkedInCandidate = (
   items: GoogleSearchResultLike[],
-  expected: { name: string; company?: string | null; role?: string | null }
+  expected: { name: string; company?: string | null; role?: string | null },
 ): { candidate: LinkedInProfileCandidate | null; confidence: number; candidates: LinkedInProfileCandidate[] } => {
   const candidates = items
     .map(extractLinkedInCandidateFromGoogleResult)
@@ -192,7 +182,7 @@ export const buildLinkedInGoogleQueries = (
   name: string,
   company?: string | null,
   email?: string | null,
-  role?: string | null
+  role?: string | null,
 ): string[] => {
   const queries: string[] = [];
   const emailDomain = getEmailDomain(email);

@@ -6,8 +6,7 @@ export function CommandPageBackground() {
       <motion.div
         className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full"
         style={{
-          background:
-            "radial-gradient(circle, hsl(210 100% 66% / 0.012), transparent 70%)",
+          background: "radial-gradient(circle, hsl(210 100% 66% / 0.012), transparent 70%)",
         }}
         animate={{ scale: [1, 1.05, 1] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}

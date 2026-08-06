@@ -297,7 +297,11 @@ export function useUpdateMemberRole() {
  * Returns { hasPermission, isLoading }
  */
 export function useHasPermission(permissionKey: string) {
-  const { data: hasPermission = false, isLoading, error } = useQuery({
+  const {
+    data: hasPermission = false,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: queryKeys.rbac.hasPermission(permissionKey),
     queryFn: () => checkUserPermission(permissionKey),
     retry: 1,

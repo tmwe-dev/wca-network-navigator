@@ -8,12 +8,14 @@ Versione marcata come **baseline ottimale per ricerca conversazionale** su Comma
 - Failover AI: OpenAI BYOK -> Lovable AI Gateway (Gemini 3 Flash)
 
 ## Cosa funziona in modo eccellente
+
 - Ricerche in linguaggio naturale (KB + partner + contatti + agenda + inbox)
 - Planner Gemini con parametri semantici
 - Voce realtime ElevenLabs + bridge ask_brain
 - Memoria L1-L3 e Knowledge Base integrate nel prompt
 
 ## Ripristino
+
 Usare la History di Lovable e ripristinare al commit sopra, oppure remixare
 il progetto in questa data.
 
@@ -30,6 +32,7 @@ quando l'utente incolla un UUID esplicito, ma falliscono con frasi tipo
 "aggiorna lo stato del partner Rossi a cliente".
 
 ## Prossimo step consigliato
+
 Far risolvere al planner partner_id da partner_name prima di passare i
 parametri al tool, come gia fatto per i tool di search.
 
@@ -47,5 +50,5 @@ Applicata la stessa doctrine Prompt Freedom ai tool di scrittura:
   nessuna perdita di funzionalità, zero perdita di performance (una sola
   query aggiuntiva ilike quando il planner passa un nome invece di UUID).
 
-Risultato: le frasi tipo *"marca il partner Rossi Srl come cliente"* ora
+Risultato: le frasi tipo _"marca il partner Rossi Srl come cliente"_ ora
 funzionano senza dover incollare l'UUID. Voto UPDATE: 6/10 → 9/10.

@@ -43,9 +43,7 @@ export function CreateEventDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [eventType, setEventType] = useState<EventType>(defaultType);
-  const [startDate, setStartDate] = useState(
-    initialDate?.toISOString().split("T")[0] || "",
-  );
+  const [startDate, setStartDate] = useState(initialDate?.toISOString().split("T")[0] || "");
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("11:00");
   const [allDay, setAllDay] = useState(false);
@@ -62,7 +60,7 @@ export function CreateEventDialog({
   const { data: contactsData } = useContacts();
   const contacts: Contact[] = Array.isArray(contactsData)
     ? (contactsData as unknown as Contact[])
-    : ((contactsData as { items?: unknown[] } | undefined)?.items as unknown as Contact[]) ?? [];
+    : (((contactsData as { items?: unknown[] } | undefined)?.items as unknown as Contact[]) ?? []);
   const { data: deals = [] } = useDeals();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,9 +72,7 @@ export function CreateEventDialog({
     }
 
     const start_at = new Date(`${startDate}T${allDay ? "00:00" : startTime}`).toISOString();
-    const end_at = !allDay
-      ? new Date(`${startDate}T${endTime}`).toISOString()
-      : undefined;
+    const end_at = !allDay ? new Date(`${startDate}T${endTime}`).toISOString() : undefined;
 
     await createEvent.mutateAsync({
       title: title.trim(),
@@ -152,9 +148,7 @@ export function CreateEventDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Titolo *
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Titolo *</label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -166,9 +160,7 @@ export function CreateEventDialog({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Descrizione
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Descrizione</label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -180,9 +172,7 @@ export function CreateEventDialog({
 
           {/* Event Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Tipo di Evento
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Tipo di Evento</label>
             <select
               value={eventType}
               onChange={(e) => setEventType(e.target.value as EventType)}
@@ -199,9 +189,7 @@ export function CreateEventDialog({
           {/* Date and Time */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Data *
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Data *</label>
               <Input
                 type="date"
                 value={startDate}
@@ -228,9 +216,7 @@ export function CreateEventDialog({
           {!allDay && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Ora inizio
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Ora inizio</label>
                 <Input
                   type="time"
                   value={startTime}
@@ -240,9 +226,7 @@ export function CreateEventDialog({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Ora fine
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Ora fine</label>
                 <Input
                   type="time"
                   value={endTime}
@@ -255,9 +239,7 @@ export function CreateEventDialog({
 
           {/* Location */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Luogo
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Luogo</label>
             <Input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
@@ -269,9 +251,7 @@ export function CreateEventDialog({
           {/* Partner, Contact, Deal */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Partner
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Partner</label>
               <select
                 value={selectedPartnerId}
                 onChange={(e) => setSelectedPartnerId(e.target.value)}
@@ -287,9 +267,7 @@ export function CreateEventDialog({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Contatto
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Contatto</label>
               <select
                 value={selectedContactId}
                 onChange={(e) => setSelectedContactId(e.target.value)}
@@ -305,9 +283,7 @@ export function CreateEventDialog({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Deal
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Deal</label>
               <select
                 value={selectedDealId}
                 onChange={(e) => setSelectedDealId(e.target.value)}
@@ -326,9 +302,7 @@ export function CreateEventDialog({
           {/* Recurrence */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Ricorrenza
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Ricorrenza</label>
               <select
                 value={recurrence}
                 onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
@@ -343,9 +317,7 @@ export function CreateEventDialog({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Promemoria (minuti)
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Promemoria (minuti)</label>
               <Input
                 type="number"
                 value={reminderMinutes}
@@ -358,9 +330,7 @@ export function CreateEventDialog({
 
           {/* Color Picker */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Colore
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Colore</label>
             <div className="flex gap-2">
               {colorOptions.map((c) => (
                 <button
@@ -388,11 +358,7 @@ export function CreateEventDialog({
             >
               Annulla
             </Button>
-            <Button
-              type="submit"
-              disabled={createEvent.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button type="submit" disabled={createEvent.isPending} className="bg-blue-600 hover:bg-blue-700">
               {createEvent.isPending ? "Creazione..." : "Crea Evento"}
             </Button>
           </DialogFooter>

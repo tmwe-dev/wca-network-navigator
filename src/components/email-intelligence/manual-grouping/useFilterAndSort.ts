@@ -23,9 +23,9 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
   const setVolumeFilter = (v: string) => g.setFilter("emailIntelVolume", v);
   const hideClassified = g.filters.emailIntelHideClassified;
   const setHideClassified = (v: boolean) => g.setFilter("emailIntelHideClassified", v);
-  const [groupSortOption, setGroupSortOption] = useState<
-    "alpha-asc" | "alpha-desc" | "count-desc" | "count-asc"
-  >("alpha-asc");
+  const [groupSortOption, setGroupSortOption] = useState<"alpha-asc" | "alpha-desc" | "count-desc" | "count-asc">(
+    "alpha-asc",
+  );
   const [activeLetterFilter, setActiveLetterFilter] = useState<string | null>(null);
 
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("");
@@ -98,10 +98,12 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
     switch (groupSortOption) {
       case "alpha-asc":
         return filtered.sort((a, b) =>
-          a.nome_gruppo.localeCompare(b.nome_gruppo, "it", { sensitivity: "base", numeric: true }));
+          a.nome_gruppo.localeCompare(b.nome_gruppo, "it", { sensitivity: "base", numeric: true }),
+        );
       case "alpha-desc":
         return filtered.sort((a, b) =>
-          b.nome_gruppo.localeCompare(a.nome_gruppo, "it", { sensitivity: "base", numeric: true }));
+          b.nome_gruppo.localeCompare(a.nome_gruppo, "it", { sensitivity: "base", numeric: true }),
+        );
       case "count-desc":
         return filtered.sort((a, b) => {
           const ca = a.assigned_count || 0;
@@ -117,10 +119,7 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
     }
   }, [groups, groupSortOption, activeLetterFilter]);
 
-  const totalEmailCount = useMemo(
-    () => senders.reduce((sum, s) => sum + s.emailCount, 0),
-    [senders]
-  );
+  const totalEmailCount = useMemo(() => senders.reduce((sum, s) => sum + s.emailCount, 0), [senders]);
 
   return {
     searchQuery,

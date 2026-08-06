@@ -21,7 +21,10 @@ export function RegenerateBanner({ visible, message = "Modifica salvata", onDism
       <div className="flex items-center gap-1">
         <Button
           size="sm"
-          onClick={() => { forgeLabStore.triggerRun(); onDismiss?.(); }}
+          onClick={() => {
+            forgeLabStore.triggerRun();
+            onDismiss?.();
+          }}
           className="h-6 text-[10px] gap-1"
         >
           <Sparkles className="w-3 h-3" /> Re-genera mail

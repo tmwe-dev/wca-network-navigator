@@ -93,13 +93,13 @@ class TraceBuilder {
       references: [...this.references],
     };
     log.info("[command-trace]", {
-        prompt: trace.prompt,
-        phase: trace.phase,
-        driver: trace.driver,
-        totalMs: trace.totalMs,
-        steps: trace.steps,
-        references: trace.references,
-      });
+      prompt: trace.prompt,
+      phase: trace.phase,
+      driver: trace.driver,
+      totalMs: trace.totalMs,
+      steps: trace.steps,
+      references: trace.references,
+    });
     return trace;
   }
 }

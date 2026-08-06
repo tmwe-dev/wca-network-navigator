@@ -17,7 +17,10 @@ function extractFileName(prompt: string): string | null {
 function extractTags(prompt: string): string[] {
   const m = prompt.match(/tag[s]?[:=]\s*([^\n]+)/i);
   if (!m) return [];
-  return m[1].split(/[,;]/).map((t) => t.trim()).filter(Boolean);
+  return m[1]
+    .split(/[,;]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
 }
 
 interface IngestResp {
@@ -33,7 +36,10 @@ export const kbIngestDocumentTool: Tool = {
   id: "kb-ingest-document",
   label: "Ingestisci documento KB",
   description: "Indicizza un documento (PDF/DOCX/MD/TXT) nella Knowledge Base con embedding e chunking.",
-  match: (p) => /\b(?:ingest|indicizza|carica|aggiungi)\b[^.]{0,40}\b(?:knowledge|kb|knowledge\s*base)\b|\bkb[-\s]ingest\b/i.test(p),
+  match: (p) =>
+    /\b(?:ingest|indicizza|carica|aggiungi)\b[^.]{0,40}\b(?:knowledge|kb|knowledge\s*base)\b|\bkb[-\s]ingest\b/i.test(
+      p,
+    ),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     if (!context?.confirmed) {

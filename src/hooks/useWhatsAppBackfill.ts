@@ -10,7 +10,11 @@ import { useState, useCallback, useRef } from "react";
 import { toJsonValue } from "@/lib/typedJson";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "./useWhatsAppExtensionBridge";
-import { getChannelBackfillCursor, upsertChannelMessageIgnoreDup, upsertChannelBackfillState } from "@/data/whatsappBackfillQueries";
+import {
+  getChannelBackfillCursor,
+  upsertChannelMessageIgnoreDup,
+  upsertChannelBackfillState,
+} from "@/data/whatsappBackfillQueries";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
 import { fetchOperatorIdForUser } from "@/data/emailGrouping";
@@ -48,7 +52,7 @@ const MAX_SCROLLS_PER_CHAT = 30;
 const MAX_MESSAGES_PER_THREAD = 50;
 
 function jitteredPause(base: number): number {
-  return base * (0.85 + Math.random() * 0.30);
+  return base * (0.85 + Math.random() * 0.3);
 }
 
 function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): Promise<boolean> {
@@ -89,8 +93,14 @@ export function useWhatsAppBackfill() {
     setProgress({ ...INITIAL_PROGRESS, status: "running", phase: "discovery" });
 
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-      if (!user) { toast.error("Non autenticato"); return; }
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
+      if (!user) {
+        toast.error("Non autenticato");
+        return;
+      }
 
       const operatorId = await fetchOperatorIdForUser(user.id);
       if (!operatorId) {
@@ -101,12 +111,15 @@ export function useWhatsAppBackfill() {
       // ── PHASE 1: Discovery ──
       const sidebarResult = await bridge.readUnread();
       if (!sidebarResult.success || !sidebarResult.messages?.length) {
-        setProgress(p => ({ ...p, status: "done", phase: "idle" }));
+        setProgress((p) => ({ ...p, status: "done", phase: "idle" }));
         toast.info("Nessun contatto da recuperare");
         return;
       }
 
-      if (abortRef.current) { setProgress(p => ({ ...p, status: "paused", phase: "idle" })); return; }
+      if (abortRef.current) {
+        setProgress((p) => ({ ...p, status: "paused", phase: "idle" }));
+        return;
+      }
 
       // Get unique contacts from sidebar
       const sidebarContacts = new Map<string, { name: string; lastMessage: string; time: string }>();
@@ -148,13 +161,13 @@ export function useWhatsAppBackfill() {
       }
 
       if (chatsToProcess.length === 0) {
-        setProgress(p => ({ ...p, status: "done", phase: "idle" }));
+        setProgress((p) => ({ ...p, status: "done", phase: "idle" }));
         toast.success("Tutte le chat sono complete ✅");
         return;
       }
 
       // ── PHASE 2: Deep Recovery with cursor ──
-      setProgress(p => ({ ...p, phase: "deep", chatsTotal: chatsToProcess.length, chatsProcessed: 0 }));
+      setProgress((p) => ({ ...p, phase: "deep", chatsTotal: chatsToProcess.length, chatsProcessed: 0 }));
 
       let totalRecovered = 0;
       let totalDupes = 0;
@@ -162,14 +175,14 @@ export function useWhatsAppBackfill() {
 
       for (let i = 0; i < chatsToProcess.length; i++) {
         if (abortRef.current) {
-          setProgress(p => ({ ...p, status: "paused", phase: "idle" }));
+          setProgress((p) => ({ ...p, status: "paused", phase: "idle" }));
           toast.info("Recupero interrotto");
           return;
         }
 
         const chat = chatsToProcess[i];
         const chatId = chat.name.toLowerCase();
-        setProgress(p => ({ ...p, currentChat: chat.name, chatsProcessed: i }));
+        setProgress((p) => ({ ...p, currentChat: chat.name, chatsProcessed: i }));
 
         let messages: Array<Record<string, unknown>> = [];
         let attemptError: string | null = null;
@@ -184,17 +197,17 @@ export function useWhatsAppBackfill() {
           // If we have a cursor anchor and it's not found, scroll deeper
           if (chat.cursorOldestId && messages.length > 0) {
             const anchorText = chat.lastMessage?.trim().toLowerCase();
-            const foundAnchor = anchorText && messages.some((m) => {
-              const t = String(m.text || m.lastMessage || "").trim().toLowerCase();
-              return t === anchorText;
-            });
+            const foundAnchor =
+              anchorText &&
+              messages.some((m) => {
+                const t = String(m.text || m.lastMessage || "")
+                  .trim()
+                  .toLowerCase();
+                return t === anchorText;
+              });
 
             if (!foundAnchor) {
-              const backfillResult = await bridge.backfillChat(
-                chat.name,
-                chat.lastMessage || "",
-                MAX_SCROLLS_PER_CHAT
-              );
+              const backfillResult = await bridge.backfillChat(chat.name, chat.lastMessage || "", MAX_SCROLLS_PER_CHAT);
               if (backfillResult.success && backfillResult.messages?.length) {
                 messages = [...messages, ...(backfillResult.messages as Record<string, unknown>[])];
               }
@@ -220,13 +233,28 @@ export function useWhatsAppBackfill() {
 
         // Etichette UI WhatsApp da NON salvare come contatti
         const WA_UI_LABELS = new Set([
-          "gruppi", "da leggere", "ferie permessi malattie", "name", "group 1",
-          "non letti", "preferiti", "archiviate", "tutti",
+          "gruppi",
+          "da leggere",
+          "ferie permessi malattie",
+          "name",
+          "group 1",
+          "non letti",
+          "preferiti",
+          "archiviate",
+          "tutti",
         ]);
         // Anteprime sidebar / placeholder media da scartare
         const WA_GHOST_BODIES = new Set([
-          "foto", "video", "audio", "sticker", "gif", "documento",
-          "posizione", "contatto", "messaggio", "messaggio eliminato",
+          "foto",
+          "video",
+          "audio",
+          "sticker",
+          "gif",
+          "documento",
+          "posizione",
+          "contatto",
+          "messaggio",
+          "messaggio eliminato",
         ]);
 
         for (const msg of messages) {
@@ -252,8 +280,14 @@ export function useWhatsAppBackfill() {
           const timestamp = rawTime || new Date().toISOString();
 
           // Track oldest/newest
-          if (!oldestAt || timestamp < oldestAt) { oldestAt = timestamp; oldestExtId = extId; }
-          if (!newestAt || timestamp > newestAt) { newestAt = timestamp; newestExtId = extId; }
+          if (!oldestAt || timestamp < oldestAt) {
+            oldestAt = timestamp;
+            oldestExtId = extId;
+          }
+          if (!newestAt || timestamp > newestAt) {
+            newestAt = timestamp;
+            newestExtId = extId;
+          }
 
           const { error, status } = await upsertChannelMessageIgnoreDup({
             user_id: user.id,
@@ -311,7 +345,7 @@ export function useWhatsAppBackfill() {
 
         totalRecovered += chatRecovered;
         totalDupes += chatDupes;
-        setProgress(p => ({
+        setProgress((p) => ({
           ...p,
           chatsProcessed: i + 1,
           chatsCompleted: totalCompleted,
@@ -322,21 +356,28 @@ export function useWhatsAppBackfill() {
         // Pause between chats
         if (i < chatsToProcess.length - 1) {
           const pause = jitteredPause(PAUSE_BETWEEN_CHATS_MS);
-          setProgress(p => ({ ...p, status: "paused" }));
+          setProgress((p) => ({ ...p, status: "paused" }));
           const aborted = await sleepAbortable(pause, abortRef);
           if (aborted) {
-            setProgress(p => ({ ...p, status: "paused", phase: "idle" }));
+            setProgress((p) => ({ ...p, status: "paused", phase: "idle" }));
             toast.info("Recupero interrotto");
             return;
           }
-          setProgress(p => ({ ...p, status: "running" }));
+          setProgress((p) => ({ ...p, status: "running" }));
         }
       }
 
-      setProgress(p => ({ ...p, status: "done", phase: "idle", currentChat: null }));
-      toast.success(`Recupero completato: ${totalRecovered} messaggi da ${chatsToProcess.length} chat (${totalDupes} duplicati skippati)`);
+      setProgress((p) => ({ ...p, status: "done", phase: "idle", currentChat: null }));
+      toast.success(
+        `Recupero completato: ${totalRecovered} messaggi da ${chatsToProcess.length} chat (${totalDupes} duplicati skippati)`,
+      );
     } catch (err: unknown) {
-      setProgress(p => ({ ...p, status: "error", phase: "idle", lastError: (err instanceof Error ? err.message : String(err)) }));
+      setProgress((p) => ({
+        ...p,
+        status: "error",
+        phase: "idle",
+        lastError: err instanceof Error ? err.message : String(err),
+      }));
       toast.error(`Errore recupero: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       runningRef.current = false;

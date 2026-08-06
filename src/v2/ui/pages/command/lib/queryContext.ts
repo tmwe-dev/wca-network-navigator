@@ -62,8 +62,6 @@ export function isElliptical(prompt: string): boolean {
  */
 export function contextHint(ctx: QueryContext | null): string {
   if (!ctx || !isContextFresh(ctx)) return "";
-  const filterDesc = ctx.filters
-    .map((f) => `${f.column} ${f.op} ${JSON.stringify(f.value)}`)
-    .join(" AND ");
+  const filterDesc = ctx.filters.map((f) => `${f.column} ${f.op} ${JSON.stringify(f.value)}`).join(" AND ");
   return `\n\nCONTESTO TURNO PRECEDENTE: tabella=${ctx.table}, mode=${ctx.mode}, filtri=[${filterDesc || "nessuno"}]. Se il nuovo prompt è un follow-up ellittico (es. "e a New York?", "anche a Miami"), EREDITA tabella e filtri compatibili dal contesto, SOSTITUENDO solo quelli esplicitamente cambiati (es. cambia/aggiunge "city").`;
 }

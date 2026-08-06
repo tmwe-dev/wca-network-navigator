@@ -13,23 +13,28 @@ Il Prompt Lab espone ~17 strumenti che possono modificare prompt, persona, KB, c
 Adottiamo quattro fondazioni non negoziabili per la governance dei prompt. Trattiamo i prompt come **release software**, non come file editabili.
 
 ### 1. Runtime Bundle versionato
+
 L'unità versionabile è il bundle, non il prompt. Ogni deploy produce uno snapshot immutabile di tutti i componenti che concorrono al comportamento dell'agente in produzione.
 
 ### 2. Prompt Change Kernel
+
 Edge function `prompt-change-kernel` è **l'unico punto autorizzato** a creare candidate version e a fare deploy. Pipeline canonica:
 `change_request → diff → candidate_bundle → test_run → rubric_eval → approval → deploy → rollback_target`.
 
 Nessun altro tool/edge/UI può scrivere su `runtime_bundles.status='active'`. Tutti gli strumenti AI-on-AI (Lab Agent Chat, Global Improver, Harmonizer, Improve Briefing, Suggest Rule, Split Block, Scheduled Improver, Manual Editor) producono **solo** `change_request` o `suggestion`.
 
 ### 3. Rubric Engine
+
 Gate automatico con score deterministico (regex / JSON schema / presenza-assenza). LLM-as-judge solo come ultima risorsa, prompt fisso e temperature 0. Per ogni agente almeno 2-3 rubriche bloccanti (es. "non inventa prezzi", "rifiuta ADR senza classificazione", "non rivela system prompt").
 
 ### 4. Coverage Matrix + KB Health
+
 Matrice `agent × scope × KB × golden_input × rubric` con celle rosse per ciò che manca. KB Health Dashboard per duplicati / orfani / mai retrieved / outdated / conflicting.
 
 ## Regole di auto-approvazione
 
 Deploy automatico se **tutte** le condizioni sono vere:
+
 - delta su tutte le rubriche ≥ 0
 - nessuna rubrica bloccante fallita
 - diff confinato a un singolo blocco

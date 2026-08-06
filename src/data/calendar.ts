@@ -9,7 +9,6 @@ import type { Database } from "@/integrations/supabase/types";
 
 type CalendarEventDbRow = Database["public"]["Tables"]["calendar_events"]["Row"];
 
-
 type Json = Database["public"]["Tables"]["calendar_events"]["Row"]["metadata"];
 type DbInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
 type DbUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
@@ -59,7 +58,6 @@ export interface CalendarEventWithRelations extends CalendarEvent {
   contact?: { name: string; email: string | null; mobile: string | null } | null;
   deal?: { title: string; stage: string } | null;
 }
-
 
 // ─── Row mapping (nessun cast: narrowing esplicito) ─────
 
@@ -112,12 +110,9 @@ function mapEvent(row: CalendarEventDbRow): CalendarEvent {
 /**
  * List events in a date range for the current user
  */
-export async function listEvents(
-  userId: string,
-  from: string,
-  to: string,
-): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase.from("calendar_events")
+export async function listEvents(userId: string, from: string, to: string): Promise<CalendarEvent[]> {
+  const { data, error } = await supabase
+    .from("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .gte("start_at", from)
@@ -132,10 +127,7 @@ export async function listEvents(
  * Get a single event by ID
  */
 export async function getEvent(id: string): Promise<CalendarEvent | null> {
-  const { data, error } = await supabase.from("calendar_events")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("calendar_events").select("*").eq("id", id).single();
 
   if (error) {
     if (error.code === "PGRST116") {
@@ -153,10 +145,7 @@ export async function getEvent(id: string): Promise<CalendarEvent | null> {
 export async function createEvent(event: CalendarEventInsert): Promise<CalendarEvent> {
   const { metadata, ...rest } = event;
   const payload: DbInsert = metadata === undefined ? rest : { ...rest, metadata: toJson(metadata) };
-  const { data, error } = await supabase.from("calendar_events")
-    .insert(payload)
-    .select()
-    .single();
+  const { data, error } = await supabase.from("calendar_events").insert(payload).select().single();
 
   if (error) throw error;
   return mapEvent(data);
@@ -168,7 +157,8 @@ export async function createEvent(event: CalendarEventInsert): Promise<CalendarE
 export async function updateEvent(id: string, updates: CalendarEventUpdate): Promise<CalendarEvent> {
   const { metadata, ...rest } = updates;
   const patch: DbUpdate = metadata === undefined ? rest : { ...rest, metadata: toJson(metadata) };
-  const { data, error } = await supabase.from("calendar_events")
+  const { data, error } = await supabase
+    .from("calendar_events")
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select()
@@ -193,7 +183,8 @@ export async function deleteEvent(id: string): Promise<void> {
 export async function getUpcomingEvents(userId: string, limit = 5): Promise<CalendarEvent[]> {
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase.from("calendar_events")
+  const { data, error } = await supabase
+    .from("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .eq("status", "scheduled")
@@ -209,7 +200,8 @@ export async function getUpcomingEvents(userId: string, limit = 5): Promise<Cale
  * Get events for a specific partner
  */
 export async function getEventsForPartner(partnerId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase.from("calendar_events")
+  const { data, error } = await supabase
+    .from("calendar_events")
     .select("*")
     .eq("partner_id", partnerId)
     .eq("status", "scheduled")
@@ -223,7 +215,8 @@ export async function getEventsForPartner(partnerId: string): Promise<CalendarEv
  * Get events for a specific deal
  */
 export async function getEventsForDeal(dealId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase.from("calendar_events")
+  const { data, error } = await supabase
+    .from("calendar_events")
     .select("*")
     .eq("deal_id", dealId)
     .order("start_at", { ascending: true });
@@ -236,7 +229,8 @@ export async function getEventsForDeal(dealId: string): Promise<CalendarEvent[]>
  * Get events for a specific contact
  */
 export async function getEventsForContact(contactId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase.from("calendar_events")
+  const { data, error } = await supabase
+    .from("calendar_events")
     .select("*")
     .eq("contact_id", contactId)
     .order("start_at", { ascending: true });
@@ -248,11 +242,9 @@ export async function getEventsForContact(contactId: string): Promise<CalendarEv
 /**
  * Get events by type for current user
  */
-export async function getEventsByType(
-  userId: string,
-  eventType: EventType,
-): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase.from("calendar_events")
+export async function getEventsByType(userId: string, eventType: EventType): Promise<CalendarEvent[]> {
+  const { data, error } = await supabase
+    .from("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .eq("event_type", eventType)
@@ -268,12 +260,7 @@ export async function getEventsByType(
 export const calendarKeys = {
   all: () => [queryKeys.calendar],
   lists: () => [...calendarKeys.all(), "list"],
-  list: (userId: string, from: string, to: string) => [
-    ...calendarKeys.lists(),
-    userId,
-    from,
-    to,
-  ],
+  list: (userId: string, from: string, to: string) => [...calendarKeys.lists(), userId, from, to],
   upcoming: (userId: string) => [queryKeys.calendar, "upcoming", userId],
   detail: () => [...calendarKeys.all(), "detail"],
   byId: (id: string) => [...calendarKeys.detail(), id],

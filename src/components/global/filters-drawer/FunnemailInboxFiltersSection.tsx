@@ -18,13 +18,13 @@ export function FunnemailInboxFiltersSection() {
 
   return (
     <InboxGroupsSidebar
-        folders={grouped.folders}
-        counts={grouped.counts}
-        selectedFolder={g.filters.funnemailFolder}
-        totalCount={grouped.messages.length}
-        loading={groupedQ.isLoading}
-        onSelect={(slug) => g.setFilter("funnemailFolder", slug)}
-        variant="drawer"
+      folders={grouped.folders}
+      counts={grouped.counts}
+      selectedFolder={g.filters.funnemailFolder}
+      totalCount={grouped.messages.length}
+      loading={groupedQ.isLoading}
+      onSelect={(slug) => g.setFilter("funnemailFolder", slug)}
+      variant="drawer"
     />
   );
 }

@@ -2,8 +2,19 @@ import { ArrowUpDown, ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01 } from "luc
 
 export type LetterRange =
   | "all"
-  | "A-B" | "C-D" | "E-F" | "G-H" | "I-J" | "K-L"
-  | "M-N" | "O-P" | "Q-R" | "S-T" | "U-V" | "W-X" | "Y-Z";
+  | "A-B"
+  | "C-D"
+  | "E-F"
+  | "G-H"
+  | "I-J"
+  | "K-L"
+  | "M-N"
+  | "O-P"
+  | "Q-R"
+  | "S-T"
+  | "U-V"
+  | "W-X"
+  | "Y-Z";
 
 export const LETTER_RANGES: { value: LetterRange; label: string }[] = [
   { value: "all", label: "Tutti" },
@@ -40,8 +51,8 @@ export const GROUP_SORT_CYCLE: Record<GroupSort, GroupSort> = {
 };
 
 export const GROUP_SORT_META: Record<GroupSort, { label: string; Icon: typeof ArrowUpDown }> = {
-  "alpha-asc":  { label: "A → Z",        Icon: ArrowDownAZ },
-  "alpha-desc": { label: "Z → A",        Icon: ArrowUpAZ },
+  "alpha-asc": { label: "A → Z", Icon: ArrowDownAZ },
+  "alpha-desc": { label: "Z → A", Icon: ArrowUpAZ },
   "count-desc": { label: "Più contatti", Icon: ArrowDown01 },
-  "count-asc":  { label: "Meno contatti", Icon: ArrowUp01 },
+  "count-asc": { label: "Meno contatti", Icon: ArrowUp01 },
 };

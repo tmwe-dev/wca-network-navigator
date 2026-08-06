@@ -25,11 +25,21 @@ interface EmailAIPanelProps {
 }
 
 export function EmailAIPanel({
-  aiGenerating, aiImproving, hasBody,
-  learningDialogOpen, editAnalysis,
-  onGenerate, onImprove, onLoadTemplate, onInsertImage,
-  onCloseLearningDialog, onSendAndSave, onSendWithoutSaving,
-  recipientPartnerId = null, recipientCount = 0, contextSummary = null,
+  aiGenerating,
+  aiImproving,
+  hasBody,
+  learningDialogOpen,
+  editAnalysis,
+  onGenerate,
+  onImprove,
+  onLoadTemplate,
+  onInsertImage,
+  onCloseLearningDialog,
+  onSendAndSave,
+  onSendWithoutSaving,
+  recipientPartnerId = null,
+  recipientCount = 0,
+  contextSummary = null,
 }: EmailAIPanelProps): React.ReactElement {
   return (
     <div className="w-[260px] shrink-0 h-full">

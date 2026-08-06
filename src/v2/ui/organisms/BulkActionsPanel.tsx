@@ -45,13 +45,15 @@ function ActionRow({
         destructive
           ? "border-destructive/30 hover:border-destructive/60 hover:bg-destructive/5"
           : "border-border/40 hover:border-primary/40 hover:bg-primary/5",
-        !onClick && "opacity-50 cursor-not-allowed"
+        !onClick && "opacity-50 cursor-not-allowed",
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
         <Icon className={cn("w-4 h-4 flex-shrink-0", destructive ? "text-destructive" : "text-primary")} />
         <div className="min-w-0">
-          <div className={cn("text-[12px] font-semibold truncate", destructive ? "text-destructive" : "text-foreground")}>
+          <div
+            className={cn("text-[12px] font-semibold truncate", destructive ? "text-destructive" : "text-foreground")}
+          >
             {title}
           </div>
           {hint && <div className="text-[10px] text-muted-foreground truncate">{hint}</div>}
@@ -60,7 +62,7 @@ function ActionRow({
       <span
         className={cn(
           "text-[11px] font-mono px-2 py-0.5 rounded-md flex-shrink-0",
-          destructive ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"
+          destructive ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary",
         )}
       >
         {count}
@@ -165,9 +167,7 @@ export function BulkActionsPanel({
               </div>
             ))}
             {selected.length > 12 && (
-              <div className="text-[10px] text-muted-foreground italic px-2 pt-1">
-                + altri {selected.length - 12}…
-              </div>
+              <div className="text-[10px] text-muted-foreground italic px-2 pt-1">+ altri {selected.length - 12}…</div>
             )}
           </div>
         </div>

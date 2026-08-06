@@ -18,13 +18,7 @@ const FORBIDDEN_PATTERNS = [
   /admin\s*panel/i,
 ];
 
-const FORBIDDEN_URL_PATTERNS = [
-  /javascript:/i,
-  /data:/i,
-  /file:/i,
-  /chrome:/i,
-  /about:/i,
-];
+const FORBIDDEN_URL_PATTERNS = [/javascript:/i, /data:/i, /file:/i, /chrome:/i, /about:/i];
 
 /**
  * Checks if a tool call is forbidden by safety rules.

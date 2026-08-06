@@ -2,25 +2,24 @@
 // TTL differenziato + quota management + cleanup automatico
 
 const Cache = {
-
   // ============================================================
   // 1. TTL PER TIPO (in giorni)
   // ============================================================
   TTL: {
-    domain:     30,
-    company:    60,
-    person:     90,
-    news:       7,
-    logo:       90,
+    domain: 30,
+    company: 60,
+    person: 90,
+    news: 7,
+    logo: 90,
     screenshot: 14,
-    search:     3,
-    freight:    14,
+    search: 3,
+    freight: 14,
   },
 
   // Quota management
   MAX_ENTRIES: 1000,
 
-  _prefix: 'fs_cache_',
+  _prefix: "fs_cache_",
   _entryCount: null, // Cache entry count
   _statsCachedAt: 0,
   _statsCacheDuration: 30000, // 30 seconds
@@ -32,15 +31,19 @@ const Cache = {
   // 2. GESTIONE CACHE
   // ============================================================
   _key(type, identifier) {
-    const clean = identifier.toLowerCase().replace(/^www\./, '').replace(/\/+$/, '').trim();
-    return this._prefix + type + ':' + clean;
+    const clean = identifier
+      .toLowerCase()
+      .replace(/^www\./, "")
+      .replace(/\/+$/, "")
+      .trim();
+    return this._prefix + type + ":" + clean;
   },
 
   async _initEntryCount() {
     if (this._entryCount !== null) return;
     try {
       const all = await chrome.storage.local.get(null);
-      this._entryCount = Object.keys(all).filter(k => k.startsWith(this._prefix)).length;
+      this._entryCount = Object.keys(all).filter((k) => k.startsWith(this._prefix)).length;
     } catch {
       this._entryCount = 0;
     }
@@ -54,7 +57,7 @@ const Cache = {
       type,
       identifier,
       cachedAt: Date.now(),
-      expiresAt: Date.now() + (ttlDays * 24 * 60 * 60 * 1000),
+      expiresAt: Date.now() + ttlDays * 24 * 60 * 60 * 1000,
       hits: 0,
     };
 
@@ -113,7 +116,7 @@ const Cache = {
       }
       this._hitUpdates = {};
     } catch (err) {
-      console.error('Failed to flush hit updates:', err);
+      console.error("Failed to flush hit updates:", err);
     }
   },
 
@@ -190,7 +193,7 @@ const Cache = {
     });
 
     // Rimuovi il 20% più basso
-    const toRemove = entries.slice(0, Math.ceil(entries.length * 0.2)).map(e => e.key);
+    const toRemove = entries.slice(0, Math.ceil(entries.length * 0.2)).map((e) => e.key);
     if (toRemove.length > 0) {
       await chrome.storage.local.remove(toRemove);
     }
@@ -203,7 +206,7 @@ const Cache = {
     const now = Date.now();
 
     // Return cached stats if fresh
-    if (this._statsCache && (now - this._statsCachedAt) < this._statsCacheDuration) {
+    if (this._statsCache && now - this._statsCachedAt < this._statsCacheDuration) {
       return this._statsCache;
     }
 
@@ -214,7 +217,7 @@ const Cache = {
       if (!key.startsWith(this._prefix)) continue;
       stats.total++;
 
-      const type = entry.type || 'unknown';
+      const type = entry.type || "unknown";
       if (!stats.byType[type]) stats.byType[type] = { count: 0, hits: 0 };
       stats.byType[type].count++;
       stats.byType[type].hits += entry.hits || 0;
@@ -237,7 +240,7 @@ const Cache = {
 
   async clear() {
     const all = await chrome.storage.local.get(null);
-    const cacheKeys = Object.keys(all).filter(k => k.startsWith(this._prefix));
+    const cacheKeys = Object.keys(all).filter((k) => k.startsWith(this._prefix));
     if (cacheKeys.length > 0) {
       await chrome.storage.local.remove(cacheKeys);
     }
@@ -268,6 +271,6 @@ const Cache = {
   },
 };
 
-if (typeof globalThis !== 'undefined') {
+if (typeof globalThis !== "undefined") {
   globalThis.Cache = Cache;
 }

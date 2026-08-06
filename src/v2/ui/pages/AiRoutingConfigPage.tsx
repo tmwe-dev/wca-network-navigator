@@ -59,7 +59,9 @@ export function AiRoutingConfigPage() {
   const { data: profile } = useQuery({
     queryKey: ["operators", "self-admin-check"],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const user = session?.user ?? null;
       if (!user) return null;
       return findOperatorAdminFlag(user.id);
@@ -78,11 +80,12 @@ export function AiRoutingConfigPage() {
   const filteredRows = useMemo(() => {
     if (!filter.trim()) return rows;
     const q = filter.toLowerCase();
-    return rows.filter((r) =>
-      r.scope.toLowerCase().includes(q) ||
-      r.provider.toLowerCase().includes(q) ||
-      r.model.toLowerCase().includes(q) ||
-      (r.tier ?? "").toLowerCase().includes(q),
+    return rows.filter(
+      (r) =>
+        r.scope.toLowerCase().includes(q) ||
+        r.provider.toLowerCase().includes(q) ||
+        r.model.toLowerCase().includes(q) ||
+        (r.tier ?? "").toLowerCase().includes(q),
     );
   }, [rows, filter]);
 
@@ -130,13 +133,16 @@ export function AiRoutingConfigPage() {
             Come funziona
           </CardTitle>
           <CardDescription>
-            Ogni edge function AI è etichettata con uno <strong>scope</strong>. Il gateway risolve provider/modello da questa tabella prima di chiamare l'API. Cambia provider o modello per scope senza redeploy.
+            Ogni edge function AI è etichettata con uno <strong>scope</strong>. Il gateway risolve provider/modello da
+            questa tabella prima di chiamare l'API. Cambia provider o modello per scope senza redeploy.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2 text-xs">
           {Object.entries(TIER_HINT).map(([tier, hint]) => (
             <div key={tier} className="flex items-center gap-2">
-              <Badge variant="outline" className={TIER_COLOR[tier]}>{tier}</Badge>
+              <Badge variant="outline" className={TIER_COLOR[tier]}>
+                {tier}
+              </Badge>
               <span className="text-muted-foreground">{hint}</span>
             </div>
           ))}
@@ -185,13 +191,22 @@ export function AiRoutingConfigPage() {
                     <TableRow key={r.scope} className={dirty ? "bg-amber-500/5" : ""}>
                       <TableCell className="font-mono text-xs">{r.scope}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={TIER_COLOR[tier] ?? ""}>{tier}</Badge>
+                        <Badge variant="outline" className={TIER_COLOR[tier] ?? ""}>
+                          {tier}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Select
                           value={provider}
                           onValueChange={(v) =>
-                            setEdits((p) => ({ ...p, [r.scope]: { ...(p[r.scope] || {}), provider: v, model: MODEL_SUGGESTIONS[v]?.[0] ?? model } }))
+                            setEdits((p) => ({
+                              ...p,
+                              [r.scope]: {
+                                ...(p[r.scope] || {}),
+                                provider: v,
+                                model: MODEL_SUGGESTIONS[v]?.[0] ?? model,
+                              },
+                            }))
                           }
                         >
                           <SelectTrigger className="w-32">
@@ -199,7 +214,9 @@ export function AiRoutingConfigPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {PROVIDERS.map((p) => (
-                              <SelectItem key={p} value={p}>{p}</SelectItem>
+                              <SelectItem key={p} value={p}>
+                                {p}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -208,7 +225,9 @@ export function AiRoutingConfigPage() {
                         <Input
                           value={model}
                           list={`models-${provider}`}
-                          onChange={(e) => setEdits((p) => ({ ...p, [r.scope]: { ...(p[r.scope] || {}), model: e.target.value } }))}
+                          onChange={(e) =>
+                            setEdits((p) => ({ ...p, [r.scope]: { ...(p[r.scope] || {}), model: e.target.value } }))
+                          }
                           className="font-mono text-xs w-56"
                         />
                         <datalist id={`models-${provider}`}>
@@ -221,7 +240,9 @@ export function AiRoutingConfigPage() {
                         <Input
                           value={notes}
                           placeholder="—"
-                          onChange={(e) => setEdits((p) => ({ ...p, [r.scope]: { ...(p[r.scope] || {}), notes: e.target.value } }))}
+                          onChange={(e) =>
+                            setEdits((p) => ({ ...p, [r.scope]: { ...(p[r.scope] || {}), notes: e.target.value } }))
+                          }
                           className="text-xs"
                         />
                       </TableCell>
@@ -235,7 +256,9 @@ export function AiRoutingConfigPage() {
                           {saveOne.isPending && saveOne.variables === r.scope ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <><Save className="h-4 w-4 mr-1" /> Salva</>
+                            <>
+                              <Save className="h-4 w-4 mr-1" /> Salva
+                            </>
                           )}
                         </Button>
                       </TableCell>

@@ -5,16 +5,7 @@
  * Semafori verde/giallo/rosso in base a soglie definite localmente.
  */
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Activity,
-  Copy,
-  UserCircle2,
-  TestTube2,
-  Inbox,
-  Sparkles,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle2, Activity, Copy, UserCircle2, TestTube2, Inbox, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { fetchPromptLabHealth, type PromptLabHealth } from "@/data/promptLabHealth";
@@ -64,17 +55,12 @@ interface KpiProps {
 
 function Kpi({ icon: Icon, label, value, hint, level }: KpiProps) {
   return (
-    <div
-      className="flex items-center gap-2.5 px-3 py-2 rounded-md border bg-card/50 min-w-0 flex-1"
-      title={hint}
-    >
+    <div className="flex items-center gap-2.5 px-3 py-2 rounded-md border bg-card/50 min-w-0 flex-1" title={hint}>
       <Icon className={cn("h-4 w-4 flex-shrink-0", lvlClass(level))} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className={cn("h-1.5 w-1.5 rounded-full flex-shrink-0", lvlDot(level))} />
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
-            {label}
-          </span>
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">{label}</span>
         </div>
         <div className="text-sm font-semibold leading-tight truncate">{value}</div>
       </div>
@@ -115,10 +101,7 @@ export function PromptLabHealthBanner() {
   const copilotLevel: Level = data.copilotPending === 0 ? "ok" : data.copilotPending <= 5 ? "warn" : "alert";
 
   const anyAlert =
-    tests.level === "alert" ||
-    dups.level === "alert" ||
-    personas.level === "alert" ||
-    !data.cronTestRunner;
+    tests.level === "alert" || dups.level === "alert" || personas.level === "alert" || !data.cronTestRunner;
 
   return (
     <Card className="rounded-none border-x-0 border-t-0 border-b bg-muted/20 px-2 py-1.5">

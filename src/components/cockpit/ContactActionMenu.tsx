@@ -3,18 +3,33 @@ import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { format } from "date-fns";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub,
-  DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuLabel,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MoreVertical, CheckCircle2, StickyNote, CalendarClock, Phone, Users, MoreHorizontal, CalendarIcon, Mail, MessageCircle } from "lucide-react";
+import {
+  MoreVertical,
+  CheckCircle2,
+  StickyNote,
+  CalendarClock,
+  Phone,
+  Users,
+  MoreHorizontal,
+  CalendarIcon,
+  Mail,
+  MessageCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,9 +66,12 @@ export function ContactActionMenu({ contact, children }: Props) {
   const createActivity = async (
     activityType: ActivityType,
     status: "completed" | "pending",
-    extra: { due_date?: string; description?: string; completed_at?: string } = {}
+    extra: { due_date?: string; description?: string; completed_at?: string } = {},
   ) => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (!user) return;
 
     await insertActivity({
@@ -61,7 +79,12 @@ export function ContactActionMenu({ contact, children }: Props) {
       activity_type: activityType,
       status,
       title: `${contact.name} — ${contact.company}`,
-      source_type: contact.sourceType === "partner_contact" ? "partner" : contact.sourceType === "prospect_contact" ? "prospect" : "contact",
+      source_type:
+        contact.sourceType === "partner_contact"
+          ? "partner"
+          : contact.sourceType === "prospect_contact"
+            ? "prospect"
+            : "contact",
       source_id: contact.partnerId || contact.sourceId,
       source_meta: { company: contact.company, email: contact.email, country: contact.country, name: contact.name },
       partner_id: contact.partnerId,
@@ -131,7 +154,12 @@ export function ContactActionMenu({ contact, children }: Props) {
       companyName: contact.company,
       contactId: contact.sourceId,
       partnerId: contact.partnerId ?? undefined,
-      sourceType: contact.sourceType === "partner_contact" ? "partner" : contact.sourceType === "prospect_contact" ? "prospect" : "contact",
+      sourceType:
+        contact.sourceType === "partner_contact"
+          ? "partner"
+          : contact.sourceType === "prospect_contact"
+            ? "prospect"
+            : "contact",
       sourceId: contact.partnerId || contact.sourceId,
     });
   };
@@ -141,7 +169,12 @@ export function ContactActionMenu({ contact, children }: Props) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {children || (
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md border border-border/50 bg-background/80 backdrop-blur-sm hover:bg-accent" aria-label="Altre azioni">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-md border border-border/50 bg-background/80 backdrop-blur-sm hover:bg-accent"
+              aria-label="Altre azioni"
+            >
               <MoreVertical className="w-3.5 h-3.5" />
             </Button>
           )}
@@ -155,7 +188,11 @@ export function ContactActionMenu({ contact, children }: Props) {
             <Mail className="w-4 h-4 text-primary" />
             Invia email ora
           </DropdownMenuItem>
-          <DropdownMenuItem className="gap-2.5 text-xs px-3 py-2" onClick={handleSendWhatsApp} disabled={!contact.phone}>
+          <DropdownMenuItem
+            className="gap-2.5 text-xs px-3 py-2"
+            onClick={handleSendWhatsApp}
+            disabled={!contact.phone}
+          >
             <MessageCircle className="w-4 h-4 text-emerald-500" />
             Invia WhatsApp
           </DropdownMenuItem>
@@ -187,8 +224,12 @@ export function ContactActionMenu({ contact, children }: Props) {
               Segna come svolta
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              {DONE_TYPES.map(dt => (
-                <DropdownMenuItem key={dt.type} className="gap-2.5 text-xs px-3 py-2" onClick={() => handleMarkDone(dt.type)}>
+              {DONE_TYPES.map((dt) => (
+                <DropdownMenuItem
+                  key={dt.type}
+                  className="gap-2.5 text-xs px-3 py-2"
+                  onClick={() => handleMarkDone(dt.type)}
+                >
                   <dt.icon className="w-4 h-4" />
                   {dt.label}
                 </DropdownMenuItem>
@@ -206,13 +247,17 @@ export function ContactActionMenu({ contact, children }: Props) {
           </DialogHeader>
           <Textarea
             value={noteText}
-            onChange={e => setNoteText(e.target.value)}
+            onChange={(e) => setNoteText(e.target.value)}
             placeholder="Scrivi una nota..."
             className="min-h-[100px] text-sm"
           />
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setNoteOpen(false)}>Annulla</Button>
-            <Button size="sm" onClick={handleSaveNote} disabled={!noteText.trim()}>Salva</Button>
+            <Button variant="outline" size="sm" onClick={() => setNoteOpen(false)}>
+              Annulla
+            </Button>
+            <Button size="sm" onClick={handleSaveNote} disabled={!noteText.trim()}>
+              Salva
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -226,7 +271,10 @@ export function ContactActionMenu({ contact, children }: Props) {
           <div className="space-y-3">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left text-sm", !scheduleDate && "text-muted-foreground")}>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left text-sm", !scheduleDate && "text-muted-foreground")}
+                >
                   <CalendarIcon className="w-4 h-4 mr-2" />
                   {scheduleDate ? format(scheduleDate, "dd/MM/yyyy") : "Seleziona data"}
                 </Button>
@@ -243,14 +291,18 @@ export function ContactActionMenu({ contact, children }: Props) {
             </Popover>
             <Textarea
               value={scheduleNote}
-              onChange={e => setScheduleNote(e.target.value)}
+              onChange={(e) => setScheduleNote(e.target.value)}
               placeholder="Nota opzionale..."
               className="min-h-[60px] text-sm"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setScheduleOpen(false)}>Annulla</Button>
-            <Button size="sm" onClick={handleSchedule} disabled={!scheduleDate}>Programma</Button>
+            <Button variant="outline" size="sm" onClick={() => setScheduleOpen(false)}>
+              Annulla
+            </Button>
+            <Button size="sm" onClick={handleSchedule} disabled={!scheduleDate}>
+              Programma
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

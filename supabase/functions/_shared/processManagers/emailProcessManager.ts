@@ -29,13 +29,7 @@
  * PATTERN: Process Manager (DDD), Event-Driven
  */
 
-import {
-  eventBus,
-  createEvent,
-  publishAndPersist,
-  type WCADomainEvent,
-  type EventActor,
-} from "../domainEvents.ts";
+import { eventBus, createEvent, publishAndPersist, type WCADomainEvent, type EventActor } from "../domainEvents.ts";
 import {
   runPostClassificationPipeline,
   type ClassificationInput,
@@ -118,35 +112,25 @@ export class EmailProcessManager {
    * The actual pipeline work is done via processClassification() which is
    * called directly by classify-inbound-message after AI classification.
    */
-  private async onEmailClassified(
-    event: Extract<WCADomainEvent, { type: "email.classified" }>,
-  ): Promise<void> {
+  private async onEmailClassified(event: Extract<WCADomainEvent, { type: "email.classified" }>): Promise<void> {
     // Log that we processed this classification
     console.log(
       `[EmailPM] Processed classification for message ${event.payload.messageId}: ` +
-      `category=${event.payload.category}, confidence=${event.payload.confidence}`,
+        `category=${event.payload.category}, confidence=${event.payload.confidence}`,
     );
   }
 
   /**
    * React to email.bounce_detected — ensure email hygiene actions.
    */
-  private async onBounceDetected(
-    event: Extract<WCADomainEvent, { type: "email.bounce_detected" }>,
-  ): Promise<void> {
+  private async onBounceDetected(event: Extract<WCADomainEvent, { type: "email.bounce_detected" }>): Promise<void> {
     const { contactEmail, bounceType, partnerId } = event.payload;
 
     // Mark email as bounced across all tables
     const email = contactEmail.toLowerCase().trim();
     try {
-      await this.supabase
-        .from("imported_contacts")
-        .update({ email_status: "bounced" })
-        .ilike("email", email);
-      await this.supabase
-        .from("partners")
-        .update({ email_status: "bounced" })
-        .ilike("email", email);
+      await this.supabase.from("imported_contacts").update({ email_status: "bounced" }).ilike("email", email);
+      await this.supabase.from("partners").update({ email_status: "bounced" }).ilike("email", email);
     } catch (e) {
       console.warn("[EmailPM] bounce mark failed:", e);
     }
@@ -169,10 +153,7 @@ export class EmailProcessManager {
       }
     }
 
-    console.log(
-      `[EmailPM] Bounce processed: ${email} (${bounceType})` +
-      `${partnerId ? ` partner=${partnerId}` : ""}`,
-    );
+    console.log(`[EmailPM] Bounce processed: ${email} (${bounceType})` + `${partnerId ? ` partner=${partnerId}` : ""}`);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -192,9 +173,7 @@ export class EmailProcessManager {
    *
    * Callers: classify-inbound-message, check-inbox post-classification
    */
-  async processClassification(
-    ctx: EmailClassificationContext,
-  ): Promise<EmailProcessManagerResult> {
+  async processClassification(ctx: EmailClassificationContext): Promise<EmailProcessManagerResult> {
     const eventsPublished: string[] = [];
     const actor: EventActor = { type: "system", name: "EmailProcessManager" };
 
@@ -233,36 +212,45 @@ export class EmailProcessManager {
       bodyPreview: ctx.bodyPreview,
     };
 
-    const pipelineResult = await runPostClassificationPipeline(
-      this.supabase,
-      classificationInput,
-    );
+    const pipelineResult = await runPostClassificationPipeline(this.supabase, classificationInput);
 
     // ── Step 3: Publish bounce/unsubscribe events ──
     if (ctx.category === "bounce") {
-      const bounceEvent = createEvent("email.bounce_detected", ctx.userId, actor, {
-        contactEmail: ctx.senderEmail,
-        partnerId: ctx.partnerId || undefined,
-        bounceType: "hard",
-        rawReason: ctx.aiSummary,
-      }, {
-        correlationId: classifiedEvent.correlationId,
-        causationId: classifiedEvent.eventId,
-      });
+      const bounceEvent = createEvent(
+        "email.bounce_detected",
+        ctx.userId,
+        actor,
+        {
+          contactEmail: ctx.senderEmail,
+          partnerId: ctx.partnerId || undefined,
+          bounceType: "hard",
+          rawReason: ctx.aiSummary,
+        },
+        {
+          correlationId: classifiedEvent.correlationId,
+          causationId: classifiedEvent.eventId,
+        },
+      );
       await publishAndPersist(this.supabase, bounceEvent);
       eventsPublished.push("email.bounce_detected");
     }
 
     if (ctx.category === "unsubscribe") {
-      const unsubEvent = createEvent("email.bounce_detected", ctx.userId, actor, {
-        contactEmail: ctx.senderEmail,
-        partnerId: ctx.partnerId || undefined,
-        bounceType: "unsubscribe",
-        rawReason: "Explicit unsubscribe request",
-      }, {
-        correlationId: classifiedEvent.correlationId,
-        causationId: classifiedEvent.eventId,
-      });
+      const unsubEvent = createEvent(
+        "email.bounce_detected",
+        ctx.userId,
+        actor,
+        {
+          contactEmail: ctx.senderEmail,
+          partnerId: ctx.partnerId || undefined,
+          bounceType: "unsubscribe",
+          rawReason: "Explicit unsubscribe request",
+        },
+        {
+          correlationId: classifiedEvent.correlationId,
+          causationId: classifiedEvent.eventId,
+        },
+      );
       await publishAndPersist(this.supabase, unsubEvent);
       eventsPublished.push("email.bounce_detected(unsubscribe)");
     }
@@ -286,7 +274,9 @@ export class EmailProcessManager {
     channel: "email" | "whatsapp" | "linkedin";
     matchedOutreachId?: string;
   }): Promise<void> {
-    const event = createEvent("email.inbound_received", opts.userId,
+    const event = createEvent(
+      "email.inbound_received",
+      opts.userId,
       { type: "system", name: "EmailProcessManager/check-inbox" },
       {
         messageId: opts.messageId,

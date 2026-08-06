@@ -21,7 +21,9 @@ export async function runContentClassification(supabase: Sb, body: RequestBody):
         emit_pending_actions: true,
       },
     });
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 }
 
 export async function refreshConversationContext(supabase: Sb, body: RequestBody): Promise<void> {
@@ -35,7 +37,9 @@ export async function refreshConversationContext(supabase: Sb, body: RequestBody
         limit: 30,
       },
     });
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 }
 
 export async function runTriageAndAlert(supabase: Sb, body: RequestBody): Promise<void> {
@@ -60,5 +64,7 @@ export async function runTriageAndAlert(supabase: Sb, body: RequestBody): Promis
         triage,
       });
     }
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 }

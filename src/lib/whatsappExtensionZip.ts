@@ -13,12 +13,7 @@ import {
 } from "@/lib/extensions/catalog";
 
 export { DEFAULT_EXTENSION_CATALOG };
-export type {
-  ExtensionCatalog,
-  ExtensionCatalogChannel,
-  ExtensionCatalogItem,
-  ExtensionCatalogSection,
-};
+export type { ExtensionCatalog, ExtensionCatalogChannel, ExtensionCatalogItem, ExtensionCatalogSection };
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.59";
@@ -66,7 +61,7 @@ async function fetchStaticAsset(assetPath: string, fallbackPaths: string[] = [])
     }
   }
 
-  throw (lastError instanceof Error ? lastError : new Error(`Static asset unavailable: ${assetPath}`));
+  throw lastError instanceof Error ? lastError : new Error(`Static asset unavailable: ${assetPath}`);
 }
 
 function base64ToBlob(base64: string, mimeType: string) {
@@ -84,7 +79,10 @@ async function bytesToShortHash(bytes: ArrayBuffer): Promise<string> {
   try {
     const digest = await crypto.subtle.digest("SHA-256", bytes);
     const arr = Array.from(new Uint8Array(digest));
-    return arr.slice(0, 4).map((b) => b.toString(16).padStart(2, "0")).join("");
+    return arr
+      .slice(0, 4)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
   } catch {
     return Date.now().toString(16).slice(-8);
   }

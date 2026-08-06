@@ -1,10 +1,43 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Plane, Ship, Container, Truck, TrainFront, Package, AlertTriangle,
-  Snowflake, Pill, ShoppingCart, Home, FileCheck, Warehouse, Anchor, Box,
-  Boxes, ThermometerSnowflake, Banknote, Briefcase, Stamp, ShieldAlert,
-  Radar, Globe2, Forklift, Sailboat, Cog, Building2, Wrench, ClipboardList,
-  Wine, Fuel, Car, Sprout, Leaf, Hammer, Microscope, BookOpen, MonitorSmartphone,
+  Plane,
+  Ship,
+  Container,
+  Truck,
+  TrainFront,
+  Package,
+  AlertTriangle,
+  Snowflake,
+  Pill,
+  ShoppingCart,
+  Home,
+  FileCheck,
+  Warehouse,
+  Anchor,
+  Box,
+  Boxes,
+  ThermometerSnowflake,
+  Banknote,
+  Briefcase,
+  Stamp,
+  ShieldAlert,
+  Radar,
+  Globe2,
+  Forklift,
+  Sailboat,
+  Cog,
+  Building2,
+  Wrench,
+  ClipboardList,
+  Wine,
+  Fuel,
+  Car,
+  Sprout,
+  Leaf,
+  Hammer,
+  Microscope,
+  BookOpen,
+  MonitorSmartphone,
 } from "lucide-react";
 
 export const SERVICE_ICONS: Record<string, LucideIcon> = {
@@ -118,9 +151,21 @@ export function resolveServiceIcon(label: string) {
 }
 
 export const TRANSPORT_SERVICES = [
-  "air_freight", "ocean_fcl", "ocean_lcl", "road_freight", "rail_freight", "project_cargo",
+  "air_freight",
+  "ocean_fcl",
+  "ocean_lcl",
+  "road_freight",
+  "rail_freight",
+  "project_cargo",
 ];
 
 export const SPECIALTY_SERVICES = [
-  "dangerous_goods", "perishables", "pharma", "ecommerce", "relocations", "customs_broker", "warehousing", "nvocc",
+  "dangerous_goods",
+  "perishables",
+  "pharma",
+  "ecommerce",
+  "relocations",
+  "customs_broker",
+  "warehousing",
+  "nvocc",
 ];

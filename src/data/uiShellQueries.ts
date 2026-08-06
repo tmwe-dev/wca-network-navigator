@@ -13,19 +13,13 @@ export async function findPrototypeContacts(
   orderByCreatedAtDesc: boolean,
 ): Promise<{ data: unknown[] | null; error: { message: string } | null }> {
   const base = supabase.from("partner_contacts").select(select);
-  const query = orderByCreatedAtDesc
-    ? base.order("created_at", { ascending: false }).limit(limit)
-    : base.limit(limit);
+  const query = orderByCreatedAtDesc ? base.order("created_at", { ascending: false }).limit(limit) : base.limit(limit);
   const { data, error } = await query;
   return { data, error };
 }
 
 export async function getAppSettingByKey(key: string): Promise<{ value: string | null } | null> {
-  const { data } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
+  const { data } = await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
   return data;
 }
 
@@ -64,7 +58,9 @@ export async function updateActivityById(
 export async function searchNetworkPartners(term: string) {
   const { data } = await supabase
     .from("partners")
-    .select("id, company_name, company_alias, country_code, city, email, partner_contacts(id, name, email, contact_alias, title)")
+    .select(
+      "id, company_name, company_alias, country_code, city, email, partner_contacts(id, name, email, contact_alias, title)",
+    )
     .or(`company_name.ilike.%${term}%,company_alias.ilike.%${term}%,email.ilike.%${term}%`)
     .eq("is_active", true)
     .limit(30);
@@ -105,7 +101,9 @@ export async function searchRecipientPartners(pattern: string) {
 export async function getPartnerSnapshot(partnerId: string) {
   const { data } = await supabase
     .from("partners")
-    .select("company_name, company_alias, country_name, city, last_interaction_at, interaction_count, enrichment_data, lead_status")
+    .select(
+      "company_name, company_alias, country_name, city, last_interaction_at, interaction_count, enrichment_data, lead_status",
+    )
     .eq("id", partnerId)
     .maybeSingle();
   return data;

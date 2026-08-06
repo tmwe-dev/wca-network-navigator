@@ -14,7 +14,7 @@ import { OutreachLegendFooter } from "@/components/outreach/OutreachLegendFooter
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Rocket } from "lucide-react";
 
-const CockpitContent = lazyRetry(() => import("./CockpitPage").then(m => ({ default: m.CockpitPage })));
+const CockpitContent = lazyRetry(() => import("./CockpitPage").then((m) => ({ default: m.CockpitPage })));
 
 function TabFallback() {
   return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
@@ -24,7 +24,9 @@ export function OutreachPage() {
   const { setOutreachTab } = useGlobalFilters();
 
   // Manteniamo il filtro globale coerente: la pagina è sempre "cockpit".
-  useEffect(() => { setOutreachTab("cockpit"); }, [setOutreachTab]);
+  useEffect(() => {
+    setOutreachTab("cockpit");
+  }, [setOutreachTab]);
 
   return (
     <div data-testid="page-outreach" className="flex flex-col h-full overflow-hidden">

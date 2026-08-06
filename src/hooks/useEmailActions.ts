@@ -6,11 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import { queryKeys } from "@/lib/queryKeys";
-import {
-  countUnreadInbound,
-  markChannelMessageRead,
-  findAttachmentsByMessage,
-} from "@/data/channelMessages";
+import { countUnreadInbound, markChannelMessageRead, findAttachmentsByMessage } from "@/data/channelMessages";
 
 const log = createLogger("useEmailActions");
 
@@ -43,11 +39,7 @@ export function useMessageAttachments(messageId: string | null) {
   });
 }
 
-export type MailboxFilter =
-  | { kind: "personal" }
-  | { kind: "shared"; id: string }
-  | null
-  | undefined;
+export type MailboxFilter = { kind: "personal" } | { kind: "shared"; id: string } | null | undefined;
 
 function mailboxKeyOf(mb: MailboxFilter): string | undefined {
   if (!mb) return undefined;
@@ -117,10 +109,12 @@ export function useMarkAsRead() {
                 body: body || undefined,
               });
             })
-            .catch((err) => log.warn("mark-imap-seen sync failed", {
-              messageId,
-              message: err instanceof Error ? err.message : String(err),
-            }));
+            .catch((err) =>
+              log.warn("mark-imap-seen sync failed", {
+                messageId,
+                message: err instanceof Error ? err.message : String(err),
+              }),
+            );
         });
       }
     },

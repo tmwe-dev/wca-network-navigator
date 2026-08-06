@@ -19,7 +19,7 @@ const aiCreditsFallbackResponse = (headers: Record<string, string>, mode: unknow
       mode,
       items: [],
     }),
-    { status: 200, headers: jsonHeaders(headers) }
+    { status: 200, headers: jsonHeaders(headers) },
   );
 
 const aiRateLimitFallbackResponse = (headers: Record<string, string>, mode: unknown) =>
@@ -32,9 +32,8 @@ const aiRateLimitFallbackResponse = (headers: Record<string, string>, mode: unkn
       mode,
       items: [],
     }),
-    { status: 200, headers: jsonHeaders(headers) }
+    { status: 200, headers: jsonHeaders(headers) },
   );
-
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -51,11 +50,9 @@ serve(async (req) => {
         headers: { ...dynCors, "Content-Type": "application/json" },
       });
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -70,13 +67,10 @@ serve(async (req) => {
     // mode: "thread"  = extract messages from open chat HTML
 
     if (!html || typeof html !== "string") {
-      return new Response(
-        JSON.stringify({ error: "html field required" }),
-        {
-          status: 400,
-          headers: { ...dynCors, "Content-Type": "application/json" },
-        }
-      );
+      return new Response(JSON.stringify({ error: "html field required" }), {
+        status: 400,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // Trim HTML to avoid token limits (keep max ~30k chars)
@@ -274,10 +268,10 @@ REGOLE:
     } catch (fetchErr) {
       clearTimeout(aiTimeout);
       if ((fetchErr as Error).name === "AbortError") {
-        return new Response(
-          JSON.stringify({ error: "AI gateway timeout (30s)" }),
-          { status: 504, headers: { ...dynCors, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "AI gateway timeout (30s)" }), {
+          status: 504,
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        });
       }
       throw fetchErr;
     }
@@ -318,10 +312,10 @@ REGOLE:
         console.error("AI gateway error:", aiResponse.status, errText);
 
         if (aiResponse.status === 429) {
-          return new Response(
-            JSON.stringify({ error: "Rate limit exceeded, retry later" }),
-            { status: 429, headers: { ...dynCors, "Content-Type": "application/json" } }
-          );
+          return new Response(JSON.stringify({ error: "Rate limit exceeded, retry later" }), {
+            status: 429,
+            headers: { ...dynCors, "Content-Type": "application/json" },
+          });
         }
         if (aiResponse.status === 402) {
           return aiCreditsFallbackResponse(dynCors, mode);
@@ -334,13 +328,13 @@ REGOLE:
             upstream_body: errText.slice(0, 500),
             model: selectedModel,
           }),
-          { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
     }
 
     const aiData = await aiResponse.json();
-    
+
     // Extract from tool call response
     let items: Array<Record<string, unknown>> = [];
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
@@ -386,16 +380,13 @@ REGOLE:
       }),
       {
         headers: { ...dynCors, "Content-Type": "application/json" },
-      }
+      },
     );
   } catch (e) {
     console.error("whatsapp-ai-extract error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

@@ -38,9 +38,7 @@ describe("jsonValidators", () => {
     });
 
     it("strict version throws on invalid", () => {
-      expect(() =>
-        parsePartnerEnrichmentStrict({ employee_count: "wrong" }),
-      ).toThrow();
+      expect(() => parsePartnerEnrichmentStrict({ employee_count: "wrong" })).toThrow();
     });
   });
 
@@ -53,12 +51,7 @@ describe("jsonValidators", () => {
 
     it("rejects invalid names but returns sanitized list", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
-      const res = safeParseAssignedTools([
-        "search_partners",
-        "Bad-Name",
-        "ALSO_BAD",
-        "ok_tool",
-      ]);
+      const res = safeParseAssignedTools(["search_partners", "Bad-Name", "ALSO_BAD", "ok_tool"]);
       expect(res.ok).toBe(false);
       expect(res.data).toEqual(["search_partners", "ok_tool"]);
     });

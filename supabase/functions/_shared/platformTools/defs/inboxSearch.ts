@@ -136,5 +136,4 @@ export const TOOLS_INBOX_SEARCH = [
       },
     },
   },
-
 ];

@@ -4,10 +4,7 @@
  */
 import type { Quality } from "../_shared/kbSlice.ts";
 import { getLanguageHint, isLikelyPersonName, cleanCompanyName } from "../_shared/textUtils.ts";
-import {
-  buildAddressPriorityBlock,
-  buildCommercialStateBlock,
-} from "../_shared/prompts/promptParts.ts";
+import { buildAddressPriorityBlock, buildCommercialStateBlock } from "../_shared/prompts/promptParts.ts";
 
 export type Channel = "email" | "linkedin" | "whatsapp" | "sms";
 
@@ -58,19 +55,46 @@ export interface OutreachPromptContext {
 }
 
 export function getModel(quality: Quality): string {
-  return quality === "fast"
-    ? "google/gemini-2.5-flash-lite"
-    : "google/gemini-3-flash-preview";
+  return quality === "fast" ? "google/gemini-2.5-flash-lite" : "google/gemini-3-flash-preview";
 }
 
 export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt: string; userPrompt: string } {
   const {
-    channel: ch, _quality, contact_name, contact_email, company_name, country_code,
-    language, goal, base_proposal, _oracle_tone, email_type_id, email_type_prompt, email_type_structure,
-    settings, enrichmentSnippet, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
-    conversationIntelligenceContext, salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
-    commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
-    playbookBlock, channelDeclaration, addressCustomPrompt, addressCategory,
+    channel: ch,
+    _quality,
+    contact_name,
+    contact_email,
+    company_name,
+    country_code,
+    language,
+    goal,
+    base_proposal,
+    _oracle_tone,
+    email_type_id,
+    email_type_prompt,
+    email_type_structure,
+    settings,
+    enrichmentSnippet,
+    interlocutorBlock,
+    relationshipBlock,
+    branchBlock,
+    metInPersonContext,
+    conversationIntelligenceContext,
+    salesKBSlice,
+    salesKBSections,
+    commercialLevers,
+    decision,
+    readinessTotal,
+    commercialState,
+    touchCount,
+    lastChannel,
+    lastOutcome,
+    daysSinceLastContact,
+    warmthScore,
+    playbookBlock,
+    channelDeclaration,
+    addressCustomPrompt,
+    addressCategory,
   } = ctx;
 
   let recipientName = "";
@@ -124,7 +148,8 @@ ${enrichmentSnippet}
   // TUTTE le doctrine (filosofia WCA, language rules, anti-ripetizione, WA gate,
   // zero allucinazioni, lunghezze) vivono nel Prompt Lab DB e vengono iniettate
   // dal loader unificato (operativePromptsLoader). Non duplicarle qui.
-  const senderCompanyForPrompt = settings.ai_company_alias || settings.ai_company_name || "(azienda mittente non configurata in Settings)";
+  const senderCompanyForPrompt =
+    settings.ai_company_alias || settings.ai_company_name || "(azienda mittente non configurata in Settings)";
   const systemPrompt = `${addressPriorityBlock}${channelDeclaration ? channelDeclaration + "\n\n" : ""}Sei un editor giornalista al servizio ESCLUSIVO di "${senderCompanyForPrompt}". Scrivi UN messaggio per UN destinatario specifico, basandoti sul dossier che ti viene passato.
 
 REGOLA IDENTITÀ NON NEGOZIABILE: il mittente del messaggio è "${senderCompanyForPrompt}". MAI firmare/citare altre aziende, network o alleanze come identità del mittente, anche se compaiono nel dossier o nella KB (in tal caso sono CONTESTO, non firma).

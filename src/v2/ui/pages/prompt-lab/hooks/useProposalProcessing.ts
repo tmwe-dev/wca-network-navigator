@@ -16,12 +16,12 @@ import { toRecord } from "@/lib/records";
  * Non tutti i problemi si risolvono riscrivendo il testo.
  */
 export type OutcomeType =
-  | "text_fix"             // Riscrittura testo sufficiente
-  | "kb_fix"               // Serve aggiungere/modificare una voce KB
-  | "contract_needed"      // Serve un contratto backend / logica runtime
-  | "code_policy_needed"   // Serve una policy hard nel codice
-  | "runtime_mapping_fix"  // Serve correggere il routing/mapping runtime (agente sbagliato, trigger errato)
-  | "no_change";           // Blocco già ottimo, nessun intervento
+  | "text_fix" // Riscrittura testo sufficiente
+  | "kb_fix" // Serve aggiungere/modificare una voce KB
+  | "contract_needed" // Serve un contratto backend / logica runtime
+  | "code_policy_needed" // Serve una policy hard nel codice
+  | "runtime_mapping_fix" // Serve correggere il routing/mapping runtime (agente sbagliato, trigger errato)
+  | "no_change"; // Blocco già ottimo, nessun intervento
 
 export interface GlobalProposal {
   block: Block;
@@ -46,15 +46,24 @@ export interface GlobalProposal {
 /** Stringa "tab label" per ogni tipo di sorgente. */
 export function tabLabelFor(src: BlockSource): string {
   switch (src.kind) {
-    case "app_setting": return src.key === "system_prompt_blocks" ? "System Prompt" : "Email";
-    case "kb_entry": return "KB Doctrine";
-    case "operative_prompt": return "Operative";
-    case "email_prompt": return "Email";
-    case "email_address_rule": return "Email";
-    case "playbook": return "Playbooks";
-    case "agent_persona": return "Agent Personas";
-    case "agent": return "AI Profile";
-    default: return "n/d";
+    case "app_setting":
+      return src.key === "system_prompt_blocks" ? "System Prompt" : "Email";
+    case "kb_entry":
+      return "KB Doctrine";
+    case "operative_prompt":
+      return "Operative";
+    case "email_prompt":
+      return "Email";
+    case "email_address_rule":
+      return "Email";
+    case "playbook":
+      return "Playbooks";
+    case "agent_persona":
+      return "Agent Personas";
+    case "agent":
+      return "AI Profile";
+    default:
+      return "n/d";
   }
 }
 

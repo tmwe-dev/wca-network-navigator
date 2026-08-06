@@ -16,6 +16,7 @@ type: feature
 6. **DAL**: `src/data/emailProcessingJobs.ts` con `listEmailProcessingJobs`/`getEmailProcessingJob`.
 
 ## Da fare nei prossimi sprint
+
 - UI tab "Job Ledger" in /v2/email-intelligence (Sprint 1 finale).
 - Inserimento stage='received' nel trigger `on_inbound_message` quando inserisce in email_processing_jobs (idempotente ON CONFLICT).
 - Chiamate a `record_email_processing_job_stage()` da ciascuna edge ai vari stage.

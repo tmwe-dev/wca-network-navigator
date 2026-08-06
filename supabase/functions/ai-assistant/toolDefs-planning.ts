@@ -10,13 +10,22 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "save_memory",
-      description: "Save a memory (decision, preference, fact, conversation insight) to persistent storage. Use when the user expresses a preference, makes a decision, or when you learn something important. Always add relevant tags for fast retrieval.",
+      description:
+        "Save a memory (decision, preference, fact, conversation insight) to persistent storage. Use when the user expresses a preference, makes a decision, or when you learn something important. Always add relevant tags for fast retrieval.",
       parameters: {
         type: "object",
         properties: {
           content: { type: "string", description: "What to remember (clear, concise)" },
-          memory_type: { type: "string", enum: ["conversation", "decision", "preference", "fact"], description: "Type of memory" },
-          tags: { type: "array", items: { type: "string" }, description: "Semantic tags for fast retrieval (e.g. 'download', 'germania', 'email')" },
+          memory_type: {
+            type: "string",
+            enum: ["conversation", "decision", "preference", "fact"],
+            description: "Type of memory",
+          },
+          tags: {
+            type: "array",
+            items: { type: "string" },
+            description: "Semantic tags for fast retrieval (e.g. 'download', 'germania', 'email')",
+          },
           importance: { type: "number", description: "1-5 scale, 5 = critical preference" },
           context_page: { type: "string", description: "Page context where this was learned" },
         },
@@ -29,7 +38,8 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "search_memory",
-      description: "Search persistent memory by tags or text. Use to recall user preferences, past decisions, or operational history before answering.",
+      description:
+        "Search persistent memory by tags or text. Use to recall user preferences, past decisions, or operational history before answering.",
       parameters: {
         type: "object",
         properties: {
@@ -46,7 +56,8 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "create_work_plan",
-      description: "Create a multi-step work plan. Each step defines an action with parameters. The plan will be executed step by step. Use for complex multi-action requests.",
+      description:
+        "Create a multi-step work plan. Each step defines an action with parameters. The plan will be executed step by step. Use for complex multi-action requests.",
       parameters: {
         type: "object",
         properties: {
@@ -65,7 +76,11 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
             },
             description: "Ordered list of steps",
           },
-          tags: { type: "array", items: { type: "string" }, description: "Tags for categorization and template matching" },
+          tags: {
+            type: "array",
+            items: { type: "string" },
+            description: "Tags for categorization and template matching",
+          },
         },
         required: ["title", "steps", "tags"],
         additionalProperties: false,
@@ -76,7 +91,8 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "execute_plan_step",
-      description: "Execute the next pending step of an active work plan. Returns the step result and updates plan progress.",
+      description:
+        "Execute the next pending step of an active work plan. Returns the step result and updates plan progress.",
       parameters: {
         type: "object",
         properties: {
@@ -142,7 +158,11 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
           event_name: { type: "string", description: "Event name (partial match)" },
           company_name: { type: "string", description: "Company name (partial match)" },
           contact_name: { type: "string", description: "Contact name (partial match)" },
-          match_status: { type: "string", enum: ["pending", "matched", "unmatched", "manual"], description: "Match status filter" },
+          match_status: {
+            type: "string",
+            enum: ["pending", "matched", "unmatched", "manual"],
+            description: "Match status filter",
+          },
           limit: { type: "number", description: "Max results (default 20)" },
         },
         additionalProperties: false,
@@ -170,12 +190,17 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "search_kb",
-      description: "Search the Knowledge Base for active rules/articles matching a free-text query (semantic via RAG). Use to RECALL existing knowledge BEFORE asking the user. Returns matching KB entries with similarity score.",
+      description:
+        "Search the Knowledge Base for active rules/articles matching a free-text query (semantic via RAG). Use to RECALL existing knowledge BEFORE asking the user. Returns matching KB entries with similarity score.",
       parameters: {
         type: "object",
         properties: {
           query: { type: "string", description: "Free-text query to match against KB entries" },
-          categories: { type: "array", items: { type: "string" }, description: "Optional category filter (e.g. ['cold_outreach','negoziazione'])" },
+          categories: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optional category filter (e.g. ['cold_outreach','negoziazione'])",
+          },
           limit: { type: "number", description: "Max results (default 6, max 20)" },
         },
         required: ["query"],
@@ -187,13 +212,17 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "save_kb_rule",
-      description: "Save a reusable rule to the Knowledge Base. Use when you detect a repeated pattern, standard procedure, or correction that should apply to FUTURE interactions (not just this session). Triggers: user correction, repeated pattern across 2+ partners, explicit user 'always do X' instruction.",
+      description:
+        "Save a reusable rule to the Knowledge Base. Use when you detect a repeated pattern, standard procedure, or correction that should apply to FUTURE interactions (not just this session). Triggers: user correction, repeated pattern across 2+ partners, explicit user 'always do X' instruction.",
       parameters: {
         type: "object",
         properties: {
           title: { type: "string", description: "Short descriptive title" },
           content: { type: "string", description: "Rule body (full text the AI will read)" },
-          category: { type: "string", description: "Category (e.g. 'cold_outreach','negoziazione','filosofia','regole_sistema')" },
+          category: {
+            type: "string",
+            description: "Category (e.g. 'cold_outreach','negoziazione','filosofia','regole_sistema')",
+          },
           tags: { type: "array", items: { type: "string" }, description: "Tags for filtering" },
           priority: { type: "number", description: "Priority 1-10 (default 5)" },
           chapter: { type: "string", description: "Optional chapter/section label" },
@@ -207,7 +236,8 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "save_operative_prompt",
-      description: "Save a structured operative prompt for a recurring complex scenario. Use when you've executed a 3+ step process that the user might want to standardize and replay (e.g. 'partner onboarding checklist', 'silent client recovery'). Schema: name, objective, procedure (steps array), criteria (success criteria array).",
+      description:
+        "Save a structured operative prompt for a recurring complex scenario. Use when you've executed a 3+ step process that the user might want to standardize and replay (e.g. 'partner onboarding checklist', 'silent client recovery'). Schema: name, objective, procedure (steps array), criteria (success criteria array).",
       parameters: {
         type: "object",
         properties: {
@@ -226,14 +256,16 @@ export const PLANNING_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "run_kb_audit",
-      description: "Esegue un audit della Knowledge Base verificando struttura, coerenza e allineamento strategico. Usa questo tool quando l'utente chiede di verificare, analizzare o ottimizzare la KB.",
+      description:
+        "Esegue un audit della Knowledge Base verificando struttura, coerenza e allineamento strategico. Usa questo tool quando l'utente chiede di verificare, analizzare o ottimizzare la KB.",
       parameters: {
         type: "object",
         properties: {
           audit_level: {
             type: "string",
             enum: ["structural", "coherence", "strategic", "all"],
-            description: "Livello di audit: structural (tag/categorie), coherence (contraddizioni), strategic (allineamento obiettivo), all (tutti)",
+            description:
+              "Livello di audit: structural (tag/categorie), coherence (contraddizioni), strategic (allineamento obiettivo), all (tutti)",
           },
         },
         additionalProperties: false,

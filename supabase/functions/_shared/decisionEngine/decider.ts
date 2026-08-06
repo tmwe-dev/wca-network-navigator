@@ -27,10 +27,7 @@ import {
  * @param ctx - Decision context (user preferences, error rates)
  * @returns Array of recommended next actions
  */
-export function decideNextActions(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideNextActions(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 

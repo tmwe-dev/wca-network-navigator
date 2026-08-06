@@ -22,7 +22,10 @@ test.describe("P0 AI Invocation Charter", () => {
   test("UI espone colonne scope/source o stato vuoto esplicito", async ({ page }) => {
     await page.goto("/v2/ai-interactions-log");
     await page.waitForTimeout(2000);
-    const body = await page.locator("body").innerText().catch(() => "");
+    const body = await page
+      .locator("body")
+      .innerText()
+      .catch(() => "");
     expect(body).toMatch(/scope|source|nessun|empty|interazion/i);
   });
 

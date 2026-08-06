@@ -3,6 +3,7 @@ name: Blacklist WCA Workflow
 description: Import file BlackListExport WCA, sniff CSV vs XLSX, soglia 30g, banner globale top, badge ShieldAlert su CompanyCard + BCA
 type: feature
 ---
+
 - File `BlackListExport-*.xls` di WCA è in realtà CSV con BOM UTF-8: parser in `BlacklistManager.tsx` fa sniff binario (PK/D0CF/BOM/sample) e tratta come CSV anche con estensione .xls.
 - Soglia refresh: 30 giorni (costante `BLACKLIST_REFRESH_DAYS`). Card stats mostra "scaduta da Xg" / "in scadenza tra Yg" / "prossimo aggiornamento tra Zg".
 - Banner globale `BlacklistStaleBanner` in AuthenticatedLayout (solo desktop, top): si mostra se >30g o se ci sono entry ma nessun log; CTA → /v2/settings?tab=connessioni.

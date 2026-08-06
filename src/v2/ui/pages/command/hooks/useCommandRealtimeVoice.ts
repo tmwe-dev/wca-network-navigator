@@ -49,25 +49,19 @@ export function useCommandRealtimeVoice(): CommandRealtimeVoice {
         const question = (params?.question || "").trim();
         if (!question) return "Domanda vuota.";
         try {
-          const { data, error: err } = await supabase.functions.invoke(
-            "command-ask-brain",
-            {
-              body: {
-                question,
-                bridge_token: bridgeTokenRef.current,
-                conversation_id: conversationIdRef.current,
-                language: "it",
-              },
+          const { data, error: err } = await supabase.functions.invoke("command-ask-brain", {
+            body: {
+              question,
+              bridge_token: bridgeTokenRef.current,
+              conversation_id: conversationIdRef.current,
+              language: "it",
             },
-          );
+          });
           if (err) {
             log.warn("ask_brain invoke error", { error: err.message });
             return "Brain non raggiungibile, riprova tra poco.";
           }
-          return (
-            (data as { answer?: string } | null)?.answer ||
-            "Nessuna risposta dal Brain."
-          );
+          return (data as { answer?: string } | null)?.answer || "Nessuna risposta dal Brain.";
         } catch (e) {
           log.warn("ask_brain failed", { error: e instanceof Error ? e.message : String(e) });
           return "Errore tecnico interrogando il Brain.";
@@ -84,10 +78,7 @@ export function useCommandRealtimeVoice(): CommandRealtimeVoice {
       // generic ElevenLabs SDK error.
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const { data, error: invokeErr } = await supabase.functions.invoke(
-        "elevenlabs-conversation-token",
-        { body: {} },
-      );
+      const { data, error: invokeErr } = await supabase.functions.invoke("elevenlabs-conversation-token", { body: {} });
       if (invokeErr) throw invokeErr;
       const payload = data as {
         token?: string;
@@ -117,7 +108,9 @@ export function useCommandRealtimeVoice(): CommandRealtimeVoice {
           });
           try {
             await conversation.endSession();
-          } catch { /* noop: session may not have opened */ }
+          } catch {
+            /* noop: session may not have opened */
+          }
           startedConversationId = await conversation.startSession({
             conversationToken: token,
             connectionType: "webrtc",
@@ -132,7 +125,9 @@ export function useCommandRealtimeVoice(): CommandRealtimeVoice {
       setError(null);
       try {
         conversationIdRef.current = startedConversationId || conversation.getId() || null;
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       log.warn("realtime start failed", { error: msg });

@@ -18,9 +18,7 @@ export function isOverdue(activity: Activity): boolean {
 }
 
 /** Group activities by status */
-export function groupByStatus(
-  activities: readonly Activity[],
-): Readonly<Record<ActivityStatus, readonly Activity[]>> {
+export function groupByStatus(activities: readonly Activity[]): Readonly<Record<ActivityStatus, readonly Activity[]>> {
   const groups: Record<ActivityStatus, Activity[]> = {
     pending: [],
     in_progress: [],

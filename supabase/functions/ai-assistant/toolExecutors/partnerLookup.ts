@@ -19,9 +19,7 @@ export async function resolveWcaId(
 ): Promise<number | null> {
   let query = supabase
     .from("partners")
-    .select(
-      "id, wca_id, company_name, city, country_code, country_name, raw_profile_html",
-    )
+    .select("id, wca_id, company_name, city, country_code, country_name, raw_profile_html")
     .ilike("company_name", `%${escapeLike(companyName)}%`);
   if (countryCode) query = query.eq("country_code", countryCode);
   if (city) query = query.ilike("city", `%${escapeLike(city)}%`);
@@ -29,10 +27,10 @@ export async function resolveWcaId(
 
   if (!found || found.length === 0) return null;
 
-  const exact = (found as Record<string, unknown>[]).find(
-    (p) =>
-      String(p.company_name).toLowerCase() === companyName.toLowerCase(),
-  ) || (found[0] as Record<string, unknown>);
+  const exact =
+    (found as Record<string, unknown>[]).find(
+      (p) => String(p.company_name).toLowerCase() === companyName.toLowerCase(),
+    ) || (found[0] as Record<string, unknown>);
 
   if (exact.raw_profile_html) {
     return null;
@@ -49,9 +47,7 @@ export async function resolveWcaIdFromCache(
   companyName: string,
   countryCode: string | null,
 ): Promise<number | null> {
-  let cacheQuery = supabase
-    .from("directory_cache")
-    .select("members, country_code");
+  let cacheQuery = supabase.from("directory_cache").select("members, country_code");
   if (countryCode) cacheQuery = cacheQuery.eq("country_code", countryCode);
   const { data: cacheRows } = await cacheQuery;
 
@@ -61,18 +57,14 @@ export async function resolveWcaIdFromCache(
     const members = row.members as Record<string, unknown>[];
     if (!Array.isArray(members)) continue;
     const match = members.find((m: Record<string, unknown>) => {
-      const name = typeof m === "object"
-        ? String(m.company_name || m.name || "")
-        : "";
+      const name = typeof m === "object" ? String(m.company_name || m.name || "") : "";
       return name.toLowerCase().includes(companyName.toLowerCase());
     });
     if (match) {
-      const wcaId = typeof match === "object"
-        ? Number(
-          (match as Record<string, unknown>).wca_id ||
-            (match as Record<string, unknown>).id,
-        )
-        : Number(match);
+      const wcaId =
+        typeof match === "object"
+          ? Number((match as Record<string, unknown>).wca_id || (match as Record<string, unknown>).id)
+          : Number(match);
       if (wcaId) return wcaId;
     }
   }
@@ -87,11 +79,7 @@ export async function resolveCountry(
   wcaId: number,
   fallbackCode?: string,
 ): Promise<{ code: string; name: string }> {
-  const { data: p } = await supabase
-    .from("partners")
-    .select("country_code, country_name")
-    .eq("wca_id", wcaId)
-    .single();
+  const { data: p } = await supabase.from("partners").select("country_code, country_name").eq("wca_id", wcaId).single();
 
   if (p) {
     return {
@@ -106,18 +94,12 @@ export async function resolveCountry(
 /**
  * Resolve country name from country code.
  */
-export async function resolveCountryName(
-  supabase: SupabaseClient,
-  countryCode: string,
-): Promise<string> {
+export async function resolveCountryName(supabase: SupabaseClient, countryCode: string): Promise<string> {
   const { data: p } = await supabase
     .from("partners")
     .select("country_name")
     .eq("country_code", countryCode)
     .limit(1)
     .single();
-  return (
-    ((p as Record<string, unknown> | null)?.country_name as string) ||
-    countryCode
-  );
+  return ((p as Record<string, unknown> | null)?.country_name as string) || countryCode;
 }

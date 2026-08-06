@@ -21,32 +21,49 @@ interface BuilderChatInterfaceProps {
 }
 
 export function BuilderChatInterface({
-  messages, isChatLoading, chatScrollRef,
-  stepData, onSetStepData, countryStats,
-  onLaunch, onPlanApprove, onPlanCancel,
-  pendingPlan, isApproving,
+  messages,
+  isChatLoading,
+  chatScrollRef,
+  stepData,
+  onSetStepData,
+  countryStats,
+  onLaunch,
+  onPlanApprove,
+  onPlanCancel,
+  pendingPlan,
+  isApproving,
 }: BuilderChatInterfaceProps) {
   return (
     <ScrollArea className="flex-1 p-4" ref={chatScrollRef}>
       <div className="max-w-2xl mx-auto space-y-3">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-xl px-4 py-3 text-sm ${
-              m.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border"
-            }`}>
+            <div
+              className={`max-w-[85%] rounded-xl px-4 py-3 text-sm ${
+                m.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border"
+              }`}
+            >
               {m.role === "assistant" ? (
                 <>
                   <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:my-1">
                     <ReactMarkdown>{m.content}</ReactMarkdown>
                   </div>
                   {m.widgets && m.widgets.length > 0 && (
-                    <MissionWidgetRenderer widgets={m.widgets} stepData={stepData} onChange={onSetStepData}
-                      countryStats={countryStats} onLaunch={onLaunch} onPlanApprove={onPlanApprove} onPlanCancel={onPlanCancel}
+                    <MissionWidgetRenderer
+                      widgets={m.widgets}
+                      stepData={stepData}
+                      onChange={onSetStepData}
+                      countryStats={countryStats}
+                      onLaunch={onLaunch}
+                      onPlanApprove={onPlanApprove}
+                      onPlanCancel={onPlanCancel}
                       planReviewProps={pendingPlan ? { plan: pendingPlan, isApproving } : undefined}
                     />
                   )}
                 </>
-              ) : m.content}
+              ) : (
+                m.content
+              )}
             </div>
           </div>
         ))}

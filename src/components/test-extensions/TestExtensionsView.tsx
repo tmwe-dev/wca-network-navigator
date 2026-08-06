@@ -17,10 +17,18 @@ export function TestExtensionsContent() {
         <TabsTrigger value="linkedin-matrix">🧪 LI Matrix</TabsTrigger>
         <TabsTrigger value="firescrape">🔥 FireScrape</TabsTrigger>
       </TabsList>
-      <TabsContent value="whatsapp"><WhatsAppTest /></TabsContent>
-      <TabsContent value="linkedin"><LinkedInTest /></TabsContent>
-      <TabsContent value="linkedin-matrix"><LinkedInMatrixTest /></TabsContent>
-      <TabsContent value="firescrape"><FireScrapeTest /></TabsContent>
+      <TabsContent value="whatsapp">
+        <WhatsAppTest />
+      </TabsContent>
+      <TabsContent value="linkedin">
+        <LinkedInTest />
+      </TabsContent>
+      <TabsContent value="linkedin-matrix">
+        <LinkedInMatrixTest />
+      </TabsContent>
+      <TabsContent value="firescrape">
+        <FireScrapeTest />
+      </TabsContent>
     </Tabs>
   );
 }
@@ -36,8 +44,8 @@ export default function TestExtensions() {
         </div>
       </div>
       <p className="text-muted-foreground text-sm mb-6">
-        Test diretto via postMessage. Nessun codice dell'app — solo comunicazione raw con le estensioni.
-        I badge "Controllo tempi" mostrano in tempo reale mutex e cooldown attivi sul canale.
+        Test diretto via postMessage. Nessun codice dell'app — solo comunicazione raw con le estensioni. I badge
+        "Controllo tempi" mostrano in tempo reale mutex e cooldown attivi sul canale.
       </p>
       <TestExtensionsContent />
     </div>

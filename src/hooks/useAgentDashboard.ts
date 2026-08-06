@@ -32,7 +32,10 @@ export function useAgentDashboard() {
   const agentsQuery = useQuery({
     queryKey: queryKeys.agents.dashboard.agents,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return [];
       const agents = await getActiveAgentsForUser(user.id);
       return agents as Array<{ id: string; name: string; role: string; avatar_emoji: string; is_active: boolean }>;
@@ -43,7 +46,10 @@ export function useAgentDashboard() {
   const tasksQuery = useQuery({
     queryKey: queryKeys.agents.dashboard.tasks(),
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return [];
       const data = await getAgentTasksForUser(user.id);
       return data as AgentTaskRow[];
@@ -59,23 +65,25 @@ export function useAgentDashboard() {
         tasksQuery.refetch();
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   const agents = agentsQuery.data ?? [];
   const tasks = tasksQuery.data ?? [];
 
-  const agentsWithTasks: AgentWithTasks[] = agents.map(a => ({
+  const agentsWithTasks: AgentWithTasks[] = agents.map((a) => ({
     ...a,
-    tasks: tasks.filter(t => t.agent_id === a.id),
+    tasks: tasks.filter((t) => t.agent_id === a.id),
   }));
 
   const stats = {
     total: tasks.length,
-    pending: tasks.filter(t => t.status === "pending" || t.status === "proposed").length,
-    running: tasks.filter(t => t.status === "running").length,
-    completed: tasks.filter(t => t.status === "completed").length,
-    failed: tasks.filter(t => t.status === "failed").length,
+    pending: tasks.filter((t) => t.status === "pending" || t.status === "proposed").length,
+    running: tasks.filter((t) => t.status === "running").length,
+    completed: tasks.filter((t) => t.status === "completed").length,
+    failed: tasks.filter((t) => t.status === "failed").length,
   };
 
   return {
@@ -83,6 +91,9 @@ export function useAgentDashboard() {
     tasks,
     stats,
     isLoading: agentsQuery.isLoading || tasksQuery.isLoading,
-    refetch: () => { agentsQuery.refetch(); tasksQuery.refetch(); },
+    refetch: () => {
+      agentsQuery.refetch();
+      tasksQuery.refetch();
+    },
   };
 }

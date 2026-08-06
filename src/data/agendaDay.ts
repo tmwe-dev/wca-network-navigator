@@ -25,14 +25,11 @@ export async function findAgendaDayActivities(
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return toRecords((data ?? []));
+  return toRecords(data ?? []);
 }
 
 /** Partner con almeno un messaggio inbound dal `since` indicato. */
-export async function findRespondedPartnerIds(
-  partnerIds: string[],
-  since: string,
-): Promise<string[]> {
+export async function findRespondedPartnerIds(partnerIds: string[], since: string): Promise<string[]> {
   if (partnerIds.length === 0) return [];
   const { data } = await supabase
     .from("channel_messages")

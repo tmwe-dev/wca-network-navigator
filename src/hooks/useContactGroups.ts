@@ -35,7 +35,7 @@ export function useContactsByGroup(
   page: number = 0,
   pageSize: number = 200,
   enabled: boolean = false,
-  holdingPattern?: "out" | "in" | "all"
+  holdingPattern?: "out" | "in" | "all",
 ) {
   return useQuery({
     queryKey: queryKeys.contacts.byGroup(groupType, groupKey, page, pageSize, holdingPattern),

@@ -23,21 +23,33 @@ interface SignalsBannerProps {
 
 function severityColor(severity: PromptLabSignal["severity"]) {
   switch (severity) {
-    case "critical": return "bg-destructive/10 border-destructive/40 text-destructive";
-    case "warning": return "bg-warning/10 border-warning/40 text-warning";
-    default: return "bg-info/10 border-info/40 text-info";
+    case "critical":
+      return "bg-destructive/10 border-destructive/40 text-destructive";
+    case "warning":
+      return "bg-warning/10 border-warning/40 text-warning";
+    default:
+      return "bg-info/10 border-info/40 text-info";
   }
 }
 
 function severityBadge(severity: PromptLabSignal["severity"]) {
   switch (severity) {
-    case "critical": return "destructive" as const;
-    case "warning": return "secondary" as const;
-    default: return "outline" as const;
+    case "critical":
+      return "destructive" as const;
+    case "warning":
+      return "secondary" as const;
+    default:
+      return "outline" as const;
   }
 }
 
-export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge: _onAcknowledge, onCopySuggestion }: SignalsBannerProps) {
+export function SignalsBanner({
+  state,
+  onAnalyze,
+  onDismiss,
+  onAcknowledge: _onAcknowledge,
+  onCopySuggestion,
+}: SignalsBannerProps) {
   const [expanded, setExpanded] = useState(false);
   const activeSignals = state.signals.filter((s) => s.status === "new" || s.status === "acknowledged");
 
@@ -80,15 +92,12 @@ export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge: _onA
             {activeSignals.length} segnalazione{activeSignals.length > 1 ? "i" : ""} dal sistema
           </span>
           {activeSignals.some((s) => s.severity === "critical") && (
-            <Badge variant="destructive" className="text-[9px] h-4">Critica</Badge>
+            <Badge variant="destructive" className="text-[9px] h-4">
+              Critica
+            </Badge>
           )}
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 w-6 p-0"
-          onClick={() => setExpanded(!expanded)}
-        >
+        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setExpanded(!expanded)}>
           {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         </Button>
       </div>
@@ -96,10 +105,7 @@ export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge: _onA
       {expanded && (
         <div className="space-y-2 pt-1">
           {activeSignals.map((signal) => (
-            <div
-              key={signal.id}
-              className={`rounded border p-2.5 text-xs ${severityColor(signal.severity)}`}
-            >
+            <div key={signal.id} className={`rounded border p-2.5 text-xs ${severityColor(signal.severity)}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
@@ -109,9 +115,7 @@ export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge: _onA
                     <span className="font-medium">{signal.title}</span>
                   </div>
                   <p className="text-[11px] opacity-80 mb-1.5">{signal.description}</p>
-                  <p className="text-[11px] font-medium opacity-90">
-                    Suggerimento: {signal.suggested_action}
-                  </p>
+                  <p className="text-[11px] font-medium opacity-90">Suggerimento: {signal.suggested_action}</p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {onCopySuggestion && (
@@ -119,19 +123,16 @@ export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge: _onA
                       size="sm"
                       variant="ghost"
                       className="h-5 text-[9px] px-1.5"
-                      onClick={() => onCopySuggestion(
-                        `[Segnalazione ${signal.type}] ${signal.title}\n${signal.description}\nSuggerimento: ${signal.suggested_action}`
-                      )}
+                      onClick={() =>
+                        onCopySuggestion(
+                          `[Segnalazione ${signal.type}] ${signal.title}\n${signal.description}\nSuggerimento: ${signal.suggested_action}`,
+                        )
+                      }
                     >
                       Copia
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-5 w-5 p-0"
-                    onClick={() => onDismiss(signal.id)}
-                  >
+                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => onDismiss(signal.id)}>
                     <X className="h-3 w-3" />
                   </Button>
                 </div>

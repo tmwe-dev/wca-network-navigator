@@ -41,22 +41,17 @@ export const SEVERITY_CLS: Record<NonNullable<HarmonizeProposal["severity"]>, st
   critical: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
-export const TEST_URGENCY_LABEL: Record<
-  NonNullable<HarmonizeProposal["test_urgency"]>,
-  string
-> = {
+export const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>, string> = {
   none: "Nessun test",
   manual_smoke: "Smoke manuale",
   regression_full: "Regression completa",
 };
 
 /** Una proposta è "nota documentale" se l'AI l'ha marcata come tale. */
-export const isDocNote = (p: HarmonizeProposal): boolean =>
-  p.is_document_note === true;
+export const isDocNote = (p: HarmonizeProposal): boolean => p.is_document_note === true;
 
 /** "Gestita" = già applicata al DB (executed) o fallita. */
-export const isManaged = (p: HarmonizeProposal): boolean =>
-  p.status === "executed" || p.status === "failed";
+export const isManaged = (p: HarmonizeProposal): boolean => p.status === "executed" || p.status === "failed";
 
 /**
  * Una proposta è "sicura" se è solo testo, non DELETE, non INSERT su agents,

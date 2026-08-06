@@ -7,7 +7,7 @@ test.describe("smoke: onboarding", () => {
   test("authenticated user can access home", async ({ authedPage: page }) => {
     // After auth, should land on home or onboarding
     const url = page.url();
-    const validLanding = ["/v2", "/v1", "/onboarding", "/"].some(p => url.includes(p));
+    const validLanding = ["/v2", "/v1", "/onboarding", "/"].some((p) => url.includes(p));
     expect(validLanding).toBeTruthy();
     // Page should have content (no blank screen)
     await expect(page.locator("#root")).not.toBeEmpty({ timeout: 10_000 });

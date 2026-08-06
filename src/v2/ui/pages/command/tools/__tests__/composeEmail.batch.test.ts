@@ -42,11 +42,7 @@ describe("composeEmail · country-wide batch intent", () => {
       });
     }
 
-    const negatives = [
-      "manda una mail a Mario Rossi",
-      "ciao",
-      "che ore sono",
-    ];
+    const negatives = ["manda una mail a Mario Rossi", "ciao", "che ore sono"];
     for (const p of negatives) {
       it(`NON è batch: "${p}"`, () => {
         expect(isCountryWideIntent(p)).toBe(false);

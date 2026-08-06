@@ -45,12 +45,53 @@ interface Strategy {
 }
 
 const STRATEGIES: Strategy[] = [
-  { id: "pipeline_standard",  label: "Pipeline standard",     emoji: "📤", desc: "navigate + clickMessage + composer + writer (default 3.9.59)", action: "sendMessage" },
-  { id: "physical_click",     label: "Click fisico",          emoji: "🖱️", desc: "pointerdown/mousedown/click reali con coordinate",            action: "sendMessageWithMethod", method: "physical_click" },
-  { id: "form_submit",        label: "Form submit",           emoji: "📋", desc: "form.requestSubmit() su .msg-form",                          action: "sendMessageWithMethod", method: "form_submit" },
-  { id: "keyboard_shortcut",  label: "Ctrl+Enter",            emoji: "⌨️", desc: "Ctrl+Enter (Cmd+Enter su Mac)",                              action: "sendMessageWithMethod", method: "keyboard_shortcut" },
-  { id: "cdp_physical_click", label: "CDP click",             emoji: "🎯", desc: "Chrome DevTools Protocol mousePressed/Released",             action: "sendMessageWithMethod", method: "cdp_physical_click" },
-  { id: "cdp_ctrl_enter",     label: "CDP Ctrl+Enter",        emoji: "⌘", desc: "Chrome DevTools Protocol Ctrl/Cmd+Enter nativo",             action: "sendMessageWithMethod", method: "cdp_ctrl_enter" },
+  {
+    id: "pipeline_standard",
+    label: "Pipeline standard",
+    emoji: "📤",
+    desc: "navigate + clickMessage + composer + writer (default 3.9.59)",
+    action: "sendMessage",
+  },
+  {
+    id: "physical_click",
+    label: "Click fisico",
+    emoji: "🖱️",
+    desc: "pointerdown/mousedown/click reali con coordinate",
+    action: "sendMessageWithMethod",
+    method: "physical_click",
+  },
+  {
+    id: "form_submit",
+    label: "Form submit",
+    emoji: "📋",
+    desc: "form.requestSubmit() su .msg-form",
+    action: "sendMessageWithMethod",
+    method: "form_submit",
+  },
+  {
+    id: "keyboard_shortcut",
+    label: "Ctrl+Enter",
+    emoji: "⌨️",
+    desc: "Ctrl+Enter (Cmd+Enter su Mac)",
+    action: "sendMessageWithMethod",
+    method: "keyboard_shortcut",
+  },
+  {
+    id: "cdp_physical_click",
+    label: "CDP click",
+    emoji: "🎯",
+    desc: "Chrome DevTools Protocol mousePressed/Released",
+    action: "sendMessageWithMethod",
+    method: "cdp_physical_click",
+  },
+  {
+    id: "cdp_ctrl_enter",
+    label: "CDP Ctrl+Enter",
+    emoji: "⌘",
+    desc: "Chrome DevTools Protocol Ctrl/Cmd+Enter nativo",
+    action: "sendMessageWithMethod",
+    method: "cdp_ctrl_enter",
+  },
 ];
 
 type Outcome = "ok" | "fail" | "skip";
@@ -67,11 +108,17 @@ function loadResults(): MatrixResults {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {} as MatrixResults;
     return JSON.parse(raw) as MatrixResults;
-  } catch { return {} as MatrixResults; }
+  } catch {
+    return {} as MatrixResults;
+  }
 }
 
 function saveResults(r: MatrixResults): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(r)); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(r));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function LinkedInMatrixTest() {
@@ -97,57 +144,80 @@ export function LinkedInMatrixTest() {
         const saved = JSON.parse(raw) as { url?: string };
         if (saved.url) setRecipient(saved.url);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   // Pausa interrompibile con countdown UI
-  const safePause = useCallback(async (ms: number, reason: string) => {
-    log(`⏸️ Pausa di sicurezza ${(ms / 1000).toFixed(0)}s · ${reason}`, "info");
-    const startedAt = Date.now();
-    while (Date.now() - startedAt < ms) {
-      if (abortRef.current) { log("🛑 Suite annullata dall'operatore", "warn"); throw new Error("ABORTED"); }
-      const remaining = Math.max(0, Math.ceil((ms - (Date.now() - startedAt)) / 1000));
-      setCountdown(remaining);
-      await new Promise((r) => setTimeout(r, 500));
-    }
-    setCountdown(0);
-  }, [log]);
-
-  const runOneStrategy = useCallback(async (s: Strategy): Promise<RunResult> => {
-    log(`${s.emoji} → ${s.label} — ${s.desc}`, "info");
-    const t0 = Date.now();
-    try {
-      const payload: Record<string, unknown> = { url: recipient, message: messageText };
-      if (s.method) payload.method = s.method;
-      const r = await liMsg(s.action, payload, 90_000) as Record<string, unknown>;
-      const durationMs = Date.now() - t0;
-      if (r?.success) {
-        log(`  ✅ ${s.label}: OK in ${durationMs}ms`, "ok");
-        return { outcome: "ok", at: new Date().toISOString(), durationMs };
+  const safePause = useCallback(
+    async (ms: number, reason: string) => {
+      log(`⏸️ Pausa di sicurezza ${(ms / 1000).toFixed(0)}s · ${reason}`, "info");
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < ms) {
+        if (abortRef.current) {
+          log("🛑 Suite annullata dall'operatore", "warn");
+          throw new Error("ABORTED");
+        }
+        const remaining = Math.max(0, Math.ceil((ms - (Date.now() - startedAt)) / 1000));
+        setCountdown(remaining);
+        await new Promise((r) => setTimeout(r, 500));
       }
-      const err = String(r?.error || JSON.stringify(r)).slice(0, 200);
-      log(`  ❌ ${s.label}: ${err}`, "error");
-      return { outcome: "fail", error: err, at: new Date().toISOString(), durationMs };
-    } catch (e) {
-      const err = e instanceof Error ? e.message : String(e);
-      log(`  ❌ ${s.label} eccezione: ${err}`, "error");
-      return { outcome: "fail", error: err, at: new Date().toISOString(), durationMs: Date.now() - t0 };
-    }
-  }, [recipient, messageText, log]);
+      setCountdown(0);
+    },
+    [log],
+  );
+
+  const runOneStrategy = useCallback(
+    async (s: Strategy): Promise<RunResult> => {
+      log(`${s.emoji} → ${s.label} — ${s.desc}`, "info");
+      const t0 = Date.now();
+      try {
+        const payload: Record<string, unknown> = { url: recipient, message: messageText };
+        if (s.method) payload.method = s.method;
+        const r = (await liMsg(s.action, payload, 90_000)) as Record<string, unknown>;
+        const durationMs = Date.now() - t0;
+        if (r?.success) {
+          log(`  ✅ ${s.label}: OK in ${durationMs}ms`, "ok");
+          return { outcome: "ok", at: new Date().toISOString(), durationMs };
+        }
+        const err = String(r?.error || JSON.stringify(r)).slice(0, 200);
+        log(`  ❌ ${s.label}: ${err}`, "error");
+        return { outcome: "fail", error: err, at: new Date().toISOString(), durationMs };
+      } catch (e) {
+        const err = e instanceof Error ? e.message : String(e);
+        log(`  ❌ ${s.label} eccezione: ${err}`, "error");
+        return { outcome: "fail", error: err, at: new Date().toISOString(), durationMs: Date.now() - t0 };
+      }
+    },
+    [recipient, messageText, log],
+  );
 
   const runSuite = useCallback(async () => {
-    if (!recipient.trim()) { log("⛔ Inserisci il destinatario LinkedIn fisso", "error"); return; }
-    if (!messageText.trim()) { log("⛔ Inserisci il testo del messaggio", "error"); return; }
+    if (!recipient.trim()) {
+      log("⛔ Inserisci il destinatario LinkedIn fisso", "error");
+      return;
+    }
+    if (!messageText.trim()) {
+      log("⛔ Inserisci il testo del messaggio", "error");
+      return;
+    }
     setRunning(true);
     abortRef.current = false;
     try {
       // Verifica che l'estensione bridge risponda (un solo ping, non è un test)
       log("🔌 Verifica bridge estensione...", "info");
-      const pong = await liMsg("ping", {}, 5000) as { success?: boolean; version?: string };
-      if (!pong?.success) { log("❌ Estensione LinkedIn non risponde. Installala e riprova.", "error"); return; }
+      const pong = (await liMsg("ping", {}, 5000)) as { success?: boolean; version?: string };
+      if (!pong?.success) {
+        log("❌ Estensione LinkedIn non risponde. Installala e riprova.", "error");
+        return;
+      }
       setBridgeVersion(pong.version || "?");
       log(`✅ Bridge attivo · estensione v${pong.version || "?"}`, "ok");
-      log(`🧪 Avvio matrice ${STRATEGIES.length} strategie di scrittura · pause ${PAUSE_BETWEEN_TESTS_MS / 1000}s tra strategie, ${LONG_PAUSE_MS / 1000}s ogni ${LONG_PAUSE_EVERY}`, "info");
+      log(
+        `🧪 Avvio matrice ${STRATEGIES.length} strategie di scrittura · pause ${PAUSE_BETWEEN_TESTS_MS / 1000}s tra strategie, ${LONG_PAUSE_MS / 1000}s ogni ${LONG_PAUSE_EVERY}`,
+        "info",
+      );
 
       const next: MatrixResults = { ...results };
       for (let i = 0; i < STRATEGIES.length; i++) {
@@ -160,14 +230,18 @@ export function LinkedInMatrixTest() {
         saveResults(next);
         if (i < STRATEGIES.length - 1) {
           const longPause = (i + 1) % LONG_PAUSE_EVERY === 0;
-          await safePause(longPause ? LONG_PAUSE_MS : PAUSE_BETWEEN_TESTS_MS, longPause ? "ciclo lungo anti rate-limit" : "tra strategie");
+          await safePause(
+            longPause ? LONG_PAUSE_MS : PAUSE_BETWEEN_TESTS_MS,
+            longPause ? "ciclo lungo anti rate-limit" : "tra strategie",
+          );
         }
       }
       const ok = STRATEGIES.filter((s) => next[s.id]?.outcome === "ok").length;
       log(`🏁 Matrice completata: ${ok}/${STRATEGIES.length} strategie funzionanti`, ok > 0 ? "ok" : "error");
     } catch (e) {
-      if (e instanceof Error && e.message === "ABORTED") { /* già loggato */ }
-      else log(`❌ Errore suite: ${e instanceof Error ? e.message : String(e)}`, "error");
+      if (e instanceof Error && e.message === "ABORTED") {
+        /* già loggato */
+      } else log(`❌ Errore suite: ${e instanceof Error ? e.message : String(e)}`, "error");
     } finally {
       setRunning(false);
       setCountdown(0);
@@ -175,7 +249,9 @@ export function LinkedInMatrixTest() {
     }
   }, [recipient, messageText, results, runOneStrategy, safePause, log]);
 
-  const stopSuite = useCallback(() => { abortRef.current = true; }, []);
+  const stopSuite = useCallback(() => {
+    abortRef.current = true;
+  }, []);
 
   const clearMatrix = useCallback(() => {
     if (!window.confirm("Cancellare i risultati matrice salvati?")) return;
@@ -185,7 +261,8 @@ export function LinkedInMatrixTest() {
   }, [log]);
 
   const summary = useMemo(() => {
-    let ok = 0, fail = 0;
+    let ok = 0,
+      fail = 0;
     for (const s of STRATEGIES) {
       const r = results[s.id];
       if (r?.outcome === "ok") ok++;
@@ -215,7 +292,12 @@ export function LinkedInMatrixTest() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-muted-foreground">Destinatario (URL profilo o thread)</label>
-            <Input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="https://www.linkedin.com/in/..." className="text-sm" />
+            <Input
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              placeholder="https://www.linkedin.com/in/..."
+              className="text-sm"
+            />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Testo messaggio (inviato {STRATEGIES.length} volte)</label>
@@ -239,15 +321,18 @@ export function LinkedInMatrixTest() {
               </Button>
             )}
             {running && (
-              <Button onClick={stopSuite} size="sm" variant="destructive">🛑 Stop</Button>
+              <Button onClick={stopSuite} size="sm" variant="destructive">
+                🛑 Stop
+              </Button>
             )}
           </div>
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          L'estensione installata fa SOLO da ponte: un click esegue {STRATEGIES.length} strategie di scrittura diverse sullo stesso destinatario.
-          Pause: <b>{PAUSE_BETWEEN_TESTS_MS / 1000}s</b> tra strategie, <b>{LONG_PAUSE_MS / 1000}s</b> ogni {LONG_PAUSE_EVERY} (anti rate-limit LinkedIn).
-          Solo SCRITTURA messaggio: niente ping, inbox, scraping profilo.
+          L'estensione installata fa SOLO da ponte: un click esegue {STRATEGIES.length} strategie di scrittura diverse
+          sullo stesso destinatario. Pause: <b>{PAUSE_BETWEEN_TESTS_MS / 1000}s</b> tra strategie,{" "}
+          <b>{LONG_PAUSE_MS / 1000}s</b> ogni {LONG_PAUSE_EVERY} (anti rate-limit LinkedIn). Solo SCRITTURA messaggio:
+          niente ping, inbox, scraping profilo.
         </p>
       </div>
 
@@ -278,7 +363,9 @@ export function LinkedInMatrixTest() {
                       {!r && <Circle className="h-4 w-4 text-muted-foreground inline" />}
                     </td>
                     <td className="px-2 py-1.5">
-                      <div className="font-medium">{s.emoji} {s.label}</div>
+                      <div className="font-medium">
+                        {s.emoji} {s.label}
+                      </div>
                       <div className="font-mono text-[10px] text-muted-foreground">{s.id}</div>
                     </td>
                     <td className="px-2 py-1.5 text-muted-foreground">{s.desc}</td>

@@ -13,17 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
-} from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Loader2, Save, User, Sparkles, BookOpen, Mic, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { listAgentsForCapabilities } from "@/data/agentsForPromptLab";
-import {
-  getAgentPersonaByAgent,
-  upsertAgentPersona,
-  type AgentPersona,
-} from "@/data/agentPersonas";
+import { getAgentPersonaByAgent, upsertAgentPersona, type AgentPersona } from "@/data/agentPersonas";
 import { queryKeys } from "@/lib/queryKeys";
 
 const TONES = [
@@ -81,7 +75,10 @@ function joinLines(arr: string[]): string {
 }
 
 function parseLines(text: string): string[] {
-  return text.split("\n").map((s) => s.trim()).filter(Boolean);
+  return text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 export function AgentPersonasTab() {
@@ -116,10 +113,7 @@ export function AgentPersonasTab() {
     setBaseline(next);
   }, [personaQuery.data, selectedAgentId]);
 
-  const dirty = useMemo(
-    () => JSON.stringify(draft) !== JSON.stringify(baseline),
-    [draft, baseline],
-  );
+  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [draft, baseline]);
 
   const selectedAgent = useMemo(
     () => agentsQuery.data?.find((a) => a.id === selectedAgentId) ?? null,
@@ -164,7 +158,9 @@ export function AgentPersonasTab() {
       <Card className="p-3">
         <Label className="text-xs">Agente</Label>
         <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-          <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 mt-1">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             {agentsQuery.data.map((a) => (
               <SelectItem key={a.id} value={a.id}>
@@ -177,8 +173,9 @@ export function AgentPersonasTab() {
           <p className="text-[11px] text-muted-foreground mt-2 flex items-start gap-1.5">
             <ShieldCheck className="h-3 w-3 mt-0.5 flex-shrink-0 text-primary" />
             <span>
-              Identità di <strong>{selectedAgent.name}</strong>. Le modifiche si applicano in tempo reale alle edge functions
-              (agent-loop, agent-execute) — nessun redeploy. I guardrail tecnici di sicurezza restano sempre attivi.
+              Identità di <strong>{selectedAgent.name}</strong>. Le modifiche si applicano in tempo reale alle edge
+              functions (agent-loop, agent-execute) — nessun redeploy. I guardrail tecnici di sicurezza restano sempre
+              attivi.
             </span>
           </p>
         )}
@@ -199,18 +196,30 @@ export function AgentPersonasTab() {
               <div>
                 <Label className="text-xs">Tono di base</Label>
                 <Select value={draft.tone} onValueChange={(v) => setDraft({ ...draft, tone: v })}>
-                  <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {TONES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                    {TONES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label className="text-xs">Lingua</Label>
                 <Select value={draft.language} onValueChange={(v) => setDraft({ ...draft, language: v })}>
-                  <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {LANGS.map((l) => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
+                    {LANGS.map((l) => (
+                      <SelectItem key={l.value} value={l.value}>
+                        {l.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -242,7 +251,9 @@ export function AgentPersonasTab() {
                 rows={4}
                 value={joinLines(draft.style_rules)}
                 onChange={(e) => setDraft({ ...draft, style_rules: parseLines(e.target.value) })}
-                placeholder={"Frasi corte, max 2 righe per paragrafo.\nNon usare emoji.\nFirma sempre con nome + ruolo."}
+                placeholder={
+                  "Frasi corte, max 2 righe per paragrafo.\nNon usare emoji.\nFirma sempre con nome + ruolo."
+                }
               />
             </div>
           </Card>
@@ -296,16 +307,20 @@ export function AgentPersonasTab() {
               size="sm"
               className="gap-2"
             >
-              {saveMutation.isPending
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : <Save className="h-3.5 w-3.5" />}
+              {saveMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
               Salva persona
             </Button>
-            {dirty && <Badge variant="outline" className="text-[10px]">Modifiche non salvate</Badge>}
+            {dirty && (
+              <Badge variant="outline" className="text-[10px]">
+                Modifiche non salvate
+              </Badge>
+            )}
             {!dirty && personaQuery.data && (
-              <span className="text-[11px] text-muted-foreground">
-                Persona configurata
-              </span>
+              <span className="text-[11px] text-muted-foreground">Persona configurata</span>
             )}
             {!personaQuery.data && !dirty && (
               <span className="text-[11px] text-muted-foreground">

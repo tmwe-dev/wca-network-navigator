@@ -16,7 +16,10 @@ export function BusinessCardsViewV2(): React.ReactElement {
   const { data: cards, isLoading } = useQuery({
     queryKey: queryKeys.v2.businessCards(),
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return [];
       return await findBusinessCardsForUser(user.id, 100);
     },
@@ -75,38 +78,33 @@ function BcaCardRow({ card, matchStatusMap, blacklistNames }: BcaCardRowProps): 
         (isBlacklisted ? "border-destructive/40 bg-destructive/[0.04]" : "")
       }
     >
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium truncate text-foreground">{card.company_name ?? "—"}</span>
-              {card.contact_name && (
-                <span className="text-xs text-muted-foreground truncate">{card.contact_name}</span>
-              )}
-              {isBlacklisted && (
-                <Badge
-                  variant="outline"
-                  className="text-[9px] px-1 py-0 h-4 gap-0.5 bg-destructive/15 text-destructive border-destructive/40 font-semibold flex-shrink-0"
-                  title="Azienda presente nella blacklist WCA World"
-                >
-                  <ShieldAlert className="w-2.5 h-2.5" />
-                  Blacklist
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {card.email && <span>{card.email}</span>}
-              {card.event_name && <span>· {card.event_name}</span>}
-            </div>
-          </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium truncate text-foreground">{card.company_name ?? "—"}</span>
+          {card.contact_name && <span className="text-xs text-muted-foreground truncate">{card.contact_name}</span>}
+          {isBlacklisted && (
+            <Badge
+              variant="outline"
+              className="text-[9px] px-1 py-0 h-4 gap-0.5 bg-destructive/15 text-destructive border-destructive/40 font-semibold flex-shrink-0"
+              title="Azienda presente nella blacklist WCA World"
+            >
+              <ShieldAlert className="w-2.5 h-2.5" />
+              Blacklist
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {card.email && <span>{card.email}</span>}
+          {card.event_name && <span>· {card.event_name}</span>}
+        </div>
+      </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <StatusBadge
-              status={matchStatusMap[card.match_status] ?? "info"}
-              label={card.match_status}
-            />
-            {card.match_confidence != null && card.match_confidence > 0 && (
-              <span className="text-[10px] text-muted-foreground">{Math.round(card.match_confidence)}%</span>
-            )}
-          </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <StatusBadge status={matchStatusMap[card.match_status] ?? "info"} label={card.match_status} />
+        {card.match_confidence != null && card.match_confidence > 0 && (
+          <span className="text-[10px] text-muted-foreground">{Math.round(card.match_confidence)}%</span>
+        )}
+      </div>
     </div>
   );
 }

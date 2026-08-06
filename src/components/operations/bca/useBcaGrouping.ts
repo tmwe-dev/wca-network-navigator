@@ -23,10 +23,27 @@ function extractDomain(input: string | null | undefined): string | null {
 
 /** Domini pubblici di posta da escludere come fonte del logo aziendale. */
 const PUBLIC_MAIL_DOMAINS = new Set([
-  "gmail.com", "googlemail.com", "yahoo.com", "yahoo.it", "outlook.com",
-  "hotmail.com", "hotmail.it", "live.com", "live.it", "icloud.com",
-  "me.com", "aol.com", "libero.it", "tiscali.it", "tin.it", "alice.it",
-  "virgilio.it", "fastwebnet.it", "pec.it", "protonmail.com", "proton.me",
+  "gmail.com",
+  "googlemail.com",
+  "yahoo.com",
+  "yahoo.it",
+  "outlook.com",
+  "hotmail.com",
+  "hotmail.it",
+  "live.com",
+  "live.it",
+  "icloud.com",
+  "me.com",
+  "aol.com",
+  "libero.it",
+  "tiscali.it",
+  "tin.it",
+  "alice.it",
+  "virgilio.it",
+  "fastwebnet.it",
+  "pec.it",
+  "protonmail.com",
+  "proton.me",
 ]);
 
 function faviconFor(domain: string | null): string | null {
@@ -79,7 +96,7 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
   const [eventFilter, setEventFilter] = useState<string | null>(null);
 
   const cardsWithCountry: CardWithCountry[] = useMemo(() => {
-    return cards.map(c => ({
+    return cards.map((c) => ({
       ...c,
       _country: c.partner?.country_code || guessCountryFromLocation(c.location, c.phone || c.mobile),
     }));
@@ -132,30 +149,31 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
     let list: CardWithCountry[] = cardsWithCountry;
     if (selectedCountry != null) {
       if (selectedCountry === "__none__") {
-        list = list.filter(c => !c._country);
+        list = list.filter((c) => !c._country);
       } else {
-        list = list.filter(c => c._country === selectedCountry);
+        list = list.filter((c) => c._country === selectedCountry);
       }
     }
     if (eventFilter) {
-      list = list.filter(c => (c.event_name || "").trim() === eventFilter);
+      list = list.filter((c) => (c.event_name || "").trim() === eventFilter);
     }
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter(c =>
-        (c.company_name || "").toLowerCase().includes(q) ||
-        (c.contact_name || "").toLowerCase().includes(q) ||
-        (c.event_name || "").toLowerCase().includes(q)
+      list = list.filter(
+        (c) =>
+          (c.company_name || "").toLowerCase().includes(q) ||
+          (c.contact_name || "").toLowerCase().includes(q) ||
+          (c.event_name || "").toLowerCase().includes(q),
       );
     }
-    if (onlyMatched) list = list.filter(c => !!c.matched_partner_id);
-    if (onlyWithEmail) list = list.filter(c => !!c.email);
-    if (hideHolding) list = list.filter(c => !c.lead_status || c.lead_status === "new");
+    if (onlyMatched) list = list.filter((c) => !!c.matched_partner_id);
+    if (onlyWithEmail) list = list.filter((c) => !!c.email);
+    if (hideHolding) list = list.filter((c) => !c.lead_status || c.lead_status === "new");
     return list;
   }, [cardsWithCountry, selectedCountry, eventFilter, search, onlyMatched, onlyWithEmail, hideHolding]);
 
   const holdingCount = useMemo(() => {
-    return cardsWithCountry.filter(c => c.lead_status && c.lead_status !== "new").length;
+    return cardsWithCountry.filter((c) => c.lead_status && c.lead_status !== "new").length;
   }, [cardsWithCountry]);
 
   const groups = useMemo(() => {
@@ -164,11 +182,8 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
       const key = card.matched_partner_id || (card.company_name || "sconosciuta").toLowerCase().trim();
       if (!map.has(key)) {
         const partner = card.partner;
-        const fallbackDomain =
-          extractDomain(partner?.website) ||
-          extractDomain(card.email);
-        const resolvedLogo =
-          partner?.logo_url || faviconFor(fallbackDomain);
+        const fallbackDomain = extractDomain(partner?.website) || extractDomain(card.email);
+        const resolvedLogo = partner?.logo_url || faviconFor(fallbackDomain);
         map.set(key, {
           key,
           companyName: partner?.company_name || card.company_name || "Sconosciuta",
@@ -185,9 +200,12 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
     }
     const arr = Array.from(map.values());
     switch (sortMode) {
-      case "name_asc": return arr.sort((a, b) => a.companyName.localeCompare(b.companyName));
-      case "name_desc": return arr.sort((a, b) => b.companyName.localeCompare(a.companyName));
-      case "contacts_desc": return arr.sort((a, b) => b.cards.length - a.cards.length);
+      case "name_asc":
+        return arr.sort((a, b) => a.companyName.localeCompare(b.companyName));
+      case "name_desc":
+        return arr.sort((a, b) => b.companyName.localeCompare(a.companyName));
+      case "contacts_desc":
+        return arr.sort((a, b) => b.cards.length - a.cards.length);
       case "matched_first":
       default:
         return arr.sort((a, b) => {
@@ -198,15 +216,30 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
   }, [filtered, sortMode]);
 
   return {
-    search, setSearch,
-    viewMode, setViewMode,
-    sortMode, setSortMode,
-    selectedCountry, setSelectedCountry,
-    sidebarOpen, setSidebarOpen,
-    onlyMatched, setOnlyMatched,
-    onlyWithEmail, setOnlyWithEmail,
-    hideHolding, setHideHolding,
-    eventFilter, setEventFilter, events,
-    cardsWithCountry, countries, totalCompanies, filtered, holdingCount, groups,
+    search,
+    setSearch,
+    viewMode,
+    setViewMode,
+    sortMode,
+    setSortMode,
+    selectedCountry,
+    setSelectedCountry,
+    sidebarOpen,
+    setSidebarOpen,
+    onlyMatched,
+    setOnlyMatched,
+    onlyWithEmail,
+    setOnlyWithEmail,
+    hideHolding,
+    setHideHolding,
+    eventFilter,
+    setEventFilter,
+    events,
+    cardsWithCountry,
+    countries,
+    totalCompanies,
+    filtered,
+    holdingCount,
+    groups,
   };
 }

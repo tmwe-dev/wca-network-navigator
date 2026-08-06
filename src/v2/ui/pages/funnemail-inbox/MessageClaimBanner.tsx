@@ -22,9 +22,7 @@ export function MessageClaimBanner({ messageId }: Props): React.ReactElement | n
   const _claimedByOther = !!claim && !claimedByMe;
   const pending = ctl.pendingMessageId === messageId;
 
-  const minutes = claim
-    ? Math.max(0, Math.round((Date.now() - new Date(claim.claimed_at).getTime()) / 60000))
-    : 0;
+  const minutes = claim ? Math.max(0, Math.round((Date.now() - new Date(claim.claimed_at).getTime()) / 60000)) : 0;
 
   if (!claim) {
     return (
@@ -35,9 +33,12 @@ export function MessageClaimBanner({ messageId }: Props): React.ReactElement | n
           variant="outline"
           className="h-7 gap-1.5 text-xs"
           disabled={pending}
-          onClick={() => { void ctl.claim({ messageId }); }}
+          onClick={() => {
+            void ctl.claim({ messageId });
+          }}
         >
-          <Hand className="h-3.5 w-3.5" />Lo prendo io
+          <Hand className="h-3.5 w-3.5" />
+          Lo prendo io
         </Button>
       </div>
     );
@@ -47,16 +48,20 @@ export function MessageClaimBanner({ messageId }: Props): React.ReactElement | n
     return (
       <div className="flex items-center justify-between gap-2 border-b border-primary/30 bg-primary/10 px-3 py-1.5 text-xs">
         <span className="inline-flex items-center gap-1.5 font-medium text-primary">
-          <Hand className="h-3.5 w-3.5" />In carico a te da {minutes} min
+          <Hand className="h-3.5 w-3.5" />
+          In carico a te da {minutes} min
         </span>
         <Button
           size="sm"
           variant="outline"
           className="h-7 gap-1.5 text-xs"
           disabled={pending}
-          onClick={() => { void ctl.release(messageId); }}
+          onClick={() => {
+            void ctl.release(messageId);
+          }}
         >
-          <Undo2 className="h-3.5 w-3.5" />Rilascia
+          <Undo2 className="h-3.5 w-3.5" />
+          Rilascia
         </Button>
       </div>
     );
@@ -64,9 +69,11 @@ export function MessageClaimBanner({ messageId }: Props): React.ReactElement | n
 
   // claimedByOther
   return (
-    <div className={cn(
-      "flex items-center justify-between gap-2 border-b border-warning/40 bg-warning/10 px-3 py-1.5 text-xs",
-    )}>
+    <div
+      className={cn(
+        "flex items-center justify-between gap-2 border-b border-warning/40 bg-warning/10 px-3 py-1.5 text-xs",
+      )}
+    >
       <span className="inline-flex items-center gap-1.5 font-medium text-warning">
         <AlertTriangle className="h-3.5 w-3.5" />
         In carico a {claim.operator_display_name ?? "altro operatore"} da {minutes} min — sola lettura
@@ -77,10 +84,13 @@ export function MessageClaimBanner({ messageId }: Props): React.ReactElement | n
           variant="outline"
           className="h-7 gap-1.5 text-xs"
           disabled={pending}
-          onClick={() => { void ctl.forceClaim({ messageId }); }}
+          onClick={() => {
+            void ctl.forceClaim({ messageId });
+          }}
           title="Forza presa in carico (admin)"
         >
-          <ShieldAlert className="h-3.5 w-3.5" />Forza presa in carico
+          <ShieldAlert className="h-3.5 w-3.5" />
+          Forza presa in carico
         </Button>
       )}
     </div>

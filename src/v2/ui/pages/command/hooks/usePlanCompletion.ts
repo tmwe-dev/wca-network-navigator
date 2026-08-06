@@ -12,15 +12,24 @@ import type { TraceBuilder } from "../lib/toolTrace";
 /** Map a ToolResult kind to the corresponding canvas type */
 function canvasForResult(result: ToolResult): CanvasType {
   switch (result.kind) {
-    case "table":      return "live-table";
-    case "card-grid":  return "live-card-grid";
-    case "timeline":   return "live-timeline";
-    case "flow":       return "live-flow";
-    case "composer":   return "live-composer";
-    case "report":     return "live-report";
-    case "approval":   return "live-approval";
-    case "result":     return "live-result";
-    case "multi":      return "live-multi";
+    case "table":
+      return "live-table";
+    case "card-grid":
+      return "live-card-grid";
+    case "timeline":
+      return "live-timeline";
+    case "flow":
+      return "live-flow";
+    case "composer":
+      return "live-composer";
+    case "report":
+      return "live-report";
+    case "approval":
+      return "live-approval";
+    case "result":
+      return "live-result";
+    case "multi":
+      return "live-multi";
   }
 }
 
@@ -32,16 +41,20 @@ function canvasForResult(result: ToolResult): CanvasType {
  */
 function isEmptyResult(result: ToolResult): boolean {
   switch (result.kind) {
-    case "table":     return result.rows.length === 0;
-    case "card-grid": return result.cards.length === 0;
-    case "multi":     return result.parts.every((p) => (p.count ?? p.rows.length) === 0);
+    case "table":
+      return result.rows.length === 0;
+    case "card-grid":
+      return result.cards.length === 0;
+    case "multi":
+      return result.parts.every((p) => (p.count ?? p.rows.length) === 0);
     case "result": {
       const count = result.meta && "count" in result.meta ? Number(result.meta.count) : undefined;
       if (count === 0) return true;
       return /\bnessun\w*\b|\bnon\s+(?:ci\s+sono|risult|trovat)/i.test(result.message ?? "");
     }
     // composer / approval / report / timeline / flow → mai considerati vuoti
-    default: return false;
+    default:
+      return false;
   }
 }
 
@@ -56,9 +69,7 @@ interface PlanCompletionDeps {
 }
 
 export function usePlanCompletion(deps: PlanCompletionDeps) {
-  const {
-    addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
-  } = deps;
+  const { addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools } = deps;
 
   /** Render an executed plan: messages + canvas + AI comment */
   const renderPlanCompletion = useCallback(

@@ -53,7 +53,7 @@ export function useNotifications(filters: NotificationFilters = {}) {
           queryClient.invalidateQueries({
             queryKey: [queryKeys.notifications.list],
           });
-        }
+        },
       )
       .subscribe();
 
@@ -97,7 +97,7 @@ export function useUnreadCount() {
           queryClient.invalidateQueries({
             queryKey: [queryKeys.notifications.unreadCount],
           });
-        }
+        },
       )
       .subscribe();
 
@@ -171,8 +171,7 @@ export function useCreateNotification() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateNotificationInput) =>
-      user ? createNotification(user.id, input) : Promise.resolve(null),
+    mutationFn: (input: CreateNotificationInput) => (user ? createNotification(user.id, input) : Promise.resolve(null)),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [queryKeys.notifications.list],

@@ -17,10 +17,16 @@ function load(): number {
     const v = sessionStorage.getItem(KEY);
     const n = v ? parseInt(v, 10) : 0;
     return Number.isFinite(n) && n >= 0 ? n : 0;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 function save(n: number) {
-  try { sessionStorage.setItem(KEY, String(n)); } catch { /* ignore */ }
+  try {
+    sessionStorage.setItem(KEY, String(n));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function useWhatsAppNewMessagesIndicator() {

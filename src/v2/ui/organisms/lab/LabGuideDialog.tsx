@@ -45,7 +45,7 @@ export function LabGuideDialog({ initialTabId, initialGroup }: LabGuideDialogPro
 
   const tabsInGroup = useMemo(() => getLabTabsByGroup(group), [group]);
   const validIds = useMemo(() => new Set(tabsInGroup.map((t) => t.id)), [tabsInGroup]);
-  const activeId = validIds.has(tabId) ? tabId : tabsInGroup[0]?.id ?? "";
+  const activeId = validIds.has(tabId) ? tabId : (tabsInGroup[0]?.id ?? "");
   const activeTab = LAB_TABS.find((t) => t.id === activeId);
   const guide = getLabGuide(activeId);
 
@@ -145,9 +145,7 @@ export function LabGuideDialog({ initialTabId, initialGroup }: LabGuideDialogPro
               </Section>
 
               <Section title="Dove modificare">
-                <p className="font-mono text-xs bg-muted/40 rounded p-3 whitespace-pre-wrap">
-                  {guide.editing}
-                </p>
+                <p className="font-mono text-xs bg-muted/40 rounded p-3 whitespace-pre-wrap">{guide.editing}</p>
               </Section>
 
               {guide.caveats ? (
@@ -174,9 +172,7 @@ export function LabGuideDialog({ initialTabId, initialGroup }: LabGuideDialogPro
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
       <div className="text-sm leading-relaxed text-foreground">{children}</div>
     </section>
   );

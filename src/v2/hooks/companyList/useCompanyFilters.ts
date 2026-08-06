@@ -151,9 +151,6 @@ export function countActiveFilters(f: CompanyFiltersState): number {
   return n;
 }
 
-export function useFilteredCompanies(
-  companies: CompanyEntity[],
-  filters: CompanyFiltersState
-): CompanyEntity[] {
+export function useFilteredCompanies(companies: CompanyEntity[], filters: CompanyFiltersState): CompanyEntity[] {
   return useMemo(() => applyCompanyFilters(companies, filters), [companies, filters]);
 }

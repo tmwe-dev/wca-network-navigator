@@ -45,10 +45,7 @@ export async function handleOperativeRequest(
 
   if (input.partnerId) {
     try {
-      await supabase
-        .from("partners")
-        .update({ last_interaction_at: now })
-        .eq("id", input.partnerId);
+      await supabase.from("partners").update({ last_interaction_at: now }).eq("id", input.partnerId);
     } catch (e) {
       result.errors.push(`Failed to update partner interaction: ${e}`);
     }
@@ -89,15 +86,17 @@ export async function handleOperativeRequest(
   }
 
   const isConversionSignal = currentLeadStatus && ["negotiation", "qualified"].includes(currentLeadStatus);
-  const isSoftSignalQualification = currentLeadStatus === "engaged" && ["quote_request", "booking_request", "rate_inquiry"].includes(category);
+  const isSoftSignalQualification =
+    currentLeadStatus === "engaged" && ["quote_request", "booking_request", "rate_inquiry"].includes(category);
 
   // Re-engagement: partner in holding/first_touch_sent che invia richiesta operativa
   // ad alto intento (preventivo, booking, tariffa) → riportare a "engaged".
   // Chi chiede un preventivo dopo settimane di silenzio è chiaramente ri-coinvolto.
   const HIGH_INTENT_CATEGORIES = ["quote_request", "booking_request", "rate_inquiry"];
-  const isReEngagementSignal = currentLeadStatus
-    && ["holding", "first_touch_sent"].includes(currentLeadStatus)
-    && HIGH_INTENT_CATEGORIES.includes(category);
+  const isReEngagementSignal =
+    currentLeadStatus &&
+    ["holding", "first_touch_sent"].includes(currentLeadStatus) &&
+    HIGH_INTENT_CATEGORIES.includes(category);
 
   try {
     const actionPayload = enrichActionPayload(
@@ -261,7 +260,8 @@ export async function handleOperativeRequest(
             trigger_summary: input.aiSummary,
             sender_email: input.senderEmail,
             current_lead_status: "converted",
-            suggested_action: "Riconoscere come opportunità di upsell/cross-sell. Cliente esistente mostra nuovo bisogno.",
+            suggested_action:
+              "Riconoscere come opportunità di upsell/cross-sell. Cliente esistente mostra nuovo bisogno.",
           },
           status: "pending",
           priority: "high",
@@ -320,10 +320,7 @@ export async function handleAdministrativeRequest(
 
   if (input.partnerId) {
     try {
-      await supabase
-        .from("partners")
-        .update({ last_interaction_at: now })
-        .eq("id", input.partnerId);
+      await supabase.from("partners").update({ last_interaction_at: now }).eq("id", input.partnerId);
     } catch (e) {
       result.errors.push(`Failed to update partner interaction: ${e}`);
     }
@@ -420,7 +417,11 @@ export async function handleSupportRequest(
   supabase: SupabaseClient,
   input: DomainHandlerInput,
   result: PostClassificationResult,
-  handleComplaintFn: (supabase: SupabaseClient, input: DomainHandlerInput, result: PostClassificationResult) => Promise<void>,
+  handleComplaintFn: (
+    supabase: SupabaseClient,
+    input: DomainHandlerInput,
+    result: PostClassificationResult,
+  ) => Promise<void>,
 ) {
   const now = new Date().toISOString();
   const category = input.category as string;
@@ -432,10 +433,7 @@ export async function handleSupportRequest(
 
   if (input.partnerId) {
     try {
-      await supabase
-        .from("partners")
-        .update({ last_interaction_at: now })
-        .eq("id", input.partnerId);
+      await supabase.from("partners").update({ last_interaction_at: now }).eq("id", input.partnerId);
     } catch (e) {
       result.errors.push(`Failed to update partner interaction: ${e}`);
     }
@@ -476,7 +474,7 @@ export async function handleSupportRequest(
 
   if (["service_inquiry", "technical_issue"].includes(category)) {
     actionType = "reply_to_support";
-    priority = (input.urgency ?? 1) >= 4 ? "critical" : (category === "technical_issue" ? "high" : "normal");
+    priority = (input.urgency ?? 1) >= 4 ? "critical" : category === "technical_issue" ? "high" : "normal";
   } else {
     actionType = "support_action";
     priority = "normal";

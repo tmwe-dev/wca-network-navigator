@@ -36,8 +36,8 @@ export function InUscitaTab(_props: InUscitaTabProps = {}) {
       <div className="flex-shrink-0 px-4 pt-2 pb-1 flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/20 border-b border-border/30">
         <Info className="w-3 h-3 mt-0.5 shrink-0 text-primary" />
         <span>
-          <b>Single send</b> dal Cockpit/Drawer parte subito e finisce in <b>Inviati</b>. <b>Bulk</b> (≥2 destinatari) viene
-          accodato qui in <b>Da Inviare</b> e tracciato per contatto in <code>email_send_log</code>.
+          <b>Single send</b> dal Cockpit/Drawer parte subito e finisce in <b>Inviati</b>. <b>Bulk</b> (≥2 destinatari)
+          viene accodato qui in <b>Da Inviare</b> e tracciato per contatto in <code>email_send_log</code>.
         </span>
       </div>
       <div className="flex-shrink-0 px-4 pt-2 pb-1 border-b border-border/40 flex items-center justify-between">

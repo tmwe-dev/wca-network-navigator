@@ -34,8 +34,12 @@ export function StaffChatCanvas({ agent }: Props) {
     setInput((prev) => (prev ? prev + " " + text : text));
   });
 
-  useEffect(() => { setMessages([]); }, [agent.id]);
-  useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
+  useEffect(() => {
+    setMessages([]);
+  }, [agent.id]);
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
+  }, [messages]);
 
   const handleFileUploaded = useCallback((url: string, name: string) => {
     setPendingFiles((prev) => [...prev, { url, name }]);
@@ -98,7 +102,11 @@ export function StaffChatCanvas({ agent }: Props) {
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* best-effort */
+    }
   };
 
   return (
@@ -117,17 +125,22 @@ export function StaffChatCanvas({ agent }: Props) {
         )}
         {messages.map((msg, i) => (
           <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-            <div className={cn(
-              "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
-              msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted/50 rounded-bl-md"
-            )}>
+            <div
+              className={cn(
+                "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
+                msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted/50 rounded-bl-md",
+              )}
+            >
               {msg.role === "assistant" ? (
                 <div className="flex items-start gap-2">
                   <div className="prose prose-sm dark:prose-invert prose-p:my-1 max-w-none flex-1">
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                   {agent.elevenlabs_voice_id && (
-                    <button onClick={() => playTTS(msg.content)} className="mt-1 flex-shrink-0 text-muted-foreground hover:text-foreground">
+                    <button
+                      onClick={() => playTTS(msg.content)}
+                      className="mt-1 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                    >
                       <Volume2 className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -154,9 +167,17 @@ export function StaffChatCanvas({ agent }: Props) {
       {pendingFiles.length > 0 && (
         <div className="px-4 py-1 flex gap-2 flex-wrap">
           {pendingFiles.map((f, i) => (
-            <span key={i} className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
+            <span
+              key={i}
+              className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1"
+            >
               📎 {f.name}
-              <button onClick={() => setPendingFiles((p) => p.filter((_, j) => j !== i))} className="hover:text-destructive">×</button>
+              <button
+                onClick={() => setPendingFiles((p) => p.filter((_, j) => j !== i))}
+                className="hover:text-destructive"
+              >
+                ×
+              </button>
             </span>
           ))}
         </div>
@@ -183,7 +204,7 @@ export function StaffChatCanvas({ agent }: Props) {
             <Paperclip className="w-4 h-4" />
           </Button>
           <input
-            value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
+            value={speech.listening ? input + (speech.interimText ? ` ${speech.interimText}` : "") : input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
             placeholder={speech.listening ? "🎙 Sto ascoltando…" : `Istruzioni per ${agent.name}…`}
@@ -195,11 +216,20 @@ export function StaffChatCanvas({ agent }: Props) {
             variant={speech.listening ? "destructive" : "outline"}
             onClick={speech.toggle}
             className={cn("rounded-xl relative shrink-0", speech.listening && "animate-pulse")}
-           aria-label="Stop dettatura">
+            aria-label="Stop dettatura"
+          >
             {speech.listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            {speech.listening && <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-ping" />}
+            {speech.listening && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-ping" />
+            )}
           </Button>
-          <Button size="icon" onClick={send} disabled={(!input.trim() && pendingFiles.length === 0) || loading} className="rounded-xl shrink-0" aria-label="Invia">
+          <Button
+            size="icon"
+            onClick={send}
+            disabled={(!input.trim() && pendingFiles.length === 0) || loading}
+            className="rounded-xl shrink-0"
+            aria-label="Invia"
+          >
             <Send className="w-4 h-4" />
           </Button>
         </div>

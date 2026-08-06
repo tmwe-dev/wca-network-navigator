@@ -2,7 +2,7 @@ import type { AnySupabaseClient } from "../../_shared/supabaseClient.ts";
 export async function handleManageWorkspacePreset(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const action = String(args.action);
 
@@ -13,9 +13,7 @@ export async function handleManageWorkspacePreset(
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    return error
-      ? { error: error.message }
-      : { count: data?.length || 0, presets: data || [] };
+    return error ? { error: error.message } : { count: data?.length || 0, presets: data || [] };
   }
 
   if (action === "create") {
@@ -58,21 +56,13 @@ export async function handleManageWorkspacePreset(
       .eq("id", args.preset_id)
       .eq("user_id", userId);
 
-    return error
-      ? { error: error.message }
-      : { success: true, message: "Preset aggiornato." };
+    return error ? { error: error.message } : { success: true, message: "Preset aggiornato." };
   }
 
   if (action === "delete" && args.preset_id) {
-    const { error } = await supabase
-      .from("workspace_presets")
-      .delete()
-      .eq("id", args.preset_id)
-      .eq("user_id", userId);
+    const { error } = await supabase.from("workspace_presets").delete().eq("id", args.preset_id).eq("user_id", userId);
 
-    return error
-      ? { error: error.message }
-      : { success: true, message: "Preset eliminato." };
+    return error ? { error: error.message } : { success: true, message: "Preset eliminato." };
   }
 
   return {
@@ -83,7 +73,7 @@ export async function handleManageWorkspacePreset(
 export async function handleGetConversationContext(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const { data, error } = await supabase
     .from("contact_conversation_context")
@@ -106,7 +96,7 @@ export async function handleGetConversationContext(
 export async function handleGetAddressRules(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let q = supabase
     .from("email_address_rules")
@@ -135,7 +125,7 @@ export async function handleGetAddressRules(
 export async function handleSaveMemory(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const { data, error } = await supabase
     .from("ai_memory")
@@ -156,9 +146,7 @@ export async function handleSaveMemory(
   return { success: true, memory_id: data.id };
 }
 
-export async function handleDetectLanguage(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleDetectLanguage(args: Record<string, unknown>): Promise<unknown> {
   const map: Record<string, string> = {
     IT: "Italiano",
     DE: "Deutsch",
@@ -184,13 +172,13 @@ export async function handleDetectLanguage(
 export async function handleGetPendingActions(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const status = String(args.status || "pending");
   let q = supabase
     .from("ai_pending_actions")
     .select(
-      "id, action_type, confidence, reasoning, suggested_content, partner_id, contact_id, email_address, status, created_at, source"
+      "id, action_type, confidence, reasoning, suggested_content, partner_id, contact_id, email_address, status, created_at, source",
     )
     .eq("user_id", userId)
     .eq("status", status)
@@ -213,7 +201,7 @@ export async function handleGetPendingActions(
 export async function handleApproveAiAction(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const actionId = String(args.action_id);
   const { error } = await supabase
@@ -232,7 +220,7 @@ export async function handleApproveAiAction(
 export async function handleRejectAiAction(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const actionId = String(args.action_id);
   const reason = args.reason ? String(args.reason) : null;
@@ -255,9 +243,7 @@ export async function handleRejectAiAction(
   return { success: true, message: `Azione ${actionId} rifiutata.` };
 }
 
-export async function handleExecuteUiAction(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleExecuteUiAction(args: Record<string, unknown>): Promise<unknown> {
   const action = String(args.action || "toast");
   const target = String(args.target || "");
   const params = (args.params || {}) as Record<string, unknown>;
@@ -274,9 +260,7 @@ export async function handleExecuteUiAction(
   };
 }
 
-export async function handleReadKb(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleReadKb(args: Record<string, unknown>): Promise<unknown> {
   return {
     error: "Tool not yet implemented",
     message: "read_kb tool è programmato per future implementazione. Contattare il team di development.",
@@ -287,9 +271,7 @@ export async function handleReadKb(
   };
 }
 
-export async function handleGetOutreachStats(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGetOutreachStats(args: Record<string, unknown>): Promise<unknown> {
   return {
     error: "Tool not yet implemented",
     message: "get_outreach_stats tool è programmato per future implementazione. Contattare il team di development.",

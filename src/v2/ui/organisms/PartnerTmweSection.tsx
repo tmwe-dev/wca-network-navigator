@@ -98,12 +98,29 @@ export function PartnerTmweSection({ partnerId }: Props): React.ReactElement {
 }
 
 function LinkedView({
-  clientId, confidence, snapshot, snapshotLoading, revenueLoading,
-  total12m, currency, monthsCount, onUnlink, unlinking,
+  clientId,
+  confidence,
+  snapshot,
+  snapshotLoading,
+  revenueLoading,
+  total12m,
+  currency,
+  monthsCount,
+  onUnlink,
+  unlinking,
 }: {
   readonly clientId: string;
   readonly confidence: string;
-  readonly snapshot: { denomination: string | null; vat: string | null; is_active: boolean; assigned_price_list_name: string | null; last_synced_at: string } | null | undefined;
+  readonly snapshot:
+    | {
+        denomination: string | null;
+        vat: string | null;
+        is_active: boolean;
+        assigned_price_list_name: string | null;
+        last_synced_at: string;
+      }
+    | null
+    | undefined;
   readonly snapshotLoading: boolean;
   readonly revenueLoading: boolean;
   readonly total12m: number;
@@ -139,7 +156,8 @@ function LinkedView({
           <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground mt-1" />
         ) : (
           <p className="text-base font-semibold text-foreground">
-            {fmt.format(total12m)} <span className="text-xs font-normal text-muted-foreground">· {monthsCount} mesi</span>
+            {fmt.format(total12m)}{" "}
+            <span className="text-xs font-normal text-muted-foreground">· {monthsCount} mesi</span>
           </p>
         )}
       </div>
@@ -152,20 +170,34 @@ function LinkedView({
 }
 
 function UnlinkedView({
-  searchOpen, onToggleSearch, loading, candidates, onLink, linking,
+  searchOpen,
+  onToggleSearch,
+  loading,
+  candidates,
+  onLink,
+  linking,
 }: {
   readonly searchOpen: boolean;
   readonly onToggleSearch: () => void;
   readonly loading: boolean;
-  readonly candidates: ReadonlyArray<{ tmwe_client_id: string; denomination: string | null; vat: string | null; city: string | null; score: number; reason: string }>;
-  readonly onLink: (c: { tmwe_client_id: string; vat: string | null; reason: "exact_vat" | "vies" | "name_fuzzy" }) => void;
+  readonly candidates: ReadonlyArray<{
+    tmwe_client_id: string;
+    denomination: string | null;
+    vat: string | null;
+    city: string | null;
+    score: number;
+    reason: string;
+  }>;
+  readonly onLink: (c: {
+    tmwe_client_id: string;
+    vat: string | null;
+    reason: "exact_vat" | "vies" | "name_fuzzy";
+  }) => void;
   readonly linking: boolean;
 }): React.ReactElement {
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">
-        Nessun collegamento TMWE per questo partner.
-      </p>
+      <p className="text-xs text-muted-foreground">Nessun collegamento TMWE per questo partner.</p>
       <Button variant="outline" size="sm" onClick={onToggleSearch}>
         <Search className="h-3.5 w-3.5 mr-1.5" />
         {searchOpen ? "Nascondi candidati" : "Cerca su TMWE"}
@@ -181,7 +213,10 @@ function UnlinkedView({
             <p className="text-xs text-muted-foreground italic">Nessun candidato trovato.</p>
           ) : (
             candidates.map((c) => (
-              <div key={c.tmwe_client_id} className="flex items-center justify-between gap-2 rounded-md border bg-background/50 px-2.5 py-1.5">
+              <div
+                key={c.tmwe_client_id}
+                className="flex items-center justify-between gap-2 rounded-md border bg-background/50 px-2.5 py-1.5"
+              >
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium truncate">{c.denomination ?? "—"}</p>
                   <p className="text-[10px] text-muted-foreground truncate">
@@ -189,12 +224,20 @@ function UnlinkedView({
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <Badge variant="secondary">{c.reason} · {c.score}</Badge>
+                  <Badge variant="secondary">
+                    {c.reason} · {c.score}
+                  </Badge>
                   <Button
                     variant="default"
                     size="sm"
                     disabled={linking}
-                    onClick={() => onLink({ tmwe_client_id: c.tmwe_client_id, vat: c.vat, reason: c.reason as "exact_vat" | "vies" | "name_fuzzy" })}
+                    onClick={() =>
+                      onLink({
+                        tmwe_client_id: c.tmwe_client_id,
+                        vat: c.vat,
+                        reason: c.reason as "exact_vat" | "vies" | "name_fuzzy",
+                      })
+                    }
                   >
                     <Link2 className="h-3 w-3 mr-1" /> Collega
                   </Button>

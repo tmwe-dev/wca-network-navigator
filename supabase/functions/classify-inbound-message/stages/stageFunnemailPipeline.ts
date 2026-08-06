@@ -26,30 +26,39 @@ export async function runFunnemailScoutAndClassify(
     try {
       const { isDeepMailAnalysisEnabled } = await import("../../_shared/deepMailAnalysis.ts");
       deepEnabled = await isDeepMailAnalysisEnabled(supabase, body.user_id ?? null);
-    } catch { /* fail-safe: deep OFF */ }
-    if (deepEnabled) try {
-      const { data: scoutData } = await supabase.functions.invoke("funnemail-scout-sender", {
-        headers: internalHeaders(),
-        body: {
-          from_address: body.from_address,
-          message_id: body.message_id,
-          user_id: body.user_id ?? null,
-          force: false,
-        },
-      });
-      if (scoutData) {
-        const sd = scoutData as { known?: boolean; partner_id?: string | null; intel?: Record<string, unknown> | null };
-        senderIntel = {
-          known: !!sd.known,
-          partner_id: sd.partner_id ?? null,
-          company_type: sd.intel?.company_type ?? null,
-          country: sd.intel?.country ?? null,
-          website: sd.intel?.website ?? null,
-          role_guess: sd.intel?.role_guess ?? null,
-        };
-        void recordStage("scouted", { known: !!sd.known });
+    } catch {
+      /* fail-safe: deep OFF */
+    }
+    if (deepEnabled)
+      try {
+        const { data: scoutData } = await supabase.functions.invoke("funnemail-scout-sender", {
+          headers: internalHeaders(),
+          body: {
+            from_address: body.from_address,
+            message_id: body.message_id,
+            user_id: body.user_id ?? null,
+            force: false,
+          },
+        });
+        if (scoutData) {
+          const sd = scoutData as {
+            known?: boolean;
+            partner_id?: string | null;
+            intel?: Record<string, unknown> | null;
+          };
+          senderIntel = {
+            known: !!sd.known,
+            partner_id: sd.partner_id ?? null,
+            company_type: sd.intel?.company_type ?? null,
+            country: sd.intel?.country ?? null,
+            website: sd.intel?.website ?? null,
+            role_guess: sd.intel?.role_guess ?? null,
+          };
+          void recordStage("scouted", { known: !!sd.known });
+        }
+      } catch {
+        /* scout fallito, fail-safe */
       }
-    } catch { /* scout fallito, fail-safe */ }
 
     await supabase.functions.invoke("funnemail-classify", {
       headers: internalHeaders(),
@@ -66,14 +75,12 @@ export async function runFunnemailScoutAndClassify(
       },
     });
     void recordStage("classified");
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 }
 
-export async function runFunnemailAutoRoute(
-  supabase: Sb,
-  body: RequestBody,
-  recordStage: RecordStage,
-): Promise<void> {
+export async function runFunnemailAutoRoute(supabase: Sb, body: RequestBody, recordStage: RecordStage): Promise<void> {
   if (body.channel !== "email" || !body.user_id) return;
   try {
     await supabase.functions.invoke("funnemail-auto-route", {
@@ -87,7 +94,9 @@ export async function runFunnemailAutoRoute(
       },
     });
     void recordStage("routed");
-  } catch { /* fail-safe */ }
+  } catch {
+    /* fail-safe */
+  }
 }
 
 /**
@@ -110,7 +119,9 @@ export async function runFunnemailPolicyPipeline(
         user_id: body.user_id,
       },
     });
-    const plan = (planData as { actions?: Array<{ action_type: string; payload?: Record<string, unknown> }> } | null)?.actions ?? [];
+    const plan =
+      (planData as { actions?: Array<{ action_type: string; payload?: Record<string, unknown> }> } | null)?.actions ??
+      [];
     if (plan.length === 0) {
       void recordStage("policy_applied", { actions: 0 });
       return;
@@ -129,8 +140,12 @@ export async function runFunnemailPolicyPipeline(
           },
         });
         executed += 1;
-      } catch { /* fail-safe per singola action */ }
+      } catch {
+        /* fail-safe per singola action */
+      }
     }
     void recordStage("policy_applied", { actions: plan.length, executed });
-  } catch { /* fail-safe globale */ }
+  } catch {
+    /* fail-safe globale */
+  }
 }

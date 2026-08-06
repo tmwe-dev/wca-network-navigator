@@ -5,10 +5,7 @@
 
 import { supabase } from "./supabaseClient.ts";
 
-export async function handleDeleteRecords(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleDeleteRecords(args: Record<string, unknown>, userId: string): Promise<unknown> {
   const table = String(args.table);
   const ids = args.ids as string[];
   const valid = ["partners", "prospects", "activities", "reminders"];

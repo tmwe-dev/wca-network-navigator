@@ -35,7 +35,7 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
   const [connectingAll, setConnectingAll] = useState(false);
   const [liSessionOk, setLiSessionOk] = useState(false);
 
-  const liHasCreds = !!(liEmail && liPass) || !!(settings?.["linkedin_li_at"]);
+  const liHasCreds = !!(liEmail && liPass) || !!settings?.["linkedin_li_at"];
   const waConnected = waExt.isAvailable;
 
   useEffect(() => {
@@ -51,8 +51,12 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     try {
       const ok = await ensureSession();
       toast.success(ok ? "Sessione attiva!" : "Sessione non attiva");
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante la verifica"); }
-    finally { setVerifying(false); }
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      toast.error("Errore durante la verifica");
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const handleSaveCookie = async () => {
@@ -60,12 +64,20 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     if (!cookie) return;
     setSavingCookie(true);
     try {
-      const data = await invokeEdge<Record<string, unknown>>("save-wca-cookie", { body: { cookie }, context: "ConnectionsSettings.save_wca_cookie" });
-      if (data?.authenticated) { toast.success("Cookie salvato e verificato!"); setCookieInput(""); }
-      else toast.warning("Cookie salvato ma la verifica è fallita.");
+      const data = await invokeEdge<Record<string, unknown>>("save-wca-cookie", {
+        body: { cookie },
+        context: "ConnectionsSettings.save_wca_cookie",
+      });
+      if (data?.authenticated) {
+        toast.success("Cookie salvato e verificato!");
+        setCookieInput("");
+      } else toast.warning("Cookie salvato ma la verifica è fallita.");
       ensureSession();
-    } catch (err: unknown) { toast.error("Errore: " + (err instanceof Error ? err.message : "Sconosciuto")); }
-    finally { setSavingCookie(false); }
+    } catch (err: unknown) {
+      toast.error("Errore: " + (err instanceof Error ? err.message : "Sconosciuto"));
+    } finally {
+      setSavingCookie(false);
+    }
   };
 
   const handleConnectAll = async () => {
@@ -86,12 +98,18 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
     if (waExt.isAvailable) {
       const res = await waExt.verifySession();
       results.push(res.success ? "✅ WhatsApp" : "⚠️ WhatsApp (sessione scaduta)");
-    } else { results.push("❌ WhatsApp (estensione non rilevata)"); }
+    } else {
+      results.push("❌ WhatsApp (estensione non rilevata)");
+    }
     results.push("✅ AI Agent");
     try {
       await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liSessionOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waConnected) });
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* intentionally ignored: best-effort cleanup */
+    }
     toast.success(results.join(" · "));
     setConnectingAll(false);
   };
@@ -99,30 +117,64 @@ export function ConnectionsSettings({ settings, updateSetting }: ConnectionsSett
   return (
     <Tabs defaultValue="canali" className="space-y-4">
       <TabsList className="w-full justify-start flex-wrap">
-        <TabsTrigger value="canali" className="gap-1.5 text-xs"><Wifi className="w-3.5 h-3.5" /> Canali</TabsTrigger>
-        <TabsTrigger value="estensioni" className="gap-1.5 text-xs"><Download className="w-3.5 h-3.5" /> Estensioni</TabsTrigger>
-        <TabsTrigger value="wca" className="gap-1.5 text-xs"><Globe className="w-3.5 h-3.5" /> WCA</TabsTrigger>
-        <TabsTrigger value="linkedin" className="gap-1.5 text-xs"><Linkedin className="w-3.5 h-3.5" /> LinkedIn</TabsTrigger>
-        <TabsTrigger value="blacklist" className="gap-1.5 text-xs"><ShieldAlert className="w-3.5 h-3.5" /> Blacklist</TabsTrigger>
+        <TabsTrigger value="canali" className="gap-1.5 text-xs">
+          <Wifi className="w-3.5 h-3.5" /> Canali
+        </TabsTrigger>
+        <TabsTrigger value="estensioni" className="gap-1.5 text-xs">
+          <Download className="w-3.5 h-3.5" /> Estensioni
+        </TabsTrigger>
+        <TabsTrigger value="wca" className="gap-1.5 text-xs">
+          <Globe className="w-3.5 h-3.5" /> WCA
+        </TabsTrigger>
+        <TabsTrigger value="linkedin" className="gap-1.5 text-xs">
+          <Linkedin className="w-3.5 h-3.5" /> LinkedIn
+        </TabsTrigger>
+        <TabsTrigger value="blacklist" className="gap-1.5 text-xs">
+          <ShieldAlert className="w-3.5 h-3.5" /> Blacklist
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="canali" className="m-0">
-        <ChannelsTab waConnected={waConnected} liConnected={liSessionOk} liHasCreds={liHasCreds}
-          liExtAvailable={liExt.isAvailable} waExt={waExt} liExt={liExt}
-          connectingAll={connectingAll} onConnectAll={handleConnectAll} />
+        <ChannelsTab
+          waConnected={waConnected}
+          liConnected={liSessionOk}
+          liHasCreds={liHasCreds}
+          liExtAvailable={liExt.isAvailable}
+          waExt={waExt}
+          liExt={liExt}
+          connectingAll={connectingAll}
+          onConnectAll={handleConnectAll}
+        />
       </TabsContent>
-      <TabsContent value="estensioni" className="m-0"><ExtensionsTab /></TabsContent>
+      <TabsContent value="estensioni" className="m-0">
+        <ExtensionsTab />
+      </TabsContent>
       <TabsContent value="wca" className="m-0">
-        <WcaTab isWcaOk={isWcaOk} verifying={verifying} onVerify={handleVerify}
-          cookieInput={cookieInput} setCookieInput={setCookieInput}
-          savingCookie={savingCookie} onSaveCookie={handleSaveCookie} />
+        <WcaTab
+          isWcaOk={isWcaOk}
+          verifying={verifying}
+          onVerify={handleVerify}
+          cookieInput={cookieInput}
+          setCookieInput={setCookieInput}
+          savingCookie={savingCookie}
+          onSaveCookie={handleSaveCookie}
+        />
       </TabsContent>
       <TabsContent value="linkedin" className="m-0">
-        <LinkedInTab liHasCreds={liHasCreds} liEmail={liEmail} setLiEmail={setLiEmail}
-          liPass={liPass} setLiPass={setLiPass} liAtCookie={liAtCookie}
-          setLiAtCookie={setLiAtCookie} updateSetting={updateSetting} />
+        <LinkedInTab
+          liHasCreds={liHasCreds}
+          liEmail={liEmail}
+          setLiEmail={setLiEmail}
+          liPass={liPass}
+          setLiPass={setLiPass}
+          liAtCookie={liAtCookie}
+          setLiAtCookie={setLiAtCookie}
+          updateSetting={updateSetting}
+        />
       </TabsContent>
-      <TabsContent value="blacklist" className="m-0"><BlacklistManager /></TabsContent>
+      <TabsContent value="blacklist" className="m-0">
+        <BlacklistManager />
+      </TabsContent>
     </Tabs>
   );
 }

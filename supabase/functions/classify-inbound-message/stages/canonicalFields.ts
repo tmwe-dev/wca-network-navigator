@@ -26,9 +26,7 @@ export interface CanonicalExtension {
  * - `policy_plan`: sconosciuto qui → popolato da funnemail-policy-engine (B4).
  * - `triage`: sconosciuto qui → popolato da runTriageAndAlert stage 4 (B4).
  */
-export function buildCanonicalExtension(input: {
-  classification: ClassificationValue;
-}): CanonicalExtension {
+export function buildCanonicalExtension(input: { classification: ClassificationValue }): CanonicalExtension {
   return {
     category: mapInboundToEmailCategory(input.classification) ?? null,
     sender_group_id: null,
@@ -43,8 +41,6 @@ export function buildCanonicalExtension(input: {
  * Feature flag server-side. Default sicuro: OFF quando la variabile è
  * assente o diversa dalla stringa esatta "true". Non esposta al frontend.
  */
-export function isMessageIntelligenceV1Enabled(
-  env: { get(name: string): string | undefined },
-): boolean {
+export function isMessageIntelligenceV1Enabled(env: { get(name: string): string | undefined }): boolean {
   return env.get("MESSAGE_INTELLIGENCE_V1_ENABLED") === "true";
 }

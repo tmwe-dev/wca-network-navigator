@@ -35,7 +35,20 @@ function getDomain(email?: string | null): string | null {
   const dom = email.slice(at + 1).toLowerCase();
   // skip free providers — favicon di gmail.com non rappresenta l'azienda
   if (/^(gmail|yahoo|hotmail|outlook|icloud|live|me|msn|aol|gmx|protonmail|proton)\./.test(dom + ".")) return null;
-  if (["gmail.com","yahoo.com","hotmail.com","outlook.com","icloud.com","live.com","me.com","msn.com","aol.com"].includes(dom)) return null;
+  if (
+    [
+      "gmail.com",
+      "yahoo.com",
+      "hotmail.com",
+      "outlook.com",
+      "icloud.com",
+      "live.com",
+      "me.com",
+      "msn.com",
+      "aol.com",
+    ].includes(dom)
+  )
+    return null;
   return dom;
 }
 
@@ -48,7 +61,13 @@ export function CompanyAvatar({ companyName, email, size = "md", className }: Co
 
   if (domain && !errored) {
     return (
-      <div className={cn("rounded-md overflow-hidden bg-muted/30 flex items-center justify-center shrink-0", sizeCls, className)}>
+      <div
+        className={cn(
+          "rounded-md overflow-hidden bg-muted/30 flex items-center justify-center shrink-0",
+          sizeCls,
+          className,
+        )}
+      >
         <img
           src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
           alt=""

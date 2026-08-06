@@ -8,7 +8,9 @@ export function t(dark: boolean) {
     pageBg: dark ? "bg-slate-950" : "bg-slate-100",
     pageGrad1: dark ? "from-slate-950 via-slate-900/95 to-slate-950" : "from-slate-100 via-slate-50 to-slate-100",
     pageGrad2: dark ? "from-slate-800/20" : "from-slate-200/30",
-    panel: dark ? "bg-white/[0.06] backdrop-blur-xl border-white/[0.1]" : "bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/30 border-white/80",
+    panel: dark
+      ? "bg-white/[0.06] backdrop-blur-xl border-white/[0.1]"
+      : "bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/30 border-white/80",
     panelAmber: dark ? "border-amber-500/20" : "border-sky-300/40",
     panelEmerald: dark ? "border-emerald-500/20" : "border-emerald-300/40",
     panelBlue: dark ? "border-blue-500/20" : "border-blue-300/40",
@@ -26,12 +28,20 @@ export function t(dark: boolean) {
     cardBg: dark ? "bg-slate-800/40 border-slate-700/50" : "bg-white border-slate-200 shadow-sm",
     back: dark ? "text-slate-400 hover:text-amber-400" : "text-slate-500 hover:text-sky-600",
     btnAct: dark ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white",
-    btnOff: dark ? "border-slate-600 text-slate-300 hover:bg-slate-800" : "border-slate-300 text-slate-600 hover:bg-slate-100",
+    btnOff: dark
+      ? "border-slate-600 text-slate-300 hover:bg-slate-800"
+      : "border-slate-300 text-slate-600 hover:bg-slate-100",
     btnPri: dark ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white",
-    btnPause: dark ? "border-amber-500/30 text-amber-400 hover:bg-amber-500/10 backdrop-blur-sm" : "bg-sky-50/80 backdrop-blur-sm border-sky-200/60 text-sky-600 hover:bg-sky-100/80 shadow-sm shadow-sky-100/50",
+    btnPause: dark
+      ? "border-amber-500/30 text-amber-400 hover:bg-amber-500/10 backdrop-blur-sm"
+      : "bg-sky-50/80 backdrop-blur-sm border-sky-200/60 text-sky-600 hover:bg-sky-100/80 shadow-sm shadow-sky-100/50",
     btnResume: "bg-emerald-600 hover:bg-emerald-700 text-white",
-    btnStop: dark ? "border-red-500/30 text-red-400 hover:bg-red-500/10 backdrop-blur-sm" : "bg-rose-50/80 backdrop-blur-sm border-rose-200/60 text-rose-600 hover:bg-rose-100/80 shadow-sm shadow-rose-100/50",
-    btnTest: dark ? "border-blue-500/30 text-blue-400 hover:bg-blue-500/10 backdrop-blur-sm" : "bg-sky-50/80 backdrop-blur-sm border-sky-200/60 text-sky-600 hover:bg-sky-100/80 shadow-sm shadow-sky-100/50",
+    btnStop: dark
+      ? "border-red-500/30 text-red-400 hover:bg-red-500/10 backdrop-blur-sm"
+      : "bg-rose-50/80 backdrop-blur-sm border-rose-200/60 text-rose-600 hover:bg-rose-100/80 shadow-sm shadow-rose-100/50",
+    btnTest: dark
+      ? "border-blue-500/30 text-blue-400 hover:bg-blue-500/10 backdrop-blur-sm"
+      : "bg-sky-50/80 backdrop-blur-sm border-sky-200/60 text-sky-600 hover:bg-sky-100/80 shadow-sm shadow-sky-100/50",
     btnEn: "bg-emerald-600 hover:bg-emerald-700 text-white",
     acAmber: dark ? "text-amber-400" : "text-sky-600",
     acEm: dark ? "text-emerald-400" : "text-emerald-600",
@@ -42,13 +52,19 @@ export function t(dark: boolean) {
     logErr: dark ? "text-red-400" : "text-red-600",
     logId: dark ? "text-slate-600" : "text-slate-400",
     logName: dark ? "text-slate-300" : "text-slate-700",
-    chipBg: dark ? "bg-black/50 backdrop-blur-sm border-slate-700/50 hover:border-amber-500/40" : "bg-white border-slate-200 hover:border-sky-400 shadow-sm",
+    chipBg: dark
+      ? "bg-black/50 backdrop-blur-sm border-slate-700/50 hover:border-amber-500/40"
+      : "bg-white border-slate-200 hover:border-sky-400 shadow-sm",
     chipName: dark ? "text-slate-200" : "text-slate-800",
     chipSub: dark ? "text-slate-500" : "text-slate-400",
-    bdgNew: dark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border-emerald-200",
+    bdgNew: dark
+      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+      : "bg-emerald-50 text-emerald-700 border-emerald-200",
     bdgUpd: dark ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-blue-50 text-blue-700 border-blue-200",
     bdgNet: dark ? "bg-amber-500/10 text-amber-300 border-amber-500/30" : "bg-sky-50 text-sky-700 border-sky-200",
-    dlgBg: dark ? "bg-slate-900/95 backdrop-blur-xl border-amber-500/20 text-slate-100" : "bg-white border-slate-200 text-slate-800",
+    dlgBg: dark
+      ? "bg-slate-900/95 backdrop-blur-xl border-amber-500/20 text-slate-100"
+      : "bg-white border-slate-200 text-slate-800",
     dlgTitle: dark ? "text-slate-100" : "text-slate-800",
     dlgSub: dark ? "text-slate-400" : "text-slate-500",
     dlgField: dark ? "text-slate-500" : "text-slate-400",
@@ -72,6 +88,8 @@ export function t(dark: boolean) {
     optCard: dark
       ? "bg-white/[0.04] backdrop-blur-md border-white/[0.08] hover:bg-white/[0.08] hover:border-white/[0.15] hover:shadow-lg hover:shadow-white/[0.03] text-slate-200 transition-all duration-200"
       : "bg-white/60 backdrop-blur-md border-white/80 hover:bg-white/80 hover:border-slate-300/80 hover:shadow-lg hover:shadow-slate-200/50 text-slate-700 transition-all duration-200",
-    infoBox: dark ? "bg-white/[0.04] backdrop-blur-sm border-white/[0.08] text-slate-300" : "bg-white/50 backdrop-blur-sm border-slate-200/60 text-slate-600",
+    infoBox: dark
+      ? "bg-white/[0.04] backdrop-blur-sm border-white/[0.08] text-slate-300"
+      : "bg-white/50 backdrop-blur-sm border-slate-200/60 text-slate-600",
   };
 }

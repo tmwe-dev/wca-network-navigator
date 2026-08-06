@@ -25,25 +25,18 @@ export interface UrlStateOptions<T> {
 export function useUrlState<T>(
   key: string,
   defaultValue: T,
-  options: UrlStateOptions<T> = {}
+  options: UrlStateOptions<T> = {},
 ): [T, (next: T | ((prev: T) => T)) => void] {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const parse =
-    options.parse ??
-    ((raw: string | null) => (raw == null ? defaultValue : (raw as unknown as T)));
-  const serialize =
-    options.serialize ??
-    ((v: T) => (v == null || v === undefined ? "" : String(v)));
+  const parse = options.parse ?? ((raw: string | null) => (raw == null ? defaultValue : (raw as unknown as T)));
+  const serialize = options.serialize ?? ((v: T) => (v == null || v === undefined ? "" : String(v)));
 
   const value = useMemo<T>(() => parse(searchParams.get(key)), [searchParams, key, parse]);
 
   const setValue = useCallback(
     (next: T | ((prev: T) => T)) => {
-      const resolved =
-        typeof next === "function"
-          ? (next as (prev: T) => T)(value)
-          : next;
+      const resolved = typeof next === "function" ? (next as (prev: T) => T)(value) : next;
 
       setSearchParams(
         (prev) => {
@@ -64,10 +57,10 @@ export function useUrlState<T>(
           }
           return params;
         },
-        { replace: options.replace ?? true }
+        { replace: options.replace ?? true },
       );
     },
-    [setSearchParams, key, serialize, value, defaultValue, options.replace]
+    [setSearchParams, key, serialize, value, defaultValue, options.replace],
   );
 
   return [value, setValue];
@@ -76,7 +69,7 @@ export function useUrlState<T>(
 /** Convenience: comma-separated string array in URL */
 export function useUrlArrayState(
   key: string,
-  defaultValue: string[] = []
+  defaultValue: string[] = [],
 ): [string[], (next: string[] | ((prev: string[]) => string[])) => void] {
   return useUrlState<string[]>(key, defaultValue, {
     parse: (raw) => (raw ? raw.split(",").filter(Boolean) : defaultValue),
@@ -87,7 +80,7 @@ export function useUrlArrayState(
 /** Convenience: number with parsing */
 export function useUrlNumberState(
   key: string,
-  defaultValue: number
+  defaultValue: number,
 ): [number, (next: number | ((prev: number) => number)) => void] {
   return useUrlState<number>(key, defaultValue, {
     parse: (raw) => {
@@ -102,7 +95,7 @@ export function useUrlNumberState(
 /** Convenience: boolean */
 export function useUrlBoolState(
   key: string,
-  defaultValue = false
+  defaultValue = false,
 ): [boolean, (next: boolean | ((prev: boolean) => boolean)) => void] {
   return useUrlState<boolean>(key, defaultValue, {
     parse: (raw) => (raw == null ? defaultValue : raw === "1" || raw === "true"),

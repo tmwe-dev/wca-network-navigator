@@ -27,11 +27,7 @@
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
-import {
-  detectInjection,
-  type SanitizeFinding,
-  type UntrustedSource,
-} from "./promptSanitizer.ts";
+import { detectInjection, type SanitizeFinding, type UntrustedSource } from "./promptSanitizer.ts";
 
 export interface InjectionGuardInput {
   userId: string;

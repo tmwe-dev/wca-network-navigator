@@ -7,7 +7,7 @@ import { findOperativePromptsFull, updateOperativePrompt } from "@/data/operativ
 import type { Block } from "../types";
 
 const FIELDS = ["objective", "procedure", "criteria", "context", "examples"] as const;
-type Field = typeof FIELDS[number];
+type Field = (typeof FIELDS)[number];
 
 export function OperativePromptsTab() {
   const { user } = useAuth();

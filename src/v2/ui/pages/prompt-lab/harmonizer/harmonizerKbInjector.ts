@@ -32,8 +32,8 @@ const TABLE_TO_KB_FILES: Record<string, string[]> = {
  * la context window. Ordine = priorità (i primi sono garantiti).
  */
 const ALWAYS_INJECT: string[] = [
-  "60-code-policies-active.md",   // policy hard: bloccante
-  "30-business-constraints.md",   // constraint business: bloccante
+  "60-code-policies-active.md", // policy hard: bloccante
+  "30-business-constraints.md", // constraint business: bloccante
 ];
 
 /**
@@ -73,9 +73,7 @@ async function fetchKbFile(filename: string): Promise<string | null> {
  * @param targetTables tabelle target del chunk corrente
  * @returns testo markdown da accodare al system prompt, già taggato
  */
-export async function buildHarmonizerKbContext(
-  targetTables: string[],
-): Promise<string> {
+export async function buildHarmonizerKbContext(targetTables: string[]): Promise<string> {
   // 1. Determina set di file rilevanti (sempre + tabelle).
   const fileSet = new Set<string>(ALWAYS_INJECT);
   for (const t of targetTables) {
@@ -92,9 +90,7 @@ export async function buildHarmonizerKbContext(
     .filter((f) => !ALWAYS_INJECT.includes(f))
     .sort();
   const fileList = [...tableFiles, ...ALWAYS_INJECT.filter((f) => fileSet.has(f))];
-  const contents = await Promise.all(
-    fileList.map(async (f) => ({ name: f, body: await fetchKbFile(f) })),
-  );
+  const contents = await Promise.all(fileList.map(async (f) => ({ name: f, body: await fetchKbFile(f) })));
 
   // 3. Concatena rispettando il budget chars.
   const parts: string[] = [];

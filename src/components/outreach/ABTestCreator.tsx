@@ -12,12 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 
 const TEST_TYPES = [
@@ -39,7 +35,10 @@ export function ABTestCreator() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       const fieldKey = testType === "body" ? "body" : testType;
@@ -69,16 +68,26 @@ export function ABTestCreator() {
     }
     setGenerating(true);
     try {
-      const data = await invokeAi<{ choices?: { message?: { content?: string } }[]; content?: string; text?: string }>("ai-assistant", {
-        scope: "outreach",
-        body: {
-          messages: [
-            { role: "system", content: "Genera una variante alternativa per un A/B test email. Rispondi SOLO con il testo della variante, niente altro." },
-            { role: "user", content: `Tipo: ${testType}. Variante originale: "${variantA}". Genera una variante B diversa ma con lo stesso intento.` },
-          ],
+      const data = await invokeAi<{ choices?: { message?: { content?: string } }[]; content?: string; text?: string }>(
+        "ai-assistant",
+        {
+          scope: "outreach",
+          body: {
+            messages: [
+              {
+                role: "system",
+                content:
+                  "Genera una variante alternativa per un A/B test email. Rispondi SOLO con il testo della variante, niente altro.",
+              },
+              {
+                role: "user",
+                content: `Tipo: ${testType}. Variante originale: "${variantA}". Genera una variante B diversa ma con lo stesso intento.`,
+              },
+            ],
+          },
+          context: { source: "ABTestCreator", route: "/v2/outreach", mode: "generate-variant" },
         },
-        context: { source: "ABTestCreator", route: "/v2/outreach", mode: "generate-variant" },
-      });
+      );
       const text = data?.choices?.[0]?.message?.content || data?.content || data?.text || "";
       if (text) setVariantB(text.trim().replace(/^["']|["']$/g, ""));
       else toast.error("Nessuna risposta AI");
@@ -110,16 +119,25 @@ export function ABTestCreator() {
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <Label className="text-xs">Nome test</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="es. Test oggetto Q2 2026" className="h-8 text-sm" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="es. Test oggetto Q2 2026"
+              className="h-8 text-sm"
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs">Tipo test</Label>
             <Select value={testType} onValueChange={setTestType}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {TEST_TYPES.map(t => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                {TEST_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -128,27 +146,49 @@ export function ABTestCreator() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Variante A</Label>
-              <InputComp value={variantA} onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setVariantA(e.target.value)} placeholder="Testo variante A..." className="text-sm" rows={isBody ? 4 : undefined} />
+              <InputComp
+                value={variantA}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setVariantA(e.target.value)}
+                placeholder="Testo variante A..."
+                className="text-sm"
+                rows={isBody ? 4 : undefined}
+              />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label className="text-xs">Variante B</Label>
-                <Button variant="ghost" size="sm" className="h-5 text-[10px] gap-1 px-1.5" onClick={handleGenerateB} disabled={generating}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 text-[10px] gap-1 px-1.5"
+                  onClick={handleGenerateB}
+                  disabled={generating}
+                >
                   <Sparkles className="w-3 h-3" /> {generating ? "..." : "Genera AI"}
                 </Button>
               </div>
-              <InputComp value={variantB} onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setVariantB(e.target.value)} placeholder="Testo variante B..." className="text-sm" rows={isBody ? 4 : undefined} />
+              <InputComp
+                value={variantB}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setVariantB(e.target.value)}
+                placeholder="Testo variante B..."
+                className="text-sm"
+                rows={isBody ? 4 : undefined}
+              />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Split ratio: {splitRatio[0]}% A / {100 - splitRatio[0]}% B</Label>
+            <Label className="text-xs">
+              Split ratio: {splitRatio[0]}% A / {100 - splitRatio[0]}% B
+            </Label>
             <Slider value={splitRatio} onValueChange={setSplitRatio} min={30} max={70} step={10} className="py-2" />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Annulla</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Annulla
+          </Button>
           <Button
             onClick={() => createMutation.mutate()}
             disabled={!name.trim() || !variantA.trim() || !variantB.trim() || createMutation.isPending}

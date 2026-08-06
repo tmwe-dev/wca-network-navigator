@@ -32,9 +32,16 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function JobList({
-  jobs, contactsByPartner, focusedContactId, onFocusContact,
-  selectedContactIds, onToggleContact,
-  onSelectAll, onSelectAllWithEmail, onSelectAllWithPhone, onDeselectAll,
+  jobs,
+  contactsByPartner,
+  focusedContactId,
+  onFocusContact,
+  selectedContactIds,
+  onToggleContact,
+  onSelectAll,
+  onSelectAllWithEmail,
+  onSelectAllWithPhone,
+  onDeselectAll,
   totalContacts,
 }: JobListProps) {
   const [search, setSearch] = useState("");
@@ -43,21 +50,25 @@ export function JobList({
 
   // Filter jobs first
   const filteredJobs = useMemo(() => {
-    return jobs.filter(j => {
+    return jobs.filter((j) => {
       if (filterStatus === "pending" && (j.status === "completed" || j.status === "skipped")) return false;
       if (filterStatus === "completed" && j.status !== "completed") return false;
       if (search) {
         const s = search.toLowerCase();
-        return j.company_name.toLowerCase().includes(s) || j.country_name.toLowerCase().includes(s) || (j.city || "").toLowerCase().includes(s);
+        return (
+          j.company_name.toLowerCase().includes(s) ||
+          j.country_name.toLowerCase().includes(s) ||
+          (j.city || "").toLowerCase().includes(s)
+        );
       }
       return true;
     });
   }, [jobs, search, filterStatus]);
 
-  const completedCount = jobs.filter(j => j.status === "completed").length;
+  const completedCount = jobs.filter((j) => j.status === "completed").length;
 
   const toggleCollapse = (partnerId: string) => {
-    setCollapsedPartners(prev => {
+    setCollapsedPartners((prev) => {
       const next = new Set(prev);
       if (next.has(partnerId)) next.delete(partnerId);
       else next.add(partnerId);
@@ -84,7 +95,7 @@ export function JobList({
           <Input
             placeholder="Cerca azienda..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-8 h-8 text-xs"
           />
         </div>
@@ -104,13 +115,15 @@ export function JobList({
             Nessuno
           </Button>
           <div className="w-px bg-border mx-0.5" />
-          {(["all", "pending", "completed"] as const).map(s => (
+          {(["all", "pending", "completed"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
               className={cn(
                 "px-2 py-0.5 rounded-md transition-colors",
-                filterStatus === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"
+                filterStatus === s
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-accent",
               )}
             >
               {s === "all" ? "Tutti" : s === "pending" ? "Aperti" : "Fatti"}
@@ -122,7 +135,7 @@ export function JobList({
       {/* Grouped contact list */}
       <ScrollArea className="flex-1">
         <div className="px-2 pb-2 space-y-0.5">
-          {filteredJobs.map(job => {
+          {filteredJobs.map((job) => {
             const contacts = contactsByPartner[job.partner_id] || [];
             const isCollapsed = collapsedPartners.has(job.partner_id);
 
@@ -133,16 +146,15 @@ export function JobList({
                   onClick={() => toggleCollapse(job.partner_id)}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs font-semibold text-muted-foreground hover:bg-accent transition-colors"
                 >
-                  {isCollapsed
-                    ? <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                    : <ChevronDown className="w-3.5 h-3.5 shrink-0" />
-                  }
+                  {isCollapsed ? (
+                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+                  )}
                   {STATUS_ICONS[job.status]}
                   <span className="text-base leading-none">{getCountryFlag(job.country_code)}</span>
                   <span className="flex-1 truncate text-foreground">{job.company_name}</span>
-                  <span className="text-[10px] text-muted-foreground shrink-0">
-                    {job.city}
-                  </span>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{job.city}</span>
                   {contacts.length > 0 && (
                     <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
                       <Users className="w-3 h-3" /> {contacts.length}
@@ -153,7 +165,7 @@ export function JobList({
                 {/* Contact rows */}
                 {!isCollapsed && contacts.length > 0 && (
                   <div className="ml-3 space-y-0.5">
-                    {contacts.map(contact => {
+                    {contacts.map((contact) => {
                       const hasEmail = !!contact.email;
                       const hasPhone = !!(contact.direct_phone || contact.mobile);
                       const isFocused = focusedContactId === contact.id;
@@ -166,7 +178,7 @@ export function JobList({
                             "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-colors cursor-pointer",
                             isFocused
                               ? "bg-primary/10 border border-primary/30"
-                              : "hover:bg-accent border border-transparent"
+                              : "hover:bg-accent border border-transparent",
                           )}
                         >
                           <Checkbox
@@ -180,21 +192,19 @@ export function JobList({
                             onClick={() => onFocusContact(contact.id)}
                           >
                             <span className="font-medium text-foreground truncate">{contact.name}</span>
-                            {contact.contact_alias && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 shrink-0">{contact.contact_alias}</span>}
+                            {contact.contact_alias && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 shrink-0">
+                                {contact.contact_alias}
+                              </span>
+                            )}
                             {contact.title && (
                               <span className="text-muted-foreground truncate hidden sm:inline">· {contact.title}</span>
                             )}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {hasEmail && (
-                              <Mail className="w-3 h-3 text-emerald-500" />
-                            )}
-                            {hasPhone && (
-                              <Phone className="w-3 h-3 text-blue-500" />
-                            )}
-                            {!hasEmail && !hasPhone && (
-                              <span className="text-[10px] text-muted-foreground">—</span>
-                            )}
+                            {hasEmail && <Mail className="w-3 h-3 text-emerald-500" />}
+                            {hasPhone && <Phone className="w-3 h-3 text-blue-500" />}
+                            {!hasEmail && !hasPhone && <span className="text-[10px] text-muted-foreground">—</span>}
                           </div>
                         </div>
                       );

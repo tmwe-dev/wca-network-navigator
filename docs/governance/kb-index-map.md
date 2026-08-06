@@ -13,14 +13,14 @@
 Le 27 categorie attuali sono raggruppate in **6 famiglie canoniche** (audit 2026-05-02).
 L'AI deve ragionare in famiglie, non in categorie singole.
 
-| Famiglia        | Categorie sorgente                                                                            | Quando usarla                                                                                              |
-|-----------------|-----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| **doctrine**    | `doctrine`, `system_doctrine`, `agent_doctrine`, `sales_doctrine`, `filosofia`, `regole_sistema` | Domande su "perché" facciamo qualcosa, principi non negoziabili, governance, regole AI invocation, hard guards |
-| **procedures**  | `procedures`, `lab_architect_procedure`, `command_tools`, `email_management`                   | Domande su "come si fa", workflow operativi, sequenze di tool, gestione inbox                              |
-| **personas**    | `voice_rules`, `tono`, `calligrafia`, `chris_voss`                                            | Definizione voce/tono di un agente, stile di scrittura, formule di apertura/chiusura                       |
-| **playbooks**   | `cold_outreach`, `followup`, `negoziazione`, `obiezioni`, `chiusura`, `hook`, `frasi_modello`, `struttura_email`, `prompt_template`, `arsenale`, `persuasione` | Costruire un messaggio commerciale, A/B test, follow-up, handling obiezioni                  |
-| **glossary**    | `errori`                                                                                       | Vocabolario sistema, errori comuni, termini tecnici interni                                                |
-| **data-schema** | `dati_partner`                                                                                 | Struttura dati partner/contatti, campi disponibili, vincoli DB                                             |
+| Famiglia        | Categorie sorgente                                                                                                                                             | Quando usarla                                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **doctrine**    | `doctrine`, `system_doctrine`, `agent_doctrine`, `sales_doctrine`, `filosofia`, `regole_sistema`                                                               | Domande su "perché" facciamo qualcosa, principi non negoziabili, governance, regole AI invocation, hard guards |
+| **procedures**  | `procedures`, `lab_architect_procedure`, `command_tools`, `email_management`                                                                                   | Domande su "come si fa", workflow operativi, sequenze di tool, gestione inbox                                  |
+| **personas**    | `voice_rules`, `tono`, `calligrafia`, `chris_voss`                                                                                                             | Definizione voce/tono di un agente, stile di scrittura, formule di apertura/chiusura                           |
+| **playbooks**   | `cold_outreach`, `followup`, `negoziazione`, `obiezioni`, `chiusura`, `hook`, `frasi_modello`, `struttura_email`, `prompt_template`, `arsenale`, `persuasione` | Costruire un messaggio commerciale, A/B test, follow-up, handling obiezioni                                    |
+| **glossary**    | `errori`                                                                                                                                                       | Vocabolario sistema, errori comuni, termini tecnici interni                                                    |
+| **data-schema** | `dati_partner`                                                                                                                                                 | Struttura dati partner/contatti, campi disponibili, vincoli DB                                                 |
 
 ---
 
@@ -28,19 +28,19 @@ L'AI deve ragionare in famiglie, non in categorie singole.
 
 Quando l'AI riceve un task, consulta questa tabella per sapere **dove cercare**.
 
-| Intento del task                                       | Famiglie da consultare (ordine)                  |
-|--------------------------------------------------------|--------------------------------------------------|
-| "Validare il blocco Identità di un agente"             | personas → doctrine                              |
-| "Validare il blocco Obiettivo"                         | doctrine → procedures                            |
-| "Validare il blocco Metodo"                            | procedures → playbooks                           |
-| "Validare il blocco Guardrail"                         | doctrine → glossary                              |
-| "Validare il blocco Output (formato)"                  | playbooks (struttura_email, frasi_modello)       |
-| "Migliorare un'email commerciale"                      | playbooks → personas                             |
-| "Capire una regola commerciale"                        | doctrine (sales_doctrine) → playbooks            |
-| "Verificare una transizione di stato lead"             | doctrine → procedures                            |
-| "Capire come usare uno strumento del Command"          | procedures (command_tools)                       |
-| "Verificare schema dati partner/contatto"              | data-schema                                      |
-| "Aggiungere nuovo materiale alla KB"                   | tutte (per detect duplicati/conflitti)           |
+| Intento del task                              | Famiglie da consultare (ordine)            |
+| --------------------------------------------- | ------------------------------------------ |
+| "Validare il blocco Identità di un agente"    | personas → doctrine                        |
+| "Validare il blocco Obiettivo"                | doctrine → procedures                      |
+| "Validare il blocco Metodo"                   | procedures → playbooks                     |
+| "Validare il blocco Guardrail"                | doctrine → glossary                        |
+| "Validare il blocco Output (formato)"         | playbooks (struttura_email, frasi_modello) |
+| "Migliorare un'email commerciale"             | playbooks → personas                       |
+| "Capire una regola commerciale"               | doctrine (sales_doctrine) → playbooks      |
+| "Verificare una transizione di stato lead"    | doctrine → procedures                      |
+| "Capire come usare uno strumento del Command" | procedures (command_tools)                 |
+| "Verificare schema dati partner/contatto"     | data-schema                                |
+| "Aggiungere nuovo materiale alla KB"          | tutte (per detect duplicati/conflitti)     |
 
 ---
 

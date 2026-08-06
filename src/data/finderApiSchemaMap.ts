@@ -51,20 +51,18 @@ export async function upsertFinderApiSchemaField(payload: {
   example?: string | null;
   sample_value?: string | null;
 }): Promise<void> {
-  const { error } = await supabase
-    .from("finder_api_schema_map")
-    .upsert(
-      {
-        op: payload.op,
-        field: payload.field,
-        role: payload.role,
-        description: payload.description ?? null,
-        example: payload.example ?? null,
-        sample_value: payload.sample_value ?? null,
-        verified_at: new Date().toISOString(),
-      },
-      { onConflict: "op,field" },
-    );
+  const { error } = await supabase.from("finder_api_schema_map").upsert(
+    {
+      op: payload.op,
+      field: payload.field,
+      role: payload.role,
+      description: payload.description ?? null,
+      example: payload.example ?? null,
+      sample_value: payload.sample_value ?? null,
+      verified_at: new Date().toISOString(),
+    },
+    { onConflict: "op,field" },
+  );
   if (error) throw error;
 }
 
@@ -83,7 +81,10 @@ export async function ingestSampleIntoSchemaMap(
   let added = 0;
   let skipped = 0;
   for (const [field, value] of Object.entries(sample)) {
-    if (known.has(field)) { skipped++; continue; }
+    if (known.has(field)) {
+      skipped++;
+      continue;
+    }
     const example = value == null || value === undefined ? "" : String(value).slice(0, 80);
     await upsertFinderApiSchemaField({
       op,

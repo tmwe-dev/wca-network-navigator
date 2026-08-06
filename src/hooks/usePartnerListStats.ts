@@ -41,8 +41,16 @@ export function usePartnerListStats({ countryCodes, partners }: UsePartnerListSt
     }
     if (!countryStatsData.byCountry) return null;
     if (countryCodes.length === 1) return countryStatsData.byCountry[countryCodes[0]] || null;
-    const agg = { total_partners: 0, with_profile: 0, with_deep_search: 0, with_email: 0, with_phone: 0, with_company_alias: 0, with_contact_alias: 0 };
-    countryCodes.forEach(cc => {
+    const agg = {
+      total_partners: 0,
+      with_profile: 0,
+      with_deep_search: 0,
+      with_email: 0,
+      with_phone: 0,
+      with_company_alias: 0,
+      with_contact_alias: 0,
+    };
+    countryCodes.forEach((cc) => {
       const s = countryStatsData.byCountry[cc];
       if (s) {
         agg.total_partners += s.total_partners;
@@ -71,7 +79,12 @@ export function usePartnerListStats({ countryCodes, partners }: UsePartnerListSt
     }
     const list = partners || [];
     const total = list.length;
-    let withProfile = 0, withDeep = 0, withEmail = 0, withPhone = 0, withAliasCo = 0, withAliasCt = 0;
+    let withProfile = 0,
+      withDeep = 0,
+      withEmail = 0,
+      withPhone = 0,
+      withAliasCo = 0,
+      withAliasCt = 0;
     list.forEach((p) => {
       // Sorgente verità: profile_description (sync WCA). Fallback su raw_profile_html per backward-compat.
       if (p.profile_description || p.raw_profile_html) withProfile++;
@@ -89,15 +102,24 @@ export function usePartnerListStats({ countryCodes, partners }: UsePartnerListSt
     const hasProfile = (p: PartnerLike) => !!(p.profile_description || p.raw_profile_html);
     const missingEmailList = list.filter((p) => !p.email && !(p.partner_contacts || []).some((c) => c.email));
     const emailVerified = missingEmailList.length === 0 || missingEmailList.every(hasProfile);
-    const missingPhoneList = list.filter((p) => !p.phone && !(p.partner_contacts || []).some((c) => c.direct_phone || c.mobile));
+    const missingPhoneList = list.filter(
+      (p) => !p.phone && !(p.partner_contacts || []).some((c) => c.direct_phone || c.mobile),
+    );
     const phoneVerified = missingPhoneList.length === 0 || missingPhoneList.every(hasProfile);
     const missingDeepList = list.filter((p) => !asEnrichment(p.enrichment_data)?.deep_search_at);
-    const deepVerified = missingDeepList.length === 0 || missingDeepList.every((p) => !!asEnrichment(p.enrichment_data)?.deep_search_at);
+    const deepVerified =
+      missingDeepList.length === 0 || missingDeepList.every((p) => !!asEnrichment(p.enrichment_data)?.deep_search_at);
     const missingAliasCoList = list.filter((p) => !p.company_alias);
     const aliasCoVerified = missingAliasCoList.length === 0 || missingAliasCoList.every((p) => !!p.ai_parsed_at);
     const missingAliasCtList = list.filter((p) => !(p.partner_contacts || []).some((c) => c.contact_alias));
     const aliasCtVerified = missingAliasCtList.length === 0 || missingAliasCtList.every((p) => !!p.ai_parsed_at);
-    return { email: emailVerified, phone: phoneVerified, deep: deepVerified, aliasCo: aliasCoVerified, aliasCt: aliasCtVerified };
+    return {
+      email: emailVerified,
+      phone: phoneVerified,
+      deep: deepVerified,
+      aliasCo: aliasCoVerified,
+      aliasCt: aliasCtVerified,
+    };
   }, [partners]);
 
   const missingProfiles = stats.total - stats.withProfile;

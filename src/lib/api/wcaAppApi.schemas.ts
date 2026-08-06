@@ -91,11 +91,7 @@ export const JobStartResultSchema = z.object({
 
 // ─── Safe parsers (best-effort, never throw) ─────────────────
 
-function safeParse<T>(
-  schema: z.ZodType<T>,
-  data: unknown,
-  context: string
-): T | null {
+function safeParse<T>(schema: z.ZodType<T>, data: unknown, context: string): T | null {
   const result = schema.safeParse(data);
   if (result.success) return result.data;
   log.warn("schema validation failed", {
@@ -109,14 +105,10 @@ function safeParse<T>(
   return null;
 }
 
-export const safeParseDiscover = (data: unknown) =>
-  safeParse(DiscoverResultSchema, data, "wcaDiscover");
+export const safeParseDiscover = (data: unknown) => safeParse(DiscoverResultSchema, data, "wcaDiscover");
 
-export const safeParseScrape = (data: unknown) =>
-  safeParse(ScrapeResultSchema, data, "wcaScrape");
+export const safeParseScrape = (data: unknown) => safeParse(ScrapeResultSchema, data, "wcaScrape");
 
-export const safeParseCheckIds = (data: unknown) =>
-  safeParse(CheckIdsResultSchema, data, "wcaCheckIds");
+export const safeParseCheckIds = (data: unknown) => safeParse(CheckIdsResultSchema, data, "wcaCheckIds");
 
-export const safeParseJobStart = (data: unknown) =>
-  safeParse(JobStartResultSchema, data, "wcaJobStart");
+export const safeParseJobStart = (data: unknown) => safeParse(JobStartResultSchema, data, "wcaJobStart");

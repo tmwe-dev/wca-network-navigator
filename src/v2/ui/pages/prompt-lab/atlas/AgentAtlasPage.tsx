@@ -46,7 +46,14 @@ export default function AgentAtlasPage() {
   );
 
   const categories: ReadonlyArray<AgentCategory | "all"> = [
-    "all", "core", "email", "outreach", "analysis", "voice", "autonomous", "classifier",
+    "all",
+    "core",
+    "email",
+    "outreach",
+    "analysis",
+    "voice",
+    "autonomous",
+    "classifier",
   ];
 
   return (
@@ -62,17 +69,10 @@ export default function AgentAtlasPage() {
           </Button>
           <span className="text-muted-foreground text-xs">/</span>
           <h1 className="text-sm font-semibold">Agent Atlas</h1>
-          <span className="text-muted-foreground text-xs">
-            — brain map di {allAgents.length} agenti
-          </span>
+          <span className="text-muted-foreground text-xs">— brain map di {allAgents.length} agenti</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 gap-1.5"
-            onClick={() => setCreateBlockOpen(true)}
-          >
+          <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setCreateBlockOpen(true)}>
             <Plus className="h-3.5 w-3.5" />
             Nuovo
           </Button>
@@ -105,33 +105,19 @@ export default function AgentAtlasPage() {
 
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        <AtlasSidebar
-          agents={filteredAgents}
-          selectedId={selected?.id ?? ""}
-          onSelect={setSelectedId}
-        />
+        <AtlasSidebar agents={filteredAgents} selectedId={selected?.id ?? ""} onSelect={setSelectedId} />
         <div className="flex-1 overflow-auto">
           {selected ? (
             <AtlasContent agent={selected} />
           ) : (
-            <div className="text-muted-foreground p-8 text-sm">
-              Nessun agente in questa categoria.
-            </div>
+            <div className="text-muted-foreground p-8 text-sm">Nessun agente in questa categoria.</div>
           )}
         </div>
       </div>
 
       {/* Dialogs */}
-      <GlobalImproverDialog
-        open={improverOpen}
-        onOpenChange={setImproverOpen}
-        defaultGrouping="agent"
-      />
-      <CreateBlockDialog
-        open={createBlockOpen}
-        onOpenChange={setCreateBlockOpen}
-        defaultType="kb_entry"
-      />
+      <GlobalImproverDialog open={improverOpen} onOpenChange={setImproverOpen} defaultGrouping="agent" />
+      <CreateBlockDialog open={createBlockOpen} onOpenChange={setCreateBlockOpen} defaultType="kb_entry" />
     </div>
   );
 }

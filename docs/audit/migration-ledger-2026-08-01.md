@@ -5,20 +5,20 @@ Gate deterministico: `src/test/migration-audit.test.ts` (ratchet, solo in disces
 
 ## Sintesi
 
-| Metrica | Valore |
-|---|---|
-| Migrazioni totali | 416 |
-| Naming non standard (prefisso ≠ 14 cifre) | 7 |
-| Gruppi di timestamp duplicati | 2 |
-| Conflitti di ordinamento | 7 |
-| Oggetti alterati prima della creazione | 7 |
-| Funzioni SECURITY DEFINER senza search_path | 1 |
-| View SECURITY DEFINER dichiarate | 0 |
-| CREATE TABLE public senza GRANT nello stesso file | 202 |
-| Tabelle nei tipi generati | 282 |
-| Tabelle create nelle migrazioni | 229 |
-| Presenti nelle migrazioni ma assenti dai tipi | 17 |
-| Presenti nei tipi ma senza CREATE TABLE tracciata | 70 |
+| Metrica                                           | Valore |
+| ------------------------------------------------- | ------ |
+| Migrazioni totali                                 | 416    |
+| Naming non standard (prefisso ≠ 14 cifre)         | 7      |
+| Gruppi di timestamp duplicati                     | 2      |
+| Conflitti di ordinamento                          | 7      |
+| Oggetti alterati prima della creazione            | 7      |
+| Funzioni SECURITY DEFINER senza search_path       | 1      |
+| View SECURITY DEFINER dichiarate                  | 0      |
+| CREATE TABLE public senza GRANT nello stesso file | 202    |
+| Tabelle nei tipi generati                         | 282    |
+| Tabelle create nelle migrazioni                   | 229    |
+| Presenti nelle migrazioni ma assenti dai tipi     | 17     |
+| Presenti nei tipi ma senza CREATE TABLE tracciata | 70     |
 
 ## 1. Naming e ordinamento
 

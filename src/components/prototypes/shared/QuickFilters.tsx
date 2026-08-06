@@ -16,10 +16,10 @@ interface Props {
 
 export function QuickFilters({ chips, active, onChange, className }: Props) {
   const toggle = (key: string) => {
-    onChange(active.includes(key) ? active.filter(k => k !== key) : [...active, key]);
+    onChange(active.includes(key) ? active.filter((k) => k !== key) : [...active, key]);
   };
 
-  const _groups = [...new Set(chips.map(c => c.group || ""))];
+  const _groups = [...new Set(chips.map((c) => c.group || ""))];
 
   return (
     <div className={cn("flex flex-wrap gap-1.5 p-2", className)}>
@@ -31,7 +31,7 @@ export function QuickFilters({ chips, active, onChange, className }: Props) {
           <X className="h-2.5 w-2.5" /> Reset
         </button>
       )}
-      {chips.map(chip => (
+      {chips.map((chip) => (
         <button
           key={chip.key}
           onClick={() => toggle(chip.key)}
@@ -39,7 +39,7 @@ export function QuickFilters({ chips, active, onChange, className }: Props) {
             "px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
             active.includes(chip.key)
               ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted/60 text-muted-foreground hover:bg-muted"
+              : "bg-muted/60 text-muted-foreground hover:bg-muted",
           )}
         >
           {chip.label}

@@ -35,11 +35,25 @@ interface CountryWorkbenchFiltersProps {
 }
 
 export function CountryWorkbenchFilters({
-  countryCode, countryPartners, filteredPartners, searchTerm, onSearchChange,
-  sortStack, onSortToggle, activeServiceFilters, onToggleServiceFilter,
-  availableServices, availableNetworks, networkFilter, onNetworkFilterChange,
-  availableBranchCountries, branchCountryFilter, onBranchCountryFilterChange,
-  allSelected, onSelectAll, onBack,
+  countryCode,
+  countryPartners,
+  filteredPartners,
+  searchTerm,
+  onSearchChange,
+  sortStack,
+  onSortToggle,
+  activeServiceFilters,
+  onToggleServiceFilter,
+  availableServices,
+  availableNetworks,
+  networkFilter,
+  onNetworkFilterChange,
+  availableBranchCountries,
+  branchCountryFilter,
+  onBranchCountryFilterChange,
+  allSelected,
+  onSelectAll,
+  onBack,
 }: CountryWorkbenchFiltersProps) {
   const countryName = WCA_COUNTRIES.find((c) => c.code === countryCode)?.name || countryCode;
   const flag = getCountryFlag(countryCode);
@@ -63,7 +77,10 @@ export function CountryWorkbenchFilters({
       {/* ═══ HEADER ═══ */}
       <div className="px-4 py-2.5 border-b border-border/60 bg-card/30">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all">
+          <button
+            onClick={onBack}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all"
+          >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <span className="text-2xl">{flag}</span>
@@ -77,17 +94,26 @@ export function CountryWorkbenchFilters({
                 <SelectValue placeholder="Network" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__" className="text-xs">Tutti i network</SelectItem>
+                <SelectItem value="__all__" className="text-xs">
+                  Tutti i network
+                </SelectItem>
                 {availableNetworks.map((n) => (
-                  <SelectItem key={n} value={n} className="text-xs">{n.replace("WCA ", "")}</SelectItem>
+                  <SelectItem key={n} value={n} className="text-xs">
+                    {n.replace("WCA ", "")}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
           <span className="ml-auto text-lg font-bold text-foreground tabular-nums bg-muted/60 px-3 py-0.5 rounded-lg">
-            {(hasAnyFilter || searchTerm)
-              ? <>{filteredPartners.length} <span className="text-muted-foreground font-normal text-sm">/ {countryPartners.length}</span></>
-              : countryPartners.length}
+            {hasAnyFilter || searchTerm ? (
+              <>
+                {filteredPartners.length}{" "}
+                <span className="text-muted-foreground font-normal text-sm">/ {countryPartners.length}</span>
+              </>
+            ) : (
+              countryPartners.length
+            )}
           </span>
         </div>
       </div>
@@ -104,18 +130,23 @@ export function CountryWorkbenchFilters({
             const DirIcon = isAsc ? ChevronUp : ChevronDown;
             const isDefaultDir = entry?.dir === DEFAULT_DIRS[s.field];
             const colorClass = isActive
-              ? isDefaultDir ? "text-primary" : "text-destructive"
+              ? isDefaultDir
+                ? "text-primary"
+                : "text-destructive"
               : "text-muted-foreground";
-            const bgClass = isActive
-              ? isDefaultDir ? "bg-primary/15" : "bg-destructive/15"
-              : "hover:bg-accent/50";
+            const bgClass = isActive ? (isDefaultDir ? "bg-primary/15" : "bg-destructive/15") : "hover:bg-accent/50";
 
             return (
               <Tooltip key={s.field}>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => onSortToggle(s.field)}
-                    className={cn("relative p-1.5 rounded-md transition-all", bgClass, colorClass, !isActive && "hover:text-foreground")}
+                    className={cn(
+                      "relative p-1.5 rounded-md transition-all",
+                      bgClass,
+                      colorClass,
+                      !isActive && "hover:text-foreground",
+                    )}
                   >
                     <Icon className="w-4 h-4" strokeWidth={isActive ? 2.2 : 1.6} />
                     {isActive && (
@@ -130,7 +161,9 @@ export function CountryWorkbenchFilters({
                     )}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">{s.label}</TooltipContent>
+                <TooltipContent side="bottom" className="text-xs">
+                  {s.label}
+                </TooltipContent>
               </Tooltip>
             );
           })}
@@ -152,13 +185,18 @@ export function CountryWorkbenchFilters({
                           "p-1.5 rounded-md border transition-all",
                           isActive
                             ? "bg-primary/20 border-primary/60 text-primary"
-                            : "bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                            : "bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50",
                         )}
                       >
-                        <Icon className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-muted-foreground")} strokeWidth={1.8} />
+                        <Icon
+                          className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-muted-foreground")}
+                          strokeWidth={1.8}
+                        />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">{formatServiceCategory(svc)}</TooltipContent>
+                    <TooltipContent side="bottom" className="text-xs">
+                      {formatServiceCategory(svc)}
+                    </TooltipContent>
                   </Tooltip>
                 );
               })}
@@ -167,8 +205,10 @@ export function CountryWorkbenchFilters({
         )}
 
         {hasAnyFilter && (
-          <button onClick={clearAllFilters}
-            className="p-1.5 rounded-full text-foreground hover:text-destructive hover:bg-destructive/10 transition-all ml-auto">
+          <button
+            onClick={clearAllFilters}
+            className="p-1.5 rounded-full text-foreground hover:text-destructive hover:bg-destructive/10 transition-all ml-auto"
+          >
             <X className="w-3.5 h-3.5" />
           </button>
         )}
@@ -185,7 +225,9 @@ export function CountryWorkbenchFilters({
               <SelectValue placeholder="Filiali" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__" className="text-xs">Tutte le filiali</SelectItem>
+              <SelectItem value="__all__" className="text-xs">
+                Tutte le filiali
+              </SelectItem>
               {availableBranchCountries.map((b) => (
                 <SelectItem key={b.code} value={b.code} className="text-xs">
                   {getCountryFlag(b.code)} {b.name}

@@ -16,9 +16,7 @@ export interface ActivityFilters {
   readonly offset?: number;
 }
 
-export async function fetchActivities(
-  filters?: ActivityFilters,
-): Promise<Result<Activity[], AppError>> {
+export async function fetchActivities(filters?: ActivityFilters): Promise<Result<Activity[], AppError>> {
   try {
     let query = supabase.from("activities").select("*").is("deleted_at", null);
 
@@ -34,9 +32,16 @@ export async function fetchActivities(
     const { data, error } = await query;
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "activities",
-      }, "fetchActivities"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "activities",
+          },
+          "fetchActivities",
+        ),
+      );
     }
 
     if (!data) return ok([]);

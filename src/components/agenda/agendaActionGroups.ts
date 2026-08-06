@@ -15,10 +15,10 @@ export interface ActionGroupDef {
 }
 
 export const ACTION_GROUPS: readonly ActionGroupDef[] = [
-  { key: "reply",  label: "Da rispondere", icon: Reply,      verb: "Rispondi" },
-  { key: "send",   label: "Da inviare",    icon: Send,       verb: "Invia"    },
-  { key: "call",   label: "Da chiamare",   icon: PhoneCall,  verb: "Chiama"   },
-  { key: "decide", label: "Da decidere",   icon: HelpCircle, verb: "Apri"     },
+  { key: "reply", label: "Da rispondere", icon: Reply, verb: "Rispondi" },
+  { key: "send", label: "Da inviare", icon: Send, verb: "Invia" },
+  { key: "call", label: "Da chiamare", icon: PhoneCall, verb: "Chiama" },
+  { key: "decide", label: "Da decidere", icon: HelpCircle, verb: "Apri" },
 ] as const;
 
 export function classifyAction(a: AllActivity, partnerHasResponded: boolean): ActionGroupKey {

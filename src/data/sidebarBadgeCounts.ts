@@ -14,7 +14,9 @@ export interface UnreadCountsRaw {
   readonly pendingQueue: number;
 }
 
-export async function fetchSidebarBadgeCounts(activeMailbox: UnreadCountsMailboxFilter | null): Promise<UnreadCountsRaw> {
+export async function fetchSidebarBadgeCounts(
+  activeMailbox: UnreadCountsMailboxFilter | null,
+): Promise<UnreadCountsRaw> {
   let msgQuery = supabase
     .from("channel_messages")
     .select("id", { count: "exact", head: true })
@@ -28,7 +30,11 @@ export async function fetchSidebarBadgeCounts(activeMailbox: UnreadCountsMailbox
   }
   const [msgRes, taskRes, queueRes] = await Promise.all([
     msgQuery,
-    supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending").is("deleted_at", null),
+    supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .is("deleted_at", null),
     supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
   ]);
   return {

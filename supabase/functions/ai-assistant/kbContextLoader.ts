@@ -43,9 +43,7 @@ export async function loadKBContext(
       coreQ = coreQ.is("user_id", null);
     }
 
-    const { data: coreEntries } = await coreQ
-      .order("priority", { ascending: false })
-      .limit(10);
+    const { data: coreEntries } = await coreQ.order("priority", { ascending: false }).limit(10);
 
     if (coreEntries?.length) {
       for (const e of coreEntries as Array<{ id: string; title: string; content: string }>) {
@@ -62,10 +60,7 @@ export async function loadKBContext(
   // ── LEVEL 1: Contextual tag-based loading ──
   if (contextTags && (contextTags.tags.length > 0 || contextTags.categories.length > 0)) {
     try {
-      let q = supabase
-        .from("kb_entries")
-        .select("id, title, content, category, tags, priority")
-        .eq("is_active", true);
+      let q = supabase.from("kb_entries").select("id, title, content, category, tags, priority").eq("is_active", true);
 
       if (userId) {
         q = q.or(`user_id.eq.${userId},user_id.is.null`);
@@ -86,7 +81,9 @@ export async function loadKBContext(
       if (data?.length) {
         for (const e of data as Record<string, unknown>[]) seenIds.add(e.id as string);
         const entries = (data as Record<string, unknown>[])
-          .map((e) => `### ${e.title} [${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
+          .map(
+            (e) => `### ${e.title} [${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`,
+          )
           .join("\n\n");
         parts.push(`KNOWLEDGE BASE CONTESTUALE (tags: ${contextTags.tags.join(", ")}):\n${entries}`);
       }
@@ -101,12 +98,18 @@ export async function loadKBContext(
       const { ragSearchKb } = await import("../_shared/embeddings.ts");
       const ragCount = seenIds.size > 0 ? 4 : 8;
       const matches = await ragSearchKb(supabase, query, {
-        matchCount: ragCount, matchThreshold: 0.25, minPriority: 3, onlyActive: true,
+        matchCount: ragCount,
+        matchThreshold: 0.25,
+        minPriority: 3,
+        onlyActive: true,
       });
       const filtered = matches.filter((e) => !seenIds.has(e.id));
       if (filtered.length > 0) {
         const entries = filtered
-          .map((e) => `### ${e.title} [sim=${e.similarity.toFixed(2)} · ${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
+          .map(
+            (e) =>
+              `### ${e.title} [sim=${e.similarity.toFixed(2)} · ${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`,
+          )
           .join("\n\n");
         parts.push(`KNOWLEDGE BASE AZIENDALE (RAG retrieval):\n${entries}`);
       }
@@ -139,7 +142,8 @@ export async function loadKBContext(
 
   // Track KB access counts (fire-and-forget)
   if (seenIds.size > 0) {
-    supabase.rpc("increment_kb_access", { entry_ids: Array.from(seenIds) })
+    supabase
+      .rpc("increment_kb_access", { entry_ids: Array.from(seenIds) })
       .then(() => {})
       .catch((e: unknown) => console.warn("increment_kb_access failed:", extractErrorMessage(e)));
   }

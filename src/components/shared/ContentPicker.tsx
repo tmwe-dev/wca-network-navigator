@@ -6,11 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import {
-  CONTENT_CATEGORIES, DEFAULT_GOALS, DEFAULT_PROPOSALS, type ContentItem,
+  CONTENT_CATEGORIES,
+  DEFAULT_GOALS,
+  DEFAULT_PROPOSALS,
+  type ContentItem,
 } from "@/constants/defaultContentPresets";
 import { toast } from "@/hooks/use-toast";
 import type { LucideIcon } from "lucide-react";
@@ -20,7 +28,13 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("ContentPicker");
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  Handshake, RefreshCw, Search, Briefcase, Globe, FileText, Target,
+  Handshake,
+  RefreshCw,
+  Search,
+  Briefcase,
+  Globe,
+  FileText,
+  Target,
 };
 
 const CYCLE_ICONS = [Target, Handshake, Briefcase, Search, Globe, RefreshCw, FileText];
@@ -33,9 +47,7 @@ interface ContentPickerProps {
   className?: string;
 }
 
-export default function ContentPicker({
-  type, onSelect, selectedText, triggerLabel, className,
-}: ContentPickerProps) {
+export default function ContentPicker({ type, onSelect, selectedText, triggerLabel, className }: ContentPickerProps) {
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateSetting();
   const [open, setOpen] = useState(false);
@@ -50,7 +62,10 @@ export default function ContentPicker({
   const items = useMemo<ContentItem[]>(() => {
     try {
       return settings?.[settingsKey] ? JSON.parse(settings[settingsKey]) : defaults;
-    } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return defaults; }
+    } catch (e) {
+      log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) });
+      return defaults;
+    }
   }, [settings?.[settingsKey]]);
 
   const grouped = useMemo(() => {
@@ -88,7 +103,12 @@ export default function ContentPicker({
     updated[editItem.index] = { ...updated[editItem.index], name: editName.trim(), text: editText.trim() };
     updateSetting.mutate(
       { key: settingsKey, value: JSON.stringify(updated) },
-      { onSuccess: () => { toast({ title: "Salvato" }); setEditItem(null); } },
+      {
+        onSuccess: () => {
+          toast({ title: "Salvato" });
+          setEditItem(null);
+        },
+      },
     );
   };
 
@@ -105,11 +125,7 @@ export default function ContentPicker({
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn("h-7 text-xs gap-1.5 justify-start", className)}
-          >
+          <Button variant="outline" size="sm" className={cn("h-7 text-xs gap-1.5 justify-start", className)}>
             <Target className="w-3.5 h-3.5 text-primary" />
             {selectedName ? (
               <span className="truncate max-w-[180px]">{selectedName}</span>
@@ -134,7 +150,9 @@ export default function ContentPicker({
                     <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       {catLabel}
                     </span>
-                    <Badge variant="secondary" className="h-4 px-1 text-[9px]">{catItems.length}</Badge>
+                    <Badge variant="secondary" className="h-4 px-1 text-[9px]">
+                      {catItems.length}
+                    </Badge>
                   </div>
                   <div className="grid grid-cols-3 gap-1.5">
                     {catItems.map((item) => {
@@ -145,22 +163,25 @@ export default function ContentPicker({
                         <div
                           key={globalIdx}
                           className={cn(
-                           "group relative rounded-lg border p-2 cursor-pointer transition-all hover:border-primary/40 hover:bg-primary/5",
+                            "group relative rounded-lg border p-2 cursor-pointer transition-all hover:border-primary/40 hover:bg-primary/5",
                             isSelected ? "border-primary/50 bg-primary/10" : "border-border bg-card",
                           )}
                           onClick={() => handleSelect(item)}
                         >
                           <button
-                            onClick={(e) => { e.stopPropagation(); openEdit(item, globalIdx); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEdit(item, globalIdx);
+                            }}
                             className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-muted/80 hover:bg-muted"
                           >
                             <Pencil className="w-2.5 h-2.5 text-muted-foreground" />
                           </button>
                           <div className="flex flex-col items-center gap-1 text-center">
-                            <ItemIcon className={cn("w-5 h-5", isSelected ? "text-primary" : "text-muted-foreground")} />
-                            <span className="text-[10px] font-medium leading-tight line-clamp-2">
-                              {item.name}
-                            </span>
+                            <ItemIcon
+                              className={cn("w-5 h-5", isSelected ? "text-primary" : "text-muted-foreground")}
+                            />
+                            <span className="text-[10px] font-medium leading-tight line-clamp-2">{item.name}</span>
                             {isSelected && <Check className="w-3 h-3 text-primary" />}
                           </div>
                         </div>
@@ -190,13 +211,20 @@ export default function ContentPicker({
             </div>
             <div>
               <label className="text-[11px] font-medium text-muted-foreground">Testo</label>
-              <Textarea value={editText} onChange={(e) => setEditText(e.target.value)}
-                className="min-h-[120px] text-sm mt-1" />
+              <Textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="min-h-[120px] text-sm mt-1"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => setEditItem(null)}>Annulla</Button>
-            <Button size="sm" onClick={saveEdit} disabled={updateSetting.isPending}>Salva</Button>
+            <Button variant="ghost" size="sm" onClick={() => setEditItem(null)}>
+              Annulla
+            </Button>
+            <Button size="sm" onClick={saveEdit} disabled={updateSetting.isPending}>
+              Salva
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

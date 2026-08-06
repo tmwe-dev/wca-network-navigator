@@ -44,10 +44,15 @@ export function useWhatsAppChatMode({ contact, syncSingleThread }: Options) {
   const runningRef = useRef(false);
   const contactRef = useRef<string | null>(contact);
 
-  useEffect(() => { contactRef.current = contact; }, [contact]);
+  useEffect(() => {
+    contactRef.current = contact;
+  }, [contact]);
 
   const stop = useCallback(() => {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     setActive(false);
     window.__waChatModeActive = false;
     idleTicksRef.current = 0;
@@ -111,12 +116,16 @@ export function useWhatsAppChatMode({ contact, syncSingleThread }: Options) {
     return () => {
       cancelled = true;
       clearTimeout(first);
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [active, contact, syncSingleThread, stop]);
 
   const toggle = useCallback(() => {
-    if (active) stop(); else start("manual");
+    if (active) stop();
+    else start("manual");
   }, [active, start, stop]);
 
   return { active, source, start, stop, toggle };

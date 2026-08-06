@@ -37,15 +37,17 @@ export function CountryStrip({ sortedCountries, selectedCountry, countrySort, di
               <span>Tutti</span>
             </button>
           )}
-          {sortedCountries.map(c => (
+          {sortedCountries.map((c) => (
             <button
               key={c.code}
-              onClick={() => dispatch({ type: "SET_SELECTED_COUNTRY", code: selectedCountry === c.code ? null : c.code })}
+              onClick={() =>
+                dispatch({ type: "SET_SELECTED_COUNTRY", code: selectedCountry === c.code ? null : c.code })
+              }
               className={cn(
                 "flex flex-col items-center gap-0.5 px-1.5 py-2 rounded-lg text-[9px] font-medium transition-all border",
                 selectedCountry === c.code
                   ? "bg-primary/15 border-primary/40 text-primary ring-1 ring-primary/20"
-                  : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                  : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
               )}
             >
               <span className="text-2xl leading-none">{c.flag}</span>

@@ -9,10 +9,7 @@ import { useCallback } from "react";
 import type { Message } from "../constants";
 import type { ConversationMessage } from "@/v2/io/supabase/queries/conversations";
 
-export function useCommandHistory(
-  messages: Message[],
-  persistedMessages: ConversationMessage[] = [],
-) {
+export function useCommandHistory(messages: Message[], persistedMessages: ConversationMessage[] = []) {
   /**
    * Build conversation history merging DB history (persistent memory)
    * with the current React state. Deduplicates by (role, content) and caps

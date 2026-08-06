@@ -3,6 +3,7 @@
 Inserisci qui i file `.md` della KB operativa e il file `index.json` con i metadati.
 
 Struttura prevista:
+
 ```
 kb-source/
   index.json          ← metadati (title, tags, slug) per ogni doc
@@ -16,6 +17,7 @@ kb-source/
 ```
 
 Dopo aver inserito i file, esegui:
+
 ```bash
 npm run seed:kb
 ```

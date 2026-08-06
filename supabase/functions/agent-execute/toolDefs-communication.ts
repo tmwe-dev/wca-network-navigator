@@ -10,7 +10,16 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
       description: "Generate outreach message (email, LinkedIn, WhatsApp, SMS).",
       parameters: {
         type: "object",
-        properties: { channel: { type: "string" }, contact_name: { type: "string" }, contact_email: { type: "string" }, company_name: { type: "string" }, country_code: { type: "string" }, language: { type: "string" }, goal: { type: "string" }, quality: { type: "string" } },
+        properties: {
+          channel: { type: "string" },
+          contact_name: { type: "string" },
+          contact_email: { type: "string" },
+          company_name: { type: "string" },
+          country_code: { type: "string" },
+          language: { type: "string" },
+          goal: { type: "string" },
+          quality: { type: "string" },
+        },
         required: ["channel", "contact_name", "company_name"],
       },
     },
@@ -22,7 +31,13 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
       description: "Send an email.",
       parameters: {
         type: "object",
-        properties: { to_email: { type: "string" }, to_name: { type: "string" }, subject: { type: "string" }, html_body: { type: "string" }, partner_id: { type: "string" } },
+        properties: {
+          to_email: { type: "string" },
+          to_name: { type: "string" },
+          subject: { type: "string" },
+          html_body: { type: "string" },
+          partner_id: { type: "string" },
+        },
         required: ["to_email", "subject", "html_body"],
       },
     },
@@ -35,8 +50,10 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
       parameters: {
         type: "object",
         properties: {
-          to_email: { type: "string" }, to_name: { type: "string" },
-          subject: { type: "string" }, html_body: { type: "string" },
+          to_email: { type: "string" },
+          to_name: { type: "string" },
+          subject: { type: "string" },
+          html_body: { type: "string" },
           partner_id: { type: "string" },
           scheduled_at: { type: "string", description: "ISO 8601 datetime" },
         },
@@ -53,10 +70,15 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
         type: "object",
         properties: {
           channel: { type: "string", enum: ["email", "linkedin", "whatsapp", "sms"] },
-          recipient_name: { type: "string" }, recipient_email: { type: "string" },
-          recipient_phone: { type: "string" }, recipient_linkedin_url: { type: "string" },
-          partner_id: { type: "string" }, contact_id: { type: "string" },
-          subject: { type: "string" }, body: { type: "string" }, priority: { type: "number" },
+          recipient_name: { type: "string" },
+          recipient_email: { type: "string" },
+          recipient_phone: { type: "string" },
+          recipient_linkedin_url: { type: "string" },
+          partner_id: { type: "string" },
+          contact_id: { type: "string" },
+          subject: { type: "string" },
+          body: { type: "string" },
+          priority: { type: "number" },
         },
         required: ["channel", "body"],
       },
@@ -71,8 +93,11 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
         type: "object",
         properties: {
           channel: { type: "string", enum: ["email", "whatsapp", "linkedin"] },
-          unread_only: { type: "boolean" }, partner_id: { type: "string" },
-          from_date: { type: "string" }, to_date: { type: "string" }, limit: { type: "number" },
+          unread_only: { type: "boolean" },
+          partner_id: { type: "string" },
+          from_date: { type: "string" },
+          to_date: { type: "string" },
+          limit: { type: "number" },
         },
       },
     },
@@ -84,7 +109,12 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
       description: "Get unified timeline for a partner or contact.",
       parameters: {
         type: "object",
-        properties: { partner_id: { type: "string" }, contact_id: { type: "string" }, company_name: { type: "string" }, limit: { type: "number" } },
+        properties: {
+          partner_id: { type: "string" },
+          contact_id: { type: "string" },
+          company_name: { type: "string" },
+          limit: { type: "number" },
+        },
       },
     },
   },
@@ -95,7 +125,12 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
       description: "Get an email thread for a partner or email address.",
       parameters: {
         type: "object",
-        properties: { partner_id: { type: "string" }, email_address: { type: "string" }, thread_id: { type: "string" }, limit: { type: "number" } },
+        properties: {
+          partner_id: { type: "string" },
+          email_address: { type: "string" },
+          thread_id: { type: "string" },
+          limit: { type: "number" },
+        },
       },
     },
   },
@@ -124,8 +159,10 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
         type: "object",
         properties: {
           source_type: { type: "string", enum: ["wca", "crm", "prospect", "all"] },
-          country_code: { type: "string" }, min_days_waiting: { type: "number" },
-          max_days_waiting: { type: "number" }, limit: { type: "number" },
+          country_code: { type: "string" },
+          min_days_waiting: { type: "number" },
+          max_days_waiting: { type: "number" },
+          limit: { type: "number" },
         },
       },
     },
@@ -135,7 +172,15 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
     function: {
       name: "get_email_classifications",
       description: "Query email classifications with filters.",
-      parameters: { type: "object", properties: { email_address: { type: "string" }, partner_id: { type: "string" }, category: { type: "string" }, limit: { type: "number" } } },
+      parameters: {
+        type: "object",
+        properties: {
+          email_address: { type: "string" },
+          partner_id: { type: "string" },
+          category: { type: "string" },
+          limit: { type: "number" },
+        },
+      },
     },
   },
   get_conversation_context: {
@@ -151,7 +196,10 @@ export const COMMUNICATION_TOOLS: Record<string, unknown> = {
     function: {
       name: "get_address_rules",
       description: "Get email address rules.",
-      parameters: { type: "object", properties: { email_address: { type: "string" }, is_active: { type: "boolean" }, limit: { type: "number" } } },
+      parameters: {
+        type: "object",
+        properties: { email_address: { type: "string" }, is_active: { type: "boolean" }, limit: { type: "number" } },
+      },
     },
   },
 };

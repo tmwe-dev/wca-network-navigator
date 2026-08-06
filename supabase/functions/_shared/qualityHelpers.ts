@@ -9,7 +9,7 @@ import type { DetailScore } from "./partnerQualityScore.ts";
 export function extractFromEnrichment<T>(
   enrichmentData: Record<string, unknown> | null,
   key: string,
-  defaultValue: T | null
+  defaultValue: T | null,
 ): T | null {
   if (!enrichmentData || typeof enrichmentData !== "object") {
     return defaultValue;
@@ -29,9 +29,7 @@ export function calculateYearsSince(dateString: string | null): number {
   if (!dateString) return 0;
   const date = new Date(dateString);
   const now = new Date();
-  return (
-    (now.getTime() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-  );
+  return (now.getTime() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
 }
 
 /** Checks if a date is in the future. */
@@ -83,11 +81,7 @@ export function scoreMembershipYears(dateString: string | null): DetailScore {
 }
 
 /** Scores contact quality based on available fields. */
-export function scoreContactQuality(
-  email: string | null,
-  phone: string | null,
-  name: string | null
-): DetailScore {
+export function scoreContactQuality(email: string | null, phone: string | null, name: string | null): DetailScore {
   if (email && phone)
     return {
       score: 15,
@@ -123,9 +117,7 @@ export function scoreDataFreshness(dateString: string | null): DetailScore {
       reason: "Deep Search mai eseguito",
     };
 
-  const ageInDays =
-    (new Date().getTime() - new Date(dateString).getTime()) /
-    (24 * 60 * 60 * 1000);
+  const ageInDays = (new Date().getTime() - new Date(dateString).getTime()) / (24 * 60 * 60 * 1000);
 
   if (ageInDays <= 30)
     return {

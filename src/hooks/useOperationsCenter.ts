@@ -2,7 +2,12 @@ import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDownloadJobs } from "@/hooks/useDownloadJobs";
-import { getOpsCenterAgentTasks, getAgentNamesByIds, getOpsCenterEmailQueue, getOpsCenterActivities } from "@/data/opsCenterQueries";
+import {
+  getOpsCenterAgentTasks,
+  getAgentNamesByIds,
+  getOpsCenterEmailQueue,
+  getOpsCenterActivities,
+} from "@/data/opsCenterQueries";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface AgentTaskLive {
@@ -106,32 +111,42 @@ export function useOperationsCenter() {
       .on("postgres_changes", { event: "*", schema: "public", table: "activities" }, () => refetchActivities())
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refetchTasks, refetchEmails, refetchActivities]);
 
   // Stats
   const stats = useMemo(() => {
-    const activeDownloads = downloadJobs.filter(j => ["running", "pending"].includes(j.status)).length;
-    const completedDownloads = downloadJobs.filter(j => j.status === "completed").length;
-    const failedDownloads = downloadJobs.filter(j => j.status === "failed").length;
+    const activeDownloads = downloadJobs.filter((j) => ["running", "pending"].includes(j.status)).length;
+    const completedDownloads = downloadJobs.filter((j) => j.status === "completed").length;
+    const failedDownloads = downloadJobs.filter((j) => j.status === "failed").length;
 
-    const pendingEmails = emailQueue.filter(e => e.status === "pending").length;
-    const sentEmails = emailQueue.filter(e => e.status === "sent").length;
-    const failedEmails = emailQueue.filter(e => e.status === "failed").length;
-    const scheduledEmails = emailQueue.filter(e => e.scheduled_at && e.status === "pending").length;
-    const openedEmails = emailQueue.filter(e => (e.open_count || 0) > 0).length;
+    const pendingEmails = emailQueue.filter((e) => e.status === "pending").length;
+    const sentEmails = emailQueue.filter((e) => e.status === "sent").length;
+    const failedEmails = emailQueue.filter((e) => e.status === "failed").length;
+    const scheduledEmails = emailQueue.filter((e) => e.scheduled_at && e.status === "pending").length;
+    const openedEmails = emailQueue.filter((e) => (e.open_count || 0) > 0).length;
 
-    const runningTasks = agentTasks.filter(t => ["pending", "running"].includes(t.status)).length;
-    const completedTasks = agentTasks.filter(t => t.status === "completed").length;
+    const runningTasks = agentTasks.filter((t) => ["pending", "running"].includes(t.status)).length;
+    const completedTasks = agentTasks.filter((t) => t.status === "completed").length;
 
-    const pendingActivities = activities.filter(a => a.status === "pending").length;
-    const scheduledActivities = activities.filter(a => a.scheduled_at).length;
+    const pendingActivities = activities.filter((a) => a.status === "pending").length;
+    const scheduledActivities = activities.filter((a) => a.scheduled_at).length;
 
     return {
-      activeDownloads, completedDownloads, failedDownloads,
-      pendingEmails, sentEmails, failedEmails, scheduledEmails, openedEmails,
-      runningTasks, completedTasks,
-      pendingActivities, scheduledActivities,
+      activeDownloads,
+      completedDownloads,
+      failedDownloads,
+      pendingEmails,
+      sentEmails,
+      failedEmails,
+      scheduledEmails,
+      openedEmails,
+      runningTasks,
+      completedTasks,
+      pendingActivities,
+      scheduledActivities,
     };
   }, [downloadJobs, emailQueue, agentTasks, activities]);
 

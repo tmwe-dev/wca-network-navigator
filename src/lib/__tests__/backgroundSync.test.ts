@@ -4,7 +4,9 @@ vi.mock("@/lib/checkInbox", () => ({ callCheckInbox: vi.fn() }));
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 
 describe("backgroundSync types and progress", () => {
-  beforeEach(() => { vi.resetModules(); });
+  beforeEach(() => {
+    vi.resetModules();
+  });
 
   it("exports module with expected shape", async () => {
     const mod = await import("@/lib/backgroundSync");
@@ -29,7 +31,15 @@ describe("backgroundSync types and progress", () => {
   });
 
   it("progress initial shape has zero counts", () => {
-    const initial = { downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "idle" as const, elapsedSeconds: 0 };
+    const initial = {
+      downloaded: 0,
+      skipped: 0,
+      remaining: 0,
+      batch: 0,
+      lastSubject: "",
+      status: "idle" as const,
+      elapsedSeconds: 0,
+    };
     expect(initial.elapsedSeconds).toBe(0);
     expect(initial.batch).toBe(0);
     expect(initial.status).toBe("idle");

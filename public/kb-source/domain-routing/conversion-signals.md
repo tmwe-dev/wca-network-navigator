@@ -6,6 +6,7 @@ tags: [domain_routing, procedures, email, conversion, lead-qualification, prospe
 # Segnali di conversione prospect→client
 
 ## Obiettivo
+
 Riconoscere quando un prospect diventa cliente e applicare il routing corretto ai domini email operativi/amministrativi.
 
 ## Pattern di conversione
@@ -13,6 +14,7 @@ Riconoscere quando un prospect diventa cliente e applicare il routing corretto a
 Un prospect passa a status "CLIENT CONVERTITO" quando:
 
 ### 1. Ordine confermato
+
 **Segnale**: Ricezione di Ordine di Acquisto (PO) firmato
 
 - Cliente sottoscrive impegno economico
@@ -22,6 +24,7 @@ Un prospect passa a status "CLIENT CONVERTITO" quando:
 **Routing**: operative@domain (booking, consegna, tracking)
 
 ### 2. Primo pagamento ricevuto
+
 **Segnale**: Bonifico ricevuto sul nostro conto
 
 - Importo corrisponde almeno al 30% dell'ordine
@@ -31,6 +34,7 @@ Un prospect passa a status "CLIENT CONVERTITO" quando:
 **Routing**: operative@ + administrative@ (preparazione consegna, generazione fattura)
 
 ### 3. Sottoscrizione contratto/accordo
+
 **Segnale**: Cliente ha firmato accordo commerciale
 
 - Contratto è stato sottoscritto (digitale o cartaceo)
@@ -42,14 +46,17 @@ Un prospect passa a status "CLIENT CONVERTITO" quando:
 ## Pattern per categoria di prodotto/servizio
 
 ### Se è consegna fisica
+
 ✓ Conversione = Booking + Indirizzo di consegna verificato
 → **Routing**: operative@
 
 ### Se è servizio ricorrente
+
 ✓ Conversione = Primo pagamento ricevuto + Modulo setup completato
 → **Routing**: operative@ + administrative@ (per gestione fatture ricorrenti)
 
 ### Se è partnership strategica
+
 ✓ Conversione = Contratto firmato + Riunione kickoff completata
 → **Routing**: operative@ + support@ (con escalation a leadership)
 
@@ -61,7 +68,7 @@ Sistema dovrebbe controllare (al momento della ricezione email):
 if (email_from_customer == booking.contact_email) {
   // Localizza il booking
   booking = findBookingByCustomer(email_from)
-  
+
   if (booking.status == "CONFERMATO" || booking.status == "PAGATO") {
     // Client convertito: usa routing operativo
     route_to = ["operative", "administrative", "support"]
@@ -75,6 +82,7 @@ if (email_from_customer == booking.contact_email) {
 ## Segnali di escalation interno
 
 Quando prospect diventa cliente, notifica:
+
 - **Team Operativo**: "Nuovo booking [ID], cliente [NAME], consegna [DATE]"
 - **Amministrazione**: "Nuovo cliente, aspettare fatturazione per [REF]"
 - **Commercial**: "Lead [NAME] convertito, follow-up per upsell disponibile dal [DATE]"
@@ -84,19 +92,25 @@ Quando prospect diventa cliente, notifica:
 ## Eccezioni e casi particolari
 
 ### Cliente rinuncia dopo primo ordine
+
 Se cliente annulla entro 14 giorni:
+
 - Status torna a "PROSPECT"
 - Routing torna a "commercial"
 - Keep in CRM per re-engagement
 
 ### Cliente fa ordine, poi dispare
+
 Se cliente non contatta per > 90 giorni dopo conversione:
+
 - Status diventa "DORMANT"
 - Routing rimane operativo ma assegna a retention team
 - Campaign di re-engagement
 
 ### Partner/Distributor che rende
+
 Se cliente rivende i nostri servizi:
+
 - Conversione acontece con partner agreement firmato
 - Routing include "support" (li supportiamo loro, loro supportano end customer)
 - Livello escalation più alto per dispute resolution
@@ -105,14 +119,14 @@ Se cliente rivende i nostri servizi:
 
 ## Timeline di conversione
 
-| Giorno | Evento | Routing |
-|--------|--------|---------|
-| 0 | PO ricevuta | operative |
-| 1 | Pagamento received | operative + administrative |
-| 2 | Consegna confermata | operative |
-| 3+ | Cliente contatta | operative (per support pre/post consegna) |
-| +7 | Post-consegna follow-up | support (feedback) |
-| +30 | Check-in upsell | commercial (se è partnership) |
+| Giorno | Evento                  | Routing                                   |
+| ------ | ----------------------- | ----------------------------------------- |
+| 0      | PO ricevuta             | operative                                 |
+| 1      | Pagamento received      | operative + administrative                |
+| 2      | Consegna confermata     | operative                                 |
+| 3+     | Cliente contatta        | operative (per support pre/post consegna) |
+| +7     | Post-consegna follow-up | support (feedback)                        |
+| +30    | Check-in upsell         | commercial (se è partnership)             |
 
 ---
 

@@ -25,10 +25,14 @@ const AiEntity = ({ size = "md", pulse = true, className = "" }: AiEntityProps) 
           background: `radial-gradient(circle, hsl(210 100% 66% / 0.18) 0%, hsl(270 60% 62% / 0.12) 50%, transparent 70%)`,
           filter: "blur(20px)",
         }}
-        animate={pulse ? {
-          scale: [1, 1.15, 1],
-          opacity: [0.6, 1, 0.6],
-        } : {}}
+        animate={
+          pulse
+            ? {
+                scale: [1, 1.15, 1],
+                opacity: [0.6, 1, 0.6],
+              }
+            : {}
+        }
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
       />
 
@@ -59,9 +63,13 @@ const AiEntity = ({ size = "md", pulse = true, className = "" }: AiEntityProps) 
             inset 0 0 ${s.inner}px hsl(210 100% 66% / 0.14)
           `,
         }}
-        animate={pulse ? {
-          scale: [1, 1.03, 1],
-        } : {}}
+        animate={
+          pulse
+            ? {
+                scale: [1, 1.03, 1],
+              }
+            : {}
+        }
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
       >
         {/* Inner light — the iris */}
@@ -72,10 +80,14 @@ const AiEntity = ({ size = "md", pulse = true, className = "" }: AiEntityProps) 
             height: s.inner,
             background: `radial-gradient(circle at 40% 40%, hsl(210 100% 80% / 0.7), hsl(270 60% 65% / 0.7) 70%, transparent)`,
           }}
-          animate={pulse ? {
-            scale: [1, 1.1, 1],
-            opacity: [0.7, 1, 0.7],
-          } : {}}
+          animate={
+            pulse
+              ? {
+                  scale: [1, 1.1, 1],
+                  opacity: [0.7, 1, 0.7],
+                }
+              : {}
+          }
           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
         />
 

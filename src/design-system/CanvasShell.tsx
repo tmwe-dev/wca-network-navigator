@@ -31,7 +31,10 @@ const CanvasShell = ({ children, onClose, title }: CanvasShellProps) => (
         <button className="text-muted-foreground hover:text-foreground transition-colors duration-500 p-1.5">
           <Download className="w-3 h-3" />
         </button>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors duration-500 p-1.5">
+        <button
+          onClick={onClose}
+          className="text-muted-foreground hover:text-foreground transition-colors duration-500 p-1.5"
+        >
           <X className="w-3.5 h-3.5" />
         </button>
       </div>

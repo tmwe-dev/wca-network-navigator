@@ -26,9 +26,7 @@ export function Terminal({ logs }: { logs: LogEntry[] }) {
 
   return (
     <ScrollArea className="h-[400px] rounded-lg border border-border bg-card p-4 font-mono text-xs">
-      {logs.length === 0 && (
-        <p className="text-muted-foreground">Premi un pulsante per iniziare...</p>
-      )}
+      {logs.length === 0 && <p className="text-muted-foreground">Premi un pulsante per iniziare...</p>}
       {logs.map((l, i) => (
         <div key={i} className={colorMap[l.type]}>
           <span className="text-muted-foreground">[{l.ts}]</span> {l.msg}

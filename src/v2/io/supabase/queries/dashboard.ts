@@ -20,19 +20,31 @@ export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, Ap
     const [partnersRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes] = await Promise.all([
       supabase.from("partners").select("id", { count: "exact", head: true }).is("deleted_at", null),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
-      supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending").is("deleted_at", null),
+      supabase
+        .from("activities")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .is("deleted_at", null),
       supabase.from("agents").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("is_active", true),
       supabase.from("campaign_jobs").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("email_drafts").select("id", { count: "exact", head: true }).eq("status", "draft"),
     ]);
 
-    const firstError = [partnersRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes]
-      .find((r) => r.error);
+    const firstError = [partnersRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes].find(
+      (r) => r.error,
+    );
 
     if (firstError?.error) {
-      return err(ioError("DATABASE_ERROR", firstError.error.message, {
-        table: "dashboard_counts",
-      }, "fetchDashboardCounts"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          firstError.error.message,
+          {
+            table: "dashboard_counts",
+          },
+          "fetchDashboardCounts",
+        ),
+      );
     }
 
     return ok({
@@ -94,14 +106,36 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
       repliesReceivedRes,
     ] = await Promise.all([
       supabase.from("partners").select("id", { count: "exact", head: true }).is("deleted_at", null),
-      supabase.from("partners").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("lead_status", "new"),
-      supabase.from("partners").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("lead_status", "first_touch_sent"),
-      supabase.from("outreach_queue").select("id", { count: "exact", head: true }).eq("status", "sent").gte("updated_at", todayISO),
+      supabase
+        .from("partners")
+        .select("id", { count: "exact", head: true })
+        .is("deleted_at", null)
+        .eq("lead_status", "new"),
+      supabase
+        .from("partners")
+        .select("id", { count: "exact", head: true })
+        .is("deleted_at", null)
+        .eq("lead_status", "first_touch_sent"),
+      supabase
+        .from("outreach_queue")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "sent")
+        .gte("updated_at", todayISO),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "new"),
-      supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "first_touch_sent"),
-      supabase.from("activities").select("id", { count: "exact", head: true }).eq("response_received", true).is("deleted_at", null),
-      supabase.from("outreach_schedules").select("id", { count: "exact", head: true }).in("status", ["pending", "approved", "running"]),
+      supabase
+        .from("imported_contacts")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_status", "first_touch_sent"),
+      supabase
+        .from("activities")
+        .select("id", { count: "exact", head: true })
+        .eq("response_received", true)
+        .is("deleted_at", null),
+      supabase
+        .from("outreach_schedules")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["pending", "approved", "running"]),
       supabase.from("outreach_schedules").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("mission_actions").select("id", { count: "exact", head: true }).eq("status", "approved"),
       supabase.from("mission_actions").select("id", { count: "exact", head: true }).eq("status", "proposed"),
@@ -110,14 +144,26 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
     ]);
 
     const allRes = [
-      partnersTotalRes, partnersNewRes, partnersFirstTouchRes, outreachSentTodayRes,
-      totalContactsRes, newContactsRes, contactedContactsRes, repliedRes,
-      schedulesAllRes, schedulesPendingRes, actionsApprovedRes, actionsProposedRes,
-      awaitingRes, repliesReceivedRes,
+      partnersTotalRes,
+      partnersNewRes,
+      partnersFirstTouchRes,
+      outreachSentTodayRes,
+      totalContactsRes,
+      newContactsRes,
+      contactedContactsRes,
+      repliedRes,
+      schedulesAllRes,
+      schedulesPendingRes,
+      actionsApprovedRes,
+      actionsProposedRes,
+      awaitingRes,
+      repliesReceivedRes,
     ];
     const firstErr = allRes.find((r) => r.error);
     if (firstErr?.error) {
-      return err(ioError("DATABASE_ERROR", firstErr.error.message, { table: "operative_metrics" }, "fetchOperativeMetrics"));
+      return err(
+        ioError("DATABASE_ERROR", firstErr.error.message, { table: "operative_metrics" }, "fetchOperativeMetrics"),
+      );
     }
 
     return ok({
@@ -174,21 +220,24 @@ export async function fetchAgentTaskBreakdowns(): Promise<Result<AgentTaskBreakd
     const { data: tasks, error: tasksErr } = await supabase
       .from("agent_tasks")
       .select("agent_id, status, completed_at")
-      .in("agent_id", agents.map(a => a.id));
+      .in(
+        "agent_id",
+        agents.map((a) => a.id),
+      );
 
     if (tasksErr) {
       return err(ioError("DATABASE_ERROR", tasksErr.message, { table: "agent_tasks" }, "fetchAgentTaskBreakdowns"));
     }
 
-    const breakdowns: AgentTaskBreakdown[] = agents.map(agent => {
-      const agentTasks = (tasks ?? []).filter(t => t.agent_id === agent.id);
+    const breakdowns: AgentTaskBreakdown[] = agents.map((agent) => {
+      const agentTasks = (tasks ?? []).filter((t) => t.agent_id === agent.id);
       return {
         agentId: agent.id,
-        proposed: agentTasks.filter(t => t.status === "proposed").length,
-        running: agentTasks.filter(t => t.status === "running").length,
-        pending: agentTasks.filter(t => t.status === "pending").length,
-        completedToday: agentTasks.filter(t =>
-          t.status === "completed" && t.completed_at && t.completed_at >= todayStart.toISOString()
+        proposed: agentTasks.filter((t) => t.status === "proposed").length,
+        running: agentTasks.filter((t) => t.status === "running").length,
+        pending: agentTasks.filter((t) => t.status === "pending").length,
+        completedToday: agentTasks.filter(
+          (t) => t.status === "completed" && t.completed_at && t.completed_at >= todayStart.toISOString(),
         ).length,
       };
     });
@@ -238,12 +287,13 @@ export interface DashboardSnapshotRpc {
  */
 export async function fetchDashboardSnapshot(): Promise<Result<DashboardSnapshotRpc | null, AppError>> {
   try {
-    const { data, error } = await (supabase.rpc as unknown as (
-      fn: string
-    ) => Promise<{ data: DashboardSnapshotRpc | null; error: { message: string } | null }>)(
-      "get_dashboard_snapshot"
-    );
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { rpc: "get_dashboard_snapshot" }, "fetchDashboardSnapshot"));
+    const { data, error } = await (
+      supabase.rpc as unknown as (
+        fn: string,
+      ) => Promise<{ data: DashboardSnapshotRpc | null; error: { message: string } | null }>
+    )("get_dashboard_snapshot");
+    if (error)
+      return err(ioError("DATABASE_ERROR", error.message, { rpc: "get_dashboard_snapshot" }, "fetchDashboardSnapshot"));
     return ok(data ?? null);
   } catch (caught: unknown) {
     return err(fromUnknown(caught, "DATABASE_ERROR", "fetchDashboardSnapshot"));

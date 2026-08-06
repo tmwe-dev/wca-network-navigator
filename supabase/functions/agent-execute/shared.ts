@@ -8,7 +8,7 @@ export type AgentExecuteSupabaseClient = import("../_shared/supabaseClient.ts").
 
 export const supabase: AgentExecuteSupabaseClient = createClient(
   Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
 export interface ExecuteContext {
@@ -25,7 +25,12 @@ export async function resolvePartnerId(args: Record<string, unknown>): Promise<{
     return partner ? { id: partner.id, name: partner.company_name } : null;
   }
   if (args.company_name) {
-    const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${escapeLike(args.company_name as string)}%`).limit(1).maybeSingle();
+    const { data } = await supabase
+      .from("partners")
+      .select("id, company_name")
+      .ilike("company_name", `%${escapeLike(args.company_name as string)}%`)
+      .limit(1)
+      .maybeSingle();
     const partner = data as { id: string; company_name: string } | null;
     return partner ? { id: partner.id, name: partner.company_name } : null;
   }

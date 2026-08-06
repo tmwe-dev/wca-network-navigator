@@ -47,7 +47,9 @@ function mapEntry(row: {
 export async function listFinderApiKb(status?: "pending" | "approved" | "archived"): Promise<FinderApiKbEntry[]> {
   let q = supabase
     .from("finder_api_kb")
-    .select("id, title, body, trigger_query, trigger_op, trigger_error, tags, status, created_by, approved_by, created_at, updated_at")
+    .select(
+      "id, title, body, trigger_query, trigger_op, trigger_error, tags, status, created_by, approved_by, created_at, updated_at",
+    )
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -79,7 +81,9 @@ export async function proposeFinderApiKb(payload: {
       status: "pending",
       created_by: userId,
     })
-    .select("id, title, body, trigger_query, trigger_op, trigger_error, tags, status, created_by, approved_by, created_at, updated_at")
+    .select(
+      "id, title, body, trigger_query, trigger_op, trigger_error, tags, status, created_by, approved_by, created_at, updated_at",
+    )
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("proposeFinderApiKb: insert returned no row");
@@ -97,9 +101,6 @@ export async function approveFinderApiKb(id: string): Promise<void> {
 }
 
 export async function archiveFinderApiKb(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("finder_api_kb")
-    .update({ status: "archived" })
-    .eq("id", id);
+  const { error } = await supabase.from("finder_api_kb").update({ status: "archived" }).eq("id", id);
   if (error) throw error;
 }

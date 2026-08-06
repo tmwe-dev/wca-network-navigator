@@ -15,7 +15,10 @@ const TemplateSuggest = ({ visible, label = "Salva come template", onSave }: Tem
 
   const handleSave = () => {
     onSave?.();
-    toast("Template salvato", { description: "Disponibile in Template Library · Audit log aggiornato", duration: 3000 });
+    toast("Template salvato", {
+      description: "Disponibile in Template Library · Audit log aggiornato",
+      duration: 3000,
+    });
   };
 
   return (

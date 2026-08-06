@@ -40,7 +40,9 @@ export async function loadAgentPersona(
       return null;
     }
     if (!data) {
-      console.warn(`[agentPersonaLoader] HEALTH: agent ${agentId} senza persona → l'AI sceglie tono/lingua/firma da sola`);
+      console.warn(
+        `[agentPersonaLoader] HEALTH: agent ${agentId} senza persona → l'AI sceglie tono/lingua/firma da sola`,
+      );
     }
     return (data ?? null) as PersonaData | null;
   } catch (e) {

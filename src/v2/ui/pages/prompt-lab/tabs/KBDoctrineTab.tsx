@@ -11,7 +11,14 @@ import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
 
-const DOCTRINE_CATEGORIES = ["system_doctrine", "system_core", "memory_protocol", "learning_protocol", "workflow_gate", "doctrine"];
+const DOCTRINE_CATEGORIES = [
+  "system_doctrine",
+  "system_core",
+  "memory_protocol",
+  "learning_protocol",
+  "workflow_gate",
+  "doctrine",
+];
 
 export function KBDoctrineTab() {
   const { user } = useAuth();
@@ -34,35 +41,41 @@ export function KBDoctrineTab() {
       }));
   }, []);
 
-  const onSave = useCallback(async (id: string) => {
-    const block = state.blocks.find((b) => b.id === id);
-    if (!block || !userId) return;
-    setSaving(id);
-    try {
-      await upsertKbEntry({ id, content: block.content, title: block.label.replace(/^\[[^\]]+\]\s*/, "") }, userId);
-      await logSupervisorAudit({ action: "prompt_lab_save", target_table: "kb_entries", target_id: id });
-      state.markClean(id);
-      toast.success("KB entry salvata");
-    } catch (e) {
-      toast.error(`Errore: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setSaving(null);
-    }
-  }, [state, userId]);
+  const onSave = useCallback(
+    async (id: string) => {
+      const block = state.blocks.find((b) => b.id === id);
+      if (!block || !userId) return;
+      setSaving(id);
+      try {
+        await upsertKbEntry({ id, content: block.content, title: block.label.replace(/^\[[^\]]+\]\s*/, "") }, userId);
+        await logSupervisorAudit({ action: "prompt_lab_save", target_table: "kb_entries", target_id: id });
+        state.markClean(id);
+        toast.success("KB entry salvata");
+      } catch (e) {
+        toast.error(`Errore: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setSaving(null);
+      }
+    },
+    [state, userId],
+  );
 
-  const onImprove = useCallback(async (id: string) => {
-    const block = state.blocks.find((b) => b.id === id);
-    if (!block) return;
-    setSaving(id);
-    try {
-      const improved = await lab.improveBlock({ block, tabLabel: "KB Doctrine" });
-      state.setImproved(id, improved);
-    } catch (e) {
-      toast.error(String(e));
-    } finally {
-      setSaving(null);
-    }
-  }, [lab, state]);
+  const onImprove = useCallback(
+    async (id: string) => {
+      const block = state.blocks.find((b) => b.id === id);
+      if (!block) return;
+      setSaving(id);
+      try {
+        const improved = await lab.improveBlock({ block, tabLabel: "KB Doctrine" });
+        state.setImproved(id, improved);
+      } catch (e) {
+        toast.error(String(e));
+      } finally {
+        setSaving(null);
+      }
+    },
+    [lab, state],
+  );
 
   if (state.loading) return <div className="p-4 text-sm text-muted-foreground">Caricamento KB...</div>;
 

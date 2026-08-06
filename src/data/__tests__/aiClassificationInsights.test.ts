@@ -111,7 +111,7 @@ describe("DAL — aiClassificationInsights", () => {
       });
       await rejectInsight("i1", "not relevant");
       expect(builder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: "rejected", rejection_reason: "not relevant" })
+        expect.objectContaining({ status: "rejected", rejection_reason: "not relevant" }),
       );
     });
 
@@ -129,18 +129,14 @@ describe("DAL — aiClassificationInsights", () => {
         eq: vi.fn().mockReturnValue({ error: null }),
       });
       await updateInsightDraft("i1", { proposed_change_text: "new text" });
-      expect(builder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ proposed_change_text: "new text" })
-      );
+      expect(builder.update).toHaveBeenCalledWith(expect.objectContaining({ proposed_change_text: "new text" }));
     });
 
     it("throws on error", async () => {
       builder.update = vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({ error: { message: "rls" } }),
       });
-      await expect(
-        updateInsightDraft("i1", { user_note: "note" })
-      ).rejects.toEqual({ message: "rls" });
+      await expect(updateInsightDraft("i1", { user_note: "note" })).rejects.toEqual({ message: "rls" });
     });
   });
 });

@@ -38,8 +38,11 @@ interface MatchResult {
 function countryFlag(code: string | null): string {
   if (!code) return "🌍";
   try {
-    return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
-  } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return "🌍"; }
+    return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+  } catch (e) {
+    log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+    return "🌍";
+  }
 }
 
 function confidenceColor(c: number): string {
@@ -72,20 +75,32 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     setSelected(new Map());
     setHasRun(true);
     try {
-      const data = await invokeEdge<{ error?: string; matches?: MatchResult[]; total_unmatched?: number; processed?: number }>("ai-match-business-cards", { body: { batch_offset: 0, batch_size: 20 }, context: "AIMatchDialog.ai_match_business_cards" });
+      const data = await invokeEdge<{
+        error?: string;
+        matches?: MatchResult[];
+        total_unmatched?: number;
+        processed?: number;
+      }>("ai-match-business-cards", {
+        body: { batch_offset: 0, batch_size: 20 },
+        context: "AIMatchDialog.ai_match_business_cards",
+      });
       if (data?.error) throw new Error(data.error);
       setResults(data?.matches || []);
       setTotalUnmatched(data?.total_unmatched || 0);
       setProcessed(data?.processed || 0);
     } catch (e: unknown) {
-      toast({ title: "Errore AI Match", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+      toast({
+        title: "Errore AI Match",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   }, []);
 
   const toggleSelect = useCallback((cardId: string, partnerId: string) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Map(prev);
       if (next.get(cardId) === partnerId) {
         next.delete(cardId);
@@ -98,7 +113,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
   const selectAll = useCallback(() => {
     const newSelected = new Map<string, string>();
-    results.forEach(r => {
+    results.forEach((r) => {
       if (r.candidates.length > 0 && r.candidates[0].confidence >= 70) {
         newSelected.set(r.card_id, r.candidates[0].partner_id);
       }
@@ -109,10 +124,16 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const confirmSelected = useCallback(async () => {
     if (selected.size === 0) return;
     setConfirming(true);
-    let ok = 0, fail = 0;
+    let ok = 0,
+      fail = 0;
     for (const [cardId, partnerId] of selected) {
       try {
-        await updateCard.mutateAsync({ id: cardId, matched_partner_id: partnerId, match_status: "matched", match_confidence: 100 });
+        await updateCard.mutateAsync({
+          id: cardId,
+          matched_partner_id: partnerId,
+          match_status: "matched",
+          match_confidence: 100,
+        });
         ok++;
       } catch (e) {
         log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
@@ -122,7 +143,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     qc.invalidateQueries({ queryKey: queryKeys.businessCards.all });
     qc.invalidateQueries({ queryKey: queryKeys.businessCards.matches });
     toast({ title: `✅ ${ok} match confermati${fail > 0 ? ` · ${fail} errori` : ""}` });
-    setResults(prev => prev.filter(r => !selected.has(r.card_id)));
+    setResults((prev) => prev.filter((r) => !selected.has(r.card_id)));
     setSelected(new Map());
     setConfirming(false);
   }, [selected, updateCard, qc]);
@@ -139,12 +160,7 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
         {/* Actions bar */}
         <div className="flex items-center gap-2 flex-wrap shrink-0">
-          <Button
-            size="sm"
-            className="text-xs gap-1.5"
-            onClick={runAnalysis}
-            disabled={loading}
-          >
+          <Button size="sm" className="text-xs gap-1.5" onClick={runAnalysis} disabled={loading}>
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             {hasRun ? "Ri-analizza" : "Avvia analisi AI"}
           </Button>
@@ -198,7 +214,9 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             <div className="flex flex-col items-center justify-center py-16 gap-2">
               <Sparkles className="w-8 h-8 text-primary" />
               <p className="text-sm text-muted-foreground">Clicca "Avvia analisi AI" per trovare match</p>
-              <p className="text-xs text-muted-foreground">L'AI confronterà i biglietti senza match con il database partner</p>
+              <p className="text-xs text-muted-foreground">
+                L'AI confronterà i biglietti senza match con il database partner
+              </p>
             </div>
           )}
 
@@ -229,16 +247,28 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                           </div>
                           <div className="flex items-center gap-3 text-[11px] text-muted-foreground ml-5">
                             {match.card_contact && (
-                              <span className="flex items-center gap-1"><User className="w-3 h-3" />{match.card_contact}</span>
+                              <span className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                {match.card_contact}
+                              </span>
                             )}
                             {match.card_email && (
-                              <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3" />{match.card_email}</span>
+                              <span className="flex items-center gap-1 truncate">
+                                <Mail className="w-3 h-3" />
+                                {match.card_email}
+                              </span>
                             )}
                             {match.card_phone && (
-                              <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{match.card_phone}</span>
+                              <span className="flex items-center gap-1">
+                                <Phone className="w-3 h-3" />
+                                {match.card_phone}
+                              </span>
                             )}
                             {match.card_location && (
-                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{match.card_location}</span>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {match.card_location}
+                              </span>
                             )}
                           </div>
                         </>
@@ -250,8 +280,10 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                         {candidate.confidence}%
                       </Badge>
                       <div className="w-12 h-1 bg-muted/40 rounded-full overflow-hidden">
-                        <div className={cn("h-full rounded-full transition-all", confidenceColor(candidate.confidence))}
-                          style={{ width: `${candidate.confidence}%` }} />
+                        <div
+                          className={cn("h-full rounded-full transition-all", confidenceColor(candidate.confidence))}
+                          style={{ width: `${candidate.confidence}%` }}
+                        />
                       </div>
                     </div>
 
@@ -259,12 +291,19 @@ export function AIMatchDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm shrink-0">{countryFlag(candidate.partner_country_code)}</span>
                         <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="text-sm font-semibold text-foreground truncate">{candidate.partner_company}</span>
+                        <span className="text-sm font-semibold text-foreground truncate">
+                          {candidate.partner_company}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3 text-[11px] text-muted-foreground ml-5">
-                        {candidate.partner_alias && <span className="truncate italic">"{candidate.partner_alias}"</span>}
+                        {candidate.partner_alias && (
+                          <span className="truncate italic">"{candidate.partner_alias}"</span>
+                        )}
                         {candidate.partner_city && (
-                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{candidate.partner_city}</span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {candidate.partner_city}
+                          </span>
                         )}
                         {candidate.partner_country && <span>{candidate.partner_country}</span>}
                       </div>

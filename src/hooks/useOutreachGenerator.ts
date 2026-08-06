@@ -97,7 +97,11 @@ export function useOutreachGenerator() {
       setResult(outreach);
       return outreach;
     } catch (err: unknown) {
-      toast({ title: "Errore generazione", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+      toast({
+        title: "Errore generazione",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
       return null;
     } finally {
       setIsGenerating(false);

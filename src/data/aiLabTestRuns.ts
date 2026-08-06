@@ -28,21 +28,26 @@ interface TestResultInsert {
 }
 
 export async function insertTestRun(run: TestRunInsert): Promise<string | null> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+  const {
+    data: { session: __s },
+  } = await supabase.auth.getSession();
+  const user = __s?.user ?? null;
   if (!user) return null;
 
   const { data, error } = await supabase
     .from("ai_lab_test_runs")
-    .insert([{
-      user_id: user.id,
-      completed_at: new Date().toISOString(),
-      total_score: run.totalScore,
-      max_score: run.maxScore,
-      pass_count: run.passCount,
-      warn_count: run.warnCount,
-      fail_count: run.failCount,
-      summary: run.summary as Json,
-    }])
+    .insert([
+      {
+        user_id: user.id,
+        completed_at: new Date().toISOString(),
+        total_score: run.totalScore,
+        max_score: run.maxScore,
+        pass_count: run.passCount,
+        warn_count: run.warnCount,
+        fail_count: run.failCount,
+        summary: run.summary as Json,
+      },
+    ])
     .select("id")
     .single();
 
@@ -54,7 +59,10 @@ export async function insertTestRun(run: TestRunInsert): Promise<string | null> 
 }
 
 export async function insertTestResults(runId: string, results: TestResultInsert[]): Promise<boolean> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+  const {
+    data: { session: __s },
+  } = await supabase.auth.getSession();
+  const user = __s?.user ?? null;
   if (!user) return false;
 
   const rows = results.map((r) => ({
@@ -93,7 +101,10 @@ export interface TestRunRow {
 }
 
 export async function fetchRecentRuns(limit = 20): Promise<TestRunRow[]> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+  const {
+    data: { session: __s },
+  } = await supabase.auth.getSession();
+  const user = __s?.user ?? null;
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -127,7 +138,9 @@ export interface TestResultRow {
 export async function fetchRunResults(runId: string): Promise<TestResultRow[]> {
   const { data, error } = await supabase
     .from("ai_lab_test_results")
-    .select("id, scenario_id, scenario_name, endpoint, status, score, duration_ms, issues, output_subject, output_body, debug_info")
+    .select(
+      "id, scenario_id, scenario_name, endpoint, status, score, duration_ms, issues, output_subject, output_body, debug_info",
+    )
     .eq("run_id", runId)
     .order("scenario_id", { ascending: true });
 

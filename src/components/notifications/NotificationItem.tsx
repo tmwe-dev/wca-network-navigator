@@ -41,11 +41,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   urgent: "bg-red-500/20 text-red-700 dark:text-red-300",
 };
 
-export function NotificationItem({
-  notification,
-  onDismiss,
-  onClick,
-}: NotificationItemProps): React.ReactElement {
+export function NotificationItem({ notification, onDismiss, onClick }: NotificationItemProps): React.ReactElement {
   const relativeTime = formatDistanceToNow(new Date(notification.created_at), {
     locale: it,
     addSuffix: true,
@@ -55,38 +51,23 @@ export function NotificationItem({
     <div
       className={cn(
         "flex items-start gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors",
-        notification.read
-          ? "bg-transparent hover:bg-secondary/50"
-          : "bg-primary/5 hover:bg-primary/10"
+        notification.read ? "bg-transparent hover:bg-secondary/50" : "bg-primary/5 hover:bg-primary/10",
       )}
       onClick={() => onClick(notification)}
     >
       {/* Icon */}
-      <div className="text-xl shrink-0 mt-0.5">
-        {NOTIFICATION_ICONS[notification.type] || "🔔"}
-      </div>
+      <div className="text-xl shrink-0 mt-0.5">{NOTIFICATION_ICONS[notification.type] || "🔔"}</div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <h4
-            className={cn(
-              "text-sm line-clamp-1",
-              notification.read ? "font-normal" : "font-semibold"
-            )}
-          >
+          <h4 className={cn("text-sm line-clamp-1", notification.read ? "font-normal" : "font-semibold")}>
             {notification.title}
           </h4>
-          {!notification.read && (
-            <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
-          )}
+          {!notification.read && <div className="w-2 h-2 rounded-full bg-primary shrink-0" />}
         </div>
 
-        {notification.body && (
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-1">
-            {notification.body}
-          </p>
-        )}
+        {notification.body && <p className="text-xs text-muted-foreground line-clamp-2 mb-1">{notification.body}</p>}
 
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-muted-foreground">{relativeTime}</span>

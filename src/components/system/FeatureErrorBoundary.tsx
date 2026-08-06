@@ -43,9 +43,7 @@ export class FeatureErrorBoundary extends Component<Props, State> {
       <div className="flex flex-col items-center justify-center min-h-[300px] p-8 text-center gap-4">
         <AlertTriangle className="h-10 w-10 text-amber-500" />
         <div>
-          <h2 className="text-lg font-semibold text-foreground">
-            Errore in {this.props.featureName}
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Errore in {this.props.featureName}</h2>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">
             {this.state.error?.message || "Si è verificato un errore imprevisto."}
           </p>
@@ -63,13 +61,6 @@ export class FeatureErrorBoundary extends Component<Props, State> {
 }
 
 /** HOC to wrap a lazy component with FeatureErrorBoundary */
-export function withFeatureBoundary(
-  element: ReactNode,
-  featureName: string
-): ReactNode {
-  return (
-    <FeatureErrorBoundary featureName={featureName}>
-      {element}
-    </FeatureErrorBoundary>
-  );
+export function withFeatureBoundary(element: ReactNode, featureName: string): ReactNode {
+  return <FeatureErrorBoundary featureName={featureName}>{element}</FeatureErrorBoundary>;
 }

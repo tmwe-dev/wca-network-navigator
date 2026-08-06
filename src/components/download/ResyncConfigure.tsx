@@ -5,9 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import {
-  RefreshCw, Play, Users, Mail, AlertTriangle, Loader2
-} from "lucide-react";
+import { RefreshCw, Play, Users, Mail, AlertTriangle, Loader2 } from "lucide-react";
 import {
   findPartnerNetworksWithWcaId,
   findPartnerContactEmails,
@@ -73,7 +71,8 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
     try {
       const cached = getWcaCookie();
       if (cached) {
-        setHasCookie(true); return;
+        setHasCookie(true);
+        return;
       }
       // Try a fresh login to verify
       const res = await fetch("https://wca-app.vercel.app/api/login", {
@@ -86,7 +85,10 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       if (data.success && data.cookies) {
         setWcaCookie(data.cookies);
       }
-    } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setHasCookie(false); }
+    } catch (e) {
+      log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) });
+      setHasCookie(false);
+    }
   }
 
   async function loadStats() {
@@ -95,9 +97,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       const pnData = await findPartnerNetworksWithWcaId();
       const contactsData = await findPartnerContactEmails();
 
-      const partnersWithEmail = new Set(
-        contactsData.filter(c => c.email).map(c => c.partner_id)
-      );
+      const partnersWithEmail = new Set(contactsData.filter((c) => c.email).map((c) => c.partner_id));
 
       const byNetwork = new Map<string, { partnerIds: Set<string>; wcaIds: Set<number> }>();
       for (const pn of pnData) {
@@ -111,7 +111,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
 
       const stats: NetworkStats[] = [];
       for (const [nn, entry] of byNetwork) {
-        const missing = [...entry.partnerIds].filter(pid => !partnersWithEmail.has(pid)).length;
+        const missing = [...entry.partnerIds].filter((pid) => !partnersWithEmail.has(pid)).length;
         stats.push({
           network_name: nn,
           total_partners: entry.partnerIds.size,
@@ -128,7 +128,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
   }
 
   function toggleNetwork(name: string) {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else next.add(name);
@@ -140,11 +140,11 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
     if (selected.size === networkStats.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(networkStats.map(n => n.network_name)));
+      setSelected(new Set(networkStats.map((n) => n.network_name)));
     }
   }
 
-  const totalSelected = networkStats.filter(n => selected.has(n.network_name));
+  const totalSelected = networkStats.filter((n) => selected.has(n.network_name));
   const totalPartners = totalSelected.reduce((s, n) => s + n.total_partners, 0);
   const totalMissing = totalSelected.reduce((s, n) => s + n.missing_contacts, 0);
 
@@ -163,9 +163,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
         const partnersAll = await findPartnersByWcaIds(allWcaIds);
         const contactsWithEmail = await findPartnerContactsWithEmail();
 
-        const partnerIdsWithEmail = new Set(
-          contactsWithEmail.map(c => c.partner_id)
-        );
+        const partnerIdsWithEmail = new Set(contactsWithEmail.map((c) => c.partner_id));
 
         const withEmailWcaIds = new Set<number>();
         const withoutEmailWcaIds: number[] = [];
@@ -178,10 +176,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           }
         }
 
-        const orderedIds = [
-          ...withoutEmailWcaIds,
-          ...allWcaIds.filter(id => withEmailWcaIds.has(id)),
-        ];
+        const orderedIds = [...withoutEmailWcaIds, ...allWcaIds.filter((id) => withEmailWcaIds.has(id))];
         allWcaIds = [...new Set(orderedIds)];
       }
 
@@ -201,10 +196,13 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       // 🤖 Claude Engine V8: il job viene processato dal motore V8 nella UI
       // Non serve più chiamare Edge Function process-download-job
       queryClient.invalidateQueries({ queryKey: queryKeys.downloads.jobs });
-      toast({ title: "Re-sync creato", description: `${allWcaIds.length} partner da aggiornare. Premi Avvia nella barra download.` });
+      toast({
+        title: "Re-sync creato",
+        description: `${allWcaIds.length} partner da aggiornare. Premi Avvia nella barra download.`,
+      });
       onStartRunning();
     } catch (err: unknown) {
-      toast({ title: "Errore", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
+      toast({ title: "Errore", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
     setStarting(false);
   }
@@ -253,10 +251,11 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
           <p className={`text-sm ${th.sub}`}>Nessun partner trovato nel database</p>
         ) : (
           <div className="space-y-2">
-            {networkStats.map(ns => {
-              const pct = ns.total_partners > 0
-                ? Math.round(((ns.total_partners - ns.missing_contacts) / ns.total_partners) * 100)
-                : 0;
+            {networkStats.map((ns) => {
+              const pct =
+                ns.total_partners > 0
+                  ? Math.round(((ns.total_partners - ns.missing_contacts) / ns.total_partners) * 100)
+                  : 0;
               const isComplete = ns.missing_contacts === 0;
 
               return (
@@ -273,9 +272,10 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
                       <span className={`text-sm font-medium ${th.h2}`}>{ns.network_name}</span>
                       <Badge
                         variant="outline"
-                        className={isComplete
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]"
-                          : "bg-primary/10 text-primary border-primary/30 text-[10px]"
+                        className={
+                          isComplete
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]"
+                            : "bg-primary/10 text-primary border-primary/30 text-[10px]"
                         }
                       >
                         {isComplete ? "Completo" : `${ns.missing_contacts} mancanti`}
@@ -305,10 +305,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
       {selected.size > 0 && (
         <div className={`${th.panel} border border-border rounded-2xl p-5 space-y-5`}>
           <label className="flex items-center gap-3 cursor-pointer">
-            <Checkbox
-              checked={prioritizeMissing}
-              onCheckedChange={(v) => setPrioritizeMissing(!!v)}
-            />
+            <Checkbox checked={prioritizeMissing} onCheckedChange={(v) => setPrioritizeMissing(!!v)} />
             <div>
               <span className={`text-sm ${th.h2}`}>Priorità ai contatti mancanti</span>
               <p className={`text-xs ${th.sub}`}>Scarica prima i partner senza email/telefono</p>
@@ -320,13 +317,7 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
               <span className={`text-sm ${th.label}`}>Delay</span>
               <span className={`text-sm font-mono ${th.hi}`}>{delay}s</span>
             </div>
-            <Slider
-              min={10}
-              max={60}
-              step={1}
-              value={[delay]}
-              onValueChange={([v]) => setDelay(v)}
-            />
+            <Slider min={10} max={60} step={1} value={[delay]} onValueChange={([v]) => setDelay(v)} />
             <div className={`flex justify-between text-[10px] mt-1 ${th.dim}`}>
               <span>Veloce</span>
               <span>Lento</span>
@@ -350,15 +341,15 @@ export function ResyncConfigure({ isDark, onStartRunning }: { isDark: boolean; o
             </div>
           </div>
 
-          <Button
-            onClick={startResync}
-            disabled={starting || hasCookie === false}
-            className={`w-full ${th.btnPri}`}
-          >
+          <Button onClick={startResync} disabled={starting || hasCookie === false} className={`w-full ${th.btnPri}`}>
             {starting ? (
-              <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio in corso...</>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" /> Avvio in corso...
+              </>
             ) : (
-              <><Play className="w-4 h-4 mr-2" /> Avvia Re-sync ({totalPartners} partner)</>
+              <>
+                <Play className="w-4 h-4 mr-2" /> Avvia Re-sync ({totalPartners} partner)
+              </>
             )}
           </Button>
         </div>

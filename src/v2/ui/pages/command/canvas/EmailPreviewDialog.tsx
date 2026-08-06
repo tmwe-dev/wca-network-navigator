@@ -4,13 +4,7 @@
  */
 import { useMemo, useState } from "react";
 import DOMPurify from "dompurify";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Code2, Eye } from "lucide-react";
 
@@ -22,9 +16,7 @@ interface EmailPreviewDialogProps {
   readonly body: string;
 }
 
-export default function EmailPreviewDialog({
-  open, onOpenChange, recipients, subject, body,
-}: EmailPreviewDialogProps) {
+export default function EmailPreviewDialog({ open, onOpenChange, recipients, subject, body }: EmailPreviewDialogProps) {
   const [showRaw, setShowRaw] = useState(false);
 
   const safeHtml = useMemo(
@@ -36,9 +28,10 @@ export default function EmailPreviewDialog({
     [body],
   );
 
-  const toLine = recipients.length > 0
-    ? recipients.map((r) => (r.name ? `${r.name} <${r.email}>` : r.email)).join(", ")
-    : "(nessun destinatario)";
+  const toLine =
+    recipients.length > 0
+      ? recipients.map((r) => (r.name ? `${r.name} <${r.email}>` : r.email)).join(", ")
+      : "(nessun destinatario)";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -48,23 +41,27 @@ export default function EmailPreviewDialog({
             <Eye className="w-4 h-4" /> Anteprima email
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Così la riceverà il destinatario. Firma e footer vengono aggiunti automaticamente al momento dell'invio (server-side).
+            Così la riceverà il destinatario. Firma e footer vengono aggiunti automaticamente al momento dell'invio
+            (server-side).
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto rounded-lg border border-border bg-background">
           {/* Header simulato */}
           <div className="border-b border-border px-4 py-3 text-xs space-y-1 bg-muted/30">
-            <div><span className="text-muted-foreground">A:</span> <span className="text-foreground">{toLine}</span></div>
-            <div><span className="text-muted-foreground">Oggetto:</span> <span className="text-foreground font-medium">{subject || "(senza oggetto)"}</span></div>
+            <div>
+              <span className="text-muted-foreground">A:</span> <span className="text-foreground">{toLine}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Oggetto:</span>{" "}
+              <span className="text-foreground font-medium">{subject || "(senza oggetto)"}</span>
+            </div>
           </div>
 
           {/* Body */}
           <div className="p-5">
             {showRaw ? (
-              <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-foreground">
-                {body}
-              </pre>
+              <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-foreground">{body}</pre>
             ) : (
               <div
                 className="prose prose-sm max-w-none text-foreground [&_p]:my-2 [&_a]:text-primary"
@@ -79,16 +76,13 @@ export default function EmailPreviewDialog({
         </div>
 
         <div className="flex justify-between items-center pt-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowRaw((v) => !v)}
-            className="text-xs"
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowRaw((v) => !v)} className="text-xs">
             <Code2 className="w-3.5 h-3.5 mr-1.5" />
             {showRaw ? "Vista renderizzata" : "Vista HTML grezzo"}
           </Button>
-          <Button size="sm" onClick={() => onOpenChange(false)}>Chiudi</Button>
+          <Button size="sm" onClick={() => onOpenChange(false)}>
+            Chiudi
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

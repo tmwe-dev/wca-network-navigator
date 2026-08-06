@@ -137,9 +137,9 @@ export async function createActivities(
     due_date?: string | null;
     scheduled_at?: string | null;
     campaign_batch_id?: string | null;
-  }>
+  }>,
 ) {
-  const cleaned = activities.map(a => ({
+  const cleaned = activities.map((a) => ({
     ...a,
     assigned_to: a.assigned_to === "none" ? null : a.assigned_to,
     source_type: a.source_type || "partner",
@@ -153,7 +153,10 @@ export async function createActivities(
   return data;
 }
 
-export async function updateActivity(id: string, updates: Partial<Pick<AllActivity, "status" | "completed_at" | "selected_contact_id">>) {
+export async function updateActivity(
+  id: string,
+  updates: Partial<Pick<AllActivity, "status" | "completed_at" | "selected_contact_id">>,
+) {
   const { error } = await supabase
     .from("activities")
     .update(updates as ActivityUpdate)
@@ -163,10 +166,7 @@ export async function updateActivity(id: string, updates: Partial<Pick<AllActivi
 
 export async function deleteActivities(ids: string[]): Promise<number> {
   if (ids.length === 0) return 0;
-  const { error } = await supabase
-    .from("activities")
-    .delete()
-    .in("id", ids);
+  const { error } = await supabase.from("activities").delete().in("id", ids);
   if (error) throw error;
   return ids.length;
 }
@@ -177,13 +177,20 @@ export async function insertActivity(activity: ActivityInsert) {
 }
 
 export async function countActivitiesWithNullPartner() {
-  const { count, error } = await supabase.from("activities").select("*", { count: "exact", head: true }).is("partner_id", null).is("deleted_at", null);
+  const { count, error } = await supabase
+    .from("activities")
+    .select("*", { count: "exact", head: true })
+    .is("partner_id", null)
+    .is("deleted_at", null);
   if (error) throw error;
   return count ?? 0;
 }
 
 export async function approveActivity(id: string) {
-  const { error } = await supabase.from("activities").update({ status: "approved" as Database["public"]["Enums"]["activity_status"], reviewed: true }).eq("id", id);
+  const { error } = await supabase
+    .from("activities")
+    .update({ status: "approved" as Database["public"]["Enums"]["activity_status"], reviewed: true })
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -233,7 +240,9 @@ export async function findActivitiesForKanban(limit = 500): Promise<KanbanJobCar
   const sinceIso = startOfToday.toISOString();
   const { data, error } = await supabase
     .from("activities")
-    .select("id, title, activity_type, status, priority, due_date, created_at, department, partner_id, description, email_subject, email_body, scheduled_at, partners(company_name, country_code)")
+    .select(
+      "id, title, activity_type, status, priority, due_date, created_at, department, partner_id, description, email_subject, email_body, scheduled_at, partners(company_name, country_code)",
+    )
     .is("deleted_at", null)
     .not("status", "in", "(completed,cancelled)")
     .or(`created_at.gte.${sinceIso},due_date.gte.${sinceIso},scheduled_at.gte.${sinceIso}`)
@@ -269,11 +278,7 @@ export async function updateActivityDepartment(id: string, department: ActivityD
 }
 
 /** Attività pending di un utente per una specifica data (cockpit). */
-export async function findPendingActivitiesForDate(
-  userId: string,
-  dueDate: string,
-  limit = 100,
-) {
+export async function findPendingActivitiesForDate(userId: string, dueDate: string, limit = 100) {
   const { data } = await supabase
     .from("activities")
     .select("*")
@@ -347,7 +352,8 @@ export interface AIActivity {
   source_meta: Record<string, unknown> | null;
 }
 
-const AI_ACTIVITY_SELECT = "id, activity_type, title, description, status, due_date, priority, created_at, partner_id, source_meta";
+const AI_ACTIVITY_SELECT =
+  "id, activity_type, title, description, status, due_date, priority, created_at, partner_id, source_meta";
 
 /** Attività pendenti generate dall'AI (ultime N). */
 export async function findAIGeneratedActivities(limit = 10): Promise<AIActivity[]> {
@@ -371,10 +377,7 @@ export async function setActivityStatus(activityId: string, status: string): Pro
 }
 
 export async function updateActivityDescription(id: string, description: string): Promise<void> {
-  const { error } = await supabase
-    .from("activities")
-    .update({ description })
-    .eq("id", id);
+  const { error } = await supabase.from("activities").update({ description }).eq("id", id);
   if (error) throw error;
 }
 
@@ -397,7 +400,10 @@ export async function findActivityRef(ref: string, byId: boolean): Promise<{ id:
 
 /** Patch arbitrario di un'attività per id (usato dai tool Command). */
 export async function patchActivity(id: string, patch: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from("activities").update(patch as ActivityUpdate).eq("id", id);
+  const { error } = await supabase
+    .from("activities")
+    .update(patch as ActivityUpdate)
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -419,7 +425,12 @@ export async function findPendingAgentActivities(userId: string, limit = 100): P
     .limit(limit);
   if (error) throw error;
   // Il select("*") non include le relazioni partners/team_members/selected_contact di AllActivity.
-  return (data || []).map((row) => ({ ...row, partners: null, team_members: null, selected_contact: null })) as AllActivity[];
+  return (data || []).map((row) => ({
+    ...row,
+    partners: null,
+    team_members: null,
+    selected_contact: null,
+  })) as AllActivity[];
 }
 
 export async function rejectActivity(id: string) {
@@ -489,10 +500,7 @@ export async function updateActivityEmailDraft(
     status: Database["public"]["Enums"]["activity_status"];
   },
 ): Promise<{ error: { message: string } | null }> {
-  const { error } = await supabase
-    .from("activities")
-    .update(patch)
-    .eq("id", activityId);
+  const { error } = await supabase.from("activities").update(patch).eq("id", activityId);
   return { error };
 }
 
@@ -549,7 +557,6 @@ export async function findPartnerContactsForPartnerIds(partnerIds: string[]): Pr
   }
   return allData;
 }
-
 
 export interface OpenAgendaActivityRow {
   id: string;

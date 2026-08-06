@@ -16,12 +16,11 @@ import { describe, it, expect } from "vitest";
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C4 — search_kb Fallback Integrity", () => {
-
   // Simulate the search_kb function logic
   function simulateSearchKb(
     query: string,
     userId: string,
-    embeddingResults: any[]
+    embeddingResults: any[],
   ): { matches: any[]; method: string; error?: string } {
     if (!query) return { matches: [], method: "error", error: "query è obbligatoria" };
 
@@ -74,7 +73,6 @@ describe("Collaudo C4 — search_kb Fallback Integrity", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C4 — execute_plan_step Real Execution", () => {
-
   interface PlanStep {
     index: number;
     description: string;
@@ -93,10 +91,7 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
   }
 
   // Correct behavior: calls real handler
-  function simulateCorrectExecution(
-    step: PlanStep,
-    toolHandlers: Record<string, (args: any) => any>
-  ): any {
+  function simulateCorrectExecution(step: PlanStep, toolHandlers: Record<string, (args: any) => any>): any {
     if (step.tool && typeof step.tool === "string") {
       const handler = toolHandlers[step.tool];
       if (handler) {
@@ -109,8 +104,12 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
 
   it("C4.5 — BUG: current code returns note instead of executing", () => {
     const step: PlanStep = {
-      index: 0, description: "Search KB", tool: "search_kb",
-      args: { query: "servizi marittimi" }, status: "pending", result: null,
+      index: 0,
+      description: "Search KB",
+      tool: "search_kb",
+      args: { query: "servizi marittimi" },
+      status: "pending",
+      result: null,
     };
     const result = simulateCurrentExecution(step) as any;
     expect(result.note).toContain("da eseguire");
@@ -126,8 +125,12 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
       }),
     };
     const step: PlanStep = {
-      index: 0, description: "Search KB", tool: "search_kb",
-      args: { query: "servizi marittimi" }, status: "pending", result: null,
+      index: 0,
+      description: "Search KB",
+      tool: "search_kb",
+      args: { query: "servizi marittimi" },
+      status: "pending",
+      result: null,
     };
     const result = simulateCorrectExecution(step, handlers) as any;
     expect(result.matches).toBeDefined();
@@ -136,8 +139,12 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
 
   it("C4.7 — correct: any tool returns manual note (no crash)", () => {
     const step: PlanStep = {
-      index: 0, description: "Call custom API", tool: "custom_api_call",
-      args: {}, status: "pending", result: null,
+      index: 0,
+      description: "Call custom API",
+      tool: "custom_api_call",
+      args: {},
+      status: "pending",
+      result: null,
     };
     const result = simulateCorrectExecution(step, {}) as any;
     expect(result.note).toContain("manuale");
@@ -149,7 +156,6 @@ describe("Collaudo C4 — execute_plan_step Real Execution", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C4 — apply_playbook Activation", () => {
-
   interface ApplyResult {
     success: boolean;
     playbook: { code: string; name: string };
@@ -200,7 +206,6 @@ describe("Collaudo C4 — apply_playbook Activation", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo G1 — Composer V2 Response Handling", () => {
-
   // ai-assistant returns { content: "..." }
   // useEmailComposerV2 reads data.response (WRONG KEY)
 
@@ -243,7 +248,6 @@ describe("Collaudo G1 — Composer V2 Response Handling", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo B2 — tool-decision Mode", () => {
-
   // Simulate the provider object from resolveAiProvider
   const provider = {
     url: "https://api.example.com", // Correct key

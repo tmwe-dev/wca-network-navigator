@@ -11,7 +11,7 @@
  * post primo contatto e pre-conversione/archiviazione.
  */
 export const HOLDING_STATUSES = ["first_touch_sent", "holding", "engaged"] as const;
-export type HoldingStatus = typeof HOLDING_STATUSES[number];
+export type HoldingStatus = (typeof HOLDING_STATUSES)[number];
 
 /**
  * Tassonomia canonica 9 stati lead (Costituzione Commerciale).
@@ -28,7 +28,7 @@ export const ALL_LEAD_STATUSES = [
   "archived",
   "blacklisted",
 ] as const;
-export type LeadStatus = typeof ALL_LEAD_STATUSES[number];
+export type LeadStatus = (typeof ALL_LEAD_STATUSES)[number];
 
 /**
  * Returns true if the given lead_status falls inside the holding pattern.

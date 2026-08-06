@@ -32,7 +32,12 @@ export function SuperMarioTab() {
     setEnabled(isSuperMarioEnabled());
   }, []);
 
-  const { data: invocations, isLoading, refetch, isRefetching } = useQuery({
+  const {
+    data: invocations,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useQuery({
     queryKey: ["super-mario-invocations"],
     queryFn: fetchInvocations,
     refetchInterval: 10_000,
@@ -42,13 +47,8 @@ export function SuperMarioTab() {
     const list = invocations ?? [];
     const total = list.length;
     const errors = list.filter((r) => r.error_code).length;
-    const avgLatency = total > 0
-      ? Math.round(list.reduce((sum, r) => sum + (r.latency_ms ?? 0), 0) / total)
-      : 0;
-    const totalTokens = list.reduce(
-      (sum, r) => sum + (r.prompt_tokens ?? 0) + (r.completion_tokens ?? 0),
-      0,
-    );
+    const avgLatency = total > 0 ? Math.round(list.reduce((sum, r) => sum + (r.latency_ms ?? 0), 0) / total) : 0;
+    const totalTokens = list.reduce((sum, r) => sum + (r.prompt_tokens ?? 0) + (r.completion_tokens ?? 0), 0);
     return { total, errors, avgLatency, totalTokens };
   }, [invocations]);
 
@@ -71,9 +71,8 @@ export function SuperMarioTab() {
             <div className="space-y-1">
               <div className="font-medium">Attiva nel Command</div>
               <div className="text-sm text-muted-foreground">
-                Quando attivo, il Command bypassa planner classico e regex e usa
-                super-mario edge: identità DB + KB filtrata + memoria narrativa +
-                hard guards + audit redatto.
+                Quando attivo, il Command bypassa planner classico e regex e usa super-mario edge: identità DB + KB
+                filtrata + memoria narrativa + hard guards + audit redatto.
               </div>
             </div>
             <Switch checked={enabled} onCheckedChange={onToggle} />
@@ -94,12 +93,7 @@ export function SuperMarioTab() {
             <Brain className="h-5 w-5 text-primary" />
             Ultime invocazioni
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isRefetching}
-          >
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isRefetching}>
             <RefreshCw className={`h-4 w-4 mr-1 ${isRefetching ? "animate-spin" : ""}`} />
             Aggiorna
           </Button>
@@ -112,9 +106,7 @@ export function SuperMarioTab() {
               ))}
             </div>
           ) : !invocations || invocations.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              Nessuna invocazione registrata.
-            </div>
+            <div className="text-center py-8 text-muted-foreground text-sm">Nessuna invocazione registrata.</div>
           ) : (
             <ScrollArea className="h-[480px] pr-3">
               <div className="space-y-2">
@@ -134,9 +126,7 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
   return (
     <div className="rounded-lg border p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`text-2xl font-semibold ${tone === "warn" ? "text-destructive" : ""}`}>
-        {value}
-      </div>
+      <div className={`text-2xl font-semibold ${tone === "warn" ? "text-destructive" : ""}`}>{value}</div>
     </div>
   );
 }
@@ -157,8 +147,12 @@ function InvocationRowView({ row }: { row: InvocationRow }) {
             <AlertCircle className="h-4 w-4 text-destructive" />
           )}
           <code className="text-xs">{row.trace_id.slice(0, 8)}</code>
-          <Badge variant="outline" className="text-xs">{row.scope}</Badge>
-          <Badge variant="secondary" className="text-xs">{domain}</Badge>
+          <Badge variant="outline" className="text-xs">
+            {row.scope}
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {domain}
+          </Badge>
           <span className="text-xs text-muted-foreground">{row.model}</span>
         </div>
         <span className="text-xs text-muted-foreground">
@@ -178,11 +172,7 @@ function InvocationRowView({ row }: { row: InvocationRow }) {
           </>
         )}
       </div>
-      {row.response_summary && (
-        <div className="text-xs text-muted-foreground line-clamp-2">
-          {row.response_summary}
-        </div>
-      )}
+      {row.response_summary && <div className="text-xs text-muted-foreground line-clamp-2">{row.response_summary}</div>}
     </div>
   );
 }

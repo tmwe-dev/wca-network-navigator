@@ -45,9 +45,15 @@ async function serialExtract<T>(fn: () => Promise<T>): Promise<T> {
   return new Promise<T>((resolve) => {
     const run = async () => {
       lock.busy = true;
-      try { resolve(await fn()); }
-      catch (err) { resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as unknown as T); }
-      finally { lock.busy = false; const next = lock.queue.shift(); if (next) next.fn().then(next.resolve); }
+      try {
+        resolve(await fn());
+      } catch (err) {
+        resolve({ bridgeHealthy: false, bridgeError: String(err), extraction: null } as unknown as T);
+      } finally {
+        lock.busy = false;
+        const next = lock.queue.shift();
+        if (next) next.fn().then(next.resolve);
+      }
     };
     if (!lock.busy) run();
     else lock.queue.push({ resolve: resolve as (v: unknown) => void, fn: run as () => Promise<unknown> });
@@ -79,17 +85,28 @@ export function useExtensionBridge() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const sendMessage = useCallback((action: string, payload?: Record<string, unknown>, timeoutMs = 60000): Promise<RawResponse> => {
-    return new Promise((resolve) => {
-      const requestId = `${action}_${crypto.randomUUID()}`;
-      const timer = setTimeout(() => {
-        pendingRef.current.delete(requestId);
-        resolve({ success: false, state: "bridge_error", errorCode: "EXT_BRIDGE_TIMEOUT", error: "Timeout" } as RawResponse);
-      }, timeoutMs);
-      pendingRef.current.set(requestId, (response) => { clearTimeout(timer); resolve(response); });
-      window.postMessage({ direction: "from-webapp", action, requestId, ...payload }, window.location.origin);
-    });
-  }, []);
+  const sendMessage = useCallback(
+    (action: string, payload?: Record<string, unknown>, timeoutMs = 60000): Promise<RawResponse> => {
+      return new Promise((resolve) => {
+        const requestId = `${action}_${crypto.randomUUID()}`;
+        const timer = setTimeout(() => {
+          pendingRef.current.delete(requestId);
+          resolve({
+            success: false,
+            state: "bridge_error",
+            errorCode: "EXT_BRIDGE_TIMEOUT",
+            error: "Timeout",
+          } as RawResponse);
+        }, timeoutMs);
+        pendingRef.current.set(requestId, (response) => {
+          clearTimeout(timer);
+          resolve(response);
+        });
+        window.postMessage({ direction: "from-webapp", action, requestId, ...payload }, window.location.origin);
+      });
+    },
+    [],
+  );
 
   const checkAvailable = useCallback(async (): Promise<boolean> => {
     if (Date.now() - lastHeartbeatRef.current < 15000) {
@@ -98,38 +115,50 @@ export function useExtensionBridge() {
     }
     for (let i = 0; i < 3; i++) {
       const r = await sendMessage("ping", {}, 3000);
-      if (r.success) { setIsAvailable(true); lastHeartbeatRef.current = Date.now(); return true; }
+      if (r.success) {
+        setIsAvailable(true);
+        lastHeartbeatRef.current = Date.now();
+        return true;
+      }
       if (i < 2) await new Promise((r) => setTimeout(r, 800));
     }
     return false;
   }, [sendMessage]);
 
-  const extractContacts = useCallback((wcaId: number): Promise<BridgeResult> => {
-    return serialExtract(async () => {
-      const raw = await sendMessage("extractContacts", { wcaId }, 60000);
+  const extractContacts = useCallback(
+    (wcaId: number): Promise<BridgeResult> => {
+      return serialExtract(async () => {
+        const raw = await sendMessage("extractContacts", { wcaId }, 60000);
 
-      if (raw.error === "Timeout" || raw.errorCode === "EXT_BRIDGE_TIMEOUT" || raw.errorCode === "EXT_NO_CONTENT_SCRIPT" || raw.errorCode === "EXT_CONTEXT_INVALIDATED") {
-        return { bridgeHealthy: false, bridgeError: raw.errorCode || "EXT_BRIDGE_TIMEOUT", extraction: null };
-      }
-
-      return {
-        bridgeHealthy: true,
-        extraction: {
-          success: raw.success ?? false,
-          wcaId: raw.wcaId,
-          state: raw.state || (raw.success ? "ok" : "not_loaded"),
-          errorCode: raw.errorCode || null,
-          companyName: raw.companyName || null,
-          contacts: raw.contacts || [],
-          profile: raw.profile || {},
-          profileHtml: raw.profileHtml || null,
-          htmlLength: raw.htmlLength || 0,
-          error: raw.error || null,
-          debug: raw.debug || {},
+        if (
+          raw.error === "Timeout" ||
+          raw.errorCode === "EXT_BRIDGE_TIMEOUT" ||
+          raw.errorCode === "EXT_NO_CONTENT_SCRIPT" ||
+          raw.errorCode === "EXT_CONTEXT_INVALIDATED"
+        ) {
+          return { bridgeHealthy: false, bridgeError: raw.errorCode || "EXT_BRIDGE_TIMEOUT", extraction: null };
         }
-      };
-    });
-  }, [sendMessage]);
+
+        return {
+          bridgeHealthy: true,
+          extraction: {
+            success: raw.success ?? false,
+            wcaId: raw.wcaId,
+            state: raw.state || (raw.success ? "ok" : "not_loaded"),
+            errorCode: raw.errorCode || null,
+            companyName: raw.companyName || null,
+            contacts: raw.contacts || [],
+            profile: raw.profile || {},
+            profileHtml: raw.profileHtml || null,
+            htmlLength: raw.htmlLength || 0,
+            error: raw.error || null,
+            debug: raw.debug || {},
+          },
+        };
+      });
+    },
+    [sendMessage],
+  );
 
   const verifySession = useCallback((): Promise<RawResponse> => {
     return sendMessage("verifySession", {}, 10000);

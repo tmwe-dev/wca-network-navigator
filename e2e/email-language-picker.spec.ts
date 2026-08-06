@@ -27,15 +27,10 @@ test.describe("P0 Email Language Picker", () => {
     await page.waitForLoadState("networkidle");
     // Imposta direttamente la chiave usata dalla feature e ricarica
     await page.evaluate(() => {
-      window.localStorage.setItem(
-        "email.languageMode.v1",
-        JSON.stringify({ mode: "specific", code: "en" })
-      );
+      window.localStorage.setItem("email.languageMode.v1", JSON.stringify({ mode: "specific", code: "en" }));
     });
     await page.reload();
-    const stored = await page.evaluate(() =>
-      window.localStorage.getItem("email.languageMode.v1")
-    );
+    const stored = await page.evaluate(() => window.localStorage.getItem("email.languageMode.v1"));
     expect(stored).toContain("en");
   });
 

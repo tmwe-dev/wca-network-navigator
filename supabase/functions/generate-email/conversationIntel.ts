@@ -20,8 +20,7 @@ export async function loadConversationContext(
   emailAddress: string | null,
   _partnerId: string | null,
 ): Promise<ConversationIntelligence> {
-  if (!emailAddress)
-    return { convCtx: null, rules: null, classifications: [] };
+  if (!emailAddress) return { convCtx: null, rules: null, classifications: [] };
 
   const [ctxRes, rulesRes, classRes] = await Promise.all([
     supabase
@@ -117,10 +116,12 @@ export function buildConversationBlock(intel: ConversationIntelligence): string 
       parts.push(`CONVERSATION HISTORY: ${convCtx.conversation_summary}`);
     }
     if (exchanges.length) {
-      const last5 = exchanges.slice(-5).map(
-        (ex: Record<string, unknown>) =>
-          `  ${ex.date || "?"} - ${ex.subject || "N/A"} - sentiment: ${ex.sentiment || "neutral"} - ${ex.summary || ""}`,
-      );
+      const last5 = exchanges
+        .slice(-5)
+        .map(
+          (ex: Record<string, unknown>) =>
+            `  ${ex.date || "?"} - ${ex.subject || "N/A"} - sentiment: ${ex.sentiment || "neutral"} - ${ex.summary || ""}`,
+        );
       parts.push(`Last ${last5.length} exchanges:\n${last5.join("\n")}`);
     }
     parts.push(
@@ -137,9 +138,7 @@ export function buildConversationBlock(intel: ConversationIntelligence): string 
       ruleParts.push(`Avoid=${(rules.topics_to_avoid as string[]).join(", ")}`);
     if (ruleParts.length) parts.push(`SENDER RULES: ${ruleParts.join(", ")}`);
     if ((rules.email_prompts as Record<string, unknown> | undefined)?.instructions) {
-      parts.push(
-        `SENDER PROMPT: ${(rules.email_prompts as Record<string, unknown>).instructions}`,
-      );
+      parts.push(`SENDER PROMPT: ${(rules.email_prompts as Record<string, unknown>).instructions}`);
     }
   }
 

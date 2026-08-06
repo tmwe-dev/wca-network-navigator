@@ -21,7 +21,9 @@ const SCRAPE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 giorni
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 Deno.serve(async (req) => {
@@ -40,13 +42,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -61,7 +65,8 @@ Deno.serve(async (req) => {
 
     if (pauseSetting?.value === "true") {
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 503,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -74,13 +79,15 @@ Deno.serve(async (req) => {
 
     if (partnerError || !partner) {
       return new Response(JSON.stringify({ error: "Partner not found" }), {
-        status: 404, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 404,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     if (!partner.website) {
       return new Response(JSON.stringify({ error: "Partner has no website" }), {
-        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -89,7 +96,6 @@ Deno.serve(async (req) => {
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = `https://${url}`;
     }
-
 
     // Use pre-scraped markdown if provided, otherwise fallback to server-side fetch
     let markdown = "";
@@ -103,7 +109,7 @@ Deno.serve(async (req) => {
           .select("payload, scraped_at")
           .eq("url", url)
           .maybeSingle();
-        if (cached?.scraped_at && (Date.now() - new Date(cached.scraped_at).getTime()) < SCRAPE_CACHE_TTL_MS) {
+        if (cached?.scraped_at && Date.now() - new Date(cached.scraped_at).getTime() < SCRAPE_CACHE_TTL_MS) {
           const payload = cached.payload as { markdown?: string; text?: string } | null;
           const cachedMd = payload?.markdown ?? payload?.text ?? "";
           if (typeof cachedMd === "string" && cachedMd.length > 50) {
@@ -115,48 +121,58 @@ Deno.serve(async (req) => {
       }
 
       // Fallback: direct fetch website content
-      if (!markdown) try {
-        // SSRF guard P1.4 — block private/internal hosts before fetching
-        const safeUrl = assertSafePublicUrl(url);
-        const fetchResp = await fetch(safeUrl.toString(), {
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; PartnerConnectBot/1.0)" },
-          redirect: "follow",
-        });
-        if (fetchResp.ok) {
-          const html = await fetchResp.text();
-          markdown = html
-            .replace(/<script[\s\S]*?<\/script>/gi, "")
-            .replace(/<style[\s\S]*?<\/style>/gi, "")
-            .replace(/<[^>]+>/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .substring(0, 15000);
-          // Salva nel cache per le prossime invocazioni.
-          if (markdown.length > 50) {
-            try {
-              await supabase.from("scrape_cache").upsert({
-                url, mode: "static", payload: { markdown }, scraped_at: new Date().toISOString(),
-              }, { onConflict: "url" });
-            } catch (e) { swallowedError("enrich_partner_website.scrape_cache_write_failed", e); }
+      if (!markdown)
+        try {
+          // SSRF guard P1.4 — block private/internal hosts before fetching
+          const safeUrl = assertSafePublicUrl(url);
+          const fetchResp = await fetch(safeUrl.toString(), {
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; PartnerConnectBot/1.0)" },
+            redirect: "follow",
+          });
+          if (fetchResp.ok) {
+            const html = await fetchResp.text();
+            markdown = html
+              .replace(/<script[\s\S]*?<\/script>/gi, "")
+              .replace(/<style[\s\S]*?<\/style>/gi, "")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .substring(0, 15000);
+            // Salva nel cache per le prossime invocazioni.
+            if (markdown.length > 50) {
+              try {
+                await supabase.from("scrape_cache").upsert(
+                  {
+                    url,
+                    mode: "static",
+                    payload: { markdown },
+                    scraped_at: new Date().toISOString(),
+                  },
+                  { onConflict: "url" },
+                );
+              } catch (e) {
+                swallowedError("enrich_partner_website.scrape_cache_write_failed", e);
+              }
+            }
           }
+        } catch (e) {
+          swallowedError("enrich_partner_website.fetch_page_failed", e);
         }
-      } catch (e) {
-        swallowedError("enrich_partner_website.fetch_page_failed", e);
-      }
     }
 
     if (!markdown || markdown.length < 50) {
-      await supabase.from("partners").update({
-        enrichment_data: { error: "Could not extract content from website", attempted_url: url },
-        enriched_at: new Date().toISOString(),
-      }).eq("id", partnerId);
+      await supabase
+        .from("partners")
+        .update({
+          enrichment_data: { error: "Could not extract content from website", attempted_url: url },
+          enriched_at: new Date().toISOString(),
+        })
+        .eq("id", partnerId);
 
-      return new Response(
-        JSON.stringify({ success: true, enrichment: null, message: "No content extracted" }),
-        { headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true, enrichment: null, message: "No content extracted" }), {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
-
 
     // Audit Sez.1 — B: cache AI extract via hash(url + system + content slice).
     const AI_MODEL = "google/gemini-3-flash-preview";
@@ -176,16 +192,18 @@ Deno.serve(async (req) => {
       swallowedError("enrich_partner_website.ai_cache_read_failed", e);
     }
 
-    const aiResponse = enrichment ? null : await aiFetch({
-        model: AI_MODEL,
-        messages: [
-          {
-            role: "system",
-            content: `Sei un analista di logistica e spedizioni. Analizza il contenuto del sito web di un'azienda di spedizioni/logistica e estrai informazioni strutturate. Rispondi SOLO con JSON valido, senza markdown.`,
-          },
-          {
-            role: "user",
-            content: `Azienda: ${partner.company_name} (${partner.city}, ${partner.country_name})
+    const aiResponse = enrichment
+      ? null
+      : await aiFetch({
+          model: AI_MODEL,
+          messages: [
+            {
+              role: "system",
+              content: `Sei un analista di logistica e spedizioni. Analizza il contenuto del sito web di un'azienda di spedizioni/logistica e estrai informazioni strutturate. Rispondi SOLO con JSON valido, senza markdown.`,
+            },
+            {
+              role: "user",
+              content: `Azienda: ${partner.company_name} (${partner.city}, ${partner.country_name})
 Website: ${url}
 
 Contenuto del sito:
@@ -206,48 +224,67 @@ Estrai queste informazioni (metti null se non trovate):
   "key_routes": [{"from": "paese origine", "to": "paese destinazione"}],
   "summary_it": "string - riassunto breve in italiano dell'azienda (max 2 frasi)"
 }`,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_company_data",
-              description: "Extract structured company data from website content",
-              parameters: {
-                type: "object",
-                properties: {
-                  revenue_estimate: { type: ["string", "null"] },
-                  employee_count: { type: ["number", "null"] },
-                  founding_year: { type: ["number", "null"] },
-                  has_own_fleet: { type: "boolean" },
-                  fleet_details: { type: ["string", "null"] },
-                  has_warehouses: { type: "boolean" },
-                  warehouse_sqm: { type: ["number", "null"] },
-                  warehouse_details: { type: ["string", "null"] },
-                  additional_services: { type: "array", items: { type: "string" } },
-                  key_markets: { type: "array", items: { type: "string" } },
-                  key_routes: { type: "array", items: { type: "object", properties: { from: { type: "string" }, to: { type: "string" } }, required: ["from", "to"] } },
-                  summary_it: { type: "string" },
+            },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "extract_company_data",
+                description: "Extract structured company data from website content",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    revenue_estimate: { type: ["string", "null"] },
+                    employee_count: { type: ["number", "null"] },
+                    founding_year: { type: ["number", "null"] },
+                    has_own_fleet: { type: "boolean" },
+                    fleet_details: { type: ["string", "null"] },
+                    has_warehouses: { type: "boolean" },
+                    warehouse_sqm: { type: ["number", "null"] },
+                    warehouse_details: { type: ["string", "null"] },
+                    additional_services: { type: "array", items: { type: "string" } },
+                    key_markets: { type: "array", items: { type: "string" } },
+                    key_routes: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: { from: { type: "string" }, to: { type: "string" } },
+                        required: ["from", "to"],
+                      },
+                    },
+                    summary_it: { type: "string" },
+                  },
+                  required: [
+                    "revenue_estimate",
+                    "employee_count",
+                    "founding_year",
+                    "has_own_fleet",
+                    "fleet_details",
+                    "has_warehouses",
+                    "warehouse_sqm",
+                    "warehouse_details",
+                    "additional_services",
+                    "key_markets",
+                    "key_routes",
+                    "summary_it",
+                  ],
+                  additionalProperties: false,
                 },
-                required: [
-                  "revenue_estimate", "employee_count", "founding_year",
-                  "has_own_fleet", "fleet_details", "has_warehouses",
-                  "warehouse_sqm", "warehouse_details", "additional_services",
-                  "key_markets", "key_routes", "summary_it",
-                ],
-                additionalProperties: false,
               },
             },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_company_data" } },
-      });
+          ],
+          tool_choice: { type: "function", function: { name: "extract_company_data" } },
+        });
 
     if (aiResponse && !aiResponse.ok) {
-      const detail = aiResponse.status === 402 ? "Crediti AI esauriti. Riprova più tardi." : `AI analysis failed (${aiResponse.status})`;
+      const detail =
+        aiResponse.status === 402
+          ? "Crediti AI esauriti. Riprova più tardi."
+          : `AI analysis failed (${aiResponse.status})`;
       return new Response(JSON.stringify({ error: detail }), {
-        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -255,25 +292,41 @@ Estrai queste informazioni (metti null se non trovate):
       const aiData = await aiResponse.json();
       const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
       if (toolCall?.function?.arguments) {
-        try { enrichment = JSON.parse(toolCall.function.arguments); } catch { /* ignore */ }
+        try {
+          enrichment = JSON.parse(toolCall.function.arguments);
+        } catch {
+          /* ignore */
+        }
       }
       if (!enrichment) {
         const content = aiData.choices?.[0]?.message?.content || "";
-        try { enrichment = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim()); } catch { /* ignore */ }
+        try {
+          enrichment = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+        } catch {
+          /* ignore */
+        }
       }
       // Salva in cache solo se parsing OK.
       if (enrichment) {
         try {
-          await supabase.from("ai_extract_cache").upsert({
-            cache_key: aiCacheKey, result: enrichment, model: AI_MODEL,
-          }, { onConflict: "cache_key" });
-        } catch (e) { swallowedError("enrich_partner_website.ai_cache_write_failed", e); }
+          await supabase.from("ai_extract_cache").upsert(
+            {
+              cache_key: aiCacheKey,
+              result: enrichment,
+              model: AI_MODEL,
+            },
+            { onConflict: "cache_key" },
+          );
+        } catch (e) {
+          swallowedError("enrich_partner_website.ai_cache_write_failed", e);
+        }
       }
     }
 
     if (!enrichment) {
       return new Response(JSON.stringify({ error: "Failed to extract data" }), {
-        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -283,19 +336,22 @@ Estrai queste informazioni (metti null se non trovate):
     const logoUrl = enrichment.logo_url && typeof enrichment.logo_url === "string" ? enrichment.logo_url : null;
     const websiteValue = enrichment.website && typeof enrichment.website === "string" ? enrichment.website : null;
 
-    const { error: updateError } = await supabase.from("partners").update({
-      enrichment_data: enrichment,
-      enriched_at: new Date().toISOString(),
-      ...(logoUrl && { logo_url: logoUrl }),
-      ...(websiteValue && { website: websiteValue }),
-    }).eq("id", partnerId);
+    const { error: updateError } = await supabase
+      .from("partners")
+      .update({
+        enrichment_data: enrichment,
+        enriched_at: new Date().toISOString(),
+        ...(logoUrl && { logo_url: logoUrl }),
+        ...(websiteValue && { website: websiteValue }),
+      })
+      .eq("id", partnerId);
 
     if (updateError) {
       return new Response(JSON.stringify({ error: "Failed to save enrichment" }), {
-        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
-
 
     // LOVABLE-93: Auto-calculate quality score after enrichment
     try {
@@ -305,14 +361,13 @@ Estrai queste informazioni (metti null se non trovate):
       swallowedError("enrich_partner_website.quality_score_recalc_failed", e);
     }
 
-    return new Response(
-      JSON.stringify({ success: true, enrichment }),
-      { headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, enrichment }), {
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

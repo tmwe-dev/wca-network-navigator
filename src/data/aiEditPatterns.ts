@@ -16,10 +16,11 @@ export interface EditPatternInsert {
 }
 
 export async function insertEditPattern(pattern: EditPatternInsert): Promise<void> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+  const {
+    data: { session: __s },
+  } = await supabase.auth.getSession();
+  const user = __s?.user ?? null;
   if (!user) return;
 
-  await supabase
-    .from("ai_edit_patterns")
-    .insert({ ...pattern, user_id: user.id });
+  await supabase.from("ai_edit_patterns").insert({ ...pattern, user_id: user.id });
 }

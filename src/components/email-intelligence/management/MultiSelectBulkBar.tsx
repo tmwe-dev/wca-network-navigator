@@ -2,14 +2,14 @@
  * MultiSelectBulkBar — Floating action bar for bulk operations on multiple senders
  * Shows at bottom of left panel when senders are selected
  */
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { useChannelMessagesRepo } from '@/hooks/emailIntelligence/useChannelMessagesRepo';
-import { Trash2, Archive, Folder, Check } from 'lucide-react';
-import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { useChannelMessagesRepo } from "@/hooks/emailIntelligence/useChannelMessagesRepo";
+import { Trash2, Archive, Folder, Check } from "lucide-react";
+import type { SenderAnalysis, EmailSenderGroup } from "@/types/email-management";
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("MultiSelectBulkBar");
@@ -21,14 +21,9 @@ interface MultiSelectBulkBarProps {
   onAssignGroup?: (senders: SenderAnalysis[], groupName: string, groupId: string) => Promise<void>;
 }
 
-type ActionType = 'delete' | 'archive' | 'mark-read' | 'move' | null;
+type ActionType = "delete" | "archive" | "mark-read" | "move" | null;
 
-export function MultiSelectBulkBar({
-  selectedSenders,
-  groups,
-  onComplete,
-  onAssignGroup,
-}: MultiSelectBulkBarProps) {
+export function MultiSelectBulkBar({ selectedSenders, groups, onComplete, onAssignGroup }: MultiSelectBulkBarProps) {
   const {
     fetchChannelMessageIdsFromSender,
     softDeleteChannelMessageById,
@@ -86,7 +81,7 @@ export function MultiSelectBulkBar({
     try {
       // Collect all emails from all selected senders
       const emailPromises = selectedSenders.map((sender) =>
-        fetchChannelMessageIdsFromSender(sender.email).catch(() => [] as string[])
+        fetchChannelMessageIdsFromSender(sender.email).catch(() => [] as string[]),
       );
 
       const results = await Promise.all(emailPromises);
@@ -96,7 +91,7 @@ export function MultiSelectBulkBar({
       });
 
       if (allEmails.length === 0) {
-        toast.info('Nessuna email trovata');
+        toast.info("Nessuna email trovata");
         setProgress(null);
         setIsLoading(false);
         return;
@@ -107,13 +102,13 @@ export function MultiSelectBulkBar({
         const emailId = allEmails[i];
 
         try {
-          if (action === 'delete') {
+          if (action === "delete") {
             await softDeleteChannelMessageById(emailId);
-          } else if (action === 'archive') {
+          } else if (action === "archive") {
             await archiveChannelMessageById(emailId);
-          } else if (action === 'mark-read') {
+          } else if (action === "mark-read") {
             await markChannelMessageIsReadFlag(emailId);
-          } else if (action === 'move' && selectedFolder) {
+          } else if (action === "move" && selectedFolder) {
             await moveChannelMessageToFolder(emailId, selectedFolder);
           }
         } catch (err) {
@@ -130,15 +125,13 @@ export function MultiSelectBulkBar({
       }
 
       const actionLabels: Record<Exclude<ActionType, null>, string> = {
-        delete: 'eliminate',
-        archive: 'archiviate',
-        'mark-read': 'marked as read',
-        move: 'moved',
+        delete: "eliminate",
+        archive: "archiviate",
+        "mark-read": "marked as read",
+        move: "moved",
       };
-      const label = action ? actionLabels[action] : '';
-      toast.success(
-        `${allEmails.length} email ${label} da ${totalSendersCount} mittenti`
-      );
+      const label = action ? actionLabels[action] : "";
+      toast.success(`${allEmails.length} email ${label} da ${totalSendersCount} mittenti`);
 
       setPendingAction(null);
       setConfirmationCount(0);
@@ -176,28 +169,28 @@ export function MultiSelectBulkBar({
 
   const getButtonLabel = (action: ActionType): string => {
     if (pendingAction === action && confirmationCount === 1) {
-      if (action === 'delete') return `Conferma: eliminare ${totalEmailCount} email da ${totalSendersCount} mittenti?`;
-      if (action === 'archive') return `Archivia ${totalEmailCount} email?`;
-      if (action === 'move') return `Sposta ${totalEmailCount} email?`;
-      return 'Conferma?';
+      if (action === "delete") return `Conferma: eliminare ${totalEmailCount} email da ${totalSendersCount} mittenti?`;
+      if (action === "archive") return `Archivia ${totalEmailCount} email?`;
+      if (action === "move") return `Sposta ${totalEmailCount} email?`;
+      return "Conferma?";
     }
 
-    return action === 'delete'
-      ? 'Elimina email'
-      : action === 'archive'
-        ? 'Archivia email'
-        : action === 'mark-read'
-          ? 'Segna come letto'
-          : action === 'move'
-            ? 'Sposta email'
-            : '';
+    return action === "delete"
+      ? "Elimina email"
+      : action === "archive"
+        ? "Archivia email"
+        : action === "mark-read"
+          ? "Segna come letto"
+          : action === "move"
+            ? "Sposta email"
+            : "";
   };
 
   const getButtonVariant = (action: ActionType) => {
     if (pendingAction === action && confirmationCount === 1) {
-      return action === 'delete' ? 'destructive' : 'secondary';
+      return action === "delete" ? "destructive" : "secondary";
     }
-    return 'outline';
+    return "outline";
   };
 
   return (
@@ -217,8 +210,8 @@ export function MultiSelectBulkBar({
         {/* Delete button */}
         <Button
           size="sm"
-          variant={getButtonVariant('delete')}
-          onClick={() => handleActionClick('delete')}
+          variant={getButtonVariant("delete")}
+          onClick={() => handleActionClick("delete")}
           disabled={isLoading}
           className="text-xs"
           title={`Elimina ${totalEmailCount} email`}
@@ -230,8 +223,8 @@ export function MultiSelectBulkBar({
         {/* Archive button */}
         <Button
           size="sm"
-          variant={getButtonVariant('archive')}
-          onClick={() => handleActionClick('archive')}
+          variant={getButtonVariant("archive")}
+          onClick={() => handleActionClick("archive")}
           disabled={isLoading}
           className="text-xs"
           title={`Archivia ${totalEmailCount} email`}
@@ -243,8 +236,8 @@ export function MultiSelectBulkBar({
         {/* Mark as read button */}
         <Button
           size="sm"
-          variant={getButtonVariant('mark-read')}
-          onClick={() => handleActionClick('mark-read')}
+          variant={getButtonVariant("mark-read")}
+          onClick={() => handleActionClick("mark-read")}
           disabled={isLoading}
           className="text-xs"
           title={`Segna ${totalEmailCount} email come letto`}
@@ -273,7 +266,7 @@ export function MultiSelectBulkBar({
             size="icon"
             variant="secondary"
             className="h-8 w-8 flex-shrink-0"
-            onClick={() => handleActionClick('move')}
+            onClick={() => handleActionClick("move")}
             disabled={isLoading}
             title="Conferma spostamento"
           >
@@ -292,7 +285,7 @@ export function MultiSelectBulkBar({
             <SelectContent>
               {groups.map((group) => (
                 <SelectItem key={group.id} value={group.id}>
-                  <span className="mr-2">{group.icon || '📁'}</span>
+                  <span className="mr-2">{group.icon || "📁"}</span>
                   {group.nome_gruppo}
                 </SelectItem>
               ))}

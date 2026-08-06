@@ -101,16 +101,30 @@ export function FireScrapeTest() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
-        <Button onClick={testScrapeActive} disabled={running} size="sm">📄 Scrape Tab Attivo</Button>
-        <Button onClick={testSnapshot} disabled={running} size="sm">📸 Snapshot</Button>
-        <Button onClick={testGoogleSearch} disabled={running} size="sm">🔎 Google Search</Button>
-        <Button onClick={testCacheStats} disabled={running} size="sm" variant="outline">📊 Cache</Button>
-        <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
+        <Button onClick={testPing} disabled={running} size="sm">
+          🔌 Ping
+        </Button>
+        <Button onClick={testScrapeActive} disabled={running} size="sm">
+          📄 Scrape Tab Attivo
+        </Button>
+        <Button onClick={testSnapshot} disabled={running} size="sm">
+          📸 Snapshot
+        </Button>
+        <Button onClick={testGoogleSearch} disabled={running} size="sm">
+          🔎 Google Search
+        </Button>
+        <Button onClick={testCacheStats} disabled={running} size="sm" variant="outline">
+          📊 Cache
+        </Button>
+        <Button onClick={() => setLogs([])} size="sm" variant="ghost">
+          🗑️ Pulisci
+        </Button>
       </div>
       <div className="flex gap-2">
         <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="URL da scrappare" className="flex-1" />
-        <Button onClick={testScrapeUrl} disabled={running} size="sm">🌐 Scrape URL</Button>
+        <Button onClick={testScrapeUrl} disabled={running} size="sm">
+          🌐 Scrape URL
+        </Button>
       </div>
       <Terminal logs={logs} />
     </div>

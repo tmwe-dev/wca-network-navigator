@@ -76,25 +76,35 @@ function buildLibraryUserPrompt(
   goal: string,
   opts?: { gapsBudgetChars?: number },
 ): string {
-  const realSummary = `Tabelle filtrate: ${Object.entries(collector.realSummary.by_table).map(([k, v]) => `${k}=${v}`).join(", ")}. Totale: ${collector.realSummary.total}`;
-  const desiredSummary = `Da chunk: ${Object.entries(collector.desiredSummary.by_table).map(([k, v]) => `${k}=${v}`).join(", ")}. Totale: ${collector.desiredSummary.total}`;
+  const realSummary = `Tabelle filtrate: ${Object.entries(collector.realSummary.by_table)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(", ")}. Totale: ${collector.realSummary.total}`;
+  const desiredSummary = `Da chunk: ${Object.entries(collector.desiredSummary.by_table)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(", ")}. Totale: ${collector.desiredSummary.total}`;
 
-  const factsTop = Object.entries(session.facts_registry).slice(0, 10).map(([k, f]) =>
-    `- ${k} = "${f.value}"`,
-  ).join("\n") || "(nessuno)";
+  const factsTop =
+    Object.entries(session.facts_registry)
+      .slice(0, 10)
+      .map(([k, f]) => `- ${k} = "${f.value}"`)
+      .join("\n") || "(nessuno)";
 
-  const conflictsList = session.conflicts_found.slice(0, 5).map((c) =>
-    `- [${c.status}] ${c.topic}`,
-  ).join("\n") || "(nessuno)";
+  const conflictsList =
+    session.conflicts_found
+      .slice(0, 5)
+      .map((c) => `- [${c.status}] ${c.topic}`)
+      .join("\n") || "(nessuno)";
 
-  const entitiesList = session.entities_created
-    .filter((e) => chunkDef.targetTables.includes(e.table))
-    .slice(0, 15)
-    .map((e) => `- ${e.table}: "${e.title}"`)
-    .join("\n") || "(nessuna)";
+  const entitiesList =
+    session.entities_created
+      .filter((e) => chunkDef.targetTables.includes(e.table))
+      .slice(0, 15)
+      .map((e) => `- ${e.table}: "${e.title}"`)
+      .join("\n") || "(nessuna)";
 
   const preloadedDups = chunkDef.preloadedDuplicates.map((d) => `- ${d.title} (${d.reason})`).join("\n") || "(nessuno)";
-  const preloadedConfs = chunkDef.preloadedConflicts.map((c) => `- ${c.topic}: ${c.notes ?? ""}`).join("\n") || "(nessuno)";
+  const preloadedConfs =
+    chunkDef.preloadedConflicts.map((c) => `- ${c.topic}: ${c.notes ?? ""}`).join("\n") || "(nessuno)";
 
   // Roadmap globale: dove siamo nella sequenza, cosa è già stato processato,
   // cosa resta. Il modello capisce che è un lavoro multi-step e non deve
@@ -102,32 +112,31 @@ function buildLibraryUserPrompt(
   const totalChunks = TMWE_CHUNKS.length;
   const positionInOrder = TMWE_EXECUTION_ORDER.indexOf(chunkDef.index);
   const stepNumber = positionInOrder >= 0 ? positionInOrder + 1 : chunkDef.index + 1;
-  const processedChunkIndexes = positionInOrder > 0
-    ? TMWE_EXECUTION_ORDER.slice(0, positionInOrder)
-    : [];
-  const remainingChunkIndexes = positionInOrder >= 0
-    ? TMWE_EXECUTION_ORDER.slice(positionInOrder + 1)
-    : [];
+  const processedChunkIndexes = positionInOrder > 0 ? TMWE_EXECUTION_ORDER.slice(0, positionInOrder) : [];
+  const remainingChunkIndexes = positionInOrder >= 0 ? TMWE_EXECUTION_ORDER.slice(positionInOrder + 1) : [];
   const fmtChunkRef = (i: number) => {
     const c = TMWE_CHUNKS[i];
     return c ? `#${c.index} ${c.name} [${c.targetTables.join(",")}]` : `#${i}`;
   };
-  const processedList = processedChunkIndexes.length > 0
-    ? processedChunkIndexes.map(fmtChunkRef).join("\n  - ")
-    : "(nessuno — questo è il primo chunk)";
-  const remainingList = remainingChunkIndexes.length > 0
-    ? remainingChunkIndexes.map(fmtChunkRef).join("\n  - ")
-    : "(nessuno — questo è l'ultimo chunk)";
+  const processedList =
+    processedChunkIndexes.length > 0
+      ? processedChunkIndexes.map(fmtChunkRef).join("\n  - ")
+      : "(nessuno — questo è il primo chunk)";
+  const remainingList =
+    remainingChunkIndexes.length > 0
+      ? remainingChunkIndexes.map(fmtChunkRef).join("\n  - ")
+      : "(nessuno — questo è l'ultimo chunk)";
 
   // Adaptive budget for gap section: avoid token explosion on large chunks.
   const gapsBudget = opts?.gapsBudgetChars ?? 12000;
   const allocPerGap = chunk.length > 0 ? Math.floor(gapsBudget / chunk.length) : gapsBudget;
   const contentMaxChars = Math.max(150, allocPerGap - 250);
-  const gapsText = chunk.map((g, i) => {
-    const matchedInfo = g.matched
-      ? `MATCH ESISTENTE (id=${g.matched.id ?? "n/d"}, tabella=${g.matched.table}, titolo="${g.matched.title}")`
-      : "MATCH ESISTENTE: nessuno (candidato a INSERT)";
-    return `--- GAP #${i + 1} ---
+  const gapsText = chunk
+    .map((g, i) => {
+      const matchedInfo = g.matched
+        ? `MATCH ESISTENTE (id=${g.matched.id ?? "n/d"}, tabella=${g.matched.table}, titolo="${g.matched.title}")`
+        : "MATCH ESISTENTE: nessuno (candidato a INSERT)";
+      return `--- GAP #${i + 1} ---
 BUCKET: ${g.bucket}
 RAGIONE: ${g.reason}
 
@@ -139,7 +148,8 @@ DESIDERATO:
 ${g.desired.content.slice(0, contentMaxChars)}
 
 ${matchedInfo}`;
-  }).join("\n\n");
+    })
+    .join("\n\n");
 
   return `=== CONTESTO RUN ===
 goal: ${goal || "(non specificato)"}
@@ -205,7 +215,10 @@ function extractJsonObject(raw: string): string | null {
   return null;
 }
 
-function parseExtended(raw: string, chunkIndex: number): {
+function parseExtended(
+  raw: string,
+  chunkIndex: number,
+): {
   facts: FactEntry[];
   conflicts: ConflictEntry[];
   crossRefs: CrossRefEntry[];
@@ -294,7 +307,9 @@ export async function runLibraryChunkAnalyzer(input: {
   const maxGaps = chunkDef.targetTables.includes("kb_entries") ? 10 : 20;
   const cap = actionable.slice(0, maxGaps);
   if (actionable.length > maxGaps) {
-    log.info(`[libraryAnalyzer] chunk #${chunkDef.index} cap=${maxGaps}, ${actionable.length - maxGaps} gap rinviati a retry`);
+    log.info(
+      `[libraryAnalyzer] chunk #${chunkDef.index} cap=${maxGaps}, ${actionable.length - maxGaps} gap rinviati a retry`,
+    );
   }
 
   // Inietta i .md vincolanti della KB Harmonizer per le tabelle target del
@@ -310,12 +325,8 @@ export async function runLibraryChunkAnalyzer(input: {
   // Build prompt at multiple compression levels for retry strategy.
   const buildAtLevel = (level: 1 | 2 | 3) => {
     const budget = level === 3 ? 6000 : 12000;
-    const userPrompt = buildLibraryUserPrompt(
-      collector, cap, chunkDef, session, goal, { gapsBudgetChars: budget },
-    );
-    const systemPrompt = level === 1 && kbContext
-      ? `${TMWE_INGESTION_BRIEFING}${kbContext}`
-      : TMWE_INGESTION_BRIEFING;
+    const userPrompt = buildLibraryUserPrompt(collector, cap, chunkDef, session, goal, { gapsBudgetChars: budget });
+    const systemPrompt = level === 1 && kbContext ? `${TMWE_INGESTION_BRIEFING}${kbContext}` : TMWE_INGESTION_BRIEFING;
     return { userPrompt, systemPrompt };
   };
 
@@ -346,7 +357,7 @@ export async function runLibraryChunkAnalyzer(input: {
   if (!raw || raw.trim().length === 0) {
     throw new Error(
       `Modello AI ha restituito risposta vuota per chunk #${chunkDef.index} (${chunkDef.name}). ` +
-      `Possibile token explosion o rate limit. Riprova il chunk o riduci il sorgente.`,
+        `Possibile token explosion o rate limit. Riprova il chunk o riduci il sorgente.`,
     );
   }
 
@@ -366,23 +377,21 @@ export async function runLibraryChunkAnalyzer(input: {
     }
   }
   if (outOfScope.length > 0) {
-    log.warn(
-      `[libraryAnalyzer] chunk #${chunkDef.index} ${outOfScope.length} proposte fuori scope scartate`,
-      {
-        scope: chunkDef.targetTables,
-        outOfScope: outOfScope.map((p) => ({ table: p.target?.table, label: p.block_label })),
-      },
-    );
+    log.warn(`[libraryAnalyzer] chunk #${chunkDef.index} ${outOfScope.length} proposte fuori scope scartate`, {
+      scope: chunkDef.targetTables,
+      outOfScope: outOfScope.map((p) => ({ table: p.target?.table, label: p.block_label })),
+    });
   }
 
   // Parser ha fallito su tutto → ERRORE (invece di marciare a 0 proposte).
   if (inScope.length === 0 && extended.facts.length === 0 && extended.conflicts.length === 0) {
-    const outScopeNote = outOfScope.length > 0
-      ? ` (${outOfScope.length} proposte erano fuori scope: ${outOfScope.map((p) => p.target?.table).join(", ")})`
-      : "";
+    const outScopeNote =
+      outOfScope.length > 0
+        ? ` (${outOfScope.length} proposte erano fuori scope: ${outOfScope.map((p) => p.target?.table).join(", ")})`
+        : "";
     throw new Error(
       `Parser non è riuscito a estrarre nulla in scope per chunk #${chunkDef.index}.${outScopeNote} ` +
-      `Preview: "${raw.slice(0, 200).replace(/\n/g, " ")}..."`,
+        `Preview: "${raw.slice(0, 200).replace(/\n/g, " ")}..."`,
     );
   }
 

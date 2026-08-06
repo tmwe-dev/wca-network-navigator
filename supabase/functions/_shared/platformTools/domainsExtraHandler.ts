@@ -14,7 +14,9 @@ import { supabase, escapeLike } from "./supabaseClient.ts";
 export async function handleListDeals(args: Record<string, unknown>): Promise<unknown> {
   let q = supabase
     .from("deals")
-    .select("id, title, stage, amount, currency, probability, partner_id, contact_id, expected_close_date, created_at, updated_at");
+    .select(
+      "id, title, stage, amount, currency, probability, partner_id, contact_id, expected_close_date, created_at, updated_at",
+    );
   if (args.stage) q = q.eq("stage", args.stage);
   if (Array.isArray(args.stages) && (args.stages as string[]).length) q = q.in("stage", args.stages as string[]);
   if (args.partner_id) q = q.eq("partner_id", args.partner_id);
@@ -51,7 +53,9 @@ export async function handleGetPipelineView(_args: Record<string, unknown>): Pro
 export async function handleListOutreachQueue(args: Record<string, unknown>): Promise<unknown> {
   let q = supabase
     .from("outreach_queue")
-    .select("id, channel, status, recipient_name, recipient_email, subject, partner_id, contact_id, attempts, last_error, created_at, processed_at, replied_at")
+    .select(
+      "id, channel, status, recipient_name, recipient_email, subject, partner_id, contact_id, attempts, last_error, created_at, processed_at, replied_at",
+    )
     .is("deleted_at", null);
   if (args.status) q = q.eq("status", args.status);
   if (Array.isArray(args.statuses) && (args.statuses as string[]).length) q = q.in("status", args.statuses as string[]);
@@ -73,7 +77,9 @@ export async function handleListOutreachQueue(args: Record<string, unknown>): Pr
 export async function handleListCalendarEvents(args: Record<string, unknown>): Promise<unknown> {
   let q = supabase
     .from("calendar_events")
-    .select("id, title, description, event_type, start_at, end_at, all_day, partner_id, contact_id, deal_id, location, status")
+    .select(
+      "id, title, description, event_type, start_at, end_at, all_day, partner_id, contact_id, deal_id, location, status",
+    )
     .is("deleted_at", null);
   if (args.event_type) q = q.eq("event_type", args.event_type);
   if (args.status) q = q.eq("status", args.status);
@@ -115,7 +121,9 @@ export async function handleListNotifications(args: Record<string, unknown>, use
 export async function handleListAgentTasksStatus(args: Record<string, unknown>): Promise<unknown> {
   let q = supabase
     .from("agent_tasks")
-    .select("id, agent_id, task_type, description, status, scheduled_at, started_at, completed_at, result_summary, created_at");
+    .select(
+      "id, agent_id, task_type, description, status, scheduled_at, started_at, completed_at, result_summary, created_at",
+    );
   if (args.status) q = q.eq("status", args.status);
   if (args.agent_id) q = q.eq("agent_id", args.agent_id);
   if (args.task_type) q = q.eq("task_type", args.task_type);
@@ -173,7 +181,9 @@ export async function handleGetLeadScoreBreakdown(args: Record<string, unknown>)
 // ─────────────────────────────────────────────────────────────────
 
 export async function handleCheckBlacklistEmail(args: Record<string, unknown>): Promise<unknown> {
-  const email = String(args.email || "").toLowerCase().trim();
+  const email = String(args.email || "")
+    .toLowerCase()
+    .trim();
   if (!email) return { error: "email richiesta" };
   const domain = email.split("@")[1] || "";
   const { data, error } = await supabase
@@ -231,11 +241,23 @@ export async function handleGetGlobalDashboard(_args: Record<string, unknown>): 
   const [partnersC, contactsC, manualC, dealsC, queueC, notifC, eventsC, bcaC, dealStages] = await Promise.all([
     supabase.from("partners").select("id", { count: "exact", head: true }),
     supabase.from("imported_contacts").select("id", { count: "exact", head: true }).is("deleted_at", null),
-    supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("origin", "manual").is("deleted_at", null),
+    supabase
+      .from("imported_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("origin", "manual")
+      .is("deleted_at", null),
     supabase.from("deals").select("id", { count: "exact", head: true }),
-    supabase.from("outreach_queue").select("id", { count: "exact", head: true }).eq("status", "pending").is("deleted_at", null),
+    supabase
+      .from("outreach_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .is("deleted_at", null),
     supabase.from("notifications").select("id", { count: "exact", head: true }).eq("read", false),
-    supabase.from("calendar_events").select("id", { count: "exact", head: true }).gte("start_at", new Date().toISOString()).is("deleted_at", null),
+    supabase
+      .from("calendar_events")
+      .select("id", { count: "exact", head: true })
+      .gte("start_at", new Date().toISOString())
+      .is("deleted_at", null),
     supabase.from("business_cards").select("id", { count: "exact", head: true }).is("deleted_at", null),
     supabase.from("deals").select("stage"),
   ]);

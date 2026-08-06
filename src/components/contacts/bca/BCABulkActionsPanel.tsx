@@ -24,9 +24,9 @@ interface Props {
 
 export function BCABulkActionsPanel({ cards, onClear, onRemove, onCockpit, onDeepSearch, onDelete }: Props) {
   const stats = useMemo(() => {
-    const companies = new Set(cards.map(c => c.company_name).filter(Boolean));
-    const matched = cards.filter(c => c.matched_partner_id).length;
-    const withEmail = cards.filter(c => c.email).length;
+    const companies = new Set(cards.map((c) => c.company_name).filter(Boolean));
+    const matched = cards.filter((c) => c.matched_partner_id).length;
+    const withEmail = cards.filter((c) => c.email).length;
     return { total: cards.length, companies: companies.size, matched, withEmail };
   }, [cards]);
 
@@ -37,7 +37,8 @@ export function BCABulkActionsPanel({ cards, onClear, onRemove, onCockpit, onDee
         <div className="space-y-1">
           <h2 className="text-sm font-bold text-foreground">{stats.total} biglietti selezionati</h2>
           <p className="text-[11px] text-muted-foreground">
-            {stats.companies} aziend{stats.companies === 1 ? "a" : "e"} · {stats.matched} matchati · {stats.withEmail} con email
+            {stats.companies} aziend{stats.companies === 1 ? "a" : "e"} · {stats.matched} matchati · {stats.withEmail}{" "}
+            con email
           </p>
         </div>
         <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1 text-muted-foreground" onClick={onClear}>
@@ -85,7 +86,7 @@ export function BCABulkActionsPanel({ cards, onClear, onRemove, onCockpit, onDee
       <div className="space-y-1.5">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Anteprima selezione</p>
         <div className="space-y-1 max-h-[40vh] overflow-y-auto rounded-lg border border-border/30 bg-muted/10 p-1.5">
-          {cards.map(c => (
+          {cards.map((c) => (
             <div key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/30 group">
               <Building2 className="w-3 h-3 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
@@ -93,7 +94,11 @@ export function BCABulkActionsPanel({ cards, onClear, onRemove, onCockpit, onDee
                 <div className="text-[10px] text-muted-foreground truncate">{c.company_name || "—"}</div>
               </div>
               {c.email && <Mail className="w-3 h-3 text-emerald-400/70 shrink-0" />}
-              {c.matched_partner_id && <Badge variant="outline" className="text-[8px] h-4 px-1 bg-primary/10 text-primary border-primary/30">WCA</Badge>}
+              {c.matched_partner_id && (
+                <Badge variant="outline" className="text-[8px] h-4 px-1 bg-primary/10 text-primary border-primary/30">
+                  WCA
+                </Badge>
+              )}
               <button
                 onClick={() => onRemove(c.id)}
                 className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
@@ -142,10 +147,12 @@ function ActionRow({ icon, label, sub, badge, disabled, danger, onClick }: Actio
         {sub && <div className="text-[10px] text-muted-foreground truncate">{sub}</div>}
       </div>
       {badge && (
-        <span className={
-          "text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 " +
-          (danger ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary")
-        }>
+        <span
+          className={
+            "text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 " +
+            (danger ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary")
+          }
+        >
           {badge}
         </span>
       )}

@@ -41,10 +41,7 @@ const EMAIL_VARIABLES = [
  * plain text (vedi KB "calligrafia"); qui ci limitiamo a wrappare i paragrafi.
  */
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function normalizeComposerHtml(raw: string): string {
@@ -126,14 +123,18 @@ export function useEmailComposerV2() {
       // Tutte le email — singole o batch — vengono accodate in
       // email_campaign_queue con status='pending' e partono SOLO dopo
       // autorizzazione umana dalla coda "In Uscita".
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       if (!userId) throw new Error("Sessione non valida");
       // email_campaign_queue.partner_id è NOT NULL: il composer richiede
       // che ogni destinatario sia agganciato a un partner.
       const missing = recipients.filter((r) => !r.partnerId);
       if (missing.length > 0) {
-        throw new Error(`Manca il partner per: ${missing.map((m) => m.email).join(", ")}. Aggiungi il destinatario dalla rubrica partner.`);
+        throw new Error(
+          `Manca il partner per: ${missing.map((m) => m.email).join(", ")}. Aggiungi il destinatario dalla rubrica partner.`,
+        );
       }
       const result = await createCampaignDraftQueue({
         userId,
@@ -171,14 +172,16 @@ export function useEmailComposerV2() {
         scope: "email",
         context: { source: "useEmailComposerV2", mode: "generate" },
         body: {
-          messages: [{
-            role: "user",
-            content: `Sei un assistente che genera SOLO il testo finale di un'email commerciale. NON aggiungere analisi, commenti, prossimi passi, sezioni markdown, intestazioni tipo "Bozza Email" o "Oggetto:". Restituisci ESCLUSIVAMENTE un oggetto JSON valido con questa struttura esatta, senza altro testo, senza backtick, senza markdown:
+          messages: [
+            {
+              role: "user",
+              content: `Sei un assistente che genera SOLO il testo finale di un'email commerciale. NON aggiungere analisi, commenti, prossimi passi, sezioni markdown, intestazioni tipo "Bozza Email" o "Oggetto:". Restituisci ESCLUSIVAMENTE un oggetto JSON valido con questa struttura esatta, senza altro testo, senza backtick, senza markdown:
 {"subject":"<oggetto breve max 70 caratteri>","body":"<corpo email pronto all'invio, in testo semplice con \\n per andare a capo, firma inclusa>"}
 
 Tipo email: "${emailType}". Tono: "${tone}". ${recipientInfo}. ${subject ? `Oggetto suggerito: ${subject}.` : ""} ${goal ? `Richiesta operatore: ${goal}` : ""}
 Contesto: outreach commerciale logistica WCA.`,
-          }],
+            },
+          ],
           scope: "extension",
           context: { source: "email_composer", use_kb: useKB },
         },
@@ -186,7 +189,10 @@ Contesto: outreach commerciale logistica WCA.`,
       const raw = (data?.response || data?.content || "").trim();
       if (!raw) return;
       // Strip eventuali fence ```json ... ```
-      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+      const cleaned = raw
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
       // Tenta parse JSON
       try {
         const match = cleaned.match(/\{[\s\S]*\}/);
@@ -213,7 +219,10 @@ Contesto: outreach commerciale logistica WCA.`,
   // Save draft
   const saveDraftMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
       await insertEmailDraft({
         subject,
@@ -228,12 +237,19 @@ Contesto: outreach commerciale logistica WCA.`,
   });
 
   return {
-    recipients, addRecipient, removeRecipient,
-    subject, setSubject,
-    body, setBody,
-    emailType, setEmailType,
-    tone, setTone,
-    useKB, setUseKB,
+    recipients,
+    addRecipient,
+    removeRecipient,
+    subject,
+    setSubject,
+    body,
+    setBody,
+    emailType,
+    setEmailType,
+    tone,
+    setTone,
+    useKB,
+    setUseKB,
     templates: templates.data ?? [],
     send: sendMutation,
     generate: generateMutation,

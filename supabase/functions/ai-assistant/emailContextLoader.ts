@@ -42,7 +42,7 @@ export async function loadRecentEmailContext(
             const date = new Date(msg.created_at as string).toLocaleDateString("it-IT");
             contextParts.push(
               `[${dir} ${date}] Subject: ${msg.subject || "(nessuno)"}\n` +
-              `${(String(msg.body_text || "")).slice(0, 300)}...`
+                `${String(msg.body_text || "").slice(0, 300)}...`,
             );
           }
         }
@@ -60,10 +60,10 @@ export async function loadRecentEmailContext(
           const c = classification as Record<string, unknown>;
           contextParts.push(
             `\n--- CLASSIFICAZIONE AI per ${email} ---\n` +
-            `Categoria: ${c.category} (${Math.round(((c.confidence as number) || 0) * 100)}%)\n` +
-            `Sentiment: ${c.sentiment} | Urgenza: ${c.urgency}\n` +
-            `Riepilogo: ${c.ai_summary || "n/d"}\n` +
-            `Azione suggerita: ${c.action_suggested || "nessuna"}`
+              `Categoria: ${c.category} (${Math.round(((c.confidence as number) || 0) * 100)}%)\n` +
+              `Sentiment: ${c.sentiment} | Urgenza: ${c.urgency}\n` +
+              `Riepilogo: ${c.ai_summary || "n/d"}\n` +
+              `Azione suggerita: ${c.action_suggested || "nessuna"}`,
           );
         }
       }
@@ -87,8 +87,16 @@ export async function loadRecentEmailContext(
           .limit(3);
 
         const allMatches = [
-          ...(contacts?.map((c: Record<string, unknown>) => ({ email: c.email as string | null, name: c.name as string, status: c.lead_status as string })) || []),
-          ...(partners?.map((p: Record<string, unknown>) => ({ email: p.email as string | null, name: p.company_name as string, status: p.lead_status as string })) || []),
+          ...(contacts?.map((c: Record<string, unknown>) => ({
+            email: c.email as string | null,
+            name: c.name as string,
+            status: c.lead_status as string,
+          })) || []),
+          ...(partners?.map((p: Record<string, unknown>) => ({
+            email: p.email as string | null,
+            name: p.company_name as string,
+            status: p.lead_status as string,
+          })) || []),
         ];
 
         for (const match of allMatches.slice(0, 2)) {
@@ -106,7 +114,7 @@ export async function loadRecentEmailContext(
             for (const msg of msgs as Record<string, unknown>[]) {
               const dir = msg.direction === "inbound" ? "RICEVUTA" : "INVIATA";
               contextParts.push(
-                `[${dir}] ${msg.subject || "(nessuno)"}: ${(String(msg.body_text || "")).slice(0, 200)}...`
+                `[${dir}] ${msg.subject || "(nessuno)"}: ${String(msg.body_text || "").slice(0, 200)}...`,
               );
             }
           }
@@ -128,7 +136,9 @@ export async function loadRecentEmailContext(
       if (unread?.length) {
         contextParts.push(`\n--- ULTIME ${unread.length} EMAIL NON LETTE ---`);
         for (const msg of unread as Record<string, unknown>[]) {
-          contextParts.push(`Da: ${msg.from_address} | Subject: ${msg.subject} | ${new Date(msg.created_at as string).toLocaleDateString("it-IT")}`);
+          contextParts.push(
+            `Da: ${msg.from_address} | Subject: ${msg.subject} | ${new Date(msg.created_at as string).toLocaleDateString("it-IT")}`,
+          );
         }
       }
     }

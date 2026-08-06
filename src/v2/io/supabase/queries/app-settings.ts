@@ -12,14 +12,19 @@ export interface AppSetting {
 
 export async function fetchAppSettings(): Promise<Result<AppSetting[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("app_settings")
-      .select("key, value");
+    const { data, error } = await supabase.from("app_settings").select("key, value");
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "app_settings",
-      }, "fetchAppSettings"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "app_settings",
+          },
+          "fetchAppSettings",
+        ),
+      );
     }
 
     return ok(data ?? []);
@@ -28,20 +33,22 @@ export async function fetchAppSettings(): Promise<Result<AppSetting[], AppError>
   }
 }
 
-export async function fetchAppSetting(
-  key: string,
-): Promise<Result<string | null, AppError>> {
+export async function fetchAppSetting(key: string): Promise<Result<string | null, AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", key)
-      .maybeSingle();
+    const { data, error } = await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "app_settings", key,
-      }, "fetchAppSetting"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "app_settings",
+            key,
+          },
+          "fetchAppSetting",
+        ),
+      );
     }
 
     return ok(data?.value ?? null);

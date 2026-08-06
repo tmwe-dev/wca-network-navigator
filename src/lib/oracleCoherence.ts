@@ -3,21 +3,42 @@
  */
 
 const FOLLOWUP_KEYWORDS = [
-  "follow", "follow-up", "follow up", "ricordare", "ricordo", "ricord",
-  "abbiamo parlato", "abbiamo già", "abbiamo gia", "ti avevo scritto",
-  "ti scrivo di nuovo", "ripren", "riprendo", "ripresa", "come da",
-  "tornare", "rispondo a", "risposta a", "in seguito", "dopo la nostra",
-  "dopo il nostro", "come anticipato", "come anticipava",
+  "follow",
+  "follow-up",
+  "follow up",
+  "ricordare",
+  "ricordo",
+  "ricord",
+  "abbiamo parlato",
+  "abbiamo già",
+  "abbiamo gia",
+  "ti avevo scritto",
+  "ti scrivo di nuovo",
+  "ripren",
+  "riprendo",
+  "ripresa",
+  "come da",
+  "tornare",
+  "rispondo a",
+  "risposta a",
+  "in seguito",
+  "dopo la nostra",
+  "dopo il nostro",
+  "come anticipato",
+  "come anticipava",
 ];
 
 const FIRST_CONTACT_KEYWORDS = [
-  "presentar", "mi presento", "ci presentiamo", "primo contatto",
-  "prima volta", "non ci conosciamo", "vi scrivo per la prima",
+  "presentar",
+  "mi presento",
+  "ci presentiamo",
+  "primo contatto",
+  "prima volta",
+  "non ci conosciamo",
+  "vi scrivo per la prima",
 ];
 
-const PROPOSAL_KEYWORDS = [
-  "proposta", "offerta", "preventivo", "quotazione", "tariff",
-];
+const PROPOSAL_KEYWORDS = ["proposta", "offerta", "preventivo", "quotazione", "tariff"];
 
 export interface CoherenceCheck {
   ok: boolean;
@@ -25,10 +46,7 @@ export interface CoherenceCheck {
   suggestion: string | null;
 }
 
-export function checkOracleCoherence(
-  emailTypeId: string | null,
-  customGoal: string,
-): CoherenceCheck {
+export function checkOracleCoherence(emailTypeId: string | null, customGoal: string): CoherenceCheck {
   const goal = (customGoal || "").toLowerCase();
   if (!emailTypeId || !goal.trim()) return { ok: true, warning: null, suggestion: null };
 

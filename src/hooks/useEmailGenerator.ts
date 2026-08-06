@@ -88,7 +88,9 @@ export function useEmailGenerator() {
       });
 
       if (updateError) {
-        log.error("save email to activity failed", { message: updateError instanceof Error ? updateError.message : String(updateError) });
+        log.error("save email to activity failed", {
+          message: updateError instanceof Error ? updateError.message : String(updateError),
+        });
         toast({
           title: "Email generata ma non salvata",
           description: updateError.message,
@@ -98,7 +100,11 @@ export function useEmailGenerator() {
 
       return result;
     } catch (err: unknown) {
-      toast({ title: "Errore generazione", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+      toast({
+        title: "Errore generazione",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
       return null;
     } finally {
       setIsGenerating(false);

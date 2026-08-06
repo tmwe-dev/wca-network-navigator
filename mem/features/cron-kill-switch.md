@@ -3,6 +3,7 @@ name: Cron Kill-Switch Globale
 description: system_flags.cron_paused + _shared/cronGate.ts + StatusPill toggle "Trasmissioni AI"
 type: feature
 ---
+
 - Tabella `system_flags` (key/value/updated_at/updated_by), RLS read=authenticated, write=admin.
 - Flag iniziale: `cron_paused` (bool, default false).
 - Helper edge: `supabase/functions/_shared/cronGate.ts` → `cronPausedResponse(admin, fn)` ritorna 503 + log strutturato `cron_paused_skip` se flag attiva.

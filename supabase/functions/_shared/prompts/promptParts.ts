@@ -15,15 +15,7 @@
  */
 
 /** Pattern testuali che identificano una categoria "holding pattern". */
-const HOLDING_PATTERN_KEYWORDS = [
-  "attesa",
-  "hold",
-  "pausa",
-  "pending",
-  "paused",
-  "on_hold",
-  "holding",
-] as const;
+const HOLDING_PATTERN_KEYWORDS = ["attesa", "hold", "pausa", "pending", "paused", "on_hold", "holding"] as const;
 
 /** Vero se la categoria (lowercased) contiene un segnale di holding pattern. */
 export function isHoldingPatternCategory(category: string | null | undefined): boolean {
@@ -85,7 +77,8 @@ export interface CommercialStateInput {
 
 const STATE_TO_TONE: Record<string, string> = {
   new: "PRIMO CONTATTO — Freddo-professionale. Presentati brevemente, vai al punto. Nessuna familiarità.",
-  first_touch_sent: "FOLLOW-UP INIZIALE — Professionale con riferimento al primo messaggio. Non ripresentarti. Aggiungi valore.",
+  first_touch_sent:
+    "FOLLOW-UP INIZIALE — Professionale con riferimento al primo messaggio. Non ripresentarti. Aggiungi valore.",
   holding: "RIATTIVAZIONE — Cordiale, richiamo al contatto precedente. Nuova ragione di contatto, valore concreto.",
   engaged: "DIALOGO ATTIVO — Collega amichevole, riferimenti specifici. Puoi essere diretto e propositivo.",
   qualified: "QUALIFICATO — Partner diretto, proposta di valore. Focus su next steps concreti.",
@@ -99,8 +92,10 @@ function pickToneByWarmth(touchCount: number, warmth: number, isHolding: boolean
     return "CIRCUITO DI ATTESA: Tono cordiale ma non insistente. Mantieni punto di contatto aperto. Suggerisci riattivazione con pretesto leggero. NON CTA aggressivi.";
   }
   if (touchCount === 0) return "PRIMO CONTATTO: Tono freddo-professionale. Breve. CTA basso impegno. NON vendere.";
-  if (touchCount <= 3 && warmth < 50) return "FOLLOW-UP INIZIALE: Tono cordiale. Riferirsi al contatto precedente. Aggiungere valore. NON ripetere presentazione.";
-  if (touchCount > 3 && warmth < 50) return "NURTURING: Tono amichevole. Focus su insight di valore. Mostrare competenza.";
+  if (touchCount <= 3 && warmth < 50)
+    return "FOLLOW-UP INIZIALE: Tono cordiale. Riferirsi al contatto precedente. Aggiungere valore. NON ripetere presentazione.";
+  if (touchCount > 3 && warmth < 50)
+    return "NURTURING: Tono amichevole. Focus su insight di valore. Mostrare competenza.";
   return "RELAZIONE CALDA: Tono da collega/amico professionale. Personalizzazione alta. Proposte concrete.";
 }
 
@@ -110,9 +105,7 @@ function pickToneByWarmth(touchCount: number, warmth: number, isHolding: boolean
  */
 export function buildCommercialStateBlock(input: CommercialStateInput): string {
   const hasAnyInfo =
-    input.commercialState !== undefined ||
-    input.touchCount !== undefined ||
-    Boolean(input.addressCategory);
+    input.commercialState !== undefined || input.touchCount !== undefined || Boolean(input.addressCategory);
   if (!hasAnyInfo) return "";
 
   const tc = input.touchCount ?? 0;

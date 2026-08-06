@@ -14,15 +14,13 @@
  * spam, esporta, prompt regola custom) sono raccolte nella popup
  * `SenderActionsDialog` aperta dal bottone "Azioni & regole".
  */
-import { memo, useState, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
-import {
-  GripVertical, Sparkles, Check, Clock, ArrowRight, Wand2, Loader2,
-} from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { memo, useState, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { GripVertical, Sparkles, Check, Clock, ArrowRight, Wand2, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,11 +28,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
-import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
-import { SenderActionsDialog } from './SenderActionsDialog';
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { getFlagFromDomain, getDomainFaviconUrl } from "@/lib/domainUtils";
+import type { SenderAnalysis, EmailSenderGroup } from "@/types/email-management";
+import { SenderActionsDialog } from "./SenderActionsDialog";
 
 interface SenderCardProps {
   sender: SenderAnalysis;
@@ -90,10 +88,7 @@ function SenderCardImpl({
   const faviconUrl = getDomainFaviconUrl(sender.domain);
 
   const initials = (() => {
-    const parts = (sender.companyName || sender.email || "?")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
+    const parts = (sender.companyName || sender.email || "?").trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return "?";
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
@@ -102,8 +97,8 @@ function SenderCardImpl({
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     setIsDragging(true);
     onDragStart?.(sender);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', JSON.stringify(sender));
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", JSON.stringify(sender));
   };
 
   const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
@@ -155,7 +150,7 @@ function SenderCardImpl({
               : sender.emailCount > 50
                 ? "border-l-primary"
                 : "border-l-primary/40",
-            isDragging && "cursor-grabbing"
+            isDragging && "cursor-grabbing",
           )}
         >
           <CardContent className="p-3 flex flex-col gap-2">
@@ -194,7 +189,9 @@ function SenderCardImpl({
                       {flag}
                     </span>
                   )}
-                  <span className="truncate" title={sender.email}>{sender.email}</span>
+                  <span className="truncate" title={sender.email}>
+                    {sender.email}
+                  </span>
                 </div>
               </div>
             </div>
@@ -207,7 +204,9 @@ function SenderCardImpl({
                   Ultima:{" "}
                   <span className="text-foreground font-medium">
                     {new Date(sender.lastSeen).toLocaleDateString("it-IT", {
-                      day: "2-digit", month: "short", year: "2-digit",
+                      day: "2-digit",
+                      month: "short",
+                      year: "2-digit",
                     })}
                   </span>
                 </span>
@@ -238,11 +237,7 @@ function SenderCardImpl({
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="max-h-72 overflow-y-auto w-64"
-                    onClick={stop}
-                  >
+                  <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto w-64" onClick={stop}>
                     <DropdownMenuLabel className="text-[10px] uppercase tracking-wide">
                       Assegna a un gruppo
                     </DropdownMenuLabel>
@@ -250,19 +245,13 @@ function SenderCardImpl({
                       <>
                         <DropdownMenuItem
                           onSelect={() => {
-                            runAction("ai-accept", () =>
-                              onAcceptAiSuggestion(sender, sender.aiSuggestion!.group_name),
-                            );
+                            runAction("ai-accept", () => onAcceptAiSuggestion(sender, sender.aiSuggestion!.group_name));
                           }}
                           className="gap-2"
                         >
                           <Sparkles className="h-3.5 w-3.5 text-primary" />
-                          <span className="font-semibold truncate">
-                            {sender.aiSuggestion.group_name}
-                          </span>
-                          <span className="ml-auto text-[10px] text-muted-foreground">
-                            suggerito
-                          </span>
+                          <span className="font-semibold truncate">{sender.aiSuggestion.group_name}</span>
+                          <span className="ml-auto text-[10px] text-muted-foreground">suggerito</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                       </>
@@ -272,9 +261,7 @@ function SenderCardImpl({
                     ) : (
                       [...groups]
                         .filter((g) => g.nome_gruppo !== sender.aiSuggestion!.group_name)
-                        .sort((a, b) =>
-                          a.nome_gruppo.localeCompare(b.nome_gruppo, "it", { sensitivity: "base" }),
-                        )
+                        .sort((a, b) => a.nome_gruppo.localeCompare(b.nome_gruppo, "it", { sensitivity: "base" }))
                         .map((g) => (
                           <DropdownMenuItem
                             key={g.id}
@@ -306,9 +293,7 @@ function SenderCardImpl({
                         className="h-auto w-8 flex-shrink-0"
                         onClick={(e) => {
                           stop(e);
-                          runAction("ai-accept", () =>
-                            onAcceptAiSuggestion(sender, sender.aiSuggestion!.group_name),
-                          );
+                          runAction("ai-accept", () => onAcceptAiSuggestion(sender, sender.aiSuggestion!.group_name));
                         }}
                         disabled={busy != null}
                         draggable={false}
@@ -342,9 +327,7 @@ function SenderCardImpl({
                 title={sender.currentGroup?.nome_gruppo || "Classificato"}
               >
                 <Check className="h-3 w-3" />
-                <span className="truncate max-w-[180px]">
-                  {sender.currentGroup?.nome_gruppo || "Classificato"}
-                </span>
+                <span className="truncate max-w-[180px]">{sender.currentGroup?.nome_gruppo || "Classificato"}</span>
               </Badge>
             )}
 
@@ -367,12 +350,8 @@ function SenderCardImpl({
               </Tooltip>
 
               <div className="flex items-baseline gap-1 flex-1 min-w-0">
-                <span className="text-base font-bold text-primary leading-none">
-                  {sender.emailCount}
-                </span>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  email
-                </span>
+                <span className="text-base font-bold text-primary leading-none">{sender.emailCount}</span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">email</span>
               </div>
 
               <Tooltip>
@@ -381,7 +360,10 @@ function SenderCardImpl({
                     size="sm"
                     variant="default"
                     className="h-7 px-2.5 gap-1"
-                    onClick={(e) => { stop(e); setActionsOpen(true); }}
+                    onClick={(e) => {
+                      stop(e);
+                      setActionsOpen(true);
+                    }}
                     draggable={false}
                   >
                     <Wand2 className="h-3.5 w-3.5" />
@@ -397,7 +379,10 @@ function SenderCardImpl({
                     size="sm"
                     variant="outline"
                     className="h-7 px-2 gap-1 border-primary/40 text-primary hover:bg-primary/10"
-                    onClick={(e) => { stop(e); onAnalyzeAI?.(sender); }}
+                    onClick={(e) => {
+                      stop(e);
+                      onAnalyzeAI?.(sender);
+                    }}
                     draggable={false}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
@@ -429,20 +414,23 @@ function SenderCardImpl({
  * Memoized export: la lista mittenti rendea ~1 200 card; senza memo ogni
  * cambio di stato del parent (selezione, hover, drag) ne rerenderizza tutte.
  */
-export const SenderCard = memo(SenderCardImpl, (prev, next) =>
-  prev.sender === next.sender
-  && prev.isSelected === next.isSelected
-  && prev.isFocused === next.isFocused
-  && prev.onDragStart === next.onDragStart
-  && prev.onDragEnd === next.onDragEnd
-  && prev.onToggleSelect === next.onToggleSelect
-  && prev.onAiChipClick === next.onAiChipClick
-  && prev.onFocusRequest === next.onFocusRequest
-  && prev.onOpenRules === next.onOpenRules
-  && prev.onMarkRead === next.onMarkRead
-  && prev.onDelete === next.onDelete
-  && prev.onExport === next.onExport
-  && prev.onBlock === next.onBlock
-  && prev.onAnalyzeAI === next.onAnalyzeAI
-  && prev.onAcceptAiSuggestion === next.onAcceptAiSuggestion
-  && prev.onActionComplete === next.onActionComplete);
+export const SenderCard = memo(
+  SenderCardImpl,
+  (prev, next) =>
+    prev.sender === next.sender &&
+    prev.isSelected === next.isSelected &&
+    prev.isFocused === next.isFocused &&
+    prev.onDragStart === next.onDragStart &&
+    prev.onDragEnd === next.onDragEnd &&
+    prev.onToggleSelect === next.onToggleSelect &&
+    prev.onAiChipClick === next.onAiChipClick &&
+    prev.onFocusRequest === next.onFocusRequest &&
+    prev.onOpenRules === next.onOpenRules &&
+    prev.onMarkRead === next.onMarkRead &&
+    prev.onDelete === next.onDelete &&
+    prev.onExport === next.onExport &&
+    prev.onBlock === next.onBlock &&
+    prev.onAnalyzeAI === next.onAnalyzeAI &&
+    prev.onAcceptAiSuggestion === next.onAcceptAiSuggestion &&
+    prev.onActionComplete === next.onActionComplete,
+);

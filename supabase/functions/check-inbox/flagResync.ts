@@ -30,9 +30,7 @@ interface UnreadRow {
   imap_uid: number;
 }
 
-function parseSeenFromFetchResponse(
-  lines: (string | Uint8Array)[],
-): Set<number> {
+function parseSeenFromFetchResponse(lines: (string | Uint8Array)[]): Set<number> {
   const seenUids = new Set<number>();
   for (const line of lines) {
     if (typeof line !== "string") continue;
@@ -54,8 +52,7 @@ export async function resyncUnreadFlags(
   userId: string,
   mailboxId: string | null = null,
 ): Promise<{ checked: number; markedRead: number }> {
-  const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000)
-    .toISOString();
+  const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   let q = supabase
     .from("channel_messages")
@@ -67,9 +64,7 @@ export async function resyncUnreadFlags(
     .not("imap_uid", "is", null)
     .gte("created_at", since);
   q = mailboxId ? q.eq("mailbox_id", mailboxId) : q.is("mailbox_id", null);
-  const { data, error } = await q
-    .order("imap_uid", { ascending: false })
-    .limit(MAX_UIDS);
+  const { data, error } = await q.order("imap_uid", { ascending: false }).limit(MAX_UIDS);
 
   if (error || !data || data.length === 0) {
     return { checked: 0, markedRead: 0 };
@@ -109,11 +104,7 @@ export async function resyncUnreadFlags(
   for (let i = 0; i < seenIds.length; i += CHUNK_SIZE) {
     const chunk = seenIds.slice(i, i + CHUNK_SIZE);
     try {
-      await supabase
-        .from("channel_messages")
-        .update({ read_at: nowIso })
-        .in("id", chunk)
-        .is("read_at", null);
+      await supabase.from("channel_messages").update({ read_at: nowIso }).in("id", chunk).is("read_at", null);
     } catch {
       continue;
     }

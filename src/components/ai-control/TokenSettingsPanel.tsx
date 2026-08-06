@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("TokenSettingsPanel");
 interface TokenSetting {
@@ -31,7 +30,7 @@ export function TokenSettingsPanel() {
   // Load user
   useEffect(() => {
     const loadUser = async () => {
-      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+      const { data } = await supabase.auth.getSession().then((r) => ({ data: { user: r.data.session?.user ?? null } }));
       if (data?.user?.id) {
         setUserId(data.user.id);
       }
@@ -150,9 +149,7 @@ export function TokenSettingsPanel() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-semibold text-foreground mb-4">
-          Configurazione Token Management
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground mb-4">Configurazione Token Management</h3>
         <p className="text-xs text-muted-foreground mb-6">
           Configura i limiti di token e le impostazioni di rate limiting per le funzioni AI
         </p>
@@ -166,9 +163,7 @@ export function TokenSettingsPanel() {
                 <Label htmlFor={setting.key} className="text-xs font-semibold">
                   {setting.label}
                 </Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {setting.description}
-                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{setting.description}</p>
               </div>
               <Input
                 id={setting.key}
@@ -194,11 +189,7 @@ export function TokenSettingsPanel() {
         >
           Annulla
         </Button>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={saveMutation.isPending}
-        >
+        <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? "Salvataggio..." : "Salva impostazioni"}
         </Button>
       </div>

@@ -14,13 +14,30 @@ export function WorkspaceFiltersSection({ toggleWs }: WorkspaceFiltersSectionPro
   return (
     <>
       <FilterSection icon={Search} label="Cerca">
-        <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        <Input
+          value={g.filters.search}
+          onChange={(e) => g.setSearch(e.target.value)}
+          placeholder="Cerca..."
+          className="h-8 text-xs bg-muted/30 border-border/40"
+        />
       </FilterSection>
       <FilterSection icon={Mail} label="Stato email">
-        <ChipGroup>{EMAIL_GEN.map(o => <Chip key={o.key} active={g.filters.emailGenFilter === o.key} onClick={() => g.setEmailGenFilter(o.key)}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>
+          {EMAIL_GEN.map((o) => (
+            <Chip key={o.key} active={g.filters.emailGenFilter === o.key} onClick={() => g.setEmailGenFilter(o.key)}>
+              {o.label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
       <FilterSection icon={Users} label="Contatti">
-        <ChipGroup>{WS_CHIPS.map(o => <Chip key={o.key} active={g.filters.workspaceFilters.has(o.key)} onClick={() => toggleWs(o.key)}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>
+          {WS_CHIPS.map((o) => (
+            <Chip key={o.key} active={g.filters.workspaceFilters.has(o.key)} onClick={() => toggleWs(o.key)}>
+              {o.label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
     </>
   );

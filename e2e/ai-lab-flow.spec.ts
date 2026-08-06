@@ -11,8 +11,7 @@ test.describe("AI Lab Flow", () => {
   });
 
   test("AI Lab shows tabs or control panel", async ({ page }) => {
-    const content = page.locator("[role='tablist'], [role='tab']")
-      .or(page.getByText(/AI|lab|test|scenario|prompt/i));
+    const content = page.locator("[role='tablist'], [role='tab']").or(page.getByText(/AI|lab|test|scenario|prompt/i));
     await expect(content.first()).toBeVisible({ timeout: 15000 });
   });
 
@@ -29,11 +28,15 @@ test.describe("AI Lab Flow", () => {
 
   test("AI Lab no critical console errors", async ({ page }) => {
     const errors: string[] = [];
-    page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
     await page.goto("/v2/ai-lab");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
-    const critical = errors.filter((e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"));
+    const critical = errors.filter(
+      (e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"),
+    );
     expect(critical.length).toBeLessThan(5);
   });
 });

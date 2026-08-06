@@ -123,11 +123,7 @@ export async function processDecisionAction(
   // ── PREPARE: accoda come pending ──
   if (autonomy === "prepare") {
     queueEntry.status = "pending";
-    const { data, error } = await supabase
-      .from("ai_pending_actions")
-      .insert(queueEntry)
-      .select("id")
-      .single();
+    const { data, error } = await supabase.from("ai_pending_actions").insert(queueEntry).select("id").single();
 
     if (error) {
       console.error("[approval-flow] Queue error:", error);
@@ -156,11 +152,7 @@ export async function processDecisionAction(
     queueEntry.status = "approved";
     queueEntry.execute_after = executeAfter.toISOString();
 
-    const { data, error } = await supabase
-      .from("ai_pending_actions")
-      .insert(queueEntry)
-      .select("id")
-      .single();
+    const { data, error } = await supabase.from("ai_pending_actions").insert(queueEntry).select("id").single();
 
     if (error) {
       console.error("[approval-flow] Queue error:", error);
@@ -187,11 +179,7 @@ export async function processDecisionAction(
     queueEntry.status = "approved";
     queueEntry.execute_after = now.toISOString(); // eseguibile subito
 
-    const { data, error } = await supabase
-      .from("ai_pending_actions")
-      .insert(queueEntry)
-      .select("id")
-      .single();
+    const { data, error } = await supabase.from("ai_pending_actions").insert(queueEntry).select("id").single();
 
     if (error) {
       console.error("[approval-flow] Queue error:", error);
@@ -289,9 +277,7 @@ export async function processAllDecisionActions(
  * Recupera azioni in scadenza (pending da più di TTL) e le marca come expired.
  * Da chiamare periodicamente (cron / edge function).
  */
-export async function expireStaleActions(
-  supabase: SupabaseClient,
-): Promise<{ expired_count: number }> {
+export async function expireStaleActions(supabase: SupabaseClient): Promise<{ expired_count: number }> {
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -337,13 +323,45 @@ export async function getApprovalDashboard(
     { count: rejectedToday },
     { count: undoneToday },
   ] = await Promise.all([
-    supabase.from("ai_pending_actions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "pending"),
-    supabase.from("ai_pending_actions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "approved"),
-    supabase.from("ai_pending_actions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "executing"),
-    supabase.from("ai_pending_actions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "completed").gte("created_at", todayISO),
-    supabase.from("ai_pending_actions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "failed").gte("created_at", todayISO),
-    supabase.from("ai_pending_actions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "rejected").gte("created_at", todayISO),
-    supabase.from("ai_pending_actions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "undone").gte("created_at", todayISO),
+    supabase
+      .from("ai_pending_actions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "pending"),
+    supabase
+      .from("ai_pending_actions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "approved"),
+    supabase
+      .from("ai_pending_actions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "executing"),
+    supabase
+      .from("ai_pending_actions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .gte("created_at", todayISO),
+    supabase
+      .from("ai_pending_actions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "failed")
+      .gte("created_at", todayISO),
+    supabase
+      .from("ai_pending_actions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "rejected")
+      .gte("created_at", todayISO),
+    supabase
+      .from("ai_pending_actions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "undone")
+      .gte("created_at", todayISO),
   ]);
 
   return {

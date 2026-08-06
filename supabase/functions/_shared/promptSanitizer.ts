@@ -59,7 +59,8 @@ export const INJECTION_PATTERNS: InjectionPattern[] = [
   // --- Override istruzioni / jailbreak classici ---
   {
     id: "ignore_previous",
-    regex: /\b(ignore|disregard|forget|override)\b[^\n]{0,40}\b(previous|above|prior|all)\b[^\n]{0,40}\b(instructions?|prompts?|rules?|directives?)\b/i,
+    regex:
+      /\b(ignore|disregard|forget|override)\b[^\n]{0,40}\b(previous|above|prior|all)\b[^\n]{0,40}\b(instructions?|prompts?|rules?|directives?)\b/i,
     severity: "high",
     description: "Tentativo di sovrascrivere istruzioni precedenti",
   },
@@ -79,13 +80,15 @@ export const INJECTION_PATTERNS: InjectionPattern[] = [
   // --- Esfiltrazione system prompt ---
   {
     id: "reveal_system_prompt",
-    regex: /\b(reveal|show|print|repeat|output|display)\b[^\n]{0,30}\b(system\s+prompt|initial\s+prompt|instructions|rules|hidden\s+instructions)\b/i,
+    regex:
+      /\b(reveal|show|print|repeat|output|display)\b[^\n]{0,30}\b(system\s+prompt|initial\s+prompt|instructions|rules|hidden\s+instructions)\b/i,
     severity: "high",
     description: "Tentativo di esfiltrare il system prompt",
   },
   {
     id: "rivela_system_it",
-    regex: /\b(rivela|mostra|stampa|ripeti)\b[^\n]{0,30}\b(prompt\s+di\s+sistema|istruzioni\s+iniziali|regole\s+nascoste)\b/i,
+    regex:
+      /\b(rivela|mostra|stampa|ripeti)\b[^\n]{0,30}\b(prompt\s+di\s+sistema|istruzioni\s+iniziali|regole\s+nascoste)\b/i,
     severity: "high",
     description: "Esfiltrazione system prompt in italiano",
   },
@@ -93,7 +96,8 @@ export const INJECTION_PATTERNS: InjectionPattern[] = [
   // --- Role-play / persona swap ---
   {
     id: "act_as_dan",
-    regex: /\b(you\s+are\s+now|act\s+as|pretend\s+to\s+be|roleplay\s+as)\b[^\n]{0,80}\b(DAN|jailbreak|unrestricted|no\s+rules|developer\s+mode|admin)\b/i,
+    regex:
+      /\b(you\s+are\s+now|act\s+as|pretend\s+to\s+be|roleplay\s+as)\b[^\n]{0,80}\b(DAN|jailbreak|unrestricted|no\s+rules|developer\s+mode|admin)\b/i,
     severity: "high",
     description: "Jailbreak via persona swap (DAN, dev-mode, ecc.)",
   },
@@ -101,7 +105,8 @@ export const INJECTION_PATTERNS: InjectionPattern[] = [
   // --- Tool / function-call spoofing ---
   {
     id: "fake_tool_call",
-    regex: /\b(call|invoke|execute|run)\b[^\n]{0,30}\b(tool|function|action)\b[^\n]{0,30}\b(delete|drop|admin|sudo|grant)\b/i,
+    regex:
+      /\b(call|invoke|execute|run)\b[^\n]{0,30}\b(tool|function|action)\b[^\n]{0,30}\b(delete|drop|admin|sudo|grant)\b/i,
     severity: "high",
     description: "Spoofing di chiamata tool con azioni privilegiate",
   },
@@ -121,7 +126,8 @@ export const INJECTION_PATTERNS: InjectionPattern[] = [
   // --- Esfiltrazione segreti / privilege escalation ---
   {
     id: "exfil_secrets",
-    regex: /\b(send|email|post|upload|exfiltrate)\b[^\n]{0,60}\b(api\s*key|password|secret|token|credentials|env(\s+var)?)\b/i,
+    regex:
+      /\b(send|email|post|upload|exfiltrate)\b[^\n]{0,60}\b(api\s*key|password|secret|token|credentials|env(\s+var)?)\b/i,
     severity: "high",
     description: "Tentativo di esfiltrazione segreti",
   },
@@ -217,10 +223,7 @@ export function detectInjection(text: string): SanitizeFinding[] {
  *  - Neutralizza i marker di ruolo (`<|im_start|>`, `system:`, ecc.)
  *  - Neutralizza eventuali fence sentinel che il caller userà per il wrap
  */
-export function sanitizeForPrompt(
-  input: string | null | undefined,
-  options: SanitizeOptions,
-): SanitizeResult {
+export function sanitizeForPrompt(input: string | null | undefined, options: SanitizeOptions): SanitizeResult {
   const source = options.source;
   const policy = options.policy ?? "redact";
   const maxChars = Math.max(200, Math.min(options.maxChars ?? DEFAULT_MAX_CHARS, 32_000));
@@ -246,8 +249,10 @@ export function sanitizeForPrompt(
   // 3) Neutralizza eventuali marker di fence sentinel (evita confusione col wrap)
   if (text.includes(FENCE_OPEN_PREFIX) || text.includes(FENCE_SUFFIX)) {
     text = text
-      .split(FENCE_OPEN_PREFIX).join("<<<U­NTRUSTED") // soft-hyphen invisibile
-      .split(FENCE_SUFFIX).join(">­>>");
+      .split(FENCE_OPEN_PREFIX)
+      .join("<<<U­NTRUSTED") // soft-hyphen invisibile
+      .split(FENCE_SUFFIX)
+      .join(">­>>");
     modified = true;
   }
 
@@ -290,11 +295,7 @@ export function sanitizeForPrompt(
  * Il pattern segue la raccomandazione OWASP LLM01: il modello DEVE trattare
  * il contenuto fra i fence come DATI, mai come ISTRUZIONI.
  */
-export function wrapUntrusted(
-  sanitizedText: string,
-  label: string,
-  source: UntrustedSource = "unknown",
-): string {
+export function wrapUntrusted(sanitizedText: string, label: string, source: UntrustedSource = "unknown"): string {
   const safeLabel = label.replace(/[^a-zA-Z0-9 _-]/g, "").slice(0, 60) || "UNTRUSTED";
   const open = `${FENCE_OPEN_PREFIX}:${safeLabel}:${source.toUpperCase()}${FENCE_SUFFIX}`;
   const close = `<<<END_${FENCE_CLOSE_PREFIX}:${safeLabel}${FENCE_SUFFIX}`;
@@ -320,7 +321,11 @@ export function safeWrap(
   const result = sanitizeForPrompt(rawInput, options);
   if (result.blocked) {
     return {
-      block: wrapUntrusted(`[BLOCKED: contenuto rifiutato — pattern: ${result.findings.map((f) => f.patternId).join(", ")}]`, label, options.source),
+      block: wrapUntrusted(
+        `[BLOCKED: contenuto rifiutato — pattern: ${result.findings.map((f) => f.patternId).join(", ")}]`,
+        label,
+        options.source,
+      ),
       result,
     };
   }

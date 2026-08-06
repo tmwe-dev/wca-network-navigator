@@ -39,7 +39,10 @@ function formatRelativeTime(iso: string | null): string {
   return `${Math.floor(days / 365)} anni fa`;
 }
 
-function deepSearchBadge(deepSearchAt: string | undefined | null): { label: string; tone: "fresh" | "stale" | "missing" } {
+function deepSearchBadge(deepSearchAt: string | undefined | null): {
+  label: string;
+  tone: "fresh" | "stale" | "missing";
+} {
   if (!deepSearchAt) return { label: "no Deep Search", tone: "missing" };
   const days = Math.floor((Date.now() - new Date(deepSearchAt).getTime()) / (1000 * 60 * 60 * 24));
   if (days <= 30) return { label: `Deep Search ${days}g`, tone: "fresh" };
@@ -47,7 +50,10 @@ function deepSearchBadge(deepSearchAt: string | undefined | null): { label: stri
 }
 
 export function RecipientSnapshotHeader({
-  partnerId, recipientCount, fallbackCompany, fallbackCountry,
+  partnerId,
+  recipientCount,
+  fallbackCompany,
+  fallbackCountry,
 }: RecipientSnapshotHeaderProps): React.ReactElement | null {
   const { data, isLoading } = useQuery({
     queryKey: ["composer-snapshot", partnerId],
@@ -67,7 +73,8 @@ export function RecipientSnapshotHeader({
       <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-md bg-muted/30 border border-border/30 text-xs">
         <Sparkles className="w-3 h-3 text-primary" />
         <span className="text-muted-foreground">
-          Modalità bulk: <strong className="text-foreground">{recipientCount}</strong> destinatari — snapshot disabilitato
+          Modalità bulk: <strong className="text-foreground">{recipientCount}</strong> destinatari — snapshot
+          disabilitato
         </span>
       </div>
     );

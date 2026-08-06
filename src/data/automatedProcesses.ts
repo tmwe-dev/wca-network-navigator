@@ -11,11 +11,7 @@ export interface GlobalSettingRow {
 
 /** app_settings globali (user_id IS NULL) per un set di chiavi. */
 export async function findGlobalSettings(keys: string[]): Promise<GlobalSettingRow[]> {
-  const { data } = await supabase
-    .from("app_settings")
-    .select("key, value")
-    .is("user_id", null)
-    .in("key", keys);
+  const { data } = await supabase.from("app_settings").select("key, value").is("user_id", null).in("key", keys);
   return data ?? [];
 }
 

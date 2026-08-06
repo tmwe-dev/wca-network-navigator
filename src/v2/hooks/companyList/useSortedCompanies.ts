@@ -27,7 +27,7 @@ export function useSortedCompanies(
   companies: CompanyEntity[],
   sortKey: CompanySortKey,
   sortDir: "asc" | "desc",
-  search: string
+  search: string,
 ): CompanyEntity[] {
   return useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -63,7 +63,7 @@ export function useSortedCompanies(
         case "lastInteraction":
           r = cmp(
             a.lastInteractionAt ? new Date(a.lastInteractionAt).getTime() : null,
-            b.lastInteractionAt ? new Date(b.lastInteractionAt).getTime() : null
+            b.lastInteractionAt ? new Date(b.lastInteractionAt).getTime() : null,
           );
           break;
         case "interactions":

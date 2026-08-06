@@ -14,7 +14,11 @@ sezione Z del briefing). Qui descriviamo SOLO il campo `proposals[]`.
 ## Struttura top-level
 
 ```json
-{ "proposals": [ /* array di Proposta, vedi sotto */ ] }
+{
+  "proposals": [
+    /* array di Proposta, vedi sotto */
+  ]
+}
 ```
 
 Se non hai proposte valide: `{ "proposals": [] }` (poi facts/conflicts/cross-refs separati).
@@ -27,28 +31,28 @@ I nomi dei campi sotto sono **autoritativi** e devono essere usati letteralmente
 {
   "action_type": "UPDATE | INSERT | MOVE | DELETE",
   "target_table": "kb_entries | agents | agent_personas | operative_prompts | email_prompts | email_address_rules | commercial_playbooks | app_settings",
-  "target_id":   "string | null  (id esistente per UPDATE/DELETE/MOVE; null o omesso per INSERT)",
-  "target_field":"string | null  (campo specifico se UPDATE granulare)",
-  "block_name":  "string  (max 80 char, descrizione corta del blocco)",
-  "current_location":  "string (es. 'kb_entries/system_doctrine' o vuoto se INSERT)",
+  "target_id": "string | null  (id esistente per UPDATE/DELETE/MOVE; null o omesso per INSERT)",
+  "target_field": "string | null  (campo specifico se UPDATE granulare)",
+  "block_name": "string  (max 80 char, descrizione corta del blocco)",
+  "current_location": "string (es. 'kb_entries/system_doctrine' o vuoto se INSERT)",
   "proposed_location": "string (es. 'kb_entries/procedures')",
-  "current_issue":     "string (descrizione precisa del gap)",
-  "proposed_content":  "string (testo nuovo / contenuto desiderato)",
+  "current_issue": "string (descrizione precisa del gap)",
+  "proposed_content": "string (testo nuovo / contenuto desiderato)",
   "before": "string | null  (snapshot pre-modifica)",
-  "after":  "string | null  (snapshot post-modifica)",
-  "payload": { /* oggetto opzionale con i campi DB veri (es. role, system_prompt, ecc.) */ },
-  "evidence_source":   "library | real_db | uploaded_doc",
-  "evidence_excerpt":  "string (citazione esatta, max ~280 char)",
+  "after": "string | null  (snapshot post-modifica)",
+  "payload": {
+    /* oggetto opzionale con i campi DB veri (es. role, system_prompt, ecc.) */
+  },
+  "evidence_source": "library | real_db | uploaded_doc",
+  "evidence_excerpt": "string (citazione esatta, max ~280 char)",
   "evidence_location": "string | null  (file/path/id sorgente)",
   "dependencies": ["proposal_id_1", "..."],
   "impact_score": 1,
-  "severity":     "low | medium | high | critical",
+  "severity": "low | medium | high | critical",
   "test_urgency": "none | manual_smoke | regression_full",
   "tests_required": ["smoke_kb", "manual_review", "..."],
   "resolution_layer": "text | kb_governance | contract | code_policy",
-  "missing_contracts": [
-    { "contract_name": "string", "field": "string", "why_needed": "string" }
-  ],
+  "missing_contracts": [{ "contract_name": "string", "field": "string", "why_needed": "string" }],
   "apply_recommended": true,
   "reasoning": "string (motivazione concisa)"
 }
@@ -73,16 +77,16 @@ I nomi dei campi sotto sono **autoritativi** e devono essere usati letteralmente
 
 ## Mapping `target_table` → cosa rappresenta
 
-| target_table | Cosa rappresenta | DELETE consentito? |
-|---|---|---|
-| `kb_entries` | Voce KB (doctrine, procedure, marketing, system_doctrine, governance, email_strategy) | Soft delete |
-| `agents` | Agente Doer | **NO** — usa `is_active=false` |
-| `agent_personas` | Persona di un agente | **NO** |
-| `operative_prompts` | Procedura/prompt operativo per scope | UPDATE field-based |
-| `email_prompts` | Template email per scope+stage | UPDATE field-based |
-| `email_address_rules` | Whitelist/regole indirizzo email | UPDATE field-based |
-| `commercial_playbooks` | Sequenza commerciale multi-step | UPDATE field-based |
-| `app_settings` | Setting globale key/value (es. mission, alias) | UPDATE/INSERT |
+| target_table           | Cosa rappresenta                                                                      | DELETE consentito?             |
+| ---------------------- | ------------------------------------------------------------------------------------- | ------------------------------ |
+| `kb_entries`           | Voce KB (doctrine, procedure, marketing, system_doctrine, governance, email_strategy) | Soft delete                    |
+| `agents`               | Agente Doer                                                                           | **NO** — usa `is_active=false` |
+| `agent_personas`       | Persona di un agente                                                                  | **NO**                         |
+| `operative_prompts`    | Procedura/prompt operativo per scope                                                  | UPDATE field-based             |
+| `email_prompts`        | Template email per scope+stage                                                        | UPDATE field-based             |
+| `email_address_rules`  | Whitelist/regole indirizzo email                                                      | UPDATE field-based             |
+| `commercial_playbooks` | Sequenza commerciale multi-step                                                       | UPDATE field-based             |
+| `app_settings`         | Setting globale key/value (es. mission, alias)                                        | UPDATE/INSERT                  |
 
 Se la tua proposta riguarda una **tabella NON elencata sopra** (es.
 `harmonizer_followups`, `system_prompts`, ecc.) → **NON inventare un nuovo
@@ -91,14 +95,15 @@ target_table**: usa `app_settings` o registra come `readonly` con
 
 ## Calcolo `impact_score` (1–10)
 
-| Range | Significato |
-|---|---|
-| 1–3 | Cosmetico / locale (refuso, riformulazione, voce KB nuova isolata) |
-| 4–6 | Funzionale (modifica persona agente, nuovo playbook, MOVE intra-categoria) |
-| 7–8 | Architetturale (nuovo agente, modifica system_prompt agente attivo, nuova categoria KB) |
-| 9–10 | Sistemico (tocca contratti runtime, lifecycle, policy hard, voice/email shared logic) |
+| Range | Significato                                                                             |
+| ----- | --------------------------------------------------------------------------------------- |
+| 1–3   | Cosmetico / locale (refuso, riformulazione, voce KB nuova isolata)                      |
+| 4–6   | Funzionale (modifica persona agente, nuovo playbook, MOVE intra-categoria)              |
+| 7–8   | Architetturale (nuovo agente, modifica system_prompt agente attivo, nuova categoria KB) |
+| 9–10  | Sistemico (tocca contratti runtime, lifecycle, policy hard, voice/email shared logic)   |
 
 Fattori che alzano:
+
 - Tocca runtime (+2)
 - Tocca contratti (+3, e quasi sempre `resolution_layer=contract`)
 - Tocca più blocchi (+1)
@@ -118,7 +123,7 @@ Fattori che alzano:
   "current_issue": "Contenuto datato: parla ancora di stagione 2024.",
   "proposed_content": "Per le email a partner WCA First adottiamo un tono formale-cordiale...",
   "before": "(testo attuale del blocco)",
-  "after":  "(testo proposto)",
+  "after": "(testo proposto)",
   "evidence_source": "library",
   "evidence_excerpt": "Per WCA First: tono formale-cordiale, mai colloquiale.",
   "evidence_location": "libreria-tmwe.md#tono-email-wca-first",
@@ -194,7 +199,7 @@ Fattori che alzano:
 - ❌ `target_type: "kb_entry"` → campo sbagliato + valore singolare. Usare `target_table: "kb_entries"`.
 - ❌ `evidence: [ {...} ]` → no, sono campi piatti `evidence_source` / `evidence_excerpt` / `evidence_location`.
 - ❌ `impact_score: "alto"` → deve essere numero 1–10.
-- ❌ Markdown fence ```json ... ``` attorno alla risposta → vietato.
+- ❌ Markdown fence `json ... ` attorno alla risposta → vietato.
 - ❌ Trailing comma o commenti `// nota` → JSON invalido.
 - ❌ `target_table` non in enum (es. `harmonizer_followups`) → la proposta verrà scartata.
 

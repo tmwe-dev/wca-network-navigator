@@ -25,13 +25,34 @@ function makeBuilder(table: string) {
   const stub = tableStub[table] ?? { rows: [], error: null };
   const result = { data: stub.error ? null : stub.rows, error: stub.error };
   const b: Record<string, unknown> = {};
-  b.select = (cols: string) => { call.select = cols; return b; };
-  b.eq = (col: string, val: unknown) => { call.eqs.push({ column: col, value: val }); return b; };
-  b.in = (col: string, values: unknown[]) => { call.ins.push({ column: col, values }); return b; };
-  b.is = (col: string, val: unknown) => { call.is = { column: col, value: val }; return b; };
-  b.order = (col: string, opts?: Record<string, unknown>) => { call.orders.push({ column: col, opts }); return b; };
-  b.range = (from: number, to: number) => { call.range = { from, to }; return b; };
-  b.update = (payload: unknown) => { call.update = payload; return b; };
+  b.select = (cols: string) => {
+    call.select = cols;
+    return b;
+  };
+  b.eq = (col: string, val: unknown) => {
+    call.eqs.push({ column: col, value: val });
+    return b;
+  };
+  b.in = (col: string, values: unknown[]) => {
+    call.ins.push({ column: col, values });
+    return b;
+  };
+  b.is = (col: string, val: unknown) => {
+    call.is = { column: col, value: val };
+    return b;
+  };
+  b.order = (col: string, opts?: Record<string, unknown>) => {
+    call.orders.push({ column: col, opts });
+    return b;
+  };
+  b.range = (from: number, to: number) => {
+    call.range = { from, to };
+    return b;
+  };
+  b.update = (payload: unknown) => {
+    call.update = payload;
+    return b;
+  };
   b.limit = () => b;
   b.maybeSingle = () => Promise.resolve({ data: (stub.rows[0] as unknown) ?? null, error: stub.error });
   b.then = (resolve: (v: unknown) => unknown) => Promise.resolve(result).then(resolve);
@@ -58,10 +79,25 @@ describe("B4.6b — funnemailInbox migration to message_intelligence_v", () => {
 
   it("listMailsByFolder: primaria = view; nessuna chiamata a channel_messages su OK", async () => {
     setTable("funnemail_decisions", [
-      { id: "d1", message_id: "ext-1", folder_slug: "rfq", from_address: "a@x.io", partner_id: null, created_at: "2026-01-01T00:00:00Z" },
+      {
+        id: "d1",
+        message_id: "ext-1",
+        folder_slug: "rfq",
+        from_address: "a@x.io",
+        partner_id: null,
+        created_at: "2026-01-01T00:00:00Z",
+      },
     ]);
     setTable("message_intelligence_v", [
-      { message_id_external: "ext-1", subject: "Ciao", from_address: "a@x.io", body_text: "hi", body_html: null, email_date: "2026-01-01T00:00:00Z", partner_id: null },
+      {
+        message_id_external: "ext-1",
+        subject: "Ciao",
+        from_address: "a@x.io",
+        body_text: "hi",
+        body_html: null,
+        email_date: "2026-01-01T00:00:00Z",
+        partner_id: null,
+      },
     ]);
     const out = await listMailsByFolder("rfq", 10);
     expect(out).toHaveLength(1);
@@ -79,11 +115,26 @@ describe("B4.6b — funnemailInbox migration to message_intelligence_v", () => {
 
   it("listMailsByFolder: view Err → fallback trasparente su channel_messages con stessi filtri", async () => {
     setTable("funnemail_decisions", [
-      { id: "d1", message_id: "ext-1", folder_slug: "rfq", from_address: "a@x.io", partner_id: null, created_at: "2026-01-01T00:00:00Z" },
+      {
+        id: "d1",
+        message_id: "ext-1",
+        folder_slug: "rfq",
+        from_address: "a@x.io",
+        partner_id: null,
+        created_at: "2026-01-01T00:00:00Z",
+      },
     ]);
     setTable("message_intelligence_v", [], { message: "view down", code: "42P01" });
     setTable("channel_messages", [
-      { message_id_external: "ext-1", subject: "FromLegacy", from_address: "a@x.io", body_text: null, body_html: null, email_date: null, partner_id: null },
+      {
+        message_id_external: "ext-1",
+        subject: "FromLegacy",
+        from_address: "a@x.io",
+        body_text: null,
+        body_html: null,
+        email_date: null,
+        partner_id: null,
+      },
     ]);
     const out = await listMailsByFolder("rfq", 10);
     expect(out[0].subject).toBe("FromLegacy");
@@ -100,7 +151,14 @@ describe("B4.6b — funnemailInbox migration to message_intelligence_v", () => {
 
   it("listMailsByFolder: view Err + legacy Err → propaga throw", async () => {
     setTable("funnemail_decisions", [
-      { id: "d1", message_id: "ext-1", folder_slug: "rfq", from_address: null, partner_id: null, created_at: "2026-01-01T00:00:00Z" },
+      {
+        id: "d1",
+        message_id: "ext-1",
+        folder_slug: "rfq",
+        from_address: null,
+        partner_id: null,
+        created_at: "2026-01-01T00:00:00Z",
+      },
     ]);
     setTable("message_intelligence_v", [], { message: "view down" });
     setTable("channel_messages", [], { message: "legacy down" });

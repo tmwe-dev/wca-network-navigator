@@ -12,8 +12,14 @@ import { useDeleteActivities } from "@/hooks/useActivities";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 const log = createLogger("Sorting");
@@ -36,7 +42,8 @@ export function Sorting() {
   const toggleCheck = useCallback((id: string) => {
     setCheckedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
@@ -48,13 +55,18 @@ export function Sorting() {
   const checkedReviewed = useMemo(() => jobs.filter((j) => checkedIds.has(j.id) && j.reviewed), [jobs, checkedIds]);
 
   const handleBulkSend = useCallback(async () => {
-    if (!checkedReviewed.length) { toast.error("Nessun job rivisto selezionato"); return; }
+    if (!checkedReviewed.length) {
+      toast.error("Nessun job rivisto selezionato");
+      return;
+    }
     setSending(true);
     setSendProgress({ done: 0, total: checkedReviewed.length });
     for (let i = 0; i < checkedReviewed.length; i++) {
       try {
         await sendJob.mutateAsync(checkedReviewed[i]);
-      } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); /* already toasted */ }
+      } catch (e) {
+        log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); /* already toasted */
+      }
       setSendProgress({ done: i + 1, total: checkedReviewed.length });
     }
     setSending(false);
@@ -95,23 +107,43 @@ export function Sorting() {
       {checkedIds.size > 0 && (
         <div className="border-t border-border bg-muted/50 px-4 py-3 flex items-center gap-3">
           <span className="text-sm font-medium">{checkedIds.size} selezionati</span>
-          <Button size="sm" variant="outline" onClick={() => bulkReview.mutate(checkedArr)} disabled={bulkReview.isPending}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => bulkReview.mutate(checkedArr)}
+            disabled={bulkReview.isPending}
+          >
             <CheckCircle2 className="w-4 h-4 mr-1" /> Approva selezionati
           </Button>
           <Button size="sm" onClick={handleBulkSend} disabled={sending || !checkedReviewed.length}>
             {sending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
             Invia selezionati ({checkedReviewed.length})
           </Button>
-          <Button size="sm" variant="outline" onClick={() => { cancelJobs.mutate(checkedArr); setCheckedIds(new Set()); }} disabled={cancelJobs.isPending}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              cancelJobs.mutate(checkedArr);
+              setCheckedIds(new Set());
+            }}
+            disabled={cancelJobs.isPending}
+          >
             <X className="w-4 h-4 mr-1" /> Scarta selezionati
           </Button>
-          <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleteActivities.isPending}>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleteActivities.isPending}
+          >
             <Trash2 className="w-4 h-4 mr-1" /> Elimina selezionati
           </Button>
           {sending && (
             <div className="flex-1 max-w-xs">
               <Progress value={(sendProgress.done / sendProgress.total) * 100} className="h-2" />
-              <span className="text-xs text-muted-foreground">{sendProgress.done}/{sendProgress.total}</span>
+              <span className="text-xs text-muted-foreground">
+                {sendProgress.done}/{sendProgress.total}
+              </span>
             </div>
           )}
         </div>
@@ -132,7 +164,10 @@ export function Sorting() {
                   await deleteActivities.mutateAsync(checkedArr);
                   setCheckedIds(new Set());
                   toast.success(`${checkedArr.length} record eliminati`);
-                } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante l'eliminazione"); }
+                } catch (e) {
+                  log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                  toast.error("Errore durante l'eliminazione");
+                }
                 setShowDeleteConfirm(false);
               }}
             >

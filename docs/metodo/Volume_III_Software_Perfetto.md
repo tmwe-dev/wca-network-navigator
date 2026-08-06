@@ -57,7 +57,7 @@ Il manager adotta diversi pattern: sequenziale, parallelo, "group chat", handoff
 
 ### 3.1 Prompt Master e controllo
 
-L'orchestratore invia a tutti gli agenti un *Prompt Master* che definisce:
+L'orchestratore invia a tutti gli agenti un _Prompt Master_ che definisce:
 
 - **Consensus loop**: ogni deliverable deve essere approvato da tutti; se un agente identifica un problema, il ciclo riparte.
 - **Glossario dei termini (SSOT)**: un file JSON Schema/TypeScript che elenca ogni variabile con nome, tipo e descrizione; vietati nomi generici. Grok boccia qualsiasi codice che non rispetta questi nomi.
@@ -74,22 +74,22 @@ Questa gerarchia isola le responsabilità e separa errori di logica da errori di
 
 #### 3.1.2 Perfection Matrix
 
-| Fase | Output richiesto | Criterio di accettazione |
-|------|-----------------|-------------------------|
-| **Definizione** | JSON Schema dei dati | Nessun campo opzionale senza valore di default |
-| **Architettura** | Grafo delle dipendenze | Nessun ciclo; percorso lineare |
-| **Logica** | Pseudocodice in Markdown | Nessun ciclo infinito, preferire map/filter |
+| Fase               | Output richiesto          | Criterio di accettazione                                 |
+| ------------------ | ------------------------- | -------------------------------------------------------- |
+| **Definizione**    | JSON Schema dei dati      | Nessun campo opzionale senza valore di default           |
+| **Architettura**   | Grafo delle dipendenze    | Nessun ciclo; percorso lineare                           |
+| **Logica**         | Pseudocodice in Markdown  | Nessun ciclo infinito, preferire map/filter              |
 | **Output Lovable** | Prompt di implementazione | Deve includere: "Se vedi un'ambiguità, fermati e chiedi" |
 
 ### 3.2 Ruoli e vincoli di perfezione
 
-| Agente | Ruolo | Vincolo |
-|--------|-------|---------|
-| **Cloud** | Definisce user stories atomiche | Nessuna ambiguità, user stories granulari |
-| **ChatGPT** | Definisce state machine dei dati | Deve disegnare un grafo senza cicli |
-| **Gemini** | Ricerca librerie | Deve scegliere librerie leggere e aggiornate |
-| **Queen/Claude** | Generazione codice | Codice autodocumentante, nomi delle funzioni descrittivi |
-| **Grok** | Revisore (Avvocato del Diavolo) | Boccia tutto ciò che viola Glossario, Legge del Disaccoppiamento o Perfection Matrix |
+| Agente           | Ruolo                            | Vincolo                                                                              |
+| ---------------- | -------------------------------- | ------------------------------------------------------------------------------------ |
+| **Cloud**        | Definisce user stories atomiche  | Nessuna ambiguità, user stories granulari                                            |
+| **ChatGPT**      | Definisce state machine dei dati | Deve disegnare un grafo senza cicli                                                  |
+| **Gemini**       | Ricerca librerie                 | Deve scegliere librerie leggere e aggiornate                                         |
+| **Queen/Claude** | Generazione codice               | Codice autodocumentante, nomi delle funzioni descrittivi                             |
+| **Grok**         | Revisore (Avvocato del Diavolo)  | Boccia tutto ciò che viola Glossario, Legge del Disaccoppiamento o Perfection Matrix |
 
 ### 3.3 Vincoli inviolabili
 
@@ -114,4 +114,4 @@ Questa gerarchia isola le responsabilità e separa errori di logica da errori di
 
 ## 5. Conclusioni
 
-Incorporando la **Legge del Disaccoppiamento**, il **Glossario dei Termini Approvati**, il **Pattern Atomic Design** e la **Perfection Matrix**, il sistema multi-agente diventa un *compilatore di intelligenza*: definisce regole e vincoli che garantiscono coerenza e qualità prima ancora che Lovable generi il codice. L'approccio event-driven e la modularità isolano ogni modulo, riducendo a zero l'impatto di bug a catena, mentre il glossario e il consensus loop impongono coerenza ossessiva nella nomenclatura e nella logica. Questo protocollo fornisce le fondamenta per un processo di sviluppo capace di produrre software di alta qualità, auto-validato e pronto per essere assemblato senza necessità di debugging postumo.
+Incorporando la **Legge del Disaccoppiamento**, il **Glossario dei Termini Approvati**, il **Pattern Atomic Design** e la **Perfection Matrix**, il sistema multi-agente diventa un _compilatore di intelligenza_: definisce regole e vincoli che garantiscono coerenza e qualità prima ancora che Lovable generi il codice. L'approccio event-driven e la modularità isolano ogni modulo, riducendo a zero l'impatto di bug a catena, mentre il glossario e il consensus loop impongono coerenza ossessiva nella nomenclatura e nella logica. Questo protocollo fornisce le fondamenta per un processo di sviluppo capace di produrre software di alta qualità, auto-validato e pronto per essere assemblato senza necessità di debugging postumo.

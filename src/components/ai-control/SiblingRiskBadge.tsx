@@ -40,9 +40,7 @@ export function SiblingRiskBadge({ partnerId, contactId, confirmed, onConfirmedC
       <div className="flex items-start gap-2">
         <ShieldAlert className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
         <div className="flex-1 text-xs">
-          <p className="font-semibold text-red-300">
-            Attenzione: contatto a rischio "spam aziendale"
-          </p>
+          <p className="font-semibold text-red-300">Attenzione: contatto a rischio "spam aziendale"</p>
           <p className="text-red-200/80 mt-0.5">
             {rows.length} contatto/i fratello/i già contattati negli ultimi 30 giorni
             {samePartnerCount > 0 && ` (${samePartnerCount} nello stesso partner)`}
@@ -51,7 +49,7 @@ export function SiblingRiskBadge({ partnerId, contactId, confirmed, onConfirmedC
           <button
             type="button"
             className="text-red-300 underline hover:text-red-200 mt-1"
-            onClick={() => setExpanded(v => !v)}
+            onClick={() => setExpanded((v) => !v)}
           >
             {expanded ? "Nascondi dettagli" : "Mostra dettagli"}
           </button>
@@ -64,18 +62,14 @@ export function SiblingRiskBadge({ partnerId, contactId, confirmed, onConfirmedC
             <li key={r.sibling_contact_id} className="flex items-center gap-1.5">
               <AlertTriangle className="h-3 w-3 text-red-400" />
               <span className="font-medium">{r.sibling_contact_name ?? "(senza nome)"}</span>
-              {r.same_company && (
-                <span className="text-red-300/80">· altra sede ({r.sibling_company_name})</span>
-              )}
+              {r.same_company && <span className="text-red-300/80">· altra sede ({r.sibling_company_name})</span>}
               <span className="text-red-300/60">
                 · {r.channel ?? "?"} ·{" "}
                 {formatDistanceToNow(new Date(r.last_outbound_at), { addSuffix: true, locale: it })}
               </span>
             </li>
           ))}
-          {rows.length > 8 && (
-            <li className="text-red-300/60">+ altri {rows.length - 8} sibling…</li>
-          )}
+          {rows.length > 8 && <li className="text-red-300/60">+ altri {rows.length - 8} sibling…</li>}
         </ul>
       )}
 
@@ -85,9 +79,7 @@ export function SiblingRiskBadge({ partnerId, contactId, confirmed, onConfirmedC
           onCheckedChange={(c) => onConfirmedChange(c === true)}
           className="border-red-400 data-[state=checked]:bg-red-500"
         />
-        <span>
-          Confermo: voglio inviare comunque, accetto il rischio di apparire come spam.
-        </span>
+        <span>Confermo: voglio inviare comunque, accetto il rischio di apparire come spam.</span>
       </label>
 
       {!confirmed && (

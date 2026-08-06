@@ -2,17 +2,35 @@ import type { AgentExecuteSupabaseClient as SupabaseClient } from "../shared.ts"
 import { escapeLike, resolvePartnerId } from "../shared.ts";
 import { getPartnerDeepSearchScore, formatScoreForPrompt } from "../../_shared/deepSearchScore.ts";
 
-interface _PartnerRow { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; phone: string | null; rating: number | null; wca_id: number | null; website: string | null; raw_profile_html: string | null; raw_profile_markdown?: string | null; is_favorite: boolean; office_type: string | null; lead_status: string | null; [key: string]: unknown; }
+interface _PartnerRow {
+  id: string;
+  company_name: string;
+  city: string;
+  country_code: string;
+  country_name: string;
+  email: string | null;
+  phone: string | null;
+  rating: number | null;
+  wca_id: number | null;
+  website: string | null;
+  raw_profile_html: string | null;
+  raw_profile_markdown?: string | null;
+  is_favorite: boolean;
+  office_type: string | null;
+  lead_status: string | null;
+  [key: string]: unknown;
+}
 
-export async function handleSearchPartners(
-  supabase: SupabaseClient,
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleSearchPartners(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
   const isCount = !!args.count_only;
-  let query = supabase.from("partners").select(
-    isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, lead_status",
-    isCount ? { count: "exact", head: true } : undefined
-  );
+  let query = supabase
+    .from("partners")
+    .select(
+      isCount
+        ? "id"
+        : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, lead_status",
+      isCount ? { count: "exact", head: true } : undefined,
+    );
   if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
   if (args.city) query = query.ilike("city", `%${escapeLike(args.city as string)}%`);
   if (args.search_name) query = query.ilike("company_name", `%${escapeLike(args.search_name as string)}%`);
@@ -29,26 +47,33 @@ export async function handleSearchPartners(
 
 export async function handleGetPartnerDetail(
   supabase: SupabaseClient,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let partner: Record<string, unknown> | null = null;
   if (args.partner_id) {
     const { data } = await supabase.from("partners").select("*").eq("id", args.partner_id).single();
     partner = data;
   } else if (args.company_name) {
-    const { data } = await supabase.from("partners").select("*").ilike("company_name", `%${escapeLike(args.company_name as string)}%`).limit(1).single();
+    const { data } = await supabase
+      .from("partners")
+      .select("*")
+      .ilike("company_name", `%${escapeLike(args.company_name as string)}%`)
+      .limit(1)
+      .single();
     partner = data;
   }
   if (!partner) return { error: "Partner non trovato" };
   return partner;
 }
 
-export async function handleSearchContacts(
-  supabase: SupabaseClient,
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleSearchContacts(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
   const isCount = !!args.count_only;
-  let query = supabase.from("imported_contacts").select(isCount ? "id" : "id, name, company_name, email, phone, country, lead_status, created_at", isCount ? { count: "exact", head: true } : undefined);
+  let query = supabase
+    .from("imported_contacts")
+    .select(
+      isCount ? "id" : "id, name, company_name, email, phone, country, lead_status, created_at",
+      isCount ? { count: "exact", head: true } : undefined,
+    );
   if (args.search_name) query = query.ilike("name", `%${escapeLike(args.search_name as string)}%`);
   if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name as string)}%`);
   if (args.country) query = query.ilike("country", `%${escapeLike(args.country as string)}%`);
@@ -64,25 +89,29 @@ export async function handleSearchContacts(
 
 export async function handleGetContactDetail(
   supabase: SupabaseClient,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let contact: Record<string, unknown> | null = null;
   if (args.contact_id) {
     const { data } = await supabase.from("imported_contacts").select("*").eq("id", args.contact_id).single();
     contact = data;
   } else if (args.contact_name) {
-    const { data } = await supabase.from("imported_contacts").select("*").ilike("name", `%${escapeLike(args.contact_name as string)}%`).limit(1).single();
+    const { data } = await supabase
+      .from("imported_contacts")
+      .select("*")
+      .ilike("name", `%${escapeLike(args.contact_name as string)}%`)
+      .limit(1)
+      .single();
     contact = data;
   }
   if (!contact) return { error: "Contatto non trovato" };
   return contact;
 }
 
-export async function handleSearchProspects(
-  supabase: SupabaseClient,
-  args: Record<string, unknown>
-): Promise<unknown> {
-  let query = supabase.from("prospects").select("id, company_name, city, province, codice_ateco, fatturato, email, lead_status");
+export async function handleSearchProspects(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
+  let query = supabase
+    .from("prospects")
+    .select("id, company_name, city, province, codice_ateco, fatturato, email, lead_status");
   if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name as string)}%`);
   if (args.city) query = query.ilike("city", `%${escapeLike(args.city as string)}%`);
   if (args.province) query = query.ilike("province", `%${escapeLike(args.province as string)}%`);
@@ -97,9 +126,14 @@ export async function handleSearchProspects(
 export async function handleSearchMemory(
   supabase: SupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
-  let query = supabase.from("ai_memory").select("content, memory_type, tags, importance, created_at").eq("user_id", userId).order("importance", { ascending: false }).limit(Number(args.limit) || 10);
+  let query = supabase
+    .from("ai_memory")
+    .select("content, memory_type, tags, importance, created_at")
+    .eq("user_id", userId)
+    .order("importance", { ascending: false })
+    .limit(Number(args.limit) || 10);
   if (args.tags && (args.tags as string[]).length > 0) query = query.overlaps("tags", args.tags as string[]);
   if (args.search_text) query = query.ilike("content", `%${escapeLike(args.search_text as string)}%`);
   const { data, error } = await query;
@@ -109,9 +143,13 @@ export async function handleSearchMemory(
 
 export async function handleSearchBusinessCards(
   supabase: SupabaseClient,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
-  let query = supabase.from("business_cards").select("id, company_name, contact_name, email, event_name, match_status, created_at").order("created_at", { ascending: false }).limit(Number(args.limit) || 20);
+  let query = supabase
+    .from("business_cards")
+    .select("id, company_name, contact_name, email, event_name, match_status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Number(args.limit) || 20);
   if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name as string)}%`);
   if (args.event_name) query = query.ilike("event_name", `%${escapeLike(args.event_name as string)}%`);
   const { data, error } = await query;
@@ -122,10 +160,13 @@ export async function handleDeepSearchPartner(
   supabase: SupabaseClient,
   userId: string,
   args: Record<string, unknown>,
-  _authHeader: string
+  _authHeader: string,
 ): Promise<unknown> {
   let pid = args.partner_id as string;
-  if (!pid && args.company_name) { const r = await resolvePartnerId(args); if (r) pid = r.id; }
+  if (!pid && args.company_name) {
+    const r = await resolvePartnerId(args);
+    if (r) pid = r.id;
+  }
   if (!pid) return { error: "Partner non trovato" };
 
   // LOVABLE-75: read-only — niente più chiamate edge live, leggi cosa c'è già.
@@ -177,11 +218,16 @@ export async function handleDeepSearchPartner(
 
 export async function handleDeepSearchContact(
   supabase: SupabaseClient,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let cid = args.contact_id as string;
   if (!cid && args.contact_name) {
-    const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${escapeLike(args.contact_name as string)}%`).limit(1).single();
+    const { data } = await supabase
+      .from("imported_contacts")
+      .select("id")
+      .ilike("name", `%${escapeLike(args.contact_name as string)}%`)
+      .limit(1)
+      .single();
     if (data) cid = data.id;
   }
   if (!cid) return { error: "Contatto non trovato" };

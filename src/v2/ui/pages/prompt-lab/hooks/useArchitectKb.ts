@@ -25,9 +25,7 @@ async function loadArchitectProcedureRaw(): Promise<string> {
     if (entries.length === 0) {
       return "(procedura Architect non trovata in KB — usa fallback minimo)";
     }
-    return entries
-      .map((e) => `### ${e.title}\n${e.content ?? ""}`)
-      .join("\n\n---\n\n");
+    return entries.map((e) => `### ${e.title}\n${e.content ?? ""}`).join("\n\n---\n\n");
   } catch {
     return "(impossibile caricare procedura Architect)";
   }

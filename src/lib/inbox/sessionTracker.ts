@@ -52,18 +52,27 @@ export async function getSessionStatus(channel: ChannelKind): Promise<ChannelSes
 }
 
 async function writeSession(session: ChannelSession): Promise<void> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+  const {
+    data: { session: __s },
+  } = await supabase.auth.getSession();
+  const user = __s?.user ?? null;
   if (!user) return;
   const { upsertAppSetting } = await import("@/data/appSettings");
   let error: unknown = null;
   try {
-    await upsertAppSetting(user.id, keyFor(session.channel), JSON.stringify({
-      status: session.status,
-      last_seen_at: session.last_seen_at,
-      last_error: session.last_error,
-      metadata: session.metadata,
-    }));
-  } catch (e) { error = e; }
+    await upsertAppSetting(
+      user.id,
+      keyFor(session.channel),
+      JSON.stringify({
+        status: session.status,
+        last_seen_at: session.last_seen_at,
+        last_error: session.last_error,
+        metadata: session.metadata,
+      }),
+    );
+  } catch (e) {
+    error = e;
+  }
   if (error) {
     log.error("session.write_failed", {
       channel: session.channel,
@@ -72,10 +81,7 @@ async function writeSession(session: ChannelSession): Promise<void> {
   }
 }
 
-export async function markSessionAlive(
-  channel: ChannelKind,
-  metadata: Record<string, unknown> = {}
-): Promise<void> {
+export async function markSessionAlive(channel: ChannelKind, metadata: Record<string, unknown> = {}): Promise<void> {
   await writeSession({
     channel,
     status: "active",
@@ -86,10 +92,7 @@ export async function markSessionAlive(
   log.info("session.alive", { channel });
 }
 
-export async function markSessionExpired(
-  channel: ChannelKind,
-  reason: string
-): Promise<void> {
+export async function markSessionExpired(channel: ChannelKind, reason: string): Promise<void> {
   await writeSession({
     channel,
     status: "expired",
@@ -100,10 +103,7 @@ export async function markSessionExpired(
   log.warn("session.expired", { channel, reason });
 }
 
-export async function markSessionDisconnected(
-  channel: ChannelKind,
-  reason: string
-): Promise<void> {
+export async function markSessionDisconnected(channel: ChannelKind, reason: string): Promise<void> {
   await writeSession({
     channel,
     status: "disconnected",

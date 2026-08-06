@@ -28,7 +28,9 @@ export const EmailHtmlFrame = forwardRef<HTMLIFrameElement, Props>(function Emai
     let processedHtml = html;
     if (blockRemote) processedHtml = blockRemoteImages(processedHtml);
 
-    const baseStyles = mode === "safe" ? `
+    const baseStyles =
+      mode === "safe"
+        ? `
       html, body {
         margin: 0; padding: 8px;
         background: #ffffff !important;
@@ -38,7 +40,8 @@ export const EmailHtmlFrame = forwardRef<HTMLIFrameElement, Props>(function Emai
         word-wrap: break-word; overflow-wrap: break-word;
       }
       a { color: #2563eb !important; }
-    ` : `
+    `
+        : `
       html, body {
         margin: 0; padding: 8px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -73,11 +76,7 @@ export const EmailHtmlFrame = forwardRef<HTMLIFrameElement, Props>(function Emai
     // Robust height recalculation
     const recalcHeight = () => {
       if (!doc.documentElement) return;
-      const h = Math.max(
-        doc.documentElement.scrollHeight || 0,
-        doc.body?.scrollHeight || 0,
-        300
-      );
+      const h = Math.max(doc.documentElement.scrollHeight || 0, doc.body?.scrollHeight || 0, 300);
       iframe.style.height = `${h}px`;
     };
 
@@ -100,7 +99,7 @@ export const EmailHtmlFrame = forwardRef<HTMLIFrameElement, Props>(function Emai
 
       // Attach load handlers to all images for re-resize
       const imgs = doc.querySelectorAll("img");
-      imgs.forEach(img => {
+      imgs.forEach((img) => {
         if (!img.complete) {
           img.addEventListener("load", recalcHeight);
           img.addEventListener("error", recalcHeight);

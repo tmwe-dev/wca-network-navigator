@@ -39,38 +39,18 @@ export interface InboxEnrichment {
 
 export function useInboxEnrichment(messages: ChannelMessage[]) {
   const partnerIds = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          messages
-            .map((m) => m.partner_id)
-            .filter((v): v is string => Boolean(v)),
-        ),
-      ),
+    () => Array.from(new Set(messages.map((m) => m.partner_id).filter((v): v is string => Boolean(v)))),
     [messages],
   );
 
   const domains = useMemo(
     () =>
-      Array.from(
-        new Set(
-          messages
-            .map((m) => extractDomain(m.from_address))
-            .filter((v): v is string => Boolean(v)),
-        ),
-      ),
+      Array.from(new Set(messages.map((m) => extractDomain(m.from_address)).filter((v): v is string => Boolean(v)))),
     [messages],
   );
 
   const addresses = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          messages
-            .map((m) => extractEmail(m.from_address))
-            .filter((v): v is string => Boolean(v)),
-        ),
-      ),
+    () => Array.from(new Set(messages.map((m) => extractEmail(m.from_address)).filter((v): v is string => Boolean(v)))),
     [messages],
   );
 
@@ -119,9 +99,7 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
     queryKey: ["inbox-enrichment", "ai-suggestions", addresses.join(",")],
     enabled: addresses.length > 0,
     staleTime: 60_000,
-    queryFn: async (): Promise<
-      Array<{ email_address: string; ai_suggested_group: string | null }>
-    > => {
+    queryFn: async (): Promise<Array<{ email_address: string; ai_suggested_group: string | null }>> => {
       return findAiSuggestedGroupsForEmails(addresses);
     },
   });
@@ -153,11 +131,11 @@ export function useInboxEnrichment(messages: ChannelMessage[]) {
   function getEnrichment(msg: ChannelMessage): InboxEnrichment {
     const domain = extractDomain(msg.from_address);
     const addr = extractEmail(msg.from_address);
-    const intel = domain ? intelByDomain.get(domain) ?? null : null;
+    const intel = domain ? (intelByDomain.get(domain) ?? null) : null;
     let partner: FunnemailPartnerSnapshot | null = null;
     if (msg.partner_id) partner = partnersById.get(msg.partner_id) ?? null;
     if (!partner && intel?.partner_id) partner = partnersById.get(intel.partner_id) ?? null;
-    const aiSuggestedGroup = addr ? suggestionByAddress.get(addr) ?? null : null;
+    const aiSuggestedGroup = addr ? (suggestionByAddress.get(addr) ?? null) : null;
     return { partner, intel, aiSuggestedGroup };
   }
 

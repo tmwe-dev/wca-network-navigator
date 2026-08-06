@@ -28,9 +28,7 @@ export function PageTitleHeader({ icon: Icon, title, subtitle, right }: Props): 
       <span className="inline-flex items-center gap-1.5 rounded-md bg-primary-foreground/95 px-2 py-1 border border-primary/30 shadow-sm">
         <Icon className="h-4 w-4 text-primary shrink-0" />
         <span className="text-sm font-semibold text-primary truncate">{title}</span>
-        {subtitle && (
-          <span className="text-xs text-foreground/70 truncate hidden sm:inline">· {subtitle}</span>
-        )}
+        {subtitle && <span className="text-xs text-foreground/70 truncate hidden sm:inline">· {subtitle}</span>}
       </span>
       {right && <div className="ml-2 flex items-center gap-1">{right}</div>}
     </div>

@@ -34,8 +34,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   // backward compat: actionLabel + onAction → primaryAction
   const effectivePrimary =
-    primaryAction ??
-    (actionLabel && onAction ? { label: actionLabel, onClick: onAction } : undefined);
+    primaryAction ?? (actionLabel && onAction ? { label: actionLabel, onClick: onAction } : undefined);
 
   return (
     <motion.div
@@ -48,9 +47,7 @@ export function EmptyState({
         <Icon className="w-7 h-7 text-muted-foreground" />
       </div>
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      {description && (
-        <p className="text-xs text-muted-foreground max-w-[320px] leading-relaxed">{description}</p>
-      )}
+      {description && <p className="text-xs text-muted-foreground max-w-[320px] leading-relaxed">{description}</p>}
       {(effectivePrimary || secondaryAction) && (
         <div className="mt-2 flex items-center justify-center gap-2 flex-wrap">
           {effectivePrimary && (

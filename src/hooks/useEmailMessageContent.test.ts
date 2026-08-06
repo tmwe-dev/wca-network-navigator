@@ -42,7 +42,7 @@ describe("useEmailMessageContent", () => {
   it("falls back to initial content when DB returns null", async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
     const { result } = renderHookWithProviders(() =>
-      useEmailMessageContent("msg-2", { bodyHtml: "<p>Fallback</p>", bodyText: "Fallback" })
+      useEmailMessageContent("msg-2", { bodyHtml: "<p>Fallback</p>", bodyText: "Fallback" }),
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.bodyHtml).toBe("<p>Fallback</p>");
@@ -50,7 +50,9 @@ describe("useEmailMessageContent", () => {
   });
 
   it("handles DB error — retries exhausted", async () => {
-    mockMaybeSingle.mockImplementation(() => { throw new Error("Not found"); });
+    mockMaybeSingle.mockImplementation(() => {
+      throw new Error("Not found");
+    });
     const { result } = renderHookWithProviders(() => useEmailMessageContent("msg-3"));
     await waitFor(() => expect(result.current.error).not.toBeNull(), { timeout: 3000 });
     mockMaybeSingle.mockReset();

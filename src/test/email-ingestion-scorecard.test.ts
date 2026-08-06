@@ -77,7 +77,7 @@ describe("Dedup reliability", () => {
     ];
 
     const newMessageId = "<msg1@example.com>";
-    const isDuplicate = existingMessages.some(m => m.message_id_external === newMessageId);
+    const isDuplicate = existingMessages.some((m) => m.message_id_external === newMessageId);
     expect(isDuplicate).toBe(true);
   });
 
@@ -92,8 +92,8 @@ describe("Dedup reliability", () => {
 
   it("raw_sha256 provides secondary dedup check", () => {
     const hashes = ["abc123def456", "abc123def456", "xyz789ghi012"];
-    
-    expect(hashes[0] === hashes[1]).toBe(true);  // duplicate
+
+    expect(hashes[0] === hashes[1]).toBe(true); // duplicate
     expect(hashes[0] === hashes[2]).toBe(false); // not duplicate
   });
 });
@@ -115,7 +115,7 @@ describe("Resume/recovery", () => {
 
   it("UIDVALIDITY change triggers full re-sync", () => {
     const validities = [12345, 67890]; // stored vs server
-    
+
     const needsFullResync = validities[0] !== validities[1];
     expect(needsFullResync).toBe(true);
   });

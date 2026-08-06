@@ -5,11 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function resolvePartnerRefById(id: string): Promise<{ id: string; company_name: string } | null> {
-  const { data } = await supabase
-    .from("partners")
-    .select("id, company_name")
-    .eq("id", id)
-    .maybeSingle();
+  const { data } = await supabase.from("partners").select("id, company_name").eq("id", id).maybeSingle();
   return data ? { id: data.id, company_name: data.company_name ?? "" } : null;
 }
 
@@ -24,11 +20,7 @@ export async function resolvePartnerRefByTerm(term: string): Promise<{ id: strin
 }
 
 export async function resolveContactRefById(id: string): Promise<{ id: string; name: string } | null> {
-  const { data } = await supabase
-    .from("imported_contacts")
-    .select("id, name")
-    .eq("id", id)
-    .maybeSingle();
+  const { data } = await supabase.from("imported_contacts").select("id, name").eq("id", id).maybeSingle();
   return data ? { id: data.id, name: data.name ?? "" } : null;
 }
 

@@ -8,19 +8,25 @@ export const recalculatePartnerQualityTool: Tool = {
   id: "recalculate-partner-quality",
   label: "Ricalcola quality score partner",
   description: "Ricalcola il quality_score per tutti i partner (o filtrati). Operazione massiva.",
-  match: (p) => /\b(ricalcola|recalc(?:ulate)?|aggiorna)\b[^.]{0,30}\b(quality|qualit[àa]\s+score|punteggio\s+partner)\b/i.test(p),
+  match: (p) =>
+    /\b(ricalcola|recalc(?:ulate)?|aggiorna)\b[^.]{0,30}\b(quality|qualit[àa]\s+score|punteggio\s+partner)\b/i.test(p),
 
   execute: async (_prompt, context?: ToolContext): Promise<ToolResult> => {
     if (!context?.confirmed) {
       return {
         kind: "approval",
         title: "Ricalcolare quality score di tutti i partner?",
-        description: "Operazione massiva. Aggiorna il campo quality_score in base a integrazione dati e attività recenti.",
+        description:
+          "Operazione massiva. Aggiorna il campo quality_score in base a integrazione dati e attività recenti.",
         details: [
           { label: "Scope", value: "all partners" },
           { label: "Costo stimato", value: "1 batch worker" },
         ],
-        governance: { role: "DIRETTORE", permission: "WRITE:PARTNERS_QUALITY", policy: "POLICY v1.0 · QUALITY-RECOMPUTE" },
+        governance: {
+          role: "DIRETTORE",
+          permission: "WRITE:PARTNERS_QUALITY",
+          policy: "POLICY v1.0 · QUALITY-RECOMPUTE",
+        },
         pendingPayload: {},
         toolId: "recalculate-partner-quality",
       };

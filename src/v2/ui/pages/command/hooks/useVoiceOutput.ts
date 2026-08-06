@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("useVoiceOutput");
 
@@ -9,18 +8,12 @@ type AudioCtor = typeof AudioContext;
 
 function getAudioContextCtor(): AudioCtor | null {
   if (typeof window === "undefined") return null;
-  return (
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext ||
-    null
-  );
+  return window.AudioContext || (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext || null;
 }
 
 export function useVoiceOutput() {
   const [speaking, setSpeaking] = useState(false);
-  const [muted, setMuted] = useState<boolean>(
-    () => localStorage.getItem("wca_voice_muted") === "1",
-  );
+  const [muted, setMuted] = useState<boolean>(() => localStorage.getItem("wca_voice_muted") === "1");
   // Web Audio API: riproduzione affidabile dell'MP3 ElevenLabs anche dentro
   // l'iframe di anteprima, dove l'elemento <audio> falliva con
   // "no supported source" e faceva ripiegare sulla voce nativa robotica.
@@ -69,11 +62,21 @@ export function useVoiceOutput() {
       try {
         sourceRef.current.onended = null;
         sourceRef.current.stop();
-      } catch { /* ignore */ }
-      try { sourceRef.current.disconnect(); } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
+      try {
+        sourceRef.current.disconnect();
+      } catch {
+        /* ignore */
+      }
       sourceRef.current = null;
     }
-    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      /* ignore */
+    }
     setSpeaking(false);
   }, []);
 
@@ -86,7 +89,9 @@ export function useVoiceOutput() {
     const ctx = getCtx();
     if (!ctx) return;
     if (ctx.state === "suspended") {
-      void ctx.resume().catch(() => { /* ritenteremo al prossimo gesto */ });
+      void ctx.resume().catch(() => {
+        /* ritenteremo al prossimo gesto */
+      });
     }
   }, [getCtx]);
 
@@ -107,18 +112,15 @@ export function useVoiceOutput() {
       try {
         setSpeaking(true);
 
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token ?? ""}`,
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify({ text }),
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token ?? ""}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-        );
+          body: JSON.stringify({ text }),
+        });
 
         if (!response.ok) {
           log.error("[tts] edge error", { error: response.status });
@@ -136,7 +138,9 @@ export function useVoiceOutput() {
           return;
         }
         if (ctx.state === "suspended") {
-          await ctx.resume().catch(() => { /* ignore */ });
+          await ctx.resume().catch(() => {
+            /* ignore */
+          });
         }
 
         const audioBuffer = await ctx.decodeAudioData(responseBuffer.slice(0));

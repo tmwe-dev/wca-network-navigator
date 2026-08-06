@@ -59,10 +59,9 @@ serve(async (req) => {
       description: v.description || null,
     }));
 
-    return new Response(
-      JSON.stringify({ voices, status: "ok", total: voices.length }),
-      { headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ voices, status: "ok", total: voices.length }), {
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("list-elevenlabs-voices error:", error);
     return edgeError("INTERNAL_ERROR", "Internal error", undefined, dynCors, {

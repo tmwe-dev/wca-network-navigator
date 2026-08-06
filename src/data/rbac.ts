@@ -28,9 +28,7 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 const ASSIGNABLE_APP_ROLES: readonly AppRole[] = ["admin", "moderator", "user"];
 
 function toAppRole(roleName: string): AppRole | null {
-  return (ASSIGNABLE_APP_ROLES as readonly string[]).includes(roleName)
-    ? (roleName as AppRole)
-    : null;
+  return (ASSIGNABLE_APP_ROLES as readonly string[]).includes(roleName) ? (roleName as AppRole) : null;
 }
 
 /**
@@ -102,17 +100,13 @@ export interface UserWithRoles {
   roles: Role[];
 }
 
-
 // ─── Roles ──────────────────────────────────────────────
 
 /**
  * Fetch all roles
  */
 export async function fetchRoles(): Promise<Role[]> {
-  const { data, error } = await supabase
-    .from("roles")
-    .select("*")
-    .order("name");
+  const { data, error } = await supabase.from("roles").select("*").order("name");
   if (error) throw error;
   return (data ?? []).map(mapRole);
 }
@@ -144,11 +138,7 @@ function mapPermission(row: PermissionRow): Permission {
  * Fetch a single role with its permissions
  */
 export async function fetchRoleWithPermissions(roleId: string): Promise<RoleWithPermissions | null> {
-  const { data: role, error: roleError } = await supabase
-    .from("roles")
-    .select("*")
-    .eq("id", roleId)
-    .maybeSingle();
+  const { data: role, error: roleError } = await supabase.from("roles").select("*").eq("id", roleId).maybeSingle();
   if (roleError) throw roleError;
   if (!role) return null;
 
@@ -159,11 +149,7 @@ export async function fetchRoleWithPermissions(roleId: string): Promise<RoleWith
 /**
  * Create a new role
  */
-export async function createRole(
-  name: string,
-  description?: string,
-  isSystem: boolean = false
-): Promise<Role> {
+export async function createRole(name: string, description?: string, isSystem: boolean = false): Promise<Role> {
   const { data, error } = await supabase
     .from("roles")
     .insert({ name, description, is_system: isSystem })
@@ -176,16 +162,8 @@ export async function createRole(
 /**
  * Update a role
  */
-export async function updateRole(
-  roleId: string,
-  updates: { name?: string; description?: string }
-): Promise<Role> {
-  const { data, error } = await supabase
-    .from("roles")
-    .update(updates)
-    .eq("id", roleId)
-    .select()
-    .single();
+export async function updateRole(roleId: string, updates: { name?: string; description?: string }): Promise<Role> {
+  const { data, error } = await supabase.from("roles").update(updates).eq("id", roleId).select().single();
   if (error) throw error;
   return mapRole(data);
 }
@@ -214,10 +192,7 @@ export async function deleteRole(roleId: string): Promise<void> {
  * Fetch all permissions
  */
 export async function fetchPermissions(): Promise<Permission[]> {
-  const { data, error } = await supabase
-    .from("permissions")
-    .select("*")
-    .order("module, key");
+  const { data, error } = await supabase.from("permissions").select("*").order("module, key");
   if (error) throw error;
   return (data ?? []).map(mapPermission);
 }
@@ -246,9 +221,7 @@ export async function fetchRolePermissions(roleId: string): Promise<Permission[]
  * Assign a permission to a role
  */
 export async function assignPermission(roleId: string, permissionId: string): Promise<void> {
-  const { error } = await supabase
-    .from("role_permissions")
-    .insert({ role_id: roleId, permission_id: permissionId });
+  const { error } = await supabase.from("role_permissions").insert({ role_id: roleId, permission_id: permissionId });
   if (error && error.code !== "23505") throw error; // Ignore unique constraint
 }
 
@@ -277,19 +250,13 @@ export async function fetchUserRoles(userId?: string): Promise<Role[]> {
   const targetUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id;
   if (!targetUserId) return [];
 
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", targetUserId);
+  const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", targetUserId);
   if (error) throw error;
 
   const roleNames = (data ?? []).map((row) => row.role).filter((r): r is AppRole => r != null);
   if (!roleNames.length) return [];
 
-  const { data: catalog, error: catalogError } = await supabase
-    .from("roles")
-    .select("*")
-    .in("name", roleNames);
+  const { data: catalog, error: catalogError } = await supabase.from("roles").select("*").in("name", roleNames);
   if (catalogError) throw catalogError;
 
   return (catalog ?? []).map(mapRole);
@@ -297,11 +264,7 @@ export async function fetchUserRoles(userId?: string): Promise<Role[]> {
 
 /** Risolve un id del catalogo `roles` nel nome usato da `user_roles.role`. */
 async function resolveAssignableRoleName(roleId: string): Promise<AppRole> {
-  const { data, error } = await supabase
-    .from("roles")
-    .select("name")
-    .eq("id", roleId)
-    .maybeSingle();
+  const { data, error } = await supabase.from("roles").select("name").eq("id", roleId).maybeSingle();
   if (error) throw error;
   if (!data) throw new Error(`Ruolo "${roleId}" inesistente nel catalogo dei ruoli.`);
 
@@ -330,11 +293,7 @@ export async function assignUserRole(userId: string, roleId: string): Promise<vo
  */
 export async function removeUserRole(userId: string, roleId: string): Promise<void> {
   const role = await resolveAssignableRoleName(roleId);
-  const { error } = await supabase
-    .from("user_roles")
-    .delete()
-    .eq("user_id", userId)
-    .eq("role", role);
+  const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
   if (error) throw error;
 }
 
@@ -344,14 +303,14 @@ export async function removeUserRole(userId: string, roleId: string): Promise<vo
  * Check if current user has a specific permission
  */
 export async function checkUserPermission(permissionKey: string): Promise<boolean> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+  const {
+    data: { session: __s },
+  } = await supabase.auth.getSession();
+  const user = __s?.user ?? null;
   if (!user) return false;
 
   // Fetch user's roles (per nome: vedi nota schema in testa al file).
-  const { data: userRoles, error: roleError } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id);
+  const { data: userRoles, error: roleError } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
   // Fail closed: senza ruoli leggibili non si concede alcun permesso.
   if (roleError) return false;
 
@@ -363,10 +322,7 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   if (roleNames.includes("admin")) return true;
 
   // Risoluzione nome → id del catalogo per interrogare `role_permissions`.
-  const { data: catalog, error: catalogError } = await supabase
-    .from("roles")
-    .select("id")
-    .in("name", roleNames);
+  const { data: catalog, error: catalogError } = await supabase.from("roles").select("id").in("name", roleNames);
   if (catalogError) return false;
 
   const roleIds = (catalog ?? []).map((row) => row.id);
@@ -409,10 +365,7 @@ export async function createTeam(_name: string, _description?: string): Promise<
 }
 
 /** Aggiornamento team: non disponibile (tabella `teams` assente). */
-export async function updateTeam(
-  _teamId: string,
-  _updates: { name?: string; description?: string },
-): Promise<Team> {
+export async function updateTeam(_teamId: string, _updates: { name?: string; description?: string }): Promise<Team> {
   throw new Error(TEAMS_UNAVAILABLE);
 }
 
@@ -435,11 +388,7 @@ export async function fetchTeamMembers(_teamId: string): Promise<TeamMember[]> {
 }
 
 /** Aggiunta membro: non disponibile (feature Team assente dallo schema). */
-export async function addTeamMember(
-  _teamId: string,
-  _userId: string,
-  _role: string = "member",
-): Promise<void> {
+export async function addTeamMember(_teamId: string, _userId: string, _role: string = "member"): Promise<void> {
   throw new Error(TEAMS_UNAVAILABLE);
 }
 

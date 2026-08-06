@@ -16,13 +16,19 @@ interface ResultsListProps {
 
 export function ResultsList({ picker }: ResultsListProps) {
   const {
-    state, dispatch,
+    state,
+    dispatch,
     shouldSearch,
-    filteredPartners, partnerContacts,
-    filteredContacts, groupedContacts,
+    filteredPartners,
+    partnerContacts,
+    filteredContacts,
+    groupedContacts,
     filteredBca,
     isSelected,
-    handleSelectPartner, handleSelectContact, handleSelectImported, handleSelectBca,
+    handleSelectPartner,
+    handleSelectContact,
+    handleSelectImported,
+    handleSelectBca,
   } = picker;
   const contactsListRef = useRef<HTMLDivElement>(null);
 
@@ -39,21 +45,32 @@ export function ResultsList({ picker }: ResultsListProps) {
           {/* ═══ Partners ═══ */}
           {state.tab === "partners" && (filteredPartners.length > 0 || shouldSearch) && (
             <div className="space-y-1.5">
-              {filteredPartners.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-              {filteredPartners.map(p => (
+              {filteredPartners.length === 0 && (
+                <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>
+              )}
+              {filteredPartners.map((p) => (
                 <div key={p.id} className="relative">
-                  <div className={cn(
-                    "rounded-lg border bg-card shadow-sm",
-                    state.expandedPartner === p.id ? "border-primary/30" : "border-border/50"
-                  )}>
+                  <div
+                    className={cn(
+                      "rounded-lg border bg-card shadow-sm",
+                      state.expandedPartner === p.id ? "border-primary/30" : "border-border/50",
+                    )}
+                  >
                     <button
-                      onClick={() => dispatch({ type: "SET_EXPANDED_PARTNER", id: state.expandedPartner === p.id ? null : p.id })}
+                      onClick={() =>
+                        dispatch({ type: "SET_EXPANDED_PARTNER", id: state.expandedPartner === p.id ? null : p.id })
+                      }
                       className={cn(
                         "w-full flex items-start gap-2 px-3 py-2 text-xs transition-all hover:bg-muted/40 rounded-lg",
-                        state.expandedPartner === p.id && "bg-muted/20"
+                        state.expandedPartner === p.id && "bg-muted/20",
                       )}
                     >
-                      <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground mt-0.5", state.expandedPartner === p.id && "rotate-90")} />
+                      <ChevronRight
+                        className={cn(
+                          "w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground mt-0.5",
+                          state.expandedPartner === p.id && "rotate-90",
+                        )}
+                      />
                       <div className="flex-1 text-left min-w-0">
                         <div className="font-semibold text-foreground truncate text-[11px]">{p.company_name}</div>
                         {p.city && (
@@ -64,15 +81,23 @@ export function ResultsList({ picker }: ResultsListProps) {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
                         {p.country_code && (
-                          <span className="text-base leading-none" title={WCA_COUNTRIES_MAP[p.country_code]?.name || p.country_code}>
+                          <span
+                            className="text-base leading-none"
+                            title={WCA_COUNTRIES_MAP[p.country_code]?.name || p.country_code}
+                          >
                             {getCountryFlag(p.country_code)}
                           </span>
                         )}
                         {!isSelected(p.id) ? (
                           <button
-                            onClick={e => { e.stopPropagation(); handleSelectPartner(p); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectPartner(p);
+                            }}
                             className="text-[9px] text-primary font-medium hover:underline"
-                          >+Azienda</button>
+                          >
+                            +Azienda
+                          </button>
                         ) : (
                           <Check className="w-3.5 h-3.5 text-primary" />
                         )}
@@ -84,14 +109,22 @@ export function ResultsList({ picker }: ResultsListProps) {
                       {partnerContacts.length === 0 && (
                         <p className="text-[9px] text-muted-foreground py-1 px-1">Nessun contatto</p>
                       )}
-                      {partnerContacts.map(c => (
+                      {partnerContacts.map((c) => (
                         <button
                           key={c.id}
-                          onClick={() => handleSelectContact(p.id, p.company_name || "", p.company_alias || undefined, p.country_code || undefined, c)}
+                          onClick={() =>
+                            handleSelectContact(
+                              p.id,
+                              p.company_name || "",
+                              p.company_alias || undefined,
+                              p.country_code || undefined,
+                              c,
+                            )
+                          }
                           disabled={isSelected(p.id, c.id)}
                           className={cn(
                             "w-full flex items-start gap-2 px-2 py-1.5 rounded-md text-left transition-all",
-                            isSelected(p.id, c.id) ? "opacity-50 bg-muted/20" : "hover:bg-primary/10"
+                            isSelected(p.id, c.id) ? "opacity-50 bg-muted/20" : "hover:bg-primary/10",
                           )}
                         >
                           <div className="flex-1 min-w-0">
@@ -99,10 +132,11 @@ export function ResultsList({ picker }: ResultsListProps) {
                             {c.title && <div className="text-[9px] text-muted-foreground truncate">{c.title}</div>}
                           </div>
                           {c.email && <Mail className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />}
-                          {isSelected(p.id, c.id)
-                            ? <Check className="w-3 h-3 text-primary mt-0.5" />
-                            : <span className="text-primary text-[9px] font-medium mt-0.5">+</span>
-                          }
+                          {isSelected(p.id, c.id) ? (
+                            <Check className="w-3 h-3 text-primary mt-0.5" />
+                          ) : (
+                            <span className="text-primary text-[9px] font-medium mt-0.5">+</span>
+                          )}
                         </button>
                       ))}
                       <button
@@ -121,25 +155,31 @@ export function ResultsList({ picker }: ResultsListProps) {
           {/* ═══ Contacts ═══ */}
           {state.tab === "contacts" && (
             <div className="space-y-1.5">
-              {filteredContacts.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
+              {filteredContacts.length === 0 && (
+                <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>
+              )}
               {groupedContacts.map(([companyName, members]) => (
                 <div key={companyName} className="relative">
-                  <div className={cn(
-                    "rounded-lg border bg-card shadow-sm",
-                    state.expandedCompany === companyName ? "border-primary/30" : "border-border/50"
-                  )}>
+                  <div
+                    className={cn(
+                      "rounded-lg border bg-card shadow-sm",
+                      state.expandedCompany === companyName ? "border-primary/30" : "border-border/50",
+                    )}
+                  >
                     {members.length === 1 ? (
                       <button
                         onClick={() => handleSelectImported(members[0])}
                         disabled={isSelected(members[0].id)}
                         className={cn(
                           "w-full text-left px-3 py-2 text-xs transition-all rounded-lg",
-                          isSelected(members[0].id) ? "opacity-50" : "hover:bg-muted/40"
+                          isSelected(members[0].id) ? "opacity-50" : "hover:bg-muted/40",
                         )}
                       >
                         <div className="flex items-start gap-2">
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-foreground truncate text-[11px]">{companyName !== "Senza azienda" ? companyName : (members[0].name || "—")}</div>
+                            <div className="font-semibold text-foreground truncate text-[11px]">
+                              {companyName !== "Senza azienda" ? companyName : members[0].name || "—"}
+                            </div>
                             {members[0].name && companyName !== "Senza azienda" && (
                               <div className="text-[10px] text-foreground truncate">{members[0].name}</div>
                             )}
@@ -153,47 +193,73 @@ export function ResultsList({ picker }: ResultsListProps) {
                             )}
                           </div>
                           <div className="flex items-center gap-1 mt-0.5 shrink-0">
-                            {members[0].origin && <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">{members[0].origin}</Badge>}
+                            {members[0].origin && (
+                              <Badge variant="outline" className="text-[7px] h-3 px-1 border-border/40">
+                                {members[0].origin}
+                              </Badge>
+                            )}
                             {members[0].email && <Mail className="w-3 h-3 text-primary" />}
-                            {isSelected(members[0].id) ? <Check className="w-3 h-3 text-primary" /> : <span className="text-primary text-[9px]">+</span>}
+                            {isSelected(members[0].id) ? (
+                              <Check className="w-3 h-3 text-primary" />
+                            ) : (
+                              <span className="text-primary text-[9px]">+</span>
+                            )}
                           </div>
                         </div>
                       </button>
                     ) : (
                       <button
-                        onClick={() => dispatch({ type: "SET_EXPANDED_COMPANY", name: state.expandedCompany === companyName ? null : companyName })}
+                        onClick={() =>
+                          dispatch({
+                            type: "SET_EXPANDED_COMPANY",
+                            name: state.expandedCompany === companyName ? null : companyName,
+                          })
+                        }
                         className={cn(
                           "w-full flex items-center gap-2 px-3 py-2 text-xs transition-all hover:bg-muted/40 rounded-lg",
-                          state.expandedCompany === companyName && "bg-muted/20"
+                          state.expandedCompany === companyName && "bg-muted/20",
                         )}
                       >
-                        <ChevronRight className={cn("w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground", state.expandedCompany === companyName && "rotate-90")} />
+                        <ChevronRight
+                          className={cn(
+                            "w-3 h-3 transition-transform flex-shrink-0 text-muted-foreground",
+                            state.expandedCompany === companyName && "rotate-90",
+                          )}
+                        />
                         <div className="flex-1 text-left min-w-0">
                           <div className="font-semibold text-foreground truncate text-[11px]">{companyName}</div>
                         </div>
-                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{members.length}</Badge>
+                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1">
+                          {members.length}
+                        </Badge>
                       </button>
                     )}
                   </div>
                   {members.length > 1 && state.expandedCompany === companyName && (
                     <div className="absolute left-0 right-0 z-20 mt-0.5 rounded-lg border border-primary/30 bg-popover/98 backdrop-blur-sm shadow-lg p-2 space-y-0.5 max-h-[200px] overflow-y-auto">
-                      {members.map(c => (
+                      {members.map((c) => (
                         <button
                           key={c.id}
                           onClick={() => handleSelectImported(c)}
                           disabled={isSelected(c.id)}
                           className={cn(
                             "w-full text-left px-2 py-1.5 rounded-md transition-all",
-                            isSelected(c.id) ? "opacity-50 bg-muted/20" : "hover:bg-primary/10"
+                            isSelected(c.id) ? "opacity-50 bg-muted/20" : "hover:bg-primary/10",
                           )}
                         >
                           <div className="flex items-start gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="text-[10px] font-medium text-foreground truncate">{c.name || "—"}</div>
-                              {c.position && <div className="text-[9px] text-muted-foreground truncate">{c.position}</div>}
+                              {c.position && (
+                                <div className="text-[9px] text-muted-foreground truncate">{c.position}</div>
+                              )}
                             </div>
                             {c.email && <Mail className="w-3 h-3 text-primary mt-0.5" />}
-                            {isSelected(c.id) ? <Check className="w-3 h-3 text-primary mt-0.5" /> : <span className="text-primary text-[9px] mt-0.5">+</span>}
+                            {isSelected(c.id) ? (
+                              <Check className="w-3 h-3 text-primary mt-0.5" />
+                            ) : (
+                              <span className="text-primary text-[9px] mt-0.5">+</span>
+                            )}
                           </div>
                         </button>
                       ))}
@@ -213,20 +279,24 @@ export function ResultsList({ picker }: ResultsListProps) {
           {/* ═══ BCA ═══ */}
           {state.tab === "bca" && (
             <div className="space-y-1.5">
-              {filteredBca.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>}
-              {filteredBca.map(c => (
+              {filteredBca.length === 0 && (
+                <p className="text-[10px] text-muted-foreground text-center py-3">Nessun risultato</p>
+              )}
+              {filteredBca.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => handleSelectBca(c)}
                   disabled={isSelected(c.matched_partner_id || c.id)}
                   className={cn(
                     "w-full text-left rounded-lg border border-border/50 bg-card px-3 py-2 text-xs transition-all shadow-sm",
-                    isSelected(c.matched_partner_id || c.id) ? "opacity-50" : "hover:bg-muted/40"
+                    isSelected(c.matched_partner_id || c.id) ? "opacity-50" : "hover:bg-muted/40",
                   )}
                 >
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-foreground truncate text-[11px]">{c.company_name || c.contact_name || "—"}</div>
+                      <div className="font-semibold text-foreground truncate text-[11px]">
+                        {c.company_name || c.contact_name || "—"}
+                      </div>
                       {c.contact_name && c.company_name && (
                         <div className="text-[10px] text-foreground truncate">{c.contact_name}</div>
                       )}
@@ -238,7 +308,11 @@ export function ResultsList({ picker }: ResultsListProps) {
                     </div>
                     <div className="flex items-center gap-1 mt-0.5 shrink-0">
                       {c.email && <Mail className="w-3 h-3 text-primary" />}
-                      {isSelected(c.matched_partner_id || c.id) ? <Check className="w-3 h-3 text-primary" /> : <span className="text-primary text-[9px]">+</span>}
+                      {isSelected(c.matched_partner_id || c.id) ? (
+                        <Check className="w-3 h-3 text-primary" />
+                      ) : (
+                        <span className="text-primary text-[9px]">+</span>
+                      )}
                     </div>
                   </div>
                 </button>

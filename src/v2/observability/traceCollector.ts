@@ -72,10 +72,16 @@ class TraceCollector {
     });
   }
 
-  setPaused(p: boolean) { this.paused = p; }
-  isPaused() { return this.paused; }
+  setPaused(p: boolean) {
+    this.paused = p;
+  }
+  isPaused() {
+    return this.paused;
+  }
 
-  setDbEnabled(v: boolean) { this.dbEnabled = v; }
+  setDbEnabled(v: boolean) {
+    this.dbEnabled = v;
+  }
 
   /** Returns a fresh correlation id and marks it active. */
   startCorrelation(): string {
@@ -114,7 +120,9 @@ class TraceCollector {
     this.notify();
   }
 
-  getBuffer(): TraceEvent[] { return [...this.buffer]; }
+  getBuffer(): TraceEvent[] {
+    return [...this.buffer];
+  }
 
   clear() {
     this.buffer = [];
@@ -129,12 +137,19 @@ class TraceCollector {
   private notify() {
     const snap = this.buffer;
     this.listeners.forEach((l) => {
-      try { l(snap); } catch { /* ignore listener errors */ }
+      try {
+        l(snap);
+      } catch {
+        /* ignore listener errors */
+      }
     });
   }
 
   private async flush(): Promise<void> {
-    if (!this.dbEnabled) { this.pending = []; return; }
+    if (!this.dbEnabled) {
+      this.pending = [];
+      return;
+    }
     if (this.pending.length === 0) return;
     const userId = this.currentUserId;
     if (!userId) return; // niente sessione → niente DB (ma il buffer in memoria continua)
@@ -171,7 +186,12 @@ export const traceCollector = new TraceCollector();
 
 /** Helper: misura una promise emettendo start/end events. */
 export async function traced<T>(
-  meta: { type: "ai.invoke" | "edge.invoke"; scope?: string; source?: string; payload_summary?: Record<string, unknown> },
+  meta: {
+    type: "ai.invoke" | "edge.invoke";
+    scope?: string;
+    source?: string;
+    payload_summary?: Record<string, unknown>;
+  },
   fn: () => Promise<T>,
 ): Promise<T> {
   const corr = traceCollector.startCorrelation();

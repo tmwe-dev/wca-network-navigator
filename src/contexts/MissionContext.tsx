@@ -62,24 +62,23 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [recipients, setRecipients] = useState<SelectedRecipient[]>([]);
 
   const addRecipient = (r: SelectedRecipient) => {
-    setRecipients(prev => {
+    setRecipients((prev) => {
       // Dedupe primarily by email (stable identifier from any source).
       // Fallback to partnerId+contactId when email is missing.
-      const newKey = r.email
-        ? `email:${r.email.toLowerCase()}`
-        : `pc:${r.partnerId || ""}-${r.contactId || ""}`;
-      if (prev.some(x => {
-        const xKey = x.email
-          ? `email:${x.email.toLowerCase()}`
-          : `pc:${x.partnerId || ""}-${x.contactId || ""}`;
-        return xKey === newKey;
-      })) return prev;
+      const newKey = r.email ? `email:${r.email.toLowerCase()}` : `pc:${r.partnerId || ""}-${r.contactId || ""}`;
+      if (
+        prev.some((x) => {
+          const xKey = x.email ? `email:${x.email.toLowerCase()}` : `pc:${x.partnerId || ""}-${x.contactId || ""}`;
+          return xKey === newKey;
+        })
+      )
+        return prev;
       return [...prev, r];
     });
   };
 
   const removeRecipientByIdx = (idx: number) => {
-    setRecipients(prev => prev.filter((_, i) => i !== idx));
+    setRecipients((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const clearRecipients = () => setRecipients([]);
@@ -111,19 +110,53 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     if (activePresetId === id) setActivePresetId(null);
   };
 
-  const ctxValue = useMemo(() => ({
-    goal, setGoal, baseProposal, setBaseProposal,
-    referenceLinks, setReferenceLinks, context, setContext,
-    documents, uploading, upload, removeDocument: remove,
-    presets, activePresetId, setActivePresetId,
-    savePreset, deletePreset, loadPreset,
-    quality, setQuality,
-    recipients, addRecipient, removeRecipient: removeRecipientByIdx, clearRecipients,
-  }), [goal, baseProposal, referenceLinks, context, documents, uploading, upload, remove, presets, activePresetId, savePreset, deletePreset, loadPreset, quality, recipients, addRecipient, clearRecipients]);
-
-  return (
-    <MissionCtx.Provider value={ctxValue}>
-      {children}
-    </MissionCtx.Provider>
+  const ctxValue = useMemo(
+    () => ({
+      goal,
+      setGoal,
+      baseProposal,
+      setBaseProposal,
+      referenceLinks,
+      setReferenceLinks,
+      context,
+      setContext,
+      documents,
+      uploading,
+      upload,
+      removeDocument: remove,
+      presets,
+      activePresetId,
+      setActivePresetId,
+      savePreset,
+      deletePreset,
+      loadPreset,
+      quality,
+      setQuality,
+      recipients,
+      addRecipient,
+      removeRecipient: removeRecipientByIdx,
+      clearRecipients,
+    }),
+    [
+      goal,
+      baseProposal,
+      referenceLinks,
+      context,
+      documents,
+      uploading,
+      upload,
+      remove,
+      presets,
+      activePresetId,
+      savePreset,
+      deletePreset,
+      loadPreset,
+      quality,
+      recipients,
+      addRecipient,
+      clearRecipients,
+    ],
   );
+
+  return <MissionCtx.Provider value={ctxValue}>{children}</MissionCtx.Provider>;
 }

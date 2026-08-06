@@ -22,10 +22,7 @@ export async function fetchAuthProfile(userId: string): Promise<AuthProfileRow |
 }
 
 export async function fetchUserRoles(userId: string): Promise<AppRole[]> {
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId);
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   if (!data || data.length === 0) return ["user" as AppRole];
   return data.map((row) => row.role);
 }

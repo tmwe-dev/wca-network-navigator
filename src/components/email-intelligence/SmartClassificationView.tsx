@@ -2,14 +2,14 @@
  * SmartClassificationView — Split-view layout (sidebar | list 40% | detail 60%).
  * Adapted from tmwengine SmartInboxTabIntelligent layout pattern.
  */
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { CategoriesSidebar } from './CategoriesSidebar';
-import { ClassificationList } from './ClassificationList';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileText, Target, Brain, MessageSquare } from 'lucide-react';
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { CategoriesSidebar } from "./CategoriesSidebar";
+import { ClassificationList } from "./ClassificationList";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { FileText, Target, Brain, MessageSquare } from "lucide-react";
 import { findEmailClassificationsPlain, findEmailClassificationCategories } from "@/data/emailClassifications";
 
 interface Classification {
@@ -31,12 +31,12 @@ interface Classification {
 }
 
 export function SmartClassificationView() {
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedItem, setSelectedItem] = useState<Classification | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: classifications = [], isLoading } = useQuery({
-    queryKey: ['email-classifications', selectedCategory],
+    queryKey: ["email-classifications", selectedCategory],
     queryFn: async () => {
       const data = await findEmailClassificationsPlain(selectedCategory);
       return data as unknown as Classification[];
@@ -45,7 +45,7 @@ export function SmartClassificationView() {
 
   // Category counts (from all data)
   const { data: allClassifications = [] } = useQuery({
-    queryKey: ['email-classifications-counts'],
+    queryKey: ["email-classifications-counts"],
     queryFn: async () => {
       const data = await findEmailClassificationCategories();
       return data as { category: string }[];
@@ -66,7 +66,10 @@ export function SmartClassificationView() {
       <CategoriesSidebar
         categoryCounts={categoryCounts}
         selectedCategory={selectedCategory}
-        onCategoryChange={(cat) => { setSelectedCategory(cat); setSelectedItem(null); }}
+        onCategoryChange={(cat) => {
+          setSelectedCategory(cat);
+          setSelectedItem(null);
+        }}
       />
 
       {/* Center: Card list (40%) */}
@@ -92,11 +95,9 @@ export function SmartClassificationView() {
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge>{selectedItem.category}</Badge>
                 <Badge variant="outline">{Math.round(selectedItem.confidence * 100)}%</Badge>
-                {selectedItem.sentiment && (
-                  <Badge variant="secondary">{selectedItem.sentiment}</Badge>
-                )}
+                {selectedItem.sentiment && <Badge variant="secondary">{selectedItem.sentiment}</Badge>}
                 {selectedItem.urgency && (
-                  <Badge variant={selectedItem.urgency === 'critical' ? 'destructive' : 'outline'}>
+                  <Badge variant={selectedItem.urgency === "critical" ? "destructive" : "outline"}>
                     {selectedItem.urgency}
                   </Badge>
                 )}
@@ -121,7 +122,9 @@ export function SmartClassificationView() {
                       <h4 className="text-sm font-semibold mb-2">🏷️ Keywords</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedItem.keywords.map((kw, i) => (
-                          <Badge key={i} variant="outline" className="text-xs">{kw}</Badge>
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {kw}
+                          </Badge>
                         ))}
                       </div>
                     </div>
@@ -133,7 +136,9 @@ export function SmartClassificationView() {
                       <h4 className="text-sm font-semibold mb-2">🔍 Pattern Rilevati</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedItem.detected_patterns.map((p, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{p}</Badge>
+                          <Badge key={i} variant="secondary" className="text-xs">
+                            {p}
+                          </Badge>
                         ))}
                       </div>
                     </div>
@@ -167,9 +172,7 @@ export function SmartClassificationView() {
             <div className="text-center space-y-3 p-8">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto" />
               <h3 className="text-lg font-semibold">Seleziona una classificazione</h3>
-              <p className="text-sm text-muted-foreground">
-                Clicca su un'email classificata per vedere i dettagli
-              </p>
+              <p className="text-sm text-muted-foreground">Clicca su un'email classificata per vedere i dettagli</p>
             </div>
           </div>
         )}

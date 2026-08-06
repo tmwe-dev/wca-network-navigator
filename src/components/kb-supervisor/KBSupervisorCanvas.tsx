@@ -46,9 +46,17 @@ interface Props {
 }
 
 export function KBSupervisorCanvas({
-  activeDocument, proposedChanges, canvasTab, onTabChange,
-  onApprove, onReject, onEdit, onSave,
-  auditReport, documentList, onSelectDocument,
+  activeDocument,
+  proposedChanges,
+  canvasTab,
+  onTabChange,
+  onApprove,
+  onReject,
+  onEdit,
+  onSave,
+  auditReport,
+  documentList,
+  onSelectDocument,
 }: Props) {
   return (
     <div className="flex flex-col h-full bg-background border-l border-border">
@@ -64,7 +72,9 @@ export function KBSupervisorCanvas({
             <TabsTrigger value="diff" className="gap-1.5 text-xs">
               Modifiche
               {proposedChanges?.status === "pending" && (
-                <Badge variant="destructive" className="h-4 px-1 text-[9px]">!</Badge>
+                <Badge variant="destructive" className="h-4 px-1 text-[9px]">
+                  !
+                </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="audit" className="gap-1.5 text-xs">
@@ -92,7 +102,7 @@ export function KBSupervisorCanvas({
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-1 max-w-[120px] justify-end">
-                        {(doc.tags ?? []).slice(0, 3).map(tag => (
+                        {(doc.tags ?? []).slice(0, 3).map((tag) => (
                           <Badge key={tag} variant="outline" className="text-[9px]">
                             {tag}
                           </Badge>
@@ -158,7 +168,15 @@ export function KBSupervisorCanvas({
                   <label className="text-xs text-muted-foreground">Tag (separati da virgola)</label>
                   <Input
                     value={(activeDocument.tags ?? []).join(", ")}
-                    onChange={(e) => onEdit("tags", e.target.value.split(",").map(t => t.trim()).filter(Boolean))}
+                    onChange={(e) =>
+                      onEdit(
+                        "tags",
+                        e.target.value
+                          .split(",")
+                          .map((t) => t.trim())
+                          .filter(Boolean),
+                      )
+                    }
                     className="mt-1 text-sm"
                   />
                 </div>
@@ -194,9 +212,11 @@ export function KBSupervisorCanvas({
                   </div>
                   <Badge
                     variant={
-                      proposedChanges.status === "pending" ? "secondary" :
-                      proposedChanges.status === "rejected" ? "destructive" :
-                      "default"
+                      proposedChanges.status === "pending"
+                        ? "secondary"
+                        : proposedChanges.status === "rejected"
+                          ? "destructive"
+                          : "default"
                     }
                   >
                     {proposedChanges.status}
@@ -234,15 +254,17 @@ export function KBSupervisorCanvas({
                     <div>
                       <label className="text-xs font-medium text-destructive">Tag Attuali</label>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {proposedChanges.currentTags.map(t => (
-                          <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
+                        {proposedChanges.currentTags.map((t) => (
+                          <Badge key={t} variant="outline" className="text-[10px]">
+                            {t}
+                          </Badge>
                         ))}
                       </div>
                     </div>
                     <div>
                       <label className="text-xs font-medium text-primary">Tag Proposti</label>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {proposedChanges.proposedTags.map(t => (
+                        {proposedChanges.proposedTags.map((t) => (
                           <Badge
                             key={t}
                             variant={proposedChanges.currentTags?.includes(t) ? "outline" : "default"}
@@ -301,24 +323,36 @@ export function KBSupervisorCanvas({
                     <Card
                       key={i}
                       className={
-                        issue.severity === "critical" ? "border-destructive/50" :
-                        issue.severity === "high" ? "border-warning/50" :
-                        ""
+                        issue.severity === "critical"
+                          ? "border-destructive/50"
+                          : issue.severity === "high"
+                            ? "border-warning/50"
+                            : ""
                       }
                     >
                       <CardContent className="p-3">
                         <div className="flex items-start gap-2">
-                          {issue.severity === "critical" ? <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" /> :
-                           issue.severity === "high" ? <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" /> :
-                           <Info className="w-4 h-4 text-info mt-0.5 shrink-0" />}
+                          {issue.severity === "critical" ? (
+                            <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                          ) : issue.severity === "high" ? (
+                            <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+                          ) : (
+                            <Info className="w-4 h-4 text-info mt-0.5 shrink-0" />
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-[9px]">{issue.level}</Badge>
-                              <Badge variant="outline" className="text-[9px]">{issue.category}</Badge>
+                              <Badge variant="outline" className="text-[9px]">
+                                {issue.level}
+                              </Badge>
+                              <Badge variant="outline" className="text-[9px]">
+                                {issue.category}
+                              </Badge>
                             </div>
                             <p className="text-xs font-medium mt-1">{issue.description}</p>
                             <p className="text-[10px] text-muted-foreground mt-1">{issue.location}</p>
-                            <p className="text-xs mt-1"><strong>Fix:</strong> {issue.fix_proposal}</p>
+                            <p className="text-xs mt-1">
+                              <strong>Fix:</strong> {issue.fix_proposal}
+                            </p>
                           </div>
                         </div>
                       </CardContent>

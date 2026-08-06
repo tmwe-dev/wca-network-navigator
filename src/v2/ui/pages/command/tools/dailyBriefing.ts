@@ -18,7 +18,10 @@ export const dailyBriefingTool: Tool = {
   id: "daily-briefing",
   label: "Briefing giornaliero",
   description: "Genera il briefing operativo della giornata: KPI, scadenze, code, missioni, inbox.",
-  match: (p) => /\b(briefing|brief|riepilogo\s+giornaliero|sintesi\s+giornaliera|cosa\s+devo\s+fare\s+oggi|agenda\s+oggi|stato\s+oggi)\b/i.test(p),
+  match: (p) =>
+    /\b(briefing|brief|riepilogo\s+giornaliero|sintesi\s+giornaliera|cosa\s+devo\s+fare\s+oggi|agenda\s+oggi|stato\s+oggi)\b/i.test(
+      p,
+    ),
 
   execute: async (): Promise<ToolResult> => {
     const res = await invokeAi<BriefingResp>("daily-briefing", {
@@ -36,17 +39,25 @@ export const dailyBriefingTool: Tool = {
       };
     }
 
-    const sections = res.sections && res.sections.length > 0
-      ? res.sections
-      : [
-          { heading: "Sintesi", body: res.summary ?? res.briefing ?? res.message ?? "Nessun contenuto disponibile." },
-          ...(res.highlights && res.highlights.length > 0
-            ? [{ heading: "Highlights", body: res.highlights.map((h) => `• ${h}`).join("\n") }]
-            : []),
-          ...(res.kpi
-            ? [{ heading: "KPI", body: Object.entries(res.kpi).map(([k, v]) => `${k}: ${v}`).join("\n") }]
-            : []),
-        ];
+    const sections =
+      res.sections && res.sections.length > 0
+        ? res.sections
+        : [
+            { heading: "Sintesi", body: res.summary ?? res.briefing ?? res.message ?? "Nessun contenuto disponibile." },
+            ...(res.highlights && res.highlights.length > 0
+              ? [{ heading: "Highlights", body: res.highlights.map((h) => `• ${h}`).join("\n") }]
+              : []),
+            ...(res.kpi
+              ? [
+                  {
+                    heading: "KPI",
+                    body: Object.entries(res.kpi)
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join("\n"),
+                  },
+                ]
+              : []),
+          ];
 
     return {
       kind: "report",

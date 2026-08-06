@@ -34,6 +34,7 @@ ESLint blocca le violazioni (`no-direct-ai-invoke`).
 
 Per scope con `enforcement_mode = 'block'` e `requires_grounding =
 true`, l'edge function AI:
+
 - ottiene `tools` dal sistema e li espone al modello;
 - se la query menziona entità (partner, paese, contatto, mission) e
   il modello risponde **senza chiamare alcun tool**, la risposta
@@ -45,9 +46,10 @@ Per scope `warn`, la risposta passa ma viene marcata
 ## R5 — System prompt fisso
 
 Il system prompt include sempre la direttiva:
+
 > "Per ogni domanda che menzioni entità presenti nel database
->  (partner, paesi, lead, mission, campagne) DEVI chiamare il tool
->  appropriato PRIMA di rispondere. Vietato inventare dati."
+> (partner, paesi, lead, mission, campagne) DEVI chiamare il tool
+> appropriato PRIMA di rispondere. Vietato inventare dati."
 
 ## R6 — Audit
 
@@ -70,23 +72,23 @@ disponibili per scope. Default: nessuna restrizione.
 
 ## Mapping scope → funzioni AI
 
-| Scope | Edge functions tipiche |
-|-------|------------------------|
-| home | ai-assistant |
-| partners | ai-assistant |
-| missions | unified-assistant, ai-assistant |
-| outreach | generate-outreach, generate-email, improve-email, ai-assistant |
-| crm | ai-assistant, calculate-lead-scores |
-| staff | ai-assistant |
-| strategic | ai-assistant |
-| command | ai-assistant |
-| email | generate-email, improve-email |
-| classify | classify-email-response, classify-inbound-message, categorize-content |
-| agent | agent-execute, agent-loop, agent-simulate, agent-prompt-refiner |
-| sherlock | sherlock-extract, agentic-decide |
-| lab | prompt-test-runner, agent-simulate |
-| diagnostics | ai-assistant |
-| briefing | daily-briefing |
+| Scope       | Edge functions tipiche                                                |
+| ----------- | --------------------------------------------------------------------- |
+| home        | ai-assistant                                                          |
+| partners    | ai-assistant                                                          |
+| missions    | unified-assistant, ai-assistant                                       |
+| outreach    | generate-outreach, generate-email, improve-email, ai-assistant        |
+| crm         | ai-assistant, calculate-lead-scores                                   |
+| staff       | ai-assistant                                                          |
+| strategic   | ai-assistant                                                          |
+| command     | ai-assistant                                                          |
+| email       | generate-email, improve-email                                         |
+| classify    | classify-email-response, classify-inbound-message, categorize-content |
+| agent       | agent-execute, agent-loop, agent-simulate, agent-prompt-refiner       |
+| sherlock    | sherlock-extract, agentic-decide                                      |
+| lab         | prompt-test-runner, agent-simulate                                    |
+| diagnostics | ai-assistant                                                          |
+| briefing    | daily-briefing                                                        |
 
 ## Esempio di uso
 

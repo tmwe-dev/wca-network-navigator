@@ -46,7 +46,9 @@ export function TelemetryPage() {
           className="h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {RANGES.map((r) => (
-            <option key={r.key} value={r.key}>{r.label}</option>
+            <option key={r.key} value={r.key}>
+              {r.label}
+            </option>
           ))}
         </select>
       }
@@ -60,7 +62,8 @@ export function TelemetryPage() {
                 tab === t.key ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span className="mr-1">{t.icon}</span>{t.label}
+              <span className="mr-1">{t.icon}</span>
+              {t.label}
             </button>
           ))}
         </div>

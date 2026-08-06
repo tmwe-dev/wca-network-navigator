@@ -5,9 +5,7 @@
  */
 import { ArrowDownWideNarrow, CheckSquare, Square, FolderTree, RefreshCw, EyeOff, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export type SortMode = "date_desc" | "company_asc" | "sender_asc" | "subject_asc";
 export type GroupMode = "none" | "company" | "sender";
@@ -41,9 +39,18 @@ const GROUP_LABELS: Record<GroupMode, string> = {
 };
 
 export function FunnemailListToolbar({
-  sort, group, onSortChange, onGroupChange,
-  totalCount = 0, checkedCount = 0, onSelectAll, onClearSelection,
-  hideRead, onToggleHideRead, onRefresh, refreshing,
+  sort,
+  group,
+  onSortChange,
+  onGroupChange,
+  totalCount = 0,
+  checkedCount = 0,
+  onSelectAll,
+  onClearSelection,
+  hideRead,
+  onToggleHideRead,
+  onRefresh,
+  refreshing,
 }: Props) {
   const allSelected = totalCount > 0 && checkedCount >= totalCount;
   return (
@@ -96,7 +103,9 @@ export function FunnemailListToolbar({
           </SelectTrigger>
           <SelectContent>
             {(Object.keys(SORT_LABELS) as SortMode[]).map((k) => (
-              <SelectItem key={k} value={k} className="text-sm">{SORT_LABELS[k]}</SelectItem>
+              <SelectItem key={k} value={k} className="text-sm">
+                {SORT_LABELS[k]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -110,7 +119,9 @@ export function FunnemailListToolbar({
           </SelectTrigger>
           <SelectContent>
             {(Object.keys(GROUP_LABELS) as GroupMode[]).map((k) => (
-              <SelectItem key={k} value={k} className="text-sm">{GROUP_LABELS[k]}</SelectItem>
+              <SelectItem key={k} value={k} className="text-sm">
+                {GROUP_LABELS[k]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

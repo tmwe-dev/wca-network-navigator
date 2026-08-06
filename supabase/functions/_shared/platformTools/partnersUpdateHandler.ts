@@ -11,9 +11,7 @@ interface ResolvedPartner {
   name: string;
 }
 
-async function resolvePartnerId(
-  args: Record<string, unknown>
-): Promise<ResolvedPartner | null> {
+async function resolvePartnerId(args: Record<string, unknown>): Promise<ResolvedPartner | null> {
   if (args.partner_id) {
     const { data } = await supabase
       .from("partners")
@@ -34,18 +32,14 @@ async function resolvePartnerId(
   return null;
 }
 
-export async function handleUpdatePartner(
-  args: Record<string, unknown>,
-  userId?: string
-): Promise<unknown> {
+export async function handleUpdatePartner(args: Record<string, unknown>, userId?: string): Promise<unknown> {
   const partner = await resolvePartnerId(args);
   if (!partner) return { error: "Partner non trovato" };
   const updates: Record<string, unknown> = {};
   let leadStatusChange: string | null = null;
   if (args.is_favorite !== undefined) updates.is_favorite = args.is_favorite;
   if (args.lead_status) leadStatusChange = args.lead_status as string;
-  if (args.rating !== undefined)
-    updates.rating = Math.min(5, Math.max(0, Number(args.rating)));
+  if (args.rating !== undefined) updates.rating = Math.min(5, Math.max(0, Number(args.rating)));
   if (args.company_alias) updates.company_alias = args.company_alias;
   if (Object.keys(updates).length === 0 && !leadStatusChange) return { error: "Nessun campo da aggiornare" };
   updates.updated_at = new Date().toISOString();
@@ -74,9 +68,7 @@ export async function handleUpdatePartner(
   };
 }
 
-export async function handleAddPartnerNote(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleAddPartnerNote(args: Record<string, unknown>): Promise<unknown> {
   const partner = await resolvePartnerId(args);
   if (!partner) return { error: "Partner non trovato" };
   const { error } = await supabase.from("interactions").insert({
@@ -89,10 +81,7 @@ export async function handleAddPartnerNote(
   return { success: true, message: `Nota aggiunta a "${partner.name}".` };
 }
 
-export async function handleBulkUpdatePartners(
-  args: Record<string, unknown>,
-  userId?: string
-): Promise<unknown> {
+export async function handleBulkUpdatePartners(args: Record<string, unknown>, userId?: string): Promise<unknown> {
   const updates: Record<string, unknown> = {};
   let leadStatusChange: string | null = null;
   if (args.is_favorite !== undefined) updates.is_favorite = args.is_favorite;

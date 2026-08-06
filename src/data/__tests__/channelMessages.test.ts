@@ -39,16 +39,14 @@ describe("DAL — channelMessages", () => {
         channel: "email",
         direction: "inbound",
       });
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({ channel: "email", direction: "inbound" })
-      );
+      expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ channel: "email", direction: "inbound" }));
     });
 
     it("throws on error", async () => {
       mockInsert.mockResolvedValue({ error: { message: "constraint" } });
-      await expect(
-        insertChannelMessage({ user_id: "u1", channel: "email", direction: "out" })
-      ).rejects.toEqual({ message: "constraint" });
+      await expect(insertChannelMessage({ user_id: "u1", channel: "email", direction: "out" })).rejects.toEqual({
+        message: "constraint",
+      });
     });
   });
 

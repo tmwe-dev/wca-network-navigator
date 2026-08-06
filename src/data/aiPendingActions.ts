@@ -43,9 +43,10 @@ export async function setDecisionLogReview(
   review: "approved" | "rejected",
   correction?: string | null,
 ): Promise<void> {
-  const patch = review === "approved"
-    ? { user_review: "approved" }
-    : { user_review: "rejected", user_correction: correction ?? null };
+  const patch =
+    review === "approved"
+      ? { user_review: "approved" }
+      : { user_review: "rejected", user_correction: correction ?? null };
   await supabase.from("ai_decision_log").update(patch).eq("id", decisionLogId);
 }
 
@@ -74,11 +75,7 @@ type AiPendingActionInsert = Database["public"]["Tables"]["ai_pending_actions"][
 export async function insertPendingActionReturningId(
   row: AiPendingActionInsert,
 ): Promise<{ id: string | null; error: { message: string } | null }> {
-  const { data, error } = await supabase
-    .from("ai_pending_actions")
-    .insert(row)
-    .select("id")
-    .maybeSingle();
+  const { data, error } = await supabase.from("ai_pending_actions").insert(row).select("id").maybeSingle();
   if (error) return { id: null, error };
   return { id: data?.id ?? null, error: null };
 }
@@ -87,9 +84,7 @@ export async function insertPendingActionReturningId(
  * Insert su ai_pending_actions senza select, per trasferimento da
  * `outreach_queue`. Estratto da `useOutreachQueue`.
  */
-export async function insertPendingAction(
-  row: AiPendingActionInsert,
-): Promise<{ error: { message: string } | null }> {
+export async function insertPendingAction(row: AiPendingActionInsert): Promise<{ error: { message: string } | null }> {
   const { error } = await supabase.from("ai_pending_actions").insert(row);
   return { error };
 }

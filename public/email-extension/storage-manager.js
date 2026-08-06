@@ -16,12 +16,14 @@ const STATE_KEY = "email_sync_state";
 
 export async function getSyncState() {
   const result = await chrome.storage.local.get(STATE_KEY);
-  return result[STATE_KEY] || {
-    lastUid: 0,
-    totalDownloaded: 0,
-    lastSyncAt: null,
-    storageMode: DEFAULTS.storageMode,
-  };
+  return (
+    result[STATE_KEY] || {
+      lastUid: 0,
+      totalDownloaded: 0,
+      lastSyncAt: null,
+      storageMode: DEFAULTS.storageMode,
+    }
+  );
 }
 
 export async function updateSyncState(patch) {
@@ -40,9 +42,7 @@ export async function updateSyncState(patch) {
  */
 export async function saveEmailLocally(email) {
   const sanitized = sanitizeFilename(email.subject || "no-subject");
-  const dateStr = email.date 
-    ? new Date(email.date).toISOString().slice(0, 10) 
-    : new Date().toISOString().slice(0, 10);
+  const dateStr = email.date ? new Date(email.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
   const filename = `email/${dateStr}/${sanitized}_${email.uid}.eml`;
 
   const blob = new Blob([email.raw], { type: "message/rfc822" });
@@ -62,7 +62,7 @@ export async function saveEmailLocally(email) {
         } else {
           resolve({ success: true, filename, downloadId });
         }
-      }
+      },
     );
   });
 }
@@ -114,12 +114,14 @@ const STATS_KEY = "email_stats";
 
 export async function getStats() {
   const result = await chrome.storage.local.get(STATS_KEY);
-  return result[STATS_KEY] || {
-    totalEmails: 0,
-    lastSyncDuration: 0,
-    syncCount: 0,
-    errors: 0,
-  };
+  return (
+    result[STATS_KEY] || {
+      totalEmails: 0,
+      lastSyncDuration: 0,
+      syncCount: 0,
+      errors: 0,
+    }
+  );
 }
 
 export async function updateStats(patch) {
@@ -148,5 +150,5 @@ function blobToDataUrl(blob) {
 }
 
 function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }

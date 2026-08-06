@@ -22,8 +22,16 @@ interface FormFieldProps {
 }
 
 export function FormField({
-  label, name, type = "text", placeholder, value,
-  onChange, error, required, disabled, className,
+  label,
+  name,
+  type = "text",
+  placeholder,
+  value,
+  onChange,
+  error,
+  required,
+  disabled,
+  className,
 }: FormFieldProps): React.ReactElement {
   return (
     <div className={cn("space-y-1.5", className)}>

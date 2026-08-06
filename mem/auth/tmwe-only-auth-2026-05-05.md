@@ -3,6 +3,7 @@ name: TMWE-only auth con whitelist
 description: Login esclusivamente via TMWE OAuth; gate authorized_users nel callback; nessun form email/password
 type: feature
 ---
+
 Dal 2026-05-05 l'unica porta d'ingresso è TMWE OAuth.
 
 - `/v2/login` mostra solo il bottone "Entra con TMWE". Niente form email/password, signup, reset.

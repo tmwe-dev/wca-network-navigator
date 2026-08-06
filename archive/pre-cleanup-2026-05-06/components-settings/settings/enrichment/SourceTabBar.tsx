@@ -30,7 +30,7 @@ interface Props {
 export function SourceTabBar({ activeTab, counts, onTabChange }: Props) {
   return (
     <div className="flex items-center gap-1 flex-wrap">
-      {SOURCE_TABS.map(tab => (
+      {SOURCE_TABS.map((tab) => (
         <button
           key={tab.value}
           onClick={() => onTabChange(tab.value)}
@@ -38,15 +38,17 @@ export function SourceTabBar({ activeTab, counts, onTabChange }: Props) {
             "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
             activeTab === tab.value
               ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground"
+              : "bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
           {tab.icon}
           {tab.label}
-          <span className={cn(
-            "ml-0.5 text-[10px] rounded-full px-1.5 py-0.5",
-            activeTab === tab.value ? "bg-primary-foreground/20" : "bg-muted"
-          )}>
+          <span
+            className={cn(
+              "ml-0.5 text-[10px] rounded-full px-1.5 py-0.5",
+              activeTab === tab.value ? "bg-primary-foreground/20" : "bg-muted",
+            )}
+          >
             {counts[tab.value]}
           </span>
           {tab.value === "email" && activeTab === "email" && (

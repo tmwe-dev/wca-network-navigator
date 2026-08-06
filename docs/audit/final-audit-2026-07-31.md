@@ -5,6 +5,7 @@ su `src/**` con allowlist DAL minima; gate = typecheck + lint + guard + 2 suite
 Vitest consecutive + build).
 
 ## BATCH 10 — E2E (nessun deploy, nessuna mutazione produttiva)
+
 - Ambiente: app locale (dev server 8080). Browser Node Playwright assente
   (`chromium-1223`), eseguito con il Chromium 1194 disponibile in sandbox.
 - **E2E autenticati: BLOCCATI.** `LOVABLE_BROWSER_AUTH_STATUS=signed_out`: nessuna
@@ -25,27 +26,29 @@ Vitest consecutive + build).
   `/settings`, `/v1/*`, routing e render mobile su decine di rotte.
 
 ## BATCH 11 — Metriche finali (misurate, non stimate)
-| Metrica | Baseline | Ora |
-|---|---|---|
-| Bypass DAL (`supabase.from/rpc/storage` fuori allowlist) | 733 → 427 | **0** (ratchet a 0) |
-| `as never` | 215 | 164 |
-| `as unknown as` | — | 317 |
-| `: any` | — | 393 |
-| `untypedFrom(` | — | 191 |
-| `@ts-ignore/@ts-nocheck/@ts-expect-error` | — | **0** |
-| `eslint-disable` in src | — | **0** |
-| Test Vitest | 3107 | **3114 pass, 2 skip, 390 file** (2 run consecutive) |
-| ESLint | 1339 errori | **0 errori**, 375 warning |
-| Typecheck | — | **verde** |
-| Build | — | **verde** (51,6 s; entry 934 KB / 276 KB gz) |
-| Edge contracts | 12 shape errore | contratto canonico `{error,code,details,extra}` + test |
-| DB drift | — | 0 su 216 tabelle / 14 view (read-only) |
-| Complessità hotspot | `contextInjection` 483, `toolHandlersRead` 526 | 140 / 23 (moduli estratti) |
+
+| Metrica                                                  | Baseline                                       | Ora                                                    |
+| -------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
+| Bypass DAL (`supabase.from/rpc/storage` fuori allowlist) | 733 → 427                                      | **0** (ratchet a 0)                                    |
+| `as never`                                               | 215                                            | 164                                                    |
+| `as unknown as`                                          | —                                              | 317                                                    |
+| `: any`                                                  | —                                              | 393                                                    |
+| `untypedFrom(`                                           | —                                              | 191                                                    |
+| `@ts-ignore/@ts-nocheck/@ts-expect-error`                | —                                              | **0**                                                  |
+| `eslint-disable` in src                                  | —                                              | **0**                                                  |
+| Test Vitest                                              | 3107                                           | **3114 pass, 2 skip, 390 file** (2 run consecutive)    |
+| ESLint                                                   | 1339 errori                                    | **0 errori**, 375 warning                              |
+| Typecheck                                                | —                                              | **verde**                                              |
+| Build                                                    | —                                              | **verde** (51,6 s; entry 934 KB / 276 KB gz)           |
+| Edge contracts                                           | 12 shape errore                                | contratto canonico `{error,code,details,extra}` + test |
+| DB drift                                                 | —                                              | 0 su 216 tabelle / 14 view (read-only)                 |
+| Complessità hotspot                                      | `contextInjection` 483, `toolHandlersRead` 526 | 140 / 23 (moduli estratti)                             |
 
 Nessun bypass spostato: i file toccati nei batch 6-9 non contengono `as never`,
 `as unknown as`, ts-ignore o eslint-disable (verificato con rg sul diff).
 
 ## Voto per area (/100000 pesato)
+
 - Architettura dati (DAL 0): 97.000
 - Type safety residua (`as unknown as` 317, `any` 393, `untypedFrom` 191): 78.000
 - Edge functions & contratti: 89.000
@@ -60,6 +63,7 @@ Nessun bypass spostato: i file toccati nei batch 6-9 non contengono `as never`,
 i cast residui non lo sostengono.
 
 ## Lavoro residuo
+
 1. Sessione E2E dedicata (utente di test) o mock auth locale → sblocca 28 spec.
 2. Allineare le spec login all'attuale flusso popup.
 3. Ridurre `as unknown as` / `untypedFrom` con tipi generati.

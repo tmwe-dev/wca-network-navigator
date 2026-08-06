@@ -2,7 +2,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Building2, MapPin, Mail, Phone, Globe, ExternalLink, Award, Users, Network, FileText, Calendar, Printer } from "lucide-react";
+import {
+  Building2,
+  MapPin,
+  Mail,
+  Phone,
+  Globe,
+  ExternalLink,
+  Award,
+  Users,
+  Network,
+  FileText,
+  Calendar,
+  Printer,
+} from "lucide-react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import type { ScrapedPartner, AIClassification } from "@/lib/api/wcaScraper";
 import { formatServiceCategory } from "@/lib/countries";
@@ -18,7 +31,13 @@ interface PartnerDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function PartnerDetailModal({ partner, partnerId, aiClassification, open, onOpenChange }: PartnerDetailModalProps) {
+export function PartnerDetailModal({
+  partner,
+  partnerId,
+  aiClassification,
+  open,
+  onOpenChange,
+}: PartnerDetailModalProps) {
   const navigate = useAppNavigate();
 
   if (!partner) return null;
@@ -29,7 +48,11 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
         <DialogHeader>
           <div className="flex items-start gap-3">
             {getRealLogoUrl(partner.logo_url) && (
-              <OptimizedImage src={getRealLogoUrl(partner.logo_url)!} alt="" className="w-12 h-12 object-contain rounded border bg-white p-1" />
+              <OptimizedImage
+                src={getRealLogoUrl(partner.logo_url)!}
+                alt=""
+                className="w-12 h-12 object-contain rounded border bg-white p-1"
+              />
             )}
             <div>
               <DialogTitle className="flex items-center gap-2">
@@ -39,7 +62,9 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
               <p className="text-sm text-muted-foreground mt-1">
                 {partner.city}, {partner.country_name}
                 {partner.office_type && (
-                  <Badge variant="outline" className="ml-2 text-xs">{partner.office_type === "head_office" ? "Sede Principale" : "Filiale"}</Badge>
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    {partner.office_type === "head_office" ? "Sede Principale" : "Filiale"}
+                  </Badge>
                 )}
               </p>
               {aiClassification?.rating && (
@@ -71,14 +96,14 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
             <>
               <Separator />
               <div>
-                <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-1.5">
-                  🤖 Analisi AI
-                </h4>
+                <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-1.5">🤖 Analisi AI</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed mb-2">{aiClassification.summary}</p>
                 {aiClassification.services?.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {aiClassification.services.map((s, i) => (
-                      <Badge key={i} className="text-xs">{formatServiceCategory(s)}</Badge>
+                      <Badge key={i} className="text-xs">
+                        {formatServiceCategory(s)}
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -91,15 +116,11 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
           {/* Contact details */}
           <div className="grid gap-2">
             <h4 className="text-sm font-semibold">Contatti</h4>
-            {partner.address && (
-              <InfoRow icon={<MapPin className="w-4 h-4" />} label={partner.address} />
-            )}
+            {partner.address && <InfoRow icon={<MapPin className="w-4 h-4" />} label={partner.address} />}
             {partner.phone && (
               <InfoRow icon={<Phone className="w-4 h-4" />} label={partner.phone} href={`tel:${partner.phone}`} />
             )}
-            {partner.fax && (
-              <InfoRow icon={<Printer className="w-4 h-4" />} label={`Fax: ${partner.fax}`} />
-            )}
+            {partner.fax && <InfoRow icon={<Printer className="w-4 h-4" />} label={`Fax: ${partner.fax}`} />}
             {partner.email && (
               <InfoRow icon={<Mail className="w-4 h-4" />} label={partner.email} href={`mailto:${partner.email}`} />
             )}
@@ -138,7 +159,9 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {partner.certifications.map((c, i) => (
-                    <Badge key={i} variant="outline" className="text-xs">{c}</Badge>
+                    <Badge key={i} variant="outline" className="text-xs">
+                      {c}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -158,7 +181,11 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
                     <div key={i} className="text-sm flex items-center gap-2">
                       <span className="text-muted-foreground">{c.title}</span>
                       {c.name && <span className="font-medium">{c.name}</span>}
-                      {c.email && <a href={`mailto:${c.email}`} className="text-primary text-xs hover:underline">{c.email}</a>}
+                      {c.email && (
+                        <a href={`mailto:${c.email}`} className="text-primary text-xs hover:underline">
+                          {c.email}
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -221,7 +248,17 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
   );
 }
 
-function InfoRow({ icon, label, href, external }: { icon: React.ReactNode; label: string; href?: string; external?: boolean }) {
+function InfoRow({
+  icon,
+  label,
+  href,
+  external,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  href?: string;
+  external?: boolean;
+}) {
   return (
     <div className="flex items-center gap-2 text-sm">
       <span className="text-muted-foreground shrink-0">{icon}</span>

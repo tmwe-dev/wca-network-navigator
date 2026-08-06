@@ -4,7 +4,7 @@ import { useCountryPartnerCounts } from "@/hooks/useCountryPartnerCounts";
 const GlobalNetworkSection = () => {
   const { data } = useCountryPartnerCounts();
   const top10 = (data?.countries || [])
-    .filter(c => c.count > 0)
+    .filter((c) => c.count > 0)
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
 
@@ -15,7 +15,8 @@ const GlobalNetworkSection = () => {
           <span className="text-primary text-sm font-bold tracking-widest uppercase">Rete Globale</span>
           <h2 className="text-4xl md:text-5xl font-bold text-white">Copertura mondiale</h2>
           <p className="text-white/40 text-lg">
-            {data?.activeCountries || 0} paesi con partner attivi — {data?.totalPartners?.toLocaleString() || 0} partner totali
+            {data?.activeCountries || 0} paesi con partner attivi — {data?.totalPartners?.toLocaleString() || 0} partner
+            totali
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

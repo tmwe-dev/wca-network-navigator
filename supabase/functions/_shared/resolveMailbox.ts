@@ -13,8 +13,8 @@
  */
 
 export interface ResolvedMailbox {
-  mailbox_id: string | null;          // null = personale
-  slug: string;                       // 'personal' | 'booking' | 'amministrazione' | ...
+  mailbox_id: string | null; // null = personale
+  slug: string; // 'personal' | 'booking' | 'amministrazione' | ...
   email: string;
   imap_host: string;
   imap_port: number;
@@ -95,8 +95,14 @@ interface SharedMailboxRow {
 interface SupabaseLike {
   from: (table: string) => {
     select: (cols: string) => {
-      eq: (col: string, val: unknown) => {
-        is: (col: string, val: unknown) => {
+      eq: (
+        col: string,
+        val: unknown,
+      ) => {
+        is: (
+          col: string,
+          val: unknown,
+        ) => {
           maybeSingle: () => Promise<{ data: SharedMailboxRow | null; error: unknown }>;
         };
       };
@@ -108,10 +114,7 @@ interface SupabaseLike {
  * Risolve una shared mailbox per id. Throwa se inattiva, non trovata, o senza
  * mapping ENV per la password.
  */
-export async function resolveSharedMailbox(
-  supabase: SupabaseLike,
-  mailboxId: string,
-): Promise<ResolvedMailbox> {
+export async function resolveSharedMailbox(supabase: SupabaseLike, mailboxId: string): Promise<ResolvedMailbox> {
   const { data, error } = await supabase
     .from("shared_mailboxes")
     .select("id, slug, email, imap_host, imap_port, imap_user, smtp_host, smtp_port, smtp_user, reply_to, is_active")

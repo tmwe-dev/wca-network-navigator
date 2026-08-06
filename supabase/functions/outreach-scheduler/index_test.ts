@@ -1,5 +1,9 @@
 import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
-try { loadSync({ export: true, examplePath: null }); } catch { /* env optional */ }
+try {
+  loadSync({ export: true, examplePath: null });
+} catch {
+  /* env optional */
+}
 import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL")!;

@@ -43,10 +43,7 @@ function simulateCurrentPendingReview(): PendingAction {
 }
 
 // CORRECT behavior (after fix 1.4)
-function simulateCorrectAutoExecute(
-  genSuccess: boolean,
-  sendSuccess: boolean
-): PendingAction {
+function simulateCorrectAutoExecute(genSuccess: boolean, sendSuccess: boolean): PendingAction {
   if (!genSuccess) {
     return {
       status: "failed",
@@ -89,7 +86,6 @@ function simulateCorrectPendingReview(): PendingAction {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C6 — Cadence Engine Current Bugs", () => {
-
   it("C6.6 — BUG: auto-execute creates empty payload", () => {
     const action = simulateCurrentAutoExecute();
     expect(action.status).toBe("executed"); // Claims executed
@@ -118,7 +114,6 @@ describe("Collaudo C6 — Cadence Engine Current Bugs", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C6 — Cadence Engine Correct Behavior", () => {
-
   it("C6.9 — correct: successful execution has subject + body + sent", () => {
     const action = simulateCorrectAutoExecute(true, true);
     expect(action.status).toBe("executed");
@@ -158,7 +153,6 @@ describe("Collaudo C6 — Cadence Engine Correct Behavior", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C6 — Payload Integrity Rules", () => {
-
   function validatePayload(action: PendingAction): string[] {
     const errors: string[] = [];
 
@@ -219,12 +213,11 @@ describe("Collaudo C6 — Payload Integrity Rules", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C6 — scheduleNextStep Context", () => {
-
   // Current behavior: metadata has only partner_id
   function simulateCurrentNextStep(
     _currentChannel: string,
     _currentStep: number,
-    _sequenceLength: number
+    _sequenceLength: number,
   ): Record<string, any> {
     return {
       partner_id: "uuid-123",
@@ -235,7 +228,7 @@ describe("Collaudo C6 — scheduleNextStep Context", () => {
   function simulateCorrectNextStep(
     currentChannel: string,
     currentStep: number,
-    sequenceLength: number
+    sequenceLength: number,
   ): Record<string, any> {
     return {
       partner_id: "uuid-123",

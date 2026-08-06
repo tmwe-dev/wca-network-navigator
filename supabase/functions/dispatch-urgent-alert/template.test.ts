@@ -10,17 +10,26 @@ function inQuietHours(start: string | null, end: string | null, tz: string | nul
   if (!start || !end) return false;
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: tz || "Europe/Rome",
-    hour: "2-digit", minute: "2-digit", hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   });
   const hhmm = fmt.format(now);
   if (start <= end) return hhmm >= start && hhmm < end;
   return hhmm >= start || hhmm < end;
 }
 
-function buildTemplate(b: {
-  subject: string; from_address: string; business_category: string;
-  urgency_score: number; summary: string; message_id: string;
-}, recipientName: string): string {
+function buildTemplate(
+  b: {
+    subject: string;
+    from_address: string;
+    business_category: string;
+    urgency_score: number;
+    summary: string;
+    message_id: string;
+  },
+  recipientName: string,
+): string {
   const cat = b.business_category.toUpperCase();
   const subj = (b.subject || "").slice(0, 80);
   const summary = (b.summary || "").slice(0, 240);
@@ -35,14 +44,17 @@ Apri: https://wca-network-navigator.lovable.app/v2/email-intelligence?msg=${b.me
 }
 
 Deno.test("buildTemplate: contiene tutti i campi chiave", () => {
-  const t = buildTemplate({
-    subject: "Cargo bloccato Malpensa",
-    from_address: "ops@partner.com",
-    business_category: "operations",
-    urgency_score: 92,
-    summary: "Spedizione AWB123 ferma in dogana, serve intervento entro 2 ore.",
-    message_id: "abc-123",
-  }, "Mario");
+  const t = buildTemplate(
+    {
+      subject: "Cargo bloccato Malpensa",
+      from_address: "ops@partner.com",
+      business_category: "operations",
+      urgency_score: 92,
+      summary: "Spedizione AWB123 ferma in dogana, serve intervento entro 2 ore.",
+      message_id: "abc-123",
+    },
+    "Mario",
+  );
   assert(t.includes("ALERT TMWE"));
   assert(t.includes("OPERATIONS"));
   assert(t.includes("urgency 92"));
@@ -55,11 +67,17 @@ Deno.test("buildTemplate: contiene tutti i campi chiave", () => {
 Deno.test("buildTemplate: tronca subject a 80 e summary a 240", () => {
   const longSubj = "x".repeat(200);
   const longSum = "y".repeat(500);
-  const t = buildTemplate({
-    subject: longSubj, from_address: "a@b.c",
-    business_category: "admin", urgency_score: 80,
-    summary: longSum, message_id: "m1",
-  }, "X");
+  const t = buildTemplate(
+    {
+      subject: longSubj,
+      from_address: "a@b.c",
+      business_category: "admin",
+      urgency_score: 80,
+      summary: longSum,
+      message_id: "m1",
+    },
+    "X",
+  );
   assert(t.includes("x".repeat(80)));
   assert(!t.includes("x".repeat(81)));
   assert(t.includes("y".repeat(240)));

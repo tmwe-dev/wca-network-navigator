@@ -6,19 +6,20 @@ type: feature
 
 ## Stato dati WCA (≥99% dei record)
 
-| Campo | Stato |
-|---|---|
-| `profile_description` | ✅ Valorizzato (sorgente di verità) |
-| `email`, `phone`, `address`, `website` | ✅ Valorizzati |
-| `raw_profile_html` | ❌ Vuoto (legacy scraper dismesso) |
-| `raw_profile_markdown` | ❌ Vuoto (legacy) |
-| `ai_parsed_at` | ❌ Vuoto (legacy) |
+| Campo                                  | Stato                               |
+| -------------------------------------- | ----------------------------------- |
+| `profile_description`                  | ✅ Valorizzato (sorgente di verità) |
+| `email`, `phone`, `address`, `website` | ✅ Valorizzati                      |
+| `raw_profile_html`                     | ❌ Vuoto (legacy scraper dismesso)  |
+| `raw_profile_markdown`                 | ❌ Vuoto (legacy)                   |
+| `ai_parsed_at`                         | ❌ Vuoto (legacy)                   |
 
 ## Sorgente di verità
 
 `has_profile === !!profile_description` — **NON** `raw_profile_html`.
 
 Implementato in:
+
 - `public.get_country_stats()` RPC (migration)
 - `supabase/functions/_shared/toolHandlersRead.ts`
 - `supabase/functions/_shared/platformTools.ts`
@@ -41,6 +42,7 @@ Iniettata come `criticalProcedures` nei prompt di: `luca`, `super-assistant`, `c
 ## UI suggestions aggiornate
 
 `src/components/intelliflow/overlay/useIntelliFlowOverlay.ts` rotta `/network`:
+
 - ❌ Rimossi: "Scarica tutti i partner", "Aggiorna profili mancanti", "Scarica da directory WCA"
 - ✅ Aggiunti: "Deep search USA", "Classifica per servizio", "Verifica email", "Genera alias"
 

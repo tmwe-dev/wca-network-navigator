@@ -26,8 +26,8 @@ export function DataSettingsTab(): React.ReactElement {
       <div className="p-4 rounded-lg border bg-card">
         <h4 className="font-medium text-foreground mb-2">Export dati</h4>
         <p className="text-sm text-muted-foreground">
-          Per esportare i dati in formato CSV o Excel, utilizza le funzioni di export disponibili
-          nelle pagine Network e CRM.
+          Per esportare i dati in formato CSV o Excel, utilizza le funzioni di export disponibili nelle pagine Network e
+          CRM.
         </p>
       </div>
     </div>

@@ -22,9 +22,7 @@ interface CommentaryDeps {
 }
 
 export function useResultCommentary(deps: CommentaryDeps) {
-  const {
-    addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
-  } = deps;
+  const { addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory } = deps;
 
   /** After tool execution, comment on the result + suggest next actions.
    *  Tries LOCAL formatter first (skips LLM), falls back to AI commentary. */
@@ -52,7 +50,11 @@ export function useResultCommentary(deps: CommentaryDeps) {
             content: result.message,
             agentName: "Direttore",
             timestamp: ts(),
-            meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
+            meta:
+              traceMeta ??
+              (result.meta?.sourceLabel
+                ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE`
+                : undefined),
             governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
             spokenSummary: result.message.replace(/[*_`#>❌]/g, "").slice(0, 200),
             audit,
@@ -60,21 +62,21 @@ export function useResultCommentary(deps: CommentaryDeps) {
           setVoiceSpeaking(false);
           return;
         }
-        const fallbackPlan: QueryPlan | null = result.kind === "table"
-          ? {
-              table: String(result.liveSource ?? "partners"),
-              columns: [],
-              filters: [...(result.queryFilters ?? [])] as QueryPlan["filters"],
-              limit: 50,
-              title: result.title,
-            }
-          : null;
-        const localPlan = getLastSuccessfulQueryPlan() ?? (result.kind === "table"
-          ? fallbackPlan
-          : null);
-        const local = result.kind === "multi"
-          ? tryLocalCommentMulti(userPrompt, result.parts)
-          : tryLocalComment(userPrompt, result, localPlan);
+        const fallbackPlan: QueryPlan | null =
+          result.kind === "table"
+            ? {
+                table: String(result.liveSource ?? "partners"),
+                columns: [],
+                filters: [...(result.queryFilters ?? [])] as QueryPlan["filters"],
+                limit: 50,
+                title: result.title,
+              }
+            : null;
+        const localPlan = getLastSuccessfulQueryPlan() ?? (result.kind === "table" ? fallbackPlan : null);
+        const local =
+          result.kind === "multi"
+            ? tryLocalCommentMulti(userPrompt, result.parts)
+            : tryLocalComment(userPrompt, result, localPlan);
         if (local) {
           const finalTrace = trace?.finish();
           const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
@@ -84,7 +86,11 @@ export function useResultCommentary(deps: CommentaryDeps) {
             content: local.message,
             agentName: "Direttore",
             timestamp: ts(),
-            meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
+            meta:
+              traceMeta ??
+              (result.meta?.sourceLabel
+                ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE`
+                : undefined),
             governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
             suggestedActions: local.suggestedActions,
             spokenSummary: local.spokenSummary,
@@ -124,7 +130,9 @@ export function useResultCommentary(deps: CommentaryDeps) {
         content: comment.message,
         agentName: "Direttore",
         timestamp: ts(),
-        meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
+        meta:
+          traceMeta ??
+          (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
         governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
         suggestedActions: comment.suggestedActions,
         spokenSummary: comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200),

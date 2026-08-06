@@ -3,9 +3,11 @@ name: Visibilità Globale Agenti
 description: Tutti gli operatori autenticati vedono tutti gli agenti del sistema; nessun isolamento per user_id/operator_id su SELECT
 type: feature
 ---
+
 Tutti gli operatori autenticati vedono TUTTI gli agenti del sistema (nessun isolamento per `user_id` né per `operator_id` in lettura).
 
 **Implementazione:**
+
 - `findAgents()` in `src/data/agents.ts` non filtra più per `user_id` (parametro ignorato, mantenuto per retrocompat).
 - `useAgents()` in `src/hooks/useAgents.ts` non chiama `getUser()` per filtrare.
 - Policy RLS su `agents`: `agents_select_all_authenticated` con `USING (true)` per ruolo `authenticated`.

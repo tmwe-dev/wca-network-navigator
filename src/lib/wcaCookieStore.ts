@@ -3,10 +3,10 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("wcaCookieStore");
 /**
  * WCA Session Cookie — modulo centralizzato per gestione cookie di sessione.
- * 
+ *
  * Strategia di sicurezza: cookie in memoria con fallback localStorage per persistenza.
  * Il cookie viene invalidato dopo TTL_MS (8 minuti).
- * 
+ *
  * Vol. II §6.4 — ridurre superficie di attacco XSS evitando duplicazione.
  */
 

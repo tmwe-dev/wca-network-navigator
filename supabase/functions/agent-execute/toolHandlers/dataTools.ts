@@ -3,7 +3,7 @@ import { escapeLike } from "../shared.ts";
 
 export async function handleCreateDownloadJob(
   supabase: AnySupabaseClient,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const cc = String(args.country_code || "").toUpperCase();
   const cn = String(args.country_name || "");
@@ -32,18 +32,10 @@ export async function handleCreateDownloadJob(
       .eq("country_code", cc)
       .not("wca_id", "is", null)
       .is("raw_profile_html", null);
-    wcaIds = (data || [])
-      .map((p: { wca_id: number | null }) => p.wca_id)
-      .filter(Boolean);
+    wcaIds = (data || []).map((p: { wca_id: number | null }) => p.wca_id).filter(Boolean);
   } else {
-    const { data } = await supabase
-      .from("partners")
-      .select("wca_id")
-      .eq("country_code", cc)
-      .not("wca_id", "is", null);
-    wcaIds = (data || [])
-      .map((p: { wca_id: number | null }) => p.wca_id)
-      .filter(Boolean);
+    const { data } = await supabase.from("partners").select("wca_id").eq("country_code", cc).not("wca_id", "is", null);
+    wcaIds = (data || []).map((p: { wca_id: number | null }) => p.wca_id).filter(Boolean);
   }
 
   if (wcaIds.length === 0) {
@@ -75,9 +67,7 @@ export async function handleCreateDownloadJob(
   }));
 
   for (let i = 0; i < jobItems.length; i += 500) {
-    await supabase
-      .from("download_job_items")
-      .insert(jobItems.slice(i, i + 500));
+    await supabase.from("download_job_items").insert(jobItems.slice(i, i + 500));
   }
 
   return {
@@ -90,7 +80,7 @@ export async function handleCreateDownloadJob(
 
 export async function handleDownloadSinglePartner(
   supabase: AnySupabaseClient,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const partnerName = String(args.company_name || "").trim();
   if (!partnerName) {
@@ -162,7 +152,7 @@ export async function handleDownloadSinglePartner(
 export async function handleGetBlacklist(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const cc = String(args.country_code || "").toUpperCase();
   const { data, error } = await supabase
@@ -181,7 +171,7 @@ export async function handleGetBlacklist(
 export async function handleListReminders(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const { data, error } = await supabase
     .from("reminders")
@@ -200,7 +190,7 @@ export async function handleListReminders(
 
 export async function handleGetPartnersWithoutContacts(
   supabase: AnySupabaseClient,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const { data, error } = await supabase
     .from("partners")

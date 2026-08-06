@@ -29,7 +29,11 @@ if (!existsSync(RESULTS)) {
 
 const raw = JSON.parse(readFileSync(RESULTS, "utf8"));
 
-let total = 0, passed = 0, failed = 0, skipped = 0, flaky = 0;
+let total = 0,
+  passed = 0,
+  failed = 0,
+  skipped = 0,
+  flaky = 0;
 const specs = [];
 
 function walkSuite(suite, parentFile) {
@@ -61,9 +65,10 @@ for (const s of raw.suites ?? []) walkSuite(s, s.file);
 const runId = process.env.GITHUB_RUN_ID || `local-${Date.now()}`;
 const sha = process.env.GITHUB_SHA;
 const branch = process.env.GITHUB_REF_NAME;
-const reportUrl = process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY
-  ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${runId}`
-  : undefined;
+const reportUrl =
+  process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY
+    ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${runId}`
+    : undefined;
 
 const payload = {
   run_id: String(runId),

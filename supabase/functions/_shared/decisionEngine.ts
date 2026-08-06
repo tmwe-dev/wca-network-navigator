@@ -34,8 +34,4 @@ export type {
   DecisionContext,
 } from "./decisionEngine/index.ts";
 
-export {
-  resolveAutonomy,
-  decideNextActions,
-  evaluatePartner,
-} from "./decisionEngine/index.ts";
+export { resolveAutonomy, decideNextActions, evaluatePartner } from "./decisionEngine/index.ts";

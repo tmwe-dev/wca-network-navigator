@@ -92,7 +92,11 @@ describe("lazyRetry", () => {
     // Force resolve via internal _payload
     const payload = (Lazy as any)._payload;
     if (payload && typeof payload._result === "function") {
-      try { await payload._result(); } catch { /* ignore */ }
+      try {
+        await payload._result();
+      } catch {
+        /* ignore */
+      }
     }
     // The factory is called via React internals; ensure it doesn't throw
     expect(typeof factory).toBe("function");
@@ -112,7 +116,9 @@ describe("lazyRetry", () => {
     // payload._result is the original promise factory wrapper
     try {
       await (payload._result as any)();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     // Wait a tick + retry delay
     await new Promise((r) => setTimeout(r, 50));
     expect(factory.mock.calls.length).toBeGreaterThanOrEqual(1);

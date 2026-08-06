@@ -83,10 +83,7 @@ function MiniBar({ value, label }: { value: number; label: string }) {
     <div className="flex items-center gap-2 text-xs">
       <span className="w-28 text-muted-foreground truncate">{label}</span>
       <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full bg-primary rounded-full transition-all"
-          style={{ width: `${(value / 5) * 100}%` }}
-        />
+        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(value / 5) * 100}%` }} />
       </div>
       <span className="w-6 text-right font-medium">{value.toFixed(1)}</span>
     </div>
@@ -102,10 +99,7 @@ function DimensionBar({ label, value }: { label: string; value: number }) {
         <span className="font-medium">{value}/100</span>
       </div>
       <div className="h-2 bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full bg-primary rounded-full transition-all"
-          style={{ width: `${value}%` }}
-        />
+        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${value}%` }} />
       </div>
     </div>
   );
@@ -122,9 +116,7 @@ export function PartnerRating({ rating, ratingDetails, size = "md", showLabel = 
     <div className="flex items-center gap-1.5">
       <StarDisplay rating={rating} size={size} colorClass={colorClass} />
       {showLabel && (
-        <span className={`font-semibold ${size === "sm" ? "text-xs" : "text-sm"}`}>
-          {rating.toFixed(1)}
-        </span>
+        <span className={`font-semibold ${size === "sm" ? "text-xs" : "text-sm"}`}>{rating.toFixed(1)}</span>
       )}
     </div>
   );
@@ -148,22 +140,10 @@ export function PartnerRating({ rating, ratingDetails, size = "md", showLabel = 
                 </p>
               </div>
               <div className="space-y-2">
-                <DimensionBar
-                  label="Profilo e Presenza"
-                  value={ratingDetails.dimensions!.profilo_e_presenza}
-                />
-                <DimensionBar
-                  label="Solidità Aziendale"
-                  value={ratingDetails.dimensions!.solidita_aziendale}
-                />
-                <DimensionBar
-                  label="Servizi e Capacità"
-                  value={ratingDetails.dimensions!.servizi_e_capacita}
-                />
-                <DimensionBar
-                  label="Intelligence"
-                  value={ratingDetails.dimensions!.intelligence}
-                />
+                <DimensionBar label="Profilo e Presenza" value={ratingDetails.dimensions!.profilo_e_presenza} />
+                <DimensionBar label="Solidità Aziendale" value={ratingDetails.dimensions!.solidita_aziendale} />
+                <DimensionBar label="Servizi e Capacità" value={ratingDetails.dimensions!.servizi_e_capacita} />
+                <DimensionBar label="Intelligence" value={ratingDetails.dimensions!.intelligence} />
               </div>
               {ratingDetails.data_completeness_percent !== undefined && (
                 <div className="text-xs text-muted-foreground border-t pt-2 mt-2">

@@ -16,7 +16,7 @@ try {
     "auth.js",
     "hybrid-ops.js",
     "optimus-client.js",
-    "actions.js"
+    "actions.js",
   );
 } catch (e) {
   console.error("[LI-EXT] Module import failed:", e);
@@ -25,7 +25,10 @@ try {
 // ── Action registry: maps action names to handler functions ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    var w = (typeof TabManager !== "undefined" && TabManager.getWorkerInfo) ? TabManager.getWorkerInfo() : { id: null, ready: false };
+    var w =
+      typeof TabManager !== "undefined" && TabManager.getWorkerInfo
+        ? TabManager.getWorkerInfo()
+        : { id: null, ready: false };
     sendResponse({
       success: true,
       version: chrome.runtime.getManifest().version,
@@ -56,72 +59,99 @@ const ACTION_HANDLERS = {
 
   syncCookie: function (msg, sendResponse) {
     TabManager.enqueueSession(async function () {
-      try { sendResponse(await Auth.syncCookieToServer()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message)); }
+      try {
+        sendResponse(await Auth.syncCookieToServer());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message));
+      }
     });
     return true;
   },
 
   autoLogin: function (msg, sendResponse) {
     TabManager.enqueueSession(async function () {
-      try { sendResponse(await Auth.autoLogin()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.LOGIN_FAILED, err.message)); }
+      try {
+        sendResponse(await Auth.autoLogin());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.LOGIN_FAILED, err.message));
+      }
     });
     return true;
   },
 
   extractProfile: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.extractProfileByUrl(msg.url)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.extractProfileByUrl(msg.url));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, err.message));
+      }
     });
     return true;
   },
 
   sendMessage: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.sendLinkedInMessage(msg.url, msg.message)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.MESSAGE_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.sendLinkedInMessage(msg.url, msg.message));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.MESSAGE_FAILED, err.message));
+      }
     });
     return true;
   },
 
   sendMessageWithMethod: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.sendLinkedInMessageWithMethod(msg.url, msg.message, msg.method)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.MESSAGE_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.sendLinkedInMessageWithMethod(msg.url, msg.message, msg.method));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.MESSAGE_FAILED, err.message));
+      }
     });
     return true;
   },
 
   sendConnectionRequest: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.sendConnectionRequest(msg.url, msg.note)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.CONNECT_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.sendConnectionRequest(msg.url, msg.note));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.CONNECT_FAILED, err.message));
+      }
     });
     return true;
   },
 
   searchProfile: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.searchProfile(msg.query)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.SEARCH_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.searchProfile(msg.query));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.SEARCH_FAILED, err.message));
+      }
     });
     return true;
   },
 
   readLinkedInInbox: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.readInbox()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.INBOX_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.readInbox());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.INBOX_FAILED, err.message));
+      }
     });
     return true;
   },
 
   readLinkedInThread: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.readThread(msg.threadUrl)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.INBOX_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.readThread(msg.threadUrl));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.INBOX_FAILED, err.message));
+      }
     });
     return true;
   },
@@ -143,34 +173,46 @@ const ACTION_HANDLERS = {
 
   diagnosticLinkedInDom: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.diagnostic()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message)); }
+      try {
+        sendResponse(await Actions.diagnostic());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message));
+      }
     });
     return true;
   },
 
   learnDom: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.learnDom(msg.pageType)); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.AI_LEARN_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.learnDom(msg.pageType));
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.AI_LEARN_FAILED, err.message));
+      }
     });
     return true;
   },
 
   remapSendDom: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.remapSendDom()); }
-      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.AI_LEARN_FAILED, err.message)); }
+      try {
+        sendResponse(await Actions.remapSendDom());
+      } catch (err) {
+        sendResponse(Config.errorResponse(Config.ERROR.AI_LEARN_FAILED, err.message));
+      }
     });
     return true;
   },
 
   getSendPlan: function (msg, sendResponse) {
-    chrome.storage.local.get("li_dom_schema_messaging").then(function (r) {
-      sendResponse({ success: true, plan: r.li_dom_schema_messaging || null });
-    }).catch(function (err) {
-      sendResponse({ success: false, error: err.message });
-    });
+    chrome.storage.local
+      .get("li_dom_schema_messaging")
+      .then(function (r) {
+        sendResponse({ success: true, plan: r.li_dom_schema_messaging || null });
+      })
+      .catch(function (err) {
+        sendResponse({ success: false, error: err.message });
+      });
     return true;
   },
 

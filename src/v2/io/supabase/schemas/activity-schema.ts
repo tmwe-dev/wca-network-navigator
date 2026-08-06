@@ -4,13 +4,17 @@
 import { z } from "zod";
 
 const ActivityTypeSchema = z.enum([
-  "send_email", "phone_call", "add_to_campaign", "meeting",
-  "follow_up", "other", "whatsapp_message", "linkedin_message",
+  "send_email",
+  "phone_call",
+  "add_to_campaign",
+  "meeting",
+  "follow_up",
+  "other",
+  "whatsapp_message",
+  "linkedin_message",
 ]);
 
-const ActivityStatusSchema = z.enum([
-  "pending", "in_progress", "completed", "cancelled",
-]);
+const ActivityStatusSchema = z.enum(["pending", "in_progress", "completed", "cancelled"]);
 
 export const ActivityRowSchema = z.object({
   id: z.string().uuid(),

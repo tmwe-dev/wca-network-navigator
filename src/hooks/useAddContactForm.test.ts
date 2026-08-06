@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  extractDomain,
-  buildGoogleFaviconUrl,
-  COUNTRY_OPTIONS,
-  type ContactFormData,
-} from "./useAddContactForm";
+import { extractDomain, buildGoogleFaviconUrl, COUNTRY_OPTIONS, type ContactFormData } from "./useAddContactForm";
 
 describe("extractDomain", () => {
   it("extracts domain from full URL", () => {
@@ -32,14 +27,10 @@ describe("extractDomain", () => {
 
 describe("buildGoogleFaviconUrl", () => {
   it("builds correct favicon URL", () => {
-    expect(buildGoogleFaviconUrl("example.com")).toBe(
-      "https://www.google.com/s2/favicons?domain=example.com&sz=128"
-    );
+    expect(buildGoogleFaviconUrl("example.com")).toBe("https://www.google.com/s2/favicons?domain=example.com&sz=128");
   });
   it("handles empty domain", () => {
-    expect(buildGoogleFaviconUrl("")).toBe(
-      "https://www.google.com/s2/favicons?domain=&sz=128"
-    );
+    expect(buildGoogleFaviconUrl("")).toBe("https://www.google.com/s2/favicons?domain=&sz=128");
   });
   it("handles domain with subdomain", () => {
     expect(buildGoogleFaviconUrl("api.test.com")).toContain("domain=api.test.com");
@@ -72,11 +63,25 @@ describe("COUNTRY_OPTIONS", () => {
 describe("ContactFormData type shape", () => {
   it("can create a valid empty form object", () => {
     const form: ContactFormData = {
-      companyName: "", companyAlias: "", country: "", city: "", address: "",
-      zipCode: "", companyPhone: "", companyEmail: "", website: "",
-      contactName: "", contactAlias: "", position: "", contactEmail: "",
-      contactPhone: "", contactMobile: "", origin: "", note: "",
-      logoUrl: "", linkedinUrl: "",
+      companyName: "",
+      companyAlias: "",
+      country: "",
+      city: "",
+      address: "",
+      zipCode: "",
+      companyPhone: "",
+      companyEmail: "",
+      website: "",
+      contactName: "",
+      contactAlias: "",
+      position: "",
+      contactEmail: "",
+      contactPhone: "",
+      contactMobile: "",
+      origin: "",
+      note: "",
+      logoUrl: "",
+      linkedinUrl: "",
     };
     expect(Object.keys(form)).toHaveLength(19);
     expect(form.companyName).toBe("");

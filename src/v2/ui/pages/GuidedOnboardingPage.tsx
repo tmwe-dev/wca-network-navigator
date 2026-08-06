@@ -17,8 +17,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Upload, Bot, Target, Globe, FileBarChart,
-  CheckCircle2, ArrowRight, ArrowLeft, Sparkles, X
+  Upload,
+  Bot,
+  Target,
+  Globe,
+  FileBarChart,
+  CheckCircle2,
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,7 +60,7 @@ export function GuidedOnboardingPage(): React.ReactElement {
   const [saving, setSaving] = useState(false);
 
   const markComplete = useCallback((stepIdx: number) => {
-    setCompleted(prev => new Set(prev).add(stepIdx));
+    setCompleted((prev) => new Set(prev).add(stepIdx));
   }, []);
 
   const next = () => {
@@ -65,7 +73,10 @@ export function GuidedOnboardingPage(): React.ReactElement {
   };
 
   const markOnboardingComplete = async () => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (user) {
       await updateProfileOnboarding(user.id);
     }
@@ -97,7 +108,7 @@ export function GuidedOnboardingPage(): React.ReactElement {
     }
   };
 
-  const progress = ((completed.size) / STEPS.length) * 100;
+  const progress = (completed.size / STEPS.length) * 100;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -106,7 +117,9 @@ export function GuidedOnboardingPage(): React.ReactElement {
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-primary" />
           <span className="font-semibold text-sm">Setup Guidato</span>
-          <Badge variant="secondary" className="text-xs">{current + 1}/{STEPS.length}</Badge>
+          <Badge variant="secondary" className="text-xs">
+            {current + 1}/{STEPS.length}
+          </Badge>
         </div>
         <Button variant="ghost" size="sm" onClick={skipAll} disabled={saving}>
           <X className="h-4 w-4 mr-1" /> Salta tutto
@@ -124,13 +137,19 @@ export function GuidedOnboardingPage(): React.ReactElement {
               onClick={() => setCurrent(i)}
               className={cn(
                 "flex flex-col items-center gap-1 text-[10px] sm:text-xs transition-colors",
-                i === current ? "text-primary" : completed.has(i) ? "text-success" : "text-muted-foreground"
+                i === current ? "text-primary" : completed.has(i) ? "text-success" : "text-muted-foreground",
               )}
             >
-              <div className={cn(
-                "h-8 w-8 rounded-full flex items-center justify-center border-2 transition-colors",
-                i === current ? "border-primary bg-primary/10" : completed.has(i) ? "border-success bg-success/10" : "border-border"
-              )}>
+              <div
+                className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center border-2 transition-colors",
+                  i === current
+                    ? "border-primary bg-primary/10"
+                    : completed.has(i)
+                      ? "border-success bg-success/10"
+                      : "border-border",
+                )}
+              >
                 {completed.has(i) ? <CheckCircle2 className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
               </div>
               <span className="hidden sm:block">{step.title}</span>
@@ -154,16 +173,20 @@ export function GuidedOnboardingPage(): React.ReactElement {
               {current === 0 && (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Carica un file CSV con i tuoi partner logistici. Colonne supportate: company_name, email, phone, country, website.
+                    Carica un file CSV con i tuoi partner logistici. Colonne supportate: company_name, email, phone,
+                    country, website.
                   </p>
-                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                  <div
+                    className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
                     onClick={() => navigate("/v2/import")}
                   >
                     <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                     <p className="text-sm font-medium">Clicca per andare alla pagina Import</p>
                     <p className="text-xs text-muted-foreground mt-1">oppure trascina qui un file CSV</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">Non hai un CSV? Puoi saltare questo step e importare dopo.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Non hai un CSV? Puoi saltare questo step e importare dopo.
+                  </p>
                 </>
               )}
 
@@ -175,14 +198,25 @@ export function GuidedOnboardingPage(): React.ReactElement {
                   <div className="space-y-3">
                     <div>
                       <Label htmlFor="agent-name">Nome dell'agente</Label>
-                      <Input id="agent-name" value={agentName} onChange={e => setAgentName(e.target.value)} />
+                      <Input id="agent-name" value={agentName} onChange={(e) => setAgentName(e.target.value)} />
                     </div>
                     <div>
                       <Label htmlFor="agent-tone">Tono di voce</Label>
-                      <Textarea id="agent-tone" value={agentTone} onChange={e => setAgentTone(e.target.value)} rows={2} />
+                      <Textarea
+                        id="agent-tone"
+                        value={agentTone}
+                        onChange={(e) => setAgentTone(e.target.value)}
+                        rows={2}
+                      />
                     </div>
                   </div>
-                  <Button onClick={() => { toast.success(`Agente "${agentName}" creato!`); next(); }} className="w-full gap-2">
+                  <Button
+                    onClick={() => {
+                      toast.success(`Agente "${agentName}" creato!`);
+                      next();
+                    }}
+                    className="w-full gap-2"
+                  >
                     <Bot className="h-4 w-4" /> Crea Agente
                   </Button>
                 </>
@@ -191,13 +225,23 @@ export function GuidedOnboardingPage(): React.ReactElement {
               {current === 2 && (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Lancia la tua prima missione: l'agente analizzerà 5 partner e genererà un report sullo stato dei contatti.
+                    Lancia la tua prima missione: l'agente analizzerà 5 partner e genererà un report sullo stato dei
+                    contatti.
                   </p>
                   <div className="p-4 rounded-lg border bg-muted/30 space-y-2">
                     <p className="text-sm font-medium">Missione suggerita:</p>
-                    <p className="text-sm text-muted-foreground italic">"Analizza i primi 5 partner importati: verifica se hanno email e telefono, e suggerisci azioni per arricchire i dati mancanti."</p>
+                    <p className="text-sm text-muted-foreground italic">
+                      "Analizza i primi 5 partner importati: verifica se hanno email e telefono, e suggerisci azioni per
+                      arricchire i dati mancanti."
+                    </p>
                   </div>
-                  <Button onClick={() => { toast.success("Missione avviata!"); next(); }} className="w-full gap-2">
+                  <Button
+                    onClick={() => {
+                      toast.success("Missione avviata!");
+                      next();
+                    }}
+                    className="w-full gap-2"
+                  >
                     <Target className="h-4 w-4" /> Avvia Missione Demo
                   </Button>
                 </>
@@ -206,7 +250,8 @@ export function GuidedOnboardingPage(): React.ReactElement {
               {current === 3 && (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Prova lo scraping intelligente: inserisci l'URL di un partner per estrarre automaticamente informazioni dal sito.
+                    Prova lo scraping intelligente: inserisci l'URL di un partner per estrarre automaticamente
+                    informazioni dal sito.
                   </p>
                   <div>
                     <Label htmlFor="scrape-url">URL del sito partner</Label>
@@ -214,11 +259,14 @@ export function GuidedOnboardingPage(): React.ReactElement {
                       id="scrape-url"
                       placeholder="https://example-logistics.com"
                       value={scrapeUrl}
-                      onChange={e => setScrapeUrl(e.target.value)}
+                      onChange={(e) => setScrapeUrl(e.target.value)}
                     />
                   </div>
                   <Button
-                    onClick={() => { toast.success("Scraping avviato! I risultati appariranno nella scheda del partner."); next(); }}
+                    onClick={() => {
+                      toast.success("Scraping avviato! I risultati appariranno nella scheda del partner.");
+                      next();
+                    }}
                     className="w-full gap-2"
                     disabled={!scrapeUrl.trim()}
                   >
@@ -235,7 +283,12 @@ export function GuidedOnboardingPage(): React.ReactElement {
                   <div className="space-y-2">
                     {STEPS.map((step, i) => (
                       <div key={step.id} className="flex items-center gap-3 p-2 rounded border text-sm">
-                        <CheckCircle2 className={cn("h-4 w-4 shrink-0", completed.has(i) ? "text-success" : "text-muted-foreground")} />
+                        <CheckCircle2
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            completed.has(i) ? "text-success" : "text-muted-foreground",
+                          )}
+                        />
                         <span className={completed.has(i) ? "" : "text-muted-foreground"}>{step.title}</span>
                         <Badge variant={completed.has(i) ? "default" : "secondary"} className="ml-auto text-[10px]">
                           {completed.has(i) ? "Completato" : "Saltato"}

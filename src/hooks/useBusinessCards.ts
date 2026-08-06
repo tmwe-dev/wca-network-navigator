@@ -1,8 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
 import {
-  findBusinessCards, findMatchedPartnerIds, findMatchedContactIds,
-  createBusinessCard, updateBusinessCard, businessCardKeys,
+  findBusinessCards,
+  findMatchedPartnerIds,
+  findMatchedContactIds,
+  createBusinessCard,
+  updateBusinessCard,
+  businessCardKeys,
   invalidateBusinessCards,
 } from "@/data/businessCards";
 

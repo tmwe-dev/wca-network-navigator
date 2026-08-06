@@ -36,14 +36,8 @@ export async function handleBounce(
   const email = input.senderEmail.toLowerCase().trim();
 
   try {
-    await supabase
-      .from("imported_contacts")
-      .update({ email_status: "bounced" })
-      .ilike("email", email);
-    await supabase
-      .from("partners")
-      .update({ email_status: "bounced" })
-      .ilike("email", email);
+    await supabase.from("imported_contacts").update({ email_status: "bounced" }).ilike("email", email);
+    await supabase.from("partners").update({ email_status: "bounced" }).ilike("email", email);
     result.actionsExecuted.push("email_marked_bounced");
   } catch (e) {
     result.errors.push(`Bounce mark failed: ${e}`);
@@ -73,8 +67,7 @@ export async function handleBounce(
         action_type: "suggest_alternative_channel",
         action_payload: {
           bounced_email: email,
-          suggested_action:
-            "Email bounce rilevato. Prova canale alternativo: LinkedIn o telefono dal profilo WCA.",
+          suggested_action: "Email bounce rilevato. Prova canale alternativo: LinkedIn o telefono dal profilo WCA.",
         },
         status: "pending",
         priority: "normal",

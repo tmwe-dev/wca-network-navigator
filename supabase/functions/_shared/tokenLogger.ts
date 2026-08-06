@@ -58,7 +58,7 @@ export async function logTokenUsage(
   model: string | null,
   inputTokens: number,
   outputTokens: number,
-  costEstimate: number = 0
+  costEstimate: number = 0,
 ): Promise<TokenUsageRecord | null> {
   const totalTokens = inputTokens + outputTokens;
 
@@ -132,7 +132,7 @@ export async function getMonthTokenUsage(supabase: SupabaseClient, userId: strin
 export async function getUsageByFunction(
   supabase: SupabaseClient,
   userId: string,
-  days: number = 7
+  days: number = 7,
 ): Promise<Record<string, number>> {
   const startDate = new Date();
   startDate.setUTCDate(startDate.getUTCDate() - days);
@@ -229,7 +229,7 @@ export async function getMaxTokensForFunction(
   supabase: SupabaseClient,
   userId: string,
   settingKey: string,
-  defaultValue: number
+  defaultValue: number,
 ): Promise<number> {
   try {
     const { data } = await supabase
@@ -302,10 +302,7 @@ export interface LogAiPromptInput {
   metadata?: Record<string, unknown>;
 }
 
-export async function logAiPrompt(
-  supabase: SupabaseClient,
-  input: LogAiPromptInput,
-): Promise<void> {
+export async function logAiPrompt(supabase: SupabaseClient, input: LogAiPromptInput): Promise<void> {
   try {
     const { error } = await supabase.rpc("log_ai_prompt", {
       p_user_id: input.userId,

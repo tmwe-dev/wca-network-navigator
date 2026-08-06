@@ -42,17 +42,34 @@ interface IntelResult {
 }
 
 const FREE_PROVIDERS = new Set([
-  "gmail.com","googlemail.com","yahoo.com","yahoo.it","outlook.com",
-  "hotmail.com","hotmail.it","live.com","libero.it","tiscali.it","alice.it",
-  "icloud.com","me.com","aol.com","gmx.com","protonmail.com","pec.it",
+  "gmail.com",
+  "googlemail.com",
+  "yahoo.com",
+  "yahoo.it",
+  "outlook.com",
+  "hotmail.com",
+  "hotmail.it",
+  "live.com",
+  "libero.it",
+  "tiscali.it",
+  "alice.it",
+  "icloud.com",
+  "me.com",
+  "aol.com",
+  "gmx.com",
+  "protonmail.com",
+  "pec.it",
 ]);
 
 function extractDomain(email: string): string | null {
-  const m = String(email).toLowerCase().trim().match(/@([a-z0-9.-]+\.[a-z]{2,})$/);
+  const m = String(email)
+    .toLowerCase()
+    .trim()
+    .match(/@([a-z0-9.-]+\.[a-z]{2,})$/);
   return m ? m[1] : null;
 }
 
-function jsonResp(body: unknown, status = 200, headers: Record<string,string> = {}): Response {
+function jsonResp(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...headers, "Content-Type": "application/json" },
@@ -73,7 +90,11 @@ async function findKnownPartner(
     .limit(1);
   const hit1 = byEmail?.[0]?.partners ?? null;
   if (hit1?.id) {
-    return { partner_id: hit1.id as string, company_type: (hit1.partner_type as string) ?? null, country: (hit1.country as string) ?? null };
+    return {
+      partner_id: hit1.id as string,
+      company_type: (hit1.partner_type as string) ?? null,
+      country: (hit1.country as string) ?? null,
+    };
   }
 
   // 2) Match per dominio (skip provider gratuiti)
@@ -85,31 +106,32 @@ async function findKnownPartner(
       .limit(1);
     const hit2 = byDomain?.[0] ?? null;
     if (hit2?.id) {
-      return { partner_id: hit2.id as string, company_type: (hit2.partner_type as string) ?? null, country: (hit2.country as string) ?? null };
+      return {
+        partner_id: hit2.id as string,
+        company_type: (hit2.partner_type as string) ?? null,
+        country: (hit2.country as string) ?? null,
+      };
     }
   }
 
   return null;
 }
 
-async function scoutDomainViaAi(
-  domain: string,
-  fromAddress: string,
-): Promise<Partial<IntelResult>> {
-  const apiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+async function scoutDomainViaAi(domain: string, fromAddress: string): Promise<Partial<IntelResult>> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return {};
 
   const prompt = `Stima rapidamente che tipo di azienda si nasconde dietro al dominio email.\n\nDOMINIO: ${domain}\nESEMPIO MITTENTE: ${fromAddress}\n\nRispondi SOLO con JSON nel formato:\n{"company_type":"freight_forwarder|client|supplier|carrier|service_provider|software|public_authority|unknown","country":"ISO2 o null","website":"https://... o null","role_guess":"potential_partner|potential_client|vendor|notification|unknown","reasoning":"max 200 char"}\n\nRegole:\n- Se il dominio sembra di un forwarder/agente logistico → company_type=freight_forwarder, role_guess=potential_partner\n- Se sembra software/SaaS → role_guess=vendor\n- Se domini noreply/notification → role_guess=notification\n- Se incerto → company_type=unknown, role_guess=unknown\n- NON inventare. Se non sai, "unknown".`;
 
   try {
     const resp = await aiFetch({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          { role: "system", content: "Sei uno scout: rispondi solo con il JSON richiesto, niente testo." },
-          { role: "user", content: prompt },
-        ],
-        response_format: { type: "json_object" },
-      });
+      model: "google/gemini-2.5-flash-lite",
+      messages: [
+        { role: "system", content: "Sei uno scout: rispondi solo con il JSON richiesto, niente testo." },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+    });
     if (!resp.ok) return {};
     const data = await resp.json();
     const raw = data.choices?.[0]?.message?.content;
@@ -154,11 +176,9 @@ Deno.serve(async (req) => {
       return jsonResp({ known: false, partner_id: null, intel: null, reason: "invalid_email" }, 200, cors);
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
     const sb = supabase;
 
     // 1) Cache check (skip se force)
@@ -175,19 +195,23 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
         if (userCached) {
-          return jsonResp({
-            known: !!userCached.is_known_partner,
-            partner_id: userCached.partner_id,
-            intel: {
-              company_type: userCached.company_type,
-              country: userCached.country,
-              website: userCached.website,
-              role_guess: userCached.role_guess,
-              evidence: userCached.evidence ?? {},
+          return jsonResp(
+            {
+              known: !!userCached.is_known_partner,
+              partner_id: userCached.partner_id,
+              intel: {
+                company_type: userCached.company_type,
+                country: userCached.country,
+                website: userCached.website,
+                role_guess: userCached.role_guess,
+                evidence: userCached.evidence ?? {},
+              },
+              cached: true,
+              cache_scope: "user",
             },
-            cached: true,
-            cache_scope: "user",
-          }, 200, cors);
+            200,
+            cors,
+          );
         }
       }
       // 1b) Cache globale legacy (fallback)
@@ -198,19 +222,23 @@ Deno.serve(async (req) => {
         .gt("expires_at", new Date().toISOString())
         .maybeSingle();
       if (cached) {
-        return jsonResp({
-          known: !!cached.is_known_partner,
-          partner_id: cached.partner_id,
-          intel: {
-            company_type: cached.company_type,
-            country: cached.country,
-            website: cached.website,
-            role_guess: cached.role_guess,
-            evidence: cached.evidence ?? {},
+        return jsonResp(
+          {
+            known: !!cached.is_known_partner,
+            partner_id: cached.partner_id,
+            intel: {
+              company_type: cached.company_type,
+              country: cached.country,
+              website: cached.website,
+              role_guess: cached.role_guess,
+              evidence: cached.evidence ?? {},
+            },
+            cached: true,
+            cache_scope: "global",
           },
-          cached: true,
-          cache_scope: "global",
-        }, 200, cors);
+          200,
+          cors,
+        );
       }
     }
 
@@ -244,9 +272,8 @@ Deno.serve(async (req) => {
     }
 
     // 4) Upsert in cache (30gg)
-    await sb
-      .from("funnemail_sender_intel")
-      .upsert({
+    await sb.from("funnemail_sender_intel").upsert(
+      {
         email_domain: domain,
         is_known_partner: intel.is_known_partner,
         partner_id: intel.partner_id,
@@ -257,7 +284,9 @@ Deno.serve(async (req) => {
         evidence: intel.evidence,
         scout_source: intel.scout_source,
         expires_at: new Date(Date.now() + 30 * 86400_000).toISOString(),
-      }, { onConflict: "email_domain" });
+      },
+      { onConflict: "email_domain" },
+    );
 
     // 4b) Cache per-utente (Sprint 4) — non bloccante
     if (body.user_id) {
@@ -289,21 +318,27 @@ Deno.serve(async (req) => {
         } else {
           await sb.from("funnemail_scout_cache").insert(cachePayload);
         }
-      } catch { /* fail-safe */ }
+      } catch {
+        /* fail-safe */
+      }
     }
 
-    return jsonResp({
-      known: intel.is_known_partner,
-      partner_id: intel.partner_id,
-      intel: {
-        company_type: intel.company_type,
-        country: intel.country,
-        website: intel.website,
-        role_guess: intel.role_guess,
-        evidence: intel.evidence,
+    return jsonResp(
+      {
+        known: intel.is_known_partner,
+        partner_id: intel.partner_id,
+        intel: {
+          company_type: intel.company_type,
+          country: intel.country,
+          website: intel.website,
+          role_guess: intel.role_guess,
+          evidence: intel.evidence,
+        },
+        cached: false,
       },
-      cached: false,
-    }, 200, cors);
+      200,
+      cors,
+    );
   } catch (error: unknown) {
     return jsonResp({ error: error instanceof Error ? error.message : String(error) }, 500, cors);
   }

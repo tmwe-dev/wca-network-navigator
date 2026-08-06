@@ -33,7 +33,8 @@ async function setCachedScrape(url: string, payload: Record<string, unknown>): P
 
 export const scrapeUrlTool: AgentTool = {
   name: "scrape_url",
-  description: "Scrape a website URL to extract title, headings, emails, phones, and text content. Results are cached for 7 days.",
+  description:
+    "Scrape a website URL to extract title, headings, emails, phones, and text content. Results are cached for 7 days.",
   parameters: {
     url: { type: "string", description: "Full URL to scrape (https://...)", required: true },
     mode: { type: "string", description: "'static' or 'render' (default: static)", required: false },

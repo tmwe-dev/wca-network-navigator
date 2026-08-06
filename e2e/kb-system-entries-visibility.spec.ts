@@ -30,7 +30,10 @@ test.describe("P0 KB system entries visibility", () => {
   test("UI espone almeno un riferimento a knowledge/doctrine/categorie", async ({ page }) => {
     await page.goto("/v2/knowledge-base").catch(() => {});
     await page.waitForTimeout(2000);
-    const body = await page.locator("body").innerText().catch(() => "");
+    const body = await page
+      .locator("body")
+      .innerText()
+      .catch(() => "");
     expect(body).toMatch(/knowledge|doctrine|categor|workflow|prompt|nessun/i);
   });
 

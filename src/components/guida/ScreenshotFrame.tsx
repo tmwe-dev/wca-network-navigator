@@ -20,9 +20,7 @@ const ScreenshotFrame = ({ children, title = "WCA Network Navigator", className 
         <div className="w-12" />
       </div>
       {/* Content */}
-      <div className="bg-[#111114]">
-        {children}
-      </div>
+      <div className="bg-[#111114]">{children}</div>
     </div>
   );
 };

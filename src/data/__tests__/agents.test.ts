@@ -18,14 +18,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (...args: any[]) => mockFrom(...args) },
 }));
 
-import {
-  findAgents,
-  findActiveAgents,
-  getAgentById,
-  createAgent,
-  deleteAgent,
-  invalidateAgents,
-} from "@/data/agents";
+import { findAgents, findActiveAgents, getAgentById, createAgent, deleteAgent, invalidateAgents } from "@/data/agents";
 
 describe("DAL — agents", () => {
   beforeEach(() => {

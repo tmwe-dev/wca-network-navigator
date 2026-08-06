@@ -40,15 +40,11 @@ export function useFunnemailStatuses(groupId?: string | null): UseFunnemailStatu
   React.useEffect(() => {
     const channel = supabase
       .channel(`funnemail-statuses-${groupId ?? "all"}-${Math.random().toString(36).slice(2, 10)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "funnemail_message_status" },
-        () => {
-          qc.invalidateQueries({ queryKey });
-          qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.sorting.queue() });
-          qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.sorting.count() });
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "funnemail_message_status" }, () => {
+        qc.invalidateQueries({ queryKey });
+        qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.sorting.queue() });
+        qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.sorting.count() });
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

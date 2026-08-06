@@ -12,13 +12,18 @@ export function useCestinonePageState() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bulkIds, setBulkIds] = useState<Set<string>>(new Set());
 
-  const { items: rawItems, counts, isLoading, cancel, snooze, dismiss } = useCestinone({ channel, status: "all", search });
+  const {
+    items: rawItems,
+    counts,
+    isLoading,
+    cancel,
+    snooze,
+    dismiss,
+  } = useCestinone({ channel, status: "all", search });
 
   const items = useMemo(() => {
     const filtered = rawItems.filter((it) =>
-      status === "pending"
-        ? it.status === "pending"
-        : it.status === "queued" || it.status === "scheduled"
+      status === "pending" ? it.status === "pending" : it.status === "queued" || it.status === "scheduled",
     );
     if (status === "queued") {
       return [...filtered].sort((a, b) => {
@@ -42,25 +47,35 @@ export function useCestinonePageState() {
   function toggleBulk(id: string): void {
     setBulkIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
   function toggleBulkAll(): void {
     setBulkIds((prev) => (prev.size === items.length ? new Set() : new Set(items.map((i) => i.id))));
   }
-  function clearBulk(): void { setBulkIds(new Set()); }
+  function clearBulk(): void {
+    setBulkIds(new Set());
+  }
 
   function handleBulkCancel(): void {
     const targets = items.filter((i) => bulkIds.has(i.id));
     if (targets.length === 0) return;
     if (!window.confirm(`Annullare e rimuovere dal cestinone ${targets.length} elemento/i?`)) return;
-    let ok = 0, ko = 0;
+    let ok = 0,
+      ko = 0;
     for (const it of targets) {
       dismiss(it.id);
       cancel.mutate(it, {
-        onSuccess: () => { ok++; if (ok + ko === targets.length) toast.success(`${ok} annullati${ko ? ` · ${ko} falliti` : ""}`); },
-        onError: () => { ko++; if (ok + ko === targets.length) toast.error(`${ok} annullati · ${ko} falliti`); },
+        onSuccess: () => {
+          ok++;
+          if (ok + ko === targets.length) toast.success(`${ok} annullati${ko ? ` · ${ko} falliti` : ""}`);
+        },
+        onError: () => {
+          ko++;
+          if (ok + ko === targets.length) toast.error(`${ok} annullati · ${ko} falliti`);
+        },
       });
     }
     clearBulk();
@@ -79,16 +94,18 @@ export function useCestinonePageState() {
   const inCodaTotal = counts.byStatus.queued + counts.byStatus.scheduled;
   const nextDepartingIds = useMemo(() => {
     if (status !== "queued") return new Set<string>();
-    return new Set(items.filter((i) => !!i.scheduledAt).slice(0, 3).map((i) => i.id));
+    return new Set(
+      items
+        .filter((i) => !!i.scheduledAt)
+        .slice(0, 3)
+        .map((i) => i.id),
+    );
   }, [items, status]);
 
   const navigate = useNavigate();
   const { open: openDrawer } = useContactDrawer();
 
-  const selected = useMemo(
-    () => items.find((i) => i.id === selectedId) ?? items[0] ?? null,
-    [items, selectedId]
-  );
+  const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? items[0] ?? null, [items, selectedId]);
 
   useEffect(() => {
     if ((!selectedId || !items.find((i) => i.id === selectedId)) && items.length > 0) {
@@ -99,8 +116,8 @@ export function useCestinonePageState() {
   function originHref(item: CestinoItem): string {
     const localId = item.id.split(":")[1] ?? "";
     if (item.source === "email_campaign_queue") return `/v2/communicate/outreach?queue=${encodeURIComponent(localId)}`;
-    if (item.source === "campaign_jobs")       return `/v2/communicate/campaigns?job=${encodeURIComponent(localId)}`;
-    if (item.source === "cockpit_queue")       return `/v2/communicate/outreach?cockpit=${encodeURIComponent(localId)}`;
+    if (item.source === "campaign_jobs") return `/v2/communicate/campaigns?job=${encodeURIComponent(localId)}`;
+    if (item.source === "cockpit_queue") return `/v2/communicate/outreach?cockpit=${encodeURIComponent(localId)}`;
     return `/v2/communicate/outreach?multi=${encodeURIComponent(localId)}`;
   }
 
@@ -113,7 +130,9 @@ export function useCestinonePageState() {
     if (item.partnerId) navigate(`/v2/communicate/compose?partner=${item.partnerId}`);
     else navigate("/v2/communicate/compose");
   }
-  function handleOpenOrigin(item: CestinoItem): void { navigate(originHref(item)); }
+  function handleOpenOrigin(item: CestinoItem): void {
+    navigate(originHref(item));
+  }
   function handleOpenPartner(item: CestinoItem): void {
     if (!item.partnerId) {
       toast.info("Nessun partner collegato a questa azione.");
@@ -136,21 +155,42 @@ export function useCestinonePageState() {
   }
   function handleSnooze(item: CestinoItem, minutes: number): void {
     dismiss(item.id);
-    snooze.mutate({ item, minutes }, {
-      onSuccess: () => toast.success(`Rinviato di ${minutes} min`),
-      onError: (e) => toast.error("Snooze fallito", { description: String(e) }),
-    });
+    snooze.mutate(
+      { item, minutes },
+      {
+        onSuccess: () => toast.success(`Rinviato di ${minutes} min`),
+        onError: (e) => toast.error("Snooze fallito", { description: String(e) }),
+      },
+    );
   }
 
   return {
-    channel, setChannel,
-    status, setStatus,
-    search, setSearch,
-    selectedId, setSelectedId,
-    bulkIds, toggleBulk, toggleBulkAll, clearBulk,
-    handleBulkCancel, handleBulkSnooze,
-    items, counts, isLoading, inCodaTotal, nextDepartingIds, selected,
-    handleConfirm, handleEdit, handleOpenOrigin, handleOpenPartner,
-    handleRunSherlock, handleCancel, handleSnooze,
+    channel,
+    setChannel,
+    status,
+    setStatus,
+    search,
+    setSearch,
+    selectedId,
+    setSelectedId,
+    bulkIds,
+    toggleBulk,
+    toggleBulkAll,
+    clearBulk,
+    handleBulkCancel,
+    handleBulkSnooze,
+    items,
+    counts,
+    isLoading,
+    inCodaTotal,
+    nextDepartingIds,
+    selected,
+    handleConfirm,
+    handleEdit,
+    handleOpenOrigin,
+    handleOpenPartner,
+    handleRunSherlock,
+    handleCancel,
+    handleSnooze,
   };
 }

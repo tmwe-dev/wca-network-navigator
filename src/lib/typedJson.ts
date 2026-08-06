@@ -71,10 +71,7 @@ export function getJsonFieldOr<T>(value: unknown, key: string, fallback: T): T {
  * Unisce mutazioni a un Json esistente garantendo un oggetto.
  * Utile prima di un `update({ payload: mergeJsonObject(old, patch) })`.
  */
-export function mergeJsonObject<T extends Record<string, unknown>>(
-  base: unknown,
-  patch: Partial<T>,
-): T {
+export function mergeJsonObject<T extends Record<string, unknown>>(base: unknown, patch: Partial<T>): T {
   const obj = asJsonObject<T>(base);
   return { ...obj, ...patch } as T;
 }

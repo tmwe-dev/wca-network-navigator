@@ -153,17 +153,13 @@ describe("DAL — activities", () => {
 
   describe("countActivitiesWithNullPartner", () => {
     it("returns count", async () => {
-      mockIs
-        .mockReturnValueOnce({ is: mockIs })
-        .mockResolvedValueOnce({ count: 5, error: null });
+      mockIs.mockReturnValueOnce({ is: mockIs }).mockResolvedValueOnce({ count: 5, error: null });
       const result = await countActivitiesWithNullPartner();
       expect(result).toBe(5);
     });
 
     it("throws on error", async () => {
-      mockIs
-        .mockReturnValueOnce({ is: mockIs })
-        .mockResolvedValueOnce({ count: null, error: { message: "fail" } });
+      mockIs.mockReturnValueOnce({ is: mockIs }).mockResolvedValueOnce({ count: null, error: { message: "fail" } });
       await expect(countActivitiesWithNullPartner()).rejects.toEqual({ message: "fail" });
     });
   });

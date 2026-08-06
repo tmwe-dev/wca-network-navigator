@@ -35,17 +35,28 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => mockFrom(table),
     rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
-    auth: { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null }), getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } }, error: null }) },
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } }, error: null }),
+    },
     functions: { invoke: vi.fn().mockResolvedValue({ data: null, error: null }) },
     channel: vi.fn().mockReturnValue({ on: vi.fn().mockReturnThis(), subscribe: vi.fn() }),
     removeChannel: vi.fn(),
-    storage: { from: vi.fn().mockReturnValue({ upload: vi.fn().mockResolvedValue({ data: null, error: null }), download: vi.fn().mockResolvedValue({ data: null, error: null }), createSignedUrl: vi.fn().mockResolvedValue({ data: null, error: null }) }) },
+    storage: {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ data: null, error: null }),
+        download: vi.fn().mockResolvedValue({ data: null, error: null }),
+        createSignedUrl: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+    },
   },
 }));
 vi.mock("@/lib/typedSupabase", () => ({
   tFrom: (table: string) => mockFrom(table),
 }));
-vi.mock("@/lib/log", () => ({ createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) }));
+vi.mock("@/lib/log", () => ({
+  createLogger: () => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }),
+}));
 describe("DAL — harmonizerSessions", () => {
   it("module loads and exports something", async () => {
     const mod: any = await import("@/data/harmonizerSessions");
@@ -59,11 +70,15 @@ describe("DAL — harmonizerSessions", () => {
       try {
         const result = (val as any)("x", "y", "z", {}, [], null);
         if (result && typeof (result as any).then === "function") await (result as any).catch(() => {});
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       try {
         const result = (val as any)();
         if (result && typeof (result as any).then === "function") await (result as any).catch(() => {});
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     expect(true).toBe(true);
   });

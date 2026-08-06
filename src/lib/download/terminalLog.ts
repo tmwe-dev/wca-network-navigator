@@ -9,7 +9,7 @@ const log = createLogger("terminalLog");
  * to reduce database roundtrips from 2 per log → 2 per 5 logs.
  */
 
-const BUFFER_KEY = '__terminalLogBuffer__';
+const BUFFER_KEY = "__terminalLogBuffer__";
 const FLUSH_THRESHOLD = 5;
 
 interface LogEntry {
@@ -64,16 +64,18 @@ async function flushBuffer(): Promise<void> {
  */
 export async function appendLog(jobId: string, type: string, msg: string) {
   const ts = new Date().toLocaleTimeString("it-IT", {
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 
   const buf = getBuffer();
-  
+
   // If job changed, flush previous buffer first
   if (buf.jobId && buf.jobId !== jobId && buf.entries.length > 0) {
     await flushBuffer();
   }
-  
+
   buf.jobId = jobId;
   buf.entries.push({ ts, type, msg });
 

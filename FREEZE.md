@@ -14,7 +14,7 @@ In applicazione del Vol. I §2.3 ("Dichiarazione di freeze"), **lo sviluppo di n
 
 La decisione è motivata dalla Legge 1 del Vol. I (cap. I §1.1):
 
-> *"Durante il recupero non si aggiungono funzionalità. Ogni nuova feature introdotta in fase di ripristino estende il perimetro del problema e rende impossibile distinguere i bug preesistenti dai bug introdotti."*
+> _"Durante il recupero non si aggiungono funzionalità. Ogni nuova feature introdotta in fase di ripristino estende il perimetro del problema e rende impossibile distinguere i bug preesistenti dai bug introdotti."_
 
 L'audit tecnico eseguito l'8 aprile 2026 ([`AUDIT_2026-04-08.md`](./AUDIT_2026-04-08.md)) ha rilevato uno stato di **debito tecnico critico** (voto 4.150/10.000) con oltre 1.597 problemi statici, sistemi paralleli (Claude Engine V8 non cablato), file monolitici > 500 LOC, e un tasso di churn di 2.022 commit in 7 giorni. Continuare ad aggiungere feature in queste condizioni è, per definizione del metodo, una garanzia di fallimento del recupero.
 
@@ -46,8 +46,8 @@ L'audit tecnico eseguito l'8 aprile 2026 ([`AUDIT_2026-04-08.md`](./AUDIT_2026-0
 Ogni eccezione alla lista "proibito" deve essere autorizzata **esplicitamente** da **luca** (`lucaarcana@gmail.com`) con un commento in un issue GitHub o in un messaggio scritto, e deve essere registrata qui sotto:
 
 | Data | Richiedente | Eccezione | Autorizzata da | Link commit |
-|---|---|---|---|---|
-| — | — | — | — | — |
+| ---- | ----------- | --------- | -------------- | ----------- |
+| —    | —           | —         | —              | —           |
 
 ---
 
@@ -97,4 +97,4 @@ Voto obiettivo alla fine del freeze: **≥ 8.000 / 10.000**
 
 ---
 
-*Questo file è un documento vivo. Ogni sessione di recupero deve verificarlo. In caso di conflitto tra questo file e una richiesta dell'utente, questo file va segnalato all'utente come fonte autorevole.*
+_Questo file è un documento vivo. Ogni sessione di recupero deve verificarlo. In caso di conflitto tra questo file e una richiesta dell'utente, questo file va segnalato all'utente come fonte autorevole._

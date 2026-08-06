@@ -3,7 +3,10 @@
  */
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export const VOICE_LANGUAGE_MAP: Record<string, { label: string; flag: string; sttCode: string; voiceId: string; voiceName: string }> = {
+export const VOICE_LANGUAGE_MAP: Record<
+  string,
+  { label: string; flag: string; sttCode: string; voiceId: string; voiceName: string }
+> = {
   it: { label: "Italiano", flag: "🇮🇹", sttCode: "it-IT", voiceId: "FGY2WhTYpPnrIDTdsKH5", voiceName: "Laura" },
   en: { label: "English", flag: "🇺🇸", sttCode: "en-US", voiceId: "JBFqnCBsd6RMkjVDRZzb", voiceName: "George" },
   de: { label: "Deutsch", flag: "🇩🇪", sttCode: "de-DE", voiceId: "onwK4e9ZLuTAKqWW03F9", voiceName: "Daniel" },
@@ -26,9 +29,7 @@ export default function VoiceLanguageSelector({ value, onChange, compact }: Voic
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger className={compact ? "w-10 px-0 justify-center text-sm" : "w-full text-xs"}>
-        <SelectValue>
-          {compact ? current.flag : `${current.flag} ${current.label}`}
-        </SelectValue>
+        <SelectValue>{compact ? current.flag : `${current.flag} ${current.label}`}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {VOICE_LANG_KEYS.map((key) => {

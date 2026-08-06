@@ -31,11 +31,7 @@ export async function fetchAiExportBundle(userId: string) {
       .gte("level", 2)
       .order("importance", { ascending: false })
       .limit(500),
-    supabase
-      .from("app_settings")
-      .select("id,key,value,updated_at")
-      .eq("user_id", userId)
-      .order("key"),
+    supabase.from("app_settings").select("id,key,value,updated_at").eq("user_id", userId).order("key"),
     supabase
       .from("agent_personas")
       .select(

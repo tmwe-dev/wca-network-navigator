@@ -25,14 +25,16 @@ function decodeBasicEntities(value: string): string {
 }
 
 function htmlToPlainText(value: string): string {
-  return value
-    // line breaks
-    .replace(/<br\s*\/?\s*>/gi, "\n")
-    // paragraph & block boundaries → blank line
-    .replace(/<\/(?:p|div|li|h[1-6]|blockquote)>/gi, "\n\n")
-    .replace(/<li\b[^>]*>/gi, "- ")
-    // strip every remaining tag
-    .replace(/<[^>]+>/g, "");
+  return (
+    value
+      // line breaks
+      .replace(/<br\s*\/?\s*>/gi, "\n")
+      // paragraph & block boundaries → blank line
+      .replace(/<\/(?:p|div|li|h[1-6]|blockquote)>/gi, "\n\n")
+      .replace(/<li\b[^>]*>/gi, "- ")
+      // strip every remaining tag
+      .replace(/<[^>]+>/g, "")
+  );
 }
 
 /**
@@ -50,12 +52,12 @@ export function normalizeEmailHtml(raw: string): string {
 
   // strip common markdown markers
   text = text
-    .replace(/^\s{0,3}#{1,6}\s+/gm, "")            // headings
-    .replace(/\*\*(.+?)\*\*/g, "$1")               // bold
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "") // headings
+    .replace(/\*\*(.+?)\*\*/g, "$1") // bold
     .replace(/(^|\s)_([^_\n]+)_(?=\s|$)/g, "$1$2") // italic _x_
     .replace(/(^|\s)\*([^*\n]+)\*(?=\s|$)/g, "$1$2") // italic *x*
-    .replace(/`([^`]+)`/g, "$1")                   // inline code
-    .replace(/^\s{0,3}[-*+]\s+/gm, "- ");          // unify bullets
+    .replace(/`([^`]+)`/g, "$1") // inline code
+    .replace(/^\s{0,3}[-*+]\s+/gm, "- "); // unify bullets
 
   // collapse paragraphs
   const paragraphs = text

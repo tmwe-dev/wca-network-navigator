@@ -27,10 +27,12 @@ export interface LinkedInAddressRow {
   linked_partner?: { id: string; company_name: string | null } | null;
 }
 
-export async function listLinkedInAddresses(opts: {
-  search?: string;
-  limit?: number;
-} = {}): Promise<LinkedInAddressRow[]> {
+export async function listLinkedInAddresses(
+  opts: {
+    search?: string;
+    limit?: number;
+  } = {},
+): Promise<LinkedInAddressRow[]> {
   const limit = opts.limit ?? 500;
   let q = supabase
     .from("linkedin_addresses")

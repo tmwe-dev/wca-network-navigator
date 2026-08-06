@@ -1,17 +1,10 @@
 // === Giornalisti AI — Tipi (LOVABLE-80 v2) ===
 
-export type JournalistRole =
-  | "rompighiaccio"
-  | "risvegliatore"
-  | "chiusore"
-  | "accompagnatore";
+export type JournalistRole = "rompighiaccio" | "risvegliatore" | "chiusore" | "accompagnatore";
 
 export type ReviewVerdict = "pass" | "pass_with_edits" | "warn" | "block";
 
-export type ReviewMode =
-  | "review_and_correct"
-  | "review_only"
-  | "silent_audit";
+export type ReviewMode = "review_and_correct" | "review_only" | "silent_audit";
 
 export type ReviewChannel = "email" | "whatsapp" | "linkedin" | "voice_script";
 

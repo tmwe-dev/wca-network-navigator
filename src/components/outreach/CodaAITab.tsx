@@ -9,13 +9,7 @@ import { Check, X, Eye, Bot, Loader2, RefreshCw, Clock, Mail, MessageCircle, Lin
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { approveActivity, rejectActivity, findPendingAgentActivities } from "@/data/activities";
 import { findProposedOrPendingAgentTasks } from "@/data/agentTasks";
 import { queryKeys } from "@/lib/queryKeys";
@@ -63,15 +57,17 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
       // 2) agent_tasks proposti/pending (dove vivono davvero le proposte agente)
       const taskData = await findProposedOrPendingAgentTasks(100);
 
-      const fromActivities = ((actData || []) as unknown) as AgentAction[];
-      const fromTasks: AgentAction[] = ((taskData || []) as Array<{
-        id: string;
-        agent_id: string | null;
-        task_type: string | null;
-        description: string | null;
-        status: string;
-        created_at: string;
-      }>).map((t) => ({
+      const fromActivities = (actData || []) as unknown as AgentAction[];
+      const fromTasks: AgentAction[] = (
+        (taskData || []) as Array<{
+          id: string;
+          agent_id: string | null;
+          task_type: string | null;
+          description: string | null;
+          status: string;
+          created_at: string;
+        }>
+      ).map((t) => ({
         id: t.id,
         activity_type: t.task_type || "agent_task",
         title: t.description || "Task agente",
@@ -115,7 +111,7 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
 
   const approveAll = useMutation({
     mutationFn: async () => {
-      const ids = pendingActions.map(a => a.id);
+      const ids = pendingActions.map((a) => a.id);
       for (const id of ids) {
         await approveActivity(id);
       }
@@ -148,7 +144,11 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
         purpose="Azioni che gli agenti AI vorrebbero eseguire (email, follow-up, escalation): aspettano la tua approvazione."
         origin="Agenti autonomi (Luca, Sherlock…) e missioni in corso"
         actions="Approvare, rifiutare, vedere l'anteprima"
-        relatedLink={onNavigate ? { label: "Le approvate finiscono in In Uscita › Da Inviare", onClick: () => onNavigate("inuscita") } : undefined}
+        relatedLink={
+          onNavigate
+            ? { label: "Le approvate finiscono in In Uscita › Da Inviare", onClick: () => onNavigate("inuscita") }
+            : undefined
+        }
         tone="primary"
       />
       {/* Header */}
@@ -157,7 +157,9 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
           <Bot className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">Coda AI</span>
           {displayActions.length > 0 && (
-            <Badge variant="secondary" className="text-xs">{displayActions.length}</Badge>
+            <Badge variant="secondary" className="text-xs">
+              {displayActions.length}
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -173,7 +175,8 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
             </Button>
           )}
           <Button
-            size="icon" aria-label="Azione"
+            size="icon"
+            aria-label="Azione"
             variant="ghost"
             className="h-7 w-7"
             onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.ai.agentPendingActions })}
@@ -195,7 +198,7 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
       ) : (
         <ScrollArea className="flex-1 px-3 py-2">
           <div className="space-y-2">
-            {displayActions.map(action => (
+            {displayActions.map((action) => (
               <div
                 key={action.id}
                 className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border transition-colors bg-card"
@@ -206,31 +209,54 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{action.title}</p>
                   {action.email_subject && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      Oggetto: {action.email_subject}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">Oggetto: {action.email_subject}</p>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="text-[10px]">{action.activity_type}</Badge>
+                    <Badge variant="outline" className="text-[10px]">
+                      {action.activity_type}
+                    </Badge>
                     <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                       <Clock className="w-2.5 h-2.5" />
                       {format(new Date(action.created_at), "dd MMM HH:mm", { locale: it })}
                     </span>
                     {action.priority === "high" && (
-                      <Badge variant="destructive" className="text-[10px]">Urgente</Badge>
+                      <Badge variant="destructive" className="text-[10px]">
+                        Urgente
+                      </Badge>
                     )}
                   </div>
                 </div>
                 <div className="shrink-0 flex items-center gap-1">
-                  <Button size="icon" aria-label="Visualizza" variant="ghost" className="h-7 w-7" onClick={() => setPreviewAction(action)} title="Anteprima">
+                  <Button
+                    size="icon"
+                    aria-label="Visualizza"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => setPreviewAction(action)}
+                    title="Anteprima"
+                  >
                     <Eye className="w-3.5 h-3.5" />
                   </Button>
-                  <Button size="icon" aria-label="Conferma" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                    onClick={() => approveAction.mutate(action.id)} disabled={approveAction.isPending} title="Approva">
+                  <Button
+                    size="icon"
+                    aria-label="Conferma"
+                    variant="ghost"
+                    className="h-7 w-7 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                    onClick={() => approveAction.mutate(action.id)}
+                    disabled={approveAction.isPending}
+                    title="Approva"
+                  >
                     <Check className="w-3.5 h-3.5" />
                   </Button>
-                  <Button size="icon" aria-label="Rifiuta" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                    onClick={() => rejectAction.mutate(action.id)} disabled={rejectAction.isPending} title="Rifiuta">
+                  <Button
+                    size="icon"
+                    aria-label="Rifiuta"
+                    variant="ghost"
+                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                    onClick={() => rejectAction.mutate(action.id)}
+                    disabled={rejectAction.isPending}
+                    title="Rifiuta"
+                  >
                     <X className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -241,7 +267,7 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
       )}
 
       {/* Preview Dialog */}
-      <Dialog open={!!previewAction} onOpenChange={o => !o && setPreviewAction(null)}>
+      <Dialog open={!!previewAction} onOpenChange={(o) => !o && setPreviewAction(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-sm">
@@ -275,10 +301,23 @@ export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => { rejectAction.mutate(previewAction!.id); setPreviewAction(null); }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                rejectAction.mutate(previewAction!.id);
+                setPreviewAction(null);
+              }}
+            >
               <X className="w-3 h-3 mr-1" /> Rifiuta
             </Button>
-            <Button size="sm" onClick={() => { approveAction.mutate(previewAction!.id); setPreviewAction(null); }}>
+            <Button
+              size="sm"
+              onClick={() => {
+                approveAction.mutate(previewAction!.id);
+                setPreviewAction(null);
+              }}
+            >
               <Check className="w-3 h-3 mr-1" /> Approva
             </Button>
           </DialogFooter>

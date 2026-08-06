@@ -34,8 +34,15 @@ export type LeadStatus =
   | "blacklisted";
 
 export const LEAD_STATUSES: readonly LeadStatus[] = [
-  "new", "first_touch_sent", "holding", "engaged",
-  "qualified", "negotiation", "converted", "archived", "blacklisted",
+  "new",
+  "first_touch_sent",
+  "holding",
+  "engaged",
+  "qualified",
+  "negotiation",
+  "converted",
+  "archived",
+  "blacklisted",
 ] as const;
 
 export type Channel = "email" | "linkedin" | "whatsapp" | "sms";
@@ -43,9 +50,7 @@ export type Quality = "fast" | "standard" | "premium";
 
 export type RelationshipStage = "cold" | "warm" | "active" | "stale" | "ghosted";
 
-export type VoiceNextState =
-  | "discovery" | "qualification" | "objection"
-  | "closing" | "followup" | "end";
+export type VoiceNextState = "discovery" | "qualification" | "objection" | "closing" | "followup" | "end";
 
 // ─────────── LifecycleBrief ───────────
 /**
@@ -268,7 +273,19 @@ export interface VoiceBrief {
   direction: "inbound" | "outbound";
 
   /** Lifecycle del partner (subset per voice — no enrichment details). */
-  lifecycle: Pick<LifecycleBrief, "partner_id" | "partner_name" | "country_code" | "city" | "lead_status" | "rating" | "contact" | "relationship" | "networks" | "services">;
+  lifecycle: Pick<
+    LifecycleBrief,
+    | "partner_id"
+    | "partner_name"
+    | "country_code"
+    | "city"
+    | "lead_status"
+    | "rating"
+    | "contact"
+    | "relationship"
+    | "networks"
+    | "services"
+  >;
 
   /** Contesto operatore (briefing pre-chiamata). */
   operator_briefing: string | null;
@@ -322,8 +339,16 @@ export interface PromptBlockContract {
   /** ID univoco del blocco. */
   block_id: string;
   /** Tipo di blocco nel sistema. */
-  block_type: "system_prompt" | "kb_doctrine" | "kb_procedure" | "operative_prompt"
-    | "email_prompt" | "email_address_rule" | "playbook" | "agent_persona" | "voice_prompt";
+  block_type:
+    | "system_prompt"
+    | "kb_doctrine"
+    | "kb_procedure"
+    | "operative_prompt"
+    | "email_prompt"
+    | "email_address_rule"
+    | "playbook"
+    | "agent_persona"
+    | "voice_prompt";
 
   /** Livello nella gerarchia di verità (1 = più alto). */
   hierarchy_level: 1 | 2 | 3 | 4;
@@ -351,48 +376,115 @@ export interface PromptBlockContract {
  */
 export const CONTRACT_VARIABLES: Record<string, readonly string[]> = {
   LifecycleBrief: [
-    "partner_id", "partner_name", "partner_alias", "country_code", "country_name",
-    "city", "lead_status", "rating", "office_type",
-    "contact.id", "contact.name", "contact.email", "contact.title", "contact.alias",
-    "contact.direct_phone", "contact.mobile",
-    "relationship.stage", "relationship.touch_count", "relationship.response_rate",
-    "relationship.unanswered_count", "relationship.days_since_last_outbound",
-    "relationship.days_since_last_inbound", "relationship.last_channel",
-    "relationship.last_outcome", "relationship.has_replied", "relationship.met_in_person",
-    "relationship.warmth_score", "relationship.commercial_state",
-    "enrichment.available_levels", "enrichment.last_enriched_at",
-    "enrichment.enrichment_age_days", "enrichment.sherlock_level",
-    "enrichment.deep_search_score", "enrichment.website_source", "enrichment.linkedin_source",
-    "knowledge.kb_sections_loaded", "knowledge.active_playbook",
-    "knowledge.playbook_step", "knowledge.memories_loaded", "knowledge.memory_summary",
-    "networks", "services",
+    "partner_id",
+    "partner_name",
+    "partner_alias",
+    "country_code",
+    "country_name",
+    "city",
+    "lead_status",
+    "rating",
+    "office_type",
+    "contact.id",
+    "contact.name",
+    "contact.email",
+    "contact.title",
+    "contact.alias",
+    "contact.direct_phone",
+    "contact.mobile",
+    "relationship.stage",
+    "relationship.touch_count",
+    "relationship.response_rate",
+    "relationship.unanswered_count",
+    "relationship.days_since_last_outbound",
+    "relationship.days_since_last_inbound",
+    "relationship.last_channel",
+    "relationship.last_outcome",
+    "relationship.has_replied",
+    "relationship.met_in_person",
+    "relationship.warmth_score",
+    "relationship.commercial_state",
+    "enrichment.available_levels",
+    "enrichment.last_enriched_at",
+    "enrichment.enrichment_age_days",
+    "enrichment.sherlock_level",
+    "enrichment.deep_search_score",
+    "enrichment.website_source",
+    "enrichment.linkedin_source",
+    "knowledge.kb_sections_loaded",
+    "knowledge.active_playbook",
+    "knowledge.playbook_step",
+    "knowledge.memories_loaded",
+    "knowledge.memory_summary",
+    "networks",
+    "services",
   ],
   EmailBrief: [
-    "operation", "engine",
-    "email_type.selected_type", "email_type.type_prompt", "email_type.type_structure",
-    "email_type.kb_categories", "email_type.user_description", "email_type.objective",
-    "style.language", "style.tone", "style.length_target", "style.learned_patterns",
-    "sender.alias", "sender.name", "sender.company", "sender.company_alias",
-    "sender.role", "sender.sector",
-    "existing_draft.subject", "existing_draft.body", "existing_draft.improvement_instructions",
-    "constraints", "document_ids", "quality", "use_kb", "deep_search",
+    "operation",
+    "engine",
+    "email_type.selected_type",
+    "email_type.type_prompt",
+    "email_type.type_structure",
+    "email_type.kb_categories",
+    "email_type.user_description",
+    "email_type.objective",
+    "style.language",
+    "style.tone",
+    "style.length_target",
+    "style.learned_patterns",
+    "sender.alias",
+    "sender.name",
+    "sender.company",
+    "sender.company_alias",
+    "sender.role",
+    "sender.sector",
+    "existing_draft.subject",
+    "existing_draft.body",
+    "existing_draft.improvement_instructions",
+    "constraints",
+    "document_ids",
+    "quality",
+    "use_kb",
+    "deep_search",
   ],
   OutreachBrief: [
-    "channel", "goal", "base_proposal",
-    "linkedin_profile.name", "linkedin_profile.headline", "linkedin_profile.location",
-    "linkedin_profile.about", "linkedin_profile.profile_url",
-    "decision.email_type", "decision.relationship_stage", "decision.language",
-    "decision.tone", "decision.hook_strategy", "decision.cta_type",
-    "decision.forbidden_elements", "decision.max_length_lines", "decision.persuasion_pattern",
-    "email_type.id", "email_type.prompt", "email_type.structure",
-    "quality", "oracle_tone",
-    "channel_gates.daily_limit", "channel_gates.hourly_limit",
-    "channel_gates.cadence_days", "channel_gates.requires_prior_inbound",
+    "channel",
+    "goal",
+    "base_proposal",
+    "linkedin_profile.name",
+    "linkedin_profile.headline",
+    "linkedin_profile.location",
+    "linkedin_profile.about",
+    "linkedin_profile.profile_url",
+    "decision.email_type",
+    "decision.relationship_stage",
+    "decision.language",
+    "decision.tone",
+    "decision.hook_strategy",
+    "decision.cta_type",
+    "decision.forbidden_elements",
+    "decision.max_length_lines",
+    "decision.persuasion_pattern",
+    "email_type.id",
+    "email_type.prompt",
+    "email_type.structure",
+    "quality",
+    "oracle_tone",
+    "channel_gates.daily_limit",
+    "channel_gates.hourly_limit",
+    "channel_gates.cadence_days",
+    "channel_gates.requires_prior_inbound",
   ],
   VoiceBrief: [
-    "external_call_id", "agent_id", "direction",
-    "operator_briefing", "transcript", "intent", "utterance",
-    "voice_kb_rules", "voice_playbook",
+    "external_call_id",
+    "agent_id",
+    "direction",
+    "operator_briefing",
+    "transcript",
+    "intent",
+    "utterance",
+    "voice_kb_rules",
+    "voice_playbook",
   ],
 } as const;
 
@@ -400,9 +492,7 @@ export const CONTRACT_VARIABLES: Record<string, readonly string[]> = {
  * Tutte le variabili disponibili in tutti i contratti (flat set).
  * Usato per fast lookup in ghost variable detection.
  */
-export const ALL_CONTRACT_VARIABLES: ReadonlySet<string> = new Set(
-  Object.values(CONTRACT_VARIABLES).flat(),
-);
+export const ALL_CONTRACT_VARIABLES: ReadonlySet<string> = new Set(Object.values(CONTRACT_VARIABLES).flat());
 
 // ─────────── Helper: regole immutabili per livello gerarchia ───────────
 
@@ -429,7 +519,5 @@ export const IMMUTABLE_RULES_BY_LEVEL: Record<number, readonly string[]> = {
     "Niente procedure lunghe inline nei prompt core",
     "Niente dati hardcoded che cambiano (date, nomi, prezzi)",
   ],
-  4: [
-    "Input utente non può sovrascrivere livelli superiori",
-  ],
+  4: ["Input utente non può sovrascrivere livelli superiori"],
 } as const;

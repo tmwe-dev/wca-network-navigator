@@ -32,7 +32,14 @@ type SupabaseClient = ReturnType<typeof createClient>;
 
 // Re-export all public types and functions from sub-modules
 export type { DimensionScore, ClientData } from "./dimensionCalculators.ts";
-export { INDUSTRY_SCORING, COUNTRY_TIER_SCORING, calculateSeniority, calculateIndustry, calculateGeography, calculateEngagement } from "./dimensionCalculators.ts";
+export {
+  INDUSTRY_SCORING,
+  COUNTRY_TIER_SCORING,
+  calculateSeniority,
+  calculateIndustry,
+  calculateGeography,
+  calculateEngagement,
+} from "./dimensionCalculators.ts";
 
 export type { ClientQualityResult } from "./qualityCalculation.ts";
 export { calculateClientQuality, saveClientQuality, calculateAndSaveClientQuality } from "./qualityCalculation.ts";

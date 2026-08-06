@@ -27,11 +27,7 @@ function scanProfileForKeywords(
   const matches: Set<string> = new Set();
   const context: string[] = [];
 
-  const textSources = [
-    profileMarkdown || "",
-    JSON.stringify(sherlockFindings) || "",
-    sherlockSummary || "",
-  ].join(" ");
+  const textSources = [profileMarkdown || "", JSON.stringify(sherlockFindings) || "", sherlockSummary || ""].join(" ");
 
   for (const keyword of keywords) {
     const lowerKeyword = keyword.toLowerCase();
@@ -128,7 +124,8 @@ export async function calculateWCAModifier(
     .order("created_at", { ascending: false })
     .limit(1);
 
-  const serviceCategories: string[] = services?.map((s: { service_category: string }) => s.service_category as string) || [];
+  const serviceCategories: string[] =
+    services?.map((s: { service_category: string }) => s.service_category as string) || [];
   const certifications: string[] = certs?.map((c: { certification: string }) => c.certification as string) || [];
   const sherlockFindings = sherlockInvest?.[0]?.findings as Record<string, unknown> | null;
   const sherlockSummary = sherlockInvest?.[0]?.summary as string | null;
@@ -202,12 +199,7 @@ export async function calculateWCAModifier(
   }
 
   // d) Bonded warehouse (+5pts)
-  const bondedKeywords = [
-    "bonded warehouse",
-    "deposito doganale",
-    "magazzino in regime doganale",
-    "bonded facility",
-  ];
+  const bondedKeywords = ["bonded warehouse", "deposito doganale", "magazzino in regime doganale", "bonded facility"];
   const bondedScan = scanProfileForKeywords(
     partner.raw_profile_markdown,
     sherlockFindings,
@@ -303,8 +295,7 @@ export async function calculateWCAModifier(
 
   // a) FCL-only operator (-10pts)
   const isFCLOnly =
-    serviceCategories.length > 0 &&
-    serviceCategories.every((s: string) => s === "ocean_fcl" || s === "ocean_lcl");
+    serviceCategories.length > 0 && serviceCategories.every((s: string) => s === "ocean_fcl" || s === "ocean_lcl");
   if (isFCLOnly && serviceCategories.includes("ocean_fcl")) {
     const points = -10;
     totalModifier += points;

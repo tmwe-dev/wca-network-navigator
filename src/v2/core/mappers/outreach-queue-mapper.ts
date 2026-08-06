@@ -9,9 +9,16 @@ import { type OutreachQueueItem, outreachQueueId, userId } from "../domain/entit
 export function mapOutreachQueueRow(row: unknown): Result<OutreachQueueItem, AppError> {
   const parsed = OutreachQueueRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `OutreachQueue row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "outreach-queue-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `OutreachQueue row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "outreach-queue-mapper",
+      ),
+    );
   }
   const r = parsed.data;
   return ok({

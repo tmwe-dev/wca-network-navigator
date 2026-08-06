@@ -34,10 +34,14 @@ export function KBSupervisorHeader({ mode, onModeChange, isVoiceConnected, audit
         )}
 
         {auditStatus === "running" && (
-          <Badge variant="secondary" className="text-[10px] animate-pulse">Audit in corso...</Badge>
+          <Badge variant="secondary" className="text-[10px] animate-pulse">
+            Audit in corso...
+          </Badge>
         )}
         {auditStatus === "done" && (
-          <Badge variant="default" className="text-[10px]">Audit completato</Badge>
+          <Badge variant="default" className="text-[10px]">
+            Audit completato
+          </Badge>
         )}
       </div>
 

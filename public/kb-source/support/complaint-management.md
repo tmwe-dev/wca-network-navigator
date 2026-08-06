@@ -6,6 +6,7 @@ tags: [support, procedures, email, complaints, customer-service, escalation]
 # Gestione reclami
 
 ## Obiettivo
+
 Gestire reclami e lamentele con tono empatico, procedura di escalation chiara e tempi di risposta rapidi.
 
 ## Principi fondamentali
@@ -21,6 +22,7 @@ Gestire reclami e lamentele con tono empatico, procedura di escalation chiara e 
 ### Step 1: Ricezione e inquadramento (< 4 ore)
 
 Non appena ricevi reclamo:
+
 1. **Rispondi subito**: "Ho ricevuto il tuo reclamo e lo sto analizzando"
 2. **Localizza i dati**: booking reference, data, cosa è andato storto
 3. **Classifica la gravità**:
@@ -51,6 +53,7 @@ Grazie della pazienza.
 ### Step 3: Investigazione (4-24 ore)
 
 Raccogli dati:
+
 - Se logistica: contatta corriere per tracciamento
 - Se qualità: chiedi foto/evidenza al cliente
 - Se servizio: parla con team operativo
@@ -59,12 +62,14 @@ Raccogli dati:
 ### Step 4: Proposta risolutiva
 
 **Per reclami CRITICI/ALTI**: offri proattivamente
+
 - Rimborso parziale/totale
 - Ristorno/re-consegna
 - Sconto su futuri ordini
 - Servizio aggiuntivo gratuito
 
 **Per reclami MEDI/BASSI**: proponi rispetto alla causa
+
 - Se ritardo: sconto 5% sulla prossima fattura
 - Se comunicazione assente: scuse + contatto dedicato
 - Se difetto lieve: sostituzione + porto pagato
@@ -96,26 +101,29 @@ Cordialmente,
 ## Tempi di risposta obbligatori
 
 | Gravità | 1a risposta | Aggiornamento | Risoluzione |
-|---------|------------|---------------|------------|
-| CRITICO | 2 ore | ogni 6 ore | 48 ore max |
-| ALTO | 4 ore | ogni 12 ore | 5 giorni |
-| MEDIO | 24 ore | ogni 2 giorni | 10 giorni |
-| BASSO | 24 ore | se richiesto | 15 giorni |
+| ------- | ----------- | ------------- | ----------- |
+| CRITICO | 2 ore       | ogni 6 ore    | 48 ore max  |
+| ALTO    | 4 ore       | ogni 12 ore   | 5 giorni    |
+| MEDIO   | 24 ore      | ogni 2 giorni | 10 giorni   |
+| BASSO   | 24 ore      | se richiesto  | 15 giorni   |
 
 ## Escalation
 
 ### Reclamo diventa LITE/MINACCIA LEGALE
+
 - Trasferisci a Legal/Compliance Team
 - NON continuare a negoziare da solo
 - Documenta completamente ogni comunicazione
 - Metti per iscritto tutte le offerte
 
 ### Cliente non è soddisfatto della soluzione proposta
+
 1. Ascolti realmente cosa sta chiedendo (potrebbe voler solo scuse)
 2. Se economico: consulta budget limite con manager
 3. Se non risolvibile: offri "Vogliamo risolvere questo insieme. Che cosa ti farebbe sentire giustizia?"
 
 ### Reclamo riguarda partner/fornitore esterno
+
 - Contatta il partner immediatamente
 - Non scaricare responsabilità al cliente ("È colpa del corriere")
 - Rimani il punto di contatto, tu gestisci il partner
@@ -123,6 +131,7 @@ Cordialmente,
 ## Documentazione
 
 **OBBLIGATORIO**: crea record reclamo con:
+
 - Data ricezione e contenuto
 - Classificazione gravità
 - Azioni intraprese (con date/ore)
@@ -131,11 +140,13 @@ Cordialmente,
 - Data chiusura
 
 Questa documentazione serve per:
+
 - Tracciare pattern (se molti reclami dello stesso tipo = problema sistemico)
 - Protezione legale in caso di escalation
 - Analisi performance team
 
 ## Tono VIETATO in reclami
+
 - ❌ "Non è nostra colpa"
 - ❌ "Abbiamo già detto di..."
 - ❌ "È la politica"
@@ -143,6 +154,7 @@ Questa documentazione serve per:
 - ❌ Minimizzare il problema
 
 ## Tono CONSIGLIATO
+
 - ✓ "Ho capito il tuo disappunto"
 - ✓ "Vogliamo risolvere questo per te"
 - ✓ "Ecco cosa farò..."

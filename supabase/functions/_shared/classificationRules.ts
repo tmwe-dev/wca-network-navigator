@@ -70,19 +70,23 @@ export async function generateReplyDraft(
     switch (category) {
       case "reply_interested":
         tone = "warm";
-        categoryHint = "Il partner ha mostrato interesse. La risposta deve essere positiva, concreta e proporre i prossimi step.";
+        categoryHint =
+          "Il partner ha mostrato interesse. La risposta deve essere positiva, concreta e proporre i prossimi step.";
         break;
       case "reply_to_question":
         tone = "helpful";
-        categoryHint = "Il partner ha posto una domanda. La risposta deve essere chiara, utile e basata su KB/expertise disponibile.";
+        categoryHint =
+          "Il partner ha posto una domanda. La risposta deve essere chiara, utile e basata su KB/expertise disponibile.";
         break;
       case "handle_complaint":
         tone = "empathetic";
-        categoryHint = "È stato ricevuto un reclamo. La risposta deve essere empatica, riconoscere il problema e proporre una soluzione concreta.";
+        categoryHint =
+          "È stato ricevuto un reclamo. La risposta deve essere empatica, riconoscere il problema e proporre una soluzione concreta.";
         break;
       case "send_graceful_close":
         tone = "graceful";
-        categoryHint = "Il partner non è interessato. La risposta deve chiudere con eleganza, ringraziare e lasciare la porta aperta senza pressione.";
+        categoryHint =
+          "Il partner non è interessato. La risposta deve chiudere con eleganza, ringraziare e lasciare la porta aperta senza pressione.";
         break;
     }
 

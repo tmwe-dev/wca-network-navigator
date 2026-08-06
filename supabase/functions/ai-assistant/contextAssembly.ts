@@ -34,10 +34,7 @@ export interface ContextAssemblyResult {
 /**
  * Load active workflow information if partner ID is available
  */
-async function loadActiveWorkflow(
-  supabase: SupabaseClient,
-  partnerId: string | undefined
-): Promise<string> {
+async function loadActiveWorkflow(supabase: SupabaseClient, partnerId: string | undefined): Promise<string> {
   if (!partnerId || typeof partnerId !== "string") return "";
 
   try {
@@ -50,14 +47,12 @@ async function loadActiveWorkflow(
 
     if (!ws) return "";
 
-    const wf = (ws as Record<string, unknown>).commercial_workflows as
-      | Record<string, unknown>
-      | undefined;
+    const wf = (ws as Record<string, unknown>).commercial_workflows as Record<string, unknown> | undefined;
     if (!wf) return "";
 
     const gates = Array.isArray(wf.gates) ? wf.gates : [];
     const cur = (gates[(ws as Record<string, unknown>).current_gate as number] || {}) as Record<string, unknown>;
-    return `Workflow: ${wf.name}\nGate corrente: ${(ws as Record<string, unknown>).current_gate} — ${cur.name || "(senza nome)"}\nObiettivo gate: ${cur.objective || "(non definito)"}\nExit criteria:\n${(Array.isArray(cur.exit_criteria) ? (cur.exit_criteria as string[]).map((c: string) => "  • " + c).join("\n") : "  • (non definiti)")}\nIniziato: ${(ws as Record<string, unknown>).started_at}`;
+    return `Workflow: ${wf.name}\nGate corrente: ${(ws as Record<string, unknown>).current_gate} — ${cur.name || "(senza nome)"}\nObiettivo gate: ${cur.objective || "(non definito)"}\nExit criteria:\n${Array.isArray(cur.exit_criteria) ? (cur.exit_criteria as string[]).map((c: string) => "  • " + c).join("\n") : "  • (non definiti)"}\nIniziato: ${(ws as Record<string, unknown>).started_at}`;
   } catch (e: unknown) {
     console.warn("Workflow state load failed:", extractErrorMessage(e));
     return "";
@@ -67,10 +62,7 @@ async function loadActiveWorkflow(
 /**
  * Load commercial partner state (holding pattern awareness)
  */
-async function loadHoldingState(
-  supabase: SupabaseClient,
-  partnerId: string | undefined
-): Promise<string> {
+async function loadHoldingState(supabase: SupabaseClient, partnerId: string | undefined): Promise<string> {
   if (!partnerId) return "";
 
   try {
@@ -83,21 +75,14 @@ async function loadHoldingState(
     if (!partnerState) return "";
 
     const daysInHolding = partnerState.last_interaction_at
-      ? Math.floor(
-          (Date.now() - new Date(partnerState.last_interaction_at).getTime()) /
-            86400000
-        )
+      ? Math.floor((Date.now() - new Date(partnerState.last_interaction_at).getTime()) / 86400000)
       : 0;
 
     const lines = [
       `STATO COMMERCIALE PARTNER: ${(partnerState.lead_status || "new").toUpperCase()}`,
-      partnerState.company_name
-        ? `Azienda: ${partnerState.company_name}`
-        : null,
+      partnerState.company_name ? `Azienda: ${partnerState.company_name}` : null,
       `Interazioni totali: ${partnerState.interaction_count || 0}`,
-      partnerState.last_interaction_at
-        ? `Giorni dall'ultimo contatto: ${daysInHolding}`
-        : "Mai contattato",
+      partnerState.last_interaction_at ? `Giorni dall'ultimo contatto: ${daysInHolding}` : "Mai contattato",
       daysInHolding > 90
         ? `🔴 CRITICO: Holding da ${daysInHolding} giorni — review obbligatoria (riattivazione Voss o archiviazione motivata)`
         : null,
@@ -122,7 +107,7 @@ async function loadContextParallel(
   isConversational: boolean,
   lastUserMsg: string | undefined,
   ctxTags: ContextTags,
-  requiredKeys?: string[]
+  requiredKeys?: string[],
 ): Promise<{
   memoryContext: string;
   userProfile: string;
@@ -133,8 +118,7 @@ async function loadContextParallel(
   emailContext: string;
 }> {
   // Helper: se requiredKeys è definito e NON include la chiave → skip loader
-  const need = (key: string): boolean =>
-    !requiredKeys || requiredKeys.includes(key);
+  const need = (key: string): boolean => !requiredKeys || requiredKeys.includes(key);
 
   if (isConversational) {
     // Lightweight context for voice mode
@@ -156,15 +140,16 @@ async function loadContextParallel(
     };
   } else {
     // Full context for operational mode
-    const [memoryContext, userProfile, kbContext, opPrompts, missionHistory, doctrineContext, emailContext] = await Promise.all([
-      need("memory") ? loadMemoryContext(supabase, userId, lastUserMsg) : Promise.resolve(""),
-      need("profile") ? loadUserProfile(supabase, userId) : Promise.resolve(""),
-      need("kb") ? loadKBContext(supabase, lastUserMsg, userId, ctxTags) : Promise.resolve(""),
-      need("operative_prompts") ? loadOperativePrompts(supabase, userId) : Promise.resolve(""),
-      need("mission_history") ? loadMissionHistory(supabase, userId) : Promise.resolve(""),
-      need("doctrine") ? loadSystemDoctrine(supabase) : Promise.resolve(""),
-      need("email_context") ? loadRecentEmailContext(supabase, userId, lastUserMsg ?? "") : Promise.resolve(""),
-    ]);
+    const [memoryContext, userProfile, kbContext, opPrompts, missionHistory, doctrineContext, emailContext] =
+      await Promise.all([
+        need("memory") ? loadMemoryContext(supabase, userId, lastUserMsg) : Promise.resolve(""),
+        need("profile") ? loadUserProfile(supabase, userId) : Promise.resolve(""),
+        need("kb") ? loadKBContext(supabase, lastUserMsg, userId, ctxTags) : Promise.resolve(""),
+        need("operative_prompts") ? loadOperativePrompts(supabase, userId) : Promise.resolve(""),
+        need("mission_history") ? loadMissionHistory(supabase, userId) : Promise.resolve(""),
+        need("doctrine") ? loadSystemDoctrine(supabase) : Promise.resolve(""),
+        need("email_context") ? loadRecentEmailContext(supabase, userId, lastUserMsg ?? "") : Promise.resolve(""),
+      ]);
     return {
       memoryContext,
       userProfile,
@@ -199,11 +184,7 @@ function injectPageContext(systemPrompt: string, context: Record<string, unknown
     prompt += `\nPaesi selezionati: ${selCountries.map((c) => `${c.name} (${c.code})`).join(", ")}.`;
   }
 
-  if (
-    context.filterMode &&
-    context.filterMode !== "all" &&
-    !(String(context.filterMode).startsWith("/"))
-  ) {
+  if (context.filterMode && context.filterMode !== "all" && !String(context.filterMode).startsWith("/")) {
     const filterLabels: Record<string, string> = {
       todo: "paesi con dati da verificare",
       no_profile: "paesi con descrizione profilo mancante (sync incompleto)",
@@ -224,7 +205,7 @@ function injectPageContext(systemPrompt: string, context: Record<string, unknown
     }
     if (context.missionData) {
       const md = context.missionData as Record<string, unknown>;
-      const tgtCountries = ((md.targets as Record<string, unknown> | undefined)?.countries) as string[] | undefined;
+      const tgtCountries = (md.targets as Record<string, unknown> | undefined)?.countries as string[] | undefined;
       if (tgtCountries?.length) {
         prompt += `\nPaesi già selezionati: ${tgtCountries.join(", ")}.`;
       }
@@ -247,7 +228,7 @@ export async function assembleSystemPrompt(
   isConversational: boolean,
   context: Record<string, unknown> | undefined,
   messages: Record<string, unknown>[] | undefined,
-  scopeArg?: string
+  scopeArg?: string,
 ): Promise<ContextAssemblyResult> {
   // kb-supervisor: scope funzionale (Harmonizer ecc.). Il briefing operatore
   // è già self-contained e definisce un contratto JSON rigido. Iniettare
@@ -283,28 +264,19 @@ export async function assembleSystemPrompt(
 
   // Extract last user message
   const lastUserMsg: string | undefined = Array.isArray(messages)
-    ? [...messages]
-        .reverse()
-        .find(
-          (m: Record<string, unknown>) =>
-            m?.role === "user" && typeof m.content === "string"
-        )?.content as string | undefined
+    ? ([...messages].reverse().find((m: Record<string, unknown>) => m?.role === "user" && typeof m.content === "string")
+        ?.content as string | undefined)
     : undefined;
 
   // Build conversation context
   const conversationContext: ConversationContext = {
     scope: (context?.scope as string | undefined) || undefined,
     page: (context?.currentPage || context?.page) as string | undefined,
-    partner_country:
-      (context?.partner_country ||
-        context?.country ||
-        context?.selectedCountry) as string | undefined,
+    partner_country: (context?.partner_country || context?.country || context?.selectedCountry) as string | undefined,
     channel: (context?.channel as string | undefined) || undefined,
     email_type: (context?.email_type as string | undefined) || undefined,
-    partner_id:
-      (context?.partnerId || context?.partner_id) as string | undefined,
-    relationship_stage:
-      (context?.relationship_stage as string | undefined) || undefined,
+    partner_id: (context?.partnerId || context?.partner_id) as string | undefined,
+    relationship_stage: (context?.relationship_stage as string | undefined) || undefined,
     last_user_message: lastUserMsg,
   };
   const ctxTags = extractContextTags(conversationContext);
@@ -322,7 +294,7 @@ export async function assembleSystemPrompt(
     isConversational,
     lastUserMsg,
     ctxTags,
-    scopeRequirements
+    scopeRequirements,
   );
 
   // Assemble context blocks with priority
@@ -347,10 +319,7 @@ export async function assembleSystemPrompt(
     contextBlocks = contextBlocks.filter((b) => scopeRequirements!.includes(b.key));
   }
 
-  const { text: assembledContext, stats: budgetStats } = assembleContext(
-    contextBlocks,
-    availableBudget
-  );
+  const { text: assembledContext, stats: budgetStats } = assembleContext(contextBlocks, availableBudget);
 
   let systemPrompt = baseSystemPrompt;
   if (assembledContext) systemPrompt += assembledContext;

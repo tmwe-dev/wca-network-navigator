@@ -25,6 +25,6 @@ test.describe("Auth Guard [AUTH]", () => {
     page.on("pageerror", (err) => errors.push(err.message));
     await page.goto("/auth");
     await page.waitForTimeout(2000);
-    expect(errors.filter(e => !e.includes("net::ERR"))).toHaveLength(0);
+    expect(errors.filter((e) => !e.includes("net::ERR"))).toHaveLength(0);
   });
 });

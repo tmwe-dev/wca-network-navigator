@@ -52,7 +52,10 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 }
 
 async function playTTS(text: string, voiceId: string, surface = "global_chat"): Promise<void> {
-  const cleanText = text.replace(/[#*_~`>[\]()!|]/g, "").replace(/\n{2,}/g, ". ").trim();
+  const cleanText = text
+    .replace(/[#*_~`>[\]()!|]/g, "")
+    .replace(/\n{2,}/g, ". ")
+    .trim();
   if (!cleanText || cleanText.length < 5) return;
   const truncated = cleanText.length > 500 ? cleanText.slice(0, 500) + "..." : cleanText;
 
@@ -108,9 +111,18 @@ export function useGlobalChat({ onJobCreated }: UseGlobalChatOptions) {
 
   const speech = useContinuousSpeech((text) => dispatch({ type: "SET_INPUT", value: text }));
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
-  useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
-  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!onJobCreated || messages.length === 0) return;
@@ -120,54 +132,63 @@ export function useGlobalChat({ onJobCreated }: UseGlobalChatOptions) {
     if (parsed.jobCreated) onJobCreated(parsed.jobCreated);
   }, [messages, onJobCreated]);
 
-  const handleReplay = useCallback(async (content: string, idx: number) => {
-    if (state.playingIdx != null) return;
-    dispatch({ type: "SET_PLAYING", value: idx });
-    try {
-      await playTTS(content, defaultVoiceId);
-    } catch (e: unknown) {
-      log.warn("TTS playback failed", { error: e instanceof Error ? e.message : String(e) });
-      toast({ title: "Errore TTS", description: "Impossibile riprodurre l'audio", variant: "destructive" });
-    } finally {
-      if (mountedRef.current) dispatch({ type: "SET_PLAYING", value: null });
-    }
-  }, [state.playingIdx, defaultVoiceId]);
+  const handleReplay = useCallback(
+    async (content: string, idx: number) => {
+      if (state.playingIdx != null) return;
+      dispatch({ type: "SET_PLAYING", value: idx });
+      try {
+        await playTTS(content, defaultVoiceId);
+      } catch (e: unknown) {
+        log.warn("TTS playback failed", { error: e instanceof Error ? e.message : String(e) });
+        toast({ title: "Errore TTS", description: "Impossibile riprodurre l'audio", variant: "destructive" });
+      } finally {
+        if (mountedRef.current) dispatch({ type: "SET_PLAYING", value: null });
+      }
+    },
+    [state.playingIdx, defaultVoiceId],
+  );
 
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || state.isLoading) return;
-    const userMsg: ConversationMessage = { role: "user", content: text.trim() };
-    const prevMessages = [...messages, userMsg];
-    await addMessages([userMsg]);
-    dispatch({ type: "SEND_START" });
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || state.isLoading) return;
+      const userMsg: ConversationMessage = { role: "user", content: text.trim() };
+      const prevMessages = [...messages, userMsg];
+      await addMessages([userMsg]);
+      dispatch({ type: "SEND_START" });
 
-    let assistantContent = "";
+      let assistantContent = "";
 
-    try {
-      const allMsgs = prevMessages.map((m) => ({ role: m.role, content: m.content }));
-      const edgeFunction = state.mode === "conversational" ? "unified-assistant" : "ai-assistant";
-      const body = state.mode === "conversational"
-        ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat", mode: "conversational" }
-        : { messages: allMsgs };
-      const data = await invokeEdge<{ content?: string; error?: string }>(edgeFunction, {
-        body,
-        context: "globalChat",
-      });
-      assistantContent = data.content || data.error || "Nessuna risposta";
-    } catch (e: unknown) {
-      log.error("ai chat error", { message: e instanceof Error ? e.message : String(e) });
-      assistantContent = "⚠️ Errore di connessione. Riprova.";
-    }
+      try {
+        const allMsgs = prevMessages.map((m) => ({ role: m.role, content: m.content }));
+        const edgeFunction = state.mode === "conversational" ? "unified-assistant" : "ai-assistant";
+        const body =
+          state.mode === "conversational"
+            ? { scope: "strategic", messages: allMsgs, pageContext: "global-chat", mode: "conversational" }
+            : { messages: allMsgs };
+        const data = await invokeEdge<{ content?: string; error?: string }>(edgeFunction, {
+          body,
+          context: "globalChat",
+        });
+        assistantContent = data.content || data.error || "Nessuna risposta";
+      } catch (e: unknown) {
+        log.error("ai chat error", { message: e instanceof Error ? e.message : String(e) });
+        assistantContent = "⚠️ Errore di connessione. Riprova.";
+      }
 
-    const parsed = parseAiAgentResponse<StructuredPartner>(assistantContent);
-    dispatchAiAgentEffects(parsed);
-    if (parsed.jobCreated && onJobCreated) onJobCreated(parsed.jobCreated);
-    await addMessages([{ role: "assistant", content: assistantContent }]);
-    if (mountedRef.current) dispatch({ type: "SEND_END" });
+      const parsed = parseAiAgentResponse<StructuredPartner>(assistantContent);
+      dispatchAiAgentEffects(parsed);
+      if (parsed.jobCreated && onJobCreated) onJobCreated(parsed.jobCreated);
+      await addMessages([{ role: "assistant", content: assistantContent }]);
+      if (mountedRef.current) dispatch({ type: "SEND_END" });
 
-    if (ttsEnabled && defaultVoiceId && !assistantContent.startsWith("⚠️")) {
-      playTTS(assistantContent, defaultVoiceId).catch((err) => { log.error("[TTS] playback failed:", { error: err }); });
-    }
-  }, [messages, state.isLoading, state.mode, addMessages, ttsEnabled, defaultVoiceId, onJobCreated]);
+      if (ttsEnabled && defaultVoiceId && !assistantContent.startsWith("⚠️")) {
+        playTTS(assistantContent, defaultVoiceId).catch((err) => {
+          log.error("[TTS] playback failed:", { error: err });
+        });
+      }
+    },
+    [messages, state.isLoading, state.mode, addMessages, ttsEnabled, defaultVoiceId, onJobCreated],
+  );
 
   return {
     messages,

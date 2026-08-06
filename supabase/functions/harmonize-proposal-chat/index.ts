@@ -11,7 +11,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-interface ChatRow { role: "user" | "assistant"; content: string; ts?: string }
+interface ChatRow {
+  role: "user" | "assistant";
+  content: string;
+  ts?: string;
+}
 
 interface Proposal {
   id: string;
@@ -77,11 +81,7 @@ const VOICE_PREAMBLE = [
  * dal bucket public via SUPABASE_URL. In edge function NON abbiamo accesso a
  * `/public`, quindi li leggiamo via fetch dall'origin del progetto.
  */
-const HARMONIZER_KB_FILES = [
-  "00-context-wca.md",
-  "30-business-constraints.md",
-  "40-agents-schema.md",
-] as const;
+const HARMONIZER_KB_FILES = ["00-context-wca.md", "30-business-constraints.md", "40-agents-schema.md"] as const;
 
 const HARMONIZER_KB_CHAR_BUDGET = 6_000;
 
@@ -100,7 +100,9 @@ async function loadHarmonizerKbContext(): Promise<string> {
       if (used + block.length > HARMONIZER_KB_CHAR_BUDGET) break;
       parts.push(block);
       used += block.length;
-    } catch { /* tolleriamo 404 */ }
+    } catch {
+      /* tolleriamo 404 */
+    }
   }
   if (parts.length === 0) return "";
   return [
@@ -145,22 +147,18 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { run_id, proposal_id, agent_id, user_message } = body ?? {};
     if (!run_id || !proposal_id || !user_message) {
-      return new Response(JSON.stringify({ error: "MISSING_FIELDS", required: ["run_id","proposal_id","user_message"] }), { status: 400, headers });
+      return new Response(
+        JSON.stringify({ error: "MISSING_FIELDS", required: ["run_id", "proposal_id", "user_message"] }),
+        { status: 400, headers },
+      );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // 1) Carica Gordon (system_prompt)
     let systemPrompt = "Sei Gordon, curatore del Prompt-Lab. Rispondi in italiano semplice.";
     if (agent_id) {
-      const { data: ag } = await supabase
-        .from("agents")
-        .select("system_prompt")
-        .eq("id", agent_id)
-        .maybeSingle();
+      const { data: ag } = await supabase.from("agents").select("system_prompt").eq("id", agent_id).maybeSingle();
       if (ag?.system_prompt) systemPrompt = ag.system_prompt as string;
     } else {
       const { data: ag } = await supabase
@@ -189,20 +187,13 @@ Deno.serve(async (req) => {
     }
 
     // 3) Carica KB (harmonizer .md + glossario doctrine) in parallelo
-    const [harmonizerKb, glossary] = await Promise.all([
-      loadHarmonizerKbContext(),
-      loadGlossaryFromKb(supabase),
-    ]);
+    const [harmonizerKb, glossary] = await Promise.all([loadHarmonizerKbContext(), loadGlossaryFromKb(supabase)]);
 
     // 4) Costruisci messaggi
     const history: ChatRow[] = proposal.chat ?? [];
-    const fullSystem = [
-      systemPrompt,
-      VOICE_PREAMBLE,
-      glossary,
-      harmonizerKb,
-      buildContextMessage(proposal),
-    ].filter(Boolean).join("\n\n");
+    const fullSystem = [systemPrompt, VOICE_PREAMBLE, glossary, harmonizerKb, buildContextMessage(proposal)]
+      .filter(Boolean)
+      .join("\n\n");
     const messages = [
       { role: "system", content: fullSystem },
       ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -210,22 +201,32 @@ Deno.serve(async (req) => {
     ];
 
     // 5) Chiama Lovable AI Gateway
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI_NOT_CONFIGURED" }), { status: 500, headers });
     }
     const aiRes = await aiFetch({ model: "google/gemini-3-flash-preview", messages, stream: false });
 
     if (aiRes.status === 429) {
-      return new Response(JSON.stringify({ error: "RATE_LIMIT", message: "Troppe richieste, riprova tra un minuto." }), { status: 429, headers });
+      return new Response(
+        JSON.stringify({ error: "RATE_LIMIT", message: "Troppe richieste, riprova tra un minuto." }),
+        { status: 429, headers },
+      );
     }
     if (aiRes.status === 402) {
-      return new Response(JSON.stringify({ error: "CREDITS_EXHAUSTED", message: "Crediti AI esauriti, ricarica il workspace." }), { status: 402, headers });
+      return new Response(
+        JSON.stringify({ error: "CREDITS_EXHAUSTED", message: "Crediti AI esauriti, ricarica il workspace." }),
+        { status: 402, headers },
+      );
     }
     if (!aiRes.ok) {
       const t = await aiRes.text();
       console.error("AI gateway error:", aiRes.status, t);
-      return new Response(JSON.stringify({ error: "AI_GATEWAY_ERROR", status: aiRes.status }), { status: 502, headers });
+      return new Response(JSON.stringify({ error: "AI_GATEWAY_ERROR", status: aiRes.status }), {
+        status: 502,
+        headers,
+      });
     }
 
     const aiJson = await aiRes.json();
@@ -246,8 +247,14 @@ Deno.serve(async (req) => {
 
     // Reply pulito (senza blocchi tecnici) per la chat visibile
     const cleanReply = reply
-      .replace(/\[REGENERATED_AFTER\][\s\S]*?\[\/REGENERATED_AFTER\]/gi, "_(ho preparato un nuovo testo, vedi sotto ↓)_")
-      .replace(/\[SUGGEST_KB_RULE\][\s\S]*?\[\/SUGGEST_KB_RULE\]/gi, "_(ti propongo di salvarla come regola permanente, vedi sotto ↓)_")
+      .replace(
+        /\[REGENERATED_AFTER\][\s\S]*?\[\/REGENERATED_AFTER\]/gi,
+        "_(ho preparato un nuovo testo, vedi sotto ↓)_",
+      )
+      .replace(
+        /\[SUGGEST_KB_RULE\][\s\S]*?\[\/SUGGEST_KB_RULE\]/gi,
+        "_(ti propongo di salvarla come regola permanente, vedi sotto ↓)_",
+      )
       .trim();
 
     // 6) Persisti chat
@@ -257,19 +264,17 @@ Deno.serve(async (req) => {
       { role: "user", content: String(user_message), ts },
       { role: "assistant", content: cleanReply || reply, ts },
     ];
-    const updatedProposals = proposals.map((p) =>
-      p.id === proposal_id ? { ...p, chat: updatedChat } : p,
-    );
-    await supabase
-      .from("harmonize_runs")
-      .update({ proposals: updatedProposals })
-      .eq("id", run_id);
+    const updatedProposals = proposals.map((p) => (p.id === proposal_id ? { ...p, chat: updatedChat } : p));
+    await supabase.from("harmonize_runs").update({ proposals: updatedProposals }).eq("id", run_id);
 
-    return new Response(JSON.stringify({
-      reply: cleanReply || reply,
-      regenerated_after: regeneratedAfter,
-      suggested_rule: suggestedRule,
-    }), { status: 200, headers });
+    return new Response(
+      JSON.stringify({
+        reply: cleanReply || reply,
+        regenerated_after: regeneratedAfter,
+        suggested_rule: suggestedRule,
+      }),
+      { status: 200, headers },
+    );
   } catch (error: unknown) {
     console.error("harmonize-proposal-chat error:", error);
     const msg = error instanceof Error ? error.message : String(error);

@@ -82,7 +82,9 @@ export function ReminderPopover({ onCreate, existing, onDismiss }: Props) {
           ))}
         </div>
         <div className="space-y-1">
-          <Label htmlFor="reminder-custom" className="text-xs">Custom</Label>
+          <Label htmlFor="reminder-custom" className="text-xs">
+            Custom
+          </Label>
           <input
             id="reminder-custom"
             type="datetime-local"
@@ -92,7 +94,9 @@ export function ReminderPopover({ onCreate, existing, onDismiss }: Props) {
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="reminder-note" className="text-xs">Nota (opzionale)</Label>
+          <Label htmlFor="reminder-note" className="text-xs">
+            Nota (opzionale)
+          </Label>
           <Textarea
             id="reminder-note"
             value={note}
@@ -113,9 +117,12 @@ export function ReminderPopover({ onCreate, existing, onDismiss }: Props) {
                 setOpen(false);
               }}
             >
-              <BellOff className="h-3.5 w-3.5" />Rimuovi
+              <BellOff className="h-3.5 w-3.5" />
+              Rimuovi
             </Button>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
           <Button
             size="sm"
             className="h-8 text-xs"

@@ -45,7 +45,13 @@ export default function TemplateManager() {
   const [uploading, setUploading] = useState(false);
   const [uploadCategory, setUploadCategory] = useState("altro");
 
-  const { templates, isLoading, createTemplate, deleteTemplate, invalidate: invalidateTemplates } = useEmailTemplateAdmin();
+  const {
+    templates,
+    isLoading,
+    createTemplate,
+    deleteTemplate,
+    invalidate: invalidateTemplates,
+  } = useEmailTemplateAdmin();
 
   const deleteMutation = useMutation({
     mutationFn: async (template: { id: string; file_url: string; file_name: string }) => {
@@ -122,20 +128,19 @@ export default function TemplateManager() {
           />
           <div className="flex gap-2 mb-3">
             <Select value={uploadCategory} onValueChange={setUploadCategory}>
-              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
               <SelectContent>
                 {TEMPLATE_CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="w-full gap-2"
-            size="lg"
-          >
+          <Button onClick={() => fileRef.current?.click()} disabled={uploading} className="w-full gap-2" size="lg">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {uploading ? "Caricamento..." : "Seleziona file da caricare"}
           </Button>
@@ -158,7 +163,7 @@ export default function TemplateManager() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {templates.map(t => (
+          {templates.map((t) => (
             <Card key={t.id}>
               <CardContent className="py-3 px-4 flex items-center gap-4">
                 {getIcon(t.file_name)}
@@ -166,7 +171,7 @@ export default function TemplateManager() {
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-sm truncate text-foreground">{t.name}</p>
                     <Badge variant="outline" className="text-xs shrink-0">
-                      {TEMPLATE_CATEGORIES.find(c => c.value === t.category)?.label || t.category}
+                      {TEMPLATE_CATEGORIES.find((c) => c.value === t.category)?.label || t.category}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">

@@ -3,6 +3,7 @@ name: KB Canonical Governance
 description: Tassonomia 6 famiglie, Single Source of Truth Fatti Canonici TMWE, FunnyMail atomizzata in 6 step, audit settimanale via kb-doctrine-audit
 type: feature
 ---
+
 - 6 famiglie canoniche su `kb_entries.family`: doctrine | procedures | personas | playbooks | glossary | data-schema. Mapping legacy in `_shared/kbCategoryMapper.ts`.
 - Single Source of Truth dei numeri: entry `Fatti Canonici TMWE` (canonical_id `doctrine/canonical-facts`). Le altre entry rinviano via `[[Vedi: Fatti Canonici TMWE]]`, mai duplicano numeri.
 - Procedura FunnyMail atomizzata in 6 entry `procedures/funnymail/01..06` (deep-search, classification, summary, job-creation, assignment, next-step).

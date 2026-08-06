@@ -6,12 +6,26 @@
  * (entità processate, stats, runId del DB su cui sono già salvate le proposte).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { runAgenticHarmonizer, type EntityProgress, type OrchestratorOutput, type OrchestratorStats, type OrchestratorWarning } from "./agentOrchestrator";
+import {
+  runAgenticHarmonizer,
+  type EntityProgress,
+  type OrchestratorOutput,
+  type OrchestratorStats,
+  type OrchestratorWarning,
+} from "./agentOrchestrator";
 import { parseEntities } from "./entityParser";
 import type { ParsedFile } from "../utils/fileParser";
 import { findActiveHarmonizeRun, type HarmonizeRun } from "@/data/harmonizeRuns";
 
-export type AgenticPhase = "idle" | "parsing" | "indexing" | "processing" | "reviewing" | "done" | "error" | "cancelled";
+export type AgenticPhase =
+  | "idle"
+  | "parsing"
+  | "indexing"
+  | "processing"
+  | "reviewing"
+  | "done"
+  | "error"
+  | "cancelled";
 
 export interface AgenticState {
   phase: AgenticPhase;
@@ -74,10 +88,7 @@ function persistState(userId: string, state: AgenticState): void {
       window.localStorage.removeItem(storageKey(userId));
       return;
     }
-    window.localStorage.setItem(
-      storageKey(userId),
-      JSON.stringify({ v: STORAGE_VERSION, state }),
-    );
+    window.localStorage.setItem(storageKey(userId), JSON.stringify({ v: STORAGE_VERSION, state }));
   } catch {
     // localStorage pieno o disabilitato: ignora silenziosamente.
   }
@@ -103,7 +114,9 @@ export function useAgenticHarmonizer(userId: string) {
         }
       })
       .catch(() => undefined);
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   // Persisti ad ogni transizione di stato.
@@ -111,109 +124,169 @@ export function useAgenticHarmonizer(userId: string) {
     persistState(userId, state);
   }, [userId, state]);
 
-  const start = useCallback(async (input: { sourceFile: ParsedFile; goal: string }) => {
-    if (!userId) return;
-    abortRef.current = false;
-    setState({
-      ...INITIAL,
-      phase: "parsing",
-      sourceText: input.sourceFile.content,
-      sourceFileName: input.sourceFile.name,
-      lastGoal: input.goal,
-    });
-    try {
-      const output = await runAgenticHarmonizer({
-        userId,
+  const start = useCallback(
+    async (input: { sourceFile: ParsedFile; goal: string }) => {
+      if (!userId) return;
+      abortRef.current = false;
+      setState({
+        ...INITIAL,
+        phase: "parsing",
         sourceText: input.sourceFile.content,
         sourceFileName: input.sourceFile.name,
-        goal: input.goal,
-        callbacks: {
-          onPhaseChange: (phase) => setState((s) => ({ ...s, phase })),
-          onEntityProgress: (entity, idx, total) => {
-            setState((s) => {
-              const entities = s.entities.length === total ? [...s.entities] : new Array(total).fill(null).map((_, i) => s.entities[i] ?? entity);
-              entities[idx] = entity;
-              return { ...s, entities, currentIndex: idx, total };
-            });
-          },
-          shouldAbort: () => abortRef.current,
-        },
+        lastGoal: input.goal,
       });
-      const processedEntityIds = output.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id);
-      const reviewRun = await findActiveHarmonizeRun(userId).catch(() => null);
-      setState((s) => ({ ...s, phase: "done", entities: output.entities, processedEntityIds, stats: output.stats, warnings: output.warnings, output, total: output.entities.length, reviewRun }));
-    } catch (err) {
-      setState((s) => ({ ...s, phase: "error", error: err instanceof Error ? err.message : String(err) }));
-    }
-  }, [userId]);
+      try {
+        const output = await runAgenticHarmonizer({
+          userId,
+          sourceText: input.sourceFile.content,
+          sourceFileName: input.sourceFile.name,
+          goal: input.goal,
+          callbacks: {
+            onPhaseChange: (phase) => setState((s) => ({ ...s, phase })),
+            onEntityProgress: (entity, idx, total) => {
+              setState((s) => {
+                const entities =
+                  s.entities.length === total
+                    ? [...s.entities]
+                    : new Array(total).fill(null).map((_, i) => s.entities[i] ?? entity);
+                entities[idx] = entity;
+                return { ...s, entities, currentIndex: idx, total };
+              });
+            },
+            shouldAbort: () => abortRef.current,
+          },
+        });
+        const processedEntityIds = output.entities
+          .filter((e) => e.status !== "pending" && e.status !== "processing")
+          .map((e) => e.id);
+        const reviewRun = await findActiveHarmonizeRun(userId).catch(() => null);
+        setState((s) => ({
+          ...s,
+          phase: "done",
+          entities: output.entities,
+          processedEntityIds,
+          stats: output.stats,
+          warnings: output.warnings,
+          output,
+          total: output.entities.length,
+          reviewRun,
+        }));
+      } catch (err) {
+        setState((s) => ({ ...s, phase: "error", error: err instanceof Error ? err.message : String(err) }));
+      }
+    },
+    [userId],
+  );
 
-  const resume = useCallback(async (input?: { sourceFile?: ParsedFile; goal?: string }) => {
-    if (!userId) return;
-    const restored = state;
-    // Recupera testo/nome/goal dal file fornito o, in mancanza, dallo stato persistito.
-    const sourceText = input?.sourceFile?.content ?? restored.sourceText;
-    const sourceFileName = input?.sourceFile?.name ?? restored.sourceFileName ?? "resumed-source.md";
-    const goal = input?.goal ?? restored.lastGoal ?? "Riprendi armonizzazione dal checkpoint.";
-    if (!sourceText) {
-      setState((s) => ({ ...s, phase: "error", error: "Nessun testo sorgente disponibile per il resume. Ricarica il file." }));
-      return;
-    }
-    const processedEntityIds = new Set(restored.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id));
-    if (processedEntityIds.size === 0) {
-      if (input?.sourceFile) await start({ sourceFile: input.sourceFile, goal });
-      else setState((s) => ({ ...s, phase: "error", error: "Nessuna entità in checkpoint: ricarica il file e usa Avvia." }));
-      return;
-    }
-    abortRef.current = false;
-    try {
-      setState((s) => ({ ...s, phase: "parsing" }));
-      const parsed = await parseEntities(sourceText);
-      const remainingIds = new Set(parsed.filter((e) => !processedEntityIds.has(e.id)).map((e) => e.id));
-      if (remainingIds.size === 0) {
-        setState((s) => ({ ...s, phase: "done" }));
+  const resume = useCallback(
+    async (input?: { sourceFile?: ParsedFile; goal?: string }) => {
+      if (!userId) return;
+      const restored = state;
+      // Recupera testo/nome/goal dal file fornito o, in mancanza, dallo stato persistito.
+      const sourceText = input?.sourceFile?.content ?? restored.sourceText;
+      const sourceFileName = input?.sourceFile?.name ?? restored.sourceFileName ?? "resumed-source.md";
+      const goal = input?.goal ?? restored.lastGoal ?? "Riprendi armonizzazione dal checkpoint.";
+      if (!sourceText) {
+        setState((s) => ({
+          ...s,
+          phase: "error",
+          error: "Nessun testo sorgente disponibile per il resume. Ricarica il file.",
+        }));
         return;
       }
-      const output = await runAgenticHarmonizer({
-        userId,
-        sourceText,
-        sourceFileName,
-        goal,
-        resume: {
-          runId: restored.output?.runId,
-          sessionId: restored.output?.sessionId,
-          skipEntityIds: Array.from(processedEntityIds),
-          previousEntities: restored.entities,
-        },
-        callbacks: {
-          onPhaseChange: (phase) => setState((s) => ({ ...s, phase })),
-          onEntityProgress: (entity, idx, total) => {
-            setState((s) => {
-              const existingById = new Map(s.entities.map((e) => [e.id, e]));
-              const entities = Array.from({ length: total }, (_, i) => s.entities[i] ?? existingById.get(entity.id) ?? entity);
-              entities[idx] = entity;
-              return { ...s, entities, currentIndex: idx, total };
-            });
+      const processedEntityIds = new Set(
+        restored.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id),
+      );
+      if (processedEntityIds.size === 0) {
+        if (input?.sourceFile) await start({ sourceFile: input.sourceFile, goal });
+        else
+          setState((s) => ({
+            ...s,
+            phase: "error",
+            error: "Nessuna entità in checkpoint: ricarica il file e usa Avvia.",
+          }));
+        return;
+      }
+      abortRef.current = false;
+      try {
+        setState((s) => ({ ...s, phase: "parsing" }));
+        const parsed = await parseEntities(sourceText);
+        const remainingIds = new Set(parsed.filter((e) => !processedEntityIds.has(e.id)).map((e) => e.id));
+        if (remainingIds.size === 0) {
+          setState((s) => ({ ...s, phase: "done" }));
+          return;
+        }
+        const output = await runAgenticHarmonizer({
+          userId,
+          sourceText,
+          sourceFileName,
+          goal,
+          resume: {
+            runId: restored.output?.runId,
+            sessionId: restored.output?.sessionId,
+            skipEntityIds: Array.from(processedEntityIds),
+            previousEntities: restored.entities,
           },
-          shouldAbort: () => abortRef.current,
-        },
-      });
-      const reviewRun = await findActiveHarmonizeRun(userId).catch(() => null);
-      setState((s) => ({ ...s, phase: "done", entities: output.entities, processedEntityIds: output.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id), stats: output.stats, warnings: output.warnings, output, total: output.entities.length, sourceText, sourceFileName, lastGoal: goal, reviewRun }));
-    } catch (err) {
-      setState((s) => ({ ...s, phase: "error", error: err instanceof Error ? err.message : String(err) }));
-    }
-  }, [state, start, userId]);
+          callbacks: {
+            onPhaseChange: (phase) => setState((s) => ({ ...s, phase })),
+            onEntityProgress: (entity, idx, total) => {
+              setState((s) => {
+                const existingById = new Map(s.entities.map((e) => [e.id, e]));
+                const entities = Array.from(
+                  { length: total },
+                  (_, i) => s.entities[i] ?? existingById.get(entity.id) ?? entity,
+                );
+                entities[idx] = entity;
+                return { ...s, entities, currentIndex: idx, total };
+              });
+            },
+            shouldAbort: () => abortRef.current,
+          },
+        });
+        const reviewRun = await findActiveHarmonizeRun(userId).catch(() => null);
+        setState((s) => ({
+          ...s,
+          phase: "done",
+          entities: output.entities,
+          processedEntityIds: output.entities
+            .filter((e) => e.status !== "pending" && e.status !== "processing")
+            .map((e) => e.id),
+          stats: output.stats,
+          warnings: output.warnings,
+          output,
+          total: output.entities.length,
+          sourceText,
+          sourceFileName,
+          lastGoal: goal,
+          reviewRun,
+        }));
+      } catch (err) {
+        setState((s) => ({ ...s, phase: "error", error: err instanceof Error ? err.message : String(err) }));
+      }
+    },
+    [state, start, userId],
+  );
 
   const cancel = useCallback(() => {
     abortRef.current = true;
-    setState((s) => ({ ...s, phase: "cancelled", processedEntityIds: s.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id) }));
+    setState((s) => ({
+      ...s,
+      phase: "cancelled",
+      processedEntityIds: s.entities
+        .filter((e) => e.status !== "pending" && e.status !== "processing")
+        .map((e) => e.id),
+    }));
   }, []);
 
   const reset = useCallback(() => {
     abortRef.current = false;
     setState(INITIAL);
     if (userId && typeof window !== "undefined") {
-      try { window.localStorage.removeItem(storageKey(userId)); } catch { /* noop */ }
+      try {
+        window.localStorage.removeItem(storageKey(userId));
+      } catch {
+        /* noop */
+      }
     }
   }, [userId]);
 

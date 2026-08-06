@@ -34,19 +34,13 @@ const QUERY_KEY = queryKeys.v2.kbEntries();
 // ── Reads ──
 
 export async function findKbEntries(): Promise<KbEntry[]> {
-  const { data, error } = await supabase
-    .from("kb_entries")
-    .select("*")
-    .order("category")
-    .order("sort_order");
+  const { data, error } = await supabase.from("kb_entries").select("*").order("category").order("sort_order");
   if (error) throw error;
   return (data || []) as KbEntry[];
 }
 
 export async function countKbEntries(): Promise<number> {
-  const { count, error } = await supabase
-    .from("kb_entries")
-    .select("id", { count: "exact", head: true });
+  const { count, error } = await supabase.from("kb_entries").select("id", { count: "exact", head: true });
   if (error) throw error;
   return count || 0;
 }
@@ -56,10 +50,7 @@ export async function countKbEntries(): Promise<number> {
  * IO v2, che applica i propri mapper di dominio).
  */
 export async function findKbEntryRowsByPriority(): Promise<KbEntryRow[]> {
-  const { data, error } = await supabase
-    .from("kb_entries")
-    .select("*")
-    .order("priority", { ascending: false });
+  const { data, error } = await supabase.from("kb_entries").select("*").order("priority", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
@@ -91,7 +82,10 @@ export async function updateKbEntryRow(id: string, updates: KbUpdate): Promise<v
 
 // ── Writes ──
 
-export async function upsertKbEntry(entry: Partial<KbEntry> & { title: string; content: string }, userId: string): Promise<void> {
+export async function upsertKbEntry(
+  entry: Partial<KbEntry> & { title: string; content: string },
+  userId: string,
+): Promise<void> {
   const payload = { ...entry, user_id: userId };
   if (entry.id) {
     const { error } = await supabase.from("kb_entries").update(payload).eq("id", entry.id);
@@ -219,11 +213,7 @@ export interface KbExcerptRow {
 
 /** Estratti (title+content) delle KB entry attive con titolo in `titles` (usato dal Prompt Assembler). */
 export async function findKbExcerptsByTitles(titles: readonly string[]): Promise<KbExcerptRow[]> {
-  const { data } = await supabase
-    .from("kb_entries")
-    .select("title, content")
-    .in("title", titles)
-    .eq("is_active", true);
+  const { data } = await supabase.from("kb_entries").select("title, content").in("title", titles).eq("is_active", true);
   return (data ?? []) as KbExcerptRow[];
 }
 
@@ -259,7 +249,12 @@ export async function findKbContextByTitleFuzzy(word: string, limit: number): Pr
 }
 
 /** Inserisce una KB entry "block" (senza user_id obbligatorio) per il flow di creazione rapida del Prompt Lab. */
-export async function insertKbEntryBlock(entry: { title: string; content: string; category: string; is_active: boolean }): Promise<void> {
+export async function insertKbEntryBlock(entry: {
+  title: string;
+  content: string;
+  category: string;
+  is_active: boolean;
+}): Promise<void> {
   const { error } = await supabase.from("kb_entries").insert(entry);
   if (error) throw error;
 }
@@ -277,11 +272,7 @@ export interface InsertKbEntryForApprovalInput {
 
 /** Inserisce una KB entry a partire da una proposta approvata; ritorna l'id creato. */
 export async function insertKbEntryForApproval(entry: InsertKbEntryForApprovalInput): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("kb_entries")
-    .insert(entry)
-    .select("id")
-    .maybeSingle();
+  const { data, error } = await supabase.from("kb_entries").insert(entry).select("id").maybeSingle();
   if (error) throw error;
   return data?.id ?? null;
 }

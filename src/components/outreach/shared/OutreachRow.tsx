@@ -25,23 +25,38 @@ export interface OutreachRowProps {
   readonly statusLine?: string | null;
   readonly actionKind: ActionKind;
   readonly source: SourceKind;
-  readonly sourceLabel?: string;       // override (es: "Sequenza step 2/4")
+  readonly sourceLabel?: string; // override (es: "Sequenza step 2/4")
   readonly date?: string | Date | null;
   readonly relativeDate?: string | Date | null;
   readonly relativePrefix?: string;
   readonly overdue?: boolean;
   readonly selected?: boolean;
   readonly unread?: boolean;
-  readonly leftSlot?: ReactNode;       // checkbox o altro
-  readonly rightSlot?: ReactNode;      // bottoni azione
+  readonly leftSlot?: ReactNode; // checkbox o altro
+  readonly rightSlot?: ReactNode; // bottoni azione
   readonly onClick?: () => void;
 }
 
 export function OutreachRow({
-  companyName, contactName, contactEmail, country,
-  subject, preview, statusLine,
-  actionKind, source, sourceLabel, date, relativeDate, relativePrefix, overdue,
-  selected, unread, leftSlot, rightSlot, onClick,
+  companyName,
+  contactName,
+  contactEmail,
+  country,
+  subject,
+  preview,
+  statusLine,
+  actionKind,
+  source,
+  sourceLabel,
+  date,
+  relativeDate,
+  relativePrefix,
+  overdue,
+  selected,
+  unread,
+  leftSlot,
+  rightSlot,
+  onClick,
 }: OutreachRowProps) {
   return (
     <div
@@ -59,14 +74,17 @@ export function OutreachRow({
       <div className="flex-1 min-w-0 space-y-0.5">
         {/* Riga 1: azienda + paese + sorgente + data */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={cn("text-[12px] truncate", unread ? "font-bold text-foreground" : "font-semibold text-foreground")}>
+          <span
+            className={cn(
+              "text-[12px] truncate",
+              unread ? "font-bold text-foreground" : "font-semibold text-foreground",
+            )}
+          >
             {companyName || "—"}
           </span>
           {country && <span className="text-[10px] text-muted-foreground">· {country}</span>}
           <SourcePill kind={source} compact customLabel={sourceLabel} />
-          <div className="ml-auto flex items-center gap-2 shrink-0">
-            {date && <AbsoluteTime date={date} />}
-          </div>
+          <div className="ml-auto flex items-center gap-2 shrink-0">{date && <AbsoluteTime date={date} />}</div>
         </div>
 
         {/* Riga 2: contatto */}

@@ -20,7 +20,11 @@ const VoicePresence = ({ active, speaking = false, listening = false }: VoicePre
       className="overflow-hidden"
     >
       <div className="flex flex-col items-center gap-3 py-4">
-        <motion.div className="flex items-center gap-2" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}>
+        <motion.div
+          className="flex items-center gap-2"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
           <div className={`w-2 h-2 rounded-full ${speaking ? "bg-accent/50" : "bg-primary/40"}`} />
           <span className="text-[10px] text-muted-foreground tracking-[0.15em] uppercase font-mono">
             {speaking ? "ASSISTENTE PARLA" : listening ? "IN ASCOLTO" : "VOCE ATTIVA"}
@@ -33,9 +37,17 @@ const VoicePresence = ({ active, speaking = false, listening = false }: VoicePre
               key={i}
               className={`w-[1px] rounded-full ${speaking ? "bg-accent/25" : "bg-primary/20"}`}
               animate={{
-                height: speaking ? [2, Math.random() * 28 + 4, 2] : listening ? [1, Math.random() * 20 + 2, 1] : [1, Math.random() * 4 + 1, 1],
+                height: speaking
+                  ? [2, Math.random() * 28 + 4, 2]
+                  : listening
+                    ? [1, Math.random() * 20 + 2, 1]
+                    : [1, Math.random() * 4 + 1, 1],
               }}
-              transition={{ duration: speaking ? 0.4 + Math.random() * 0.3 : 0.8 + Math.random() * 0.5, repeat: Infinity, delay: i * 0.015 }}
+              transition={{
+                duration: speaking ? 0.4 + Math.random() * 0.3 : 0.8 + Math.random() * 0.5,
+                repeat: Infinity,
+                delay: i * 0.015,
+              }}
             />
           ))}
         </div>

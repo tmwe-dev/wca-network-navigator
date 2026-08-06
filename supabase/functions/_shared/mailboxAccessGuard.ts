@@ -12,13 +12,13 @@
  */
 
 interface AuthClientLike {
-  rpc: (
-    name: string,
-    params?: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: unknown }>;
+  rpc: (name: string, params?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
   from: (table: string) => {
     select: (cols: string) => {
-      eq: (col: string, val: unknown) => {
+      eq: (
+        col: string,
+        val: unknown,
+      ) => {
         limit: (n: number) => {
           maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
         };
@@ -42,10 +42,7 @@ export class MailboxAccessDenied extends Error {
  * - Altrimenti: deve esistere una riga in `operator_mailbox_access`
  *   visibile via RLS (`oma_select_own_or_admin`) per quel mailbox.
  */
-export async function assertMailboxAccessible(
-  authClient: AuthClientLike,
-  mailboxId: string,
-): Promise<void> {
+export async function assertMailboxAccessible(authClient: AuthClientLike, mailboxId: string): Promise<void> {
   // 1) Admin shortcut — RPC security-definer, RLS-safe.
   const adminRes = await authClient.rpc("is_operator_admin");
   if (!adminRes.error && adminRes.data === true) return;

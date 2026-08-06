@@ -35,13 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ── Types ────────────────────────────────────────────────────────────
 interface AutoTemplate {
@@ -70,21 +64,40 @@ interface WakeRule {
 export function EmailStrategiesPage(): React.ReactElement {
   return (
     <>
-      <PageTitleHeader icon={Mail} title="Strategie Email" subtitle="Onboarding e risveglio dopo il circuito di attesa" />
+      <PageTitleHeader
+        icon={Mail}
+        title="Strategie Email"
+        subtitle="Onboarding e risveglio dopo il circuito di attesa"
+      />
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <Card className="p-4 bg-muted/30">
           <p className="text-sm text-foreground font-medium mb-1">A cosa serve</p>
           <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
-            <li><span className="text-foreground">Cliente HA scritto:</span> i template di risposta/onboarding inviati quando il cliente risponde.</li>
-            <li><span className="text-foreground">Cliente NON riscrive:</span> le regole di risveglio che ricontattano i contatti silenti dopo X giorni.</li>
-            <li>Qui si <span className="text-foreground">scrivono e si abilitano</span>; il motore di outreach le esegue automaticamente.</li>
+            <li>
+              <span className="text-foreground">Cliente HA scritto:</span> i template di risposta/onboarding inviati
+              quando il cliente risponde.
+            </li>
+            <li>
+              <span className="text-foreground">Cliente NON riscrive:</span> le regole di risveglio che ricontattano i
+              contatti silenti dopo X giorni.
+            </li>
+            <li>
+              Qui si <span className="text-foreground">scrivono e si abilitano</span>; il motore di outreach le esegue
+              automaticamente.
+            </li>
           </ul>
         </Card>
 
         <Tabs defaultValue="autoresponders">
           <TabsList>
-            <TabsTrigger value="autoresponders" className="gap-1.5"><MailCheck className="w-3.5 h-3.5" />Cliente HA scritto</TabsTrigger>
-            <TabsTrigger value="wakeup" className="gap-1.5"><Bell className="w-3.5 h-3.5" />Cliente NON riscrive</TabsTrigger>
+            <TabsTrigger value="autoresponders" className="gap-1.5">
+              <MailCheck className="w-3.5 h-3.5" />
+              Cliente HA scritto
+            </TabsTrigger>
+            <TabsTrigger value="wakeup" className="gap-1.5">
+              <Bell className="w-3.5 h-3.5" />
+              Cliente NON riscrive
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="autoresponders" className="mt-4">
             <AutorespondersSection />
@@ -105,8 +118,7 @@ function AutorespondersSection(): React.ReactElement {
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.emailStrategies.autoresponders,
-    queryFn: async (): Promise<AutoTemplate[]> =>
-      (await listAutoresponderTemplates()) as AutoTemplate[],
+    queryFn: async (): Promise<AutoTemplate[]> => (await listAutoresponderTemplates()) as AutoTemplate[],
   });
 
   const save = useMutation({
@@ -153,11 +165,14 @@ function AutorespondersSection(): React.ReactElement {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          {isAdmin ? "Crea, modifica o disattiva i template di risposta." : "Sola lettura — serve il ruolo amministratore per modificare."}
+          {isAdmin
+            ? "Crea, modifica o disattiva i template di risposta."
+            : "Sola lettura — serve il ruolo amministratore per modificare."}
         </p>
         {isAdmin && (
           <Button size="sm" className="gap-1.5" onClick={() => save.mutate({})} disabled={save.isPending}>
-            <Plus className="w-3.5 h-3.5" />Nuovo template
+            <Plus className="w-3.5 h-3.5" />
+            Nuovo template
           </Button>
         )}
       </div>
@@ -168,7 +183,14 @@ function AutorespondersSection(): React.ReactElement {
       ) : (
         <div className="space-y-3">
           {(data ?? []).map((t) => (
-            <AutoTemplateCard key={t.id} template={t} readOnly={!isAdmin} onSave={save.mutate} onDelete={remove.mutate} saving={save.isPending} />
+            <AutoTemplateCard
+              key={t.id}
+              template={t}
+              readOnly={!isAdmin}
+              onSave={save.mutate}
+              onDelete={remove.mutate}
+              saving={save.isPending}
+            />
           ))}
         </div>
       )}
@@ -202,10 +224,16 @@ function AutoTemplateCard({
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           className="font-medium h-8 max-w-xs"
         />
-        <Badge variant="outline" className="text-[10px] uppercase">{draft.language}</Badge>
+        <Badge variant="outline" className="text-[10px] uppercase">
+          {draft.language}
+        </Badge>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
-          <Switch checked={draft.enabled} disabled={readOnly} onCheckedChange={(v) => setDraft({ ...draft, enabled: v })} />
+          <Switch
+            checked={draft.enabled}
+            disabled={readOnly}
+            onCheckedChange={(v) => setDraft({ ...draft, enabled: v })}
+          />
           <span className="text-[11px] text-muted-foreground">{draft.enabled ? "Attivo" : "Disattivo"}</span>
         </div>
       </div>
@@ -213,7 +241,9 @@ function AutoTemplateCard({
         <div className="space-y-1">
           <Label className="text-[11px]">Lingua</Label>
           <Select value={draft.language} disabled={readOnly} onValueChange={(v) => setDraft({ ...draft, language: v })}>
-            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="it">Italiano</SelectItem>
               <SelectItem value="en">English</SelectItem>
@@ -222,24 +252,41 @@ function AutoTemplateCard({
         </div>
         <div className="space-y-1">
           <Label className="text-[11px]">Oggetto</Label>
-          <Input value={draft.subject_template} disabled={readOnly} onChange={(e) => setDraft({ ...draft, subject_template: e.target.value })} className="h-8" />
+          <Input
+            value={draft.subject_template}
+            disabled={readOnly}
+            onChange={(e) => setDraft({ ...draft, subject_template: e.target.value })}
+            className="h-8"
+          />
         </div>
       </div>
       <div className="space-y-1">
         <Label className="text-[11px]">Corpo del messaggio</Label>
-        <Textarea value={draft.body_template} disabled={readOnly} rows={5} onChange={(e) => setDraft({ ...draft, body_template: e.target.value })} />
+        <Textarea
+          value={draft.body_template}
+          disabled={readOnly}
+          rows={5}
+          onChange={(e) => setDraft({ ...draft, body_template: e.target.value })}
+        />
       </div>
       <div className="space-y-1">
         <Label className="text-[11px]">Note interne</Label>
-        <Input value={draft.notes ?? ""} disabled={readOnly} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} className="h-8" />
+        <Input
+          value={draft.notes ?? ""}
+          disabled={readOnly}
+          onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+          className="h-8"
+        />
       </div>
       {!readOnly && (
         <div className="flex items-center gap-2 pt-1 border-t border-border/40">
           <Button size="sm" className="gap-1.5" disabled={!dirty || saving} onClick={() => onSave(draft)}>
-            <Save className="w-3.5 h-3.5" />Salva
+            <Save className="w-3.5 h-3.5" />
+            Salva
           </Button>
           <Button size="sm" variant="ghost" className="gap-1.5 text-destructive" onClick={() => onDelete(template.id)}>
-            <Trash2 className="w-3.5 h-3.5" />Elimina
+            <Trash2 className="w-3.5 h-3.5" />
+            Elimina
           </Button>
         </div>
       )}
@@ -308,7 +355,8 @@ function WakeUpSection(): React.ReactElement {
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">Regole che ricontattano i contatti silenti dopo X giorni.</p>
         <Button size="sm" className="gap-1.5" onClick={() => save.mutate({})} disabled={save.isPending}>
-          <Plus className="w-3.5 h-3.5" />Nuova regola
+          <Plus className="w-3.5 h-3.5" />
+          Nuova regola
         </Button>
       </div>
       {isLoading ? (
@@ -345,7 +393,11 @@ function WakeRuleCard({
   return (
     <Card className="p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="font-medium h-8 max-w-xs" />
+        <Input
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+          className="font-medium h-8 max-w-xs"
+        />
         <div className="flex-1" />
         <div className="flex items-center gap-2">
           <Switch checked={draft.is_active} onCheckedChange={(v) => setDraft({ ...draft, is_active: v })} />
@@ -355,20 +407,37 @@ function WakeRuleCard({
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="space-y-1">
           <Label className="text-[11px]">Giorni di silenzio</Label>
-          <Input type="number" value={draft.days_dormant} onChange={(e) => setDraft({ ...draft, days_dormant: num(e.target.value, 14) })} className="h-8" />
+          <Input
+            type="number"
+            value={draft.days_dormant}
+            onChange={(e) => setDraft({ ...draft, days_dormant: num(e.target.value, 14) })}
+            className="h-8"
+          />
         </div>
         <div className="space-y-1">
           <Label className="text-[11px]">Score minimo</Label>
-          <Input type="number" value={draft.min_score} onChange={(e) => setDraft({ ...draft, min_score: num(e.target.value, 0) })} className="h-8" />
+          <Input
+            type="number"
+            value={draft.min_score}
+            onChange={(e) => setDraft({ ...draft, min_score: num(e.target.value, 0) })}
+            className="h-8"
+          />
         </div>
         <div className="space-y-1">
           <Label className="text-[11px]">Max al giorno</Label>
-          <Input type="number" value={draft.max_per_day} onChange={(e) => setDraft({ ...draft, max_per_day: num(e.target.value, 20) })} className="h-8" />
+          <Input
+            type="number"
+            value={draft.max_per_day}
+            onChange={(e) => setDraft({ ...draft, max_per_day: num(e.target.value, 20) })}
+            className="h-8"
+          />
         </div>
         <div className="space-y-1">
           <Label className="text-[11px]">Canale</Label>
           <Select value={draft.channel} onValueChange={(v) => setDraft({ ...draft, channel: v })}>
-            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="whatsapp">WhatsApp</SelectItem>
@@ -378,19 +447,29 @@ function WakeRuleCard({
         </div>
         <div className="space-y-1">
           <Label className="text-[11px]">Gruppo / segmento</Label>
-          <Input value={draft.group_name ?? ""} onChange={(e) => setDraft({ ...draft, group_name: e.target.value })} className="h-8" />
+          <Input
+            value={draft.group_name ?? ""}
+            onChange={(e) => setDraft({ ...draft, group_name: e.target.value })}
+            className="h-8"
+          />
         </div>
       </div>
       <div className="space-y-1">
         <Label className="text-[11px]">Note interne</Label>
-        <Input value={draft.notes ?? ""} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} className="h-8" />
+        <Input
+          value={draft.notes ?? ""}
+          onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+          className="h-8"
+        />
       </div>
       <div className="flex items-center gap-2 pt-1 border-t border-border/40">
         <Button size="sm" className="gap-1.5" disabled={!dirty || saving} onClick={() => onSave(draft)}>
-          <Save className="w-3.5 h-3.5" />Salva
+          <Save className="w-3.5 h-3.5" />
+          Salva
         </Button>
         <Button size="sm" variant="ghost" className="gap-1.5 text-destructive" onClick={() => onDelete(rule.id)}>
-          <Trash2 className="w-3.5 h-3.5" />Elimina
+          <Trash2 className="w-3.5 h-3.5" />
+          Elimina
         </Button>
       </div>
     </Card>

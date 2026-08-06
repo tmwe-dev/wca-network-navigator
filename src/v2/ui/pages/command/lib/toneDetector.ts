@@ -6,11 +6,7 @@
  * "professionale". Pure function: niente stato, niente effetti.
  */
 
-export type DetectedTone =
-  | "amichevole"
-  | "professionale"
-  | "diretto"
-  | "informale";
+export type DetectedTone = "amichevole" | "professionale" | "diretto" | "informale";
 
 const PATTERNS: ReadonlyArray<{ tone: DetectedTone; re: RegExp }> = [
   // Amichevole / colloquiale / vecchi compagni
@@ -52,10 +48,14 @@ export function detectTone(prompt: string): DetectedTone {
  */
 export function toneLabel(tone: DetectedTone): string {
   switch (tone) {
-    case "amichevole":   return "amichevole";
-    case "informale":    return "informale";
-    case "diretto":      return "diretto e breve";
+    case "amichevole":
+      return "amichevole";
+    case "informale":
+      return "informale";
+    case "diretto":
+      return "diretto e breve";
     case "professionale":
-    default:             return "professionale";
+    default:
+      return "professionale";
   }
 }

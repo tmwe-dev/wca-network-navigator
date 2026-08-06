@@ -9,10 +9,7 @@ describe("phaseFsm — invarianti FSM", () => {
   });
 
   it("SET_FLOW=executing forza showTools=true e toolPhase=active", () => {
-    const s = phaseReducer(
-      { ...INITIAL_PHASE, toolPhase: "activating" },
-      { type: "SET_FLOW", value: "executing" },
-    );
+    const s = phaseReducer({ ...INITIAL_PHASE, toolPhase: "activating" }, { type: "SET_FLOW", value: "executing" });
     expect(s.flowPhase).toBe("executing");
     expect(s.showTools).toBe(true);
     expect(s.toolPhase).toBe("active");

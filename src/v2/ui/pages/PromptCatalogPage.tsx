@@ -14,23 +14,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/providers/AuthProvider";
 import {
   usePromptCatalog,
@@ -39,16 +26,7 @@ import {
   DEFAULT_CATALOG_FILTERS,
   type PromptCatalogFilters,
 } from "./prompt-lab/hooks/usePromptCatalog";
-import {
-  ArrowLeft,
-  Library,
-  Play,
-  RefreshCw,
-  History as HistoryIcon,
-  Cpu,
-  User as UserIcon,
-  Tag,
-} from "lucide-react";
+import { ArrowLeft, Library, Play, RefreshCw, History as HistoryIcon, Cpu, User as UserIcon, Tag } from "lucide-react";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -113,11 +91,15 @@ export default function PromptCatalogPage() {
         <div className="flex items-center gap-1.5">
           <Label className="text-[11px] text-muted-foreground">Contesto</Label>
           <Select value={filters.context} onValueChange={(v) => setFilter("context", v)}>
-            <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[160px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti</SelectItem>
               {facets.contexts.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -125,21 +107,21 @@ export default function PromptCatalogPage() {
         <div className="flex items-center gap-1.5">
           <Label className="text-[11px] text-muted-foreground">Orchestratore</Label>
           <Select value={filters.orchestrator} onValueChange={(v) => setFilter("orchestrator", v)}>
-            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[180px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti</SelectItem>
               {facets.orchestrators.map((o) => (
-                <SelectItem key={o} value={o}>{o}</SelectItem>
+                <SelectItem key={o} value={o}>
+                  {o}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Switch
-            id="only-active"
-            checked={filters.onlyActive}
-            onCheckedChange={(v) => setFilter("onlyActive", v)}
-          />
+          <Switch id="only-active" checked={filters.onlyActive} onCheckedChange={(v) => setFilter("onlyActive", v)} />
           <Label htmlFor="only-active" className="text-[11px] text-muted-foreground cursor-pointer">
             Solo attivi
           </Label>
@@ -193,13 +175,19 @@ export default function PromptCatalogPage() {
                     <TableCell className="text-xs">
                       <div className="flex flex-col gap-1">
                         {it.context && (
-                          <Badge variant="secondary" className="text-[10px] h-5 w-fit">{it.context}</Badge>
+                          <Badge variant="secondary" className="text-[10px] h-5 w-fit">
+                            {it.context}
+                          </Badge>
                         )}
                         {it.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {it.tags.slice(0, 4).map((t) => (
-                              <span key={t} className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                                <Tag className="h-2.5 w-2.5" />{t}
+                              <span
+                                key={t}
+                                className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground"
+                              >
+                                <Tag className="h-2.5 w-2.5" />
+                                {t}
                               </span>
                             ))}
                             {it.tags.length > 4 && (
@@ -212,8 +200,7 @@ export default function PromptCatalogPage() {
                     <TableCell className="text-xs">
                       <div className="flex flex-col gap-0.5">
                         <span className="inline-flex items-center gap-1 font-mono">
-                          <HistoryIcon className="h-3 w-3 text-muted-foreground" />
-                          v{it.latest_version ?? "—"}
+                          <HistoryIcon className="h-3 w-3 text-muted-foreground" />v{it.latest_version ?? "—"}
                         </span>
                         <span className="text-[10px] text-muted-foreground">
                           {it.versions_count} snapshot · {formatDate(it.last_change_at)}
@@ -233,7 +220,8 @@ export default function PromptCatalogPage() {
                         <div className="flex flex-wrap gap-1">
                           {it.orchestrators.map((o) => (
                             <Badge key={o} variant="outline" className="text-[10px] h-5 gap-1">
-                              <Cpu className="h-2.5 w-2.5" />{o}
+                              <Cpu className="h-2.5 w-2.5" />
+                              {o}
                             </Badge>
                           ))}
                         </div>
@@ -245,16 +233,22 @@ export default function PromptCatalogPage() {
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {filledFields.map((f) => (
-                            <Badge key={f} variant="secondary" className="text-[10px] h-5">{f}</Badge>
+                            <Badge key={f} variant="secondary" className="text-[10px] h-5">
+                              {f}
+                            </Badge>
                           ))}
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="text-xs">
                       {it.is_active ? (
-                        <Badge className="text-[10px] h-5 bg-success/15 text-success dark:text-success border-success/30">attivo</Badge>
+                        <Badge className="text-[10px] h-5 bg-success/15 text-success dark:text-success border-success/30">
+                          attivo
+                        </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">disattivo</Badge>
+                        <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">
+                          disattivo
+                        </Badge>
                       )}
                     </TableCell>
                   </TableRow>

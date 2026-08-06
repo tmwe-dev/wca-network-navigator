@@ -66,7 +66,10 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
   const { data: activeSchedules = [] } = useQuery({
     queryKey: ["active-schedules"],
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return [];
       return findScheduledMissionActionsWithCadence(user.id, 50);
     },
@@ -77,7 +80,9 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
       await duplicateTimingTemplate(id);
       qc.invalidateQueries({ queryKey: queryKeys.timingTemplates.all });
       toast.success("Template duplicato");
-    } catch { toast.error("Errore duplicazione"); }
+    } catch {
+      toast.error("Errore duplicazione");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -86,7 +91,9 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
       await deleteTimingTemplate(id);
       qc.invalidateQueries({ queryKey: queryKeys.timingTemplates.all });
       toast.success("Template eliminato");
-    } catch { toast.error("Errore eliminazione"); }
+    } catch {
+      toast.error("Errore eliminazione");
+    }
   };
 
   return (
@@ -98,7 +105,11 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
         purpose="Cadenze multi‑step (es: Email → LinkedIn → Email → Telefono) salvate come template e applicate a un gruppo di contatti."
         origin="Template Sistema (preset) + Custom (creati da te). Le sequenze attive generano singoli invii visibili in 'In Uscita'."
         actions="Creare/duplicare template, avviare una programmazione su una lista di contatti"
-        relatedLink={onNavigate ? { label: "Vedi gli invii prodotti in In Uscita", onClick: () => onNavigate("inuscita") } : undefined}
+        relatedLink={
+          onNavigate
+            ? { label: "Vedi gli invii prodotti in In Uscita", onClick: () => onNavigate("inuscita") }
+            : undefined
+        }
         tone="amber"
       />
       {/* Header */}
@@ -111,7 +122,9 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
             <TabsTrigger value="active" className="gap-1.5 text-xs h-7">
               <Activity className="w-3 h-3" /> Attive
               {activeSchedules.length > 0 && (
-                <Badge className="text-[8px] h-3.5 px-1 ml-1 bg-primary/15 text-primary">{activeSchedules.length}</Badge>
+                <Badge className="text-[8px] h-3.5 px-1 ml-1 bg-primary/15 text-primary">
+                  {activeSchedules.length}
+                </Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -128,13 +141,18 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
-        {section === "templates" && (
-          isLoading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+        {section === "templates" &&
+          (isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
           ) : (
             <div className="p-3 grid grid-cols-2 gap-2.5">
               {templates.map((tpl) => (
-                <div key={tpl.id} className="p-3 rounded-lg border border-border/30 bg-card/40 hover:bg-card/60 transition-colors space-y-2">
+                <div
+                  key={tpl.id}
+                  className="p-3 rounded-lg border border-border/30 bg-card/40 hover:bg-card/60 transition-colors space-y-2"
+                >
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-medium flex-1 truncate">{tpl.template_name}</span>
                     {tpl.is_system ? (
@@ -145,7 +163,12 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <span className={cn("text-[8px] px-1.5 py-0.5 rounded-full font-medium", GOAL_COLORS[tpl.goal] || "bg-muted text-muted-foreground")}>
+                    <span
+                      className={cn(
+                        "text-[8px] px-1.5 py-0.5 rounded-full font-medium",
+                        GOAL_COLORS[tpl.goal] || "bg-muted text-muted-foreground",
+                      )}
+                    >
                       {GOAL_LABELS[tpl.goal] || tpl.goal}
                     </span>
                     <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-muted/60 text-muted-foreground font-medium">
@@ -166,11 +189,21 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
                     <Button size="sm" className="h-5 text-[9px] gap-1 px-2" onClick={() => setWizardOpen(true)}>
                       <Rocket className="w-2.5 h-2.5" /> Usa
                     </Button>
-                    <Button size="sm" variant="outline" className="h-5 text-[9px] gap-1 px-2" onClick={() => handleDuplicate(tpl.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-5 text-[9px] gap-1 px-2"
+                      onClick={() => handleDuplicate(tpl.id)}
+                    >
                       <Copy className="w-2.5 h-2.5" /> Duplica
                     </Button>
                     {!tpl.is_system && (
-                      <Button size="sm" variant="ghost" className="h-5 text-[9px] gap-1 px-2 text-destructive" onClick={() => handleDelete(tpl.id)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-5 text-[9px] gap-1 px-2 text-destructive"
+                        onClick={() => handleDelete(tpl.id)}
+                      >
                         <Trash2 className="w-2.5 h-2.5" /> Elimina
                       </Button>
                     )}
@@ -178,11 +211,10 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
                 </div>
               ))}
             </div>
-          )
-        )}
+          ))}
 
-        {section === "active" && (
-          activeSchedules.length === 0 ? (
+        {section === "active" &&
+          (activeSchedules.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground text-sm">
               Nessuna sequenza attiva. Usa "Avvia Programmazione" per iniziare.
             </div>
@@ -193,12 +225,17 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
                 const currentStep = cadence.findIndex((s) => s.step === (action.position ?? 1)) + 1;
 
                 return (
-                  <div key={action.id} className="p-2.5 rounded-lg border border-border/20 bg-card/40 flex items-center gap-3">
+                  <div
+                    key={action.id}
+                    className="p-2.5 rounded-lg border border-border/20 bg-card/40 flex items-center gap-3"
+                  >
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                       <Activity className="w-4 h-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium block truncate">{action.action_label || "Sequenza cadence"}</span>
+                      <span className="text-xs font-medium block truncate">
+                        {action.action_label || "Sequenza cadence"}
+                      </span>
                       <span className="text-[10px] text-muted-foreground">
                         Step {currentStep} di {cadence.length} · {action.status}
                       </span>
@@ -212,8 +249,7 @@ export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
                 );
               })}
             </div>
-          )
-        )}
+          ))}
       </ScrollArea>
 
       <TemplateBuilderDialog open={builderOpen} onOpenChange={setBuilderOpen} />

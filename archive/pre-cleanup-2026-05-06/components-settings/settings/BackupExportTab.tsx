@@ -38,8 +38,8 @@ export function BackupExportTab() {
       <div>
         <h3 className="text-base font-semibold">Backup &amp; Export</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Esporta o salva tutto ciò che alimenta gli agenti AI: prompt, knowledge base,
-          memorie, prompt operativi e logica applicata.
+          Esporta o salva tutto ciò che alimenta gli agenti AI: prompt, knowledge base, memorie, prompt operativi e
+          logica applicata.
         </p>
       </div>
       <KBIngestPanel />

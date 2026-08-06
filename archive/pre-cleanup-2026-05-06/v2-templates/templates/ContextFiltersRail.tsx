@@ -22,7 +22,11 @@ function getFilterContext(
   pathname: string,
   networkView: "partners" | "bca",
 ): { title: string; content: React.ReactNode; bannerKey: SidebarContextKey } | null {
-  if (pathname.startsWith("/v2/explore/network") || pathname === "/v2/network" || pathname.startsWith("/v2/partner-hub")) {
+  if (
+    pathname.startsWith("/v2/explore/network") ||
+    pathname === "/v2/network" ||
+    pathname.startsWith("/v2/partner-hub")
+  ) {
     if (networkView === "bca") {
       return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent />, bannerKey: "bca" };
     }
@@ -109,8 +113,11 @@ export function ContextFiltersRail(): React.ReactElement | null {
   const asideRef = React.useRef<HTMLElement | null>(null);
   const toggleRef = React.useRef<HTMLButtonElement | null>(null);
   const [networkView, setNetworkView] = React.useState<"partners" | "bca">(() => {
-    try { return (sessionStorage.getItem("network-view") as "partners" | "bca") || "partners"; }
-    catch { return "partners"; }
+    try {
+      return (sessionStorage.getItem("network-view") as "partners" | "bca") || "partners";
+    } catch {
+      return "partners";
+    }
   });
   React.useEffect(() => {
     const onChange = (e: Event) => {
@@ -184,42 +191,38 @@ export function ContextFiltersRail(): React.ReactElement | null {
         aria-hidden={!isOpen}
       >
         <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
-            <SlidersHorizontal className="h-4 w-4 text-primary" />
-            <h2 className="text-xs font-bold uppercase text-foreground">{context.title}</h2>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="ml-auto inline-flex h-7 items-center gap-1 rounded-md bg-card/60 dark:bg-card/40 border border-primary/60 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/15 hover:border-primary transition-colors"
-              aria-label="Conferma e chiudi filtri"
-            >
-              <Check className="h-3 w-3" /> Conferma
-            </button>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {context.bannerKey !== "email-compose" && (() => {
+          <SlidersHorizontal className="h-4 w-4 text-primary" />
+          <h2 className="text-xs font-bold uppercase text-foreground">{context.title}</h2>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="ml-auto inline-flex h-7 items-center gap-1 rounded-md bg-card/60 dark:bg-card/40 border border-primary/60 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/15 hover:border-primary transition-colors"
+            aria-label="Conferma e chiudi filtri"
+          >
+            <Check className="h-3 w-3" /> Conferma
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {context.bannerKey !== "email-compose" &&
+            (() => {
               const meta = SIDEBAR_BANNER_REGISTRY[context.bannerKey];
               return (
-                <SidebarBanner
-                  icon={meta.icon}
-                  title={meta.title}
-                  description={meta.description}
-                  tone={meta.tone}
-                />
+                <SidebarBanner icon={meta.icon} title={meta.title} description={meta.description} tone={meta.tone} />
               );
             })()}
-            <div className="space-y-4 [&>section+section]:border-t [&>section+section]:border-border/40 [&>section+section]:pt-4 [&>div+section]:border-t [&>div+section]:border-border/40 [&>div+section]:pt-4">
-              {context.content}
-            </div>
+          <div className="space-y-4 [&>section+section]:border-t [&>section+section]:border-border/40 [&>section+section]:pt-4 [&>div+section]:border-t [&>div+section]:border-border/40 [&>div+section]:pt-4">
+            {context.content}
           </div>
-          <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3">
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-card/60 dark:bg-card/40 border border-primary/60 text-primary text-xs font-semibold hover:bg-primary/15 hover:border-primary transition-colors"
-            >
-              <Check className="h-3.5 w-3.5" /> Conferma e chiudi
-            </button>
-          </div>
+        </div>
+        <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-card/60 dark:bg-card/40 border border-primary/60 text-primary text-xs font-semibold hover:bg-primary/15 hover:border-primary transition-colors"
+          >
+            <Check className="h-3.5 w-3.5" /> Conferma e chiudi
+          </button>
+        </div>
       </aside>
     </>
   );

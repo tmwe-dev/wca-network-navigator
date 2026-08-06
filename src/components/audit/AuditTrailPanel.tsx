@@ -8,13 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, ChevronDown, Square as LogSquare } from "lucide-react";
 
 interface AuditFilters {
@@ -152,12 +146,7 @@ export function AuditTrailPanel() {
                 onChange={(e) => setDateFrom(e.target.value)}
                 className="h-9 text-xs"
               />
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 text-xs"
-              />
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-xs" />
             </div>
           </div>
         </div>
@@ -199,18 +188,14 @@ export function AuditTrailPanel() {
                     <LogSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant={getActionBadgeColor(entry.action_category)}>
-                          {entry.action_category}
-                        </Badge>
+                        <Badge variant={getActionBadgeColor(entry.action_category)}>{entry.action_category}</Badge>
                         {entry.actor_type && (
                           <Badge variant="outline" className="text-xs">
                             {entry.actor_type}
                           </Badge>
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {entry.action_detail}
-                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">{entry.action_detail}</div>
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
@@ -246,22 +231,14 @@ export function AuditTrailPanel() {
                 )}
 
                 {/* IP info */}
-                {entry.ip_address && (
-                  <div className="text-xs ml-7 text-muted-foreground">
-                    IP: {entry.ip_address}
-                  </div>
-                )}
+                {entry.ip_address && <div className="text-xs ml-7 text-muted-foreground">IP: {entry.ip_address}</div>}
               </Card>
             ))}
 
             {/* Load More */}
             {canLoadMore && (
               <div className="flex justify-center pt-4">
-                <Button
-                  variant="outline"
-                  onClick={handleLoadMore}
-                  disabled={isLoading}
-                >
+                <Button variant="outline" onClick={handleLoadMore} disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <ChevronDown className="mr-2 h-4 w-4" />
                   Carica altri

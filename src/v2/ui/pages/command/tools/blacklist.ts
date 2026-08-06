@@ -41,10 +41,16 @@ export const blacklistAddTool: Tool = {
     let matchedPartnerId: string | null = null;
     if (isUuid(ref)) {
       const p = await resolvePartnerRef(ref);
-      if (p) { matchedPartnerId = p.id; company = company ?? p.company_name; }
+      if (p) {
+        matchedPartnerId = p.id;
+        company = company ?? p.company_name;
+      }
     } else {
       const p = await resolvePartnerRef(ref);
-      if (p) { matchedPartnerId = p.id; company = company ?? p.company_name; }
+      if (p) {
+        matchedPartnerId = p.id;
+        company = company ?? p.company_name;
+      }
       company = company ?? ref;
     }
     if (!company) throw new Error("Nome azienda mancante");

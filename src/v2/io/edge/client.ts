@@ -67,7 +67,7 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
     const result = await withCircuitBreaker<TRes>(
       // Isola il circuito per modalità: un fallimento in mode "commento AI"
       // non deve aprire il circuito per "plan-execution" o "tool-decision".
-      `edge:${functionName}:${typeof (payload as Record<string, unknown>).mode === "string" ? (payload as Record<string, unknown>).mode as string : "default"}`,
+      `edge:${functionName}:${typeof (payload as Record<string, unknown>).mode === "string" ? ((payload as Record<string, unknown>).mode as string) : "default"}`,
       async () => {
         const { data, error } = await supabase.functions.invoke(functionName, {
           body: payload,
@@ -79,9 +79,7 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
 
         const parsed = responseSchema.safeParse(data);
         if (!parsed.success) {
-          throw new Error(
-            `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`,
-          );
+          throw new Error(`Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`);
         }
 
         return parsed.data;
@@ -134,9 +132,16 @@ export async function invokeEdgeRaw<TReq extends Record<string, unknown>>(
     });
 
     if (error) {
-      return err(ioError("EDGE_FUNCTION_ERROR", translateInvokeError(functionName, error.message), {
-        functionName,
-      }, "invokeEdgeRaw"));
+      return err(
+        ioError(
+          "EDGE_FUNCTION_ERROR",
+          translateInvokeError(functionName, error.message),
+          {
+            functionName,
+          },
+          "invokeEdgeRaw",
+        ),
+      );
     }
 
     return ok(data);

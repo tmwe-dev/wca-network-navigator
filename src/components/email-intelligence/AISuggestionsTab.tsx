@@ -6,20 +6,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSenderGroupsOrdered } from "@/data/emailGrouping";
-import {
-  findSuggestionAddressRules,
-  assignSuggestionGroup,
-  clearAiSuggestion,
-} from "@/data/aiSuggestions";
+import { findSuggestionAddressRules, assignSuggestionGroup, clearAiSuggestion } from "@/data/aiSuggestions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
 
-import {
-  Sparkles, Loader2, PanelLeftClose, PanelLeftOpen, Layers,
-} from "lucide-react";
+import { Sparkles, Loader2, PanelLeftClose, PanelLeftOpen, Layers } from "lucide-react";
 import { ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01 } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -53,13 +47,15 @@ export default function AISuggestionsTab() {
   // SSOT: la soglia "Min. email" vive nei filtri globali (chiave `emailIntelVolume`)
   // così slider in toolbar e chip nel drawer restano sincronizzati.
   const g = useGlobalFilters();
-  const minEmailCount = g.filters.emailIntelVolume === "all"
-    ? 1
-    : Math.max(1, parseInt(g.filters.emailIntelVolume, 10) || 1);
-  const setMinEmailCount = useCallback((v: number) => {
-    const safe = Math.max(1, Math.min(20, Math.round(v)));
-    g.setFilter("emailIntelVolume", safe <= 1 ? "all" : String(safe));
-  }, [g]);
+  const minEmailCount =
+    g.filters.emailIntelVolume === "all" ? 1 : Math.max(1, parseInt(g.filters.emailIntelVolume, 10) || 1);
+  const setMinEmailCount = useCallback(
+    (v: number) => {
+      const safe = Math.max(1, Math.min(20, Math.round(v)));
+      g.setFilter("emailIntelVolume", safe <= 1 ? "all" : String(safe));
+    },
+    [g],
+  );
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("uncategorized");
   const [suggestedGroupFilter, _setSuggestedGroupFilter] = useState<string>("all");
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
@@ -125,7 +121,11 @@ export default function AISuggestionsTab() {
       const data = await invokeAi<{ processed: number }>("suggest-email-groups", {
         scope: "classify",
         context: { source: "AISuggestionsTab" },
-        body: { min_email_count: minEmailCount, batch_size: 20, emails: emails && emails.length > 0 ? emails : undefined },
+        body: {
+          min_email_count: minEmailCount,
+          batch_size: 20,
+          emails: emails && emails.length > 0 ? emails : undefined,
+        },
       });
       return data;
     },
@@ -174,11 +174,13 @@ export default function AISuggestionsTab() {
         invokeEdge("refine-classification-rule", {
           body: { address_rule_id: row.id, chosen_group_id: group.id },
           context: "ai-suggestions-tab-assign",
-        }).then(() => {
-          qc.invalidateQueries({ queryKey: queryKeys.ai.classificationInsights("pending") });
-        }).catch((err: Error) => {
-          log.warn("[refine] skipped:", { detail: err.message });
-        });
+        })
+          .then(() => {
+            qc.invalidateQueries({ queryKey: queryKeys.ai.classificationInsights("pending") });
+          })
+          .catch((err: Error) => {
+            log.warn("[refine] skipped:", { detail: err.message });
+          });
       }
       return row.id;
     },
@@ -265,7 +267,10 @@ export default function AISuggestionsTab() {
   const handleBulkAssign = async (senders: AddressRow[], groupName: string, groupId: string) => {
     await Promise.all(
       senders.map((row) =>
-        assignMutation.mutateAsync({ row, groupId }).then(() => row).catch(() => row),
+        assignMutation
+          .mutateAsync({ row, groupId })
+          .then(() => row)
+          .catch(() => row),
       ),
     );
     setSelectedEmails(new Set());
@@ -288,7 +293,9 @@ export default function AISuggestionsTab() {
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
         <Button
-          onClick={() => analyzeMutation.mutate(selectedRows.length > 0 ? selectedRows.map((row) => row.email_address) : undefined)}
+          onClick={() =>
+            analyzeMutation.mutate(selectedRows.length > 0 ? selectedRows.map((row) => row.email_address) : undefined)
+          }
           disabled={analyzeMutation.isPending}
           className="gap-2"
         >
@@ -311,7 +318,9 @@ export default function AISuggestionsTab() {
           <div className="w-24">
             <Slider value={[minEmailCount]} onValueChange={([v]) => setMinEmailCount(v)} min={1} max={20} step={1} />
           </div>
-          <Badge variant="outline" className="tabular-nums">{minEmailCount}</Badge>
+          <Badge variant="outline" className="tabular-nums">
+            {minEmailCount}
+          </Badge>
         </div>
 
         {/* Toggle binario classificate */}
@@ -388,7 +397,11 @@ export default function AISuggestionsTab() {
                 <div className="h-full flex flex-col overflow-hidden">
                   <SenderEmailPreviewPanel
                     senderEmail={previewRow?.email_address ?? null}
-                    companyName={previewRow?.company_name || previewRow?.display_name || (previewRow ? deriveSenderDisplayName(previewRow.email_address) : null)}
+                    companyName={
+                      previewRow?.company_name ||
+                      previewRow?.display_name ||
+                      (previewRow ? deriveSenderDisplayName(previewRow.email_address) : null)
+                    }
                   />
                 </div>
               </ResizablePanel>
@@ -407,11 +420,13 @@ export default function AISuggestionsTab() {
                     onClick={() => setShowPreview((value) => !value)}
                     aria-label={showPreview ? "Nascondi anteprima" : "Mostra anteprima"}
                   >
-                    {showPreview ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
+                    {showPreview ? (
+                      <PanelLeftClose className="h-3.5 w-3.5" />
+                    ) : (
+                      <PanelLeftOpen className="h-3.5 w-3.5" />
+                    )}
                   </Button>
-                  <span className="text-xs font-semibold text-foreground truncate">
-                    Suggerimenti AI
-                  </span>
+                  <span className="text-xs font-semibold text-foreground truncate">Suggerimenti AI</span>
                   <Badge variant="secondary" className="text-[10px] h-5 tabular-nums">
                     {visibleRows.length}
                   </Badge>
@@ -442,7 +457,9 @@ export default function AISuggestionsTab() {
                           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur px-2 py-1 rounded-md border border-border/50 flex items-center gap-2">
                             <Sparkles className="h-3.5 w-3.5 text-primary" />
                             <span className="text-xs font-semibold text-foreground">{bucket.label}</span>
-                            <Badge variant="outline" className="text-[10px] h-5">{bucket.items.length}</Badge>
+                            <Badge variant="outline" className="text-[10px] h-5">
+                              {bucket.items.length}
+                            </Badge>
                           </div>
                           <div className="flex flex-col gap-2">
                             {bucket.items.map((row) => (
@@ -491,7 +508,13 @@ export default function AISuggestionsTab() {
                 <MultiSelectBulkBar
                   selectedSenders={bulkSelected}
                   groups={groups}
-                  onAssignGroup={(senders, groupName, groupId) => handleBulkAssign(selectedRows.filter((row) => senders.some((sender) => sender.email === row.email_address)), groupName, groupId)}
+                  onAssignGroup={(senders, groupName, groupId) =>
+                    handleBulkAssign(
+                      selectedRows.filter((row) => senders.some((sender) => sender.email === row.email_address)),
+                      groupName,
+                      groupId,
+                    )
+                  }
                   onComplete={() => {
                     setSelectedEmails(new Set());
                     qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });

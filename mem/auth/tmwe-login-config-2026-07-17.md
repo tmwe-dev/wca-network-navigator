@@ -3,6 +3,7 @@ name: TMWE Login Config 2026-07-17
 description: Config login TMWE definitiva — base URL sandbox.findair.net, ritorno nel pannello destro (iframe same-origin /v2/tmwe-login-popup), NO popup window, NO nuova tab
 type: feature
 ---
+
 Configurazione approvata dall'utente il 2026-07-17. Non regredire.
 
 - Base URL OAuth TMWE: `https://sandbox.findair.net/`

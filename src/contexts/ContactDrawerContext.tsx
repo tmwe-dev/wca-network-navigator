@@ -41,7 +41,7 @@ export function ContactDrawerProvider({ children }: { children: ReactNode }) {
     setIsOpen(true);
     if (navList && navList.length > 0) {
       setList(navList);
-      const idx = navList.findIndex(item => item.sourceId === t.sourceId && item.sourceType === t.sourceType);
+      const idx = navList.findIndex((item) => item.sourceId === t.sourceId && item.sourceType === t.sourceType);
       setCurrentIndex(idx >= 0 ? idx : 0);
     } else {
       setList([t]);
@@ -70,15 +70,21 @@ export function ContactDrawerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentIndex, list]);
 
-  const ctxValue = useMemo(() => ({
-    isOpen, target, list, currentIndex, open, close, goNext, goPrev,
-  }), [isOpen, target, list, currentIndex, open, close, goNext, goPrev]);
-
-  return (
-    <ContactDrawerContext.Provider value={ctxValue}>
-      {children}
-    </ContactDrawerContext.Provider>
+  const ctxValue = useMemo(
+    () => ({
+      isOpen,
+      target,
+      list,
+      currentIndex,
+      open,
+      close,
+      goNext,
+      goPrev,
+    }),
+    [isOpen, target, list, currentIndex, open, close, goNext, goPrev],
   );
+
+  return <ContactDrawerContext.Provider value={ctxValue}>{children}</ContactDrawerContext.Provider>;
 }
 
 export function useContactDrawer() {

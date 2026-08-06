@@ -145,9 +145,7 @@ export function FunnemailMailCard({
   const claimedByOther = !!claim && !claimedByMe;
   const claimMinutes = claim ? Math.max(0, Math.round((Date.now() - new Date(claim.claimed_at).getTime()) / 60000)) : 0;
   const currentStatus: FunnemailJobStatus = (status?.status ?? "nuovo") as FunnemailJobStatus;
-  const reminderMinutes = reminder
-    ? Math.round((new Date(reminder.remind_at).getTime() - Date.now()) / 60000)
-    : null;
+  const reminderMinutes = reminder ? Math.round((new Date(reminder.remind_at).getTime() - Date.now()) / 60000) : null;
   const reminderLabel = (() => {
     if (reminderMinutes == null) return null;
     if (reminderMinutes <= 0) return "ora";
@@ -160,8 +158,12 @@ export function FunnemailMailCard({
   const chips = (
     <>
       {funnemailFolder && (
-        <span className={cn(chipBase, "border-border bg-secondary font-medium text-secondary-foreground")} title="Cartella Funny Mail Inbox">
-          <Tag className="h-3 w-3" />{meta.funnemail_folder_icon && <span>{meta.funnemail_folder_icon}</span>}
+        <span
+          className={cn(chipBase, "border-border bg-secondary font-medium text-secondary-foreground")}
+          title="Cartella Funny Mail Inbox"
+        >
+          <Tag className="h-3 w-3" />
+          {meta.funnemail_folder_icon && <span>{meta.funnemail_folder_icon}</span>}
           <span className="max-w-[140px] truncate">{funnemailFolder}</span>
         </span>
       )}
@@ -179,50 +181,49 @@ export function FunnemailMailCard({
       )}
       {decision?.goes_to_agenda && (
         <span className={cn(chipBase, "border-warning/30 bg-warning/10 font-medium text-warning")}>
-          <CalendarClock className="h-3 w-3" />Agenda
+          <CalendarClock className="h-3 w-3" />
+          Agenda
         </span>
       )}
       {partner?.lead_status && (
         <span className={cn(chipBase, "border-border bg-muted text-foreground")} title="Stato commerciale">
-          <Gauge className="h-3 w-3" />{partner.lead_status.replace(/_/g, " ")}
+          <Gauge className="h-3 w-3" />
+          {partner.lead_status.replace(/_/g, " ")}
         </span>
       )}
       {/* Status lavorazione: mostrato solo se diverso da "nuovo" per ridurre rumore */}
       {onSetStatus && currentStatus !== "nuovo" ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={(e) => e.stopPropagation()}
-                      className={cn(
-                        chipBase,
-                        "font-medium",
-                        FUNNEMAIL_JOB_STATUS_CLASSES[currentStatus],
-                      )}
-                      title="Cambia stato lavorazione"
-                    >
-                      ● {FUNNEMAIL_JOB_STATUS_LABELS[currentStatus]}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuLabel>Stato lavorazione</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {FUNNEMAIL_JOB_STATUSES.map((s) => (
-                      <DropdownMenuItem key={s} onSelect={() => onSetStatus(s)} disabled={s === currentStatus}>
-                        {FUNNEMAIL_JOB_STATUS_LABELS[s]}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : null}
-              {reminder && reminderLabel && (
-                <span
-                  className={cn(chipBase, "border-accent bg-accent font-medium text-accent-foreground")}
-                  title={`Reminder ${reminderLabel}${reminder.note ? ` · ${reminder.note}` : ""} · ${new Date(reminder.remind_at).toLocaleString("it-IT")}`}
-                >
-                  <Bell className="h-3 w-3" />Reminder
-                </span>
-              )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className={cn(chipBase, "font-medium", FUNNEMAIL_JOB_STATUS_CLASSES[currentStatus])}
+              title="Cambia stato lavorazione"
+            >
+              ● {FUNNEMAIL_JOB_STATUS_LABELS[currentStatus]}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuLabel>Stato lavorazione</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {FUNNEMAIL_JOB_STATUSES.map((s) => (
+              <DropdownMenuItem key={s} onSelect={() => onSetStatus(s)} disabled={s === currentStatus}>
+                {FUNNEMAIL_JOB_STATUS_LABELS[s]}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+      {reminder && reminderLabel && (
+        <span
+          className={cn(chipBase, "border-accent bg-accent font-medium text-accent-foreground")}
+          title={`Reminder ${reminderLabel}${reminder.note ? ` · ${reminder.note}` : ""} · ${new Date(reminder.remind_at).toLocaleString("it-IT")}`}
+        >
+          <Bell className="h-3 w-3" />
+          Reminder
+        </span>
+      )}
     </>
   );
 
@@ -247,94 +248,105 @@ export function FunnemailMailCard({
   const trailing = (
     <>
       {claimedByOther && (
-          <span
-            className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-warning/40 bg-warning/10 px-2 text-xs font-medium text-warning"
-            title={`Preso da ${claim?.operator_display_name ?? "operatore"} ${claimMinutes} min fa`}
-          >
-            <Hand className="h-3 w-3" />
-            {claim?.operator_display_name ?? "preso"}
-          </span>
-        )}
-        {claimedByMe && (
-          <span
-            className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 text-xs font-medium text-primary"
-            title={`In carico a te da ${claimMinutes} min`}
-          >
-            <Hand className="h-3 w-3" />tu
-          </span>
-        )}
-        {isUnread && (
-          <button
-            type="button"
-            title="Segna come letta"
-            onClick={(e) => {
-              e.stopPropagation();
-              markRead.mutate({ id: message.id, channel: message.channel, user_id: message.user_id });
-            }}
-            className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-medium text-primary hover:bg-primary/20"
-          >
-            <MailOpen className="h-3 w-3" />
-          </button>
-        )}
+        <span
+          className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-warning/40 bg-warning/10 px-2 text-xs font-medium text-warning"
+          title={`Preso da ${claim?.operator_display_name ?? "operatore"} ${claimMinutes} min fa`}
+        >
+          <Hand className="h-3 w-3" />
+          {claim?.operator_display_name ?? "preso"}
+        </span>
+      )}
+      {claimedByMe && (
+        <span
+          className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 text-xs font-medium text-primary"
+          title={`In carico a te da ${claimMinutes} min`}
+        >
+          <Hand className="h-3 w-3" />
+          tu
+        </span>
+      )}
+      {isUnread && (
+        <button
+          type="button"
+          title="Segna come letta"
+          onClick={(e) => {
+            e.stopPropagation();
+            markRead.mutate({ id: message.id, channel: message.channel, user_id: message.user_id });
+          }}
+          className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-medium text-primary hover:bg-primary/20"
+        >
+          <MailOpen className="h-3 w-3" />
+        </button>
+      )}
     </>
   );
 
   const actions = (
     <>
       {onCreateReminder && (
-          <ReminderPopover
-            onCreate={(remindAt: Date, note?: string) => onCreateReminder(remindAt, note)}
-            existing={reminder ?? null}
-            onDismiss={onDismissReminder ? (id: string) => onDismissReminder(id) : undefined}
-          />
-        )}
-        {!claim && onClaim && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            onClick={onClaim}
-            disabled={claimPending}
-            title="Prendi in carico questo messaggio"
-          >
-            <Hand className="h-3.5 w-3.5" />Lo prendo io
-          </Button>
-        )}
-        {claimedByMe && onRelease && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            onClick={onRelease}
-            disabled={claimPending}
-            title="Rilascia presa in carico"
-          >
-            <Undo2 className="h-3.5 w-3.5" />Rilascia
-          </Button>
-        )}
-        <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onReclassify} disabled={reclassifying} title="Riclassifica con AI">
-          <Brain className="h-3.5 w-3.5" />AI classifica
-        </Button>
-        <DeepSearchEmailButton
-          email={emailAddress}
-          source={{ displayName: displayBrand, partnerId: message.partner_id ?? partner?.id ?? null }}
+        <ReminderPopover
+          onCreate={(remindAt: Date, note?: string) => onCreateReminder(remindAt, note)}
+          existing={reminder ?? null}
+          onDismiss={onDismissReminder ? (id: string) => onDismissReminder(id) : undefined}
+        />
+      )}
+      {!claim && onClaim && (
+        <Button
           size="sm"
           variant="outline"
-          label="AI Search"
           className="h-8 gap-1.5 text-xs"
-        />
-        <EmailMessageActions message={message} />
-        <InlineGroupAssigner
-          fromAddress={message.from_address}
-          currentGroupName={groupName}
-        />
+          onClick={onClaim}
+          disabled={claimPending}
+          title="Prendi in carico questo messaggio"
+        >
+          <Hand className="h-3.5 w-3.5" />
+          Lo prendo io
+        </Button>
+      )}
+      {claimedByMe && onRelease && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1.5 text-xs"
+          onClick={onRelease}
+          disabled={claimPending}
+          title="Rilascia presa in carico"
+        >
+          <Undo2 className="h-3.5 w-3.5" />
+          Rilascia
+        </Button>
+      )}
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-8 gap-1.5 text-xs"
+        onClick={onReclassify}
+        disabled={reclassifying}
+        title="Riclassifica con AI"
+      >
+        <Brain className="h-3.5 w-3.5" />
+        AI classifica
+      </Button>
+      <DeepSearchEmailButton
+        email={emailAddress}
+        source={{ displayName: displayBrand, partnerId: message.partner_id ?? partner?.id ?? null }}
+        size="sm"
+        variant="outline"
+        label="AI Search"
+        className="h-8 gap-1.5 text-xs"
+      />
+      <EmailMessageActions message={message} />
+      <InlineGroupAssigner fromAddress={message.from_address} currentGroupName={groupName} />
     </>
   );
 
   const leading = showCheckbox ? (
     <div
       className="absolute left-1 top-3 z-10"
-      onClick={(e) => { e.stopPropagation(); onToggleChecked?.(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggleChecked?.();
+      }}
     >
       <Checkbox checked={!!checked} aria-label="Seleziona email" />
     </div>

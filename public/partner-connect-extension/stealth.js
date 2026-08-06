@@ -3,12 +3,12 @@
 // Fix: domain matching case-insensitive con endsWith
 
 const Stealth = {
-
   // ============================================================
   // 1. DELAY UMANI (distribuzione gaussiana)
   // ============================================================
   gaussianRandom(mean, stdDev) {
-    let u = 0, v = 0;
+    let u = 0,
+      v = 0;
     while (u === 0) u = Math.random();
     while (v === 0) v = Math.random();
     const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
@@ -16,33 +16,36 @@ const Stealth = {
     return Math.max(mean * 0.1, mean + z * stdDev);
   },
 
-  async humanDelay(type = 'read') {
+  async humanDelay(type = "read") {
     const profiles = {
-      quick:    { mean: 1500,  std: 500  },
-      read:     { mean: 4000,  std: 1500 },
-      think:    { mean: 7000,  std: 2500 },
-      navigate: { mean: 2500,  std: 800  },
-      scroll:   { mean: 800,   std: 300  },
-      type:     { mean: 150,   std: 60   },
+      quick: { mean: 1500, std: 500 },
+      read: { mean: 4000, std: 1500 },
+      think: { mean: 7000, std: 2500 },
+      navigate: { mean: 2500, std: 800 },
+      scroll: { mean: 800, std: 300 },
+      type: { mean: 150, std: 60 },
     };
     const p = profiles[type] || profiles.read;
     const delay = this.gaussianRandom(p.mean, p.std);
-    return new Promise(resolve => setTimeout(resolve, delay));
+    return new Promise((resolve) => setTimeout(resolve, delay));
   },
 
   // ============================================================
   // 2. SCROLL NATURALE
   // ============================================================
   getScrollScript() {
-    return function() {
-      return new Promise(resolve => {
+    return function () {
+      return new Promise((resolve) => {
         const totalHeight = document.documentElement.scrollHeight;
         const viewHeight = window.innerHeight;
         let currentY = 0;
         const targetY = Math.min(totalHeight * 0.7, viewHeight * 3);
 
         function scrollStep() {
-          if (currentY >= targetY) { resolve(); return; }
+          if (currentY >= targetY) {
+            resolve();
+            return;
+          }
           const progress = currentY / targetY;
           let speed;
           if (progress < 0.2) speed = 40 + Math.random() * 30;
@@ -50,7 +53,7 @@ const Stealth = {
           else speed = 30 + Math.random() * 20;
 
           currentY += speed;
-          window.scrollTo({ top: currentY, behavior: 'auto' });
+          window.scrollTo({ top: currentY, behavior: "auto" });
           const pause = Math.random() < 0.1 ? 800 + Math.random() * 1500 : 30 + Math.random() * 80;
           setTimeout(scrollStep, pause);
         }
@@ -84,12 +87,12 @@ const Stealth = {
   },
 
   shouldInsertNoise() {
-    return Math.random() < 0.10;
+    return Math.random() < 0.1;
   },
 
   async noiseDelay() {
     const delay = 5000 + Math.random() * 10000;
-    return new Promise(resolve => setTimeout(resolve, delay));
+    return new Promise((resolve) => setTimeout(resolve, delay));
   },
 
   // ============================================================
@@ -104,12 +107,12 @@ const Stealth = {
 
   async init() {
     try {
-      const stored = await chrome.storage.local.get('stealth_session');
+      const stored = await chrome.storage.local.get("stealth_session");
       if (stored.stealth_session) {
         this.sessionLimits.currentSession = stored.stealth_session;
       }
     } catch (err) {
-      console.error('Failed to restore stealth session:', err);
+      console.error("Failed to restore stealth session:", err);
     }
   },
 
@@ -117,7 +120,7 @@ const Stealth = {
     try {
       await chrome.storage.local.set({ stealth_session: this.sessionLimits.currentSession });
     } catch (err) {
-      console.error('Failed to persist stealth session:', err);
+      console.error("Failed to persist stealth session:", err);
     }
   },
 
@@ -154,7 +157,7 @@ const Stealth = {
   // 6. BROWSE NATURALLY
   // ============================================================
   async browseNaturally(tabId, options = {}) {
-    const { scroll = true, readTime = 'read', checkLimits = true } = options;
+    const { scroll = true, readTime = "read", checkLimits = true } = options;
 
     let cumulativeDelay = 0;
     const maxTotalWait = 60000; // 60 seconds max total wait
@@ -163,29 +166,29 @@ const Stealth = {
       const session = await this.checkSession();
       if (session.shouldPause) {
         const waitTime = Math.min(session.pauseMs, maxTotalWait - cumulativeDelay);
-        await new Promise(r => setTimeout(r, waitTime));
+        await new Promise((r) => setTimeout(r, waitTime));
         cumulativeDelay += waitTime;
       }
     }
 
     const quickDelay = 1500 + Math.random() * 500;
-    await new Promise(r => setTimeout(r, quickDelay));
+    await new Promise((r) => setTimeout(r, quickDelay));
     cumulativeDelay += quickDelay;
 
     if (scroll && cumulativeDelay < maxTotalWait) {
       const scrollResult = await this.scrollTab(tabId);
       if (!scrollResult.ok) {
-        console.warn('Scroll failed:', scrollResult.error);
+        console.warn("Scroll failed:", scrollResult.error);
       }
     }
 
     const readDelay = Math.min(4000 + Math.random() * 1500, maxTotalWait - cumulativeDelay);
-    await new Promise(r => setTimeout(r, readDelay));
+    await new Promise((r) => setTimeout(r, readDelay));
     cumulativeDelay += readDelay;
 
     if (this.shouldInsertNoise() && cumulativeDelay < maxTotalWait) {
       const noiseDelay = Math.min(5000 + Math.random() * 10000, maxTotalWait - cumulativeDelay);
-      await new Promise(r => setTimeout(r, noiseDelay));
+      await new Promise((r) => setTimeout(r, noiseDelay));
     }
   },
 
@@ -194,18 +197,18 @@ const Stealth = {
   // Fix: case-insensitive matching con endsWith
   // ============================================================
   domainProfiles: {
-    'linkedin.com':  { delayMultiplier: 2.5, maxPerHour: 20,  scrollDepth: 0.3 },
-    'facebook.com':  { delayMultiplier: 2.0, maxPerHour: 15,  scrollDepth: 0.3 },
-    'default':       { delayMultiplier: 1.0, maxPerHour: 60,  scrollDepth: 0.7 },
+    "linkedin.com": { delayMultiplier: 2.5, maxPerHour: 20, scrollDepth: 0.3 },
+    "facebook.com": { delayMultiplier: 2.0, maxPerHour: 15, scrollDepth: 0.3 },
+    default: { delayMultiplier: 1.0, maxPerHour: 60, scrollDepth: 0.7 },
   },
 
   getProfile(url) {
     try {
-      const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+      const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
       for (const [domain, profile] of Object.entries(this.domainProfiles)) {
-        if (domain === 'default') continue;
+        if (domain === "default") continue;
         // endsWith per match corretto (es. "it.linkedin.com" → "linkedin.com")
-        if (hostname === domain || hostname.endsWith('.' + domain)) {
+        if (hostname === domain || hostname.endsWith("." + domain)) {
           return profile;
         }
       }
@@ -213,14 +216,14 @@ const Stealth = {
     return this.domainProfiles.default;
   },
 
-  async domainAwareDelay(url, type = 'read') {
+  async domainAwareDelay(url, type = "read") {
     const profile = this.getProfile(url);
     const baseDelay = this.gaussianRandom(4000, 1500);
     const finalDelay = baseDelay * profile.delayMultiplier;
-    return new Promise(resolve => setTimeout(resolve, finalDelay));
+    return new Promise((resolve) => setTimeout(resolve, finalDelay));
   },
 };
 
-if (typeof globalThis !== 'undefined') {
+if (typeof globalThis !== "undefined") {
   globalThis.Stealth = Stealth;
 }

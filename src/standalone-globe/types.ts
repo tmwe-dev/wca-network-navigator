@@ -18,7 +18,7 @@ export interface CountryWithPartners {
   count: number;
   lat: number;
   lng: number;
-  region: 'europe' | 'asia' | 'americas' | 'africa' | 'oceania' | 'middle_east';
+  region: "europe" | "asia" | "americas" | "africa" | "oceania" | "middle_east";
 }
 
 // WCA Country base interface
@@ -27,7 +27,7 @@ export interface WCACountry {
   name: string;
   lat: number;
   lng: number;
-  region: 'europe' | 'asia' | 'americas' | 'africa' | 'oceania' | 'middle_east';
+  region: "europe" | "asia" | "americas" | "africa" | "oceania" | "middle_east";
 }
 
 // Props for the main globe component

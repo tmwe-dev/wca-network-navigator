@@ -29,11 +29,7 @@ interface UidBatch {
   hasMore: boolean;
 }
 
-export async function createImapConfig(
-  imapHost: string,
-  imapUser: string,
-  imapPassword: string
-): Promise<ImapConfig> {
+export async function createImapConfig(imapHost: string, imapUser: string, imapPassword: string): Promise<ImapConfig> {
   return {
     host: imapHost,
     port: 993,
@@ -59,7 +55,7 @@ export async function connectToImap(config: ImapConfig): Promise<ImapClient> {
       if (attempt === 2) {
         throw new Error(`IMAP connection failed after 2 attempts: ${extractErrorMessage(connErr)}`);
       }
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
 
@@ -79,7 +75,7 @@ export async function handleUidvalidityChange(
   supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   storedUidvalidity: number | null,
-  uidvalidity: number | null
+  uidvalidity: number | null,
 ): Promise<number> {
   // UIDVALIDITY change detection
   if (storedUidvalidity && uidvalidity && storedUidvalidity !== uidvalidity) {
@@ -89,10 +85,7 @@ export async function handleUidvalidityChange(
       .eq("user_id", userId);
     return 0;
   } else if (uidvalidity && storedUidvalidity !== uidvalidity) {
-    await supabase
-      .from("email_sync_state")
-      .update({ stored_uidvalidity: uidvalidity })
-      .eq("user_id", userId);
+    await supabase.from("email_sync_state").update({ stored_uidvalidity: uidvalidity }).eq("user_id", userId);
   }
 
   return 0; // lastUid should not change unless UIDVALIDITY changed
@@ -100,7 +93,7 @@ export async function handleUidvalidityChange(
 
 export async function fetchUidBatch(
   imapExec: { executeCommand(cmd: string): Promise<(string | Uint8Array)[]> },
-  lastUid: number
+  lastUid: number,
 ): Promise<UidBatch> {
   try {
     const nextBatch = await getNextUidBatch(imapExec, lastUid);
@@ -117,7 +110,7 @@ export async function fetchUidBatch(
 export async function updateSyncState(
   supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
-  lastUid: number
+  lastUid: number,
 ): Promise<void> {
   await supabase
     .from("email_sync_state")
@@ -128,7 +121,7 @@ export async function updateSyncState(
 export async function skipDuplicateUid(
   supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
-  uid: number
+  uid: number,
 ): Promise<boolean> {
   const { data: existingByUid } = await supabase
     .from("channel_messages")
@@ -161,7 +154,7 @@ export async function getSyncState(
   supabase: import("../_shared/supabaseClient.ts").AnySupabaseClient,
   userId: string,
   imapHost: string,
-  imapUser: string
+  imapUser: string,
 ): Promise<SyncState> {
   const { data: syncState } = await supabase
     .from("email_sync_state")
@@ -180,7 +173,7 @@ export async function getSyncState(
         imap_host: imapHost,
         imap_user: imapUser,
       },
-      { onConflict: "user_id" }
+      { onConflict: "user_id" },
     );
   }
 

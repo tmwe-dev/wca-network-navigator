@@ -35,14 +35,19 @@ Deno.test("loadActivePlaybook: workflow + playbook attivi → block contiene ist
   const mock = makeMock([
     { data: { workflow_id: "wf-1", status: "active", current_step: 2 }, error: null },
     { data: { code: "sales_standard", name: "Sales Standard" }, error: null },
-    { data: [{
-      name: "Opening Pitch",
-      description: "Aprire conversazione",
-      prompt_template: "Sii diretto",
-      suggested_actions: ["intro", "qualify"],
-      kb_tags: [],
-      code: "open",
-    }], error: null },
+    {
+      data: [
+        {
+          name: "Opening Pitch",
+          description: "Aprire conversazione",
+          prompt_template: "Sii diretto",
+          suggested_actions: ["intro", "qualify"],
+          kb_tags: [],
+          code: "open",
+        },
+      ],
+      error: null,
+    },
   ]);
   const res = await loadActivePlaybook(mock, "user-1", "partner-1");
   assertEquals(res.active, true);

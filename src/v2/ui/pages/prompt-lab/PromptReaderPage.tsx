@@ -38,12 +38,7 @@ export default function PromptReaderPage() {
       />
 
       <div className="flex flex-1 min-h-0 relative">
-        <Sidebar
-          open={s.sidebarOpen}
-          grouped={s.grouped}
-          selectedId={s.selectedId}
-          onSelect={s.setSelectedId}
-        />
+        <Sidebar open={s.sidebarOpen} grouped={s.grouped} selectedId={s.selectedId} onSelect={s.setSelectedId} />
 
         <button
           onClick={() => s.setSidebarOpen((v) => !v)}
@@ -65,11 +60,17 @@ export default function PromptReaderPage() {
               title: "Prompt Reader",
               toolbar: (
                 <Button
-                  size="sm" variant="ghost" className="h-6 w-6 p-0"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
                   onClick={() => s.setExpandedPanel(s.expandedPanel === "reader" ? null : "reader")}
                   title={s.expandedPanel === "reader" ? "Riduci" : "Espandi a tutta larghezza"}
                 >
-                  {s.expandedPanel === "reader" ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  {s.expandedPanel === "reader" ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
                 </Button>
               ),
               content: (
@@ -88,11 +89,17 @@ export default function PromptReaderPage() {
               title: "Co-pilot",
               toolbar: (
                 <Button
-                  size="sm" variant="ghost" className="h-6 w-6 p-0"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
                   onClick={() => s.setExpandedPanel(s.expandedPanel === "copilot" ? null : "copilot")}
                   title={s.expandedPanel === "copilot" ? "Riduci" : "Espandi a tutta larghezza"}
                 >
-                  {s.expandedPanel === "copilot" ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  {s.expandedPanel === "copilot" ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
                 </Button>
               ),
               content: s.selected ? (

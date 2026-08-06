@@ -176,14 +176,28 @@ export async function previewWcaProfile(wcaId: number): Promise<PreviewResult> {
         email: p.email || null,
         phone: p.phone || null,
         website: p.website || null,
-        networks: (p.networks || []).map((n: unknown) => typeof n === "string" ? { name: n } : n) as { name: string; expires?: string }[],
-        contacts: (p.contacts || []) as { title: string; name?: string; email?: string; phone?: string; mobile?: string }[],
+        networks: (p.networks || []).map((n: unknown) => (typeof n === "string" ? { name: n } : n)) as {
+          name: string;
+          expires?: string;
+        }[],
+        contacts: (p.contacts || []) as {
+          title: string;
+          name?: string;
+          email?: string;
+          phone?: string;
+          mobile?: string;
+        }[],
       },
       contactsFound: p.contacts?.length || 0,
       totalContacts: p.contacts?.length || 0,
     };
   } catch (err) {
-    return { success: false, wcaId, authStatus: "login_failed", error: err instanceof Error ? err.message : "Errore di rete" };
+    return {
+      success: false,
+      wcaId,
+      authStatus: "login_failed",
+      error: err instanceof Error ? err.message : "Errore di rete",
+    };
   }
 }
 
@@ -192,18 +206,20 @@ export async function scrapeWcaDirectory(
   countryCode: string,
   network?: string,
   pageIndex?: number,
-  _pageSize?: number
+  _pageSize?: number,
 ): Promise<DirectoryResult> {
   try {
     const result = await wcaDiscover(countryCode, pageIndex || 1);
 
-    const members: DirectoryMember[] = (result.members || []).map((m: { id: number; name?: string; company?: string }) => ({
-      company_name: m.name || m.company || "",
-      city: undefined,
-      country: undefined,
-      country_code: countryCode,
-      wca_id: m.id,
-    }));
+    const members: DirectoryMember[] = (result.members || []).map(
+      (m: { id: number; name?: string; company?: string }) => ({
+        company_name: m.name || m.company || "",
+        city: undefined,
+        country: undefined,
+        country_code: countryCode,
+        wca_id: m.id,
+      }),
+    );
 
     const totalResults = result.totalResults || members.length;
     const totalPages = Math.ceil((totalResults || 1) / 50) || 1;

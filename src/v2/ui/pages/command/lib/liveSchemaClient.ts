@@ -24,9 +24,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 let cache: { fetchedAt: number; key: string; data: Map<string, LiveColumn[]> } | null = null;
 let inflight: Promise<Map<string, LiveColumn[]>> | null = null;
 
-export async function getLiveColumns(
-  tables: readonly string[],
-): Promise<Map<string, LiveColumn[]>> {
+export async function getLiveColumns(tables: readonly string[]): Promise<Map<string, LiveColumn[]>> {
   const key = [...tables].sort().join(",");
   if (cache && cache.key === key && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.data;

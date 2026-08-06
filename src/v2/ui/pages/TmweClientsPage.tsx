@@ -35,9 +35,7 @@ export function TmweClientsPage(): React.ReactElement {
           <Truck className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold text-foreground">Clienti TMWE</h1>
-            <p className="text-sm text-muted-foreground">
-              Snapshot anagrafica e fatturato sincronizzati da Findair.
-            </p>
+            <p className="text-sm text-muted-foreground">Snapshot anagrafica e fatturato sincronizzati da Findair.</p>
           </div>
         </div>
         <input

@@ -21,10 +21,7 @@ export interface PlanQueryRequest {
  * normalizza sempre in array. Cap difensivo a 4 piani.
  */
 export const QueryPlanBatchSchema = z
-  .union([
-    z.object({ plans: z.array(QueryPlanSchema).min(1) }),
-    QueryPlanSchema,
-  ])
+  .union([z.object({ plans: z.array(QueryPlanSchema).min(1) }), QueryPlanSchema])
   .transform((v) => {
     if ("plans" in v) {
       return { plans: v.plans.slice(0, 4) };

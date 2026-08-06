@@ -103,11 +103,7 @@ export async function handleQuoteOrBooking(
 }
 
 /** shipment_tracking, cargo_status, documentation_request → lookup_shipment */
-export async function handleShipmentOps(
-  supabase: SupabaseClient,
-  input: CommercialHandlerInput,
-  result: PostResult,
-) {
+export async function handleShipmentOps(supabase: SupabaseClient, input: CommercialHandlerInput, result: PostResult) {
   await insertPending(
     supabase,
     input,
@@ -182,10 +178,6 @@ export async function handleServiceOrSupport(
 }
 
 /** newsletter, system_notification → no action, marker per learning loop */
-export async function handleNoise(
-  _supabase: SupabaseClient,
-  input: CommercialHandlerInput,
-  result: PostResult,
-) {
+export async function handleNoise(_supabase: SupabaseClient, input: CommercialHandlerInput, result: PostResult) {
   result.actionsExecuted.push(`skip_noise_${input.category}`);
 }

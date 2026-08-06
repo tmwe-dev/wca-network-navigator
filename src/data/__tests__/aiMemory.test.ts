@@ -34,16 +34,12 @@ describe("DAL — aiMemory", () => {
         content: "Test memory",
         memory_type: "fact",
       });
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({ user_id: "u1", content: "Test memory" })
-      );
+      expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: "u1", content: "Test memory" }));
     });
 
     it("throws on insert error", async () => {
       mockInsert.mockResolvedValue({ error: { message: "duplicate" } });
-      await expect(
-        createMemory({ user_id: "u1", content: "dup" })
-      ).rejects.toEqual({ message: "duplicate" });
+      await expect(createMemory({ user_id: "u1", content: "dup" })).rejects.toEqual({ message: "duplicate" });
     });
   });
 

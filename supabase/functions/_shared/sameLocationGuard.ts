@@ -74,7 +74,7 @@ export async function checkSameLocationContacts(
     const currentContactId = currentContactRow?.id || null;
 
     // Find if a DIFFERENT contact was emailed (same contact = follow-up = ok)
-    const sentToOther = recentActs.find(a => {
+    const sentToOther = recentActs.find((a) => {
       if (!a.selected_contact_id) return false; // no contact tracked, skip
       if (currentContactId && a.selected_contact_id === currentContactId) return false; // same person
       return true; // different person at same partner
@@ -130,11 +130,7 @@ export async function getSameCompanyBranches(
   partnerId: string,
 ): Promise<Array<{ city: string; country_code: string; contact_count: number }>> {
   // Get partner's company_name and city
-  const { data: partner } = await supabase
-    .from("partners")
-    .select("company_name, city")
-    .eq("id", partnerId)
-    .single();
+  const { data: partner } = await supabase.from("partners").select("company_name, city").eq("id", partnerId).single();
 
   if (!partner?.company_name) return [];
 
@@ -213,8 +209,8 @@ export async function analyzeRelationshipHistory(
   const activities = actRes.data || [];
   const emails = emailRes.data || [];
 
-  const emailsSent = emails.filter(e => e.direction === "outbound");
-  const emailsReceived = emails.filter(e => e.direction === "inbound");
+  const emailsSent = emails.filter((e) => e.direction === "outbound");
+  const emailsReceived = emails.filter((e) => e.direction === "inbound");
 
   const lastSent = emailsSent[0]?.created_at || activities[0]?.sent_at || null;
   const lastReceived = emailsReceived[0]?.created_at || null;
@@ -225,7 +221,7 @@ export async function analyzeRelationshipHistory(
 
   let unanswered = 0;
   if (lastReceived) {
-    unanswered = emailsSent.filter(e => new Date(e.created_at) > new Date(lastReceived)).length;
+    unanswered = emailsSent.filter((e) => new Date(e.created_at) > new Date(lastReceived)).length;
   } else {
     unanswered = emailsSent.length;
   }
@@ -240,18 +236,18 @@ export async function analyzeRelationshipHistory(
   const toneSuggestion = stage;
 
   // Map internal stage to Commercial Doctrine L0 taxonomy
-  const commercialStateMap: Record<RelationshipMetrics["relationship_stage"], RelationshipMetrics["commercial_state"]> = {
-    cold: "new",
-    warm: "holding",
-    active: "engaged",
-    stale: "holding",   // stale resta in holding, va riattivato
-    ghosted: "holding", // ghosted resta in holding, serve tecnica Voss di riattivazione
-  };
+  const commercialStateMap: Record<RelationshipMetrics["relationship_stage"], RelationshipMetrics["commercial_state"]> =
+    {
+      cold: "new",
+      warm: "holding",
+      active: "engaged",
+      stale: "holding", // stale resta in holding, va riattivato
+      ghosted: "holding", // ghosted resta in holding, serve tecnica Voss di riattivazione
+    };
   const commercialState = commercialStateMap[stage];
 
   // Exported helper: map any internal stage to commercial taxonomy (default holding)
   // Note: defined as module-level export below for reuse
-
 
   const metrics: RelationshipMetrics = {
     total_interactions: interactions.length,
@@ -270,7 +266,9 @@ export async function analyzeRelationshipHistory(
   if (interactions.length > 0) {
     historyParts.push("STORIA INTERAZIONI:");
     for (const i of interactions) {
-      historyParts.push(`  [${i.interaction_date?.slice(0, 10)}] ${i.interaction_type}: ${i.subject}${i.notes ? ` — ${i.notes.slice(0, 150)}` : ""}`);
+      historyParts.push(
+        `  [${i.interaction_date?.slice(0, 10)}] ${i.interaction_type}: ${i.subject}${i.notes ? ` — ${i.notes.slice(0, 150)}` : ""}`,
+      );
     }
   }
   if (activities.length > 0) {
@@ -306,7 +304,7 @@ export function buildBranchCoordinationBlock(
   currentCity: string | null,
 ): string {
   if (!branches.length) return "";
-  const branchList = branches.map(b => `${b.city} (${b.country_code})`).join(", ");
+  const branchList = branches.map((b) => `${b.city} (${b.country_code})`).join(", ");
   // Data only — AI decides how/whether to mention branches
   return `\n--- SEDI AZIENDALI ---\nSede attuale: ${currentCity || "N/D"}\nAltre sedi: ${branchList}\n`;
 }

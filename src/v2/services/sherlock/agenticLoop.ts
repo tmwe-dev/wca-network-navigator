@@ -7,7 +7,6 @@ import { extractInternalLinks, normalizeUrl, safeHost } from "./urlUtils";
 import { callExtractAI, callDecideAI } from "./aiIntegrations";
 import type { SherlockStepResult, SherlockProgressEvent, SherlockChannel } from "./sherlockTypes";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("agenticLoop");
 export interface AgenticLoopOptions {

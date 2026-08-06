@@ -10,7 +10,8 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "deep_search_partner",
-      description: "Run a Deep Search on a partner to find additional info from the web (logo, social links, company details). Uses Partner Connect extension. Costs credits.",
+      description:
+        "Run a Deep Search on a partner to find additional info from the web (logo, social links, company details). Uses Partner Connect extension. Costs credits.",
       parameters: {
         type: "object",
         properties: {
@@ -26,7 +27,8 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "deep_search_contact",
-      description: "Run a Deep Search on an imported contact to find LinkedIn, social profiles, and additional info. Costs credits.",
+      description:
+        "Run a Deep Search on an imported contact to find LinkedIn, social profiles, and additional info. Costs credits.",
       parameters: {
         type: "object",
         properties: {
@@ -41,7 +43,8 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "enrich_partner_website",
-      description: "Scrape and analyze a partner's website to extract services, capabilities, and company description. Costs credits.",
+      description:
+        "Scrape and analyze a partner's website to extract services, capabilities, and company description. Costs credits.",
       parameters: {
         type: "object",
         properties: {
@@ -60,7 +63,11 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
       parameters: {
         type: "object",
         properties: {
-          partner_ids: { type: "array", items: { type: "string" }, description: "Array of partner UUIDs to generate aliases for" },
+          partner_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Array of partner UUIDs to generate aliases for",
+          },
           country_code: { type: "string", description: "Generate aliases for all partners in this country" },
           type: { type: "string", enum: ["company", "contact"], description: "Alias type (default: company)" },
           limit: { type: "number", description: "Max partners to process (default 20)" },
@@ -73,12 +80,20 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "check_job_status",
-      description: "Check the real-time status of a specific background job, or get a summary of all active background processes (jobs, email queue). Use AFTER triggering any asynchronous action to verify its outcome.",
+      description:
+        "Check the real-time status of a specific background job, or get a summary of all active background processes (jobs, email queue). Use AFTER triggering any asynchronous action to verify its outcome.",
       parameters: {
         type: "object",
         properties: {
-          job_id: { type: "string", description: "UUID of a specific background job to check. If omitted, returns a summary of ALL active processes." },
-          include_email_queue: { type: "boolean", description: "Also check email campaign queue status (default: true)" },
+          job_id: {
+            type: "string",
+            description:
+              "UUID of a specific background job to check. If omitted, returns a summary of ALL active processes.",
+          },
+          include_email_queue: {
+            type: "boolean",
+            description: "Also check email campaign queue status (default: true)",
+          },
         },
         additionalProperties: false,
       },
@@ -88,12 +103,20 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "get_procedure",
-      description: "Get detailed step-by-step procedure from the Operations Knowledge Base. Use when the user asks how to do something or when you need to follow a specific workflow. Returns prerequisites, ordered steps with tool mapping, and tips.",
+      description:
+        "Get detailed step-by-step procedure from the Operations Knowledge Base. Use when the user asks how to do something or when you need to follow a specific workflow. Returns prerequisites, ordered steps with tool mapping, and tips.",
       parameters: {
         type: "object",
         properties: {
-          procedure_id: { type: "string", description: "Procedure ID (e.g. 'email_single', 'download_profiles', 'deep_search_partner')" },
-          search_tags: { type: "array", items: { type: "string" }, description: "Tags to search for matching procedures (e.g. ['email', 'campagna'])" },
+          procedure_id: {
+            type: "string",
+            description: "Procedure ID (e.g. 'email_single', 'download_profiles', 'deep_search_partner')",
+          },
+          search_tags: {
+            type: "array",
+            items: { type: "string" },
+            description: "Tags to search for matching procedures (e.g. ['email', 'campagna'])",
+          },
         },
         additionalProperties: false,
       },
@@ -103,11 +126,16 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "execute_ui_action",
-      description: "Execute a UI action on the frontend: navigate to a page, show a toast notification, apply filters, or open a dialog. The action will be dispatched as a CustomEvent to the frontend.",
+      description:
+        "Execute a UI action on the frontend: navigate to a page, show a toast notification, apply filters, or open a dialog. The action will be dispatched as a CustomEvent to the frontend.",
       parameters: {
         type: "object",
         properties: {
-          action_type: { type: "string", enum: ["navigate", "show_toast", "apply_filters", "open_dialog"], description: "Type of UI action" },
+          action_type: {
+            type: "string",
+            enum: ["navigate", "show_toast", "apply_filters", "open_dialog"],
+            description: "Type of UI action",
+          },
           path: { type: "string", description: "For navigate: the route path (e.g. /partner-hub)" },
           message: { type: "string", description: "For show_toast: the notification message" },
           toast_type: { type: "string", enum: ["default", "success", "error"], description: "Toast variant" },
@@ -123,7 +151,8 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "list_workflows",
-      description: "List available commercial workflow templates and active workflows on partners. Use when the user asks 'what workflows do I have' or before starting/advancing a workflow.",
+      description:
+        "List available commercial workflow templates and active workflows on partners. Use when the user asks 'what workflows do I have' or before starting/advancing a workflow.",
       parameters: {
         type: "object",
         properties: {
@@ -138,11 +167,15 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "start_workflow",
-      description: "Start a commercial workflow for a partner (or contact). Use when the user wants to formally begin a structured process like 'lead qualification', 'recovery silent partner', 'post event followup'.",
+      description:
+        "Start a commercial workflow for a partner (or contact). Use when the user wants to formally begin a structured process like 'lead qualification', 'recovery silent partner', 'post event followup'.",
       parameters: {
         type: "object",
         properties: {
-          workflow_code: { type: "string", description: "Workflow code (e.g. 'lead_qualification','recovery_silent_partner','post_event_followup')" },
+          workflow_code: {
+            type: "string",
+            description: "Workflow code (e.g. 'lead_qualification','recovery_silent_partner','post_event_followup')",
+          },
           partner_id: { type: "string", description: "Target partner UUID" },
           contact_id: { type: "string", description: "Optional target contact UUID" },
           notes: { type: "string", description: "Initial context notes" },
@@ -156,14 +189,19 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "advance_workflow_gate",
-      description: "Advance a partner's active workflow to the next gate (or back to a previous one). VINCOLO: avanzamento massimo +1 alla volta. NON usare se gli exit criteria del gate corrente non sono soddisfatti — informa l'utente invece.",
+      description:
+        "Advance a partner's active workflow to the next gate (or back to a previous one). VINCOLO: avanzamento massimo +1 alla volta. NON usare se gli exit criteria del gate corrente non sono soddisfatti — informa l'utente invece.",
       parameters: {
         type: "object",
         properties: {
           partner_id: { type: "string", description: "Partner UUID with active workflow" },
           new_gate: { type: "number", description: "New gate index (max current+1, or any lower for rollback)" },
           gate_notes: { type: "string", description: "Notes/decisions taken in this gate" },
-          status: { type: "string", enum: ["active","paused","completed","aborted"], description: "Optional new status" },
+          status: {
+            type: "string",
+            enum: ["active", "paused", "completed", "aborted"],
+            description: "Optional new status",
+          },
         },
         required: ["partner_id", "new_gate"],
         additionalProperties: false,
@@ -174,7 +212,8 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "list_playbooks",
-      description: "List active commercial playbooks. Use to discover applicable playbooks for the current situation, or when the user asks 'what playbooks do I have'.",
+      description:
+        "List active commercial playbooks. Use to discover applicable playbooks for the current situation, or when the user asks 'what playbooks do I have'.",
       parameters: {
         type: "object",
         properties: {
@@ -189,7 +228,8 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "apply_playbook",
-      description: "Apply a commercial playbook for a partner. Loads the playbook prompt template, KB tags, and suggested actions into the current context. Use when the situation matches a playbook's trigger conditions or when the user explicitly requests it.",
+      description:
+        "Apply a commercial playbook for a partner. Loads the playbook prompt template, KB tags, and suggested actions into the current context. Use when the situation matches a playbook's trigger conditions or when the user explicitly requests it.",
       parameters: {
         type: "object",
         properties: {
@@ -284,11 +324,16 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "get_pending_actions",
-      description: "Get AI pending actions for the current user. Shows actions the AI has suggested but that need human approval.",
+      description:
+        "Get AI pending actions for the current user. Shows actions the AI has suggested but that need human approval.",
       parameters: {
         type: "object",
         properties: {
-          status: { type: "string", enum: ["pending", "approved", "rejected", "executed"], description: "Filter by status (default: pending)" },
+          status: {
+            type: "string",
+            enum: ["pending", "approved", "rejected", "executed"],
+            description: "Filter by status (default: pending)",
+          },
           action_type: { type: "string", description: "Filter by action type" },
           limit: { type: "number", description: "Max results (default 20)" },
         },
@@ -331,13 +376,21 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "create_campaign",
-      description: "Create an outreach mission (campaign) in draft status. Configure target filters, channel, and AI prompt for email generation.",
+      description:
+        "Create an outreach mission (campaign) in draft status. Configure target filters, channel, and AI prompt for email generation.",
       parameters: {
         type: "object",
         properties: {
           title: { type: "string", description: "Campaign title" },
-          channel: { type: "string", enum: ["email", "whatsapp", "linkedin"], description: "Primary channel (default: email)" },
-          target_filters: { type: "object", description: "Filters to select recipients: country_code, lead_status, has_email, etc." },
+          channel: {
+            type: "string",
+            enum: ["email", "whatsapp", "linkedin"],
+            description: "Primary channel (default: email)",
+          },
+          target_filters: {
+            type: "object",
+            description: "Filters to select recipients: country_code, lead_status, has_email, etc.",
+          },
           ai_prompt: { type: "string", description: "AI prompt for generating outreach messages" },
           template_id: { type: "string", description: "Optional template ID for message generation" },
         },
@@ -350,7 +403,8 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "update_agent_prompt",
-      description: "Update an AI agent's system prompt. Can replace the entire prompt or append additional instructions.",
+      description:
+        "Update an AI agent's system prompt. Can replace the entire prompt or append additional instructions.",
       parameters: {
         type: "object",
         properties: {
@@ -367,7 +421,8 @@ export const ENTERPRISE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "add_agent_kb_entry",
-      description: "Add a knowledge base entry linked to an AI agent. The entry becomes part of the agent's context for future interactions.",
+      description:
+        "Add a knowledge base entry linked to an AI agent. The entry becomes part of the agent's context for future interactions.",
       parameters: {
         type: "object",
         properties: {

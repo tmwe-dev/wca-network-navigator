@@ -19,7 +19,7 @@ describe("activityConstants", () => {
 
   describe("STATUS_LABELS", () => {
     it("has labels for all cycle statuses", () => {
-      STATUS_CYCLE.forEach(s => {
+      STATUS_CYCLE.forEach((s) => {
         expect(STATUS_LABELS[s]).toBeTruthy();
       });
     });

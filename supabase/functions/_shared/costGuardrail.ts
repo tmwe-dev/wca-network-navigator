@@ -15,10 +15,7 @@ interface BudgetCheck {
 }
 
 function getServiceClient() {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 }
 
 /**
@@ -85,11 +82,7 @@ export async function checkDailyBudget(
 /**
  * Records usage after a successful API call.
  */
-export async function recordUsage(
-  userId: string,
-  type: "ai" | "tts",
-  amount: number,
-): Promise<void> {
+export async function recordUsage(userId: string, type: "ai" | "tts", amount: number): Promise<void> {
   const sb = getServiceClient();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -109,24 +102,19 @@ export async function recordUsage(
       .update({ [updateField]: currentVal + amount, updated_at: new Date().toISOString() })
       .eq("id", row.id as string);
   } else {
-    await sb
-      .from("usage_daily_budget")
-      .insert({
-        user_id: userId,
-        usage_date: today,
-        ai_tokens_used: type === "ai" ? amount : 0,
-        tts_chars_used: type === "tts" ? amount : 0,
-      });
+    await sb.from("usage_daily_budget").insert({
+      user_id: userId,
+      usage_date: today,
+      ai_tokens_used: type === "ai" ? amount : 0,
+      tts_chars_used: type === "tts" ? amount : 0,
+    });
   }
 }
 
 /**
  * Returns a 429 response when budget is exceeded.
  */
-export function budgetExceededResponse(
-  budget: BudgetCheck,
-  corsHeaders: Record<string, string>,
-): Response {
+export function budgetExceededResponse(budget: BudgetCheck, corsHeaders: Record<string, string>): Response {
   return new Response(
     JSON.stringify({
       error: "daily_budget_exceeded",

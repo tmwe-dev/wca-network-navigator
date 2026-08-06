@@ -31,7 +31,10 @@ export async function findCommercialPlaybooks(userId: string): Promise<Commercia
   return (data ?? []) as CommercialPlaybook[];
 }
 
-export async function updateCommercialPlaybook(id: string, patch: Database["public"]["Tables"]["commercial_playbooks"]["Update"]): Promise<void> {
+export async function updateCommercialPlaybook(
+  id: string,
+  patch: Database["public"]["Tables"]["commercial_playbooks"]["Update"],
+): Promise<void> {
   const { error } = await supabase.from("commercial_playbooks").update(patch).eq("id", id);
   if (error) throw error;
 }

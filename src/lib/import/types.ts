@@ -5,7 +5,7 @@
 
 export interface ParsedFile {
   headers: string[];
-  rawHeaders: string[];           // Original headers before normalization
+  rawHeaders: string[]; // Original headers before normalization
   rows: string[][];
   totalRows: number;
   sampleRows: string[][];
@@ -25,8 +25,8 @@ export interface ParsingOptions {
 export interface ColumnMapping {
   sourceColumn: string;
   sourceIndex: number;
-  targetColumn: string;           // key from TARGET_SCHEMA
-  confidence: number;             // 0-100
+  targetColumn: string; // key from TARGET_SCHEMA
+  confidence: number; // 0-100
   transformation: TransformationType;
 }
 
@@ -62,12 +62,24 @@ export interface ImportStats {
 
 /** Our target schema columns — matches imported_contacts table */
 export const TARGET_COLUMNS = [
-  "company_name", "name", "email", "phone", "mobile",
-  "country", "city", "address", "zip_code", "position",
-  "note", "origin", "external_id", "company_alias", "contact_alias",
+  "company_name",
+  "name",
+  "email",
+  "phone",
+  "mobile",
+  "country",
+  "city",
+  "address",
+  "zip_code",
+  "position",
+  "note",
+  "origin",
+  "external_id",
+  "company_alias",
+  "contact_alias",
 ] as const;
 
-export type TargetColumnKey = typeof TARGET_COLUMNS[number];
+export type TargetColumnKey = (typeof TARGET_COLUMNS)[number];
 
 export interface TargetColumn {
   key: TargetColumnKey;

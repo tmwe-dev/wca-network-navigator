@@ -28,7 +28,7 @@ async function getMasterKey(): Promise<CryptoKey> {
   if (!rawKey || rawKey.length < 32) {
     throw new Error(
       "VITE_CREDENTIAL_VAULT_KEY non configurata o troppo corta (minimo 32 char). " +
-      "Genera una chiave con: openssl rand -base64 32"
+        "Genera una chiave con: openssl rand -base64 32",
     );
   }
 
@@ -36,13 +36,10 @@ async function getMasterKey(): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const hashed = await crypto.subtle.digest("SHA-256", enc.encode(rawKey));
 
-  cachedKey = await crypto.subtle.importKey(
-    "raw",
-    hashed,
-    { name: ALG, length: KEY_LENGTH },
-    false,
-    ["encrypt", "decrypt"]
-  );
+  cachedKey = await crypto.subtle.importKey("raw", hashed, { name: ALG, length: KEY_LENGTH }, false, [
+    "encrypt",
+    "decrypt",
+  ]);
   return cachedKey;
 }
 
@@ -68,9 +65,7 @@ export async function vaultEncrypt(plaintext: string): Promise<string> {
   const key = await getMasterKey();
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const enc = new TextEncoder();
-  const ciphertext = new Uint8Array(
-    await crypto.subtle.encrypt({ name: ALG, iv }, key, enc.encode(plaintext))
-  );
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: ALG, iv }, key, enc.encode(plaintext)));
   const combined = new Uint8Array(iv.length + ciphertext.length);
   combined.set(iv, 0);
   combined.set(ciphertext, iv.length);
@@ -92,11 +87,7 @@ export async function vaultDecrypt(stored: string): Promise<string> {
   const combined = b64ToBytes(stored.slice(VAULT_VERSION.length + 1));
   const iv = combined.slice(0, IV_LENGTH);
   const ciphertext = combined.slice(IV_LENGTH);
-  const plaintextBuf = await crypto.subtle.decrypt(
-    { name: ALG, iv },
-    key,
-    ciphertext
-  );
+  const plaintextBuf = await crypto.subtle.decrypt({ name: ALG, iv }, key, ciphertext);
   return new TextDecoder().decode(plaintextBuf);
 }
 

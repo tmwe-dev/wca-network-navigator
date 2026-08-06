@@ -7,6 +7,7 @@ type: feature
 ## Regola
 
 `agent-execute/toolHandlers/emailTools.ts` → `handleSendWhatsApp` e `handleSendLinkedIn`:
+
 - NON inseriscono più in `activities` con stato pending fingendo l'invio.
 - NON chiamano la pipeline post-send.
 - INSERISCONO in `ai_pending_actions` con `action_type = send_whatsapp | send_linkedin`, status `pending`, source `agent:<id>`.
@@ -15,6 +16,7 @@ type: feature
 ## Invio reale
 
 Il send fisico LI/WA avviene SOLO dal cockpit utente attivo:
+
 - WhatsApp → `useSendWhatsApp` → `useWhatsAppExtensionBridge.sendWhatsApp` → postMessage `from-webapp-wa`.
 - LinkedIn → `useSendLinkedIn` → `useLinkedInExtensionBridge.sendDirectMessage` → postMessage `from-webapp-li`.
 

@@ -76,11 +76,7 @@ class ImapConn {
       const n = await this.conn.read(buf);
       if (n === null) break;
       response += this.decoder.decode(buf.subarray(0, n));
-      if (
-        response.includes(`${tag} OK`) ||
-        response.includes(`${tag} NO`) ||
-        response.includes(`${tag} BAD`)
-      ) break;
+      if (response.includes(`${tag} OK`) || response.includes(`${tag} NO`) || response.includes(`${tag} BAD`)) break;
     }
     return response;
   }
@@ -148,8 +144,16 @@ class ImapConn {
   }
 
   async logout(): Promise<void> {
-    try { await this.send("LOGOUT"); } catch { /* ignore */ }
-    try { this.conn.close(); } catch { /* ignore */ }
+    try {
+      await this.send("LOGOUT");
+    } catch {
+      /* ignore */
+    }
+    try {
+      this.conn.close();
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -202,7 +206,9 @@ async function backfillAddress(
     if (!target) {
       return { address, matched: uids.length, applied: 0, error: "missing target_folder" };
     }
-    try { await imap.ensureFolder(target); } catch (e) {
+    try {
+      await imap.ensureFolder(target);
+    } catch (e) {
       return {
         address,
         matched: uids.length,
@@ -237,20 +243,19 @@ async function backfillAddress(
       // Filtri DB: imap_uid + user_id (NON from_address — può essere
       // "Name <addr>" o solo "addr", il match fallirebbe).
       if (action === "mark_read") {
-        await sb.from("channel_messages")
+        await sb
+          .from("channel_messages")
           .update({ read_at: new Date().toISOString() })
           .eq("imap_uid", uid)
           .eq("user_id", userId);
       } else if (action === "archive" || action === "spam" || action === "move_to_folder") {
-        await sb.from("channel_messages")
+        await sb
+          .from("channel_messages")
           .update({ folder: target, ...(alsoMarkRead ? { read_at: new Date().toISOString() } : {}) })
           .eq("imap_uid", uid)
           .eq("user_id", userId);
       } else if (action === "hide") {
-        await sb.from("channel_messages")
-          .update({ hidden_by_rule: true })
-          .eq("imap_uid", uid)
-          .eq("user_id", userId);
+        await sb.from("channel_messages").update({ hidden_by_rule: true }).eq("imap_uid", uid).eq("user_id", userId);
       }
     } catch {
       // continua con i prossimi UID
@@ -270,7 +275,8 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401, headers: { ...cors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -282,10 +288,13 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user } } = await userClient.auth.getUser();
+    const {
+      data: { user },
+    } = await userClient.auth.getUser();
     if (!user) {
       return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-        status: 401, headers: { ...cors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -305,12 +314,14 @@ Deno.serve(async (req) => {
     const effectiveUserId = userIdInput ?? user.id;
     if (!effectiveUserId || !scope || !target) {
       return new Response(JSON.stringify({ error: "missing user_id/scope/target" }), {
-        status: 400, headers: { ...cors, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     if (scope !== "address" && scope !== "group") {
       return new Response(JSON.stringify({ error: "invalid scope" }), {
-        status: 400, headers: { ...cors, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -319,7 +330,9 @@ Deno.serve(async (req) => {
     // è sempre presente (NOT NULL nel DB).
     let q = supabase
       .from("email_address_rules")
-      .select("id, operator_id, user_id, email_address, address, domain, domain_pattern, auto_action, auto_action_params, is_active, group_name")
+      .select(
+        "id, operator_id, user_id, email_address, address, domain, domain_pattern, auto_action, auto_action_params, is_active, group_name",
+      )
       .eq("user_id", effectiveUserId)
       .eq("is_active", true)
       .not("auto_action", "is", null);
@@ -349,13 +362,16 @@ Deno.serve(async (req) => {
     }
 
     if (rules.length === 0) {
-      return new Response(JSON.stringify({
-        addresses_processed: 0,
-        messages_matched: 0,
-        messages_applied: 0,
-        errors: [],
-        truncated: false,
-      }), { headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          addresses_processed: 0,
+          messages_matched: 0,
+          messages_applied: 0,
+          errors: [],
+          truncated: false,
+        }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
     }
 
     const host = Deno.env.get("IMAP_HOST") || "";
@@ -363,7 +379,8 @@ Deno.serve(async (req) => {
     const imapPass = Deno.env.get("IMAP_PASSWORD") || "";
     if (!host || !imapUser || !imapPass) {
       return new Response(JSON.stringify({ error: "IMAP credentials not configured" }), {
-        status: 500, headers: { ...cors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -397,10 +414,13 @@ Deno.serve(async (req) => {
             .eq("id", rule.id)
             .maybeSingle();
           const prev = (cur?.applied_count as number) ?? 0;
-          await sb.from("email_address_rules").update({
-            last_applied_at: new Date().toISOString(),
-            applied_count: prev + report.applied,
-          }).eq("id", rule.id);
+          await sb
+            .from("email_address_rules")
+            .update({
+              last_applied_at: new Date().toISOString(),
+              applied_count: prev + report.applied,
+            })
+            .eq("id", rule.id);
         }
       } catch (connErr: unknown) {
         reports.push({
@@ -414,21 +434,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      addresses_processed: reports.length,
-      messages_matched: totalMatched,
-      messages_applied: totalApplied,
-      errors: reports.filter((r) => r.error).map((r) => ({ address: r.address, error: r.error! })),
-      reports,
-      truncated: (rulesData?.length ?? 0) > MAX_ADDRESSES_PER_CALL,
-      dry_run: dryRun,
-    }), { headers: { ...cors, "Content-Type": "application/json" } });
-
+    return new Response(
+      JSON.stringify({
+        addresses_processed: reports.length,
+        messages_matched: totalMatched,
+        messages_applied: totalApplied,
+        errors: reports.filter((r) => r.error).map((r) => ({ address: r.address, error: r.error! })),
+        reports,
+        truncated: (rulesData?.length ?? 0) > MAX_ADDRESSES_PER_CALL,
+        dry_run: dryRun,
+      }),
+      { headers: { ...cors, "Content-Type": "application/json" } },
+    );
   } catch (e: unknown) {
     console.error("[backfill-email-rules] error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 });

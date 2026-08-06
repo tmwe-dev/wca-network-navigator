@@ -1,6 +1,11 @@
 import { useState, useCallback } from "react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -77,9 +82,7 @@ export function AdvancedActivityForm({
             <Users className="w-5 h-5" />
             Crea Attività — {contacts.length} contatti
           </DialogTitle>
-          <DialogDescription>
-            Configura il tipo di attività e i dettagli per i contatti selezionati.
-          </DialogDescription>
+          <DialogDescription>Configura il tipo di attività e i dettagli per i contatti selezionati.</DialogDescription>
         </DialogHeader>
 
         {/* Selected contacts summary */}
@@ -101,10 +104,12 @@ export function AdvancedActivityForm({
         <Tabs value={activityTab} onValueChange={(v) => setActivityTab(v as "email" | "call")} className="flex-1">
           <TabsList className="w-full">
             <TabsTrigger value="email" className="flex-1">
-              <Mail className="w-3.5 h-3.5 mr-1.5" />Email
+              <Mail className="w-3.5 h-3.5 mr-1.5" />
+              Email
             </TabsTrigger>
             <TabsTrigger value="call" className="flex-1">
-              <Phone className="w-3.5 h-3.5 mr-1.5" />Chiamata
+              <Phone className="w-3.5 h-3.5 mr-1.5" />
+              Chiamata
             </TabsTrigger>
           </TabsList>
 
@@ -137,7 +142,8 @@ export function AdvancedActivityForm({
                 size="sm"
                 onClick={() => setSendNow(true)}
               >
-                <Send className="w-3.5 h-3.5 mr-1" />Invia subito
+                <Send className="w-3.5 h-3.5 mr-1" />
+                Invia subito
               </Button>
               <Button
                 type="button"
@@ -145,7 +151,8 @@ export function AdvancedActivityForm({
                 size="sm"
                 onClick={() => setSendNow(false)}
               >
-                <Timer className="w-3.5 h-3.5 mr-1" />Programma
+                <Timer className="w-3.5 h-3.5 mr-1" />
+                Programma
               </Button>
             </div>
           </TabsContent>
@@ -176,7 +183,8 @@ export function AdvancedActivityForm({
                 size="sm"
                 onClick={() => setSendNow(false)}
               >
-                <Timer className="w-3.5 h-3.5 mr-1" />Programma
+                <Timer className="w-3.5 h-3.5 mr-1" />
+                Programma
               </Button>
             </div>
           </TabsContent>
@@ -189,9 +197,7 @@ export function AdvancedActivityForm({
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="text-xs">
-                  {scheduleDate
-                    ? format(scheduleDate, "dd MMM yyyy", { locale: it })
-                    : "Seleziona data"}
+                  {scheduleDate ? format(scheduleDate, "dd MMM yyyy", { locale: it }) : "Seleziona data"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">

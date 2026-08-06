@@ -11,6 +11,7 @@ Piano completo approvato in `.lovable/plan.md`.
 ## ✅ Completato
 
 ### DB (migration applicata)
+
 - Tabella `super_mario_identities` (RLS: read authenticated, write admin) + trigger updated_at con search_path.
 - Tabella `conversation_summaries` (memoria narrativa versionata, coverage from..to esplicita).
 - Tabella `super_mario_invocations` (audit redatto, retention 30gg via expires_at + funzione `cleanup_super_mario_invocations()`).
@@ -18,7 +19,9 @@ Piano completo approvato in `.lovable/plan.md`.
 - Seed identity `command-director` (Direttore Operativo) inserita via UPSERT idempotente.
 
 ### Edge function `supabase/functions/super-mario/` (parziale)
+
 File già scritti:
+
 - `runtimeContract.ts` — schema risposta JSON obbligatorio + hard guards descrittivi + `isSuperMarioResponse` validator.
 - `identityLoader.ts` — cache 5 min + fallback hardcoded.
 - `toolCatalog.ts` — descrittori tool con `risk_level` (read/write/send/destructive) + `renderToolCatalog()` + `findTool()`.
@@ -28,6 +31,7 @@ File già scritti:
 ## ⏳ Da completare
 
 ### Edge function (file ancora da creare)
+
 - `hardGuards.ts` — validazione runtime (no DELETE/DROP, max 5 tool chain, sanitize input).
 - `preflightAudit.ts` — blocca se identity assente/scope invalido/budget sforato.
 - `postflightAudit.ts` — valida `SuperMarioResponse` schema, tool referenziati nel catalog, risk_level coerente.
@@ -35,6 +39,7 @@ File già scritti:
 - `index.ts` — orchestrator <150 LOC che assembla tutto e chiama il gateway con `response_format: json_object`.
 
 ### Frontend
+
 - `src/v2/ai/superMario.ts` — wrapper `invokeAi`-compliant (scope `command`, source obbligatorio).
 - Aggiungere `"super-mario"` a `AI_FUNCTION_NAMES` in `src/lib/ai/invokeAi.ts`.
 - Cablaggio in `useCommandSubmit.ts`: sostituire `aiBridge.getAiComment`, `useFastLane`, `planExecution` → `superMario.invoke()`.

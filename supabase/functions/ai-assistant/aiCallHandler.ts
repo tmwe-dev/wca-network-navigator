@@ -36,7 +36,7 @@ export interface AiCallResult {
 export function selectActiveTools(
   allTools: Record<string, unknown>[],
   scope: string | undefined,
-  isConversational: boolean
+  isConversational: boolean,
 ): Record<string, unknown>[] | undefined {
   if (isConversational) return undefined;
 
@@ -49,7 +49,6 @@ export function selectActiveTools(
     const scopeTools = scopeConfig.tools as Record<string, unknown>[];
     return scopeTools;
   } catch {
-    
     return allTools;
   }
 }
@@ -60,7 +59,7 @@ export function selectActiveTools(
 export function selectFallbackModels(
   provider: AiProvider,
   isConversational: boolean,
-  scope: string | undefined
+  scope: string | undefined,
 ): string[] {
   if (provider.isUserKey) {
     return [provider.model];
@@ -94,10 +93,7 @@ export function selectFallbackModels(
 /**
  * Make a single AI call
  */
-async function makeAiCall(
-  provider: AiProvider,
-  options: AiCallOptions
-): Promise<AiCallResult> {
+async function makeAiCall(provider: AiProvider, options: AiCallOptions): Promise<AiCallResult> {
   const fetchBody: Record<string, unknown> = {
     model: options.model,
     messages: options.messages,
@@ -125,7 +121,9 @@ async function makeAiCall(
       temperature: options.temperature,
       tools: Array.isArray(options.tools) ? options.tools.length : 0,
     });
-  } catch { /* ignore log failure */ }
+  } catch {
+    /* ignore log failure */
+  }
 
   const response = await fetch(provider.url, {
     method: "POST",
@@ -194,21 +192,15 @@ export async function callAiWithFallback(
   isConversational: boolean,
   scope: string | undefined,
   messages: Record<string, unknown>[],
-  allTools: Record<string, unknown>[] | undefined
+  allTools: Record<string, unknown>[] | undefined,
 ): Promise<{
   ok: boolean;
   data?: Record<string, unknown>;
   error?: string;
   statusCode?: number;
 }> {
-  const fallbackModels = selectFallbackModels(
-    provider,
-    isConversational,
-    scope
-  );
-  const activeTools = allTools
-    ? selectActiveTools(allTools, scope, isConversational)
-    : undefined;
+  const fallbackModels = selectFallbackModels(provider, isConversational, scope);
+  const activeTools = allTools ? selectActiveTools(allTools, scope, isConversational) : undefined;
 
   // Pull temperature/max_tokens from scope config so kb-supervisor and other
   // specialized scopes get their tuned generation parameters even in
@@ -220,7 +212,9 @@ export async function callAiWithFallback(
       const sc = getScopeConfig(scope);
       if (typeof sc.temperature === "number") scopeTemperature = sc.temperature;
       if (typeof sc.maxTokens === "number") scopeMaxTokens = sc.maxTokens;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   // kb-supervisor: prima del fix, max_tokens non veniva propagato affatto al
   // gateway → output troncato dal default del modello. Ora 32K esplicito per
@@ -234,8 +228,6 @@ export async function callAiWithFallback(
   }
 
   for (const tryModel of fallbackModels) {
-    
-
     const result = await makeAiCall(provider, {
       model: tryModel,
       messages,
@@ -249,11 +241,7 @@ export async function callAiWithFallback(
     }
 
     const errStatus = result.status || 0;
-    console.error(
-      `AI gateway error (${tryModel}):`,
-      errStatus,
-      result.errorText
-    );
+    console.error(`AI gateway error (${tryModel}):`, errStatus, result.errorText);
 
     // Rate limit or out of credits
     if (errStatus === 429 || errStatus === 402) {
@@ -262,9 +250,7 @@ export async function callAiWithFallback(
       // usando lo stesso protocollo OpenAI-compatible.
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (provider.isUserKey && LOVABLE_API_KEY) {
-        console.warn(
-          `[AI] user-key ${errStatus} on ${tryModel}, failing over to Lovable AI Gateway`,
-        );
+        console.warn(`[AI] user-key ${errStatus} on ${tryModel}, failing over to Lovable AI Gateway`);
         const fallbackProvider: AiProvider = {
           url: "https://ai.gateway.lovable.dev/v1/chat/completions",
           apiKey: LOVABLE_API_KEY,
@@ -281,9 +267,7 @@ export async function callAiWithFallback(
         if (fbResult.ok && fbResult.data) {
           return { ok: true, data: fbResult.data };
         }
-        console.error(
-          `[AI] Lovable failover also failed: ${fbResult.status} ${fbResult.errorText}`,
-        );
+        console.error(`[AI] Lovable failover also failed: ${fbResult.status} ${fbResult.errorText}`);
       }
       const errorMsg =
         errStatus === 429
@@ -312,8 +296,7 @@ export async function callAiWithFallback(
   console.error("[AI] All models failed");
   return {
     ok: false,
-    error:
-      "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto.",
+    error: "Tutti i modelli AI sono temporaneamente non disponibili. Riprova tra qualche minuto.",
     statusCode: 503,
   };
 }
@@ -326,20 +309,14 @@ export async function callAiForToolLoop(
   isConversational: boolean,
   scope: string | undefined,
   messages: Record<string, unknown>[],
-  allTools: Record<string, unknown>[] | undefined
+  allTools: Record<string, unknown>[] | undefined,
 ): Promise<{
   ok: boolean;
   data?: Record<string, unknown>;
   error?: string;
   statusCode?: number;
 }> {
-  return callAiWithFallback(
-    provider,
-    isConversational,
-    scope,
-    messages,
-    allTools
-  );
+  return callAiWithFallback(provider, isConversational, scope, messages, allTools);
 }
 
 /**
@@ -347,7 +324,7 @@ export async function callAiForToolLoop(
  */
 export async function callAiWithoutTools(
   provider: AiProvider,
-  messages: Record<string, unknown>[]
+  messages: Record<string, unknown>[],
 ): Promise<{
   ok: boolean;
   data?: Record<string, unknown>;

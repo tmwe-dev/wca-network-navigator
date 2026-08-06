@@ -52,11 +52,7 @@ export {
   handleGetApprovalDashboard,
 } from "./analysisTools.ts";
 
-export {
-  handleGetBlacklist,
-  handleListReminders,
-  handleGetPartnersWithoutContacts,
-} from "./dataTools.ts";
+export { handleGetBlacklist, handleListReminders, handleGetPartnersWithoutContacts } from "./dataTools.ts";
 
 export {
   handleGetInbox,
@@ -93,8 +89,4 @@ export {
   handleExecuteUiAction,
 } from "./configTools.ts";
 
-export {
-  handleEnrichPartnerWebsite,
-  handleGenerateAliases,
-  handleSuggestNextContacts,
-} from "./externalTools.ts";
+export { handleEnrichPartnerWebsite, handleGenerateAliases, handleSuggestNextContacts } from "./externalTools.ts";

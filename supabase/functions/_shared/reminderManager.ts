@@ -6,10 +6,7 @@ import { channelLabel, getPartnerStatus } from "./pipelineUtils.ts";
 
 type SupabaseClient = import("./supabaseClient.ts").AnySupabaseClient;
 
-const SEQUENCE_NEXT: Record<
-  number,
-  { nextDay: number; channel: "email" | "linkedin" } | null
-> = {
+const SEQUENCE_NEXT: Record<number, { nextDay: number; channel: "email" | "linkedin" } | null> = {
   0: { nextDay: 3, channel: "linkedin" },
   3: { nextDay: 7, channel: "linkedin" },
   7: { nextDay: 8, channel: "email" },
@@ -19,11 +16,7 @@ const SEQUENCE_NEXT: Record<
   23: null,
 };
 
-function getFollowUpDays(
-  channel: SendChannel,
-  leadStatus: string,
-  isFirstContact: boolean,
-): number {
+function getFollowUpDays(channel: SendChannel, leadStatus: string, isFirstContact: boolean): number {
   if (channel === "email") {
     if (isFirstContact) return 3;
     if (leadStatus === "negotiation") return 2;
@@ -44,11 +37,7 @@ export async function createReminder(
   if (!input.partnerId) return false;
 
   try {
-    const leadStatus = await getPartnerStatus(
-      supabase,
-      input.partnerId,
-      input.userId,
-    );
+    const leadStatus = await getPartnerStatus(supabase, input.partnerId, input.userId);
     const isFirstContact = !leadStatus || leadStatus === "first_touch_sent";
     const days = getFollowUpDays(input.channel, leadStatus, isFirstContact);
     const dueDate = new Date(Date.now() + days * 86400000);
@@ -58,9 +47,7 @@ export async function createReminder(
 
     if (nextSeq && input.channel === "email") {
       // Canonical sequence
-      const seqDueDate = new Date(
-        Date.now() + (nextSeq.nextDay - seqDay) * 86400000,
-      );
+      const seqDueDate = new Date(Date.now() + (nextSeq.nextDay - seqDay) * 86400000);
       const { error } = await supabase.from("activities").insert({
         user_id: input.userId,
         partner_id: input.partnerId,
@@ -134,8 +121,7 @@ export async function ensureNextAction(
         source_type: "partner",
         activity_type: "follow_up",
         title: "Follow-up review (auto)",
-        description:
-          "Next-action garantita post-invio. Da raffinare manualmente.",
+        description: "Next-action garantita post-invio. Da raffinare manualmente.",
         status: "pending",
         priority: "low",
         due_date: dueDate.toISOString(),

@@ -79,8 +79,13 @@ interface HoldingContactListProps {
 }
 
 export function HoldingContactList({
-  channel, onChannelChange, displayGroups, selectedMessageId,
-  totalUnread, unreadCounts, onSelectMessage,
+  channel,
+  onChannelChange,
+  displayGroups,
+  selectedMessageId,
+  totalUnread,
+  unreadCounts,
+  onSelectMessage,
 }: HoldingContactListProps) {
   return (
     <div className="w-[45%] border-r border-border/40 flex flex-col">
@@ -89,11 +94,13 @@ export function HoldingContactList({
         <Plane className="w-3 h-3 text-primary shrink-0" />
         <span className="text-[10px] font-semibold uppercase text-muted-foreground shrink-0">Centro Op.</span>
         {totalUnread > 0 && (
-          <Badge variant="destructive" className="text-[9px] px-1.5 h-4 shrink-0">{totalUnread}</Badge>
+          <Badge variant="destructive" className="text-[9px] px-1.5 h-4 shrink-0">
+            {totalUnread}
+          </Badge>
         )}
         <Tabs value={channel} onValueChange={(v) => onChannelChange(v as HoldingChannel)} className="ml-auto">
           <TabsList className="h-6">
-            {CHANNEL_TABS.map(t => (
+            {CHANNEL_TABS.map((t) => (
               <TabsTrigger key={t.key} value={t.key} className="text-[10px] gap-1 h-5 px-2">
                 {t.label}
                 {unreadCounts && unreadCounts[t.key] > 0 && (
@@ -129,12 +136,16 @@ export function HoldingContactList({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-bold text-foreground truncate uppercase">{group.companyName}</span>
+                      <span className="text-[11px] font-bold text-foreground truncate uppercase">
+                        {group.companyName}
+                      </span>
                       {group.countryCode ? (
                         <span className="text-xs shrink-0">{getCountryFlag(group.countryCode)}</span>
                       ) : null}
                       {group.isImportedContact ? (
-                        <Badge variant="outline" className="text-[8px] px-1 h-3.5 border-primary/30 text-primary">Imported</Badge>
+                        <Badge variant="outline" className="text-[8px] px-1 h-3.5 border-primary/30 text-primary">
+                          Imported
+                        </Badge>
                       ) : null}
                       {holdingSlaBadge(group.latestDate)}
                     </div>
@@ -143,7 +154,9 @@ export function HoldingContactList({
                     ) : null}
                   </div>
                   {group.unreadCount > 0 && (
-                    <Badge variant="destructive" className="text-[8px] px-1.5 h-4 shrink-0">{group.unreadCount}</Badge>
+                    <Badge variant="destructive" className="text-[8px] px-1.5 h-4 shrink-0">
+                      {group.unreadCount}
+                    </Badge>
                   )}
                 </div>
                 <div className="divide-y divide-border/10">
@@ -159,15 +172,29 @@ export function HoldingContactList({
                         className={cn(
                           "w-full text-left px-3 py-2.5 transition-colors flex gap-2.5",
                           isSelected ? "bg-primary/8" : "hover:bg-muted/30",
-                          isUnread && "border-l-2 border-primary"
+                          isUnread && "border-l-2 border-primary",
                         )}
                       >
-                        <div className={cn("w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5", channelColor)}>
-                          {isInbound ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                        <div
+                          className={cn(
+                            "w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5",
+                            channelColor,
+                          )}
+                        >
+                          {isInbound ? (
+                            <ArrowDownLeft className="w-3.5 h-3.5" />
+                          ) : (
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className={cn("text-[11px] truncate flex-1", isUnread ? "font-bold text-foreground" : "font-medium text-foreground")}>
+                            <span
+                              className={cn(
+                                "text-[11px] truncate flex-1",
+                                isUnread ? "font-bold text-foreground" : "font-medium text-foreground",
+                              )}
+                            >
                               {msg.subject || msg.from_address || "Messaggio"}
                             </span>
                             <span className="text-[9px] text-muted-foreground shrink-0">
@@ -178,7 +205,15 @@ export function HoldingContactList({
                             {(msg.body_text || "").slice(0, 160)}
                           </p>
                           <div className="flex items-center gap-1.5 mt-1">
-                            <Badge variant="outline" className={cn("text-[8px] px-1 h-3.5", isInbound ? "text-emerald-500 border-emerald-500/30" : "text-muted-foreground border-border")}>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[8px] px-1 h-3.5",
+                                isInbound
+                                  ? "text-emerald-500 border-emerald-500/30"
+                                  : "text-muted-foreground border-border",
+                              )}
+                            >
                               {isInbound ? "Ricevuto" : "Inviato"}
                             </Badge>
                             <span className="text-[9px] text-muted-foreground">{msg.from_address}</span>

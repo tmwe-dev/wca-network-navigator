@@ -11,10 +11,7 @@ export interface AuthorizedUserDirectoryRow {
 
 /** Elenco utenti autorizzati ordinato per email, proiezione ridotta. */
 export async function findAuthorizedUsersDirectory(): Promise<AuthorizedUserDirectoryRow[]> {
-  const { data, error } = await supabase
-    .from("authorized_users")
-    .select("id, email, display_name")
-    .order("email");
+  const { data, error } = await supabase.from("authorized_users").select("id, email, display_name").order("email");
   if (error) throw error;
   return data ?? [];
 }

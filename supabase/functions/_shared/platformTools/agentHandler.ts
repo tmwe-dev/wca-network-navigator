@@ -25,24 +25,15 @@ interface AgentTaskRow {
   result_summary: string | null;
 }
 
-export async function handleExecuteUIAction(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleExecuteUIAction(args: Record<string, unknown>): Promise<unknown> {
   const action = String(args.action || "toast");
   const target = String(args.target || "");
   return { success: true, ui_action: { action, target, params: args.params || {} } };
 }
 
-export async function handleCreateAgentTask(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
-  let agentQuery = supabase
-    .from("agents")
-    .select("id, name")
-    .eq("user_id", userId);
-  if (args.agent_name)
-    agentQuery = agentQuery.ilike("name", `%${escapeLike(String(args.agent_name))}%`);
+export async function handleCreateAgentTask(args: Record<string, unknown>, userId: string): Promise<unknown> {
+  let agentQuery = supabase.from("agents").select("id, name").eq("user_id", userId);
+  if (args.agent_name) agentQuery = agentQuery.ilike("name", `%${escapeLike(String(args.agent_name))}%`);
   else if (args.agent_role) agentQuery = agentQuery.eq("role", args.agent_role);
   const { data: agents } = await agentQuery.limit(1);
   if (!agents || agents.length === 0) return { error: `Agente non trovato.` };
@@ -67,10 +58,7 @@ export async function handleCreateAgentTask(
   };
 }
 
-export async function handleListAgentTasks(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleListAgentTasks(args: Record<string, unknown>, userId: string): Promise<unknown> {
   let query = supabase
     .from("agent_tasks")
     .select("id, agent_id, task_type, description, status, result_summary, created_at")
@@ -89,15 +77,11 @@ export async function handleListAgentTasks(
     agent_name: nameMap[t.agent_id] || "?",
   }));
   if (args.agent_name)
-    results = results.filter((t) =>
-      t.agent_name.toLowerCase().includes(String(args.agent_name).toLowerCase())
-    );
+    results = results.filter((t) => t.agent_name.toLowerCase().includes(String(args.agent_name).toLowerCase()));
   return { count: results.length, tasks: results };
 }
 
-export async function handleGetTeamStatus(
-  userId: string
-): Promise<unknown> {
+export async function handleGetTeamStatus(userId: string): Promise<unknown> {
   const { data: agents } = await supabase
     .from("agents")
     .select("id, name, role, is_active, stats, avatar_emoji, updated_at")
@@ -105,16 +89,12 @@ export async function handleGetTeamStatus(
     .order("name");
   if (!agents) return { error: "Nessun agente trovato" };
   const agentIds = agents.map((a: AgentRow) => a.id);
-  const { data: tasks } = await supabase
-    .from("agent_tasks")
-    .select("agent_id, status")
-    .in("agent_id", agentIds);
+  const { data: tasks } = await supabase.from("agent_tasks").select("agent_id, status").in("agent_id", agentIds);
   const taskStats: Record<string, { pending: number; running: number; completed: number; failed: number }> = {};
   for (const t of (tasks || []) as { agent_id: string; status: string }[]) {
-    if (!taskStats[t.agent_id])
-      taskStats[t.agent_id] = { pending: 0, running: 0, completed: 0, failed: 0 };
-    if (taskStats[t.agent_id][t.status as keyof typeof taskStats[string]] !== undefined)
-      taskStats[t.agent_id][t.status as keyof typeof taskStats[string]]++;
+    if (!taskStats[t.agent_id]) taskStats[t.agent_id] = { pending: 0, running: 0, completed: 0, failed: 0 };
+    if (taskStats[t.agent_id][t.status as keyof (typeof taskStats)[string]] !== undefined)
+      taskStats[t.agent_id][t.status as keyof (typeof taskStats)[string]]++;
   }
   return {
     team_size: agents.length,

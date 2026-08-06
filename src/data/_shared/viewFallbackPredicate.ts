@@ -29,8 +29,7 @@ const SCHEMA_ERROR_CODES = new Set<string>([
 // Message fragments that unambiguously indicate a schema/view-missing
 // condition even when the code is not populated (rare, but observed with
 // some PostgREST versions).
-const SCHEMA_MESSAGE_RX =
-  /(does not exist|schema cache|could not find (?:the )?(?:table|relation|column))/i;
+const SCHEMA_MESSAGE_RX = /(does not exist|schema cache|could not find (?:the )?(?:table|relation|column))/i;
 
 /**
  * True SE (e solo se) l'errore è compatibile con view/colonna non disponibile.

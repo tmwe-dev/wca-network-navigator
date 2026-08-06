@@ -79,10 +79,7 @@ export function buildCrumbs(pathname: string): readonly Crumb[] {
   parts.forEach((part, idx) => {
     acc += `/${part}`;
     const isLast = idx === parts.length - 1;
-    const label =
-      idx === 0
-        ? SECTION_LABELS[part] ?? humanize(part)
-        : SUB_LABELS[part] ?? humanize(part);
+    const label = idx === 0 ? (SECTION_LABELS[part] ?? humanize(part)) : (SUB_LABELS[part] ?? humanize(part));
     crumbs.push({ label, href: isLast ? undefined : acc });
   });
 

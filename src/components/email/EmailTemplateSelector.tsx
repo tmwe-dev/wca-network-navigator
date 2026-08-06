@@ -21,8 +21,15 @@ interface EmailTemplateSelectorProps {
 }
 
 export function EmailTemplateSelector({
-  open, onOpenChange, templateName, templateCategory, customCategory,
-  onTemplateNameChange, onTemplateCategoryChange, onCustomCategoryChange, onSave,
+  open,
+  onOpenChange,
+  templateName,
+  templateCategory,
+  customCategory,
+  onTemplateNameChange,
+  onTemplateCategoryChange,
+  onCustomCategoryChange,
+  onSave,
 }: EmailTemplateSelectorProps): React.ReactElement {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -33,7 +40,12 @@ export function EmailTemplateSelector({
         <div className="space-y-3 mt-2">
           <div>
             <Label className="text-xs">Nome template *</Label>
-            <Input value={templateName} onChange={e => onTemplateNameChange(e.target.value)} placeholder="Es. Follow-up trasporti aerei" className="h-8 text-sm" />
+            <Input
+              value={templateName}
+              onChange={(e) => onTemplateNameChange(e.target.value)}
+              placeholder="Es. Follow-up trasporti aerei"
+              className="h-8 text-sm"
+            />
           </div>
           <div>
             <Label className="text-xs">Tipologia *</Label>
@@ -55,13 +67,22 @@ export function EmailTemplateSelector({
           {templateCategory === "__new__" && (
             <div>
               <Label className="text-xs">Nome nuova categoria *</Label>
-              <Input value={customCategory} onChange={e => onCustomCategoryChange(e.target.value)} placeholder="Es. Post-fiera" className="h-8 text-sm" />
+              <Input
+                value={customCategory}
+                onChange={(e) => onCustomCategoryChange(e.target.value)}
+                placeholder="Es. Post-fiera"
+                className="h-8 text-sm"
+              />
             </div>
           )}
         </div>
         <DialogFooter>
-          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => onOpenChange(false)}>Annulla</Button>
-          <Button size="sm" className="h-8 text-xs" onClick={onSave}>Salva</Button>
+          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => onOpenChange(false)}>
+            Annulla
+          </Button>
+          <Button size="sm" className="h-8 text-xs" onClick={onSave}>
+            Salva
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

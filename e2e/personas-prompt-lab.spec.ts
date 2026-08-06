@@ -22,7 +22,11 @@ test.describe("Personas & Prompt Lab", () => {
   test("persona cards show tone information", async ({ page }) => {
     await page.goto("/v2/prompt-lab");
     // Navigate to personas if it's a sub-tab
-    await page.getByText(/Persona/).first().click().catch(() => {});
+    await page
+      .getByText(/Persona/)
+      .first()
+      .click()
+      .catch(() => {});
     await expect(page.locator("body")).not.toContainText("Errore critico");
   });
 });

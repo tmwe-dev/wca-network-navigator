@@ -15,11 +15,7 @@ import { toJsonValue } from "@/lib/typedJson";
 
 const log = createLogger("useEnqueueAction");
 
-export type EnqueueActionType =
-  | "send_email"
-  | "send_whatsapp"
-  | "send_linkedin"
-  | "linkedin_connect";
+export type EnqueueActionType = "send_email" | "send_whatsapp" | "send_linkedin" | "linkedin_connect";
 
 export interface EnqueueActionArgs {
   action_type: EnqueueActionType;
@@ -45,7 +41,9 @@ export function useEnqueueAction() {
   const enqueue = async (args: EnqueueActionArgs): Promise<EnqueueActionResult> => {
     setEnqueuing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       if (!userId) {
         toast({ title: "Sessione non valida", variant: "destructive" });

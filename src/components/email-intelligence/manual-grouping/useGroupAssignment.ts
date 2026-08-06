@@ -30,7 +30,10 @@ export function useGroupAssignment(
 
   const assignToGroup = useCallback(
     async (sender: SenderAnalysis, groupName: string, groupId: string) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return;
 
       const group = groups.find((g) => g.id === groupId);
@@ -117,13 +120,15 @@ export function useGroupAssignment(
             suggested_group: suggested,
             chosen_group: groupName,
           },
-        }).then((res) => {
-          if (res && typeof res === "object" && "lesson" in res && (res as { lesson?: string }).lesson) {
-            toast.success("AI aggiornata: nuova istruzione salvata in KB", { duration: 3500 });
-          }
-        }).catch((e) => {
-          log.warn("[learn-from-group-correction] failed", { detail: e });
-        });
+        })
+          .then((res) => {
+            if (res && typeof res === "object" && "lesson" in res && (res as { lesson?: string }).lesson) {
+              toast.success("AI aggiornata: nuova istruzione salvata in KB", { duration: 3500 });
+            }
+          })
+          .catch((e) => {
+            log.warn("[learn-from-group-correction] failed", { detail: e });
+          });
       }
     },
     [groups, onSendersChange, qc],
@@ -131,7 +136,10 @@ export function useGroupAssignment(
 
   const bulkAssignGroup = useCallback(
     async (senders: SenderAnalysis[], groupName: string, groupId: string) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return;
 
       const group = groups.find((g) => g.id === groupId);

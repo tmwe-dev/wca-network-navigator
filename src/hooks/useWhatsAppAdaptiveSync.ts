@@ -22,11 +22,7 @@ import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { markSessionExpired } from "@/lib/inbox/sessionTracker";
 import { queryKeys } from "@/lib/queryKeys";
-import {
-  getChannelContactCursor,
-  getChannelContactCursors,
-  upsertChannelMessageDedup,
-} from "@/data/channelMessages";
+import { getChannelContactCursor, getChannelContactCursors, upsertChannelMessageDedup } from "@/data/channelMessages";
 import { findOperatorByUserId } from "@/data/operators";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 import { toJsonValue } from "@/lib/typedJson";
@@ -37,12 +33,28 @@ export type AttentionLevel = 0 | 3 | 6;
 
 const OUTBOUND_PREFIXES = ["tu: ", "you: ", "tú: ", "du: ", "vous: ", "вы: ", "あなた: ", "io: "];
 const WA_UI_LABELS = new Set([
-  "gruppi", "da leggere", "ferie permessi malattie", "name", "group 1",
-  "non letti", "preferiti", "archiviate", "tutti", "chat con lucchetto",
+  "gruppi",
+  "da leggere",
+  "ferie permessi malattie",
+  "name",
+  "group 1",
+  "non letti",
+  "preferiti",
+  "archiviate",
+  "tutti",
+  "chat con lucchetto",
 ]);
 const WA_GHOST_BODIES = new Set([
-  "foto", "video", "audio", "sticker", "gif", "documento",
-  "posizione", "contatto", "messaggio", "messaggio eliminato",
+  "foto",
+  "video",
+  "audio",
+  "sticker",
+  "gif",
+  "documento",
+  "posizione",
+  "contatto",
+  "messaggio",
+  "messaggio eliminato",
 ]);
 const MAX_MESSAGES_PER_THREAD = 200;
 const MAX_THREADS_PER_RUN = 40;
@@ -94,10 +106,14 @@ export function useWhatsAppAdaptiveSync() {
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  useEffect(() => { readingRef.current = isReading; }, [isReading]);
+  useEffect(() => {
+    readingRef.current = isReading;
+  }, [isReading]);
 
   // ── Load per-contact cursors (latest created_at per contact) ──
   const loadCursors = useCallback(async (userId: string): Promise<Map<string, number>> => {
@@ -105,55 +121,58 @@ export function useWhatsAppAdaptiveSync() {
   }, []);
 
   // ── Save thread messages above cursor ──
-  const saveThreadMessages = useCallback(async (
-    contact: string,
-    messages: ThreadMessage[],
-    cursorMs: number,
-    userId: string,
-    operatorId: string,
-  ): Promise<number> => {
-    let newCount = 0;
-    for (const msg of messages) {
-      const rawText = String(msg.text || msg.lastMessage || "").trim();
-      if (!rawText) continue;
+  const saveThreadMessages = useCallback(
+    async (
+      contact: string,
+      messages: ThreadMessage[],
+      cursorMs: number,
+      userId: string,
+      operatorId: string,
+    ): Promise<number> => {
+      let newCount = 0;
+      for (const msg of messages) {
+        const rawText = String(msg.text || msg.lastMessage || "").trim();
+        if (!rawText) continue;
 
-      const { direction: detectedDir, cleanText } = detectDirection(rawText);
-      const finalDirection = (msg.direction as "inbound" | "outbound") || detectedDir;
-      const text = cleanText.trim();
-      if (!text || text.length < 2) continue;
-      const lowerText = text.toLowerCase();
-      if (WA_GHOST_BODIES.has(lowerText)) continue;
-      if (WA_UI_LABELS.has(contact.toLowerCase())) continue;
+        const { direction: detectedDir, cleanText } = detectDirection(rawText);
+        const finalDirection = (msg.direction as "inbound" | "outbound") || detectedDir;
+        const text = cleanText.trim();
+        if (!text || text.length < 2) continue;
+        const lowerText = text.toLowerCase();
+        if (WA_GHOST_BODIES.has(lowerText)) continue;
+        if (WA_UI_LABELS.has(contact.toLowerCase())) continue;
 
-      const rawTime = String(msg.timestamp || msg.time || "");
-      const parsedIso = parseWhatsAppTimestamp(rawTime);
-      const timestamp = parsedIso || new Date().toISOString();
-      const ts = new Date(timestamp).getTime();
-      // Skip if already on/before cursor (delta semantics)
-      if (cursorMs > 0 && ts <= cursorMs) continue;
+        const rawTime = String(msg.timestamp || msg.time || "");
+        const parsedIso = parseWhatsAppTimestamp(rawTime);
+        const timestamp = parsedIso || new Date().toISOString();
+        const ts = new Date(timestamp).getTime();
+        // Skip if already on/before cursor (delta semantics)
+        if (cursorMs > 0 && ts <= cursorMs) continue;
 
-      const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
-      const row = {
-        user_id: userId,
-        operator_id: operatorId,
-        channel: "whatsapp",
-        direction: finalDirection,
-        from_address: finalDirection === "outbound" ? undefined : contact,
-        to_address: finalDirection === "outbound" ? contact : undefined,
-        body_text: text,
-        message_id_external: extId,
-        raw_payload: toJsonValue(msg),
-        created_at: timestamp,
-      };
-      try {
-        const { inserted } = await upsertChannelMessageDedup(row as never);
-        if (inserted) newCount++;
-      } catch (err) {
-        log.warn("upsert.failed", { contact, error: err instanceof Error ? err.message : String(err) });
+        const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
+        const row = {
+          user_id: userId,
+          operator_id: operatorId,
+          channel: "whatsapp",
+          direction: finalDirection,
+          from_address: finalDirection === "outbound" ? undefined : contact,
+          to_address: finalDirection === "outbound" ? contact : undefined,
+          body_text: text,
+          message_id_external: extId,
+          raw_payload: toJsonValue(msg),
+          created_at: timestamp,
+        };
+        try {
+          const { inserted } = await upsertChannelMessageDedup(row as never);
+          if (inserted) newCount++;
+        } catch (err) {
+          log.warn("upsert.failed", { contact, error: err instanceof Error ? err.message : String(err) });
+        }
       }
-    }
-    return newCount;
-  }, []);
+      return newCount;
+    },
+    [],
+  );
 
   // ── The single, unified sync procedure ──
   const syncFromCursor = useCallback(async () => {
@@ -176,7 +195,9 @@ export function useWhatsAppAdaptiveSync() {
     setIsReading(true);
     setProgress(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) return;
       const userId = session.user.id;
 
@@ -283,18 +304,22 @@ export function useWhatsAppAdaptiveSync() {
       } else {
         toast.info(`WhatsApp: ${queue.length} chat verificate, nessun nuovo messaggio`);
       }
-      window.dispatchEvent(new CustomEvent("wa-sync-completed", {
-        detail: { newMessages: totalNew, threads: queue.length, errors: 0 },
-      }));
+      window.dispatchEvent(
+        new CustomEvent("wa-sync-completed", {
+          detail: { newMessages: totalNew, threads: queue.length, errors: 0 },
+        }),
+      );
     } catch (err: unknown) {
       log.warn("sync.failed", { error: err instanceof Error ? err.message : String(err) });
       if (isAuthError(err)) {
         await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
       }
       toast.error(`WhatsApp sync: ${err instanceof Error ? err.message : String(err)}`);
-      window.dispatchEvent(new CustomEvent("wa-sync-completed", {
-        detail: { newMessages: 0, threads: 0, errors: 1 },
-      }));
+      window.dispatchEvent(
+        new CustomEvent("wa-sync-completed", {
+          detail: { newMessages: 0, threads: 0, errors: 1 },
+        }),
+      );
     } finally {
       if (mountedRef.current) {
         setIsReading(false);
@@ -305,62 +330,69 @@ export function useWhatsAppAdaptiveSync() {
   }, [listSidebarChats, readThread, loadCursors, saveThreadMessages, queryClient, focusedChat]);
 
   // ── Single-thread sync (Chat Mode) ──
-  const syncSingleThread = useCallback(async (contact: string): Promise<number> => {
-    if (!isAvailable || !isAuthenticated) return 0;
-    if (readingRef.current) return 0;
-    let guard!: import("@/lib/syncGuard").GuardToken;
-    try {
-      guard = tryAcquire("whatsapp", `Chat: ${contact}`);
-    } catch (e) {
-      if (e instanceof SyncGuardBusyError) {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "whatsapp" } }));
+  const syncSingleThread = useCallback(
+    async (contact: string): Promise<number> => {
+      if (!isAvailable || !isAuthenticated) return 0;
+      if (readingRef.current) return 0;
+      let guard!: import("@/lib/syncGuard").GuardToken;
+      try {
+        guard = tryAcquire("whatsapp", `Chat: ${contact}`);
+      } catch (e) {
+        if (e instanceof SyncGuardBusyError) {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "whatsapp" } }));
+          }
+          return 0;
+        }
+        throw e;
+      }
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) return 0;
+        const userId = session.user.id;
+        const opRow = await findOperatorByUserId(userId);
+        const operatorId = opRow?.id;
+        if (!operatorId) return 0;
+
+        // Cursor del solo contatto: prendi il created_at più recente in DB.
+        const lower = contact.toLowerCase().trim();
+        const cursorMs = await getChannelContactCursor(userId, "whatsapp", lower);
+
+        await throttle("whatsapp", "open", `Apri chat: ${contact}`);
+        const threadRes = await readThread(contact, 60);
+        if (!threadRes.success || !Array.isArray(threadRes.messages)) return 0;
+        await throttle("whatsapp", "read", `Leggo messaggi: ${contact}`);
+        const newCount = await saveThreadMessages(
+          contact,
+          threadRes.messages as ThreadMessage[],
+          cursorMs,
+          userId,
+          operatorId,
+        );
+        if (newCount > 0) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+          queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+          window.dispatchEvent(
+            new CustomEvent("wa-sync-completed", {
+              detail: { newMessages: newCount, threads: 1, errors: 0, mode: "chat" },
+            }),
+          );
+        }
+        return newCount;
+      } catch (err) {
+        log.warn("chat_mode.tick.failed", { error: err instanceof Error ? err.message : String(err) });
+        if (isAuthError(err)) {
+          await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
         }
         return 0;
+      } finally {
+        guard.release();
       }
-      throw e;
-    }
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return 0;
-      const userId = session.user.id;
-      const opRow = await findOperatorByUserId(userId);
-      const operatorId = opRow?.id;
-      if (!operatorId) return 0;
-
-      // Cursor del solo contatto: prendi il created_at più recente in DB.
-      const lower = contact.toLowerCase().trim();
-      const cursorMs = await getChannelContactCursor(userId, "whatsapp", lower);
-
-      await throttle("whatsapp", "open", `Apri chat: ${contact}`);
-      const threadRes = await readThread(contact, 60);
-      if (!threadRes.success || !Array.isArray(threadRes.messages)) return 0;
-      await throttle("whatsapp", "read", `Leggo messaggi: ${contact}`);
-      const newCount = await saveThreadMessages(
-        contact,
-        threadRes.messages as ThreadMessage[],
-        cursorMs,
-        userId,
-        operatorId,
-      );
-      if (newCount > 0) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
-        queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
-        window.dispatchEvent(new CustomEvent("wa-sync-completed", {
-          detail: { newMessages: newCount, threads: 1, errors: 0, mode: "chat" },
-        }));
-      }
-      return newCount;
-    } catch (err) {
-      log.warn("chat_mode.tick.failed", { error: err instanceof Error ? err.message : String(err) });
-      if (isAuthError(err)) {
-        await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
-      }
-      return 0;
-    } finally {
-      guard.release();
-    }
-  }, [isAvailable, isAuthenticated, readThread, saveThreadMessages, queryClient]);
+    },
+    [isAvailable, isAuthenticated, readThread, saveThreadMessages, queryClient],
+  );
 
   const focusOn = useCallback((contact: string | null) => {
     setFocusedChat(contact);

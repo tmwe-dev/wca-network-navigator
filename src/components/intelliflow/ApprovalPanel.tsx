@@ -20,7 +20,16 @@ interface ApprovalPanelProps {
   onCancel: () => void;
 }
 
-const ApprovalPanel = ({ visible, title, description, details, governance, onApprove, onModify, onCancel }: ApprovalPanelProps) => (
+const ApprovalPanel = ({
+  visible,
+  title,
+  description,
+  details,
+  governance,
+  onApprove,
+  onModify,
+  onCancel,
+}: ApprovalPanelProps) => (
   <AnimatePresence>
     {visible && (
       <motion.div
@@ -47,7 +56,13 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
         {details && details.length > 0 && (
           <div className="mb-4 ml-6 space-y-1.5">
             {details.map((d, i) => (
-              <motion.div key={d.label} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.06, ease }} className="flex items-center justify-between text-[11px]">
+              <motion.div
+                key={d.label}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 + i * 0.06, ease }}
+                className="flex items-center justify-between text-[11px]"
+              >
                 <span className="text-muted-foreground">{d.label}</span>
                 <span className="text-foreground font-mono text-[10px]">{d.value}</span>
               </motion.div>
@@ -56,7 +71,13 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
         )}
 
         {governance && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, ease }} className="mb-4 ml-6 flex items-center gap-3 py-2 px-3 rounded-lg" style={{ background: "hsl(var(--success) / 0.03)", border: "1px solid hsl(var(--success) / 0.05)" }}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, ease }}
+            className="mb-4 ml-6 flex items-center gap-3 py-2 px-3 rounded-lg"
+            style={{ background: "hsl(var(--success) / 0.03)", border: "1px solid hsl(var(--success) / 0.05)" }}
+          >
             <div className="flex items-center gap-1.5">
               <div className="w-1 h-1 rounded-full bg-success/40" />
               <span className="text-[8px] text-success font-mono tracking-wider">{governance.role}</span>
@@ -69,15 +90,30 @@ const ApprovalPanel = ({ visible, title, description, details, governance, onApp
         )}
 
         <div className="flex items-center gap-2 ml-6">
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onApprove} className="text-[11px] px-4 py-2 rounded-xl bg-success/8 text-success hover:bg-success/12 hover:text-success transition-all duration-500 flex items-center gap-1.5">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onApprove}
+            className="text-[11px] px-4 py-2 rounded-xl bg-success/8 text-success hover:bg-success/12 hover:text-success transition-all duration-500 flex items-center gap-1.5"
+          >
             <CheckCircle2 className="w-3 h-3" /> Conferma
           </motion.button>
           {onModify && (
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onModify} className="text-[11px] px-4 py-2 rounded-xl text-muted-foreground hover:text-muted-foreground hover:bg-secondary/[0.04] transition-all duration-500 flex items-center gap-1.5">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onModify}
+              className="text-[11px] px-4 py-2 rounded-xl text-muted-foreground hover:text-muted-foreground hover:bg-secondary/[0.04] transition-all duration-500 flex items-center gap-1.5"
+            >
               <Pencil className="w-3 h-3" /> Modifica
             </motion.button>
           )}
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onCancel} className="text-[11px] px-3 py-2 rounded-xl text-muted-foreground hover:text-muted-foreground transition-all duration-500">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onCancel}
+            className="text-[11px] px-3 py-2 rounded-xl text-muted-foreground hover:text-muted-foreground transition-all duration-500"
+          >
             <X className="w-3 h-3" />
           </motion.button>
         </div>

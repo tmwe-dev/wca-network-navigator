@@ -72,11 +72,9 @@ Deno.serve(async (req) => {
     }
 
     // deno-lint-ignore no-explicit-any
-  const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // Fetch the pending action
     const { data: action, error: fetchErr } = await supabase
@@ -110,7 +108,14 @@ Deno.serve(async (req) => {
     const payload = typedAction.action_payload ?? typedAction.context ?? {};
 
     // LOVABLE-93: Refresh context data for reply-type actions before execution
-    const replyActionTypes = ["send_email", "send_proposal", "reply_interested", "reply_to_question", "handle_complaint", "send_graceful_close"];
+    const replyActionTypes = [
+      "send_email",
+      "send_proposal",
+      "reply_interested",
+      "reply_to_question",
+      "handle_complaint",
+      "send_graceful_close",
+    ];
     if (replyActionTypes.includes(typedAction.action_type)) {
       const refreshedPayload = await refreshActionContext(supabase, typedAction, payload);
       Object.assign(payload, refreshedPayload);
@@ -126,11 +131,14 @@ Deno.serve(async (req) => {
     }
 
     // Update pending action
-    await supabase.from("ai_pending_actions").update({
-      status: result.success ? "executed" : "failed",
-      executed_at: new Date().toISOString(),
-      execution_log: result,
-    }).eq("id", pending_action_id);
+    await supabase
+      .from("ai_pending_actions")
+      .update({
+        status: result.success ? "executed" : "failed",
+        executed_at: new Date().toISOString(),
+        execution_log: result,
+      })
+      .eq("id", pending_action_id);
 
     // LOVABLE-93: formato audit unificato via logSupervisorAudit
     await logSupervisorAudit(supabase, {
@@ -147,7 +155,6 @@ Deno.serve(async (req) => {
 
     endMetrics(metrics, result.success, result.success ? 200 : 500);
     return new Response(JSON.stringify(result), { status: result.success ? 200 : 500, headers });
-
   } catch (error: unknown) {
     logEdgeError("pending-action-executor", error);
     endMetrics(metrics, false, 500);
@@ -160,7 +167,7 @@ async function refreshActionContext(
   // deno-lint-ignore no-explicit-any
   supabase: ReturnType<typeof createClient>,
   action: PendingAction,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const refreshed: Record<string, unknown> = {};
 
@@ -182,11 +189,7 @@ async function refreshActionContext(
   // Reload partner lead_status if partner_id is available
   const partnerId = action.partner_id ?? (payload.partner_id as string | undefined);
   if (partnerId) {
-    const { data: partner } = await supabase
-      .from("partners")
-      .select("lead_status")
-      .eq("id", partnerId)
-      .maybeSingle();
+    const { data: partner } = await supabase.from("partners").select("lead_status").eq("id", partnerId).maybeSingle();
 
     if (partner) {
       refreshed._fresh_lead_status = partner.lead_status;
@@ -203,7 +206,7 @@ async function executeAction(
   // deno-lint-ignore no-explicit-any
   supabase: ReturnType<typeof createClient>,
   action: PendingAction,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ): Promise<ExecutionResult> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -226,7 +229,11 @@ async function executeAction(
         const err = await resp.text();
         return { success: false, action_type: action.action_type, detail: `send-email failed: ${resp.status} ${err}` };
       }
-      return { success: true, action_type: action.action_type, detail: `Email sent to ${payload.to ?? payload.recipient_email}` };
+      return {
+        success: true,
+        action_type: action.action_type,
+        detail: `Email sent to ${payload.to ?? payload.recipient_email}`,
+      };
     }
 
     case "send_whatsapp":
@@ -235,7 +242,8 @@ async function executeAction(
       return {
         success: false,
         action_type: action.action_type,
-        detail: "Canale browser-only (v3.9.56). Approva da PendingActionsPanel: l'invio parte dal client via estensione.",
+        detail:
+          "Canale browser-only (v3.9.56). Approva da PendingActionsPanel: l'invio parte dal client via estensione.",
       };
 
     case "schedule_followup": {
@@ -247,7 +255,11 @@ async function executeAction(
         status: "pending",
       });
       if (error) return { success: false, action_type: action.action_type, detail: error.message };
-      return { success: true, action_type: action.action_type, detail: `Follow-up scheduled for ${payload.contact_id}` };
+      return {
+        success: true,
+        action_type: action.action_type,
+        detail: `Follow-up scheduled for ${payload.contact_id}`,
+      };
     }
 
     case "create_reminder": {
@@ -271,12 +283,22 @@ async function executeAction(
       const partnerId = action.partner_id ?? payload.partner_id;
       if (!partnerId) return { success: false, action_type: action.action_type, detail: "No partner_id" };
       const leadPM = new LeadProcessManager(supabase);
-      const transResult = await leadPM.requestTransition(partnerId as string, action.user_id, payload.new_status as LeadStatus, {
-        trigger: `Pending action update_lead_status approvata`,
-        actor: { type: "ai_agent", name: "pending-action-executor" },
-        decisionOrigin: "ai_approved",
-      });
-      if (!transResult.applied) return { success: false, action_type: action.action_type, detail: transResult.blockedReason || "Transition blocked" };
+      const transResult = await leadPM.requestTransition(
+        partnerId as string,
+        action.user_id,
+        payload.new_status as LeadStatus,
+        {
+          trigger: `Pending action update_lead_status approvata`,
+          actor: { type: "ai_agent", name: "pending-action-executor" },
+          decisionOrigin: "ai_approved",
+        },
+      );
+      if (!transResult.applied)
+        return {
+          success: false,
+          action_type: action.action_type,
+          detail: transResult.blockedReason || "Transition blocked",
+        };
       return { success: true, action_type: action.action_type, detail: `Lead status → ${payload.new_status}` };
     }
 

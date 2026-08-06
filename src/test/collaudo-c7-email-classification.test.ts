@@ -12,9 +12,7 @@
  * IMPORTA CODICE REALE: src/lib/emailClassification.ts
  */
 import { describe, it, expect } from "vitest";
-import {
-  parseClassificationResponse,
-} from "@/lib/emailClassification";
+import { parseClassificationResponse } from "@/lib/emailClassification";
 
 // ══════════════════════════════════════════════════════════
 // TEST 1: Parsing base — JSON pulito

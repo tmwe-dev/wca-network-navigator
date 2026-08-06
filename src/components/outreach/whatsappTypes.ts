@@ -15,10 +15,20 @@ export function extractPhoneFromThread(thread: ChatThread): string | null {
   for (const msg of thread.messages) {
     const payload = msg.raw_payload as Record<string, unknown> | null | undefined;
     if (!payload) continue;
-    if (typeof payload.phone === "string" && payload.phone.replace(/\D/g, "").length >= 5) return payload.phone.replace(/\D/g, "");
-    if (typeof payload.jid === "string") { const m = payload.jid.match(/^(\d{5,})@/); if (m) return m[1]; }
-    if (typeof payload.sender === "string") { const d = payload.sender.replace(/\D/g, ""); if (d.length >= 5) return d; }
-    if (msg.direction === "inbound" && typeof msg.from_address === "string") { const d = msg.from_address.replace(/\D/g, ""); if (d.length >= 5) return d; }
+    if (typeof payload.phone === "string" && payload.phone.replace(/\D/g, "").length >= 5)
+      return payload.phone.replace(/\D/g, "");
+    if (typeof payload.jid === "string") {
+      const m = payload.jid.match(/^(\d{5,})@/);
+      if (m) return m[1];
+    }
+    if (typeof payload.sender === "string") {
+      const d = payload.sender.replace(/\D/g, "");
+      if (d.length >= 5) return d;
+    }
+    if (msg.direction === "inbound" && typeof msg.from_address === "string") {
+      const d = msg.from_address.replace(/\D/g, "");
+      if (d.length >= 5) return d;
+    }
   }
   const contactDigits = thread.contact.replace(/\D/g, "");
   if (contactDigits.length >= 5) return contactDigits;

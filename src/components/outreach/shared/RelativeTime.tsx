@@ -32,13 +32,20 @@ export function RelativeTime({ date, prefix, className, highlightOverdue }: Rela
       title={full}
       className={cn("text-[10px]", isOverdue ? "text-destructive font-semibold" : "text-muted-foreground", className)}
     >
-      {prefix ? `${prefix} ` : ""}{text}
+      {prefix ? `${prefix} ` : ""}
+      {text}
     </span>
   );
 }
 
 /** Versione assoluta sempre visibile: "24 apr 09:20". */
-export function AbsoluteTime({ date, className }: { readonly date: string | Date | null | undefined; readonly className?: string }) {
+export function AbsoluteTime({
+  date,
+  className,
+}: {
+  readonly date: string | Date | null | undefined;
+  readonly className?: string;
+}) {
   if (!date) return null;
   const d = typeof date === "string" ? new Date(date) : date;
   if (isNaN(d.getTime())) return null;

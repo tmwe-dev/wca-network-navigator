@@ -16,7 +16,8 @@
 import { createLogger } from "@/lib/log";
 const log = createLogger("suggestedImprovements");
 
-const TABLE_WARNING = 'Table "suggested_improvements" is not included in supabase/types.ts. Table exists in DB but type definitions are missing.';
+const TABLE_WARNING =
+  'Table "suggested_improvements" is not included in supabase/types.ts. Table exists in DB but type definitions are missing.';
 
 export type SuggestionType = "kb_rule" | "prompt_adjustment" | "user_preference";
 export type SuggestionPriority = "low" | "medium" | "high" | "critical";
@@ -69,10 +70,7 @@ export interface CreateSuggestionInput {
  *
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
-export async function createSuggestion(
-  _userId: string,
-  _input: CreateSuggestionInput,
-): Promise<SuggestedImprovement> {
+export async function createSuggestion(_userId: string, _input: CreateSuggestionInput): Promise<SuggestedImprovement> {
   log.warn(TABLE_WARNING);
   throw new Error('createSuggestion: Table "suggested_improvements" not available in schema');
 }
@@ -121,11 +119,7 @@ export async function listUserPreferences(_userId: string): Promise<SuggestedImp
  * Approva un suggerimento (solo admin).
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
-export async function approveSuggestion(
-  _id: string,
-  _adminId: string,
-  _note?: string,
-): Promise<void> {
+export async function approveSuggestion(_id: string, _adminId: string, _note?: string): Promise<void> {
   log.warn(TABLE_WARNING);
   throw new Error('approveSuggestion: Table "suggested_improvements" not available in schema');
 }
@@ -134,11 +128,7 @@ export async function approveSuggestion(
  * Rifiuta un suggerimento (solo admin).
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
-export async function rejectSuggestion(
-  _id: string,
-  _adminId: string,
-  _note?: string,
-): Promise<void> {
+export async function rejectSuggestion(_id: string, _adminId: string, _note?: string): Promise<void> {
   log.warn(TABLE_WARNING);
   throw new Error('rejectSuggestion: Table "suggested_improvements" not available in schema');
 }
@@ -164,10 +154,7 @@ export async function editAndApprove(
  * Chiamata al termine del salvataggio del run Migliora tutto.
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
-export async function markSuggestionsApplied(
-  ids: string[],
-  _runId: string,
-): Promise<void> {
+export async function markSuggestionsApplied(ids: string[], _runId: string): Promise<void> {
   if (ids.length === 0) return;
   log.warn(TABLE_WARNING);
 }

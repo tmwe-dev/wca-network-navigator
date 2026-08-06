@@ -17,9 +17,7 @@ interface ChannelMessageRow {
   created_at: string;
 }
 
-async function resolvePartnerId(
-  args: Record<string, unknown>
-): Promise<{ id: string; name: string } | null> {
+async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
   if (args.partner_id) {
     const { data } = await supabase
       .from("partners")
@@ -40,10 +38,7 @@ async function resolvePartnerId(
   return null;
 }
 
-export async function handleGetConversationHistory(
-  args: Record<string, unknown>,
-  userId: string
-): Promise<unknown> {
+export async function handleGetConversationHistory(args: Record<string, unknown>, userId: string): Promise<unknown> {
   let pid = args.partner_id as string;
   if (!pid && args.company_name) {
     const r = await resolvePartnerId(args);
@@ -77,7 +72,7 @@ export async function handleGetConversationHistory(
         from: e.from_address ?? undefined,
         date: e.email_date || e.created_at,
         preview: e.body_text?.substring(0, 200),
-      })
+      }),
     );
     const { data: acts } = await supabase
       .from("activities")
@@ -92,7 +87,7 @@ export async function handleGetConversationHistory(
         title: a.title,
         status: a.status,
         date: a.created_at,
-      })
+      }),
     );
     const { data: ints } = await supabase
       .from("interactions")
@@ -100,14 +95,13 @@ export async function handleGetConversationHistory(
       .eq("partner_id", pid)
       .order("created_at", { ascending: false })
       .limit(30);
-    (ints || []).forEach(
-      (i: { interaction_type: string; subject: string; created_at: string }) =>
-        timeline.push({
-          type: "interaction",
-          subtype: i.interaction_type,
-          title: i.subject,
-          date: i.created_at,
-        })
+    (ints || []).forEach((i: { interaction_type: string; subject: string; created_at: string }) =>
+      timeline.push({
+        type: "interaction",
+        subtype: i.interaction_type,
+        title: i.subject,
+        date: i.created_at,
+      }),
     );
   }
   timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

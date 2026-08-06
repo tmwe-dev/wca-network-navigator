@@ -7,7 +7,11 @@ import { aiFetch } from "./aiCallShim.ts";
 
 function extractErrorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
-  try { return String(e); } catch { return "unknown error"; }
+  try {
+    return String(e);
+  } catch {
+    return "unknown error";
+  }
 }
 
 export async function compressMessages(
@@ -30,8 +34,9 @@ export async function compressMessages(
     .limit(1);
 
   const olderMessages = messages.slice(0, messages.length - LIVE_WINDOW);
-  generateAndSaveSummary(supabase, olderMessages, apiKey, userId)
-    .catch((e: unknown) => console.warn("Background summary failed:", extractErrorMessage(e)));
+  generateAndSaveSummary(supabase, olderMessages, apiKey, userId).catch((e: unknown) =>
+    console.warn("Background summary failed:", extractErrorMessage(e)),
+  );
 
   const summaryRow = (existingSummary as Record<string, unknown>[] | null)?.[0];
   if (summaryRow?.content) {

@@ -2,10 +2,7 @@
  * HistoryTab — last 10 channel_messages for selected recipient (read-only).
  */
 import { useQuery } from "@tanstack/react-query";
-import {
-  fetchRecipientHistory,
-  type RecipientHistoryRow,
-} from "@/v2/io/supabase/queries/channel-messages";
+import { fetchRecipientHistory, type RecipientHistoryRow } from "@/v2/io/supabase/queries/channel-messages";
 import { isOk } from "@/v2/core/domain/result";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare } from "lucide-react";
@@ -33,7 +30,8 @@ export function HistoryTab({ recipient }: Props) {
     },
   });
 
-  if (!recipient) return <div className="text-[11px] text-muted-foreground py-4 text-center">Seleziona un destinatario.</div>;
+  if (!recipient)
+    return <div className="text-[11px] text-muted-foreground py-4 text-center">Seleziona un destinatario.</div>;
 
   return (
     <div className="space-y-2 text-xs">
@@ -58,15 +56,23 @@ export function HistoryTab({ recipient }: Props) {
         {query.data?.map((m) => (
           <div key={m.id} className="rounded border border-border/60 bg-card p-2">
             <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-              <Badge variant="outline" className="text-[9px]">{m.channel}</Badge>
+              <Badge variant="outline" className="text-[9px]">
+                {m.channel}
+              </Badge>
               <Badge variant={m.direction === "inbound" ? "secondary" : "outline"} className="text-[9px]">
                 {m.direction === "inbound" ? "↓ inbound" : "↑ outbound"}
               </Badge>
-              <span className="text-muted-foreground">{m.email_date ? new Date(m.email_date).toLocaleString("it-IT") : new Date(m.created_at).toLocaleString("it-IT")}</span>
+              <span className="text-muted-foreground">
+                {m.email_date
+                  ? new Date(m.email_date).toLocaleString("it-IT")
+                  : new Date(m.created_at).toLocaleString("it-IT")}
+              </span>
               {m.from_address && <span className="text-muted-foreground truncate">· {m.from_address}</span>}
             </div>
             {m.subject && <div className="font-medium text-[11px] mt-1 truncate">{m.subject}</div>}
-            {m.body_text && <div className="text-xs text-foreground line-clamp-2 mt-0.5">{m.body_text.slice(0, 200)}</div>}
+            {m.body_text && (
+              <div className="text-xs text-foreground line-clamp-2 mt-0.5">{m.body_text.slice(0, 200)}</div>
+            )}
           </div>
         ))}
       </div>

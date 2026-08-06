@@ -39,7 +39,7 @@ export function ActivityList({ partnerId }: ActivityListProps) {
             key={a.id}
             className={cn(
               "flex items-center gap-2 p-2 rounded-lg text-sm transition-colors",
-              a.status === "completed" ? "opacity-50" : "hover:bg-accent/50"
+              a.status === "completed" ? "opacity-50" : "hover:bg-accent/50",
             )}
           >
             <button

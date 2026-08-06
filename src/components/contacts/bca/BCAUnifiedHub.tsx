@@ -17,8 +17,18 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
-  Building2, CreditCard, Brain, Search, RefreshCw, CheckSquare, Plane,
-  Clock, X, LayoutList, LayoutGrid, Rows3,
+  Building2,
+  CreditCard,
+  Brain,
+  Search,
+  RefreshCw,
+  CheckSquare,
+  Plane,
+  Clock,
+  X,
+  LayoutList,
+  LayoutGrid,
+  Rows3,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { BCAQualityDashboard } from "@/components/operations/bca/BCAQualityDashboard";
@@ -71,7 +81,7 @@ export default function BCAUnifiedHub() {
     for (const c of cards) m.set(c.id, c);
     return m;
   }, [cards]);
-  const detailCard = detailCardId ? cardsById.get(detailCardId) ?? null : null;
+  const detailCard = detailCardId ? (cardsById.get(detailCardId) ?? null) : null;
   const resolveCard = (id: string) => cardsById.get(id);
 
   // Auto-selezione del primo biglietto della lista filtrata: stesso pattern
@@ -80,7 +90,10 @@ export default function BCAUnifiedHub() {
   const autoFocusedRef = useRef<string | null>(null);
   useEffect(() => {
     if (isLoading) return;
-    if (detailCardId) { autoFocusedRef.current = null; return; }
+    if (detailCardId) {
+      autoFocusedRef.current = null;
+      return;
+    }
     if (selectedBca.size > 0) return;
     const first = g.filtered[0];
     if (!first) return;
@@ -92,7 +105,9 @@ export default function BCAUnifiedHub() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const data = await invokeEdge<Record<string, number>>("sync-business-cards", { context: "BCAUnifiedHub.sync_business_cards" });
+      const data = await invokeEdge<Record<string, number>>("sync-business-cards", {
+        context: "BCAUnifiedHub.sync_business_cards",
+      });
       toast.success(`Sincronizzazione completata: ${data?.upserted ?? 0} biglietti aggiornati`);
       qc.invalidateQueries({ queryKey: queryKeys.businessCards.all });
     } catch (e: unknown) {
@@ -102,18 +117,23 @@ export default function BCAUnifiedHub() {
     }
   };
 
-  const allFilteredIds = useMemo(() => g.filtered.map(c => c.id), [g.filtered]);
-  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedBca.has(id));
+  const allFilteredIds = useMemo(() => g.filtered.map((c) => c.id), [g.filtered]);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedBca.has(id));
 
   const toggleBca = (id: string) => {
-    setSelectedBca(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+    setSelectedBca((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
   const toggleAll = () => {
     setSelectedBca(allSelected ? new Set() : new Set(allFilteredIds));
   };
 
   const handleSendToCockpit = async () => {
-    const items = Array.from(selectedBca).map(id => ({
+    const items = Array.from(selectedBca).map((id) => ({
       sourceType: "business_card",
       sourceId: id,
       partnerId: cardsById.get(id)?.matched_partner_id || undefined,
@@ -122,7 +142,10 @@ export default function BCAUnifiedHub() {
       const count = await sendToCockpit.mutateAsync(items);
       toast.success(`${count} biglietti inviati al Cockpit`);
       setSelectedBca(new Set());
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nell'invio al Cockpit"); }
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      toast.error("Errore nell'invio al Cockpit");
+    }
   };
 
   const handleBcaDeepSearch = () => {
@@ -131,7 +154,10 @@ export default function BCAUnifiedHub() {
       const card = cardsById.get(id);
       if (card?.matched_partner_id) partnerIds.add(card.matched_partner_id);
     }
-    if (partnerIds.size === 0) { toast.warning("Nessun biglietto associato a un partner."); return; }
+    if (partnerIds.size === 0) {
+      toast.warning("Nessun biglietto associato a un partner.");
+      return;
+    }
     deepSearch.start(Array.from(partnerIds), true);
   };
 
@@ -150,7 +176,11 @@ export default function BCAUnifiedHub() {
   };
 
   if (isLoading) {
-    return <div className="flex-1 flex items-center justify-center"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
   }
 
   const bulkMode = selectedBca.size >= 2;
@@ -164,15 +194,23 @@ export default function BCAUnifiedHub() {
         <div className="flex items-center gap-2 pt-2 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <input type="text" value={g.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-7 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40" />
+            <input
+              type="text"
+              value={g.search}
+              onChange={(e) => g.setSearch(e.target.value)}
+              placeholder="Cerca biglietto..."
+              className="w-full h-7 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
           </div>
           <TooltipProvider delayDuration={200}>
             <div className="inline-flex items-center gap-0.5 rounded-md border border-border/40 bg-muted/30 p-0.5">
-              {([
-                ["compact", LayoutList, "Compatta"],
-                ["card", LayoutGrid, "Media"],
-                ["expanded", Rows3, "Espansa"],
-              ] as const).map(([mode, Icon, label]) => (
+              {(
+                [
+                  ["compact", LayoutList, "Compatta"],
+                  ["card", LayoutGrid, "Media"],
+                  ["expanded", Rows3, "Espansa"],
+                ] as const
+              ).map(([mode, Icon, label]) => (
                 <Tooltip key={mode}>
                   <TooltipTrigger asChild>
                     <button
@@ -188,12 +226,22 @@ export default function BCAUnifiedHub() {
                       <Icon className="w-3.5 h-3.5" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-[10px]">{label}</TooltipContent>
+                  <TooltipContent side="bottom" className="text-[10px]">
+                    {label}
+                  </TooltipContent>
                 </Tooltip>
               ))}
             </div>
           </TooltipProvider>
-          <button onClick={toggleAll} className={cn("flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-all", allSelected ? "bg-primary/15 text-primary border-primary/30" : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
+          <button
+            onClick={toggleAll}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-all",
+              allSelected
+                ? "bg-primary/15 text-primary border-primary/30"
+                : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50",
+            )}
+          >
             <CheckSquare className="w-3 h-3" /> {allSelected ? "Deseleziona" : "Tutti"}
           </button>
           <span className="text-xs text-muted-foreground">
@@ -203,48 +251,94 @@ export default function BCAUnifiedHub() {
           {selectedBca.size > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap">
               <UnifiedBulkActionBar
-                count={selectedBca.size} sourceType="business_card"
+                count={selectedBca.size}
+                sourceType="business_card"
                 onClear={() => setSelectedBca(new Set())}
                 onCockpit={handleSendToCockpit}
                 onDeepSearch={handleBcaDeepSearch}
                 onDelete={handleBulkDelete}
                 onWorkspace={() => {
-                  const selected = g.filtered.filter(c => selectedBca.has(c.id) && c.email);
-                  if (selected.length === 0) { toast.warning("Nessun contatto con email"); return; }
-                  navigate("/v2/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
+                  const selected = g.filtered.filter((c) => selectedBca.has(c.id) && c.email);
+                  if (selected.length === 0) {
+                    toast.warning("Nessun contatto con email");
+                    return;
+                  }
+                  navigate("/v2/email-composer", {
+                    state: {
+                      partnerIds: selected.filter((c) => c.matched_partner_id).map((c) => c.matched_partner_id),
+                    },
+                  });
                 }}
                 onLinkedIn={() => {
-                  const selected = g.filtered.filter(c => selectedBca.has(c.id));
-                  const first = selected.find(c => c.contact_name);
-                  if (first) { window.open(`https://www.google.com/search?q=${encodeURIComponent(`${first.contact_name} ${first.company_name || ""} LinkedIn`)}`, "_blank"); }
+                  const selected = g.filtered.filter((c) => selectedBca.has(c.id));
+                  const first = selected.find((c) => c.contact_name);
+                  if (first) {
+                    window.open(
+                      `https://www.google.com/search?q=${encodeURIComponent(`${first.contact_name} ${first.company_name || ""} LinkedIn`)}`,
+                      "_blank",
+                    );
+                  }
                 }}
                 onCampaign={() => {
-                  const selected = g.filtered.filter(c => selectedBca.has(c.id) && c.email);
-                  if (selected.length === 0) { toast.warning("Nessun contatto con email"); return; }
-                  navigate("/v2/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
+                  const selected = g.filtered.filter((c) => selectedBca.has(c.id) && c.email);
+                  if (selected.length === 0) {
+                    toast.warning("Nessun contatto con email");
+                    return;
+                  }
+                  navigate("/v2/email-composer", {
+                    state: {
+                      partnerIds: selected.filter((c) => c.matched_partner_id).map((c) => c.matched_partner_id),
+                    },
+                  });
                 }}
-                withEmail={g.filtered.filter(c => selectedBca.has(c.id) && c.email).length}
-                withPhone={g.filtered.filter(c => selectedBca.has(c.id) && (c.phone || c.mobile)).length}
+                withEmail={g.filtered.filter((c) => selectedBca.has(c.id) && c.email).length}
+                withPhone={g.filtered.filter((c) => selectedBca.has(c.id) && (c.phone || c.mobile)).length}
               />
             </div>
           )}
           <div className="ml-auto flex items-center gap-1.5">
-            <Button variant={timelineMode ? "default" : "outline"} size="sm" className="h-7 text-[11px] gap-1" onClick={() => setTimelineMode(!timelineMode)} title="Timeline evento">
+            <Button
+              variant={timelineMode ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-[11px] gap-1"
+              onClick={() => setTimelineMode(!timelineMode)}
+              title="Timeline evento"
+            >
               <Clock className="w-3 h-3" /> Timeline
             </Button>
-            <Button size="sm" className="h-7 text-[11px] gap-1" variant="outline" onClick={handleSync} disabled={syncing} title="Sincronizza biglietti">
+            <Button
+              size="sm"
+              className="h-7 text-[11px] gap-1"
+              variant="outline"
+              onClick={handleSync}
+              disabled={syncing}
+              title="Sincronizza biglietti"
+            >
               <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
             </Button>
           </div>
         </div>
 
-        <DeepSearchCanvas open={deepSearch.canvasOpen} onClose={() => deepSearch.setCanvasOpen(false)} onStop={() => deepSearch.stop()} current={deepSearch.current} results={deepSearch.results} running={deepSearch.running} isDark={true} />
+        <DeepSearchCanvas
+          open={deepSearch.canvasOpen}
+          onClose={() => deepSearch.setCanvasOpen(false)}
+          onStop={() => deepSearch.stop()}
+          current={deepSearch.current}
+          results={deepSearch.results}
+          running={deepSearch.running}
+          isDark={true}
+        />
 
         <BCAQualityDashboard cards={cards} />
 
         {/* Two-column body: list + detail panel */}
         <div className="flex min-h-0 flex-1 overflow-hidden gap-3">
-          <div className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain", showPanel && "border-r border-border/40 pr-3")}>
+          <div
+            className={cn(
+              "min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain",
+              showPanel && "border-r border-border/40 pr-3",
+            )}
+          >
             {timelineMode ? (
               <BCAEventTimeline cards={g.filtered} />
             ) : g.groups.length === 0 ? (
@@ -254,11 +348,28 @@ export default function BCAUnifiedHub() {
               </div>
             ) : (
               <div className="space-y-3">
-                {g.groups.map(group => (
-                  <div key={group.key} className={cn("rounded-xl border overflow-hidden transition-all", group.isMatched ? "border-primary/30 bg-primary/[0.03]" : "border-border/60 bg-card/40")}>
+                {g.groups.map((group) => (
+                  <div
+                    key={group.key}
+                    className={cn(
+                      "rounded-xl border overflow-hidden transition-all",
+                      group.isMatched ? "border-primary/30 bg-primary/[0.03]" : "border-border/60 bg-card/40",
+                    )}
+                  >
                     <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30">
-                      <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border", group.isMatched ? "border-primary/30 bg-primary/10" : "border-border/40 bg-muted/30")}>
-                        {group.logoUrl ? <OptimizedImage src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" /> : <Building2 className={cn("w-4 h-4", group.isMatched ? "text-primary" : "text-muted-foreground")} />}
+                      <div
+                        className={cn(
+                          "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border",
+                          group.isMatched ? "border-primary/30 bg-primary/10" : "border-border/40 bg-muted/30",
+                        )}
+                      >
+                        {group.logoUrl ? (
+                          <OptimizedImage src={group.logoUrl} alt="" className="w-7 h-7 rounded object-contain" />
+                        ) : (
+                          <Building2
+                            className={cn("w-4 h-4", group.isMatched ? "text-primary" : "text-muted-foreground")}
+                          />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -272,7 +383,7 @@ export default function BCAUnifiedHub() {
                               }}
                               className={cn(
                                 "text-lg leading-none flex-shrink-0 rounded hover:ring-1 hover:ring-primary/40 transition-all",
-                                g.selectedCountry === group.countryCode && "ring-1 ring-primary/60"
+                                g.selectedCountry === group.countryCode && "ring-1 ring-primary/60",
                               )}
                               aria-label={`Filtra per paese ${group.countryCode}`}
                               title={`Filtra per paese ${group.countryCode}`}
@@ -281,24 +392,44 @@ export default function BCAUnifiedHub() {
                             </button>
                           )}
                           <span className="text-sm font-semibold text-foreground truncate">{group.companyName}</span>
-                          {group.isMatched && <Badge variant="outline" className="text-[9px] bg-primary/15 text-primary border-primary/30 flex-shrink-0">WCA</Badge>}
+                          {group.isMatched && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] bg-primary/15 text-primary border-primary/30 flex-shrink-0"
+                            >
+                              WCA
+                            </Badge>
+                          )}
                           {group.hasDeepSearch && <Brain className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-                          {group.inHolding && <span title="In circuito di attesa"><Plane className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" /></span>}
+                          {group.inHolding && (
+                            <span title="In circuito di attesa">
+                              <Plane className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" />
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[10px] text-muted-foreground">{group.cards.length} contatt{group.cards.length === 1 ? "o" : "i"}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {group.cards.length} contatt{group.cards.length === 1 ? "o" : "i"}
+                        </span>
                       </div>
-                      <button onClick={() => {
-                        const ids = group.cards.map(c => c.id);
-                        const allInGroup = ids.every(id => selectedBca.has(id));
-                        setSelectedBca(prev => { const next = new Set(prev); ids.forEach(id => allInGroup ? next.delete(id) : next.add(id)); return next; });
-                      }} className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border/30 hover:bg-muted/40 transition-all">
-                        {group.cards.every(c => selectedBca.has(c.id)) ? "Deseleziona" : "Seleziona"}
+                      <button
+                        onClick={() => {
+                          const ids = group.cards.map((c) => c.id);
+                          const allInGroup = ids.every((id) => selectedBca.has(id));
+                          setSelectedBca((prev) => {
+                            const next = new Set(prev);
+                            ids.forEach((id) => (allInGroup ? next.delete(id) : next.add(id)));
+                            return next;
+                          });
+                        }}
+                        className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border/30 hover:bg-muted/40 transition-all"
+                      >
+                        {group.cards.every((c) => selectedBca.has(c.id)) ? "Deseleziona" : "Seleziona"}
                       </button>
                     </div>
 
                     {g.viewMode === "compact" ? (
                       <div className="divide-y divide-border/20">
-                        {group.cards.map(card => (
+                        {group.cards.map((card) => (
                           <BcaCompactCard
                             key={card.id}
                             card={card}
@@ -315,7 +446,7 @@ export default function BCAUnifiedHub() {
                       </div>
                     ) : g.viewMode === "expanded" ? (
                       <div className="space-y-2 p-3">
-                        {group.cards.map(card => (
+                        {group.cards.map((card) => (
                           <BcaExpandedCard
                             key={card.id}
                             card={card}
@@ -332,7 +463,7 @@ export default function BCAUnifiedHub() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 p-3">
-                        {group.cards.map(card => (
+                        {group.cards.map((card) => (
                           <BcaGridCard
                             key={card.id}
                             card={card}
@@ -360,16 +491,29 @@ export default function BCAUnifiedHub() {
                 <span className="text-xs font-medium text-muted-foreground">
                   {bulkMode ? `${selectedBca.size} biglietti selezionati` : "Dettaglio biglietto"}
                 </span>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setDetailCardId(null)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground"
+                  onClick={() => setDetailCardId(null)}
+                >
                   <X className="w-3.5 h-3.5" />
                 </Button>
               </div>
               <div className="flex-1 min-h-0 overflow-hidden">
                 {bulkMode ? (
                   <BCABulkActionsPanel
-                    cards={Array.from(selectedBca).map(id => cardsById.get(id)).filter((c): c is BusinessCardWithPartner => !!c)}
+                    cards={Array.from(selectedBca)
+                      .map((id) => cardsById.get(id))
+                      .filter((c): c is BusinessCardWithPartner => !!c)}
                     onClear={() => setSelectedBca(new Set())}
-                    onRemove={(id: string) => setSelectedBca(prev => { const n = new Set(prev); n.delete(id); return n; })}
+                    onRemove={(id: string) =>
+                      setSelectedBca((prev) => {
+                        const n = new Set(prev);
+                        n.delete(id);
+                        return n;
+                      })
+                    }
                     onCockpit={handleSendToCockpit}
                     onDeepSearch={handleBcaDeepSearch}
                     onDelete={handleBulkDelete}

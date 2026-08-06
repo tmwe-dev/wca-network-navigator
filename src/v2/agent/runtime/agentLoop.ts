@@ -116,7 +116,10 @@ async function callAgentEdge(
 ): Promise<{ message: string; toolCalls?: Array<{ name: string; arguments: Record<string, unknown>; id: string }> }> {
   const trimmed = trimContext(history);
 
-  return await invokeAi<{ message: string; toolCalls?: Array<{ name: string; arguments: Record<string, unknown>; id: string }> }>("agent-loop", {
+  return await invokeAi<{
+    message: string;
+    toolCalls?: Array<{ name: string; arguments: Record<string, unknown>; id: string }>;
+  }>("agent-loop", {
     scope: "agent",
     context: { source: "agentLoop", mode: "iteration" },
     body: { goal, history: trimmed, sessionContext },
@@ -162,7 +165,8 @@ export async function runAgentLoop(
     if (detectLoop(transcript)) {
       history.push({
         role: "system",
-        content: "⚠️ LOOP DETECTED: Hai chiamato lo stesso tool con gli stessi argomenti 3 volte. CAMBIA STRATEGIA. Prova un approccio diverso o usa un tool differente.",
+        content:
+          "⚠️ LOOP DETECTED: Hai chiamato lo stesso tool con gli stessi argomenti 3 volte. CAMBIA STRATEGIA. Prova un approccio diverso o usa un tool differente.",
       });
     }
 
@@ -221,7 +225,12 @@ export async function runAgentLoop(
         );
 
         transcript.push({ stepNumber: step, toolName: tc.name, args: tc.arguments, result, timestamp: Date.now() });
-        history.push({ role: "tool", content: JSON.stringify(result).slice(0, 4000), tool_call_id: tc.id, name: tc.name });
+        history.push({
+          role: "tool",
+          content: JSON.stringify(result).slice(0, 4000),
+          tool_call_id: tc.id,
+          name: tc.name,
+        });
       }
 
       onStep(buildState());

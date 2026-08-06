@@ -4,19 +4,19 @@ import { toRecord } from "@/lib/records";
 const log = createLogger("wcaCheckpoint");
 /**
  * WCA Timing Checkpoint — Global Gate
- * 
+ *
  * Every WCA request MUST pass through this checkpoint before executing.
  * The checkpoint enforces a minimum delay between requests (green zone = ≥15s).
  * If the elapsed time since the last request is below the green threshold,
  * the checkpoint WAITS until we reach green before returning true.
- * 
+ *
  * This is the SINGLE source of truth for WCA request timing authorization.
  */
 
-const CHECKPOINT_KEY = '__wcaCheckpoint__';
+const CHECKPOINT_KEY = "__wcaCheckpoint__";
 
 interface CheckpointState {
-  lastRequestTs: number;  // timestamp of the last WCA request (ms)
+  lastRequestTs: number; // timestamp of the last WCA request (ms)
 }
 
 function getState(): CheckpointState {
@@ -36,7 +36,6 @@ let GREEN_ZONE_SECONDS = 20;
  */
 export function setGreenZoneDelay(seconds: number): void {
   GREEN_ZONE_SECONDS = Math.max(15, Math.min(60, seconds));
-  
 }
 
 export function getGreenZoneDelay(): number {
@@ -82,18 +81,18 @@ export function resetCheckpoint(): void {
 
 /**
  * THE CHECKPOINT GATE.
- * 
+ *
  * Waits until the green zone is reached (≥15s since last request),
  * then returns true = authorized.
- * 
+ *
  * If the AbortSignal fires while waiting, returns false = denied.
- * 
+ *
  * @param signal - Optional AbortSignal for cancellation
  * @param onWaiting - Optional callback with seconds remaining (for logging)
  */
 export async function waitForGreenLight(
   signal?: AbortSignal,
-  onWaiting?: (secondsRemaining: number) => void
+  onWaiting?: (secondsRemaining: number) => void,
 ): Promise<boolean> {
   // If no previous request, immediately green
   const state = getState();
@@ -115,9 +114,19 @@ export async function waitForGreenLight(
     // Wait 1 second, then check again
     try {
       await new Promise<void>((resolve, reject) => {
-        if (signal?.aborted) { reject(new DOMException("Aborted", "AbortError")); return; }
+        if (signal?.aborted) {
+          reject(new DOMException("Aborted", "AbortError"));
+          return;
+        }
         const t = setTimeout(resolve, 1000);
-        signal?.addEventListener("abort", () => { clearTimeout(t); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
+        signal?.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(t);
+            reject(new DOMException("Aborted", "AbortError"));
+          },
+          { once: true },
+        );
       });
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });

@@ -40,12 +40,26 @@ interface CompanyListRowProps {
 }
 
 export function CompanyListRow({
-  partner, isSelected, hasBca, bcaInfo, contacts, isExpanded,
-  isBcaSource, selectedContacts, onTogglePartner, onToggleExpand, onToggleContact,
+  partner,
+  isSelected,
+  hasBca,
+  bcaInfo,
+  contacts,
+  isExpanded,
+  isBcaSource,
+  selectedContacts,
+  onTogglePartner,
+  onToggleExpand,
+  onToggleContact,
 }: CompanyListRowProps) {
   return (
     <div>
-      <div className={cn("flex items-start gap-3 p-3 hover:bg-muted/30 transition-colors", hasBca && "border-l-2 border-l-primary/60")}>
+      <div
+        className={cn(
+          "flex items-start gap-3 p-3 hover:bg-muted/30 transition-colors",
+          hasBca && "border-l-2 border-l-primary/60",
+        )}
+      >
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onTogglePartner(partner.id)}
@@ -67,14 +81,14 @@ export function CompanyListRow({
                 <TooltipContent className="max-w-xs">
                   <div className="text-xs space-y-1">
                     {(bcaInfo?.event_name || partner.bca_event) && (
-                      <p>📍 Evento: <strong>{bcaInfo?.event_name || partner.bca_event}</strong></p>
+                      <p>
+                        📍 Evento: <strong>{bcaInfo?.event_name || partner.bca_event}</strong>
+                      </p>
                     )}
                     {(bcaInfo?.contact_name || partner.bca_contact) && (
                       <p>👤 Contatto: {bcaInfo?.contact_name || partner.bca_contact}</p>
                     )}
-                    {bcaInfo?.met_at && (
-                      <p>📅 Data: {new Date(bcaInfo.met_at).toLocaleDateString("it")}</p>
-                    )}
+                    {bcaInfo?.met_at && <p>📅 Data: {new Date(bcaInfo.met_at).toLocaleDateString("it")}</p>}
                   </div>
                 </TooltipContent>
               </Tooltip>
@@ -86,7 +100,7 @@ export function CompanyListRow({
                   "flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border transition-colors shrink-0",
                   isExpanded
                     ? "bg-primary/20 border-primary/40 text-primary"
-                    : "bg-muted border-border text-muted-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary"
+                    : "bg-muted border-border text-muted-foreground hover:bg-primary/10 hover:border-primary/30 hover:text-primary",
                 )}
               >
                 <Users className="w-3 h-3" />
@@ -96,14 +110,20 @@ export function CompanyListRow({
             )}
           </div>
           <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-muted-foreground" />{partner.city}</span>
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-muted-foreground" />
+              {partner.city}
+            </span>
             {partner.partner_type && !isBcaSource && (
-              <Badge variant="outline" className="text-xs hidden md:inline-flex">{formatPartnerType(partner.partner_type)}</Badge>
+              <Badge variant="outline" className="text-xs hidden md:inline-flex">
+                {formatPartnerType(partner.partner_type)}
+              </Badge>
             )}
           </div>
           {partner.email && (
             <div className="items-center gap-1 mt-1 text-xs text-muted-foreground hidden md:flex">
-              <Mail className="w-3 h-3" />{partner.email}
+              <Mail className="w-3 h-3" />
+              {partner.email}
             </div>
           )}
           {partner.partner_certifications && partner.partner_certifications.length > 0 && (
@@ -125,7 +145,7 @@ export function CompanyListRow({
               key={contact.id}
               className={cn(
                 "flex items-center gap-2.5 px-3 py-2 hover:bg-muted/30 cursor-pointer transition-colors text-sm border-b border-border/30 last:border-0",
-                contact.is_primary && "bg-primary/5"
+                contact.is_primary && "bg-primary/5",
               )}
             >
               {onToggleContact && selectedContacts && (
@@ -138,7 +158,9 @@ export function CompanyListRow({
                 <div className="flex items-center gap-1.5">
                   <span className="text-foreground truncate">{contact.name}</span>
                   {contact.is_primary && (
-                    <Badge variant="outline" className="text-[9px] px-1 py-0 text-primary border-primary/40">Primario</Badge>
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 text-primary border-primary/40">
+                      Primario
+                    </Badge>
                   )}
                 </div>
                 {contact.title && (
@@ -148,13 +170,17 @@ export function CompanyListRow({
               <div className="flex items-center gap-2 shrink-0">
                 {contact.email && (
                   <Tooltip>
-                    <TooltipTrigger asChild><Mail className="w-3 h-3 text-emerald-500/60" /></TooltipTrigger>
+                    <TooltipTrigger asChild>
+                      <Mail className="w-3 h-3 text-emerald-500/60" />
+                    </TooltipTrigger>
                     <TooltipContent className="text-xs">{contact.email}</TooltipContent>
                   </Tooltip>
                 )}
                 {(contact.direct_phone || contact.mobile) && (
                   <Tooltip>
-                    <TooltipTrigger asChild><Phone className="w-3 h-3 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipTrigger asChild>
+                      <Phone className="w-3 h-3 text-muted-foreground" />
+                    </TooltipTrigger>
                     <TooltipContent className="text-xs">{contact.direct_phone || contact.mobile}</TooltipContent>
                   </Tooltip>
                 )}

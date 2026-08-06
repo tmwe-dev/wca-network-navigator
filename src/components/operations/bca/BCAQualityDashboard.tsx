@@ -10,7 +10,17 @@ interface Props {
   cards: BusinessCardWithPartner[];
 }
 
-function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: number; color: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+  color: string;
+}) {
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-card/50 border border-border/30">
       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", color)}>
@@ -35,7 +45,9 @@ function FunnelStep({ label, count, total, color }: { label: string; count: numb
       <div className="h-2 rounded-full bg-muted/30 overflow-hidden">
         <div className={cn("h-full rounded-full transition-all duration-500", color)} style={{ width: `${pct}%` }} />
       </div>
-      <p className="text-[9px] text-muted-foreground mt-0.5">{count} / {total}</p>
+      <p className="text-[9px] text-muted-foreground mt-0.5">
+        {count} / {total}
+      </p>
     </div>
   );
 }
@@ -65,17 +77,36 @@ export function BCAQualityDashboard({ cards }: Props) {
           <span className="text-[10px] text-muted-foreground">
             {stats.total} biglietti · {stats.matched} matchati · {stats.withEmail} con email
           </span>
-          {expanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+          {expanded ? (
+            <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+          )}
         </div>
       </button>
 
       {expanded && (
         <div className="px-4 pb-3 space-y-3 border-t border-border/20 pt-3">
           <div className="grid grid-cols-4 gap-2">
-            <StatCard icon={CreditCard} label="Totale Biglietti" value={stats.total} color="bg-primary/10 text-primary" />
+            <StatCard
+              icon={CreditCard}
+              label="Totale Biglietti"
+              value={stats.total}
+              color="bg-primary/10 text-primary"
+            />
             <StatCard icon={Mail} label="Con Email" value={stats.withEmail} color="bg-blue-500/10 text-blue-400" />
-            <StatCard icon={Handshake} label="Collegati a Partner" value={stats.matched} color="bg-emerald-500/10 text-emerald-400" />
-            <StatCard icon={MessageCircle} label="Contattati" value={stats.contacted} color="bg-amber-500/10 text-amber-400" />
+            <StatCard
+              icon={Handshake}
+              label="Collegati a Partner"
+              value={stats.matched}
+              color="bg-emerald-500/10 text-emerald-400"
+            />
+            <StatCard
+              icon={MessageCircle}
+              label="Contattati"
+              value={stats.contacted}
+              color="bg-amber-500/10 text-amber-400"
+            />
           </div>
 
           <div className="flex items-center gap-3">

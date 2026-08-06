@@ -13,8 +13,9 @@ export const linkedinProfileApiTool: Tool = {
   id: "linkedin-profile-api",
   label: "Profilo LinkedIn (read)",
   description: "Recupera i dati pubblici di un profilo o azienda LinkedIn (URL richiesto). Read-only.",
-  match: (p) => /\b(profilo|profile|company|azienda)\b[^.]{0,20}\blinkedin\b/i.test(p)
-    || /\blinkedin\.com\/(?:in|company)\//i.test(p),
+  match: (p) =>
+    /\b(profilo|profile|company|azienda)\b[^.]{0,20}\blinkedin\b/i.test(p) ||
+    /\blinkedin\.com\/(?:in|company)\//i.test(p),
 
   execute: async (prompt): Promise<ToolResult> => {
     const url = extractLiUrl(prompt);
@@ -27,8 +28,12 @@ export const linkedinProfileApiTool: Tool = {
       };
     }
     const res = await invokeEdge<{
-      name?: string; headline?: string; company?: string; location?: string;
-      about?: string; experience?: Array<{ title?: string; company?: string; period?: string }>;
+      name?: string;
+      headline?: string;
+      company?: string;
+      location?: string;
+      about?: string;
+      experience?: Array<{ title?: string; company?: string; period?: string }>;
       error?: string;
     }>("linkedin-profile-api", { body: { url }, context: "command:linkedin-profile-api" });
     if (res?.error) {
@@ -47,7 +52,10 @@ export const linkedinProfileApiTool: Tool = {
     if (res?.experience?.length) {
       sections.push({
         heading: "Esperienza",
-        body: res.experience.slice(0, 8).map((e) => `• ${e.title ?? "—"} @ ${e.company ?? "—"} (${e.period ?? "—"})`).join("\n"),
+        body: res.experience
+          .slice(0, 8)
+          .map((e) => `• ${e.title ?? "—"} @ ${e.company ?? "—"} (${e.period ?? "—"})`)
+          .join("\n"),
       });
     }
     return {

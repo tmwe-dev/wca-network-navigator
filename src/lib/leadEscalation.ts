@@ -22,11 +22,7 @@ const DOWNGRADE_ELIGIBLE_STATUSES = ["first_touch_sent", "holding"];
  * computeEscalation("spam", "neutral", "first_touch_sent") // returns null
  * computeEscalation("meeting_request", "positive", "engaged") // returns "qualified"
  */
-export function computeEscalation(
-  category: string,
-  sentiment: string,
-  currentStatus: string,
-): string | null {
+export function computeEscalation(category: string, sentiment: string, currentStatus: string): string | null {
   if (!ESCALATION_CATEGORIES.includes(category)) return null;
   if (!POSITIVE_SENTIMENTS.includes(sentiment)) return null;
 
@@ -53,13 +49,9 @@ export function computeEscalation(
  * @param currentStatus - The contact's current lead_status
  * @returns "archived" if downgrade criteria are met, null otherwise
  */
-export function computeDowngrade(
-  category: string,
-  confidence: number,
-  currentStatus: string,
-): string | null {
+export function computeDowngrade(category: string, confidence: number, currentStatus: string): string | null {
   if (category !== "not_interested") return null;
-  if (confidence < 0.80) return null;
+  if (confidence < 0.8) return null;
   if (!DOWNGRADE_ELIGIBLE_STATUSES.includes(currentStatus)) return null;
   return "archived";
 }

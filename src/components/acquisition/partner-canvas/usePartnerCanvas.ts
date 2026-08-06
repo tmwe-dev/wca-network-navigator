@@ -11,9 +11,14 @@ export function usePartnerCanvas(data: CanvasData | null) {
     const timers: ReturnType<typeof setTimeout>[] = [];
     const sections = ["header", "contacts", "services", "markets", "corporate", "networks", "linkedin"];
     sections.forEach((section, i) => {
-      timers.push(setTimeout(() => {
-        setVisibleSections((prev) => new Set(prev).add(section));
-      }, 200 + i * 300));
+      timers.push(
+        setTimeout(
+          () => {
+            setVisibleSections((prev) => new Set(prev).add(section));
+          },
+          200 + i * 300,
+        ),
+      );
     });
 
     return () => timers.forEach(clearTimeout);

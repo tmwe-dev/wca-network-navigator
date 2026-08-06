@@ -17,7 +17,7 @@ export function BriefingStatsBar({ totalContacts, inHolding, notContacted, sched
 
   return (
     <div className="grid grid-cols-4 gap-2">
-      {stats.map(s => (
+      {stats.map((s) => (
         <div key={s.label} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
           <s.icon className={`h-3.5 w-3.5 ${s.color}`} />
           <div className="min-w-0">

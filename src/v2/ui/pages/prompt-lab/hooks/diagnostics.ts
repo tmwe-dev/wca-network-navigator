@@ -81,10 +81,14 @@ export interface ArchitectDiagnostic {
 
 export function severityWeight(s: DiagnosticSeverity): number {
   switch (s) {
-    case "critical": return 3;
-    case "high": return 2;
-    case "medium": return 1;
-    case "low": return 0;
+    case "critical":
+      return 3;
+    case "high":
+      return 2;
+    case "medium":
+      return 1;
+    case "low":
+      return 0;
   }
 }
 
@@ -98,8 +102,15 @@ export function impactToTestUrgency(score: number): TestUrgency {
 // ─── Parser V2 (JSON) ───
 
 const VALID_PROBLEM_CLASSES = new Set<ProblemClass>([
-  "duplication", "entropy", "ghost_variable", "misplaced_logic",
-  "inconsistency", "hardcoded", "missing_contract", "format_violation", "obsolete",
+  "duplication",
+  "entropy",
+  "ghost_variable",
+  "misplaced_logic",
+  "inconsistency",
+  "hardcoded",
+  "missing_contract",
+  "format_violation",
+  "obsolete",
 ]);
 
 const VALID_SEVERITIES = new Set<DiagnosticSeverity>(["low", "medium", "high", "critical"]);
@@ -107,8 +118,15 @@ const VALID_SEVERITIES = new Set<DiagnosticSeverity>(["low", "medium", "high", "
 function parseDestinationV2(raw: string): DiagnosticDestination {
   const t = (raw ?? "").trim().toLowerCase();
   const simple: DiagnosticDestination[] = [
-    "keep-here", "prompt_core", "kb_doctrine", "kb_procedure",
-    "contract_backend", "policy_hard", "voice", "editor", "delete",
+    "keep-here",
+    "prompt_core",
+    "kb_doctrine",
+    "kb_procedure",
+    "contract_backend",
+    "policy_hard",
+    "voice",
+    "editor",
+    "delete",
   ];
   for (const d of simple) {
     if (typeof d === "string" && t === d) return d;
@@ -124,11 +142,12 @@ function parseDestinationV2(raw: string): DiagnosticDestination {
 
 function coerceV2(obj: Record<string, unknown>, rawText: string): ArchitectDiagnosticV2 {
   const severity = VALID_SEVERITIES.has(obj.severity as DiagnosticSeverity)
-    ? (obj.severity as DiagnosticSeverity) : "low";
-  const impact = typeof obj.impact_score === "number"
-    ? Math.max(1, Math.min(10, Math.round(obj.impact_score))) : 5;
+    ? (obj.severity as DiagnosticSeverity)
+    : "low";
+  const impact = typeof obj.impact_score === "number" ? Math.max(1, Math.min(10, Math.round(obj.impact_score))) : 5;
   const problemClass = VALID_PROBLEM_CLASSES.has(obj.problem_class as ProblemClass)
-    ? (obj.problem_class as ProblemClass) : "inconsistency";
+    ? (obj.problem_class as ProblemClass)
+    : "inconsistency";
 
   return {
     blockId: String(obj.block_id ?? ""),
@@ -139,15 +158,11 @@ function coerceV2(obj: Record<string, unknown>, rawText: string): ArchitectDiagn
     destination: parseDestinationV2(String(obj.destination ?? "keep-here")),
     currentIssue: String(obj.current_issue ?? "(nessuna spiegazione)"),
     proposedText: obj.proposed_text ? String(obj.proposed_text) : undefined,
-    requiredVariables: Array.isArray(obj.required_variables)
-      ? obj.required_variables.map(String) : [],
-    missingContracts: Array.isArray(obj.missing_contracts)
-      ? obj.missing_contracts.map(String) : [],
-    testsRequired: Array.isArray(obj.tests_required)
-      ? obj.tests_required.map(String) : [],
+    requiredVariables: Array.isArray(obj.required_variables) ? obj.required_variables.map(String) : [],
+    missingContracts: Array.isArray(obj.missing_contracts) ? obj.missing_contracts.map(String) : [],
+    testsRequired: Array.isArray(obj.tests_required) ? obj.tests_required.map(String) : [],
     testUrgency: impactToTestUrgency(impact),
-    affectedSurfaces: Array.isArray(obj.affected_surfaces)
-      ? obj.affected_surfaces.map(String) : [],
+    affectedSurfaces: Array.isArray(obj.affected_surfaces) ? obj.affected_surfaces.map(String) : [],
     applyRecommended: obj.apply_recommended !== false,
     raw: rawText,
   };
@@ -159,17 +174,28 @@ function coerceV2(obj: Record<string, unknown>, rawText: string): ArchitectDiagn
  */
 function extractJson(text: string): unknown | null {
   // Rimuovi eventuale markdown code fence
-  const stripped = text.replace(/^```(?:json)?\s*/im, "").replace(/\s*```\s*$/im, "").trim();
+  const stripped = text
+    .replace(/^```(?:json)?\s*/im, "")
+    .replace(/\s*```\s*$/im, "")
+    .trim();
 
   // Prova array
   const arrMatch = stripped.match(/\[[\s\S]*\]/);
   if (arrMatch) {
-    try { return JSON.parse(arrMatch[0]); } catch { /* noop */ }
+    try {
+      return JSON.parse(arrMatch[0]);
+    } catch {
+      /* noop */
+    }
   }
   // Prova singolo oggetto
   const objMatch = stripped.match(/\{[\s\S]*\}/);
   if (objMatch) {
-    try { return JSON.parse(objMatch[0]); } catch { /* noop */ }
+    try {
+      return JSON.parse(objMatch[0]);
+    } catch {
+      /* noop */
+    }
   }
   return null;
 }
@@ -197,22 +223,24 @@ export function parseArchitectDiagnostics(text: string): ArchitectDiagnosticV2[]
   }
 
   // Fallback: output non strutturato
-  return [{
-    blockId: "",
-    blockType: "unknown",
-    problemClass: "inconsistency",
-    severity: "low",
-    impactScore: 3,
-    destination: "keep-here",
-    currentIssue: "Output non strutturato — il modello non ha rispettato il formato Architect.",
-    requiredVariables: [],
-    missingContracts: [],
-    testsRequired: [],
-    testUrgency: "bassa",
-    affectedSurfaces: [],
-    applyRecommended: false,
-    raw: trimmed,
-  }];
+  return [
+    {
+      blockId: "",
+      blockType: "unknown",
+      problemClass: "inconsistency",
+      severity: "low",
+      impactScore: 3,
+      destination: "keep-here",
+      currentIssue: "Output non strutturato — il modello non ha rispettato il formato Architect.",
+      requiredVariables: [],
+      missingContracts: [],
+      testsRequired: [],
+      testUrgency: "bassa",
+      affectedSurfaces: [],
+      applyRecommended: false,
+      raw: trimmed,
+    },
+  ];
 }
 
 // ─── Parser Legacy V1 (fallback) ───
@@ -229,14 +257,21 @@ function parseLegacySegments(text: string): ArchitectDiagnostic[] {
   const segments: string[][] = [];
   let current: string[] = [];
   for (const line of lines) {
-    if (/^\s*(BLOCK:|SEVERITY:)/i.test(line) && current.length > 0 && current.some((l) => /^(SEVERITY:|WHY:|DESTINATION:)/i.test(l.trim()))) {
+    if (
+      /^\s*(BLOCK:|SEVERITY:)/i.test(line) &&
+      current.length > 0 &&
+      current.some((l) => /^(SEVERITY:|WHY:|DESTINATION:)/i.test(l.trim()))
+    ) {
       segments.push(current);
       current = [];
     }
     current.push(line);
   }
   if (current.length > 0) segments.push(current);
-  return segments.map((s) => s.join("\n").trim()).filter((s) => s.length > 0).map(parseLegacySegment);
+  return segments
+    .map((s) => s.join("\n").trim())
+    .filter((s) => s.length > 0)
+    .map(parseLegacySegment);
 }
 
 function parseLegacyDestination(raw: string): DiagnosticDestination {

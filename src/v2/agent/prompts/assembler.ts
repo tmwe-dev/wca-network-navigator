@@ -16,7 +16,7 @@ import emailClassifierPrompt from "./core/email-classifier";
 import queryPlannerPrompt from "./core/query-planner";
 
 const CORE_PROMPTS: Record<string, string> = {
-  "luca": lucaPrompt,
+  luca: lucaPrompt,
   "super-assistant": superAssistantPrompt,
   "contacts-assistant": contactsAssistantPrompt,
   "cockpit-assistant": cockpitAssistantPrompt,
@@ -68,9 +68,7 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
       const excerptRows = await findKbExcerptsByTitles(args.injectExcerpts);
       if (excerptRows.length > 0) {
         const limit = args.excerptCharLimit ?? EXCERPT_DEFAULT;
-        kbExcerpts = excerptRows
-          .map((r) => `### ${r.title}\n${(r.content || "").slice(0, limit)}`)
-          .join("\n\n");
+        kbExcerpts = excerptRows.map((r) => `### ${r.title}\n${(r.content || "").slice(0, limit)}`).join("\n\n");
       }
     }
   } catch {

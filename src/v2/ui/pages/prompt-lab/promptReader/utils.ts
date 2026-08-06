@@ -22,16 +22,20 @@ export function downloadText(filename: string, text: string, mime = "text/markdo
 }
 
 export function slug(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export function kbForAgent(all: KbEntry[], agent: AgentRegistryEntry): KbEntry[] {
   const cats = new Set(agent.kbCategories);
   return all
     .filter((e) => e.is_active && cats.has(e.category))
-    .sort((a, b) =>
-      a.category.localeCompare(b.category) ||
-      (a.chapter ?? "").localeCompare(b.chapter ?? "") ||
-      (a.sort_order ?? 0) - (b.sort_order ?? 0),
+    .sort(
+      (a, b) =>
+        a.category.localeCompare(b.category) ||
+        (a.chapter ?? "").localeCompare(b.chapter ?? "") ||
+        (a.sort_order ?? 0) - (b.sort_order ?? 0),
     );
 }

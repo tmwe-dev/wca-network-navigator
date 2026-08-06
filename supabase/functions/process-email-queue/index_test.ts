@@ -8,7 +8,7 @@ const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/process-email-queue`;
 Deno.test("CORS preflight returns 200", async () => {
   const res = await fetch(FUNCTION_URL, {
     method: "OPTIONS",
-    headers: { "Origin": "http://localhost:3000" },
+    headers: { Origin: "http://localhost:3000" },
   });
   assertEquals(res.status, 200);
   await res.text();
@@ -19,7 +19,7 @@ Deno.test("Returns 401 without auth", async () => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
+      apikey: SUPABASE_ANON_KEY,
     },
     body: JSON.stringify({ draft_id: "test" }),
   });

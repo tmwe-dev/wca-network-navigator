@@ -33,13 +33,32 @@ const SORT_COLUMNS = [
 export function ContactListPanel({ selectedId, onSelect }: Props) {
   const [activeSegment, setActiveSegment] = useState<SegmentKey>(null);
   const h = useContactListPanel();
-  const { state, dispatch, gf, selection, linkedInLookup, parentRef, tabsRef,
-    contacts, totalCount, isLoading, isFetchingNextPage, loadMoreRef, virtualizer,
+  const {
+    state,
+    dispatch,
+    gf,
+    selection,
+    linkedInLookup,
+    parentRef,
+    tabsRef,
+    contacts,
+    totalCount,
+    isLoading,
+    isFetchingNextPage,
+    loadMoreRef,
+    virtualizer,
     actions,
-    addInlineFilter, removeInlineFilter, handleSortClick, handleTabClick,
-    handleDelete, handleDeduplicate, handleWcaMatch } = h;
+    addInlineFilter,
+    removeInlineFilter,
+    handleSortClick,
+    handleTabClick,
+    handleDelete,
+    handleDeduplicate,
+    handleWcaMatch,
+  } = h;
   // Mark intentionally-unused legacy fields to keep destructure stable.
-  void tabsRef; void handleTabClick;
+  void tabsRef;
+  void handleTabClick;
 
   const isBulk = selection.count > 0;
   const [bulkLiOpen, setBulkLiOpen] = useState(false);
@@ -86,155 +105,243 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
   const SortIcon = ({ field }: { field: string }) => {
     if (state.sortField !== field || !state.sortDir) return <ArrowUpDown className="w-3 h-3 opacity-40" />;
-    return state.sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-primary" /> : <ArrowDown className="w-3 h-3 text-primary" />;
+    return state.sortDir === "asc" ? (
+      <ArrowUp className="w-3 h-3 text-primary" />
+    ) : (
+      <ArrowDown className="w-3 h-3 text-primary" />
+    );
   };
 
   if (isLoading && contacts.length === 0) return <ListSkeleton rows={8} />;
 
   return (
     <PageErrorBoundary>
-    <div className="flex flex-col h-full min-h-0">
-      {/* Unified Toolbar — counter + active-filter chips + sort + actions */}
-      <UnifiedListToolbar
-        counter={<span>{totalCount.toLocaleString("it-IT")} contatti</span>}
-        chips={chips}
-        onOpenFilters={openFiltersDrawer}
-        sort={{
-          options: SORT_OPTIONS,
-          value: sortValue,
-          direction: sortDir,
-          onChange: handleSortChange,
-          onToggleDirection: handleSortToggleDir,
-        }}
-        actions={
-          <>
-            <ContactSegments activeSegment={activeSegment} onSegmentChange={setActiveSegment} />
-            <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}>
-                <UserPlus className="w-3.5 h-3.5" /> Nuovo
-              </Button>
-            </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
-          </>
-        }
-      />
-
-      {/* Inline filter chips */}
-      {state.inlineFilters.length > 0 && (
-        <div className="px-3 py-1.5 border-b border-border/30 flex flex-wrap gap-1 shrink-0">
-          {state.inlineFilters.map((f, i) => (
-            <span key={`${f.field}-${f.value}-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">
-              {f.value} ({totalCount})
-              <button onClick={() => removeInlineFilter(f.field, f.value)} className="ml-0.5 p-0.5 rounded-full hover:bg-primary/20 transition-colors"><X className="w-2.5 h-2.5" /></button>
-            </span>
-          ))}
-          <button onClick={() => dispatch({ type: "CLEAR_INLINE_FILTERS" })} className="text-[9px] text-muted-foreground hover:text-foreground ml-1">Reset</button>
-        </div>
-      )}
-
-      {/* Sortable column header */}
-      <div className={cn(CONTACT_GRID_CLASS, "px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30")} style={{ gridTemplateColumns: CONTACT_GRID_COLS }}>
-        <div className="flex items-center justify-center">
-          <Checkbox checked={contacts.length > 0 && selection.selectedIds.size === contacts.length}
-            onCheckedChange={(checked) => { if (checked) selection.setSelectedIds(new Set(contacts.map((c) => c.id))); else selection.clear(); }}
-            aria-label="Seleziona tutti" className="shrink-0" />
-        </div>
-        {SORT_COLUMNS.map(col => (
-          <button key={col.field} onClick={() => handleSortClick(col.sortKey)}
-            className={cn("flex items-center gap-0.5 text-[9px] font-medium transition-colors text-left", state.sortField === col.sortKey && state.sortDir ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
-            {col.label} <SortIcon field={col.sortKey} />
-          </button>
-        ))}
-        <div />
-      </div>
-
-      {/* Bulk actions */}
-      {isBulk && (
-        <UnifiedBulkActionBar count={selection.count} sourceType="contact"
-          onClear={() => selection.clear()}
-          onWorkspace={() => actions.handleAICommand({ type: "send_to_workspace", contact_ids: Array.from(selection.selectedIds) })}
-          onCockpit={() => actions.handleAICommand({ type: "create_jobs", contact_ids: Array.from(selection.selectedIds) })}
-          onDeepSearch={() => actions.handleDeepSearch(Array.from(selection.selectedIds).slice(0, 20))}
-          deepSearchLoading={actions.deepSearchLoading}
-          onLinkedIn={() => actions.handleLinkedInLookup(Array.from(selection.selectedIds), linkedInLookup.lookupBatch)}
-          linkedInLoading={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
-          onLinkedInDM={() => setBulkLiOpen(true)}
-          withLinkedIn={withLinkedInCount}
-          onCampaign={actions.handleBulkCampaign}
-          onGoogleLogo={() => {
-            const ids = Array.from(selection.selectedIds);
-            const c = contacts.find(x => ids.includes(x.id));
-            if (c?.company_name) window.open(`https://www.google.com/search?q=${encodeURIComponent(c.company_name + " logo")}&tbm=isch`, "_blank");
+      <div className="flex flex-col h-full min-h-0">
+        {/* Unified Toolbar — counter + active-filter chips + sort + actions */}
+        <UnifiedListToolbar
+          counter={<span>{totalCount.toLocaleString("it-IT")} contatti</span>}
+          chips={chips}
+          onOpenFilters={openFiltersDrawer}
+          sort={{
+            options: SORT_OPTIONS,
+            value: sortValue,
+            direction: sortDir,
+            onChange: handleSortChange,
+            onToggleDirection: handleSortToggleDir,
           }}
-          onDelete={handleDelete}
-          onDeduplicate={handleDeduplicate}
-          onWcaMatch={handleWcaMatch}
+          actions={
+            <>
+              <ContactSegments activeSegment={activeSegment} onSegmentChange={setActiveSegment} />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}
+                  >
+                    <UserPlus className="w-3.5 h-3.5" /> Nuovo
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent>
+              </Tooltip>
+            </>
+          }
         />
-      )}
 
-      {bulkLiOpen && (
-        <Suspense fallback={null}>
-          <BulkLinkedInDialog open={bulkLiOpen} onOpenChange={setBulkLiOpen} targets={bulkLiTargets} />
-        </Suspense>
-      )}
-
-      {linkedInLookup.progress.status === "running" && (
-        <div className="px-3 py-1.5 border-b border-border/30 bg-muted/50 shrink-0">
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <Loader2 className="w-3 h-3 animate-spin text-primary" />
-            <span className="truncate font-medium">{linkedInLookup.progress.currentName}</span>
-            <span className="ml-auto shrink-0">{linkedInLookup.progress.current}/{linkedInLookup.progress.total}</span>
-          </div>
-          <div className="flex gap-2 mt-0.5 text-[9px]">
-            <span className="text-green-500">✓ {linkedInLookup.progress.found}</span>
-            <span className="text-muted-foreground">✗ {linkedInLookup.progress.notFound}</span>
-            <span className="text-muted-foreground">⟳ {linkedInLookup.progress.skipped}</span>
-            <button onClick={linkedInLookup.abort} className="ml-auto text-destructive hover:underline">Stop</button>
-          </div>
-        </div>
-      )}
-
-      {/* Contact list */}
-      <div ref={parentRef} className="flex-1 overflow-y-auto min-h-0">
-        {isLoading ? (
-          <div className="p-3 space-y-2">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
-        ) : contacts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <div className="rounded-full bg-muted/40 p-4 mb-4">
-              <Search className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-base font-semibold text-foreground mb-1">Nessun contatto trovato</h3>
-            <p className="text-sm text-muted-foreground max-w-xs mb-4">
-              Importa contatti da CSV, scaricali dalla directory WCA, o aggiungili manualmente.
-            </p>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.dispatchEvent(new CustomEvent("open-add-contact"))}>
-              <UserPlus className="w-3.5 h-3.5" /> Aggiungi contatto
-            </Button>
-          </div>
-        ) : (
-          <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-            {virtualizer.getVirtualItems().map((vItem) => {
-              const c = contacts[vItem.index];
-              return (
-                <div key={c.id} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: vItem.size, transform: `translateY(${vItem.start}px)` }}>
-                  <ContactCard c={c} isActive={selectedId === c.id} isSelected={selection.selectedIds.has(c.id)}
-                    onSelect={() => {}} onViewDetail={() => onSelect(c)} onToggle={() => selection.toggle(c.id)}
-                    index={vItem.index} onFilterClick={addInlineFilter} />
-                </div>
-              );
-            })}
+        {/* Inline filter chips */}
+        {state.inlineFilters.length > 0 && (
+          <div className="px-3 py-1.5 border-b border-border/30 flex flex-wrap gap-1 shrink-0">
+            {state.inlineFilters.map((f, i) => (
+              <span
+                key={`${f.field}-${f.value}-${i}`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20"
+              >
+                {f.value} ({totalCount})
+                <button
+                  onClick={() => removeInlineFilter(f.field, f.value)}
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-primary/20 transition-colors"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            ))}
+            <button
+              onClick={() => dispatch({ type: "CLEAR_INLINE_FILTERS" })}
+              className="text-[9px] text-muted-foreground hover:text-foreground ml-1"
+            >
+              Reset
+            </button>
           </div>
         )}
-        <div ref={loadMoreRef} className="h-8 flex items-center justify-center">
-          {isFetchingNextPage && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-        </div>
-      </div>
 
-      {state.addOpen && (
-        <Suspense fallback={null}>
-          <AddContactDialog open={state.addOpen} onOpenChange={(v) => dispatch({ type: "SET_ADD_OPEN", value: v })} defaultDestination="contacts" />
-        </Suspense>
-      )}
-    </div>
+        {/* Sortable column header */}
+        <div
+          className={cn(CONTACT_GRID_CLASS, "px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30")}
+          style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
+        >
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={contacts.length > 0 && selection.selectedIds.size === contacts.length}
+              onCheckedChange={(checked) => {
+                if (checked) selection.setSelectedIds(new Set(contacts.map((c) => c.id)));
+                else selection.clear();
+              }}
+              aria-label="Seleziona tutti"
+              className="shrink-0"
+            />
+          </div>
+          {SORT_COLUMNS.map((col) => (
+            <button
+              key={col.field}
+              onClick={() => handleSortClick(col.sortKey)}
+              className={cn(
+                "flex items-center gap-0.5 text-[9px] font-medium transition-colors text-left",
+                state.sortField === col.sortKey && state.sortDir
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {col.label} <SortIcon field={col.sortKey} />
+            </button>
+          ))}
+          <div />
+        </div>
+
+        {/* Bulk actions */}
+        {isBulk && (
+          <UnifiedBulkActionBar
+            count={selection.count}
+            sourceType="contact"
+            onClear={() => selection.clear()}
+            onWorkspace={() =>
+              actions.handleAICommand({ type: "send_to_workspace", contact_ids: Array.from(selection.selectedIds) })
+            }
+            onCockpit={() =>
+              actions.handleAICommand({ type: "create_jobs", contact_ids: Array.from(selection.selectedIds) })
+            }
+            onDeepSearch={() => actions.handleDeepSearch(Array.from(selection.selectedIds).slice(0, 20))}
+            deepSearchLoading={actions.deepSearchLoading}
+            onLinkedIn={() =>
+              actions.handleLinkedInLookup(Array.from(selection.selectedIds), linkedInLookup.lookupBatch)
+            }
+            linkedInLoading={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
+            onLinkedInDM={() => setBulkLiOpen(true)}
+            withLinkedIn={withLinkedInCount}
+            onCampaign={actions.handleBulkCampaign}
+            onGoogleLogo={() => {
+              const ids = Array.from(selection.selectedIds);
+              const c = contacts.find((x) => ids.includes(x.id));
+              if (c?.company_name)
+                window.open(
+                  `https://www.google.com/search?q=${encodeURIComponent(c.company_name + " logo")}&tbm=isch`,
+                  "_blank",
+                );
+            }}
+            onDelete={handleDelete}
+            onDeduplicate={handleDeduplicate}
+            onWcaMatch={handleWcaMatch}
+          />
+        )}
+
+        {bulkLiOpen && (
+          <Suspense fallback={null}>
+            <BulkLinkedInDialog open={bulkLiOpen} onOpenChange={setBulkLiOpen} targets={bulkLiTargets} />
+          </Suspense>
+        )}
+
+        {linkedInLookup.progress.status === "running" && (
+          <div className="px-3 py-1.5 border-b border-border/30 bg-muted/50 shrink-0">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin text-primary" />
+              <span className="truncate font-medium">{linkedInLookup.progress.currentName}</span>
+              <span className="ml-auto shrink-0">
+                {linkedInLookup.progress.current}/{linkedInLookup.progress.total}
+              </span>
+            </div>
+            <div className="flex gap-2 mt-0.5 text-[9px]">
+              <span className="text-green-500">✓ {linkedInLookup.progress.found}</span>
+              <span className="text-muted-foreground">✗ {linkedInLookup.progress.notFound}</span>
+              <span className="text-muted-foreground">⟳ {linkedInLookup.progress.skipped}</span>
+              <button onClick={linkedInLookup.abort} className="ml-auto text-destructive hover:underline">
+                Stop
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Contact list */}
+        <div ref={parentRef} className="flex-1 overflow-y-auto min-h-0">
+          {isLoading ? (
+            <div className="p-3 space-y-2">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 rounded-lg" />
+              ))}
+            </div>
+          ) : contacts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+              <div className="rounded-full bg-muted/40 p-4 mb-4">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1">Nessun contatto trovato</h3>
+              <p className="text-sm text-muted-foreground max-w-xs mb-4">
+                Importa contatti da CSV, scaricali dalla directory WCA, o aggiungili manualmente.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => window.dispatchEvent(new CustomEvent("open-add-contact"))}
+              >
+                <UserPlus className="w-3.5 h-3.5" /> Aggiungi contatto
+              </Button>
+            </div>
+          ) : (
+            <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+              {virtualizer.getVirtualItems().map((vItem) => {
+                const c = contacts[vItem.index];
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: vItem.size,
+                      transform: `translateY(${vItem.start}px)`,
+                    }}
+                  >
+                    <ContactCard
+                      c={c}
+                      isActive={selectedId === c.id}
+                      isSelected={selection.selectedIds.has(c.id)}
+                      onSelect={() => {}}
+                      onViewDetail={() => onSelect(c)}
+                      onToggle={() => selection.toggle(c.id)}
+                      index={vItem.index}
+                      onFilterClick={addInlineFilter}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div ref={loadMoreRef} className="h-8 flex items-center justify-center">
+            {isFetchingNextPage && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          </div>
+        </div>
+
+        {state.addOpen && (
+          <Suspense fallback={null}>
+            <AddContactDialog
+              open={state.addOpen}
+              onOpenChange={(v) => dispatch({ type: "SET_ADD_OPEN", value: v })}
+              defaultDestination="contacts"
+            />
+          </Suspense>
+        )}
+      </div>
     </PageErrorBoundary>
   );
 }

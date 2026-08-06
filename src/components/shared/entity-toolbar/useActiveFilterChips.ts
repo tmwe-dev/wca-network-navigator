@@ -78,11 +78,12 @@ export function useActiveFilterChips(context: ChipContext): readonly FilterChip[
     }
 
     // ---------- Countries ----------
-    const countries = context === "crm"
-      ? Array.from(f.crmSelectedCountries)
-      : context === "partners"
-        ? Array.from(f.networkSelectedCountries)
-        : [];
+    const countries =
+      context === "crm"
+        ? Array.from(f.crmSelectedCountries)
+        : context === "partners"
+          ? Array.from(f.networkSelectedCountries)
+          : [];
     if (countries.length > 0) {
       countries.slice(0, MAX_COUNTRY_CHIPS).forEach((cc) => {
         chips.push({
@@ -161,7 +162,9 @@ export function useActiveFilterChips(context: ChipContext): readonly FilterChip[
     // ---------- Group by (CRM) ----------
     if (context === "crm" && f.groupBy && f.groupBy !== "country") {
       const labelMap: Record<string, string> = {
-        origin: "Origine", status: "Stato", date: "Data",
+        origin: "Origine",
+        status: "Stato",
+        date: "Data",
       };
       chips.push({
         key: "groupBy",

@@ -21,15 +21,23 @@ export function BCASmartActions({ card }: Props) {
 
   const handleCockpitWithContext = useCallback(async () => {
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return;
-      await insertCockpitQueueItems([{
-        source_id: card.id,
-        source_type: "business_card",
-        user_id: user.id,
-        partner_id: card.matched_partner_id || null,
-      }]);
-      toast({ title: "✅ Inviato al Cockpit", description: card.event_name ? `Con contesto: ${card.event_name}` : undefined });
+      await insertCockpitQueueItems([
+        {
+          source_id: card.id,
+          source_type: "business_card",
+          user_id: user.id,
+          partner_id: card.matched_partner_id || null,
+        },
+      ]);
+      toast({
+        title: "✅ Inviato al Cockpit",
+        description: card.event_name ? `Con contesto: ${card.event_name}` : undefined,
+      });
     } catch (e: unknown) {
       toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     }
@@ -77,7 +85,9 @@ export function BCASmartActions({ card }: Props) {
   return (
     <UnifiedSmartActions
       sections={["ai"]}
-      hasEmail={false} hasPhone={false} hasWhatsApp={false}
+      hasEmail={false}
+      hasPhone={false}
+      hasWhatsApp={false}
       onCockpit={handleCockpitWithContext}
       onDeepSearch={handleDeepSearch}
       onLinkedIn={handleLinkedIn}

@@ -12,14 +12,7 @@
  * con `supabase.from(...)` tipizzato e rimuoverle da `ABSENT_RELATIONS`.
  */
 import { unavailableRead, unavailableWrite } from "@/data/_shared/unavailableSchema";
-import type {
-  RAContact,
-  RAInteraction,
-  RALeadStatus,
-  RAProspect,
-  RAProspectFilters,
-  RAScrapingJob,
-} from "@/types/ra";
+import type { RAContact, RAInteraction, RALeadStatus, RAProspect, RAProspectFilters, RAScrapingJob } from "@/types/ra";
 
 export interface RAProspectPage {
   readonly items: RAProspect[];

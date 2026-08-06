@@ -20,7 +20,14 @@ interface JobCanvasProps {
   onBulkComplete?: () => void;
 }
 
-export function JobCanvas({ job, contacts = [], focusedContactId, selectedContactIds, onBulkSetType, onBulkComplete }: JobCanvasProps) {
+export function JobCanvas({
+  job,
+  contacts = [],
+  focusedContactId,
+  selectedContactIds,
+  onBulkSetType,
+  onBulkComplete,
+}: JobCanvasProps) {
   const updateJob = useUpdateCampaignJob();
   const { data: templates = [] } = useEmailTemplates();
   const [notes, setNotes] = useState("");
@@ -43,9 +50,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
     return (
       <div className="h-full flex flex-col">
         {/* Bulk bar even without focused job */}
-        {hasBulkSelection && (
-          <BulkActionBar count={bulkCount} onSetType={onBulkSetType} onComplete={onBulkComplete} />
-        )}
+        {hasBulkSelection && <BulkActionBar count={bulkCount} onSetType={onBulkSetType} onComplete={onBulkComplete} />}
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-2">
             <FileText className="w-16 h-16 mx-auto text-muted-foreground" />
@@ -60,32 +65,26 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
     );
   }
 
-  const focusedContact = contacts.find(c => c.id === focusedContactId) || null;
+  const focusedContact = contacts.find((c) => c.id === focusedContactId) || null;
 
   const handleComplete = () => {
     updateJob.mutate(
       { id: job.id, status: "completed", completed_at: new Date().toISOString() },
-      { onSuccess: () => toast.success("Job completato") }
+      { onSuccess: () => toast.success("Job completato") },
     );
   };
 
   const handleSetType = (type: "email" | "call") => {
-    updateJob.mutate(
-      { id: job.id, job_type: type },
-      { onSuccess: () => toast.success(`Tipo cambiato a ${type}`) }
-    );
+    updateJob.mutate({ id: job.id, job_type: type }, { onSuccess: () => toast.success(`Tipo cambiato a ${type}`) });
   };
 
   const handleSaveNotes = () => {
-    updateJob.mutate(
-      { id: job.id, notes },
-      { onSuccess: () => toast.success("Note salvate") }
-    );
+    updateJob.mutate({ id: job.id, notes }, { onSuccess: () => toast.success("Note salvate") });
   };
 
   const toggleTemplate = (templateId: string) => {
-    setSelectedTemplates(prev =>
-      prev.includes(templateId) ? prev.filter(t => t !== templateId) : [...prev, templateId]
+    setSelectedTemplates((prev) =>
+      prev.includes(templateId) ? prev.filter((t) => t !== templateId) : [...prev, templateId],
     );
   };
 
@@ -102,9 +101,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
   return (
     <div className="h-full flex flex-col">
       {/* Bulk action bar */}
-      {hasBulkSelection && (
-        <BulkActionBar count={bulkCount} onSetType={onBulkSetType} onComplete={onBulkComplete} />
-      )}
+      {hasBulkSelection && <BulkActionBar count={bulkCount} onSetType={onBulkSetType} onComplete={onBulkComplete} />}
 
       <ScrollArea className="flex-1">
         <div className="flex flex-col p-6 space-y-6">
@@ -116,7 +113,11 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
                 <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                   <span className="text-lg">{getCountryFlag(job.country_code)}</span>
                   <MapPin className="w-3.5 h-3.5" />
-                  <span>{job.city || ""}{job.city && job.country_name ? ", " : ""}{job.country_name || ""}</span>
+                  <span>
+                    {job.city || ""}
+                    {job.city && job.country_name ? ", " : ""}
+                    {job.country_name || ""}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -156,13 +157,13 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
                 <User className="w-4 h-4 text-primary" />
                 <h3 className="font-semibold text-sm text-foreground">Contatto selezionato</h3>
                 {focusedContact.is_primary && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">Primario</Badge>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    Primario
+                  </Badge>
                 )}
               </div>
               <p className="text-base font-medium text-foreground">{focusedContact.name}</p>
-              {focusedContact.title && (
-                <p className="text-sm text-muted-foreground">{focusedContact.title}</p>
-              )}
+              {focusedContact.title && <p className="text-sm text-muted-foreground">{focusedContact.title}</p>}
               <div className="flex items-center gap-4 text-sm">
                 {focusedContact.email ? (
                   <span className="flex items-center gap-1 text-emerald-600">
@@ -173,7 +174,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
                     <Mail className="w-3.5 h-3.5" /> —
                   </span>
                 )}
-                {(focusedContact.direct_phone || focusedContact.mobile) ? (
+                {focusedContact.direct_phone || focusedContact.mobile ? (
                   <span className="flex items-center gap-1 text-blue-600">
                     <Phone className="w-3.5 h-3.5" /> {focusedContact.direct_phone || focusedContact.mobile}
                   </span>
@@ -216,25 +217,24 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
                 <h3 className="font-semibold text-sm text-foreground">Allegati disponibili</h3>
               </div>
               <div className="space-y-1.5">
-                {templates.map(t => (
+                {templates.map((t) => (
                   <div
                     key={t.id}
                     className={cn(
                       "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors",
                       selectedTemplates.includes(t.id)
                         ? "bg-primary/5 border-primary/30"
-                        : "bg-muted/30 border-border hover:bg-muted/50"
+                        : "bg-muted/30 border-border hover:bg-muted/50",
                     )}
                     onClick={() => toggleTemplate(t.id)}
                   >
-                    <Checkbox
-                      checked={selectedTemplates.includes(t.id)}
-                      onCheckedChange={() => toggleTemplate(t.id)}
-                    />
+                    <Checkbox checked={selectedTemplates.includes(t.id)} onCheckedChange={() => toggleTemplate(t.id)} />
                     <span className="text-base">{getFileIcon(t.file_type)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate text-foreground">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.file_name} · {(t.file_size / 1024).toFixed(0)} KB</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.file_name} · {(t.file_size / 1024).toFixed(0)} KB
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -247,7 +247,7 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
             <label className="text-sm font-medium text-foreground">Note</label>
             <Textarea
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value)}
               placeholder="Appunti sul contatto..."
               className="min-h-[100px] resize-none"
             />
@@ -259,7 +259,11 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
 
           {/* Complete */}
           {!isCompleted && (
-            <Button onClick={handleComplete} size="lg" className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button
+              onClick={handleComplete}
+              size="lg"
+              className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
               <CheckCircle2 className="w-4 h-4" />
               Segna come completato
             </Button>
@@ -271,7 +275,11 @@ export function JobCanvas({ job, contacts = [], focusedContactId, selectedContac
 }
 
 /* ── Bulk Action Bar ── */
-function BulkActionBar({ count, onSetType, onComplete }: {
+function BulkActionBar({
+  count,
+  onSetType,
+  onComplete,
+}: {
   count: number;
   onSetType?: (type: "email" | "call") => void;
   onComplete?: () => void;
@@ -288,7 +296,11 @@ function BulkActionBar({ count, onSetType, onComplete }: {
       <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={() => onSetType?.("call")}>
         <Phone className="w-3 h-3" /> Call
       </Button>
-      <Button size="sm" className="gap-1.5 text-xs h-7 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => onComplete?.()}>
+      <Button
+        size="sm"
+        className="gap-1.5 text-xs h-7 bg-emerald-600 hover:bg-emerald-700 text-white"
+        onClick={() => onComplete?.()}
+      >
         <CheckCircle2 className="w-3 h-3" /> Completa
       </Button>
     </div>

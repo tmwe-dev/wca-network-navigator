@@ -22,7 +22,7 @@ export const VALID_LEAD_STATUSES = [
   "blacklisted",
 ] as const;
 
-export type LeadStatus = typeof VALID_LEAD_STATUSES[number];
+export type LeadStatus = (typeof VALID_LEAD_STATUSES)[number];
 
 /** Input strutturato per qualsiasi operazione email */
 export interface EmailContract {

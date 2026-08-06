@@ -28,7 +28,10 @@ export function useOperativeJobs() {
   const query = useQuery({
     queryKey: key,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return [];
       return findWorkPlans(user.id, [TAG]) as unknown as Promise<OperativeJob[]>;
     },
@@ -36,16 +39,26 @@ export function useOperativeJobs() {
 
   const createJob = useMutation({
     mutationFn: async (input: { title: string; description: string; channels: string[]; deadline?: string }) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
       const steps = { channels: input.channels, deadline: input.deadline || null, target: "" };
       return createWorkPlan({
-        title: input.title, description: input.description,
-        steps: JSON.parse(JSON.stringify(steps)), metadata: JSON.parse("{}"),
-        tags: [TAG], status: "running", user_id: user.id,
+        title: input.title,
+        description: input.description,
+        steps: JSON.parse(JSON.stringify(steps)),
+        metadata: JSON.parse("{}"),
+        tags: [TAG],
+        status: "running",
+        user_id: user.id,
       }) as unknown as Promise<OperativeJob>;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job creato"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Job creato");
+    },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore creazione job"),
   });
 
@@ -61,13 +74,19 @@ export function useOperativeJobs() {
 
   const deleteJobMut = useMutation({
     mutationFn: (id: string) => deleteWorkPlan(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Job eliminato"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Job eliminato");
+    },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore"),
   });
 
   const generatePrompt = useMutation({
     mutationFn: async (job: OperativeJob) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       const stratValue = user ? await getAppSetting("operative_strategy", user.id) : null;
       const strategy = stratValue ? JSON.parse(stratValue) : {};
 
@@ -89,29 +108,64 @@ Scadenza: ${job.steps?.deadline || "non specificata"}`;
       const res = await invokeAi<Record<string, unknown>>("agent-execute", {
         scope: "agent",
         context: { source: "useOperativeJobs.generatePrompt", mode: "task" },
-        body: { messages: [{ role: "system", content: systemMsg }, { role: "user", content: userMsg }] },
+        body: {
+          messages: [
+            { role: "system", content: systemMsg },
+            { role: "user", content: userMsg },
+          ],
+        },
       });
 
       const raw = res?.response ?? res?.content;
       const prompt = typeof raw === "string" && raw.length > 0 ? raw : "Prompt non generato";
       await updateWorkPlan(job.id, {
-        metadata: toJsonValue({ ...(job.metadata || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() }),
+        metadata: toJsonValue({
+          ...(job.metadata || {}),
+          generated_prompt: prompt,
+          prompt_generated_at: new Date().toISOString(),
+        }),
       });
       return prompt;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt AI generato"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Prompt AI generato");
+    },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore generazione prompt"),
   });
 
   const savePrompt = useMutation({
-    mutationFn: async ({ id, prompt, currentMeta }: { id: string; prompt: string; currentMeta: Record<string, unknown> | null }) => {
+    mutationFn: async ({
+      id,
+      prompt,
+      currentMeta,
+    }: {
+      id: string;
+      prompt: string;
+      currentMeta: Record<string, unknown> | null;
+    }) => {
       await updateWorkPlan(id, {
-        metadata: toJsonValue({ ...(currentMeta || {}), generated_prompt: prompt, prompt_generated_at: new Date().toISOString() }),
+        metadata: toJsonValue({
+          ...(currentMeta || {}),
+          generated_prompt: prompt,
+          prompt_generated_at: new Date().toISOString(),
+        }),
       });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Prompt salvato"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Prompt salvato");
+    },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Errore"),
   });
 
-  return { jobs: query.data ?? [], isLoading: query.isLoading, createJob, updateStatus, deleteJob: deleteJobMut, generatePrompt, savePrompt };
+  return {
+    jobs: query.data ?? [],
+    isLoading: query.isLoading,
+    createJob,
+    updateStatus,
+    deleteJob: deleteJobMut,
+    generatePrompt,
+    savePrompt,
+  };
 }

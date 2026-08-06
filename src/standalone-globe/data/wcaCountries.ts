@@ -1,7 +1,7 @@
 // Complete WCA Countries Database with all 249 ISO 3166-1 alpha-2 country codes
 // This is the comprehensive list used by freight forwarding networks worldwide
 
-import { WCACountry, CountryWithPartners } from '../types';
+import { WCACountry, CountryWithPartners } from "../types";
 
 export const WCA_COUNTRIES: WCACountry[] = [
   // ===================== EUROPE (50 countries) =====================
@@ -52,7 +52,7 @@ export const WCA_COUNTRIES: WCACountry[] = [
   { code: "RU", name: "Russia", lat: 55.7558, lng: 37.6173, region: "europe" },
   { code: "SE", name: "Sweden", lat: 59.3293, lng: 18.0686, region: "europe" },
   { code: "SI", name: "Slovenia", lat: 46.0569, lng: 14.5058, region: "europe" },
-  { code: "SJ", name: "Svalbard and Jan Mayen", lat: 77.8750, lng: 20.9752, region: "europe" },
+  { code: "SJ", name: "Svalbard and Jan Mayen", lat: 77.875, lng: 20.9752, region: "europe" },
   { code: "SK", name: "Slovakia", lat: 48.1486, lng: 17.1077, region: "europe" },
   { code: "SM", name: "San Marino", lat: 43.9424, lng: 12.4578, region: "europe" },
   { code: "UA", name: "Ukraine", lat: 50.4501, lng: 30.5234, region: "europe" },
@@ -131,7 +131,7 @@ export const WCA_COUNTRIES: WCACountry[] = [
   { code: "CO", name: "Colombia", lat: 4.711, lng: -74.0721, region: "americas" },
   { code: "CR", name: "Costa Rica", lat: 9.9281, lng: -84.0907, region: "americas" },
   { code: "CU", name: "Cuba", lat: 23.1136, lng: -82.3666, region: "americas" },
-  { code: "CW", name: "Curaçao", lat: 12.1696, lng: -68.9900, region: "americas" },
+  { code: "CW", name: "Curaçao", lat: 12.1696, lng: -68.99, region: "americas" },
   { code: "DM", name: "Dominica", lat: 15.415, lng: -61.371, region: "americas" },
   { code: "DO", name: "Dominican Republic", lat: 18.4861, lng: -69.9312, region: "americas" },
   { code: "EC", name: "Ecuador", lat: -0.1807, lng: -78.4678, region: "americas" },
@@ -145,7 +145,7 @@ export const WCA_COUNTRIES: WCACountry[] = [
   { code: "HN", name: "Honduras", lat: 14.072, lng: -87.1921, region: "americas" },
   { code: "HT", name: "Haiti", lat: 18.5944, lng: -72.3074, region: "americas" },
   { code: "JM", name: "Jamaica", lat: 18.1096, lng: -77.2975, region: "americas" },
-  { code: "KN", name: "Saint Kitts and Nevis", lat: 17.3578, lng: -62.7830, region: "americas" },
+  { code: "KN", name: "Saint Kitts and Nevis", lat: 17.3578, lng: -62.783, region: "americas" },
   { code: "KY", name: "Cayman Islands", lat: 19.3133, lng: -81.2546, region: "americas" },
   { code: "LC", name: "Saint Lucia", lat: 13.9094, lng: -60.9789, region: "americas" },
   { code: "MF", name: "Saint Martin", lat: 18.0731, lng: -63.0822, region: "americas" },
@@ -161,7 +161,7 @@ export const WCA_COUNTRIES: WCACountry[] = [
   { code: "SR", name: "Suriname", lat: 5.852, lng: -55.2038, region: "americas" },
   { code: "SV", name: "El Salvador", lat: 13.6929, lng: -89.2182, region: "americas" },
   { code: "SX", name: "Sint Maarten", lat: 18.0425, lng: -63.0548, region: "americas" },
-  { code: "TC", name: "Turks and Caicos Islands", lat: 21.6940, lng: -71.7979, region: "americas" },
+  { code: "TC", name: "Turks and Caicos Islands", lat: 21.694, lng: -71.7979, region: "americas" },
   { code: "TT", name: "Trinidad and Tobago", lat: 10.6918, lng: -61.2225, region: "americas" },
   { code: "US", name: "United States", lat: 40.7128, lng: -74.006, region: "americas" },
   { code: "UY", name: "Uruguay", lat: -34.9011, lng: -56.1645, region: "americas" },
@@ -214,7 +214,7 @@ export const WCA_COUNTRIES: WCACountry[] = [
   { code: "RW", name: "Rwanda", lat: -1.9403, lng: 29.8739, region: "africa" },
   { code: "SC", name: "Seychelles", lat: -4.6796, lng: 55.492, region: "africa" },
   { code: "SD", name: "Sudan", lat: 15.5007, lng: 32.5599, region: "africa" },
-  { code: "SH", name: "Saint Helena", lat: -15.9650, lng: -5.7089, region: "africa" },
+  { code: "SH", name: "Saint Helena", lat: -15.965, lng: -5.7089, region: "africa" },
   { code: "SL", name: "Sierra Leone", lat: 8.4606, lng: -13.2317, region: "africa" },
   { code: "SN", name: "Senegal", lat: 14.7167, lng: -17.4677, region: "africa" },
   { code: "SO", name: "Somalia", lat: 2.0469, lng: 45.3182, region: "africa" },
@@ -236,12 +236,12 @@ export const WCA_COUNTRIES: WCACountry[] = [
   { code: "AU", name: "Australia", lat: -33.8688, lng: 151.2093, region: "oceania" },
   { code: "CK", name: "Cook Islands", lat: -21.2367, lng: -159.7777, region: "oceania" },
   { code: "FJ", name: "Fiji", lat: -18.1416, lng: 178.4419, region: "oceania" },
-  { code: "FM", name: "Micronesia", lat: 6.8874, lng: 158.2150, region: "oceania" },
+  { code: "FM", name: "Micronesia", lat: 6.8874, lng: 158.215, region: "oceania" },
   { code: "GU", name: "Guam", lat: 13.4443, lng: 144.7937, region: "oceania" },
   { code: "KI", name: "Kiribati", lat: 1.8369, lng: -157.3768, region: "oceania" },
   { code: "MH", name: "Marshall Islands", lat: 7.1315, lng: 171.1845, region: "oceania" },
   { code: "MP", name: "Northern Mariana Islands", lat: 15.0979, lng: 145.6739, region: "oceania" },
-  { code: "NC", name: "New Caledonia", lat: -22.2735, lng: 166.4580, region: "oceania" },
+  { code: "NC", name: "New Caledonia", lat: -22.2735, lng: 166.458, region: "oceania" },
   { code: "NF", name: "Norfolk Island", lat: -29.0408, lng: 167.9547, region: "oceania" },
   { code: "NR", name: "Nauru", lat: -0.5228, lng: 166.9315, region: "oceania" },
   { code: "NU", name: "Niue", lat: -19.0544, lng: -169.8672, region: "oceania" },
@@ -253,24 +253,25 @@ export const WCA_COUNTRIES: WCACountry[] = [
   { code: "SB", name: "Solomon Islands", lat: -9.4438, lng: 159.9498, region: "oceania" },
   { code: "TK", name: "Tokelau", lat: -9.2005, lng: -171.8484, region: "oceania" },
   { code: "TO", name: "Tonga", lat: -21.1789, lng: -175.1982, region: "oceania" },
-  { code: "TV", name: "Tuvalu", lat: -8.5199, lng: 179.1940, region: "oceania" },
-  { code: "UM", name: "U.S. Minor Outlying Islands", lat: 19.2823, lng: 166.6470, region: "oceania" },
+  { code: "TV", name: "Tuvalu", lat: -8.5199, lng: 179.194, region: "oceania" },
+  { code: "UM", name: "U.S. Minor Outlying Islands", lat: 19.2823, lng: 166.647, region: "oceania" },
   { code: "VU", name: "Vanuatu", lat: -17.7333, lng: 168.3273, region: "oceania" },
   { code: "WF", name: "Wallis and Futuna", lat: -13.7687, lng: -177.1561, region: "oceania" },
   { code: "WS", name: "Samoa", lat: -13.8506, lng: -171.7513, region: "oceania" },
 ];
 
 // Create lookup maps for efficient access
-export const WCA_COUNTRIES_MAP: Record<string, WCACountry> = WCA_COUNTRIES.reduce((acc, c) => {
-  acc[c.code] = c;
-  return acc;
-}, {} as Record<string, WCACountry>);
+export const WCA_COUNTRIES_MAP: Record<string, WCACountry> = WCA_COUNTRIES.reduce(
+  (acc, c) => {
+    acc[c.code] = c;
+    return acc;
+  },
+  {} as Record<string, WCACountry>,
+);
 
 // Helper to create countries with partner counts
-export function createCountriesWithPartners(
-  partnerCountsByCode: Record<string, number> = {}
-): CountryWithPartners[] {
-  return WCA_COUNTRIES.map(country => ({
+export function createCountriesWithPartners(partnerCountsByCode: Record<string, number> = {}): CountryWithPartners[] {
+  return WCA_COUNTRIES.map((country) => ({
     ...country,
     count: partnerCountsByCode[country.code] || 0,
   }));

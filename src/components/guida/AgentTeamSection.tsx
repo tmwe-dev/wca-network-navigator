@@ -21,11 +21,14 @@ const AgentTeamSection = () => {
     staleTime: 60000,
   });
 
-  const agentList: AgentView[] = agents && agents.length > 0 ? agents : [
-    { name: "Sales Agent", role: "outreach", avatar_emoji: "🎯", territory_codes: ["EU"], stats: {} },
-    { name: "Support Agent", role: "support", avatar_emoji: "🛡️", territory_codes: ["GLOBAL"], stats: {} },
-    { name: "Strategy Agent", role: "strategy", avatar_emoji: "🧠", territory_codes: ["ALL"], stats: {} },
-  ];
+  const agentList: AgentView[] =
+    agents && agents.length > 0
+      ? agents
+      : [
+          { name: "Sales Agent", role: "outreach", avatar_emoji: "🎯", territory_codes: ["EU"], stats: {} },
+          { name: "Support Agent", role: "support", avatar_emoji: "🛡️", territory_codes: ["GLOBAL"], stats: {} },
+          { name: "Strategy Agent", role: "strategy", avatar_emoji: "🧠", territory_codes: ["ALL"], stats: {} },
+        ];
 
   return (
     <>
@@ -36,22 +39,23 @@ const AgentTeamSection = () => {
             <span className="text-primary text-sm font-bold tracking-widest uppercase">Il Team</span>
             <h2 className="text-4xl md:text-5xl font-bold text-white">Agenti AI Autonomi</h2>
             <p className="text-white/40 text-lg max-w-2xl mx-auto">
-              Ogni agente ha un ruolo specifico, territori assegnati e obiettivi chiari.
-              Lavorano in parallelo, si coordinano e non dormono mai.
+              Ogni agente ha un ruolo specifico, territori assegnati e obiettivi chiari. Lavorano in parallelo, si
+              coordinano e non dormono mai.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {agentList.map((agent) => (
-              <div key={agent.name} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all group space-y-4 text-center">
+              <div
+                key={agent.name}
+                className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all group space-y-4 text-center"
+              >
                 <div className="text-5xl">{agent.avatar_emoji}</div>
                 <h3 className="text-xl font-bold text-white">{agent.name}</h3>
                 <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium uppercase">
                   {agent.role}
                 </span>
                 {(agent.territory_codes?.length ?? 0) > 0 && (
-                  <p className="text-xs text-white/30">
-                    Territori: {agent.territory_codes?.join(", ")}
-                  </p>
+                  <p className="text-xs text-white/30">Territori: {agent.territory_codes?.join(", ")}</p>
                 )}
               </div>
             ))}
@@ -66,8 +70,8 @@ const AgentTeamSection = () => {
             <span className="text-primary text-sm font-bold tracking-widest uppercase">Come funzionano</span>
             <h2 className="text-4xl font-bold text-white">Ciclo decisionale</h2>
             <p className="text-lg text-white/50 leading-relaxed">
-              Ogni 10 minuti, il sistema attiva il ciclo autonomo. Ogni agente valuta la propria coda,
-              prende decisioni e agisce — o propone azioni per approvazione umana.
+              Ogni 10 minuti, il sistema attiva il ciclo autonomo. Ogni agente valuta la propria coda, prende decisioni
+              e agisce — o propone azioni per approvazione umana.
             </p>
           </div>
           <div className="space-y-4">

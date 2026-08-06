@@ -18,7 +18,10 @@ import { useCoPilot } from "./CoPilotContext";
 const HIDDEN_ROUTES = [/^\/auth/, /^\/v2\/login/, /^\/v2\/reset-password/, /^\/v2\/onboarding/, /^\/v2\/command(\/|$)/];
 const STORAGE_POS = "copilot.position";
 
-interface Position { x: number; y: number; }
+interface Position {
+  x: number;
+  y: number;
+}
 
 function loadPosition(): Position {
   try {
@@ -27,7 +30,9 @@ function loadPosition(): Position {
       const p = JSON.parse(raw) as Position;
       if (typeof p.x === "number" && typeof p.y === "number") return p;
     }
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
   return { x: window.innerWidth - 96, y: window.innerHeight - 120 };
 }
 
@@ -47,7 +52,11 @@ export function FloatingCoPilot() {
 
   // Persistenza posizione
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_POS, JSON.stringify(pos)); } catch { /* noop */ }
+    try {
+      localStorage.setItem(STORAGE_POS, JSON.stringify(pos));
+    } catch {
+      /* noop */
+    }
   }, [pos]);
 
   // Listener: ai-ui-action per highlight + open_modal
@@ -92,9 +101,11 @@ export function FloatingCoPilot() {
 
   const respondConfirmation = (result: "ok" | "cancel") => {
     if (!confirmRequest) return;
-    window.dispatchEvent(new CustomEvent("copilot-confirm-result", {
-      detail: { id: confirmRequest.id, result },
-    }));
+    window.dispatchEvent(
+      new CustomEvent("copilot-confirm-result", {
+        detail: { id: confirmRequest.id, result },
+      }),
+    );
     setConfirmRequest(null);
   };
 
@@ -111,7 +122,11 @@ export function FloatingCoPilot() {
   };
   const onPointerUp = (e: React.PointerEvent) => {
     dragRef.current = null;
-    try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* noop */
+    }
   };
 
   const isHiddenRoute = HIDDEN_ROUTES.some((r) => r.test(location.pathname));
@@ -131,20 +146,22 @@ export function FloatingCoPilot() {
           <div className="w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-xl">
             <h3 className="text-base font-semibold text-foreground">Conferma azione</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Il Co-Pilot vuole eseguire: <span className="font-medium text-foreground">{confirmRequest.label}</span>. Procedo?
+              Il Co-Pilot vuole eseguire: <span className="font-medium text-foreground">{confirmRequest.label}</span>.
+              Procedo?
             </p>
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => respondConfirmation("cancel")}>Annulla</Button>
-              <Button size="sm" onClick={() => respondConfirmation("ok")}>Conferma</Button>
+              <Button variant="outline" size="sm" onClick={() => respondConfirmation("cancel")}>
+                Annulla
+              </Button>
+              <Button size="sm" onClick={() => respondConfirmation("ok")}>
+                Conferma
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      <div
-        className="fixed z-[9997] select-none"
-        style={{ left: pos.x, top: pos.y }}
-      >
+      <div className="fixed z-[9997] select-none" style={{ left: pos.x, top: pos.y }}>
         {expanded ? (
           <div className="w-[340px] rounded-xl border border-border bg-card shadow-2xl">
             <div
@@ -154,11 +171,19 @@ export function FloatingCoPilot() {
               onPointerUp={onPointerUp}
             >
               <div className="flex items-center gap-2">
-                <div className={`h-2 w-2 rounded-full ${isActive ? "bg-green-500 animate-pulse" : isConnecting ? "bg-amber-500 animate-pulse" : "bg-muted-foreground"}`} />
+                <div
+                  className={`h-2 w-2 rounded-full ${isActive ? "bg-green-500 animate-pulse" : isConnecting ? "bg-amber-500 animate-pulse" : "bg-muted-foreground"}`}
+                />
                 <span className="text-sm font-semibold text-foreground">Co-Pilot</span>
               </div>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEnabled(false)} title="Disattiva Co-Pilot">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setEnabled(false)}
+                  title="Disattiva Co-Pilot"
+                >
                   <Power className="h-3.5 w-3.5" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpanded(false)}>
@@ -170,10 +195,18 @@ export function FloatingCoPilot() {
             <div className="space-y-3 p-3">
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
                 <div className="flex items-center gap-2">
-                  <Activity className={`h-4 w-4 ${voice.isSpeaking ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
+                  <Activity
+                    className={`h-4 w-4 ${voice.isSpeaking ? "text-primary animate-pulse" : "text-muted-foreground"}`}
+                  />
                   <div className="text-xs">
                     <div className="font-medium text-foreground">
-                      {isActive ? (voice.isSpeaking ? "Sta parlando…" : "In ascolto") : isConnecting ? "Connessione…" : "Spento"}
+                      {isActive
+                        ? voice.isSpeaking
+                          ? "Sta parlando…"
+                          : "In ascolto"
+                        : isConnecting
+                          ? "Connessione…"
+                          : "Spento"}
                     </div>
                     {voice.error && <div className="text-destructive">{voice.error}</div>}
                   </div>
@@ -184,18 +217,32 @@ export function FloatingCoPilot() {
                   onClick={isActive ? voice.stop : voice.start}
                   disabled={isConnecting}
                 >
-                  {isActive ? <><MicOff className="mr-1 h-3.5 w-3.5" />Stop</> : <><Mic className="mr-1 h-3.5 w-3.5" />Parla</>}
+                  {isActive ? (
+                    <>
+                      <MicOff className="mr-1 h-3.5 w-3.5" />
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="mr-1 h-3.5 w-3.5" />
+                      Parla
+                    </>
+                  )}
                 </Button>
               </div>
 
               <div>
-                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Ultime azioni</div>
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Ultime azioni
+                </div>
                 <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border bg-background/50 p-2 text-xs">
                   {actionLog.length === 0 ? (
                     <div className="text-muted-foreground">Nessuna azione ancora.</div>
                   ) : (
                     actionLog.map((a, i) => (
-                      <div key={i} className="truncate text-foreground">• {a}</div>
+                      <div key={i} className="truncate text-foreground">
+                        • {a}
+                      </div>
                     ))
                   )}
                 </div>

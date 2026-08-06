@@ -9,7 +9,10 @@ test.describe("Funnemail Eval Flow", () => {
 
   test("eval tab shows accuracy metrics", async ({ page }) => {
     await page.goto("/v2/funnemail-inbox");
-    await page.getByText("Eval Accuracy").click().catch(() => {});
+    await page
+      .getByText("Eval Accuracy")
+      .click()
+      .catch(() => {});
     // Should show accuracy bars or loading state
     await expect(page.getByText(/Accuracy|Caricamento|Nessun/).first()).toBeVisible();
   });

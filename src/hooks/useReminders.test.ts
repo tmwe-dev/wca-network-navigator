@@ -3,8 +3,30 @@ import { waitFor, act } from "@testing-library/react";
 import { renderHookWithProviders } from "@/test/hookTestUtils";
 
 const MOCK_REMINDERS = [
-  { id: "r1", partner_id: "p1", due_date: "2024-06-01", title: "Follow up", description: null, status: "pending", priority: "high", created_at: "2024-05-01", updated_at: null, partners: { company_name: "Acme", country_code: "IT" } },
-  { id: "r2", partner_id: "p2", due_date: "2024-06-15", title: "Call", description: "Discuss rates", status: "completed", priority: "low", created_at: "2024-05-10", updated_at: null, partners: { company_name: "Beta", country_code: "DE" } },
+  {
+    id: "r1",
+    partner_id: "p1",
+    due_date: "2024-06-01",
+    title: "Follow up",
+    description: null,
+    status: "pending",
+    priority: "high",
+    created_at: "2024-05-01",
+    updated_at: null,
+    partners: { company_name: "Acme", country_code: "IT" },
+  },
+  {
+    id: "r2",
+    partner_id: "p2",
+    due_date: "2024-06-15",
+    title: "Call",
+    description: "Discuss rates",
+    status: "completed",
+    priority: "low",
+    created_at: "2024-05-10",
+    updated_at: null,
+    partners: { company_name: "Beta", country_code: "DE" },
+  },
 ];
 
 const mockOrder = vi.fn().mockReturnValue({ data: MOCK_REMINDERS, error: null });
@@ -57,14 +79,18 @@ describe("useReminders", () => {
 describe("useCompleteReminder", () => {
   it("updates status to completed", async () => {
     const { result } = renderHookWithProviders(() => useCompleteReminder());
-    await act(async () => { result.current.mutate("r1"); });
+    await act(async () => {
+      result.current.mutate("r1");
+    });
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith({ status: "completed" }));
     expect(mockUpdateEq).toHaveBeenCalledWith("id", "r1");
   });
   it("handles update error", async () => {
     mockUpdateEq.mockReturnValueOnce({ error: { message: "RLS" } });
     const { result } = renderHookWithProviders(() => useCompleteReminder());
-    await act(async () => { result.current.mutate("r1"); });
+    await act(async () => {
+      result.current.mutate("r1");
+    });
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });

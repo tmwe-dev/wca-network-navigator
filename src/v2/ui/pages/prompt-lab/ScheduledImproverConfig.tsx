@@ -19,13 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, Loader2, Play, AlertCircle } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
 import { createLogger } from "@/lib/log";
@@ -125,7 +119,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         toast.success(
           newConfig.enabled
             ? `Programmazione attivata: ogni ${DAYS_OF_WEEK.find((d) => d.value === String(newConfig.dayOfWeek))?.label} alle ${String(newConfig.hour).padStart(2, "0")}:00`
-            : "Programmazione disattivata"
+            : "Programmazione disattivata",
         );
       } catch (err) {
         toast.error("Errore nel salvataggio configurazione");
@@ -134,7 +128,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         setSaving(false);
       }
     },
-    [userId]
+    [userId],
   );
 
   const handleToggleEnabled = useCallback(
@@ -144,7 +138,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         enabled,
       });
     },
-    [config, saveConfig]
+    [config, saveConfig],
   );
 
   const handleChangeDay = useCallback(
@@ -154,7 +148,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         dayOfWeek: parseInt(day, 10),
       });
     },
-    [config, saveConfig]
+    [config, saveConfig],
   );
 
   const handleChangeHour = useCallback(
@@ -164,7 +158,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         hour: parseInt(hour, 10),
       });
     },
-    [config, saveConfig]
+    [config, saveConfig],
   );
 
   const handleRunNow = useCallback(async () => {
@@ -218,16 +212,10 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         <div className="flex items-center gap-3 flex-1">
           <div>
             <p className="text-sm font-medium">Programmazione settimanale</p>
-            <p className="text-xs text-muted-foreground">
-              Esegui automaticamente "Migliora tutto" ogni settimana
-            </p>
+            <p className="text-xs text-muted-foreground">Esegui automaticamente "Migliora tutto" ogni settimana</p>
           </div>
         </div>
-        <Switch
-          checked={config.enabled}
-          onCheckedChange={handleToggleEnabled}
-          disabled={saving}
-        />
+        <Switch checked={config.enabled} onCheckedChange={handleToggleEnabled} disabled={saving} />
       </div>
 
       {/* Selezioni giorno/ora (visibili solo se abilitato) */}
@@ -240,11 +228,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
                 <Calendar className="h-3.5 w-3.5" />
                 Giorno
               </Label>
-              <Select
-                value={String(config.dayOfWeek)}
-                onValueChange={handleChangeDay}
-                disabled={saving}
-              >
+              <Select value={String(config.dayOfWeek)} onValueChange={handleChangeDay} disabled={saving}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -264,11 +248,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
                 <Clock className="h-3.5 w-3.5" />
                 Ora
               </Label>
-              <Select
-                value={String(config.hour)}
-                onValueChange={handleChangeHour}
-                disabled={saving}
-              >
+              <Select value={String(config.hour)} onValueChange={handleChangeHour} disabled={saving}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -286,9 +266,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
           {/* Prossima esecuzione */}
           {nextRun && (
             <div className="rounded bg-primary/10 border border-primary/30 p-2">
-              <p className="text-xs text-muted-foreground">
-                Prossima esecuzione:
-              </p>
+              <p className="text-xs text-muted-foreground">Prossima esecuzione:</p>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="default" className="text-[11px]">
                   {nextRun.toLocaleDateString("it-IT", {
@@ -318,18 +296,8 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
       <Separator className="my-2" />
 
       {/* Pulsante Esegui ora */}
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={handleRunNow}
-        disabled={runningNow}
-        className="w-full gap-2"
-      >
-        {runningNow ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <Play className="h-3.5 w-3.5" />
-        )}
+      <Button size="sm" variant="outline" onClick={handleRunNow} disabled={runningNow} className="w-full gap-2">
+        {runningNow ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
         Esegui subito
       </Button>
     </div>

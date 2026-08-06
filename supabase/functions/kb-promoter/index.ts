@@ -28,11 +28,8 @@ serve(async (req) => {
       .overlaps("tags", ["auto_generated"]);
 
     if (candidates3to5?.length) {
-      const ids = (candidates3to5 as Array<{ id: string }>).map(e => e.id);
-      await supabase
-        .from("kb_entries")
-        .update({ priority: 5 })
-        .in("id", ids);
+      const ids = (candidates3to5 as Array<{ id: string }>).map((e) => e.id);
+      await supabase.from("kb_entries").update({ priority: 5 }).in("id", ids);
       stats.promoted_to_5 = ids.length;
     }
 
@@ -48,11 +45,8 @@ serve(async (req) => {
     if (candidates5to7?.length) {
       for (const entry of candidates5to7 as Array<{ id: string; tags: string[] }>) {
         const currentTags = entry.tags || [];
-        const newTags = currentTags.filter(t => t !== "auto_generated").concat(["validated"]);
-        await supabase
-          .from("kb_entries")
-          .update({ priority: 7, tags: newTags })
-          .eq("id", entry.id);
+        const newTags = currentTags.filter((t) => t !== "auto_generated").concat(["validated"]);
+        await supabase.from("kb_entries").update({ priority: 7, tags: newTags }).eq("id", entry.id);
       }
       stats.promoted_to_7 = candidates5to7.length;
     }
@@ -69,22 +63,18 @@ serve(async (req) => {
       .lt("created_at", thirtyDaysAgo);
 
     if (stale?.length) {
-      const ids = (stale as Array<{ id: string }>).map(e => e.id);
-      await supabase
-        .from("kb_entries")
-        .update({ is_active: false })
-        .in("id", ids);
+      const ids = (stale as Array<{ id: string }>).map((e) => e.id);
+      await supabase.from("kb_entries").update({ is_active: false }).in("id", ids);
       stats.deactivated = ids.length;
     }
-
 
     return new Response(JSON.stringify({ success: true, stats }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

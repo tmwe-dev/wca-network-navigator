@@ -36,26 +36,35 @@ export function useForgeKb(categories: string[] | null) {
     }
   }, [categories]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const update = useCallback(async (id: string, patch: Partial<Pick<ForgeKbEntry, "title" | "content" | "priority" | "is_active">>) => {
-    setSavingId(id);
-    try {
-      await updateForgeKbEntry(id, patch);
-      setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch, updated_at: new Date().toISOString() } : e)));
-      toast.success("Voce KB aggiornata");
-    } catch (e) {
-      toast.error("Salvataggio fallito", { description: e instanceof Error ? e.message : String(e) });
-    } finally {
-      setSavingId(null);
-    }
-  }, []);
+  const update = useCallback(
+    async (id: string, patch: Partial<Pick<ForgeKbEntry, "title" | "content" | "priority" | "is_active">>) => {
+      setSavingId(id);
+      try {
+        await updateForgeKbEntry(id, patch);
+        setEntries((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, ...patch, updated_at: new Date().toISOString() } : e)),
+        );
+        toast.success("Voce KB aggiornata");
+      } catch (e) {
+        toast.error("Salvataggio fallito", { description: e instanceof Error ? e.message : String(e) });
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [],
+  );
 
   const toggleActive = useCallback((id: string, value: boolean) => update(id, { is_active: value }), [update]);
 
   const insert = useCallback(async (input: { title: string; content: string; category: string; priority?: number }) => {
     try {
-      const { data: userRes } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+      const { data: userRes } = await supabase.auth
+        .getSession()
+        .then((r) => ({ data: { user: r.data.session?.user ?? null } }));
       const user_id = userRes.user?.id ?? null;
       const data = await insertForgeKbEntry({
         title: input.title,

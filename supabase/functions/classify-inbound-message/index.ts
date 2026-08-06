@@ -15,8 +15,16 @@ import { resolveCaller, assertMessageOwned } from "../_shared/ownership.ts";
 import { makeRecordStage, type RequestBody } from "./stages/types.ts";
 import { runAiClassification, persistClassificationSideEffects } from "./stages/stageClassifyAi.ts";
 import { runEmailProcessManager, runFunnemailDispatcher } from "./stages/stagePostClassification.ts";
-import { runFunnemailScoutAndClassify, runFunnemailAutoRoute, runFunnemailPolicyPipeline } from "./stages/stageFunnemailPipeline.ts";
-import { runContentClassification, refreshConversationContext, runTriageAndAlert } from "./stages/stageContentAndContext.ts";
+import {
+  runFunnemailScoutAndClassify,
+  runFunnemailAutoRoute,
+  runFunnemailPolicyPipeline,
+} from "./stages/stageFunnemailPipeline.ts";
+import {
+  runContentClassification,
+  refreshConversationContext,
+  runTriageAndAlert,
+} from "./stages/stageContentAndContext.ts";
 import { createTracer } from "../_shared/pipelineTrace.ts";
 
 Deno.serve(async (req) => {
@@ -47,11 +55,9 @@ Deno.serve(async (req) => {
       if (message_id) {
         const ownErr = await assertMessageOwned(
           // use a service client so RLS doesn't block the lookup
-          createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-            { auth: { persistSession: false } },
-          ),
+          createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+            auth: { persistSession: false },
+          }),
           message_id,
           caller.userId,
           corsHeadersOnly,
@@ -68,11 +74,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing message_id" }), { status: 400, headers });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // ── Job ledger (Sprint 1 Funnemail) ──
     const recordStage = makeRecordStage(supabase, message_id, body.user_id ?? null);
@@ -106,10 +110,7 @@ Deno.serve(async (req) => {
           status: "success",
         });
         endMetrics(metrics, true, 200);
-        return new Response(
-          JSON.stringify({ success: true, deduped: true, message_id }),
-          { status: 200, headers },
-        );
+        return new Response(JSON.stringify({ success: true, deduped: true, message_id }), { status: 200, headers });
       }
     }
 
@@ -118,9 +119,8 @@ Deno.serve(async (req) => {
       const reviewToken = req.headers.get("x-injection-review-id");
       const guard = await checkInjectionGuard(supabase, {
         userId: body.user_id,
-        source: channel === "whatsapp" ? "whatsapp-message"
-          : channel === "linkedin" ? "linkedin-message"
-          : "email-inbound",
+        source:
+          channel === "whatsapp" ? "whatsapp-message" : channel === "linkedin" ? "linkedin-message" : "email-inbound",
         functionName: "classify-inbound-message",
         text: `${subject || ""}\n\n${body_text || ""}`,
         reviewToken,
@@ -145,8 +145,16 @@ Deno.serve(async (req) => {
     const t1 = Date.now();
     const { result, model } = await runAiClassification(supabase, body);
     void tracer.step("classify_inbound:ai", {
-      output: { classification: result.classification, confidence: result.confidence, sentiment: result.sentiment, urgency: result.urgency },
-      aiModel: model, aiScope: "classification", durationMs: Date.now() - t1, status: "success",
+      output: {
+        classification: result.classification,
+        confidence: result.confidence,
+        sentiment: result.sentiment,
+        urgency: result.urgency,
+      },
+      aiModel: model,
+      aiScope: "classification",
+      durationMs: Date.now() - t1,
+      status: "success",
     });
     await persistClassificationSideEffects(supabase, body, result, model);
 
@@ -156,7 +164,8 @@ Deno.serve(async (req) => {
     const funnemailResult = await runFunnemailDispatcher(supabase, body, result);
     void tracer.step("classify_inbound:post_classification", {
       output: { post_class: !!postClassResult, funnemail_dispatched: !!funnemailResult },
-      durationMs: Date.now() - t2, status: "success",
+      durationMs: Date.now() - t2,
+      status: "success",
     });
 
     // ── Stage 3: Funnemail pipeline (scout → classify → auto-route). Fire-and-forget. ──
@@ -174,18 +183,21 @@ Deno.serve(async (req) => {
     void tracer.step("classify_inbound:content_and_triage", { durationMs: Date.now() - t4, status: "success" });
 
     endMetrics(metrics, true, 200);
-    if (channel === "email") void recordStage("completed", { post_classification: !!postClassResult, funnemail: !!funnemailResult });
-    return new Response(JSON.stringify({
-      success: true,
-      classification: result.classification,
-      confidence: result.confidence,
-      sentiment: result.sentiment,
-      urgency: result.urgency,
-      channel,
-      post_classification: postClassResult,
-      funnemail: funnemailResult,
-    }), { status: 200, headers });
-
+    if (channel === "email")
+      void recordStage("completed", { post_classification: !!postClassResult, funnemail: !!funnemailResult });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        classification: result.classification,
+        confidence: result.confidence,
+        sentiment: result.sentiment,
+        urgency: result.urgency,
+        channel,
+        post_classification: postClassResult,
+        funnemail: funnemailResult,
+      }),
+      { status: 200, headers },
+    );
   } catch (error: unknown) {
     logEdgeError("classify-inbound-message", error);
     endMetrics(metrics, false, 500);

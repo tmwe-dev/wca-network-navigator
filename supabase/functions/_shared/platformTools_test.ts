@@ -10,12 +10,12 @@ const source = await Deno.readTextFile(new URL("./platformTools.ts", import.meta
 
 function extractToolNames(): string[] {
   const section = source.split("export const PLATFORM_TOOLS")[1]?.split("];")[0] ?? "";
-  return [...section.matchAll(/name:\s*"([^"]+)"/g)].map(m => m[1]);
+  return [...section.matchAll(/name:\s*"([^"]+)"/g)].map((m) => m[1]);
 }
 
 function extractHandlerCases(): string[] {
   const section = source.split("export async function executePlatformTool")[1] ?? "";
-  return [...section.matchAll(/case\s+"([^"]+)":/g)].map(m => m[1]);
+  return [...section.matchAll(/case\s+"([^"]+)":/g)].map((m) => m[1]);
 }
 
 const toolNames = extractToolNames();
@@ -31,12 +31,12 @@ Deno.test("nomi unici (nessun duplicato)", () => {
 });
 
 Deno.test("ogni tool ha un handler nel switch", () => {
-  const missing = toolNames.filter(n => !handlerCases.includes(n));
+  const missing = toolNames.filter((n) => !handlerCases.includes(n));
   assertEquals(missing, [], `Tool senza handler: ${missing.join(", ")}`);
 });
 
 Deno.test("ogni handler ha una definizione tool", () => {
-  const orphans = handlerCases.filter(n => !toolNames.includes(n));
+  const orphans = handlerCases.filter((n) => !toolNames.includes(n));
   assertEquals(orphans, [], `Handler orfani: ${orphans.join(", ")}`);
 });
 

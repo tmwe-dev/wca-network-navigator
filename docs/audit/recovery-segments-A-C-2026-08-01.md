@@ -4,6 +4,7 @@ Baseline macchina: `docs/audit/baseline-755abe88e2.json` (`npm run baseline[:ful
 Matrice rotte: `docs/audit/route-matrix-2026-08-01.json`.
 
 ## A — Baseline + install deterministico
+
 - Toolchain: Node v22.22.0, npm 10.9.4, engines `>=20`.
 - Repo: 4305 file tracciati, src 2509 file / 329.032 LOC, 394 file di test,
   149 Edge Function / 87.177 LOC, 416 migrazioni / 25.186 LOC SQL.
@@ -22,9 +23,10 @@ Matrice rotte: `docs/audit/route-matrix-2026-08-01.json`.
   introdotto. I lotti separati non sono necessari, restano un'opzione se il
   picco supera ~3 GB.
 - `npm run verify` = typecheck + lint:ratchet + debt:check + audit:function-auth
-  + vitest + build. Non nasconde warning (il ratchet li stampa per regola).
+  - vitest + build. Non nasconde warning (il ratchet li stampa per regola).
 
 ## B — Governance
+
 - Regole custom `tmwe/no-direct-ai-invoke` (36) e `tmwe/no-direct-bulk-op` (9)
   agganciate in report-only con ratchet; nessun disable globale.
 - Copertura lint estesa a `supabase/functions` (globals Deno) e `scripts`.
@@ -37,6 +39,7 @@ Matrice rotte: `docs/audit/route-matrix-2026-08-01.json`.
   vive. **Nessuna cancellazione.**
 
 ## C — Pulizia warning (primo lotto)
+
 - Rimossi solo import provatamente inutilizzati (regola singola, via API ESLint
   con filtro fix per `unused-imports/no-unused-imports`): 38 file, nessun file
   di routing toccato.
@@ -46,16 +49,17 @@ Matrice rotte: `docs/audit/route-matrix-2026-08-01.json`.
   Warning esbuild `css-syntax-error` **eliminato**.
 
 ## Prima / dopo
-| Metrica | Prima | Dopo |
-|---|---|---|
-| ESLint errori | 0 | 0 |
-| ESLint warning | 1283 | 1189 |
-| `unused-imports/no-unused-imports` | 94 | 0 |
-| Warning build CSS | 1 | 0 |
-| Typecheck | OK | OK |
-| Vitest | 394 file / 3147 pass / 2 skip | idem |
-| `npm ci` da zero | OK | OK |
-| untypedFrom / asNever / asUnknownAs / explicitAny (src) | 0 / 22 / 88 / 6 | invariato |
+
+| Metrica                                                 | Prima                         | Dopo      |
+| ------------------------------------------------------- | ----------------------------- | --------- |
+| ESLint errori                                           | 0                             | 0         |
+| ESLint warning                                          | 1283                          | 1189      |
+| `unused-imports/no-unused-imports`                      | 94                            | 0         |
+| Warning build CSS                                       | 1                             | 0         |
+| Typecheck                                               | OK                            | OK        |
+| Vitest                                                  | 394 file / 3147 pass / 2 skip | idem      |
+| `npm ci` da zero                                        | OK                            | OK        |
+| untypedFrom / asNever / asUnknownAs / explicitAny (src) | 0 / 22 / 88 / 6               | invariato |
 
 Gate esterni non eseguibili offline (blocco atteso): DB usa-e-getta e E2E
 autenticati. Migrazioni correttive: **non applicate**, restano pending.

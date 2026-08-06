@@ -12,10 +12,10 @@ Deno.serve(async (req) => {
     const extUrl = "https://dlldkrzoxvjxpgkkttxu.supabase.co";
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
     if (!extKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: "WCA_EXTERNAL_SUPABASE_KEY not configured" }),
-        { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: false, error: "WCA_EXTERNAL_SUPABASE_KEY not configured" }), {
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const extSb = createClient(extUrl, extKey);
@@ -29,15 +29,17 @@ Deno.serve(async (req) => {
     let userId: string | null = null;
     if (authHeader) {
       const anonSb = createClient(localUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
-      const { data: { user } } = await anonSb.auth.getUser(authHeader.replace("Bearer ", ""));
+      const {
+        data: { user },
+      } = await anonSb.auth.getUser(authHeader.replace("Bearer ", ""));
       userId = user?.id ?? null;
     }
 
     if (!userId) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Authentication required" }),
-        { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: false, error: "Authentication required" }), {
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     // Fetch all from external DB with pagination
@@ -54,10 +56,10 @@ Deno.serve(async (req) => {
 
       if (batchErr) {
         console.error("Error fetching external cards:", batchErr);
-        return new Response(
-          JSON.stringify({ success: false, error: batchErr.message }),
-          { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ success: false, error: batchErr.message }), {
+          status: 500,
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        });
       }
 
       if (batch && batch.length > 0) {
@@ -70,19 +72,13 @@ Deno.serve(async (req) => {
     }
 
     if (allCards.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, upserted: 0, message: "No cards in external DB" }),
-        { headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true, upserted: 0, message: "No cards in external DB" }), {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
-    
-
     // Get existing cards to avoid duplicates (match by external_id stored in raw_data)
-    const { data: existingCards } = await localSb
-      .from("business_cards")
-      .select("id, raw_data")
-      .eq("user_id", userId);
+    const { data: existingCards } = await localSb.from("business_cards").select("id, raw_data").eq("user_id", userId);
 
     const existingExtIds = new Set<string>();
     const existingByExtId = new Map<string, string>();
@@ -130,9 +126,7 @@ Deno.serve(async (req) => {
       const toInsert = batch.filter((b: Record<string, unknown>) => !b.id);
 
       if (toUpdate.length > 0) {
-        const { error: updateErr } = await localSb
-          .from("business_cards")
-          .upsert(toUpdate, { onConflict: "id" });
+        const { error: updateErr } = await localSb.from("business_cards").upsert(toUpdate, { onConflict: "id" });
         if (updateErr) {
           console.error(`Batch ${i} update error:`, updateErr);
         } else {
@@ -148,9 +142,7 @@ Deno.serve(async (req) => {
         });
 
         if (newInserts.length > 0) {
-          const { error: insertErr } = await localSb
-            .from("business_cards")
-            .insert(newInserts);
+          const { error: insertErr } = await localSb.from("business_cards").insert(newInserts);
           if (insertErr) {
             console.error(`Batch ${i} insert error:`, insertErr);
           } else {
@@ -165,17 +157,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    
-
-    return new Response(
-      JSON.stringify({ success: true, upserted, skipped, total: allCards.length }),
-      { headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, upserted, skipped, total: allCards.length }), {
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Sync error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   }
 });

@@ -11,7 +11,6 @@ import type { useAcquisitionPipelineState } from "./useAcquisitionPipelineState"
 import type { LiveStats } from "./useAcquisitionPipelineState";
 import { EMPTY_STATS } from "./useAcquisitionPipelineState";
 
-
 import { createLogger } from "@/lib/log";
 import { toRecords } from "@/lib/records";
 const log = createLogger("useAcquisitionPipelineActions");
@@ -24,7 +23,7 @@ export function useAcquisitionPipelineActions(
     waitForExtension: (ms?: number) => Promise<boolean>;
     verifySession: () => Promise<{ success: boolean; authenticated?: boolean }>;
     runExtensionLoop: (jobId: string, items: Record<string, unknown>[], startFrom?: number) => Promise<LiveStats>;
-  }
+  },
 ) {
   const { extensionAvailable: _extensionAvailable, waitForExtension, verifySession, runExtensionLoop } = deps;
 
@@ -45,13 +44,17 @@ export function useAcquisitionPipelineActions(
 
       const wcaIdToNetworks = await enrichQueueWithNetworks(result.queue);
       if (Object.keys(wcaIdToNetworks).length > 0) {
-        state.setQueue(prev => prev.map(q =>
-          wcaIdToNetworks[q.wca_id] ? { ...q, networks: wcaIdToNetworks[q.wca_id] } : q
-        ));
+        state.setQueue((prev) =>
+          prev.map((q) => (wcaIdToNetworks[q.wca_id] ? { ...q, networks: wcaIdToNetworks[q.wca_id] } : q)),
+        );
       }
       state.setPipelineStatus("idle");
     } catch (err: unknown) {
-      toast({ title: "Errore scansione", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
+      toast({
+        title: "Errore scansione",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
       state.setPipelineStatus("idle");
     }
   }, [state.selectedCountries, state.selectedNetworks]);
@@ -59,13 +62,21 @@ export function useAcquisitionPipelineActions(
   const startPipeline = useCallback(async () => {
     const extReady = await waitForExtension(10000);
     if (!extReady) {
-      toast({ title: "Estensione Chrome non trovata", description: "Installa o ricarica l'estensione WCA Cookie Sync e riprova.", variant: "destructive" });
+      toast({
+        title: "Estensione Chrome non trovata",
+        description: "Installa o ricarica l'estensione WCA Cookie Sync e riprova.",
+        variant: "destructive",
+      });
       return;
     }
 
     const sessionResult = await verifySession();
     if (!sessionResult.success || !sessionResult.authenticated) {
-      toast({ title: "Sessione WCA non attiva", description: "Effettua il login su wcaworld.com e riprova.", variant: "destructive" });
+      toast({
+        title: "Sessione WCA non attiva",
+        description: "Effettua il login su wcaworld.com e riprova.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -129,7 +140,19 @@ export function useAcquisitionPipelineActions(
         description: `${localStats.processed} partner processati — Completi: ${localStats.complete}, Incompleti: ${localStats.processed - localStats.complete}`,
       });
     }
-  }, [state.queue, state.includeEnrich, state.includeDeepSearch, state.delaySeconds, state.selectedIds, state.activeJobId, state.selectedCountries, state.selectedNetworks, runExtensionLoop, waitForExtension, verifySession]);
+  }, [
+    state.queue,
+    state.includeEnrich,
+    state.includeDeepSearch,
+    state.delaySeconds,
+    state.selectedIds,
+    state.activeJobId,
+    state.selectedCountries,
+    state.selectedNetworks,
+    runExtensionLoop,
+    waitForExtension,
+    verifySession,
+  ]);
 
   const handleExcludeNetwork = useCallback((network: string) => {
     state.setExcludedNetworks((prev) => {
@@ -143,11 +166,14 @@ export function useAcquisitionPipelineActions(
         if (q.status !== "pending" || !q.networks || q.networks.length === 0) return q;
         const updatedExcluded = new Set(state.excludedNetworksRef.current);
         updatedExcluded.add(network);
-        const allExcluded = q.networks.every(n => updatedExcluded.has(n));
+        const allExcluded = q.networks.every((n) => updatedExcluded.has(n));
         return allExcluded ? { ...q, status: "done" as const, skippedNetwork: true } : q;
-      })
+      }),
     );
-    toast({ title: `Network "${network}" escluso`, description: "I partner con solo questo network verranno saltati." });
+    toast({
+      title: `Network "${network}" escluso`,
+      description: "I partner con solo questo network verranno saltati.",
+    });
   }, []);
 
   const handleReincludeNetwork = useCallback((network: string) => {
@@ -162,9 +188,9 @@ export function useAcquisitionPipelineActions(
         if (!q.skippedNetwork || !q.networks) return q;
         const updatedExcluded = new Set(state.excludedNetworksRef.current);
         updatedExcluded.delete(network);
-        const stillAllExcluded = q.networks.every(n => updatedExcluded.has(n));
+        const stillAllExcluded = q.networks.every((n) => updatedExcluded.has(n));
         return stillAllExcluded ? q : { ...q, status: "pending" as const, skippedNetwork: false };
-      })
+      }),
     );
     toast({ title: `Network "${network}" riattivato` });
   }, []);

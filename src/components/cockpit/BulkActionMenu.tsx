@@ -1,20 +1,30 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub,
-  DropdownMenuSubContent, DropdownMenuSubTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  CheckCircle2, StickyNote, CalendarClock,
-  Phone, Users, MoreHorizontal, CalendarIcon, Zap, Mail,
+  CheckCircle2,
+  StickyNote,
+  CalendarClock,
+  Phone,
+  Users,
+  MoreHorizontal,
+  CalendarIcon,
+  Zap,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,29 +78,39 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [languageMode, setLanguageModeState] = useState<LanguageMode>(() => loadLanguageModeFromStorage());
-  const setLanguageMode = (m: LanguageMode) => { setLanguageModeState(m); saveLanguageModeToStorage(m); };
+  const setLanguageMode = (m: LanguageMode) => {
+    setLanguageModeState(m);
+    saveLanguageModeToStorage(m);
+  };
   const [translatePerRecipient, setTranslatePerRecipient] = useState(false);
 
-  const eligibleEmailContacts = selectedContacts.filter(c => !!c.email && /@/.test(c.email));
+  const eligibleEmailContacts = selectedContacts.filter((c) => !!c.email && /@/.test(c.email));
 
   const autoAssignBulk = async (contacts: CockpitContact[]) => {
-    const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach"))
-      || agents.find(a => a.is_active);
+    const salesAgent =
+      agents.find((a) => a.is_active && (a.role === "sales" || a.role === "outreach")) ||
+      agents.find((a) => a.is_active);
     if (!salesAgent) return;
     for (const c of contacts) {
-      const sourceType = c.sourceType === "partner_contact" ? "partner" : c.sourceType === "prospect_contact" ? "prospect" : "contact";
+      const sourceType =
+        c.sourceType === "partner_contact" ? "partner" : c.sourceType === "prospect_contact" ? "prospect" : "contact";
       try {
         await assignClient.mutateAsync({ sourceId: c.partnerId || c.sourceId, sourceType, agentId: salesAgent.id });
-      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* skip already assigned */ }
+      } catch (e) {
+        log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* skip already assigned */
+      }
     }
   };
 
   const createBulkActivities = async (
     activityType: ActivityType,
     status: "completed" | "pending",
-    extra: { due_date?: string; description?: string; completed_at?: string } = {}
+    extra: { due_date?: string; description?: string; completed_at?: string } = {},
   ) => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
     if (!user) return;
 
     setIsProcessing(true);
@@ -102,7 +122,12 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
         activity_type: activityType,
         status,
         title: `${contact.name} — ${contact.company}`,
-        source_type: contact.sourceType === "partner_contact" ? "partner" : contact.sourceType === "prospect_contact" ? "prospect" : "contact",
+        source_type:
+          contact.sourceType === "partner_contact"
+            ? "partner"
+            : contact.sourceType === "prospect_contact"
+              ? "prospect"
+              : "contact",
         source_id: contact.partnerId || contact.sourceId,
         source_meta: { company: contact.company, email: contact.email, country: contact.country, name: contact.name },
         partner_id: contact.partnerId,
@@ -162,7 +187,9 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
       toast.error("Servono almeno 2 contatti con email per l'invio bulk");
       return;
     }
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     const user = session?.user;
     if (!user) {
       toast.error("Sessione scaduta");
@@ -170,51 +197,50 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
     }
     setIsProcessing(true);
     try {
-      const safeHtml = DOMPurify.sanitize(
-        emailBody.replace(/\n/g, "<br/>"),
-        {
-          ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'],
-          ALLOWED_ATTR: ['href', 'target', 'rel', 'style'],
-        },
-      );
+      const safeHtml = DOMPurify.sanitize(emailBody.replace(/\n/g, "<br/>"), {
+        ALLOWED_TAGS: ["br", "p", "b", "i", "strong", "em", "a", "ul", "ol", "li", "h1", "h2", "h3", "span", "div"],
+        ALLOWED_ATTR: ["href", "target", "rel", "style"],
+      });
       // Risolvi lingua per ogni destinatario (se modalità auto/per-recipient).
       const perRecipient = translatePerRecipient || languageMode.kind === "auto";
-      const recipients = await Promise.all(eligibleEmailContacts.map(async (c) => {
-        let subject = emailSubject;
-        let html = safeHtml;
-        try {
-          const resolved = resolveLanguage(languageMode, { countryCode: c.country });
-          // Se modalità "italiano" e nessuna richiesta esplicita di traduzione → no-op.
-          const shouldTranslate = perRecipient || languageMode.kind !== "italiano";
-          if (shouldTranslate) {
-            const r = await invokeEdge<{ subject: string; body: string }>("translate-text", {
-              body: {
-                subject: emailSubject,
-                body: safeHtml,
-                targetLanguage: resolved.language,
-                sourceLanguage: "italiano",
-              },
-              context: "BulkActionMenu.translate",
-            });
-            if (r?.subject) subject = r.subject;
-            if (r?.body) html = r.body;
+      const recipients = await Promise.all(
+        eligibleEmailContacts.map(async (c) => {
+          let subject = emailSubject;
+          let html = safeHtml;
+          try {
+            const resolved = resolveLanguage(languageMode, { countryCode: c.country });
+            // Se modalità "italiano" e nessuna richiesta esplicita di traduzione → no-op.
+            const shouldTranslate = perRecipient || languageMode.kind !== "italiano";
+            if (shouldTranslate) {
+              const r = await invokeEdge<{ subject: string; body: string }>("translate-text", {
+                body: {
+                  subject: emailSubject,
+                  body: safeHtml,
+                  targetLanguage: resolved.language,
+                  sourceLanguage: "italiano",
+                },
+                context: "BulkActionMenu.translate",
+              });
+              if (r?.subject) subject = r.subject;
+              if (r?.body) html = r.body;
+            }
+          } catch (e) {
+            log.warn("translate failed, fallback to original", { error: e instanceof Error ? e.message : String(e) });
           }
-        } catch (e) {
-          log.warn("translate failed, fallback to original", { error: e instanceof Error ? e.message : String(e) });
-        }
-        return {
-          partner_id: c.partnerId || c.sourceId,
-          email: c.email,
-          name: c.name,
-          subject,
-          html,
-        };
-      }));
+          return {
+            partner_id: c.partnerId || c.sourceId,
+            email: c.email,
+            name: c.name,
+            subject,
+            html,
+          };
+        }),
+      );
       const { queued } = await createCampaignDraftQueue({
         userId: user.id,
         subject: emailSubject,
         htmlBody: safeHtml,
-        partnerIds: recipients.map(r => r.partner_id),
+        partnerIds: recipients.map((r) => r.partner_id),
         recipients,
       });
       toast.success(`${queued} email accodate in "In Uscita"`);
@@ -248,7 +274,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
               Segna come svolta
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              {DONE_TYPES.map(dt => (
+              {DONE_TYPES.map((dt) => (
                 <DropdownMenuItem key={dt.type} className="gap-2 text-xs" onClick={() => handleBulkMarkDone(dt.type)}>
                   <dt.icon className="w-3.5 h-3.5" />
                   {dt.label}
@@ -285,12 +311,14 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
           </DialogHeader>
           <Textarea
             value={noteText}
-            onChange={e => setNoteText(e.target.value)}
+            onChange={(e) => setNoteText(e.target.value)}
             placeholder="Scrivi una nota per tutti i contatti selezionati..."
             className="min-h-[100px] text-sm"
           />
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setNoteOpen(false)}>Annulla</Button>
+            <Button variant="outline" size="sm" onClick={() => setNoteOpen(false)}>
+              Annulla
+            </Button>
             <Button size="sm" onClick={handleBulkNote} disabled={!noteText.trim() || isProcessing}>
               {isProcessing ? "Salvataggio..." : "Salva"}
             </Button>
@@ -307,7 +335,10 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
           <div className="space-y-3">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left text-sm", !scheduleDate && "text-muted-foreground")}>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left text-sm", !scheduleDate && "text-muted-foreground")}
+                >
                   <CalendarIcon className="w-4 h-4 mr-2" />
                   {scheduleDate ? format(scheduleDate, "dd/MM/yyyy") : "Seleziona data"}
                 </Button>
@@ -324,13 +355,15 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
             </Popover>
             <Textarea
               value={scheduleNote}
-              onChange={e => setScheduleNote(e.target.value)}
+              onChange={(e) => setScheduleNote(e.target.value)}
               placeholder="Nota opzionale..."
               className="min-h-[60px] text-sm"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setScheduleOpen(false)}>Annulla</Button>
+            <Button variant="outline" size="sm" onClick={() => setScheduleOpen(false)}>
+              Annulla
+            </Button>
             <Button size="sm" onClick={handleBulkSchedule} disabled={!scheduleDate || isProcessing}>
               {isProcessing ? "..." : "Programma"}
             </Button>
@@ -342,33 +375,27 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
       <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-sm">
-              Invia email a {eligibleEmailContacts.length} contatti
-            </DialogTitle>
+            <DialogTitle className="text-sm">Invia email a {eligibleEmailContacts.length} contatti</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="text-xs text-muted-foreground">
-              Le email verranno accodate in <b>Outreach → In Uscita</b> (passano dal review editoriale prima dell'invio SMTP). Nessun invio immediato.
+              Le email verranno accodate in <b>Outreach → In Uscita</b> (passano dal review editoriale prima dell'invio
+              SMTP). Nessun invio immediato.
             </div>
             <Input
               value={emailSubject}
-              onChange={e => setEmailSubject(e.target.value)}
+              onChange={(e) => setEmailSubject(e.target.value)}
               placeholder="Oggetto"
               className="text-sm"
             />
             <Textarea
               value={emailBody}
-              onChange={e => setEmailBody(e.target.value)}
+              onChange={(e) => setEmailBody(e.target.value)}
               placeholder="Corpo dell'email..."
               className="min-h-[160px] text-sm"
             />
             <div className="flex flex-col gap-2 pt-1 border-t border-border/40">
-              <EmailLanguagePicker
-                value={languageMode}
-                onChange={setLanguageMode}
-                disabled={isProcessing}
-                compact
-              />
+              <EmailLanguagePicker value={languageMode} onChange={setLanguageMode} disabled={isProcessing} compact />
               <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
                 <input
                   type="checkbox"
@@ -382,7 +409,9 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setEmailOpen(false)}>Annulla</Button>
+            <Button variant="outline" size="sm" onClick={() => setEmailOpen(false)}>
+              Annulla
+            </Button>
             <Button
               size="sm"
               onClick={handleBulkEnqueueEmail}

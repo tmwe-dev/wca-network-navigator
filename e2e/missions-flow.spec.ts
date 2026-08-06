@@ -11,7 +11,8 @@ test.describe("Missions Flow", () => {
   });
 
   test("missions shows builder or list", async ({ page }) => {
-    const content = page.locator("form, [role='tablist'], table")
+    const content = page
+      .locator("form, [role='tablist'], table")
       .or(page.getByText(/mission|campagna|nuova|crea|builder/i));
     await expect(content.first()).toBeVisible({ timeout: 15000 });
   });
@@ -29,11 +30,15 @@ test.describe("Missions Flow", () => {
 
   test("missions no critical console errors", async ({ page }) => {
     const errors: string[] = [];
-    page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
     await page.goto("/v2/missions");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
-    const critical = errors.filter((e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"));
+    const critical = errors.filter(
+      (e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"),
+    );
     expect(critical.length).toBeLessThan(5);
   });
 });

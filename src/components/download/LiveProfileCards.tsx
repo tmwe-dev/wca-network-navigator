@@ -29,7 +29,7 @@ export function LiveProfileCards() {
 
   const activeJob = useMemo(() => {
     if (!jobs) return null;
-    return jobs.find(j => j.status === "running") || jobs.find(j => j.status === "pending") || jobs[0];
+    return jobs.find((j) => j.status === "running") || jobs.find((j) => j.status === "pending") || jobs[0];
   }, [jobs]);
 
   const processedIds = useMemo(() => {
@@ -46,9 +46,7 @@ export function LiveProfileCards() {
       const data = await findLiveProfilePartners(lastIds);
       // Sort by processedIds order (most recent last)
       const idOrder = new Map(lastIds.map((id, i) => [id, i]));
-      return (data as ProfileData[]).sort((a, b) =>
-        (idOrder.get(b.wca_id!) ?? 0) - (idOrder.get(a.wca_id!) ?? 0)
-      );
+      return (data as ProfileData[]).sort((a, b) => (idOrder.get(b.wca_id!) ?? 0) - (idOrder.get(a.wca_id!) ?? 0));
     },
     enabled: processedIds.length > 0,
     refetchInterval: 5000,
@@ -85,7 +83,7 @@ export function LiveProfileCards() {
               transition={{ duration: 0.3, delay: idx * 0.05 }}
               className={cn(
                 "rounded-lg border p-3 bg-card/60 backdrop-blur-sm transition-all",
-                idx === 0 && "ring-2 ring-primary/40 border-primary/30 shadow-lg shadow-primary/5"
+                idx === 0 && "ring-2 ring-primary/40 border-primary/30 shadow-lg shadow-primary/5",
               )}
             >
               {/* Header */}
@@ -107,7 +105,7 @@ export function LiveProfileCards() {
               {/* Networks */}
               {p.partner_networks?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
-                  {p.partner_networks.map(n => (
+                  {p.partner_networks.map((n) => (
                     <Badge key={n.network_name} variant="outline" className="text-[8px] px-1.5 py-0 h-3.5">
                       {n.network_name}
                     </Badge>

@@ -64,7 +64,6 @@ export function NetworkPage(): React.ReactElement {
       next.delete("partnerId");
       setSearchParams(next, { replace: true });
     }
-     
   }, []);
 
   useMissionDrawerEvents({
@@ -107,7 +106,9 @@ export function NetworkPage(): React.ReactElement {
   const handleBulkAddToCockpit = useCallback(async (sel: CompanyEntity[]) => {
     if (!sel.length) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       if (!userId) {
         toast.error("Utente non autenticato");
@@ -141,9 +142,7 @@ export function NetworkPage(): React.ReactElement {
   const handleBulkDeepSearch = useCallback((sel: CompanyEntity[]) => {
     if (!sel.length) return;
     const ids = sel.map((s) => s.id);
-    window.dispatchEvent(
-      new CustomEvent("sherlock-launch", { detail: { queue: ids, level: 2 } })
-    );
+    window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { queue: ids, level: 2 } }));
     toast.info(`Deep Search Detective avviato su ${ids.length} partner`, {
       description: "Eseguiti in sequenza nel pannello Sherlock.",
     });
@@ -154,7 +153,7 @@ export function NetworkPage(): React.ReactElement {
     window.dispatchEvent(
       new CustomEvent("campaign-create-bulk", {
         detail: { partnerIds: withEmail.map((s) => s.id), source: "wca" },
-      })
+      }),
     );
     toast.success(`Campagna creata per ${withEmail.length} destinatari`);
   }, []);
@@ -173,10 +172,7 @@ export function NetworkPage(): React.ReactElement {
         onOpenCompany={handleOpenCompany}
         detailSlot={
           selectedPartnerId ? (
-            <PartnerDetailInline
-              partnerId={selectedPartnerId}
-              onClose={() => setSelectedPartnerId(null)}
-            />
+            <PartnerDetailInline partnerId={selectedPartnerId} onClose={() => setSelectedPartnerId(null)} />
           ) : null
         }
         openedId={selectedPartnerId}

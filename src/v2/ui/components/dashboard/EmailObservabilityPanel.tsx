@@ -77,22 +77,33 @@ export function EmailObservabilityPanel() {
       </header>
 
       {error && (
-        <div className="text-[11px] text-destructive">
-          Errore caricamento log email: {(error as Error).message}
-        </div>
+        <div className="text-[11px] text-destructive">Errore caricamento log email: {(error as Error).message}</div>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Stat label="Inviate" value={data?.sent ?? 0} loading={isLoading} icon={<CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />} />
-        <Stat label="Fallite" value={totalFailures} loading={isLoading} icon={<AlertTriangle className="h-3.5 w-3.5 text-destructive" />} />
+        <Stat
+          label="Inviate"
+          value={data?.sent ?? 0}
+          loading={isLoading}
+          icon={<CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+        />
+        <Stat
+          label="Fallite"
+          value={totalFailures}
+          loading={isLoading}
+          icon={<AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+        />
         <Stat label="Bounce" value={data?.bounced ?? 0} loading={isLoading} />
-        <Stat label="Tasso errore" value={isLoading ? null : `${failureRatePct}%`} loading={isLoading} highlight={failureRatePct >= 10} />
+        <Stat
+          label="Tasso errore"
+          value={isLoading ? null : `${failureRatePct}%`}
+          loading={isLoading}
+          highlight={failureRatePct >= 10}
+        />
       </div>
 
       <div className="space-y-1.5">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Ultimi errori
-        </div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Ultimi errori</div>
         {isLoading ? (
           <Skeleton className="h-16 w-full" />
         ) : !data || data.recentErrors.length === 0 ? (
@@ -144,7 +155,7 @@ function Stat({ label, value, loading, icon, highlight }: StatProps) {
     <div
       className={cn(
         "rounded-lg border border-border/50 bg-background/50 px-2.5 py-2",
-        highlight && "border-destructive/50 bg-destructive/5"
+        highlight && "border-destructive/50 bg-destructive/5",
       )}
     >
       <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -152,7 +163,7 @@ function Stat({ label, value, loading, icon, highlight }: StatProps) {
         {label}
       </div>
       <div className={cn("mt-0.5 text-lg font-semibold tabular-nums", highlight && "text-destructive")}>
-        {loading ? <Skeleton className="h-5 w-12" /> : value ?? 0}
+        {loading ? <Skeleton className="h-5 w-12" /> : (value ?? 0)}
       </div>
     </div>
   );

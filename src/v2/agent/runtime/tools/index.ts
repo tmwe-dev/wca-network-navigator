@@ -4,9 +4,18 @@
  * they operate at DOM/navigation level for browser automation.
  */
 import {
-  navigateTool, readPageTool, clickTool, typeTextTool, readDomTool,
-  waitForTool, scrollToTool, selectOptionTool, uploadFileTool,
-  submitFormTool, takeSnapshotTool, readTableTool,
+  navigateTool,
+  readPageTool,
+  clickTool,
+  typeTextTool,
+  readDomTool,
+  waitForTool,
+  scrollToTool,
+  selectOptionTool,
+  uploadFileTool,
+  submitFormTool,
+  takeSnapshotTool,
+  readTableTool,
 } from "./dom";
 import { listKbTool, readKbTool } from "./kb";
 import { scrapeUrlTool } from "./scrape";

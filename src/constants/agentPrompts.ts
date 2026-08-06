@@ -7,12 +7,7 @@ import { EMAIL_OUTREACH_AGENTS } from "./agentPromptsParts/emailOutreach";
 import { VOICE_AUTONOMOUS_AGENTS } from "./agentPromptsParts/voiceAutonomous";
 import type { AgentRegistryEntry } from "./agentPromptsParts/types";
 
-export type {
-  AgentCategory,
-  AgentRole,
-  PromptSource,
-  AgentRegistryEntry,
-} from "./agentPromptsParts/types";
+export type { AgentCategory, AgentRole, PromptSource, AgentRegistryEntry } from "./agentPromptsParts/types";
 
 export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
   ...CORE_AGENTS,

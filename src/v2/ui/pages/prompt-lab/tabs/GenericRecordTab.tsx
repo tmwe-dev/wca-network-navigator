@@ -30,26 +30,26 @@ export function GenericRecordTab({ tabLabel, loader, saver, loaderDeps = [], emp
   const lab = useLabAgent();
   const state = usePromptLabBlocks(loader, loaderDeps);
 
-  const tabActivation = useMemo(
-    () => PROMPT_LAB_TABS.find((t) => t.label === tabLabel)?.activation,
-    [tabLabel],
-  );
+  const tabActivation = useMemo(() => PROMPT_LAB_TABS.find((t) => t.label === tabLabel)?.activation, [tabLabel]);
 
-  const onSave = useCallback(async (id: string) => {
-    const block = state.blocks.find((b) => b.id === id);
-    if (!block) return;
-    setSaving(id);
-    try {
-      const meta = await saver(block);
-      await logSupervisorAudit({ action: "prompt_lab_save", target_table: meta.table, target_id: meta.id });
-      state.markClean(id);
-      toast.success(`${block.label} salvato`);
-    } catch (e) {
-      toast.error(String(e));
-    } finally {
-      setSaving(null);
-    }
-  }, [saver, state]);
+  const onSave = useCallback(
+    async (id: string) => {
+      const block = state.blocks.find((b) => b.id === id);
+      if (!block) return;
+      setSaving(id);
+      try {
+        const meta = await saver(block);
+        await logSupervisorAudit({ action: "prompt_lab_save", target_table: meta.table, target_id: meta.id });
+        state.markClean(id);
+        toast.success(`${block.label} salvato`);
+      } catch (e) {
+        toast.error(String(e));
+      } finally {
+        setSaving(null);
+      }
+    },
+    [saver, state],
+  );
 
   // Quando l'utente clicca "Migliora" sul blocco, apriamo il dialog briefing.
   const onImprove = useCallback((id: string) => {
@@ -86,7 +86,7 @@ export function GenericRecordTab({ tabLabel, loader, saver, loaderDeps = [], emp
     [lab, state, tabLabel, tabActivation, pendingBlockId],
   );
 
-  const pendingBlock = pendingBlockId ? state.blocks.find((b) => b.id === pendingBlockId) ?? null : null;
+  const pendingBlock = pendingBlockId ? (state.blocks.find((b) => b.id === pendingBlockId) ?? null) : null;
   const detectedKind = pendingBlock
     ? isVoiceBlock({
         tabLabel,
@@ -108,8 +108,8 @@ export function GenericRecordTab({ tabLabel, loader, saver, loaderDeps = [], emp
       <div className="flex items-center gap-2 flex-shrink-0 text-[11px] text-muted-foreground">
         <ClipboardCheck className="h-3.5 w-3.5 flex-shrink-0" />
         <span>
-          Cliccando <strong className="text-foreground">Migliora</strong> apri la <em>checklist briefing</em>:
-          obiettivo + canale + audience + vincoli. L'AI userà solo questi parametri.
+          Cliccando <strong className="text-foreground">Migliora</strong> apri la <em>checklist briefing</em>: obiettivo
+          + canale + audience + vincoli. L'AI userà solo questi parametri.
         </span>
         {lastBriefing && (
           <Button

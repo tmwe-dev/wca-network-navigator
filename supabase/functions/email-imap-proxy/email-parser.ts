@@ -1,7 +1,6 @@
 export function parseHeaders(raw: string): Record<string, string> {
   const headerEnd = raw.indexOf("\r\n\r\n");
-  const headerSection =
-    headerEnd > 0 ? raw.substring(0, headerEnd) : raw.substring(0, 2000);
+  const headerSection = headerEnd > 0 ? raw.substring(0, headerEnd) : raw.substring(0, 2000);
 
   const headers: Record<string, string> = {};
   const lines = headerSection.split("\r\n");
@@ -27,26 +26,19 @@ export function parseHeaders(raw: string): Record<string, string> {
 }
 
 function decodeMimeWords(str: string): string {
-  return str.replace(
-    /=\?([^?]+)\?([BbQq])\?([^?]+)\?=/g,
-    (_match, charset, encoding, text) => {
-      try {
-        if (encoding.toUpperCase() === "B") {
-          const bytes = Uint8Array.from(atob(text), (c) =>
-            c.charCodeAt(0)
-          );
-          return new TextDecoder(charset).decode(bytes);
-        } else {
-          const decoded = text
-            .replace(/_/g, " ")
-            .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) =>
-              String.fromCharCode(parseInt(hex, 16))
-            );
-          return decoded;
-        }
-      } catch {
-        return text;
+  return str.replace(/=\?([^?]+)\?([BbQq])\?([^?]+)\?=/g, (_match, charset, encoding, text) => {
+    try {
+      if (encoding.toUpperCase() === "B") {
+        const bytes = Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
+        return new TextDecoder(charset).decode(bytes);
+      } else {
+        const decoded = text
+          .replace(/_/g, " ")
+          .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+        return decoded;
       }
+    } catch {
+      return text;
     }
-  );
+  });
 }

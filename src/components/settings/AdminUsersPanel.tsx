@@ -27,7 +27,10 @@ export default function AdminUsers() {
   const { data: myProfile, isLoading: profileLoading } = useQuery({
     queryKey: queryKeys.operators.adminCheck,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return null;
       return await findOperatorAdminFlag(user.id);
     },
@@ -80,7 +83,11 @@ export default function AdminUsers() {
   });
 
   if (profileLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
   if (!isAdmin) {
     return <div className="p-8 text-center text-muted-foreground">Accesso riservato agli amministratori</div>;
@@ -94,9 +101,7 @@ export default function AdminUsers() {
             <Shield className="w-5 h-5 text-primary" />
             <CardTitle>Utenti Autorizzati</CardTitle>
           </div>
-          <CardDescription>
-            Solo le email presenti in questa lista possono accedere alla piattaforma.
-          </CardDescription>
+          <CardDescription>Solo le email presenti in questa lista possono accedere alla piattaforma.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Add new user form */}
@@ -105,13 +110,13 @@ export default function AdminUsers() {
               placeholder="email@esempio.com"
               type="email"
               value={newEmail}
-              onChange={e => setNewEmail(e.target.value)}
+              onChange={(e) => setNewEmail(e.target.value)}
               className="flex-1"
             />
             <Input
               placeholder="Nome (opzionale)"
               value={newName}
-              onChange={e => setNewName(e.target.value)}
+              onChange={(e) => setNewName(e.target.value)}
               className="w-48"
             />
             <Button
@@ -148,7 +153,7 @@ export default function AdminUsers() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map(u => (
+                  {users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">{u.email}</TableCell>
                       <TableCell className="text-muted-foreground">{u.display_name || "—"}</TableCell>
@@ -195,7 +200,7 @@ export default function AdminUsers() {
           )}
 
           <p className="text-xs text-muted-foreground">
-            Totale: {users.length} utenti autorizzati · {users.filter(u => u.is_active).length} attivi
+            Totale: {users.length} utenti autorizzati · {users.filter((u) => u.is_active).length} attivi
           </p>
         </CardContent>
       </Card>

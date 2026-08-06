@@ -2,9 +2,7 @@
  * CampaignGoalDialog — Goal picker before sending to Cockpit
  */
 import { Button } from "@/components/ui/button";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Target, Send } from "lucide-react";
 import { CAMPAIGN_GOALS, type CampaignPartner } from "./useCampaignData";
@@ -18,7 +16,14 @@ interface Props {
   onConfirm: () => void;
 }
 
-export function CampaignGoalDialog({ open, onOpenChange, campaignPartners, selectedGoal, onGoalChange, onConfirm }: Props) {
+export function CampaignGoalDialog({
+  open,
+  onOpenChange,
+  campaignPartners,
+  selectedGoal,
+  onGoalChange,
+  onConfirm,
+}: Props) {
   const bcaCount = campaignPartners.filter((p) => p.has_bca).length;
 
   return (
@@ -33,11 +38,7 @@ export function CampaignGoalDialog({ open, onOpenChange, campaignPartners, selec
         <div className="py-4">
           <p className="text-sm text-muted-foreground mb-3">
             {campaignPartners.length} aziende saranno inviate al Cockpit con il goal selezionato.
-            {bcaCount > 0 && (
-              <span className="text-primary ml-1">
-                ({bcaCount} incontrate di persona)
-              </span>
-            )}
+            {bcaCount > 0 && <span className="text-primary ml-1">({bcaCount} incontrate di persona)</span>}
           </p>
           <Select value={selectedGoal} onValueChange={onGoalChange}>
             <SelectTrigger>

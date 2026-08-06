@@ -31,7 +31,10 @@ export function AdminUsersPage() {
   const { data: myProfile, isLoading: profileLoading } = useQuery({
     queryKey: queryKeys.operators.adminCheck,
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return null;
       return await findOperatorAdminFlag(user.id);
     },
@@ -86,7 +89,9 @@ export function AdminUsersPage() {
   if (profileLoading) {
     return (
       <PageShell title="Utenti Autorizzati" description="Whitelist accesso piattaforma">
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
       </PageShell>
     );
   }
@@ -102,7 +107,11 @@ export function AdminUsersPage() {
 
   return (
     <PageShell
-      title={<span className="inline-flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Utenti Autorizzati</span>}
+      title={
+        <span className="inline-flex items-center gap-2">
+          <Shield className="h-5 w-5 text-primary" /> Utenti Autorizzati
+        </span>
+      }
       description="Solo le email presenti in questa lista possono accedere alla piattaforma."
     >
       <Card>
@@ -112,13 +121,13 @@ export function AdminUsersPage() {
               placeholder="email@esempio.com"
               type="email"
               value={newEmail}
-              onChange={e => setNewEmail(e.target.value)}
+              onChange={(e) => setNewEmail(e.target.value)}
               className="flex-1 min-w-[200px]"
             />
             <Input
               placeholder="Nome (opzionale)"
               value={newName}
-              onChange={e => setNewName(e.target.value)}
+              onChange={(e) => setNewName(e.target.value)}
               className="w-full sm:w-48"
             />
             <Button
@@ -154,7 +163,7 @@ export function AdminUsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map(u => (
+                  {users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">{u.email}</TableCell>
                       <TableCell className="text-muted-foreground">{u.display_name || "—"}</TableCell>
@@ -201,7 +210,7 @@ export function AdminUsersPage() {
           )}
 
           <p className="text-xs text-muted-foreground">
-            Totale: {users.length} utenti autorizzati · {users.filter(u => u.is_active).length} attivi
+            Totale: {users.length} utenti autorizzati · {users.filter((u) => u.is_active).length} attivi
           </p>
         </CardContent>
       </Card>

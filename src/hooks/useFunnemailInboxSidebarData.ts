@@ -11,11 +11,8 @@ export function useFunnemailInboxSidebarData() {
   const { activeMailbox } = useActiveMailbox();
   // Vedi useFunnemailInbox: usiamo activeOperator solo se è davvero
   // accessibile dall'utente corrente, altrimenti fallback su user.id.
-  const trustedActiveOp =
-    activeOperator && operators.some((o) => o.id === activeOperator.id)
-      ? activeOperator
-      : null;
-  const targetUserId = viewingAll ? null : trustedActiveOp?.user_id ?? user?.id ?? null;
+  const trustedActiveOp = activeOperator && operators.some((o) => o.id === activeOperator.id) ? activeOperator : null;
+  const targetUserId = viewingAll ? null : (trustedActiveOp?.user_id ?? user?.id ?? null);
   const folderOwnerUserId = targetUserId ?? user?.id ?? null;
   const mailboxFilter = activeMailbox
     ? activeMailbox.kind === "shared"

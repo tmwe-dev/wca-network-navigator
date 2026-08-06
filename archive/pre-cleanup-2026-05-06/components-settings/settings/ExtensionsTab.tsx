@@ -1,10 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
-import {
-  downloadLinkedInExtensionZip,
-  downloadWhatsAppExtensionZip,
-} from "@/lib/whatsappExtensionZip";
+import { downloadLinkedInExtensionZip, downloadWhatsAppExtensionZip } from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { ExtensionDownloadCatalog } from "@/components/settings/ExtensionDownloadCatalog";
@@ -31,7 +28,9 @@ export function ExtensionsTab() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Estensioni Chrome</h2>
-        <p className="text-sm text-muted-foreground">Scarica e installa le estensioni per abilitare i canali di comunicazione.</p>
+        <p className="text-sm text-muted-foreground">
+          Scarica e installa le estensioni per abilitare i canali di comunicazione.
+        </p>
       </div>
 
       <div className="space-y-1 rounded-lg border border-border bg-muted/50 p-3">
@@ -39,9 +38,15 @@ export function ExtensionsTab() {
         <ol className="list-inside list-decimal space-y-0.5 text-[11px] text-muted-foreground">
           <li>Scarica lo ZIP dell'estensione</li>
           <li>Decomprimi il file</li>
-          <li>Apri <code className="rounded bg-muted px-1 font-mono">chrome://extensions</code></li>
-          <li>Attiva <strong>Modalità sviluppatore</strong> (toggle in alto a destra)</li>
-          <li>Clicca <strong>Carica estensione non pacchettizzata</strong> e seleziona la cartella</li>
+          <li>
+            Apri <code className="rounded bg-muted px-1 font-mono">chrome://extensions</code>
+          </li>
+          <li>
+            Attiva <strong>Modalità sviluppatore</strong> (toggle in alto a destra)
+          </li>
+          <li>
+            Clicca <strong>Carica estensione non pacchettizzata</strong> e seleziona la cartella
+          </li>
           <li>Ricarica questa pagina</li>
         </ol>
       </div>
@@ -58,10 +63,17 @@ export function ExtensionsTab() {
                 <p className="text-xs text-muted-foreground">Scraping, Deep Search, Hydra Memory</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => {
-              void downloadGenericZip("/partner-connect-extension.zip", "partner-connect-extension.zip", "Partner Connect scaricato!")
-                .catch(() => toast.error("File non disponibile"));
-            }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void downloadGenericZip(
+                  "/partner-connect-extension.zip",
+                  "partner-connect-extension.zip",
+                  "Partner Connect scaricato!",
+                ).catch(() => toast.error("File non disponibile"));
+              }}
+            >
               <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
             </Button>
           </div>
@@ -80,20 +92,24 @@ export function ExtensionsTab() {
                 <p className="text-xs text-muted-foreground">Invio automatico messaggi WhatsApp</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={async () => {
-              try {
-                await downloadWhatsAppExtensionZip();
-                toast.success("Estensione WhatsApp scaricata!", {
-                  description:
-                    "PRIMA di caricarla: vai su chrome://extensions e RIMUOVI la versione vecchia. Estrai lo ZIP in una cartella NUOVA e vuota, poi 'Carica estensione non pacchettizzata'.",
-                  duration: 15000,
-                });
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                log.warn("operation failed", { error: msg });
-                toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
-              }
-            }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await downloadWhatsAppExtensionZip();
+                  toast.success("Estensione WhatsApp scaricata!", {
+                    description:
+                      "PRIMA di caricarla: vai su chrome://extensions e RIMUOVI la versione vecchia. Estrai lo ZIP in una cartella NUOVA e vuota, poi 'Carica estensione non pacchettizzata'.",
+                    duration: 15000,
+                  });
+                } catch (e) {
+                  const msg = e instanceof Error ? e.message : String(e);
+                  log.warn("operation failed", { error: msg });
+                  toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
+                }
+              }}
+            >
               <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
             </Button>
           </div>
@@ -113,20 +129,24 @@ export function ExtensionsTab() {
                 <p className="text-xs text-muted-foreground">Login automatico e invio messaggi LinkedIn</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={async () => {
-              try {
-                await downloadLinkedInExtensionZip();
-                toast.success("LinkedIn extension scaricata!", {
-                  description:
-                    "PRIMA di caricarla: vai su chrome://extensions e RIMUOVI la versione vecchia. Estrai lo ZIP in una cartella NUOVA e vuota, poi 'Carica estensione non pacchettizzata'.",
-                  duration: 15000,
-                });
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                log.warn("operation failed", { error: msg });
-                toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
-              }
-            }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await downloadLinkedInExtensionZip();
+                  toast.success("LinkedIn extension scaricata!", {
+                    description:
+                      "PRIMA di caricarla: vai su chrome://extensions e RIMUOVI la versione vecchia. Estrai lo ZIP in una cartella NUOVA e vuota, poi 'Carica estensione non pacchettizzata'.",
+                    duration: 15000,
+                  });
+                } catch (e) {
+                  const msg = e instanceof Error ? e.message : String(e);
+                  log.warn("operation failed", { error: msg });
+                  toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
+                }
+              }}
+            >
               <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
             </Button>
           </div>
@@ -146,10 +166,15 @@ export function ExtensionsTab() {
                 <p className="text-xs text-muted-foreground">Download IMAP, auto-discovery, sync e notifiche</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => {
-              void downloadGenericZip("/email-extension.zip", "email-extension.zip", "Email Client scaricato!")
-                .catch(() => toast.error("File non disponibile"));
-            }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void downloadGenericZip("/email-extension.zip", "email-extension.zip", "Email Client scaricato!").catch(
+                  () => toast.error("File non disponibile"),
+                );
+              }}
+            >
               <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
             </Button>
           </div>

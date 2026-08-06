@@ -15,11 +15,19 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
       { check: "kb_consult", label: "Consulta KB procedures/email-single per gate completi", tool: "search_kb" },
     ],
     steps: [
-      { order: 1, action: "Consulta KB procedures/email-single", tool: "search_kb", detail: "Single source of truth: kb_entries title='procedures/email-single'. Esegui A→Z fino al post-send-checklist." },
+      {
+        order: 1,
+        action: "Consulta KB procedures/email-single",
+        tool: "search_kb",
+        detail:
+          "Single source of truth: kb_entries title='procedures/email-single'. Esegui A→Z fino al post-send-checklist.",
+      },
     ],
     related_pages: ["/cockpit", "/workspace", "/email-composer"],
     ai_tools_required: ["search_kb"],
-    tips: ["Procedura unificata in KB: include gate, invio, post-send checklist (activity + lead_status + reminder + next_action)."],
+    tips: [
+      "Procedura unificata in KB: include gate, invio, post-send checklist (activity + lead_status + reminder + next_action).",
+    ],
   },
   {
     id: "email_campaign",
@@ -34,12 +42,42 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
       { check: "goal_defined", label: "Obiettivo commerciale definito" },
     ],
     steps: [
-      { order: 1, action: "Seleziona destinatari", tool: "search_partners", detail: "Filtra per paese, servizio, rating, email presente. Mostra conteggio." },
-      { order: 2, action: "Verifica blacklist collettiva", tool: "check_blacklist", detail: "Escludi partner in blacklist dalla lista." },
-      { order: 3, action: "Definisci obiettivo e proposta", tool: null, detail: "L'utente specifica goal, base_proposal, quality via Goal Bar o chat." },
-      { order: 4, action: "Genera email modello", tool: "generate_outreach", detail: "Genera 1 email di esempio per approvazione. Quality 'standard' per campagne." },
-      { order: 5, action: "Approva e lancia coda", tool: null, detail: "Dopo approvazione, le email vengono generate e accodate nella email_campaign_queue." },
-      { order: 6, action: "Monitora invio", tool: "check_job_status", detail: "Verifica stato coda email: pending, sent, failed." },
+      {
+        order: 1,
+        action: "Seleziona destinatari",
+        tool: "search_partners",
+        detail: "Filtra per paese, servizio, rating, email presente. Mostra conteggio.",
+      },
+      {
+        order: 2,
+        action: "Verifica blacklist collettiva",
+        tool: "check_blacklist",
+        detail: "Escludi partner in blacklist dalla lista.",
+      },
+      {
+        order: 3,
+        action: "Definisci obiettivo e proposta",
+        tool: null,
+        detail: "L'utente specifica goal, base_proposal, quality via Goal Bar o chat.",
+      },
+      {
+        order: 4,
+        action: "Genera email modello",
+        tool: "generate_outreach",
+        detail: "Genera 1 email di esempio per approvazione. Quality 'standard' per campagne.",
+      },
+      {
+        order: 5,
+        action: "Approva e lancia coda",
+        tool: null,
+        detail: "Dopo approvazione, le email vengono generate e accodate nella email_campaign_queue.",
+      },
+      {
+        order: 6,
+        action: "Monitora invio",
+        tool: "check_job_status",
+        detail: "Verifica stato coda email: pending, sent, failed.",
+      },
     ],
     related_pages: ["/cockpit", "/workspace", "/email-composer", "/campaigns"],
     ai_tools_required: ["search_partners", "check_blacklist", "generate_outreach", "send_email", "check_job_status"],
@@ -61,11 +99,36 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
       { check: "recipient_identified", label: "Contatto/partner identificato" },
     ],
     steps: [
-      { order: 1, action: "Identifica il contatto", tool: "search_partners", detail: "Cerca partner e contatto specifico." },
-      { order: 2, action: "Verifica profilo LinkedIn", tool: "get_partner_detail", detail: "Controlla se il contatto ha un link LinkedIn nei social_links." },
-      { order: 3, action: "Genera messaggio LinkedIn", tool: "generate_outreach", detail: "channel='linkedin'. Max 300 caratteri per InMail, più conciso di un'email." },
-      { order: 4, action: "Mostra all'utente per copia", tool: null, detail: "LinkedIn non supporta invio automatico: mostra il testo pronto da copiare." },
-      { order: 5, action: "Registra attività", tool: "create_activity", detail: "Crea attività tipo 'linkedin_message' per tracciamento." },
+      {
+        order: 1,
+        action: "Identifica il contatto",
+        tool: "search_partners",
+        detail: "Cerca partner e contatto specifico.",
+      },
+      {
+        order: 2,
+        action: "Verifica profilo LinkedIn",
+        tool: "get_partner_detail",
+        detail: "Controlla se il contatto ha un link LinkedIn nei social_links.",
+      },
+      {
+        order: 3,
+        action: "Genera messaggio LinkedIn",
+        tool: "generate_outreach",
+        detail: "channel='linkedin'. Max 300 caratteri per InMail, più conciso di un'email.",
+      },
+      {
+        order: 4,
+        action: "Mostra all'utente per copia",
+        tool: null,
+        detail: "LinkedIn non supporta invio automatico: mostra il testo pronto da copiare.",
+      },
+      {
+        order: 5,
+        action: "Registra attività",
+        tool: "create_activity",
+        detail: "Crea attività tipo 'linkedin_message' per tracciamento.",
+      },
     ],
     related_pages: ["/cockpit", "/workspace"],
     ai_tools_required: ["search_partners", "get_partner_detail", "generate_outreach", "create_activity"],
@@ -83,10 +146,20 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
     category: "outreach",
     channels: ["whatsapp"],
     prerequisites: [
-      { check: "kb_consult", label: "Consulta KB procedures/whatsapp-message (gate consenso, fase qualified+)", tool: "search_kb" },
+      {
+        check: "kb_consult",
+        label: "Consulta KB procedures/whatsapp-message (gate consenso, fase qualified+)",
+        tool: "search_kb",
+      },
     ],
     steps: [
-      { order: 1, action: "Consulta KB procedures/whatsapp-message", tool: "search_kb", detail: "WhatsApp VIETATO primo contatto. Solo lead_status in [engaged|qualified|negotiation|converted] + consenso esplicito. Refusal JSON se gate non rispettato." },
+      {
+        order: 1,
+        action: "Consulta KB procedures/whatsapp-message",
+        tool: "search_kb",
+        detail:
+          "WhatsApp VIETATO primo contatto. Solo lead_status in [engaged|qualified|negotiation|converted] + consenso esplicito. Refusal JSON se gate non rispettato.",
+      },
     ],
     related_pages: ["/cockpit", "/workspace"],
     ai_tools_required: ["search_kb"],
@@ -99,9 +172,7 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
     tags: ["sms", "messaggio", "outreach", "testo", "mobile"],
     category: "outreach",
     channels: ["sms"],
-    prerequisites: [
-      { check: "recipient_has_phone", label: "Il contatto ha un numero di cellulare" },
-    ],
+    prerequisites: [{ check: "recipient_has_phone", label: "Il contatto ha un numero di cellulare" }],
     steps: [
       { order: 1, action: "Identifica contatto", tool: "search_partners", detail: "Cerca partner con mobile." },
       { order: 2, action: "Genera SMS", tool: "generate_outreach", detail: "channel='sms'. Max 160 caratteri." },
@@ -114,15 +185,19 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
   {
     id: "multi_channel_sequence",
     name: "Sequenza Multi-Canale",
-    description: "[STUB] Migrata in KB. Vedi procedures/multi-channel-sequence (G0 email, G+5 LinkedIn, G+12 follow-up, WhatsApp solo se engaged+consenso).",
+    description:
+      "[STUB] Migrata in KB. Vedi procedures/multi-channel-sequence (G0 email, G+5 LinkedIn, G+12 follow-up, WhatsApp solo se engaged+consenso).",
     tags: ["sequenza", "multi-canale", "stub", "kb-redirect"],
     category: "outreach",
     channels: ["email", "linkedin", "whatsapp"],
-    prerequisites: [
-      { check: "kb_consult", label: "Consulta KB procedures/multi-channel-sequence", tool: "search_kb" },
-    ],
+    prerequisites: [{ check: "kb_consult", label: "Consulta KB procedures/multi-channel-sequence", tool: "search_kb" }],
     steps: [
-      { order: 1, action: "Consulta KB procedures/multi-channel-sequence", tool: "search_kb", detail: "Cadence allineata a Dottrina Multi-Canale: NO WhatsApp G+7 cieco." },
+      {
+        order: 1,
+        action: "Consulta KB procedures/multi-channel-sequence",
+        tool: "search_kb",
+        detail: "Cadence allineata a Dottrina Multi-Canale: NO WhatsApp G+7 cieco.",
+      },
     ],
     related_pages: ["/cockpit", "/workspace", "/reminders"],
     ai_tools_required: ["search_kb"],
@@ -138,13 +213,26 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
     description: "Verifica la copertura dei dati locali già sincronizzati per un paese",
     tags: ["copertura", "dati-locali", "paese", "wca", "network", "membri"],
     category: "network",
-    prerequisites: [
-      { check: "local_data_available", label: "Dati locali partner/contatti disponibili" },
-    ],
+    prerequisites: [{ check: "local_data_available", label: "Dati locali partner/contatti disponibili" }],
     steps: [
-      { order: 1, action: "Verifica copertura dati locale", tool: "get_directory_status", detail: "Controlla copertura e qualità dei dati già sincronizzati." },
-      { order: 2, action: "Confronta con DB locale", tool: "get_country_overview", detail: "Valuta quantità e qualità dei partner presenti." },
-      { order: 3, action: "Scegli arricchimento", tool: null, detail: "Se mancano rating o dati qualitativi, proponi deep search o arricchimento sito web." },
+      {
+        order: 1,
+        action: "Verifica copertura dati locale",
+        tool: "get_directory_status",
+        detail: "Controlla copertura e qualità dei dati già sincronizzati.",
+      },
+      {
+        order: 2,
+        action: "Confronta con DB locale",
+        tool: "get_country_overview",
+        detail: "Valuta quantità e qualità dei partner presenti.",
+      },
+      {
+        order: 3,
+        action: "Scegli arricchimento",
+        tool: null,
+        detail: "Se mancano rating o dati qualitativi, proponi deep search o arricchimento sito web.",
+      },
     ],
     related_pages: ["/operations", "/partner-hub"],
     ai_tools_required: ["get_directory_status", "get_country_overview"],
@@ -166,9 +254,24 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
       { check: "has_credits", label: "Crediti sufficienti (costa 1 credito)" },
     ],
     steps: [
-      { order: 1, action: "Identifica il partner", tool: "get_partner_detail", detail: "Ottieni dettagli completi per verificare cosa manca." },
-      { order: 2, action: "Avvia Deep Search", tool: "deep_search_partner", detail: "Usa Partner Connect per cercare sul web." },
-      { order: 3, action: "Verifica risultati", tool: "get_partner_detail", detail: "Ricarica il partner per vedere i dati arricchiti." },
+      {
+        order: 1,
+        action: "Identifica il partner",
+        tool: "get_partner_detail",
+        detail: "Ottieni dettagli completi per verificare cosa manca.",
+      },
+      {
+        order: 2,
+        action: "Avvia Deep Search",
+        tool: "deep_search_partner",
+        detail: "Usa Partner Connect per cercare sul web.",
+      },
+      {
+        order: 3,
+        action: "Verifica risultati",
+        tool: "get_partner_detail",
+        detail: "Ricarica il partner per vedere i dati arricchiti.",
+      },
     ],
     related_pages: ["/partner-hub", "/operations"],
     ai_tools_required: ["get_partner_detail", "deep_search_partner"],

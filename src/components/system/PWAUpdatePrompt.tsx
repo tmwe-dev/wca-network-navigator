@@ -25,8 +25,7 @@ export function PWAUpdatePrompt() {
     })();
 
     const isPreviewHost =
-      window.location.hostname.includes("id-preview--") ||
-      window.location.hostname.includes("lovableproject.com");
+      window.location.hostname.includes("id-preview--") || window.location.hostname.includes("lovableproject.com");
 
     if (isInIframe || isPreviewHost) {
       // Non registrare SW in preview/iframe per evitare interferenze

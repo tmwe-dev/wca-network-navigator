@@ -34,9 +34,7 @@ export const PIPELINE_GOOGLE_MAPS: DeepSearchPipeline = {
   description: "Cerca l'azienda su Google Maps: scheda Place (indirizzo, telefono, sito, ore).",
   requiredVars: ["companyName"],
   settleMs: 3000,
-  buildUrls: (v) => [
-    `https://www.google.com/maps/search/${enc(v.companyName)}+${enc(v.city ?? "")}`,
-  ],
+  buildUrls: (v) => [`https://www.google.com/maps/search/${enc(v.companyName)}+${enc(v.city ?? "")}`],
 };
 
 export const PIPELINE_WEBSITE_MULTI_PAGE: DeepSearchPipeline = {
@@ -68,9 +66,7 @@ export const PIPELINE_GOOGLE_GENERAL: DeepSearchPipeline = {
   description: "Ricerca Google generica per scoprire presenze web dell'azienda.",
   requiredVars: ["query"],
   settleMs: 2500,
-  buildUrls: (v) => [
-    `https://www.google.com/search?q=${enc(v.query)}`,
-  ],
+  buildUrls: (v) => [`https://www.google.com/search?q=${enc(v.query)}`],
 };
 
 export const ALL_PIPELINES = {

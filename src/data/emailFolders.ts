@@ -33,19 +33,12 @@ export async function fetchDbFolderCounts(): Promise<DbFolderCount[]> {
 /** Nasconde i messaggi indicati (soft-hide via `hidden_by_rule`). */
 export async function hideChannelMessagesByIds(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const { error } = await supabase
-    .from("channel_messages")
-    .update({ hidden_by_rule: true })
-    .in("id", ids);
+  const { error } = await supabase.from("channel_messages").update({ hidden_by_rule: true }).in("id", ids);
   if (error) throw error;
 }
 
 /** Aggiorna la cartella (ed eventualmente nasconde) per id messaggio. */
-export async function setChannelMessagesFolderByIds(
-  ids: string[],
-  folder: string,
-  hide = false,
-): Promise<void> {
+export async function setChannelMessagesFolderByIds(ids: string[], folder: string, hide = false): Promise<void> {
   if (ids.length === 0) return;
   const { error } = await supabase
     .from("channel_messages")
@@ -55,11 +48,7 @@ export async function setChannelMessagesFolderByIds(
 }
 
 /** Aggiorna la cartella (ed eventualmente nasconde) per UID IMAP. */
-export async function setChannelMessagesFolderByUids(
-  uids: number[],
-  folder: string,
-  hide = false,
-): Promise<void> {
+export async function setChannelMessagesFolderByUids(uids: number[], folder: string, hide = false): Promise<void> {
   if (uids.length === 0) return;
   const { error } = await supabase
     .from("channel_messages")
@@ -69,10 +58,7 @@ export async function setChannelMessagesFolderByUids(
 }
 
 /** Id messaggi inbound di un mittente esatto. */
-export async function findInboundMessageIdsByAddress(
-  address: string,
-  limit = 500,
-): Promise<string[]> {
+export async function findInboundMessageIdsByAddress(address: string, limit = 500): Promise<string[]> {
   const { data, error } = await supabase
     .from("channel_messages")
     .select("id")
@@ -85,10 +71,7 @@ export async function findInboundMessageIdsByAddress(
 }
 
 /** Id messaggi inbound provenienti da un dominio. */
-export async function findInboundMessageIdsByDomain(
-  domain: string,
-  limit = 500,
-): Promise<string[]> {
+export async function findInboundMessageIdsByDomain(domain: string, limit = 500): Promise<string[]> {
   const { data, error } = await supabase
     .from("channel_messages")
     .select("id")

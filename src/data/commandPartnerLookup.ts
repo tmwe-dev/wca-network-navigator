@@ -46,7 +46,8 @@ function parseCommandPartnerRow(row: Record<string, unknown>): CommandPartnerRow
   };
 }
 
-const PARTNER_COLS = "id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at";
+const PARTNER_COLS =
+  "id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at";
 
 /** Colonne di `partners` filtrabili da un contesto salvato dal planner. */
 const PARTNER_FILTERABLE_COLUMNS: ReadonlySet<string> = new Set([
@@ -89,10 +90,7 @@ export async function fetchPartnersByIds(ids: ReadonlyArray<string>): Promise<Co
 }
 
 export async function searchPartner(company: string | null, email: string | null): Promise<CommandPartnerRow[]> {
-  let q = supabase
-    .from("partners")
-    .select(PARTNER_COLS)
-    .limit(5);
+  let q = supabase.from("partners").select(PARTNER_COLS).limit(5);
   if (email) {
     q = q.eq("email", email);
   } else if (company) {
@@ -105,7 +103,11 @@ export async function searchPartner(company: string | null, email: string | null
   return (data ?? []) as CommandPartnerRow[];
 }
 
-export async function findPartnerContact(partnerId: string, person: string | null, email: string | null): Promise<CommandContactRow | null> {
+export async function findPartnerContact(
+  partnerId: string,
+  person: string | null,
+  email: string | null,
+): Promise<CommandContactRow | null> {
   let q = supabase
     .from("partner_contacts")
     .select("id, partner_id, name, contact_alias, email, title")
@@ -118,8 +120,9 @@ export async function findPartnerContact(partnerId: string, person: string | nul
   if (!person) return rows[0];
   const norm = person.toLowerCase();
   return (
-    rows.find((r) => (r.name ?? "").toLowerCase().includes(norm) || (r.contact_alias ?? "").toLowerCase().includes(norm)) ??
-    rows[0]
+    rows.find(
+      (r) => (r.name ?? "").toLowerCase().includes(norm) || (r.contact_alias ?? "").toLowerCase().includes(norm),
+    ) ?? rows[0]
   );
 }
 
@@ -131,7 +134,9 @@ export async function fetchPrimaryContact(partnerId: string): Promise<{ name: st
     .not("email", "is", null)
     .order("created_at", { ascending: true })
     .limit(1);
-  const row = (data ?? [])[0] as { name: string | null; contact_alias: string | null; email: string | null } | undefined;
+  const row = (data ?? [])[0] as
+    | { name: string | null; contact_alias: string | null; email: string | null }
+    | undefined;
   if (!row) return { name: null, email: null };
   return { name: row.name ?? row.contact_alias ?? null, email: row.email ?? null };
 }

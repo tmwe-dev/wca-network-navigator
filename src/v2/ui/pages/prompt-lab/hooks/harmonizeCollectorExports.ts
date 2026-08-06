@@ -21,10 +21,7 @@ export const CATEGORY_TO_TABLE_INTERNAL: Record<string, string> = {
 
 export function readMetaPublic(section: string, label: string): string | undefined {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const patterns = [
-    new RegExp(`^\\*\\*${escaped}:\\*\\*\\s*(.+)$`, "im"),
-    new RegExp(`^${escaped}:\\s*(.+)$`, "im"),
-  ];
+  const patterns = [new RegExp(`^\\*\\*${escaped}:\\*\\*\\s*(.+)$`, "im"), new RegExp(`^${escaped}:\\s*(.+)$`, "im")];
   for (const pattern of patterns) {
     const match = section.match(pattern);
     if (match?.[1]?.trim()) return match[1].trim();

@@ -19,8 +19,13 @@ interface ContactSearchStepProps {
 }
 
 export function ContactSearchStep({
-  companyName, contactName, placesLoading, placesResults,
-  onFieldChange, onSearch, onApplyResult,
+  companyName,
+  contactName,
+  placesLoading,
+  placesResults,
+  onFieldChange,
+  onSearch,
+  onApplyResult,
 }: ContactSearchStepProps): React.ReactElement {
   return (
     <div className="space-y-3 mt-3">
@@ -28,11 +33,19 @@ export function ContactSearchStep({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs">Nome Azienda *</Label>
-          <Input value={companyName} onChange={e => onFieldChange("companyName", e.target.value)} placeholder="Es. Acme Logistics Srl" />
+          <Input
+            value={companyName}
+            onChange={(e) => onFieldChange("companyName", e.target.value)}
+            placeholder="Es. Acme Logistics Srl"
+          />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Nome Contatto</Label>
-          <Input value={contactName} onChange={e => onFieldChange("contactName", e.target.value)} placeholder="Mario Rossi" />
+          <Input
+            value={contactName}
+            onChange={(e) => onFieldChange("contactName", e.target.value)}
+            placeholder="Mario Rossi"
+          />
         </div>
       </div>
 
@@ -50,9 +63,11 @@ export function ContactSearchStep({
         {placesResults.length > 0 && (
           <div className="space-y-1 max-h-40 overflow-y-auto">
             {placesResults.map((r, i) => (
-              <button key={i}
+              <button
+                key={i}
                 className="w-full text-left text-xs p-2 rounded hover:bg-accent/50 transition-colors border border-transparent hover:border-border"
-                onClick={() => onApplyResult(r)}>
+                onClick={() => onApplyResult(r)}
+              >
                 <div className="flex items-start gap-2">
                   <ExternalLink className="w-3 h-3 mt-0.5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">

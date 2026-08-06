@@ -3,7 +3,6 @@ import { ImapClient } from "jsr:@workingdevshero/deno-imap";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { resolveMailbox } from "../_shared/resolveMailbox.ts";
 
-
 /* ── CA Certificates (same as check-inbox) ── */
 
 const SECTIGO_RSA_DOMAIN_VALIDATION_CA = `-----BEGIN CERTIFICATE-----
@@ -179,7 +178,10 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
     if (authErr || !user) throw new Error("Unauthorized");
 
     // Step D — opt-in shared mailbox: header x-mailbox-id (UUID di shared_mailboxes)
@@ -190,7 +192,8 @@ Deno.serve(async (req) => {
     const { message_id } = await req.json();
     if (!message_id || typeof message_id !== "string") {
       return new Response(JSON.stringify({ error: "message_id is required" }), {
-        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -200,21 +203,21 @@ Deno.serve(async (req) => {
       .select("imap_uid, uidvalidity, channel")
       .eq("id", message_id)
       .eq("user_id", user.id);
-    msgQuery = mailboxId
-      ? msgQuery.eq("mailbox_id", mailboxId)
-      : msgQuery.is("mailbox_id", null);
+    msgQuery = mailboxId ? msgQuery.eq("mailbox_id", mailboxId) : msgQuery.is("mailbox_id", null);
     const { data: msg, error: msgErr } = await msgQuery.maybeSingle();
 
     if (msgErr) throw msgErr;
     if (!msg) {
       return new Response(JSON.stringify({ success: false, skipped: true, reason: "message_not_found" }), {
-        status: 200, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 200,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     if (!msg.imap_uid) {
       // Not an IMAP message (e.g. outbound/manual) — nothing to sync, return success
       return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_imap_uid" }), {
-        status: 200, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 200,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -226,8 +229,12 @@ Deno.serve(async (req) => {
 
     // Connect to IMAP
     const client = new ImapClient({
-      host: imapHost, port: resolved.imap_port || 993, username: imapUser, password: imapPassword,
-      secure: true, connectionTimeout: 10000,
+      host: imapHost,
+      port: resolved.imap_port || 993,
+      username: imapUser,
+      password: imapPassword,
+      secure: true,
+      connectionTimeout: 10000,
       tlsOptions: { caCerts: getCaCertsForHost(imapHost) },
     });
 
@@ -246,7 +253,8 @@ Deno.serve(async (req) => {
   } catch (err: Record<string, unknown>) {
     console.error(`[mark-imap-seen] Error: ${err.message}`);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });

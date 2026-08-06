@@ -25,10 +25,7 @@ export interface LoadedEntity {
   activityPartnerId?: string | null;
 }
 
-export async function loadEntityFromActivity(
-  supabase: SupabaseClient,
-  activityId: string,
-): Promise<LoadedEntity> {
+export async function loadEntityFromActivity(supabase: SupabaseClient, activityId: string): Promise<LoadedEntity> {
   const { data: actData, error: actErr } = await supabase
     .from("activities")
     .select(
@@ -47,7 +44,9 @@ export async function loadEntityFromActivity(
   if (sourceType === "contact" && activity.source_id) {
     const { data: ic } = await supabase
       .from("imported_contacts")
-      .select("id, company_name, company_alias, name, contact_alias, email, phone, mobile, country, city, position, origin, note")
+      .select(
+        "id, company_name, company_alias, name, contact_alias, email, phone, mobile, country, city, position, origin, note",
+      )
       .eq("id", activity.source_id)
       .single();
     if (ic) {
@@ -134,7 +133,13 @@ export async function loadEntityFromActivity(
     contactEmail = contact?.email || partner?.email || null;
   }
 
-  return { partner, contact, contactEmail, sourceType, activityPartnerId: (activity.partner_id as string | null) ?? null };
+  return {
+    partner,
+    contact,
+    contactEmail,
+    sourceType,
+    activityPartnerId: (activity.partner_id as string | null) ?? null,
+  };
 }
 
 export async function loadStandalonePartner(
@@ -179,10 +184,7 @@ export async function loadStandalonePartner(
   return { partner, contact, contactEmail, sourceType: "partner" };
 }
 
-export async function loadMetInPerson(
-  supabase: SupabaseClient,
-  partnerId: string | null,
-): Promise<string> {
+export async function loadMetInPerson(supabase: SupabaseClient, partnerId: string | null): Promise<string> {
   if (!partnerId) return "";
   const { data: bcaRows } = await supabase
     .from("business_cards")

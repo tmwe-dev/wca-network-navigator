@@ -9,10 +9,7 @@ import { mapDownloadJobRow } from "../../../core/mappers/download-job-mapper";
 
 export async function fetchDownloadJobs(): Promise<Result<DownloadJob[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("download_jobs")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("download_jobs").select("*").order("created_at", { ascending: false });
     if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "download_jobs" }, "fetchDownloadJobs"));
     if (!data) return ok([]);
     const jobs: DownloadJob[] = [];
@@ -34,7 +31,10 @@ export async function fetchDownloadJobsByCountry(countryCode: string): Promise<R
       .select("*")
       .eq("country_code", countryCode)
       .order("created_at", { ascending: false });
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "download_jobs", countryCode }, "fetchDownloadJobsByCountry"));
+    if (error)
+      return err(
+        ioError("DATABASE_ERROR", error.message, { table: "download_jobs", countryCode }, "fetchDownloadJobsByCountry"),
+      );
     if (!data) return ok([]);
     const jobs: DownloadJob[] = [];
     for (const row of data) {

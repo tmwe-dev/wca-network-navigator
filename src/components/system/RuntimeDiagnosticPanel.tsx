@@ -37,7 +37,9 @@ export function RuntimeDiagnosticPanel() {
 
     // Supabase + auth
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session?.access_token) {
         state.supabaseStatus = "connected";
         state.userId = session.user?.id || null;
@@ -74,7 +76,11 @@ export function RuntimeDiagnosticPanel() {
     try {
       const data = await findJobsByStatusSelect(["pending", "running"], "id", 10);
       state.activeJobs = data?.length || 0;
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* intentionally ignored: best-effort cleanup */
+    }
 
     // Cache size
     state.queryCacheSize = queryClient.getQueryCache().getAll().length;
@@ -83,13 +89,21 @@ export function RuntimeDiagnosticPanel() {
     try {
       const raw = localStorage.getItem("last_wca_error");
       if (raw) state.lastWcaError = JSON.parse(raw);
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* intentionally ignored: best-effort cleanup */
+    }
 
     // Last failed call
     try {
       const raw = localStorage.getItem("last_failed_network_call");
       if (raw) state.lastFailedCall = JSON.parse(raw);
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* intentionally ignored: best-effort cleanup */
+    }
 
     setDiag(state);
   }, [queryClient]);
@@ -98,7 +112,7 @@ export function RuntimeDiagnosticPanel() {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === "D") {
         e.preventDefault();
-        setOpen(o => {
+        setOpen((o) => {
           if (!o) refresh();
           return !o;
         });
@@ -133,18 +147,25 @@ export function RuntimeDiagnosticPanel() {
         {diag.lastWcaError && (
           <div className="pt-1 border-t border-border">
             <span className="text-red-400">Last WCA Error:</span>
-            <pre className="text-[10px] text-muted-foreground mt-0.5 whitespace-pre-wrap">{JSON.stringify(diag.lastWcaError, null, 1)}</pre>
+            <pre className="text-[10px] text-muted-foreground mt-0.5 whitespace-pre-wrap">
+              {JSON.stringify(diag.lastWcaError, null, 1)}
+            </pre>
           </div>
         )}
         {diag.lastFailedCall && (
           <div className="pt-1 border-t border-border">
             <span className="text-red-400">Last Failed Call:</span>
-            <pre className="text-[10px] text-muted-foreground mt-0.5">{diag.lastFailedCall.endpoint} → {diag.lastFailedCall.status}</pre>
+            <pre className="text-[10px] text-muted-foreground mt-0.5">
+              {diag.lastFailedCall.endpoint} → {diag.lastFailedCall.status}
+            </pre>
           </div>
         )}
       </div>
       <div className="px-3 py-1.5 border-t border-border text-muted-foreground text-[10px]">
-        Ctrl+Shift+D to close • <button onClick={refresh} className="underline hover:text-foreground">Refresh</button>
+        Ctrl+Shift+D to close •{" "}
+        <button onClick={refresh} className="underline hover:text-foreground">
+          Refresh
+        </button>
       </div>
     </div>
   );

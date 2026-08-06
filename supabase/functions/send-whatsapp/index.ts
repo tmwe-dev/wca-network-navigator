@@ -19,29 +19,34 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const body = await req.json();
-    const { contact_id, recipient, message_text, mission_id, partner_id, outreach_queue_id, journalist_reviewed } = body;
+    const { contact_id, recipient, message_text, mission_id, partner_id, outreach_queue_id, journalist_reviewed } =
+      body;
 
     if (!recipient || !message_text) {
       return new Response(JSON.stringify({ error: "recipient and message_text required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -52,18 +57,21 @@ Deno.serve(async (req) => {
     });
 
     if (rlResult && !rlResult.allowed) {
-      return new Response(JSON.stringify({
-        error: "rate_limit_exceeded",
-        message: "Max 5 WhatsApp/min. Riprova tra qualche secondo.",
-        retry_after_ms: rlResult.retry_after_ms,
-      }), {
-        status: 429,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "Retry-After": String(Math.ceil((rlResult.retry_after_ms || 60000) / 1000)),
+      return new Response(
+        JSON.stringify({
+          error: "rate_limit_exceeded",
+          message: "Max 5 WhatsApp/min. Riprova tra qualche secondo.",
+          retry_after_ms: rlResult.retry_after_ms,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(Math.ceil((rlResult.retry_after_ms || 60000) / 1000)),
+          },
         },
-      });
+      );
     }
 
     // === GATE HARD: Dottrina Multi-Canale WhatsApp ===
@@ -76,7 +84,8 @@ Deno.serve(async (req) => {
 
       if (partner?.lead_status === "blacklisted") {
         return new Response(JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Partner in blacklist" }), {
-          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
@@ -90,12 +99,15 @@ Deno.serve(async (req) => {
           .eq("direction", "inbound");
 
         if (!count) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: "GATE_BLOCKED",
-            reason: `WhatsApp non consentito a fase ${partner.lead_status}. Serve almeno 'engaged'. Usa email o LinkedIn.`,
-            suggested_alternative: "email",
-          }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "GATE_BLOCKED",
+              reason: `WhatsApp non consentito a fase ${partner.lead_status}. Serve almeno 'engaged'. Usa email o LinkedIn.`,
+              suggested_alternative: "email",
+            }),
+            { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
         }
       }
 
@@ -112,11 +124,14 @@ Deno.serve(async (req) => {
       if (lastWa?.created_at) {
         const daysSince = (Date.now() - new Date(lastWa.created_at).getTime()) / 86400000;
         if (daysSince < 7) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: "CADENCE_GATE",
-            reason: `Ultimo WhatsApp ${Math.round(daysSince)} giorni fa. Minimo 7 giorni tra invii WhatsApp.`,
-          }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "CADENCE_GATE",
+              reason: `Ultimo WhatsApp ${Math.round(daysSince)} giorni fa. Minimo 7 giorni tra invii WhatsApp.`,
+            }),
+            { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
         }
       }
     }
@@ -128,18 +143,10 @@ Deno.serve(async (req) => {
       // Fetch partner & contact data for journalist review context
       const [partnerData, contactData] = await Promise.all([
         partner_id
-          ? supabase
-              .from("partners")
-              .select("company_name, country, lead_status")
-              .eq("id", partner_id)
-              .maybeSingle()
+          ? supabase.from("partners").select("company_name, country, lead_status").eq("id", partner_id).maybeSingle()
           : Promise.resolve({ data: null }),
         contact_id
-          ? supabase
-              .from("imported_contacts")
-              .select("name, role")
-              .eq("id", contact_id)
-              .maybeSingle()
+          ? supabase.from("imported_contacts").select("name, role").eq("id", contact_id).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
 
@@ -207,7 +214,8 @@ Deno.serve(async (req) => {
     if (insertErr) {
       console.error("Queue insert error:", insertErr);
       return new Response(JSON.stringify({ error: "queue_failed", detail: insertErr.message }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -221,7 +229,7 @@ Deno.serve(async (req) => {
           p_user_id: user.id,
           p_operator_id: operator_id,
           p_handle: String(recipient),
-          p_phone_e164: phone.startsWith("+") ? phone : (phone ? `+${phone}` : null),
+          p_phone_e164: phone.startsWith("+") ? phone : phone ? `+${phone}` : null,
           p_display_name: body.recipient_name ?? null,
           p_chat_thread_id: null,
           p_direction: "outbound",
@@ -233,45 +241,61 @@ Deno.serve(async (req) => {
     }
 
     if (partner_id) {
-      await supabase.from("activities").insert({
-        user_id: user.id,
-        partner_id,
-        selected_contact_id: contact_id || null,
-        activity_type: "whatsapp_message",
-        title: `WhatsApp inviato a ${recipient}`,
-        description: finalMessage,
-        status: "completed",
-        priority: "medium",
-        source_type: "partner",
-        source_id: partner_id,
-        completed_at: new Date().toISOString(),
-      }).then(() => null, () => null);
+      await supabase
+        .from("activities")
+        .insert({
+          user_id: user.id,
+          partner_id,
+          selected_contact_id: contact_id || null,
+          activity_type: "whatsapp_message",
+          title: `WhatsApp inviato a ${recipient}`,
+          description: finalMessage,
+          status: "completed",
+          priority: "medium",
+          source_type: "partner",
+          source_id: partner_id,
+          completed_at: new Date().toISOString(),
+        })
+        .then(
+          () => null,
+          () => null,
+        );
 
       const { data: p } = await supabase.from("partners").select("lead_status").eq("id", partner_id).maybeSingle();
       const reminderDays = p?.lead_status === "negotiation" ? 2 : 5;
       const dueDate = new Date(Date.now() + reminderDays * 86400000).toISOString().slice(0, 10);
-      await supabase.from("reminders").insert({
-        user_id: user.id,
-        partner_id,
-        title: "Check risposta WhatsApp",
-        due_date: dueDate,
-        priority: p?.lead_status === "negotiation" ? "high" : "medium",
-        status: "pending",
-      }).then(() => null, () => null);
+      await supabase
+        .from("reminders")
+        .insert({
+          user_id: user.id,
+          partner_id,
+          title: "Check risposta WhatsApp",
+          due_date: dueDate,
+          priority: p?.lead_status === "negotiation" ? "high" : "medium",
+          status: "pending",
+        })
+        .then(
+          () => null,
+          () => null,
+        );
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      dispatch_id: queued.id,
-      message: "Messaggio in coda. L'estensione lo invierà a breve.",
-    }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        dispatch_id: queued.id,
+        message: "Messaggio in coda. L'estensione lo invierà a breve.",
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (err: unknown) {
     console.error("[send-whatsapp] Error:", err);
     return new Response(JSON.stringify({ error: "internal_error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

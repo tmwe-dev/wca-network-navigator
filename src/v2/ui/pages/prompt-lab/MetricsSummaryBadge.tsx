@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { getMetricsSummary, type MetricsSummary } from "@/data/promptLabMetrics";
 import { useAuth } from "@/providers/AuthProvider";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("MetricsSummaryBadge");
 export function MetricsSummaryBadge() {

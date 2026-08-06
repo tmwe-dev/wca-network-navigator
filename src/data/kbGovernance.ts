@@ -27,7 +27,9 @@ export interface KbFamilyRow {
 export async function fetchLatestAuditReport(): Promise<KbAuditReport | null> {
   const { data, error } = await supabase
     .from("kb_audit_reports")
-    .select("id, created_at, triggered_by, total_entries, exact_duplicates, semantic_duplicates, numbers_outside_canonical, entries_without_tags, entries_without_family, proposed_changes, family_distribution, report_markdown")
+    .select(
+      "id, created_at, triggered_by, total_entries, exact_duplicates, semantic_duplicates, numbers_outside_canonical, entries_without_tags, entries_without_family, proposed_changes, family_distribution, report_markdown",
+    )
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -38,7 +40,9 @@ export async function fetchLatestAuditReport(): Promise<KbAuditReport | null> {
 export async function fetchAuditHistory(limit = 20): Promise<readonly KbAuditReport[]> {
   const { data, error } = await supabase
     .from("kb_audit_reports")
-    .select("id, created_at, triggered_by, total_entries, exact_duplicates, semantic_duplicates, numbers_outside_canonical, entries_without_tags, entries_without_family, proposed_changes, family_distribution, report_markdown")
+    .select(
+      "id, created_at, triggered_by, total_entries, exact_duplicates, semantic_duplicates, numbers_outside_canonical, entries_without_tags, entries_without_family, proposed_changes, family_distribution, report_markdown",
+    )
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -47,9 +51,7 @@ export async function fetchAuditHistory(limit = 20): Promise<readonly KbAuditRep
 
 export async function fetchFamilyDistribution(): Promise<readonly KbFamilyRow[]> {
   // Uses the canonical view; falls back to category if family is null.
-  const { data, error } = await supabase
-    .from("v_kb_active_canonical")
-    .select("family");
+  const { data, error } = await supabase.from("v_kb_active_canonical").select("family");
   if (error) throw error;
   const counts = new Map<string, number>();
   for (const row of (data ?? []) as Array<{ family: string | null }>) {
@@ -67,10 +69,7 @@ export interface PendingProposalSummary {
 }
 
 export async function fetchPendingProposalsSummary(): Promise<PendingProposalSummary> {
-  const { data, error } = await supabase
-    .from("kb_entry_proposals")
-    .select("operation")
-    .eq("status", "pending");
+  const { data, error } = await supabase.from("kb_entry_proposals").select("operation").eq("status", "pending");
   if (error) throw error;
   const byOperation: Record<string, number> = {};
   for (const row of (data ?? []) as Array<{ operation: string }>) {

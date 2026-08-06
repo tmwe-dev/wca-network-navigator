@@ -42,22 +42,22 @@ gate, misura onesta e ratchet.
 
 Errori ESLint: **0**. Warning totali: **1.282**.
 
-| Regola | Conteggio |
-|---|---|
-| no-restricted-imports (UI→DAL, v1 pages) | 0 (UI instradata tramite gateway per dominio in `src/application/data/`) |
-| unused-imports/no-unused-vars | 275 |
-| @typescript-eslint/no-explicit-any (solo edge/scripts) | 0 |
-| unused-imports/no-unused-imports | 93 |
-| @typescript-eslint/no-unsafe-function-type | 49 |
-| tmwe/no-direct-ai-invoke | 36 |
-| no-empty | 27 |
-| no-useless-escape | 18 |
-| prefer-const | 12 |
-| tmwe/no-direct-bulk-op | 9 |
-| no-case-declarations | 5 |
-| no-var | 4 |
-| no-control-regex | 3 |
-| no-regex-spaces / no-useless-catch | 1 / 1 |
+| Regola                                                 | Conteggio                                                                |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| no-restricted-imports (UI→DAL, v1 pages)               | 0 (UI instradata tramite gateway per dominio in `src/application/data/`) |
+| unused-imports/no-unused-vars                          | 275                                                                      |
+| @typescript-eslint/no-explicit-any (solo edge/scripts) | 0                                                                        |
+| unused-imports/no-unused-imports                       | 93                                                                       |
+| @typescript-eslint/no-unsafe-function-type             | 49                                                                       |
+| tmwe/no-direct-ai-invoke                               | 36                                                                       |
+| no-empty                                               | 27                                                                       |
+| no-useless-escape                                      | 18                                                                       |
+| prefer-const                                           | 12                                                                       |
+| tmwe/no-direct-bulk-op                                 | 9                                                                        |
+| no-case-declarations                                   | 5                                                                        |
+| no-var                                                 | 4                                                                        |
+| no-control-regex                                       | 3                                                                        |
+| no-regex-spaces / no-useless-catch                     | 1 / 1                                                                    |
 
 Confronto con la baseline precedente: i 385 warning di `src` erano una misura
 parziale della superficie, non un livello di qualità. Il numero sale perché il

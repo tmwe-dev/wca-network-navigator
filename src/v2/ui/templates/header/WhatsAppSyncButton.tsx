@@ -35,8 +35,12 @@ export function GlobalSyncButton(): React.ReactElement {
 
   // Mantiene lo spinner sincronizzato con WA auto-sync se in corso da altrove.
   React.useEffect(() => {
-    function onStart() { setSyncing(true); }
-    function onDone() { setSyncing(false); }
+    function onStart() {
+      setSyncing(true);
+    }
+    function onDone() {
+      setSyncing(false);
+    }
     window.addEventListener("wa-sync-trigger", onStart);
     window.addEventListener("wa-sync-completed", onDone);
     return () => {
@@ -49,9 +53,7 @@ export function GlobalSyncButton(): React.ReactElement {
   const liConnected = li.isAvailable;
   const hasNew = count > 0;
 
-  const colorClass = hasNew
-    ? "text-emerald-500"
-    : "text-foreground hover:text-primary";
+  const colorClass = hasNew ? "text-emerald-500" : "text-foreground hover:text-primary";
 
   const title = syncing
     ? "Sincronizzazione in corso…"

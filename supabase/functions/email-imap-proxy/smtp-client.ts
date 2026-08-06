@@ -52,8 +52,7 @@ export async function handleSend(body: {
     }
 
     const greeting = await readSmtp();
-    if (!greeting.startsWith("220"))
-      throw new Error("SMTP greeting failed: " + greeting.slice(0, 100));
+    if (!greeting.startsWith("220")) throw new Error("SMTP greeting failed: " + greeting.slice(0, 100));
 
     await writeSmtp(`EHLO ${smtpHost}`);
     const ehloRes = await readSmtp();
@@ -61,33 +60,24 @@ export async function handleSend(body: {
     if (smtpSecurity === "starttls" && ehloRes.includes("STARTTLS")) {
       await writeSmtp("STARTTLS");
       const starttlsRes = await readSmtp();
-      if (!starttlsRes.startsWith("220"))
-        throw new Error("STARTTLS failed");
+      if (!starttlsRes.startsWith("220")) throw new Error("STARTTLS failed");
     }
 
     await writeSmtp("AUTH LOGIN");
     const authRes = await readSmtp();
-    if (!authRes.startsWith("334"))
-      throw new Error(
-        "AUTH LOGIN non supportato: " + authRes.slice(0, 100)
-      );
+    if (!authRes.startsWith("334")) throw new Error("AUTH LOGIN non supportato: " + authRes.slice(0, 100));
 
     await writeSmtp(btoa(email));
     const userRes = await readSmtp();
-    if (!userRes.startsWith("334"))
-      throw new Error("Username rifiutato");
+    if (!userRes.startsWith("334")) throw new Error("Username rifiutato");
 
     await writeSmtp(btoa(password));
     const passRes = await readSmtp();
-    if (!passRes.startsWith("235"))
-      throw new Error(
-        "Autenticazione SMTP fallita — verifica le credenziali"
-      );
+    if (!passRes.startsWith("235")) throw new Error("Autenticazione SMTP fallita — verifica le credenziali");
 
     await writeSmtp(`MAIL FROM:<${email}>`);
     const mailRes = await readSmtp();
-    if (!mailRes.startsWith("250"))
-      throw new Error("MAIL FROM rifiutato: " + mailRes.slice(0, 100));
+    if (!mailRes.startsWith("250")) throw new Error("MAIL FROM rifiutato: " + mailRes.slice(0, 100));
 
     const recipients = [to];
     if (cc)
@@ -95,27 +85,20 @@ export async function handleSend(body: {
         ...cc
           .split(",")
           .map((s) => s.trim())
-          .filter(Boolean)
+          .filter(Boolean),
       );
 
     for (const rcpt of recipients) {
       await writeSmtp(`RCPT TO:<${rcpt}>`);
       const rcptRes = await readSmtp();
-      if (!rcptRes.startsWith("250"))
-        throw new Error(
-          `Destinatario rifiutato (${rcpt}): ` +
-            rcptRes.slice(0, 100)
-        );
+      if (!rcptRes.startsWith("250")) throw new Error(`Destinatario rifiutato (${rcpt}): ` + rcptRes.slice(0, 100));
     }
 
     await writeSmtp("DATA");
     const dataRes = await readSmtp();
-    if (!dataRes.startsWith("354"))
-      throw new Error("DATA rifiutato");
+    if (!dataRes.startsWith("354")) throw new Error("DATA rifiutato");
 
-    const messageId = `<${Date.now()}.${Math.random()
-      .toString(36)
-      .slice(2)}@${smtpHost}>`;
+    const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@${smtpHost}>`;
     const date = new Date().toUTCString();
     let message = `From: ${email}\r\n`;
     message += `To: ${to}\r\n`;
@@ -132,8 +115,7 @@ export async function handleSend(body: {
 
     await conn.write(encoder.encode(message));
     const sendRes = await readSmtp();
-    if (!sendRes.startsWith("250"))
-      throw new Error("Invio fallito: " + sendRes.slice(0, 100));
+    if (!sendRes.startsWith("250")) throw new Error("Invio fallito: " + sendRes.slice(0, 100));
 
     await writeSmtp("QUIT");
     try {

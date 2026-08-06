@@ -30,15 +30,10 @@ export function EnrichmentExtraInfo({ partnerId }: Props): React.ReactElement | 
           <Info className="w-3.5 h-3.5 text-primary" />
         </button>
       </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-64 text-xs space-y-1.5"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <PopoverContent align="end" className="w-64 text-xs space-y-1.5" onClick={(e) => e.stopPropagation()}>
         {snapshot.deep.available && (
           <p className="text-foreground">
-            🔍 <span className="font-semibold">Deep Search:</span>{" "}
-            {snapshot.deep.fields.join(", ")}
+            🔍 <span className="font-semibold">Deep Search:</span> {snapshot.deep.fields.join(", ")}
             {snapshot.deep.age_days !== null && (
               <span className="text-muted-foreground"> ({snapshot.deep.age_days} gg fa)</span>
             )}

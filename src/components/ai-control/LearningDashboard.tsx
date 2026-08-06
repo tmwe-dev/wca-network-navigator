@@ -3,17 +3,17 @@
  * Computes metrics from ai_decision_log aggregations.
  * Visual: Progress bars, TrendingUp/Down, problematic senders, yellow suggestion card.
  */
-import { useQuery } from '@tanstack/react-query';
-import { findLearningDecisions, findRecentFeedbackDecisions } from '@/data/aiDecisionLog';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { TrendingUp, TrendingDown, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useQuery } from "@tanstack/react-query";
+import { findLearningDecisions, findRecentFeedbackDecisions } from "@/data/aiDecisionLog";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { TrendingUp, TrendingDown, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function LearningDashboard() {
   const { data: decisions = [], isLoading } = useQuery({
-    queryKey: ['learning-decisions'],
+    queryKey: ["learning-decisions"],
     queryFn: async () => {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
       return findLearningDecisions(thirtyDaysAgo);
@@ -21,39 +21,38 @@ export function LearningDashboard() {
   });
 
   const { data: recentFeedback = [] } = useQuery({
-    queryKey: ['recent-feedback-decisions'],
+    queryKey: ["recent-feedback-decisions"],
     queryFn: () => findRecentFeedbackDecisions(10),
   });
 
   // Compute classification accuracy
-  const classifyDecisions = decisions.filter(d => d.decision_type === 'classify_email');
-  const classifyReviewed = classifyDecisions.filter(d => d.user_review);
-  const classifyApproved = classifyReviewed.filter(d => d.user_review === 'approved');
-  const classificationAccuracy = classifyReviewed.length > 0
-    ? (classifyApproved.length / classifyReviewed.length) * 100
-    : 0;
-  const classificationConfidence = classifyDecisions.length > 0
-    ? classifyDecisions.reduce((s, d) => s + (d.confidence || 0), 0) / classifyDecisions.length
-    : 0;
+  const classifyDecisions = decisions.filter((d) => d.decision_type === "classify_email");
+  const classifyReviewed = classifyDecisions.filter((d) => d.user_review);
+  const classifyApproved = classifyReviewed.filter((d) => d.user_review === "approved");
+  const classificationAccuracy =
+    classifyReviewed.length > 0 ? (classifyApproved.length / classifyReviewed.length) * 100 : 0;
+  const classificationConfidence =
+    classifyDecisions.length > 0
+      ? classifyDecisions.reduce((s, d) => s + (d.confidence || 0), 0) / classifyDecisions.length
+      : 0;
 
   // Compute action accuracy
-  const actionDecisions = decisions.filter(d => d.decision_type !== 'classify_email');
-  const actionReviewed = actionDecisions.filter(d => d.user_review);
-  const actionApproved = actionReviewed.filter(d => d.user_review === 'approved');
-  const actionAccuracy = actionReviewed.length > 0
-    ? (actionApproved.length / actionReviewed.length) * 100
-    : 0;
-  const actionConfidence = actionDecisions.length > 0
-    ? actionDecisions.reduce((s, d) => s + (d.confidence || 0), 0) / actionDecisions.length
-    : 0;
+  const actionDecisions = decisions.filter((d) => d.decision_type !== "classify_email");
+  const actionReviewed = actionDecisions.filter((d) => d.user_review);
+  const actionApproved = actionReviewed.filter((d) => d.user_review === "approved");
+  const actionAccuracy = actionReviewed.length > 0 ? (actionApproved.length / actionReviewed.length) * 100 : 0;
+  const actionConfidence =
+    actionDecisions.length > 0
+      ? actionDecisions.reduce((s, d) => s + (d.confidence || 0), 0) / actionDecisions.length
+      : 0;
 
   // Problematic senders
   const senderMap = new Map<string, { total: number; approved: number }>();
-  decisions.forEach(d => {
+  decisions.forEach((d) => {
     if (!d.email_address || !d.user_review) return;
     const entry = senderMap.get(d.email_address) || { total: 0, approved: 0 };
     entry.total++;
-    if (d.user_review === 'approved') entry.approved++;
+    if (d.user_review === "approved") entry.approved++;
     senderMap.set(d.email_address, entry);
   });
   const problematicSenders = Array.from(senderMap.entries())
@@ -72,9 +71,7 @@ export function LearningDashboard() {
     <div className="space-y-6 p-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">📊 Learning Insights</h2>
-        <p className="text-muted-foreground">
-          Metriche di performance e suggerimenti per migliorare l'AI
-        </p>
+        <p className="text-muted-foreground">Metriche di performance e suggerimenti per migliorare l'AI</p>
       </div>
 
       {/* Overall Accuracy Cards */}
@@ -167,7 +164,7 @@ export function LearningDashboard() {
                         {sender.approved}/{sender.total} azioni corrette
                       </p>
                     </div>
-                    <Badge variant={sender.accuracy < 60 ? 'destructive' : 'secondary'}>
+                    <Badge variant={sender.accuracy < 60 ? "destructive" : "secondary"}>
                       {sender.accuracy.toFixed(0)}%
                     </Badge>
                   </div>
@@ -193,17 +190,21 @@ export function LearningDashboard() {
                     <div className="flex items-center justify-between">
                       <Badge
                         variant={
-                          fb.user_review === 'approved' ? 'default'
-                          : fb.user_review === 'rejected' ? 'destructive'
-                          : 'secondary'
+                          fb.user_review === "approved"
+                            ? "default"
+                            : fb.user_review === "rejected"
+                              ? "destructive"
+                              : "secondary"
                         }
                       >
-                        {fb.user_review === 'approved' ? '✓ Approvato'
-                          : fb.user_review === 'rejected' ? '✗ Rifiutato'
-                          : '✎ Modificato'}
+                        {fb.user_review === "approved"
+                          ? "✓ Approvato"
+                          : fb.user_review === "rejected"
+                            ? "✗ Rifiutato"
+                            : "✎ Modificato"}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {fb.created_at ? new Date(fb.created_at).toLocaleDateString('it-IT') : ''}
+                        {fb.created_at ? new Date(fb.created_at).toLocaleDateString("it-IT") : ""}
                       </span>
                     </div>
                     <p className="text-sm">
@@ -214,11 +215,7 @@ export function LearningDashboard() {
                         <strong>Correzione:</strong> {fb.user_correction}
                       </p>
                     )}
-                    {fb.email_address && (
-                      <p className="text-xs text-muted-foreground">
-                        Contatto: {fb.email_address}
-                      </p>
-                    )}
+                    {fb.email_address && <p className="text-xs text-muted-foreground">Contatto: {fb.email_address}</p>}
                   </div>
                 ))}
               </div>
@@ -235,14 +232,12 @@ export function LearningDashboard() {
       {problematicSenders.length > 0 && (
         <Card className="border-yellow-500/30 bg-yellow-500/5">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-400">
-              💡 Suggerimenti
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-yellow-400">💡 Suggerimenti</CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-2 text-yellow-300/80">
             <p>
-              • {problematicSenders.length} contatt{problematicSenders.length > 1 ? 'i' : 'o'} con
-              bassa accuracy - considera di creare regole AI personalizzate
+              • {problematicSenders.length} contatt{problematicSenders.length > 1 ? "i" : "o"} con bassa accuracy -
+              considera di creare regole AI personalizzate
             </p>
             {classificationAccuracy > 0 && classificationAccuracy < 75 && (
               <p>• Accuracy classificazione sotto il 75% - rivedi i prompt di classificazione</p>

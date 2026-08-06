@@ -5,9 +5,9 @@
  */
 
 const Pipeline = {
-  _dbName: 'FireScrapePipelines',
+  _dbName: "FireScrapePipelines",
   _dbVersion: 1,
-  _storeName: 'pipelines',
+  _storeName: "pipelines",
   _db: null,
   _executionHistory: [],
 
@@ -15,145 +15,146 @@ const Pipeline = {
    * Pre-built pipeline templates
    */
   templates: {
-    'logistics-scraper': {
-      id: 'logistics-scraper',
-      name: 'Logistics Company Scraper',
-      description: 'Scrape sites → analyze → extract companies → save to Supabase → export CSV',
+    "logistics-scraper": {
+      id: "logistics-scraper",
+      name: "Logistics Company Scraper",
+      description: "Scrape sites → analyze → extract companies → save to Supabase → export CSV",
       variables: {
-        country: { type: 'string', default: 'DE', label: 'Country code' },
-        maxPages: { type: 'number', default: 10, label: 'Max pages to scrape' },
+        country: { type: "string", default: "DE", label: "Country code" },
+        maxPages: { type: "number", default: 10, label: "Max pages to scrape" },
       },
       stages: [
         {
-          id: 'search',
-          type: 'scrape',
+          id: "search",
+          type: "scrape",
           params: {
-            url: 'https://www.google.com/search?q={{country}}+logistics+companies',
+            url: "https://www.google.com/search?q={{country}}+logistics+companies",
           },
         },
         {
-          id: 'analyze',
-          type: 'brain-think',
+          id: "analyze",
+          type: "brain-think",
           params: {
-            prompt: 'Extract company names, emails, and phone numbers from: {{stages.search.markdown}}',
+            prompt: "Extract company names, emails, and phone numbers from: {{stages.search.markdown}}",
           },
-          transform: { pick: ['analysis.companies'] },
+          transform: { pick: ["analysis.companies"] },
         },
         {
-          id: 'filter',
-          type: 'transform',
+          id: "filter",
+          type: "transform",
           params: {
-            operation: 'filter',
-            field: 'country',
-            value: '{{country}}',
-          },
-        },
-        {
-          id: 'save_db',
-          type: 'connector',
-          params: {
-            connector: 'supabase',
-            method: 'upsert',
-            table: 'companies',
-            data: '{{stages.filter}}',
+            operation: "filter",
+            field: "country",
+            value: "{{country}}",
           },
         },
         {
-          id: 'export',
-          type: 'download',
+          id: "save_db",
+          type: "connector",
           params: {
-            format: 'csv',
-            filename: 'companies-{{country}}-{{now}}.csv',
-            data: '{{stages.filter}}',
+            connector: "supabase",
+            method: "upsert",
+            table: "companies",
+            data: "{{stages.filter}}",
+          },
+        },
+        {
+          id: "export",
+          type: "download",
+          params: {
+            format: "csv",
+            filename: "companies-{{country}}-{{now}}.csv",
+            data: "{{stages.filter}}",
           },
         },
       ],
     },
 
-    'contact-finder': {
-      id: 'contact-finder',
-      name: 'Contact Finder',
-      description: 'Navigate → snapshot → analyze → extract contacts → email report',
+    "contact-finder": {
+      id: "contact-finder",
+      name: "Contact Finder",
+      description: "Navigate → snapshot → analyze → extract contacts → email report",
       variables: {
-        websiteUrl: { type: 'string', label: 'Website URL' },
-        recipientEmail: { type: 'string', label: 'Email for report' },
+        websiteUrl: { type: "string", label: "Website URL" },
+        recipientEmail: { type: "string", label: "Email for report" },
       },
       stages: [
         {
-          id: 'navigate',
-          type: 'agent',
+          id: "navigate",
+          type: "agent",
           params: {
-            action: 'navigate',
-            url: '{{websiteUrl}}',
+            action: "navigate",
+            url: "{{websiteUrl}}",
           },
         },
         {
-          id: 'snapshot',
-          type: 'scrape',
+          id: "snapshot",
+          type: "scrape",
           params: {},
         },
         {
-          id: 'analyze',
-          type: 'brain-think',
+          id: "analyze",
+          type: "brain-think",
           params: {
-            prompt: 'Find all email addresses, phone numbers, and contact forms on this page: {{stages.snapshot.markdown}}',
+            prompt:
+              "Find all email addresses, phone numbers, and contact forms on this page: {{stages.snapshot.markdown}}",
           },
-          transform: { pick: ['analysis.contacts'] },
+          transform: { pick: ["analysis.contacts"] },
         },
         {
-          id: 'notify',
-          type: 'connector',
+          id: "notify",
+          type: "connector",
           params: {
-            connector: 'email',
-            method: 'send',
-            to: '{{recipientEmail}}',
-            subject: 'Contact info found on {{websiteUrl}}',
-            body: 'Contacts: {{stages.analyze}}',
+            connector: "email",
+            method: "send",
+            to: "{{recipientEmail}}",
+            subject: "Contact info found on {{websiteUrl}}",
+            body: "Contacts: {{stages.analyze}}",
           },
         },
       ],
     },
 
-    'site-monitor': {
-      id: 'site-monitor',
-      name: 'Site Monitor',
-      description: 'Batch scrape URLs → compare with previous data → notify changes via webhook',
+    "site-monitor": {
+      id: "site-monitor",
+      name: "Site Monitor",
+      description: "Batch scrape URLs → compare with previous data → notify changes via webhook",
       variables: {
-        urls: { type: 'array', label: 'URLs to monitor' },
-        webhookUrl: { type: 'string', label: 'Webhook URL for notifications' },
+        urls: { type: "array", label: "URLs to monitor" },
+        webhookUrl: { type: "string", label: "Webhook URL for notifications" },
       },
       stages: [
         {
-          id: 'scrape_batch',
-          type: 'batch',
+          id: "scrape_batch",
+          type: "batch",
           params: {
-            items: '{{urls}}',
+            items: "{{urls}}",
           },
           stages: [
             {
-              id: 'scrape_item',
-              type: 'scrape',
+              id: "scrape_item",
+              type: "scrape",
               params: {
-                url: '{{item}}',
+                url: "{{item}}",
               },
             },
           ],
         },
         {
-          id: 'analyze_changes',
-          type: 'brain-think',
+          id: "analyze_changes",
+          type: "brain-think",
           params: {
-            prompt: 'Compare current content with previous snapshots and identify changes: {{stages.scrape_batch}}',
+            prompt: "Compare current content with previous snapshots and identify changes: {{stages.scrape_batch}}",
           },
         },
         {
-          id: 'notify_webhook',
-          type: 'connector',
+          id: "notify_webhook",
+          type: "connector",
           params: {
-            connector: 'webhook',
-            method: 'send',
-            url: '{{webhookUrl}}',
-            data: '{{stages.analyze_changes}}',
+            connector: "webhook",
+            method: "send",
+            url: "{{webhookUrl}}",
+            data: "{{stages.analyze_changes}}",
           },
         },
       ],
@@ -178,7 +179,7 @@ const Pipeline = {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains(this._storeName)) {
-          db.createObjectStore(this._storeName, { keyPath: 'id' });
+          db.createObjectStore(this._storeName, { keyPath: "id" });
         }
       };
     });
@@ -190,7 +191,7 @@ const Pipeline = {
   async save(pipelineDef) {
     this.validate(pipelineDef);
     const db = await this._getDb();
-    const store = db.transaction(this._storeName, 'readwrite').objectStore(this._storeName);
+    const store = db.transaction(this._storeName, "readwrite").objectStore(this._storeName);
     const timestamp = new Date().toISOString();
     const toSave = { ...pipelineDef, savedAt: timestamp };
     return new Promise((resolve, reject) => {
@@ -205,7 +206,7 @@ const Pipeline = {
    */
   async load(pipelineId) {
     const db = await this._getDb();
-    const store = db.transaction(this._storeName, 'readonly').objectStore(this._storeName);
+    const store = db.transaction(this._storeName, "readonly").objectStore(this._storeName);
     return new Promise((resolve, reject) => {
       const request = store.get(pipelineId);
       request.onerror = () => reject(request.error);
@@ -218,7 +219,7 @@ const Pipeline = {
    */
   async list() {
     const db = await this._getDb();
-    const store = db.transaction(this._storeName, 'readonly').objectStore(this._storeName);
+    const store = db.transaction(this._storeName, "readonly").objectStore(this._storeName);
     return new Promise((resolve, reject) => {
       const request = store.getAll();
       request.onerror = () => reject(request.error);
@@ -231,7 +232,7 @@ const Pipeline = {
    */
   async remove(pipelineId) {
     const db = await this._getDb();
-    const store = db.transaction(this._storeName, 'readwrite').objectStore(this._storeName);
+    const store = db.transaction(this._storeName, "readwrite").objectStore(this._storeName);
     return new Promise((resolve, reject) => {
       const request = store.delete(pipelineId);
       request.onerror = () => reject(request.error);
@@ -259,7 +260,7 @@ const Pipeline = {
 
       // Execute via TaskRunner (assuming TaskRunner is available globally)
       if (!globalThis.TaskRunner) {
-        throw new Error('TaskRunner module not loaded');
+        throw new Error("TaskRunner module not loaded");
       }
 
       const result = await globalThis.TaskRunner.executeBatch(steps);
@@ -267,7 +268,7 @@ const Pipeline = {
       const execution = {
         executionId,
         pipelineId,
-        status: 'completed',
+        status: "completed",
         startTime,
         endTime: Date.now(),
         duration: Date.now() - startTime,
@@ -281,7 +282,7 @@ const Pipeline = {
       const execution = {
         executionId,
         pipelineId,
-        status: 'failed',
+        status: "failed",
         startTime,
         endTime: Date.now(),
         duration: Date.now() - startTime,
@@ -320,11 +321,11 @@ const Pipeline = {
   _compile(stages, context) {
     const steps = [];
 
-    const processStages = (stageList, parentPath = '') => {
+    const processStages = (stageList, parentPath = "") => {
       stageList.forEach((stage) => {
         const stagePath = parentPath ? `${parentPath}.${stage.id}` : stage.id;
 
-        if (stage.type === 'forEach') {
+        if (stage.type === "forEach") {
           // Expand forEach into multiple copies of sub-stages
           const items = this._resolveVars(stage.params.items, context);
           if (Array.isArray(items)) {
@@ -335,7 +336,7 @@ const Pipeline = {
               }
             });
           }
-        } else if (stage.type === 'if') {
+        } else if (stage.type === "if") {
           // Evaluate condition and pick branch
           const condition = this._evaluateCondition(stage.condition, context);
           if (condition && stage.then) {
@@ -343,7 +344,7 @@ const Pipeline = {
           } else if (!condition && stage.else) {
             processStages(stage.else, parentPath);
           }
-        } else if (stage.type === 'batch') {
+        } else if (stage.type === "batch") {
           // Handle batch processing
           const items = this._resolveVars(stage.params.items, context);
           if (Array.isArray(items)) {
@@ -396,7 +397,7 @@ const Pipeline = {
    */
   _resolveVars(value, context) {
     if (value === null || value === undefined) return value;
-    if (typeof value !== 'string') return value;
+    if (typeof value !== "string") return value;
 
     return value.replace(/\{\{([^}]+)\}\}/g, (match, expression) => {
       const trimmed = expression.trim();
@@ -407,15 +408,15 @@ const Pipeline = {
       }
 
       // Try built-in variables
-      if (trimmed === 'now') return context.now;
-      if (trimmed === 'date') return context.date;
-      if (trimmed === 'random') return context.random;
+      if (trimmed === "now") return context.now;
+      if (trimmed === "date") return context.date;
+      if (trimmed === "random") return context.random;
 
       // Try nested path: stages.search.markdown
-      const parts = trimmed.split('.');
+      const parts = trimmed.split(".");
       let current = context;
       for (const part of parts) {
-        if (current && typeof current === 'object' && part in current) {
+        if (current && typeof current === "object" && part in current) {
           current = current[part];
         } else {
           return match; // Return original if path not found
@@ -438,16 +439,13 @@ const Pipeline = {
     // Simple evaluation of common patterns
     try {
       // Replace comparison operators and evaluate
-      const expr = resolved
-        .replace(/true/g, 'true')
-        .replace(/false/g, 'false')
-        .replace(/null/g, 'null');
+      const expr = resolved.replace(/true/g, "true").replace(/false/g, "false").replace(/null/g, "null");
 
       // Use Function constructor for safe evaluation (in controlled context)
-      const fn = new Function('return ' + expr);
+      const fn = new Function("return " + expr);
       return fn();
     } catch (e) {
-      console.warn('Failed to evaluate condition:', condition, e);
+      console.warn("Failed to evaluate condition:", condition, e);
       return false;
     }
   },
@@ -464,7 +462,7 @@ const Pipeline = {
     if (transform.pick) {
       const picked = {};
       transform.pick.forEach((field) => {
-        const parts = field.split('.');
+        const parts = field.split(".");
         let current = data;
         for (const part of parts) {
           current = current?.[part];
@@ -502,11 +500,11 @@ const Pipeline = {
    */
   validate(pipelineDef) {
     if (!pipelineDef.id || !pipelineDef.name || !pipelineDef.stages) {
-      throw new Error('Pipeline must have id, name, and stages');
+      throw new Error("Pipeline must have id, name, and stages");
     }
 
     if (!Array.isArray(pipelineDef.stages) || pipelineDef.stages.length === 0) {
-      throw new Error('Pipeline must have at least one stage');
+      throw new Error("Pipeline must have at least one stage");
     }
 
     // Validate each stage
@@ -516,30 +514,30 @@ const Pipeline = {
       }
 
       const validTypes = [
-        'scrape',
-        'crawl',
-        'batch',
-        'map',
-        'extract',
-        'transform',
-        'brain-think',
-        'agent',
-        'connector',
-        'download',
-        'forEach',
-        'if',
+        "scrape",
+        "crawl",
+        "batch",
+        "map",
+        "extract",
+        "transform",
+        "brain-think",
+        "agent",
+        "connector",
+        "download",
+        "forEach",
+        "if",
       ];
       if (!validTypes.includes(stage.type)) {
         throw new Error(`Invalid stage type: ${stage.type}`);
       }
 
       // Validate conditional stages
-      if (stage.type === 'if' && !stage.condition) {
+      if (stage.type === "if" && !stage.condition) {
         throw new Error(`If stage ${stage.id} must have a condition`);
       }
 
       // Validate forEach
-      if (stage.type === 'forEach' && !stage.params?.items) {
+      if (stage.type === "forEach" && !stage.params?.items) {
         throw new Error(`forEach stage ${stage.id} must have items parameter`);
       }
     });
@@ -557,12 +555,10 @@ const Pipeline = {
     const stats = {
       totalPipelines: pipelines.length,
       totalExecutions: history.length,
-      successfulExecutions: history.filter((e) => e.status === 'completed').length,
-      failedExecutions: history.filter((e) => e.status === 'failed').length,
+      successfulExecutions: history.filter((e) => e.status === "completed").length,
+      failedExecutions: history.filter((e) => e.status === "failed").length,
       averageDuration:
-        history.length > 0
-          ? Math.round(history.reduce((sum, e) => sum + e.duration, 0) / history.length)
-          : 0,
+        history.length > 0 ? Math.round(history.reduce((sum, e) => sum + e.duration, 0) / history.length) : 0,
       templates: Object.keys(this.templates),
     };
 

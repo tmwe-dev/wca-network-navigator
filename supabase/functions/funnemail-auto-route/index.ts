@@ -39,12 +39,29 @@ const ResultSchema = z.object({
 });
 
 const AUTO_APPLY_THRESHOLD = 0.85;
-const SUGGEST_THRESHOLD = 0.60;
+const SUGGEST_THRESHOLD = 0.6;
 const FALLBACK_GENERIC_DOMAINS = new Set<string>([
-  "gmail.com","googlemail.com","outlook.com","hotmail.com","live.com",
-  "libero.it","virgilio.it","tiscali.it","alice.it","tin.it",
-  "yahoo.com","yahoo.it","aol.com","icloud.com","me.com",
-  "proton.me","protonmail.com","gmx.com","gmx.de","mail.com","pec.it",
+  "gmail.com",
+  "googlemail.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "libero.it",
+  "virgilio.it",
+  "tiscali.it",
+  "alice.it",
+  "tin.it",
+  "yahoo.com",
+  "yahoo.it",
+  "aol.com",
+  "icloud.com",
+  "me.com",
+  "proton.me",
+  "protonmail.com",
+  "gmx.com",
+  "gmx.de",
+  "mail.com",
+  "pec.it",
 ]);
 
 function lc(s: string | null | undefined): string {
@@ -66,15 +83,25 @@ function evalCondition(cond: RuleCondition, ctx: Record<string, string>): boolea
   const haystack = lc(ctx[cond.field] ?? "");
   const needle = cond.value;
   switch (cond.op) {
-    case "equals":   return haystack === lc(String(needle ?? ""));
-    case "contains": return haystack.includes(lc(String(needle ?? "")));
-    case "starts_with": return haystack.startsWith(lc(String(needle ?? "")));
-    case "ends_with":   return haystack.endsWith(lc(String(needle ?? "")));
-    case "in":       return Array.isArray(needle) && needle.map((v) => lc(String(v))).includes(haystack);
+    case "equals":
+      return haystack === lc(String(needle ?? ""));
+    case "contains":
+      return haystack.includes(lc(String(needle ?? "")));
+    case "starts_with":
+      return haystack.startsWith(lc(String(needle ?? "")));
+    case "ends_with":
+      return haystack.endsWith(lc(String(needle ?? "")));
+    case "in":
+      return Array.isArray(needle) && needle.map((v) => lc(String(v))).includes(haystack);
     case "regex": {
-      try { return new RegExp(String(needle), "i").test(haystack); } catch { return false; }
+      try {
+        return new RegExp(String(needle), "i").test(haystack);
+      } catch {
+        return false;
+      }
     }
-    default: return false;
+    default:
+      return false;
   }
 }
 function evalRule(conditions: unknown, ctx: Record<string, string>): boolean {
@@ -92,7 +119,10 @@ Deno.serve(async (req) => {
     const body: RequestBody = await req.json();
     if (!body.message_id || !body.from_address || !body.user_id) {
       endMetrics(metrics, false, 400);
-      return new Response(JSON.stringify({ error: "message_id+from_address+user_id required" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "message_id+from_address+user_id required" }), {
+        status: 400,
+        headers,
+      });
     }
 
     // Auth: JWT utente o token interno server-to-server
@@ -106,11 +136,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden: user_id mismatch" }), { status: 403, headers });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     const addr = lc(body.from_address);
     const dom = domainOf(addr);
@@ -140,7 +168,9 @@ Deno.serve(async (req) => {
       if (typeof cfg?.generic_domain_min_confidence === "number") {
         genericMinConfidence = Number(cfg.generic_domain_min_confidence);
       }
-    } catch { /* fail-safe: usa default */ }
+    } catch {
+      /* fail-safe: usa default */
+    }
     const isGenericDomain = genericDomains.has(dom);
 
     // 1) Già instradato? skip.
@@ -152,7 +182,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (existingByAddr?.group_id) {
       endMetrics(metrics, true, 200);
-      return new Response(JSON.stringify({ ok: true, skipped: "already_routed", group: existingByAddr.group_name }), { status: 200, headers });
+      return new Response(JSON.stringify({ ok: true, skipped: "already_routed", group: existingByAddr.group_name }), {
+        status: 200,
+        headers,
+      });
     }
 
     // 2) Match per dominio (sender stesso dominio già classificato)?
@@ -167,14 +200,24 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
       if (domRule?.group_id) {
-        await applyRule(supabase, body.user_id, addr, dom, {
-          group_id: domRule.group_id,
-          group_name: domRule.group_name,
-          group_color: domRule.group_color,
-          group_icon: domRule.group_icon,
-        }, "domain_match");
+        await applyRule(
+          supabase,
+          body.user_id,
+          addr,
+          dom,
+          {
+            group_id: domRule.group_id,
+            group_name: domRule.group_name,
+            group_color: domRule.group_color,
+            group_icon: domRule.group_icon,
+          },
+          "domain_match",
+        );
         endMetrics(metrics, true, 200);
-        return new Response(JSON.stringify({ ok: true, applied: true, source: "domain_match", group: domRule.group_name }), { status: 200, headers });
+        return new Response(
+          JSON.stringify({ ok: true, applied: true, source: "domain_match", group: domRule.group_name }),
+          { status: 200, headers },
+        );
       }
     }
 
@@ -192,7 +235,7 @@ Deno.serve(async (req) => {
         .eq("user_id", body.user_id)
         .eq("enabled", true)
         .order("priority", { ascending: true });
-      for (const rule of (compositeRules ?? [])) {
+      for (const rule of compositeRules ?? []) {
         if (!rule.target_group_id) continue;
         if (!evalRule(rule.conditions, ctx)) continue;
         const { data: grp } = await supabase
@@ -201,18 +244,37 @@ Deno.serve(async (req) => {
           .eq("id", rule.target_group_id)
           .maybeSingle();
         if (!grp?.id) continue;
-        await applyRule(supabase, body.user_id, addr, dom, {
-          group_id: grp.id as string,
-          group_name: grp.nome_gruppo as string,
-          group_color: (grp.colore as string) ?? null,
-          group_icon: (grp.icon as string) ?? null,
-        }, `rule:${rule.name}`);
+        await applyRule(
+          supabase,
+          body.user_id,
+          addr,
+          dom,
+          {
+            group_id: grp.id as string,
+            group_name: grp.nome_gruppo as string,
+            group_color: (grp.colore as string) ?? null,
+            group_icon: (grp.icon as string) ?? null,
+          },
+          `rule:${rule.name}`,
+        );
         await supabase
           .from("funnemail_routing_rules")
-          .update({ match_count: ((rule as { match_count?: number }).match_count ?? 0) + 1, last_matched_at: new Date().toISOString() })
+          .update({
+            match_count: ((rule as { match_count?: number }).match_count ?? 0) + 1,
+            last_matched_at: new Date().toISOString(),
+          })
           .eq("id", rule.id);
         endMetrics(metrics, true, 200);
-        return new Response(JSON.stringify({ ok: true, applied: true, source: "composite_rule", rule_id: rule.id, group: grp.nome_gruppo }), { status: 200, headers });
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            applied: true,
+            source: "composite_rule",
+            rule_id: rule.id,
+            group: grp.nome_gruppo,
+          }),
+          { status: 200, headers },
+        );
       }
     }
 
@@ -227,20 +289,23 @@ Deno.serve(async (req) => {
     }
 
     // 4) Chiedi all'AI in quale gruppo va la mail
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       endMetrics(metrics, true, 200);
       return new Response(JSON.stringify({ ok: true, skipped: "no_ai_key" }), { status: 200, headers });
     }
 
-    const groupsList = groups.map((g) => {
-      const parts = [
-        `- ${String(g.nome_gruppo)}`,
-        g.descrizione ? `descr: ${String(g.descrizione).trim()}` : null,
-        g.classification_hint ? `hint: ${String(g.classification_hint).trim()}` : null,
-      ].filter(Boolean);
-      return parts.join(" | ");
-    }).join("\n");
+    const groupsList = groups
+      .map((g) => {
+        const parts = [
+          `- ${String(g.nome_gruppo)}`,
+          g.descrizione ? `descr: ${String(g.descrizione).trim()}` : null,
+          g.classification_hint ? `hint: ${String(g.classification_hint).trim()}` : null,
+        ].filter(Boolean);
+        return parts.join(" | ");
+      })
+      .join("\n");
     const validNames = groups.map((g) => String(g.nome_gruppo));
 
     const subjNorm = normalizeContent(body.subject ?? "", { source: "email-inbound", maxChars: 240 }).text;
@@ -258,12 +323,13 @@ Deno.serve(async (req) => {
     let chosen: z.infer<typeof ResultSchema> | null = null;
     try {
       const resp = await aiFetch({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          tools: [{
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        tools: [
+          {
             type: "function",
             function: {
               name: "assign_to_group",
@@ -279,9 +345,10 @@ Deno.serve(async (req) => {
                 additionalProperties: false,
               },
             },
-          }],
-          tool_choice: { type: "function", function: { name: "assign_to_group" } },
-        });
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "assign_to_group" } },
+      });
       if (resp.ok) {
         const data = await resp.json();
         const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
@@ -290,7 +357,9 @@ Deno.serve(async (req) => {
           if (parsed.success) chosen = parsed.data;
         }
       }
-    } catch { /* fail-safe */ }
+    } catch {
+      /* fail-safe */
+    }
 
     if (!chosen) {
       endMetrics(metrics, true, 200);
@@ -309,14 +378,31 @@ Deno.serve(async (req) => {
       : AUTO_APPLY_THRESHOLD;
 
     if (chosen.confidence >= effectiveAutoApplyThreshold) {
-      await applyRule(supabase, body.user_id, addr, dom, {
-        group_id: matchedGroup.id as string,
-        group_name: matchedGroup.nome_gruppo as string,
-        group_color: (matchedGroup.colore as string) ?? null,
-        group_icon: (matchedGroup.icon as string) ?? null,
-      }, "ai_auto");
+      await applyRule(
+        supabase,
+        body.user_id,
+        addr,
+        dom,
+        {
+          group_id: matchedGroup.id as string,
+          group_name: matchedGroup.nome_gruppo as string,
+          group_color: (matchedGroup.colore as string) ?? null,
+          group_icon: (matchedGroup.icon as string) ?? null,
+        },
+        "ai_auto",
+      );
       endMetrics(metrics, true, 200);
-      return new Response(JSON.stringify({ ok: true, applied: true, source: "ai_auto", group: chosen.group_name, confidence: chosen.confidence, generic_domain: isGenericDomain }), { status: 200, headers });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          applied: true,
+          source: "ai_auto",
+          group: chosen.group_name,
+          confidence: chosen.confidence,
+          generic_domain: isGenericDomain,
+        }),
+        { status: 200, headers },
+      );
     }
 
     if (chosen.confidence >= SUGGEST_THRESHOLD) {
@@ -336,15 +422,24 @@ Deno.serve(async (req) => {
         })
         .eq("id", body.message_id);
       endMetrics(metrics, true, 200);
-      return new Response(JSON.stringify({ ok: true, suggested: true, group: chosen.group_name, confidence: chosen.confidence }), { status: 200, headers });
+      return new Response(
+        JSON.stringify({ ok: true, suggested: true, group: chosen.group_name, confidence: chosen.confidence }),
+        { status: 200, headers },
+      );
     }
 
     endMetrics(metrics, true, 200);
-    return new Response(JSON.stringify({ ok: true, skipped: "low_confidence", confidence: chosen.confidence }), { status: 200, headers });
+    return new Response(JSON.stringify({ ok: true, skipped: "low_confidence", confidence: chosen.confidence }), {
+      status: 200,
+      headers,
+    });
   } catch (error: unknown) {
     logEdgeError("funnemail-auto-route", error);
     endMetrics(metrics, false, 500);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500, headers });
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+      status: 500,
+      headers,
+    });
   }
 });
 
@@ -369,7 +464,5 @@ async function applyRule(
     is_active: true,
     updated_at: new Date().toISOString(),
   };
-  await supabase
-    .from("email_address_rules")
-    .upsert(payload, { onConflict: "user_id,email_address" });
+  await supabase.from("email_address_rules").upsert(payload, { onConflict: "user_id,email_address" });
 }

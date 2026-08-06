@@ -4,7 +4,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-
 const TARGET_SCHEMA = {
   company_name: "Nome dell'azienda (es. 'Global Logistics Srl', 'DHL Express')",
   name: "Nome e cognome della persona di contatto (es. 'Mario Rossi')",
@@ -15,12 +14,16 @@ const TARGET_SCHEMA = {
   city: "Città (es. 'Milano', 'Hamburg', 'New York')",
   address: "Indirizzo stradale completo",
   zip_code: "Codice postale / CAP (es. '20100', '10115')",
-  position: "Ruolo/posizione/responsabilità della persona in azienda (es. 'Sales Manager', 'Director', 'Responsabile Commerciale')",
+  position:
+    "Ruolo/posizione/responsabilità della persona in azienda (es. 'Sales Manager', 'Director', 'Responsabile Commerciale')",
   note: "Qualsiasi informazione aggiuntiva: commenti, note varie, campi duplicati che non trovano altra collocazione",
   origin: "Origine/provenienza del contatto (es. nome di un network, fiera, segnalazione)",
-  external_id: "Codice identificativo esterno del cliente/contatto nel sistema sorgente (es. ID anagrafica, codice CRM, numero cliente). NON è un alias.",
-  company_alias: "Abbreviazione colloquiale del nome azienda (es. 'DHL' per 'DHL Express'). Generata internamente dal sistema. NON mappare da ID, codici numerici o identificativi esterni.",
-  contact_alias: "Abbreviazione colloquiale del nome contatto (es. 'Mario' per 'Mario Rossi'). Generata internamente dal sistema.",
+  external_id:
+    "Codice identificativo esterno del cliente/contatto nel sistema sorgente (es. ID anagrafica, codice CRM, numero cliente). NON è un alias.",
+  company_alias:
+    "Abbreviazione colloquiale del nome azienda (es. 'DHL' per 'DHL Express'). Generata internamente dal sistema. NON mappare da ID, codici numerici o identificativi esterni.",
+  contact_alias:
+    "Abbreviazione colloquiale del nome contatto (es. 'Mario' per 'Mario Rossi'). Generata internamente dal sistema.",
 };
 
 const TARGET_FIELDS = Object.keys(TARGET_SCHEMA);
@@ -40,7 +43,9 @@ I file possono provenire da qualsiasi fonte: export di altri CRM, rubriche Excel
 
 ## LA NOSTRA TABELLA
 I contatti importati vengono salvati nella tabella "imported_contacts" che ha ESATTAMENTE questi campi:
-${Object.entries(TARGET_SCHEMA).map(([col, desc]) => `  - "${col}": ${desc}`).join("\n")}
+${Object.entries(TARGET_SCHEMA)
+  .map(([col, desc]) => `  - "${col}": ${desc}`)
+  .join("\n")}
 
 ## IL TUO COMPITO
 Ricevi un campione di ~50 righe da un file di formato sconosciuto. Ogni riga è un oggetto JSON con le chiavi originali del file (normalizzate in lowercase con underscore).
@@ -116,7 +121,9 @@ Sei un analista dati che lavora per una piattaforma CRM nel settore spedizioni/l
 Gli utenti incollano testo libero contenente contatti commerciali: elenchi di aziende, tabelle copiate, email con contatti, biglietti da visita, appunti da fiere.
 
 ## LA NOSTRA TABELLA
-${Object.entries(TARGET_SCHEMA).map(([col, desc]) => `  - "${col}": ${desc}`).join("\n")}
+${Object.entries(TARGET_SCHEMA)
+  .map(([col, desc]) => `  - "${col}": ${desc}`)
+  .join("\n")}
 
 ## IL TUO COMPITO
 Analizza il testo, identifica ogni entità (azienda o contatto), e mappa i dati trovati ai campi della nostra tabella.
@@ -140,7 +147,7 @@ function arrayMappingToDict(arr: unknown): Record<string, string> {
 // Fallback: derive mapping from parsed_rows by matching values against source sample
 function deriveMappingFromParsedRows(
   sampleRows: Record<string, unknown>[],
-  parsedRows: Record<string, unknown>[]
+  parsedRows: Record<string, unknown>[],
 ): Record<string, string> {
   const dict: Record<string, string> = {};
   if (!sampleRows?.length || !parsedRows?.length) return dict;
@@ -194,116 +201,128 @@ serve(async (req) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
     if (!token || token === SUPABASE_ANON_KEY) {
       return new Response(JSON.stringify({ error: "Authentication required" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     try {
       const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      const { data: { user }, error: authErr } = await authClient.auth.getUser(token);
+      const {
+        data: { user },
+        error: authErr,
+      } = await authClient.auth.getUser(token);
       if (authErr || !user) {
         return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
-          status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+          status: 401,
+          headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
     } catch {
       return new Response(JSON.stringify({ error: "Authentication check failed" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const lovableApiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const lovableApiKey =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const { sample_rows, input_type, raw_text } = await req.json();
 
     const isPaste = input_type === "paste";
     const prompt = isPaste ? PASTE_PROMPT : CONTEXT_PROMPT;
-    const userContent = isPaste ? (raw_text || "") : JSON.stringify(sample_rows || [], null, 2);
+    const userContent = isPaste ? raw_text || "" : JSON.stringify(sample_rows || [], null, 2);
 
     const response = await aiFetch({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: prompt },
-          { role: "user", content: userContent },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "return_import_structure",
-              description: "Returns the analyzed import structure with column mapping and parsed sample rows",
-              parameters: {
-                type: "object",
-                properties: {
-                  column_mapping: {
-                    type: "array",
-                    description: "Array of mappings from source column to target column. Each item has 'source' (original header) and 'target' (one of our imported_contacts fields). MUST NOT be empty for file imports.",
-                    items: {
-                      type: "object",
-                      properties: {
-                        source: { type: "string", description: "Exact key name from the source data" },
-                        target: { type: "string", description: "Target field name in imported_contacts table" },
-                      },
-                      required: ["source", "target"],
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: userContent },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "return_import_structure",
+            description: "Returns the analyzed import structure with column mapping and parsed sample rows",
+            parameters: {
+              type: "object",
+              properties: {
+                column_mapping: {
+                  type: "array",
+                  description:
+                    "Array of mappings from source column to target column. Each item has 'source' (original header) and 'target' (one of our imported_contacts fields). MUST NOT be empty for file imports.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      source: { type: "string", description: "Exact key name from the source data" },
+                      target: { type: "string", description: "Target field name in imported_contacts table" },
                     },
-                  },
-                  parsed_rows: {
-                    type: "array",
-                    description: "Preview: first 5 rows transformed using the mapping, with target column names as keys.",
-                    items: {
-                      type: "object",
-                      properties: {
-                        company_name: { type: "string", nullable: true },
-                        name: { type: "string", nullable: true },
-                        email: { type: "string", nullable: true },
-                        phone: { type: "string", nullable: true },
-                        mobile: { type: "string", nullable: true },
-                        country: { type: "string", nullable: true },
-                        city: { type: "string", nullable: true },
-                        address: { type: "string", nullable: true },
-                        zip_code: { type: "string", nullable: true },
-                        position: { type: "string", nullable: true },
-                        note: { type: "string", nullable: true },
-                        origin: { type: "string", nullable: true },
-                        external_id: { type: "string", nullable: true },
-                        company_alias: { type: "string", nullable: true },
-                        contact_alias: { type: "string", nullable: true },
-                      },
-                    },
-                  },
-                  confidence: {
-                    type: "number",
-                    description: "0-1. High (0.9+) if key fields like company_name/name/email found. Medium (0.5-0.8) if partial. Low (<0.5) if poor match.",
-                  },
-                  warnings: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Doubts about specific mappings, e.g. 'La colonna X potrebbe essere sia phone che mobile, ho scelto phone'",
-                  },
-                  unmapped_columns: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Source columns that don't match any target field (IDs, timestamps, status flags, etc.)",
+                    required: ["source", "target"],
                   },
                 },
-                required: ["column_mapping", "parsed_rows", "confidence", "warnings", "unmapped_columns"],
-                additionalProperties: false,
+                parsed_rows: {
+                  type: "array",
+                  description: "Preview: first 5 rows transformed using the mapping, with target column names as keys.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      company_name: { type: "string", nullable: true },
+                      name: { type: "string", nullable: true },
+                      email: { type: "string", nullable: true },
+                      phone: { type: "string", nullable: true },
+                      mobile: { type: "string", nullable: true },
+                      country: { type: "string", nullable: true },
+                      city: { type: "string", nullable: true },
+                      address: { type: "string", nullable: true },
+                      zip_code: { type: "string", nullable: true },
+                      position: { type: "string", nullable: true },
+                      note: { type: "string", nullable: true },
+                      origin: { type: "string", nullable: true },
+                      external_id: { type: "string", nullable: true },
+                      company_alias: { type: "string", nullable: true },
+                      contact_alias: { type: "string", nullable: true },
+                    },
+                  },
+                },
+                confidence: {
+                  type: "number",
+                  description:
+                    "0-1. High (0.9+) if key fields like company_name/name/email found. Medium (0.5-0.8) if partial. Low (<0.5) if poor match.",
+                },
+                warnings: {
+                  type: "array",
+                  items: { type: "string" },
+                  description:
+                    "Doubts about specific mappings, e.g. 'La colonna X potrebbe essere sia phone che mobile, ho scelto phone'",
+                },
+                unmapped_columns: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Source columns that don't match any target field (IDs, timestamps, status flags, etc.)",
+                },
               },
+              required: ["column_mapping", "parsed_rows", "confidence", "warnings", "unmapped_columns"],
+              additionalProperties: false,
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "return_import_structure" } },
-      });
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "return_import_structure" } },
+    });
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit superato, riprova tra poco." }), {
-          status: 429, headers: { ...dynCors, "Content-Type": "application/json" },
+          status: 429,
+          headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-          status: 402, headers: { ...dynCors, "Content-Type": "application/json" },
+          status: 402,
+          headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
       const text = await response.text();
@@ -319,7 +338,6 @@ serve(async (req) => {
     // Convert array mapping to dict
     let columnMappingDict = arrayMappingToDict(result.column_mapping);
 
-
     // Fallback: if dict is empty but parsed_rows has data, derive mapping
     if (Object.keys(columnMappingDict).length === 0 && result.parsed_rows?.length > 0 && !isPaste) {
       columnMappingDict = deriveMappingFromParsedRows(sample_rows || [], result.parsed_rows);
@@ -333,14 +351,13 @@ serve(async (req) => {
       unmapped_columns: result.unmapped_columns || [],
     };
 
-
     return new Response(JSON.stringify(finalResult), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

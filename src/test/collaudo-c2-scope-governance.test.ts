@@ -18,8 +18,16 @@ import { describe, it, expect } from "vitest";
 
 // Valid scopes accepted by unified-assistant (from index.ts line 10-12)
 const VALID_SCOPES = [
-  "partner_hub", "cockpit", "contacts", "import", "extension",
-  "strategic", "kb-supervisor", "deep-search", "chat", "mission-builder",
+  "partner_hub",
+  "cockpit",
+  "contacts",
+  "import",
+  "extension",
+  "strategic",
+  "kb-supervisor",
+  "deep-search",
+  "chat",
+  "mission-builder",
 ];
 
 // Scopes used by V2 hooks
@@ -31,15 +39,15 @@ const V2_HOOK_SCOPES = {
 
 // Tool count per scope (from scopeConfigs.ts read)
 const SCOPE_TOOL_CONFIG: Record<string, { toolCount: string; hasLocalHandler: boolean }> = {
-  cockpit:          { toolCount: "platform",        hasLocalHandler: false },
-  contacts:         { toolCount: "platform+extras",  hasLocalHandler: true },
-  import:           { toolCount: "platform+extras",  hasLocalHandler: true },
-  extension:        { toolCount: "platform",         hasLocalHandler: false },
-  strategic:        { toolCount: "zero",             hasLocalHandler: false },
-  "kb-supervisor":  { toolCount: "platform",         hasLocalHandler: false },
-  "deep-search":    { toolCount: "platform",         hasLocalHandler: false },
-  chat:             { toolCount: "platform",         hasLocalHandler: false },
-  "mission-builder":{ toolCount: "zero",             hasLocalHandler: false },
+  cockpit: { toolCount: "platform", hasLocalHandler: false },
+  contacts: { toolCount: "platform+extras", hasLocalHandler: true },
+  import: { toolCount: "platform+extras", hasLocalHandler: true },
+  extension: { toolCount: "platform", hasLocalHandler: false },
+  strategic: { toolCount: "zero", hasLocalHandler: false },
+  "kb-supervisor": { toolCount: "platform", hasLocalHandler: false },
+  "deep-search": { toolCount: "platform", hasLocalHandler: false },
+  chat: { toolCount: "platform", hasLocalHandler: false },
+  "mission-builder": { toolCount: "zero", hasLocalHandler: false },
 };
 
 // ══════════════════════════════════════════════════════════
@@ -47,7 +55,6 @@ const SCOPE_TOOL_CONFIG: Record<string, { toolCount: string; hasLocalHandler: bo
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C8 — Scope Routing", () => {
-
   it("C8.1 — unified-assistant accepts exactly 10 scopes", () => {
     expect(VALID_SCOPES).toHaveLength(10);
   });
@@ -62,7 +69,7 @@ describe("Collaudo C8 — Scope Routing", () => {
     // partner_hub goes to default → throws Error
     // All others should have explicit config
     const scopesWithConfig = Object.keys(SCOPE_TOOL_CONFIG);
-    const scopesNeedingConfig = VALID_SCOPES.filter(s => s !== "partner_hub");
+    const scopesNeedingConfig = VALID_SCOPES.filter((s) => s !== "partner_hub");
     for (const scope of scopesNeedingConfig) {
       expect(scopesWithConfig).toContain(scope);
     }
@@ -81,7 +88,6 @@ describe("Collaudo C8 — Scope Routing", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C8 — Tool Filtering by Scope", () => {
-
   it("C8.5 — strategic scope has ZERO tools", () => {
     expect(SCOPE_TOOL_CONFIG.strategic.toolCount).toBe("zero");
   });
@@ -121,7 +127,6 @@ describe("Collaudo C8 — Tool Filtering by Scope", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C8 — Agent Approval Gate", () => {
-
   // Tools that have REAL side effects (write to DB, send messages, etc.)
   const SIDE_EFFECT_TOOLS = [
     "send_email",
@@ -154,9 +159,7 @@ describe("Collaudo C8 — Agent Approval Gate", () => {
   });
 
   it("C8.11 — BUG: other side-effect tools LACK approval guard", () => {
-    const unguarded = SIDE_EFFECT_TOOLS.filter(
-      t => !TOOLS_WITH_HARD_GUARD.includes(t)
-    );
+    const unguarded = SIDE_EFFECT_TOOLS.filter((t) => !TOOLS_WITH_HARD_GUARD.includes(t));
     // These tools can bypass approval — this is the bug
     expect(unguarded.length).toBeGreaterThan(0);
     expect(unguarded).toContain("send_whatsapp");
@@ -184,7 +187,6 @@ describe("Collaudo C8 — Agent Approval Gate", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C6 — Cadence Engine mapActionType", () => {
-
   // Current code from cadence-engine/index.ts line 342-350
   function mapActionType(type: string): string {
     const map: Record<string, string> = {

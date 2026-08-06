@@ -28,10 +28,7 @@ const flatten = (obj, prefix = "") => {
 };
 
 const locales = Object.fromEntries(
-  files.map((f) => [
-    path.basename(f, ".json"),
-    flatten(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"))),
-  ]),
+  files.map((f) => [path.basename(f, ".json"), flatten(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")))]),
 );
 
 const all = new Set();
@@ -45,7 +42,9 @@ for (const [name, keys] of Object.entries(locales)) {
   report.push(`  ${name}: ${keys.size}/${all.size} (${coverage}%)`);
   if (missing.length > 0) {
     drift += missing.length;
-    report.push(`    missing: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (+${missing.length - 10})` : ""}`);
+    report.push(
+      `    missing: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (+${missing.length - 10})` : ""}`,
+    );
   }
 }
 

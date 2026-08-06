@@ -10,7 +10,10 @@ import * as React from "react";
 import { Search, ScanSearch, Telescope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SherlockLauncherDialog, type SherlockLauncherTarget } from "./SherlockLauncherDialog";
 import { buildEmailDeepSearchTarget, type BuildEmailTargetOpts } from "./deepSearchEmailAdapter";
@@ -30,7 +33,13 @@ interface Props {
 }
 
 export function DeepSearchEmailButton({
-  email, source, size = "sm", variant = "outline", className, label = "Deep Search", onComplete,
+  email,
+  source,
+  size = "sm",
+  variant = "outline",
+  className,
+  label = "Deep Search",
+  onComplete,
 }: Props): React.ReactElement {
   const [open, setOpen] = React.useState(false);
   const [level, setLevel] = React.useState<SherlockLevel | undefined>(undefined);
@@ -53,13 +62,16 @@ export function DeepSearchEmailButton({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onSelect={() => launch(1)} className="gap-2 text-xs">
-            <Search className="h-3.5 w-3.5" /> Scout <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
+            <Search className="h-3.5 w-3.5" /> Scout{" "}
+            <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => launch(2)} className="gap-2 text-xs">
-            <ScanSearch className="h-3.5 w-3.5" /> Detective <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
+            <ScanSearch className="h-3.5 w-3.5" /> Detective{" "}
+            <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => launch(3)} className="gap-2 text-xs">
-            <Telescope className="h-3.5 w-3.5" /> Sherlock <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
+            <Telescope className="h-3.5 w-3.5" /> Sherlock{" "}
+            <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

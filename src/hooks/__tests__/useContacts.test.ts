@@ -28,7 +28,9 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(QueryClientProvider, { client: qc }, children);
 }
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("useContacts", () => {
   it("fetches contacts with default filters", async () => {
@@ -65,10 +67,7 @@ describe("useContacts", () => {
 
   it("re-fetches when filters change", async () => {
     vi.mocked(findContacts).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 50 } as any);
-    const { result, rerender } = renderHook(
-      ({ f }) => useContacts(f),
-      { wrapper, initialProps: { f: {} } }
-    );
+    const { result, rerender } = renderHook(({ f }) => useContacts(f), { wrapper, initialProps: { f: {} } });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     rerender({ f: { country: "DE" } });
     await waitFor(() => expect(findContacts).toHaveBeenCalledWith({ country: "DE" }));

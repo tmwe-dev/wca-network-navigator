@@ -14,9 +14,10 @@ function describeSaveError(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "object") {
     const e = err as { message?: string; details?: string; hint?: string; code?: string };
-    return [e.message, e.details, e.hint, e.code ? `(code ${e.code})` : null]
-      .filter(Boolean)
-      .join(" — ") || "errore sconosciuto";
+    return (
+      [e.message, e.details, e.hint, e.code ? `(code ${e.code})` : null].filter(Boolean).join(" — ") ||
+      "errore sconosciuto"
+    );
   }
   return String(err);
 }
@@ -48,7 +49,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user || cancelled) return;
       const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
@@ -67,13 +70,17 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         linkedinUrl: (profile?.linkedin_url as string | undefined) ?? "",
       });
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSubmit = async (values: OperatorIdentityValues) => {
     setSaving(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) throw new Error("no_session");
 
@@ -137,12 +144,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-lg my-8">
         <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-lg">
-          <StepOperatorIdentity
-            initial={initial}
-            email={email}
-            saving={saving}
-            onSubmit={handleSubmit}
-          />
+          <StepOperatorIdentity initial={initial} email={email} saving={saving} onSubmit={handleSubmit} />
         </div>
       </div>
     </div>

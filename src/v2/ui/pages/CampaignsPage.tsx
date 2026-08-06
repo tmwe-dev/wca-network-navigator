@@ -6,7 +6,9 @@
  */
 import { useEffect, useState, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
-const CampaignAnalyticsTab = lazy(() => import("@/components/analytics/CampaignAnalyticsTab").then(m => ({ default: m.CampaignAnalyticsTab })));
+const CampaignAnalyticsTab = lazy(() =>
+  import("@/components/analytics/CampaignAnalyticsTab").then((m) => ({ default: m.CampaignAnalyticsTab })),
+);
 import { Button } from "@/components/ui/button";
 import { CompanyList } from "@/components/campaigns/CompanyList";
 import { CampaignHeaderControls } from "@/components/campaigns/CampaignHeaderControls";
@@ -15,7 +17,9 @@ import { CampaignGoalDialog } from "@/components/campaigns/CampaignGoalDialog";
 import { useCampaignData } from "@/components/campaigns/useCampaignData";
 import { Target, BarChart3 } from "lucide-react";
 
-const CampaignGlobe = lazy(() => import("@/components/campaigns/CampaignGlobe").then(m => ({ default: m.CampaignGlobe })));
+const CampaignGlobe = lazy(() =>
+  import("@/components/campaigns/CampaignGlobe").then((m) => ({ default: m.CampaignGlobe })),
+);
 
 export function Campaigns() {
   const c = useCampaignData();
@@ -28,36 +32,59 @@ export function Campaigns() {
   return (
     <div className="h-full min-h-0 relative overflow-hidden flex flex-col">
       <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80 backdrop-blur-sm z-20">
-        <Button variant={c.viewMode === "globe" ? "default" : "ghost"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => c.setViewMode("globe")}>
-          <Target className="w-3.5 h-3.5" />Mappa
+        <Button
+          variant={c.viewMode === "globe" ? "default" : "ghost"}
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={() => c.setViewMode("globe")}
+        >
+          <Target className="w-3.5 h-3.5" />
+          Mappa
         </Button>
-        <Button variant={c.viewMode === "analytics" ? "default" : "ghost"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => c.setViewMode("analytics")}>
-          <BarChart3 className="w-3.5 h-3.5" />Analytics
+        <Button
+          variant={c.viewMode === "analytics" ? "default" : "ghost"}
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={() => c.setViewMode("analytics")}
+        >
+          <BarChart3 className="w-3.5 h-3.5" />
+          Analytics
         </Button>
       </div>
 
       {c.viewMode === "analytics" ? (
-        <div className="flex-1 min-h-0"><Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}><CampaignAnalyticsTab /></Suspense></div>
+        <div className="flex-1 min-h-0">
+          <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
+            <CampaignAnalyticsTab />
+          </Suspense>
+        </div>
       ) : (
         <div className="flex-1 relative overflow-hidden">
-          {headerContainer && createPortal(
-            <CampaignHeaderControls
-              countries={c.countries}
-              selectedCountry={c.selectedCountry}
-              onCountrySelect={c.handleCountrySelect}
-              countriesWithPartners={c.countriesWithPartners}
-              totalPartners={c.totalPartners}
-              campaignPartners={c.campaignPartners}
-              onGenerateJobs={() => c.setShowGoalDialog(true)}
-              source={c.source}
-              onSourceChange={c.handleSourceChange}
-              bcaCountryCounts={c.bcaCountryCounts}
-            />,
-            headerContainer
-          )}
+          {headerContainer &&
+            createPortal(
+              <CampaignHeaderControls
+                countries={c.countries}
+                selectedCountry={c.selectedCountry}
+                onCountrySelect={c.handleCountrySelect}
+                countriesWithPartners={c.countriesWithPartners}
+                totalPartners={c.totalPartners}
+                campaignPartners={c.campaignPartners}
+                onGenerateJobs={() => c.setShowGoalDialog(true)}
+                source={c.source}
+                onSourceChange={c.handleSourceChange}
+                bcaCountryCounts={c.bcaCountryCounts}
+              />,
+              headerContainer,
+            )}
 
           <div className="absolute inset-0">
-            <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground text-sm">Caricamento globo...</div>}>
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                  Caricamento globo...
+                </div>
+              }
+            >
               <CampaignGlobe selectedCountry={c.selectedCountry} onCountrySelect={c.handleCountrySelect} />
             </Suspense>
           </div>

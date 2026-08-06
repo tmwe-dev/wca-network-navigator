@@ -25,7 +25,7 @@ export function AgentCard({ agent, isSelected, onClick }: Props) {
         "w-full text-left p-3 rounded-lg border transition-all duration-200 group",
         isSelected
           ? "bg-accent/60 border-primary/40 shadow-sm"
-          : "bg-card/50 border-border/50 hover:bg-accent/30 hover:border-border"
+          : "bg-card/50 border-border/50 hover:bg-accent/30 hover:border-border",
       )}
     >
       <div className="flex items-start gap-3">

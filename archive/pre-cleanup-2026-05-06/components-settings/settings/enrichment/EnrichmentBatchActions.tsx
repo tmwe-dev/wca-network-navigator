@@ -24,8 +24,13 @@ interface Props {
 }
 
 export function EnrichmentBatchActions({
-  source, contactsWithoutLinkedin, partnersWithoutLogo,
-  isExtensionAvailable, onLinkedInBatch, onAbort, progress,
+  source,
+  contactsWithoutLinkedin,
+  partnersWithoutLogo,
+  isExtensionAvailable,
+  onLinkedInBatch,
+  onAbort,
+  progress,
 }: Props) {
   const isRunning = progress.status === "running";
   const isDone = progress.status === "done" || progress.status === "aborted";
@@ -44,9 +49,7 @@ export function EnrichmentBatchActions({
               <Linkedin className="w-4 h-4 text-primary" />
               <div>
                 <div className="text-xs font-semibold text-foreground">LinkedIn Batch</div>
-                <div className="text-xs text-foreground/70">
-                  {contactsWithoutLinkedin} contatti senza profilo
-                </div>
+                <div className="text-xs text-foreground/70">{contactsWithoutLinkedin} contatti senza profilo</div>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
@@ -61,7 +64,15 @@ export function EnrichmentBatchActions({
                 onClick={onLinkedInBatch}
                 disabled={isRunning || !isExtensionAvailable}
               >
-                {isRunning ? <><Loader2 className="w-3 h-3 animate-spin" /> Cercando...</> : <><Search className="w-3 h-3" /> Cerca</>}
+                {isRunning ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" /> Cercando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-3 h-3" /> Cerca
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -69,15 +80,24 @@ export function EnrichmentBatchActions({
             <div className="space-y-1">
               <Progress value={progress.total > 0 ? (progress.current / progress.total) * 100 : 0} className="h-1" />
               <div className="flex items-center justify-between text-xs text-foreground/70">
-                <span>{progress.current}/{progress.total}
-                  {progress.currentName && isRunning && <span className="ml-1 text-foreground">{progress.currentName}</span>}
+                <span>
+                  {progress.current}/{progress.total}
+                  {progress.currentName && isRunning && (
+                    <span className="ml-1 text-foreground">{progress.currentName}</span>
+                  )}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-0.5"><CheckCircle2 className="w-2.5 h-2.5 text-green-500" /> {progress.found}</span>
-                  <span className="flex items-center gap-0.5"><XCircle className="w-2.5 h-2.5 text-destructive" /> {progress.notFound}</span>
+                  <span className="flex items-center gap-0.5">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-green-500" /> {progress.found}
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <XCircle className="w-2.5 h-2.5 text-destructive" /> {progress.notFound}
+                  </span>
                 </div>
               </div>
-              {isDone && <div className="text-[10px] font-medium text-green-600">✅ Completato — {progress.found} trovati</div>}
+              {isDone && (
+                <div className="text-[10px] font-medium text-green-600">✅ Completato — {progress.found} trovati</div>
+              )}
             </div>
           )}
         </div>
@@ -91,9 +111,7 @@ export function EnrichmentBatchActions({
               <Image className="w-4 h-4 text-amber-500" />
               <div>
                 <div className="text-xs font-semibold text-foreground">Logo Batch</div>
-                <div className="text-xs text-foreground/70">
-                  {partnersWithoutLogo} partner senza logo
-                </div>
+                <div className="text-xs text-foreground/70">{partnersWithoutLogo} partner senza logo</div>
               </div>
             </div>
             <Badge variant="outline" className="text-[11px] text-foreground/70">

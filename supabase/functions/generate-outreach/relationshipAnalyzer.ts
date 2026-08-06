@@ -46,12 +46,22 @@ export async function analyzePartnerRelationship(
     };
   }
 
-  const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
+  const {
+    checkSameLocationContacts,
+    getSameCompanyBranches,
+    analyzeRelationshipHistory,
+    buildInterlocutorTypeBlock,
+    buildBranchCoordinationBlock,
+    buildRelationshipAnalysisBlock,
+  } = await import("../_shared/sameLocationGuard.ts");
 
   try {
     const guardResult = await checkSameLocationContacts(supabase, partnerId, null, userId);
     if (!guardResult.allowed) {
-      throw Object.assign(new Error(guardResult.reason), { code: "duplicate_branch", recentContact: guardResult.recentContact });
+      throw Object.assign(new Error(guardResult.reason), {
+        code: "duplicate_branch",
+        recentContact: guardResult.recentContact,
+      });
     }
 
     const { metrics, historyText } = await analyzeRelationshipHistory(supabase, partnerId, userId);

@@ -16,7 +16,8 @@ import { getLastQueryResultContext } from "../lib/lastQueryResultContext";
 import type { Tool, ToolResult } from "./types";
 import { toRecord } from "@/lib/records";
 
-const MATCH = /\b(arricchisci|arricchimento|enrich)\b.*\b(dati|partner|sito|siti|web)\b|\bdati\s+mancanti\b|\barricchisci\s+(?:i\s+)?(?:dati|siti)\b/i;
+const MATCH =
+  /\b(arricchisci|arricchimento|enrich)\b.*\b(dati|partner|sito|siti|web)\b|\bdati\s+mancanti\b|\barricchisci\s+(?:i\s+)?(?:dati|siti)\b/i;
 
 interface EnrichResult {
   ok: number;
@@ -35,9 +36,8 @@ export const batchEnrichPartnersTool: Tool = {
   execute: async (prompt, context): Promise<ToolResult> => {
     const ctx = getLastQueryResultContext();
     const ids = (context?.payload?.partnerIds as string[] | undefined) ?? ctx?.partnerIds ?? [];
-    const selectionLabel = (context?.payload?.selectionLabel as string | undefined)
-      ?? ctx?.selectionLabel
-      ?? "partner selezionati";
+    const selectionLabel =
+      (context?.payload?.selectionLabel as string | undefined) ?? ctx?.selectionLabel ?? "partner selezionati";
 
     if (!ids || ids.length === 0) {
       return {
@@ -81,9 +81,8 @@ export const batchEnrichPartnersTool: Tool = {
         continue;
       }
       const partner = toRecord(pRes.value);
-      const name = (partner.company_name as string | undefined)
-        ?? (partner.company_alias as string | undefined)
-        ?? id.slice(0, 8);
+      const name =
+        (partner.company_name as string | undefined) ?? (partner.company_alias as string | undefined) ?? id.slice(0, 8);
       const website = (partner.website as string | undefined)?.trim();
       if (!website) {
         out.skipped++;

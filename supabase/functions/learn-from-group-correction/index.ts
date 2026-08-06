@@ -29,7 +29,8 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -43,7 +44,8 @@ serve(async (req) => {
     const { data: userData, error: userError } = await anonClient.auth.getUser();
     if (userError || !userData?.user?.id) {
       return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const userId = userData.user.id;
@@ -52,7 +54,9 @@ serve(async (req) => {
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
     const body = await req.json();
-    const email = String(body.email || "").trim().toLowerCase();
+    const email = String(body.email || "")
+      .trim()
+      .toLowerCase();
     const suggestedGroup = String(body.suggested_group || "").trim();
     const chosenGroup = String(body.chosen_group || "").trim();
     if (!email || !chosenGroup || suggestedGroup === chosenGroup) {
@@ -100,21 +104,26 @@ serve(async (req) => {
     }
 
     // 3) Chiedi all'AI di scrivere l'istruzione di apprendimento.
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const peersBlock = peerSamples.length === 0
-      ? "(nessun altro mittente già nel gruppo)"
-      : peerSamples.map((p) =>
-          `- ${p.email}${p.display_name ? ` (${p.display_name})` : ""}\n  subject: ${p.subjects.join(" | ") || "N/A"}`
-        ).join("\n");
+    const peersBlock =
+      peerSamples.length === 0
+        ? "(nessun altro mittente già nel gruppo)"
+        : peerSamples
+            .map(
+              (p) =>
+                `- ${p.email}${p.display_name ? ` (${p.display_name})` : ""}\n  subject: ${p.subjects.join(" | ") || "N/A"}`,
+            )
+            .join("\n");
 
-    const prompt =
-`L'operatore ha CORRETTO una tua classificazione email.
+    const prompt = `L'operatore ha CORRETTO una tua classificazione email.
 
 Mittente: ${email}
 Subject recenti del mittente: ${senderSubjects.join(" | ") || "N/A"}
@@ -135,17 +144,21 @@ COMPITO:
 Rispondi SOLO con il testo dell'istruzione, niente preamboli.`;
 
     const aiResponse = await aiFetch({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "Sei un classificatore email che impara dagli errori. Scrivi istruzioni concise e operative." },
-          { role: "user", content: prompt },
-        ],
-      });
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "system",
+          content: "Sei un classificatore email che impara dagli errori. Scrivi istruzioni concise e operative.",
+        },
+        { role: "user", content: prompt },
+      ],
+    });
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
     const aiData = await aiResponse.json();
@@ -159,8 +172,7 @@ Rispondi SOLO con il testo dell'istruzione, niente preamboli.`;
     // 4) Salva/aggiorna entry KB.
     const tags = ["email_classification", "group_correction", chosenGroup];
     const title = `Correzione classificazione → ${chosenGroup}`;
-    const content =
-`${lesson}
+    const content = `${lesson}
 
 — Caso: il mittente ${email} era stato suggerito come "${suggestedGroup || "n/d"}", ma l'operatore lo ha messo in "${chosenGroup}".
 Subject di riferimento: ${senderSubjects.slice(0, 3).join(" | ") || "N/A"}.`;
@@ -175,12 +187,15 @@ Subject di riferimento: ${senderSubjects.slice(0, 3).join(" | ") || "N/A"}.`;
 
     if (existing?.id) {
       const merged = `${existing.content}\n\n---\n${content}`.slice(-6000);
-      await supabase.from("kb_entries").update({
-        content: merged,
-        tags,
-        priority: 7,
-        is_active: true,
-      }).eq("id", existing.id);
+      await supabase
+        .from("kb_entries")
+        .update({
+          content: merged,
+          tags,
+          priority: 7,
+          is_active: true,
+        })
+        .eq("id", existing.id);
     } else {
       await supabase.from("kb_entries").insert({
         user_id: userId,
@@ -207,9 +222,9 @@ Subject di riferimento: ${senderSubjects.slice(0, 3).join(" | ") || "N/A"}.`;
     });
   } catch (e) {
     console.error("learn-from-group-correction error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

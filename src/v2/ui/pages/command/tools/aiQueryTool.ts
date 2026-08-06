@@ -33,24 +33,34 @@ function bulkActionsFor(table: string): readonly { id: string; label: string; pr
   switch (table) {
     case "partners":
       return [
-        { id: "outreach", label: "Programma outreach", promptTemplate: "Programma outreach per i partner con id: {ids}" },
+        {
+          id: "outreach",
+          label: "Programma outreach",
+          promptTemplate: "Programma outreach per i partner con id: {ids}",
+        },
         { id: "campaign", label: "Aggiungi a campagna", promptTemplate: "Crea campagna per i partner con id: {ids}" },
         { id: "enrich", label: "Arricchisci dati", promptTemplate: "Arricchisci i dati dei partner con id: {ids}" },
         { id: "score", label: "Calcola lead-score", promptTemplate: "Calcola lead-score per i partner con id: {ids}" },
       ];
     case "imported_contacts":
       return [
-        { id: "outreach", label: "Programma outreach", promptTemplate: "Programma outreach per i contatti con id: {ids}" },
+        {
+          id: "outreach",
+          label: "Programma outreach",
+          promptTemplate: "Programma outreach per i contatti con id: {ids}",
+        },
         { id: "compose", label: "Componi email", promptTemplate: "Componi email per i contatti con id: {ids}" },
         { id: "enrich", label: "Arricchisci", promptTemplate: "Arricchisci i contatti con id: {ids}" },
       ];
     case "outreach_queue":
-      return [
-        { id: "approve", label: "Approva", promptTemplate: "Approva gli outreach con id: {ids}" },
-      ];
+      return [{ id: "approve", label: "Approva", promptTemplate: "Approva gli outreach con id: {ids}" }];
     case "activities":
       return [
-        { id: "complete", label: "Segna completate", promptTemplate: "Segna come completate le attività con id: {ids}" },
+        {
+          id: "complete",
+          label: "Segna completate",
+          promptTemplate: "Segna come completate le attività con id: {ids}",
+        },
       ];
     default:
       return [];
@@ -87,21 +97,62 @@ export const aiQueryTool: Tool = {
     if (!lower) return false;
     // Esclusioni esplicite (azioni, non letture)
     const actionPatterns = [
-      /\bcrea\b/, /\baggiungi\b/, /\baggiorna\b/, /\bmodifica\b/, /\belimina\b/,
-      /\bscrap/, /\benrich/, /\barricch/, /\bdedup/, /\bcalcola lead/, /\binvia\b/,
-      /\bcomponi\b/, /\bnaviga\b/, /\bcompila form/,
-      /\bscriv/, /\bredig/, /\bprepar/, /\bmand/, /\bbozz[ae]/, /\bdraft\b/,
-      /\b(e-?mail|mail)\s+a\b/, /\bemail\s+ai\b/, /\bmail\s+ai\b/, /\binvit/,
+      /\bcrea\b/,
+      /\baggiungi\b/,
+      /\baggiorna\b/,
+      /\bmodifica\b/,
+      /\belimina\b/,
+      /\bscrap/,
+      /\benrich/,
+      /\barricch/,
+      /\bdedup/,
+      /\bcalcola lead/,
+      /\binvia\b/,
+      /\bcomponi\b/,
+      /\bnaviga\b/,
+      /\bcompila form/,
+      /\bscriv/,
+      /\bredig/,
+      /\bprepar/,
+      /\bmand/,
+      /\bbozz[ae]/,
+      /\bdraft\b/,
+      /\b(e-?mail|mail)\s+a\b/,
+      /\bemail\s+ai\b/,
+      /\bmail\s+ai\b/,
+      /\binvit/,
     ];
     if (actionPatterns.some((re) => re.test(lower))) return false;
 
     // Inclusioni: verbi/sostantivi tipici di query
     const queryPatterns = [
-      /\bmostra/, /\belenc/, /\bcerca/, /\btrova/, /\bvisualizza/, /\blista/,
-      /\bquanti/, /\bquante/, /\bultimi/, /\bultime/, /\brecenti/,
-      /\bpartner/, /\bcontatt/, /\bprospect/, /\battivit/, /\bmessagg/,
-      /\bagent/, /\boutreach/, /\bcampagn/, /\bjob/, /\bbiglietti/, /\bkb\b/,
-      /\bscansion/, /\bscan\b/, /\bdirectory/, /\bdatabase/, /\btabella/,
+      /\bmostra/,
+      /\belenc/,
+      /\bcerca/,
+      /\btrova/,
+      /\bvisualizza/,
+      /\blista/,
+      /\bquanti/,
+      /\bquante/,
+      /\bultimi/,
+      /\bultime/,
+      /\brecenti/,
+      /\bpartner/,
+      /\bcontatt/,
+      /\bprospect/,
+      /\battivit/,
+      /\bmessagg/,
+      /\bagent/,
+      /\boutreach/,
+      /\bcampagn/,
+      /\bjob/,
+      /\bbiglietti/,
+      /\bkb\b/,
+      /\bscansion/,
+      /\bscan\b/,
+      /\bdirectory/,
+      /\bdatabase/,
+      /\btabella/,
     ];
     if (queryPatterns.some((re) => re.test(lower))) return true;
 
@@ -158,13 +209,17 @@ export const aiQueryTool: Tool = {
     });
     const plans: QueryPlan[] | null = isOk(planRes) ? planRes.value.plans : null;
     const isRateLimited = (p: QueryPlan[] | null) =>
-      !p || (p[0]?.table === "INVALID" && /openai|troppe richieste|rate limit|limite temporaneo|token al minuto|riprova tra/i.test(p[0]?.rationale ?? ""));
+      !p ||
+      (p[0]?.table === "INVALID" &&
+        /openai|troppe richieste|rate limit|limite temporaneo|token al minuto|riprova tra/i.test(
+          p[0]?.rationale ?? "",
+        ));
     if (isRateLimited(plans)) {
       return {
         kind: "result",
         title: "Query AI · Servizio AI momentaneamente occupato",
         message:
-          (plans?.[0]?.rationale && /troppe richieste|rate limit|riprova/i.test(plans[0].rationale))
+          plans?.[0]?.rationale && /troppe richieste|rate limit|riprova/i.test(plans[0].rationale)
             ? plans[0].rationale
             : "Il motore AI è momentaneamente occupato (troppe richieste). Riprova tra qualche secondo.",
         status: "rate-limited",
@@ -192,7 +247,8 @@ export const aiQueryTool: Tool = {
         kind: "result",
         title: "Query AI · Richiesta non supportata",
         message:
-          firstPlan.rationale ?? "Questa richiesta non è una query di lettura. Prova con un'azione esplicita o riformulala come ricerca.",
+          firstPlan.rationale ??
+          "Questa richiesta non è una query di lettura. Prova con un'azione esplicita o riformulala come ricerca.",
         status: "unsupported",
         meta: { count: 0, sourceLabel: "AI Query Planner" },
       };
@@ -257,7 +313,12 @@ export const aiQueryTool: Tool = {
         return buildPart(plan, s.value.exec, null, s.value.durationMs);
       }
       const reason = s.reason;
-      const msg = reason instanceof QueryValidationError ? reason.message : reason instanceof Error ? reason.message : String(reason);
+      const msg =
+        reason instanceof QueryValidationError
+          ? reason.message
+          : reason instanceof Error
+            ? reason.message
+            : String(reason);
       return buildPart(plan, null, msg, 0);
     });
 

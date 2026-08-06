@@ -13,9 +13,11 @@ function buildBuilder(rows: Row[], error: { message: string } | null) {
   builder.select = () => builder;
   builder.order = () => builder;
   builder.eq = () => builder;
-  builder.limit = (n: number) => { lastLimit = n; return builder; };
-  builder.then = (resolve: (v: unknown) => unknown) =>
-    resolve({ data: error ? null : rows, error });
+  builder.limit = (n: number) => {
+    lastLimit = n;
+    return builder;
+  };
+  builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: error ? null : rows, error });
   return builder;
 }
 
@@ -29,10 +31,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import {
-  fetchChannelMessagesFromView,
-  fetchChannelMessages,
-} from "../channel-messages";
+import { fetchChannelMessagesFromView, fetchChannelMessages } from "../channel-messages";
 
 const baseRow = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -53,27 +52,33 @@ const baseRow = {
 
 describe("fetchChannelMessagesFromView (B4.1)", () => {
   beforeEach(() => {
-    viewRows = []; viewError = null; legacyRows = []; legacyError = null;
-    lastFromTable = ""; lastLimit = 0;
+    viewRows = [];
+    viewError = null;
+    legacyRows = [];
+    legacyError = null;
+    lastFromTable = "";
+    lastLimit = 0;
   });
 
   it("messaggio classificato: preserva tutti i campi reali (body, to_address, partner_id, read_at, category originale)", async () => {
-    viewRows = [{
-      message_id: baseRow.id,
-      user_id: baseRow.user_id,
-      channel: "email",
-      direction: "inbound",
-      subject: "Hi",
-      from_address: "a@b.com",
-      to_address: "me@x.com",
-      body_text: "ciao",
-      body_html: "<p>ciao</p>",
-      partner_id: "33333333-3333-4333-8333-333333333333",
-      message_category: "fornitori",
-      read_at: "2026-07-20T01:00:00Z",
-      email_date: baseRow.email_date,
-      message_created_at: baseRow.created_at,
-    }];
+    viewRows = [
+      {
+        message_id: baseRow.id,
+        user_id: baseRow.user_id,
+        channel: "email",
+        direction: "inbound",
+        subject: "Hi",
+        from_address: "a@b.com",
+        to_address: "me@x.com",
+        body_text: "ciao",
+        body_html: "<p>ciao</p>",
+        partner_id: "33333333-3333-4333-8333-333333333333",
+        message_category: "fornitori",
+        read_at: "2026-07-20T01:00:00Z",
+        email_date: baseRow.email_date,
+        message_created_at: baseRow.created_at,
+      },
+    ];
     const r = await fetchChannelMessagesFromView(50, "inbound");
     expect(lastFromTable).toBe("message_intelligence_v");
     expect(lastLimit).toBe(50);
@@ -90,22 +95,24 @@ describe("fetchChannelMessagesFromView (B4.1)", () => {
   });
 
   it("messaggio NON classificato: è comunque presente con campi rc null", async () => {
-    viewRows = [{
-      message_id: baseRow.id,
-      user_id: baseRow.user_id,
-      channel: "email",
-      direction: "inbound",
-      subject: "Not classified yet",
-      from_address: "a@b.com",
-      to_address: null,
-      body_text: "corpo",
-      body_html: null,
-      partner_id: null,
-      message_category: null,
-      read_at: null,
-      email_date: baseRow.email_date,
-      message_created_at: baseRow.created_at,
-    }];
+    viewRows = [
+      {
+        message_id: baseRow.id,
+        user_id: baseRow.user_id,
+        channel: "email",
+        direction: "inbound",
+        subject: "Not classified yet",
+        from_address: "a@b.com",
+        to_address: null,
+        body_text: "corpo",
+        body_html: null,
+        partner_id: null,
+        message_category: null,
+        read_at: null,
+        email_date: baseRow.email_date,
+        message_created_at: baseRow.created_at,
+      },
+    ];
     const r = await fetchChannelMessagesFromView(10);
     expect(r._tag).toBe("Ok");
     if (r._tag === "Ok") {

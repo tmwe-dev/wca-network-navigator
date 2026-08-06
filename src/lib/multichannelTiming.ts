@@ -8,8 +8,8 @@
  */
 
 export interface ChannelTimingConfig {
-  startHour: number;       // 0-23
-  endHour: number;         // 0-23 (esclusivo: send window è [start, end))
+  startHour: number; // 0-23
+  endHour: number; // 0-23 (esclusivo: send window è [start, end))
   minDelaySeconds: number;
   maxDelaySeconds: number;
 }

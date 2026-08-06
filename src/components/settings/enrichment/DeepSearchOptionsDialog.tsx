@@ -1,12 +1,20 @@
 import { useState } from "react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Loader2, Zap, ThumbsUp, Trophy, Info } from "lucide-react";
 import {
-  ALL_QUALITIES, getDeepSearchMeta, presetToCockpitConfig, type DeepSearchQuality,
+  ALL_QUALITIES,
+  getDeepSearchMeta,
+  presetToCockpitConfig,
+  type DeepSearchQuality,
 } from "@/lib/deepSearchPresets";
 
 interface DeepSearchOptionsDialogProps {
@@ -20,7 +28,11 @@ interface DeepSearchOptionsDialogProps {
 const QUALITY_ICONS = { fast: Zap, standard: ThumbsUp, premium: Trophy } as const;
 
 export function DeepSearchOptionsDialog({
-  open, onOpenChange, count, onConfirm, loading,
+  open,
+  onOpenChange,
+  count,
+  onConfirm,
+  loading,
 }: DeepSearchOptionsDialogProps) {
   const [quality, setQuality] = useState<DeepSearchQuality>("standard");
   const meta = getDeepSearchMeta(quality);
@@ -74,7 +86,9 @@ export function DeepSearchOptionsDialog({
               <div className="text-xs font-medium text-foreground">{meta.label} include:</div>
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {meta.includedLabels.map((l) => (
-                  <Badge key={l} variant="secondary" className="text-[10px] py-0 px-1.5 h-4 font-normal">{l}</Badge>
+                  <Badge key={l} variant="secondary" className="text-[10px] py-0 px-1.5 h-4 font-normal">
+                    {l}
+                  </Badge>
                 ))}
               </div>
               <div className="text-xs text-foreground mt-1.5 leading-tight">{meta.description}</div>
@@ -91,12 +105,7 @@ export function DeepSearchOptionsDialog({
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="text-xs">
             Annulla
           </Button>
-          <Button
-            size="sm"
-            className="text-xs gap-1.5"
-            disabled={loading}
-            onClick={handleConfirm}
-          >
+          <Button size="sm" className="text-xs gap-1.5" disabled={loading} onClick={handleConfirm}>
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3" />}
             Avvia Deep Search {meta.label}
           </Button>

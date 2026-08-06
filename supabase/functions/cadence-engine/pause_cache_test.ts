@@ -19,7 +19,11 @@ Deno.test("createPauseChecker — distinct users → 1 lookup each", async () =>
     calls++;
     return uid === "p";
   });
-  await check("a"); await check("b"); await check("p"); await check("a"); await check("b");
+  await check("a");
+  await check("b");
+  await check("p");
+  await check("a");
+  await check("b");
   assertEquals(calls, 3);
 });
 

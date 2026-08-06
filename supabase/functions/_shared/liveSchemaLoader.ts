@@ -8,8 +8,7 @@
  */
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL") ?? "";
-const SERVICE_ROLE_KEY =
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY") ?? "";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY") ?? "";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -82,16 +81,15 @@ function renderForPrompt(tables: LiveTable[]): string {
   for (const t of tables) {
     lines.push(`📊 ${t.table}`);
     for (const c of t.columns) {
-      const enumPart =
-        c.enum_values && c.enum_values.length
-          ? ` [${c.enum_values.join("|")}]`
-          : "";
+      const enumPart = c.enum_values && c.enum_values.length ? ` [${c.enum_values.join("|")}]` : "";
       const nul = c.nullable ? "" : " *";
       lines.push(`  - ${c.name}: ${c.type}${enumPart}${nul}`);
     }
     lines.push("");
   }
-  lines.push("Legenda: tipo enum:<name> = colonna a valori fissi (usa SOLO i valori elencati). Asterisco * = NOT NULL.");
+  lines.push(
+    "Legenda: tipo enum:<name> = colonna a valori fissi (usa SOLO i valori elencati). Asterisco * = NOT NULL.",
+  );
   return lines.join("\n");
 }
 

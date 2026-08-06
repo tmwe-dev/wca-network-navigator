@@ -13,8 +13,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import {
-  Search, Loader2, CheckCircle2, AlertCircle, X, Square, Database,
-  FileText, Eye, Code2, Sparkles, SkipForward, ListChecks, Globe,
+  Search,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Square,
+  Database,
+  FileText,
+  Eye,
+  Code2,
+  Sparkles,
+  SkipForward,
+  ListChecks,
+  Globe,
 } from "lucide-react";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
 import { useSherlock } from "@/v2/hooks/useSherlock";
@@ -78,7 +90,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
     if (!open) {
       sherlock.stop();
     }
-  }, [open]);  
+  }, [open]);
 
   const selected = sherlock.stepResults.find((r) => r.order === selectedOrder) ?? null;
 
@@ -114,9 +126,11 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                   onClick={() => sherlock.start(lvl)}
                   className="h-7 px-2 text-[11px] gap-1"
                 >
-                  {isRunning
-                    ? <Loader2 className="w-3 h-3 animate-spin" />
-                    : <span className="text-[12px]">{meta.icon}</span>}
+                  {isRunning ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <span className="text-[12px]">{meta.icon}</span>
+                  )}
                   {meta.label}
                   <span className="text-[11px] text-foreground ml-0.5">{meta.eta}</span>
                 </Button>
@@ -140,7 +154,11 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
           <Input
             value={manualWebsite}
             onChange={(e) => setManualWebsite(e.target.value)}
-            placeholder={discoveredWebsite ? `Auto-scoperto: ${discoveredWebsite}` : "https://… (lascia vuoto per scoperta automatica via Google)"}
+            placeholder={
+              discoveredWebsite
+                ? `Auto-scoperto: ${discoveredWebsite}`
+                : "https://… (lascia vuoto per scoperta automatica via Google)"
+            }
             disabled={!!sherlock.running}
             className="h-7 text-[11px] flex-1 max-w-md"
           />
@@ -245,10 +263,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                 <TabsContent value="findings" className="flex-1 min-h-0 mt-0">
                   <ScrollArea className="h-full">
                     <div className="px-6 py-4">
-                      <FindingsView
-                        findings={selected.findings}
-                        suggestedNextUrl={selected.suggested_next_url}
-                      />
+                      <FindingsView findings={selected.findings} suggestedNextUrl={selected.suggested_next_url} />
                     </div>
                   </ScrollArea>
                 </TabsContent>
@@ -263,37 +278,43 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                       )}
 
                       {/* Oracle Escalation CTA */}
-                      {selected && selected.confidence != null && selected.confidence < 0.8 && sherlock.running == null && (
-                        <div className="rounded-md border border-warning/30 bg-warning/10 p-4 space-y-2">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="text-[10px] gap-1 border-warning/40 text-warning dark:text-warning">
-                              Confidenza: {Math.round(selected.confidence * 100)}%
-                            </Badge>
-                          </div>
-                          {sherlock.currentLevel && sherlock.currentLevel < 3 && (
-                            <div className="space-y-2">
-                              <p className="text-xs text-warning dark:text-warning font-medium">
-                                La ricerca attuale ha bassa confidenza. Approfondisci per risultati più affidabili.
-                              </p>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => sherlock.start((sherlock.currentLevel ?? 1) + 1 as SherlockLevel)}
-                                disabled={!!sherlock.running}
-                                className="h-8 text-xs gap-1 w-full"
+                      {selected &&
+                        selected.confidence != null &&
+                        selected.confidence < 0.8 &&
+                        sherlock.running == null && (
+                          <div className="rounded-md border border-warning/30 bg-warning/10 p-4 space-y-2">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] gap-1 border-warning/40 text-warning dark:text-warning"
                               >
-                                <Search className="w-3.5 h-3.5" />
-                                Approfondisci al Livello {(sherlock.currentLevel ?? 1) + 1}
-                              </Button>
+                                Confidenza: {Math.round(selected.confidence * 100)}%
+                              </Badge>
                             </div>
-                          )}
-                          {sherlock.currentLevel === 3 && (
-                            <p className="text-xs text-warning dark:text-warning font-medium">
-                              Massimo livello raggiunto — questa è la ricerca più profonda disponibile.
-                            </p>
-                          )}
-                        </div>
-                      )}
+                            {sherlock.currentLevel && sherlock.currentLevel < 3 && (
+                              <div className="space-y-2">
+                                <p className="text-xs text-warning dark:text-warning font-medium">
+                                  La ricerca attuale ha bassa confidenza. Approfondisci per risultati più affidabili.
+                                </p>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => sherlock.start(((sherlock.currentLevel ?? 1) + 1) as SherlockLevel)}
+                                  disabled={!!sherlock.running}
+                                  className="h-8 text-xs gap-1 w-full"
+                                >
+                                  <Search className="w-3.5 h-3.5" />
+                                  Approfondisci al Livello {(sherlock.currentLevel ?? 1) + 1}
+                                </Button>
+                              </div>
+                            )}
+                            {sherlock.currentLevel === 3 && (
+                              <p className="text-xs text-warning dark:text-warning font-medium">
+                                Massimo livello raggiunto — questa è la ricerca più profonda disponibile.
+                              </p>
+                            )}
+                          </div>
+                        )}
 
                       <div className="text-[10px] font-semibold uppercase text-muted-foreground">
                         Findings consolidati ({Object.keys(sherlock.consolidated).length})
@@ -333,7 +354,9 @@ function StepRow({ result, active, onClick }: { result: SherlockStepResult; acti
     >
       <StatusIcon status={result.status} small />
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{result.order}. {result.label}</div>
+        <div className="font-medium truncate">
+          {result.order}. {result.label}
+        </div>
         <div className="text-[11px] text-foreground truncate">
           {result.channel} · {result.duration_ms ? `${(result.duration_ms / 1000).toFixed(1)}s` : "—"}
           {result.cache_hit && " · cache"}
@@ -370,19 +393,16 @@ function MarkdownPane({ markdown }: { markdown: string }) {
             ? `Markdown grezzo · ${markdown.length.toLocaleString()} caratteri`
             : `Markdown pulito · ${pretty.length.toLocaleString()} caratteri${reduction > 0 ? ` (−${reduction}% rumore)` : ""}`}
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 text-[10px] gap-1"
-          onClick={() => setShowRaw((v) => !v)}
-        >
+        <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1" onClick={() => setShowRaw((v) => !v)}>
           <Code2 className="w-3 h-3" />
           {showRaw ? "Versione pulita" : "Mostra raw"}
         </Button>
       </div>
       <ScrollArea className="flex-1">
-        <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-5
-          prose-headings:text-primary prose-strong:text-primary prose-a:text-primary">
+        <article
+          className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-5
+          prose-headings:text-primary prose-strong:text-primary prose-a:text-primary"
+        >
           <LazyMarkdown>{content}</LazyMarkdown>
         </article>
       </ScrollArea>

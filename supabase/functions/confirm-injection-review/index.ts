@@ -43,10 +43,10 @@ Deno.serve(async (req) => {
 
   const { review_id, decision, reason } = body;
   if (!review_id || (decision !== "approved" && decision !== "rejected")) {
-    return new Response(
-      JSON.stringify({ error: "review_id and decision (approved|rejected) required" }),
-      { status: 400, headers },
-    );
+    return new Response(JSON.stringify({ error: "review_id and decision (approved|rejected) required" }), {
+      status: 400,
+      headers,
+    });
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -55,11 +55,10 @@ Deno.serve(async (req) => {
   }
 
   // Client autenticato per rispettare RLS (solo l'owner può approvare).
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } },
-  );
+  const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false },
+  });
 
   // Decode JWT per ottenere user id (no network call).
   let userId: string | null = null;
@@ -76,14 +75,8 @@ Deno.serve(async (req) => {
 
   const result = await resolveInjectionReview(supabase, review_id, decision, userId, reason);
   if (!result.ok) {
-    return new Response(
-      JSON.stringify({ error: result.error ?? "update failed" }),
-      { status: 400, headers },
-    );
+    return new Response(JSON.stringify({ error: result.error ?? "update failed" }), { status: 400, headers });
   }
 
-  return new Response(
-    JSON.stringify({ ok: true, review_id, status: decision }),
-    { status: 200, headers },
-  );
+  return new Response(JSON.stringify({ ok: true, review_id, status: decision }), { status: 200, headers });
 });

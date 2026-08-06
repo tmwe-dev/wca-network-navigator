@@ -41,7 +41,9 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
   const [agents, setAgents] = useState(deduped);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  useEffect(() => { setAgents(deduped); }, [deduped]);
+  useEffect(() => {
+    setAgents(deduped);
+  }, [deduped]);
 
   // Auto-select first agent
   useEffect(() => {
@@ -55,38 +57,51 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
 
     const channel = supabase
       .channel("home-agent-tasks")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "agent_tasks" },
-        (payload) => {
-          const row = payload.new as Record<string, unknown>;
-          if (!row?.agent_id) return;
-          setAgents(prev =>
-            prev.map(a => {
-              if (a.id !== row.agent_id) return a;
-              if (payload.eventType === "INSERT" || (payload.eventType === "UPDATE" && ["pending", "running"].includes(row.status as string))) {
-                if (payload.eventType === "INSERT") {
-                  toast.info(`🤖 ${a.name}: nuovo task`, { description: String(row.description ?? "Task assegnato").slice(0, 80), duration: 5000 });
-                }
-                return { ...a, activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0), lastTask: (String(row.description ?? "") || a.lastTask) as string | null };
+      .on("postgres_changes", { event: "*", schema: "public", table: "agent_tasks" }, (payload) => {
+        const row = payload.new as Record<string, unknown>;
+        if (!row?.agent_id) return;
+        setAgents((prev) =>
+          prev.map((a) => {
+            if (a.id !== row.agent_id) return a;
+            if (
+              payload.eventType === "INSERT" ||
+              (payload.eventType === "UPDATE" && ["pending", "running"].includes(row.status as string))
+            ) {
+              if (payload.eventType === "INSERT") {
+                toast.info(`🤖 ${a.name}: nuovo task`, {
+                  description: String(row.description ?? "Task assegnato").slice(0, 80),
+                  duration: 5000,
+                });
               }
-              if (payload.eventType === "UPDATE" && row.status === "completed") {
-                return { ...a, activeTasks: Math.max(0, a.activeTasks - 1), completedToday: a.completedToday + 1, lastTask: String(row.description ?? '') || a.lastTask };
-              }
-              return a;
-            })
-          );
-        }
-      )
+              return {
+                ...a,
+                activeTasks: a.activeTasks + (payload.eventType === "INSERT" ? 1 : 0),
+                lastTask: (String(row.description ?? "") || a.lastTask) as string | null,
+              };
+            }
+            if (payload.eventType === "UPDATE" && row.status === "completed") {
+              return {
+                ...a,
+                activeTasks: Math.max(0, a.activeTasks - 1),
+                completedToday: a.completedToday + 1,
+                lastTask: String(row.description ?? "") || a.lastTask,
+              };
+            }
+            return a;
+          }),
+        );
+      })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [initialAgents]);
 
   if (!agents || agents.length === 0) return null;
 
-  const selected = agents.find(a => a.id === selectedId) ?? agents[0];
-  const bd = breakdowns?.find(b => b.agentId === selected.id);
+  const selected = agents.find((a) => a.id === selectedId) ?? agents[0];
+  const bd = breakdowns?.find((b) => b.agentId === selected.id);
   const avatarSrc = resolveAgentAvatar(selected.name, selected.emoji);
   const isWorking = (bd?.running ?? selected.activeTasks) > 0;
   const completed = bd?.completedToday ?? selected.completedToday;
@@ -98,7 +113,7 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
         {agents.map((agent) => {
           const isActive = agent.id === selectedId;
           const agentAvatar = resolveAgentAvatar(agent.name, agent.emoji);
-          const agentBd = breakdowns?.find(b => b.agentId === agent.id);
+          const agentBd = breakdowns?.find((b) => b.agentId === agent.id);
           const working = (agentBd?.running ?? agent.activeTasks) > 0;
 
           return (
@@ -109,7 +124,7 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
                 "flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all whitespace-nowrap border-b-2 -mb-px",
                 isActive
                   ? "border-primary text-foreground bg-primary/5"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30",
               )}
             >
               {agentAvatar ? (
@@ -152,7 +167,12 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
           <div className="flex-1 min-w-0 space-y-3">
             {/* Primary metric: completati */}
             <div className="flex items-baseline gap-2">
-              <span className={cn("text-3xl font-bold leading-none", completed > 0 ? "text-emerald-500" : "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "text-3xl font-bold leading-none",
+                  completed > 0 ? "text-emerald-500" : "text-muted-foreground",
+                )}
+              >
                 {completed}
               </span>
               <span className="text-xs text-muted-foreground">completati oggi</span>
@@ -173,9 +193,7 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
 
             {/* Last task */}
             {selected.lastTask && (
-              <div className="text-[10px] text-muted-foreground truncate italic">
-                Ultimo: {selected.lastTask}
-              </div>
+              <div className="text-[10px] text-muted-foreground truncate italic">Ultimo: {selected.lastTask}</div>
             )}
 
             {/* Navigate to agent */}

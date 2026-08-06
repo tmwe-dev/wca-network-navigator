@@ -24,10 +24,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
 
   // Check if push notifications are supported
   useEffect(() => {
-    const supported =
-      "serviceWorker" in navigator &&
-      "PushManager" in window &&
-      "Notification" in window;
+    const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
     setIsSupported(supported);
     setHasPermission(Notification.permission === "granted");
   }, []);
@@ -70,7 +67,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       const savedSubscription = await savePushSubscription(
         user.id,
         subscription.toJSON() as unknown as Parameters<typeof savePushSubscription>[1],
-        navigator.userAgent
+        navigator.userAgent,
       );
 
       if (savedSubscription) {
@@ -140,7 +137,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
 
           // Trigger callback
           onNotification?.(payload.new as Notification);
-        }
+        },
       )
       .subscribe();
 

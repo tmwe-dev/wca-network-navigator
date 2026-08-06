@@ -28,7 +28,12 @@ export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white/10" onClick={() => navigate("/ra/explorer")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-white/10"
+              onClick={() => navigate("/ra/explorer")}
+            >
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <h1 className="text-2xl font-bold text-white/95">{prospect.company_name}</h1>
@@ -36,7 +41,8 @@ export function RACompanyHeader({ prospect }: RACompanyHeaderProps) {
           <div className="flex items-center gap-2 flex-wrap">
             {prospect.city && (
               <Badge className="gap-1 bg-white/10 text-white/80 border border-white/20">
-                {prospect.city}{prospect.province && `, ${prospect.province}`}
+                {prospect.city}
+                {prospect.province && `, ${prospect.province}`}
               </Badge>
             )}
             {prospect.codice_ateco && (

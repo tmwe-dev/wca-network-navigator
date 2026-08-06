@@ -17,20 +17,9 @@ interface EmptyStateProps {
   readonly className?: string;
 }
 
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-  className,
-}: EmptyStateProps): React.ReactElement {
+export function EmptyState({ icon, title, description, action, className }: EmptyStateProps): React.ReactElement {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-3 py-16 px-6 text-center",
-        className,
-      )}
-    >
+    <div className={cn("flex flex-col items-center justify-center gap-3 py-16 px-6 text-center", className)}>
       {icon ? (
         <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center text-muted-foreground">
           {icon}
@@ -38,9 +27,7 @@ export function EmptyState({
       ) : null}
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {description ? (
-        <p className="text-xs text-muted-foreground max-w-[320px] leading-relaxed">
-          {description}
-        </p>
+        <p className="text-xs text-muted-foreground max-w-[320px] leading-relaxed">{description}</p>
       ) : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>

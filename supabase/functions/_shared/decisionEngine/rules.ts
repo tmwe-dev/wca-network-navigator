@@ -11,10 +11,7 @@ import { resolveAutonomy } from "./autonomy.ts";
 /**
  * Regole decisioni per status NEW
  */
-export function decideNew(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideNew(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 
@@ -54,10 +51,7 @@ export function decideNew(
 /**
  * Regole decisioni per status FIRST_TOUCH_SENT
  */
-export function decideFirstTouchSent(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideFirstTouchSent(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 
@@ -110,10 +104,7 @@ export function decideFirstTouchSent(
 /**
  * Regole decisioni per status HOLDING
  */
-export function decideHolding(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideHolding(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 
@@ -166,10 +157,7 @@ export function decideHolding(
 /**
  * Regole decisioni per status ENGAGED
  */
-export function decideEngaged(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideEngaged(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 
@@ -205,10 +193,7 @@ export function decideEngaged(
 /**
  * Regole decisioni per status QUALIFIED
  */
-export function decideQualified(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideQualified(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 
@@ -240,10 +225,7 @@ export function decideQualified(
 /**
  * Regole decisioni per status NEGOTIATION
  */
-export function decideNegotiation(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideNegotiation(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 
@@ -265,10 +247,7 @@ export function decideNegotiation(
 /**
  * Regole decisioni per status CONVERTED
  */
-export function decideConverted(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideConverted(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 
@@ -290,10 +269,7 @@ export function decideConverted(
 /**
  * Regole decisioni per status ARCHIVED
  */
-export function decideArchived(
-  state: PartnerState,
-  ctx: DecisionContext,
-): NextAction[] {
+export function decideArchived(state: PartnerState, ctx: DecisionContext): NextAction[] {
   const actions: NextAction[] = [];
   const s = state;
 
@@ -315,10 +291,7 @@ export function decideArchived(
 /**
  * Regole decisioni per status BLACKLISTED
  */
-export function decideBlacklisted(
-  _state: PartnerState,
-  _ctx: DecisionContext,
-): NextAction[] {
+export function decideBlacklisted(_state: PartnerState, _ctx: DecisionContext): NextAction[] {
   return [
     {
       action: "no_action",

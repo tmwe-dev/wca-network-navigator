@@ -36,12 +36,14 @@ Schema:
   "conflict": { "topic": "...", "with_fact_key": "...", "value_seen": "..." } | null
 }`;
 
-export const ProposalSchema = z.object({
-  table: z.string(),
-  title: z.string(),
-  content: z.string(),
-  category: z.string().optional(),
-}).nullable();
+export const ProposalSchema = z
+  .object({
+    table: z.string(),
+    title: z.string(),
+    content: z.string(),
+    category: z.string().optional(),
+  })
+  .nullable();
 
 export const FactSchema = z.object({
   key: z.string(),
@@ -49,11 +51,13 @@ export const FactSchema = z.object({
   evidence: z.string().optional(),
 });
 
-export const ConflictSchema = z.object({
-  topic: z.string(),
-  with_fact_key: z.string(),
-  value_seen: z.string(),
-}).nullable();
+export const ConflictSchema = z
+  .object({
+    topic: z.string(),
+    with_fact_key: z.string(),
+    value_seen: z.string(),
+  })
+  .nullable();
 
 export const AgentDecisionSchema = z.object({
   decision: z.enum(["INSERT", "UPDATE", "SKIP", "NEEDS_REVIEW"]),

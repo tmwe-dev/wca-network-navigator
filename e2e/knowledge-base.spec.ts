@@ -7,7 +7,7 @@ test.describe("knowledge-base", () => {
     await page.goto("/settings");
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(1500);
-    expect(errors.filter(e => !e.includes("net::ERR"))).toHaveLength(0);
+    expect(errors.filter((e) => !e.includes("net::ERR"))).toHaveLength(0);
   });
 
   test("settings page has no ErrorBoundary crash", async ({ page }) => {

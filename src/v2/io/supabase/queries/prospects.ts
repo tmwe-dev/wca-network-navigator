@@ -9,10 +9,7 @@ import { mapProspectRow } from "../../../core/mappers/prospect-mapper";
 
 export async function fetchProspects(): Promise<Result<Prospect[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("prospects")
-      .select("*")
-      .order("company_name");
+    const { data, error } = await supabase.from("prospects").select("*").order("company_name");
     if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "prospects" }, "fetchProspects"));
     if (!data) return ok([]);
     const list: Prospect[] = [];
@@ -29,12 +26,9 @@ export async function fetchProspects(): Promise<Result<Prospect[], AppError>> {
 
 export async function fetchProspectsByRegion(region: string): Promise<Result<Prospect[], AppError>> {
   try {
-    const { data, error } = await supabase
-      .from("prospects")
-      .select("*")
-      .eq("region", region)
-      .order("company_name");
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "prospects", region }, "fetchProspectsByRegion"));
+    const { data, error } = await supabase.from("prospects").select("*").eq("region", region).order("company_name");
+    if (error)
+      return err(ioError("DATABASE_ERROR", error.message, { table: "prospects", region }, "fetchProspectsByRegion"));
     if (!data) return ok([]);
     const list: Prospect[] = [];
     for (const row of data) {

@@ -50,7 +50,8 @@ export function parseWhatsAppTimestamp(rawValue: string, now: Date = new Date())
   // "oggi" / "today"
   if (/^(oggi|today)/i.test(lower)) {
     const d = new Date(now);
-    if (hhmmMatch) applyHHMM(d, hhmmMatch[0]); else d.setHours(0, 0, 0, 0);
+    if (hhmmMatch) applyHHMM(d, hhmmMatch[0]);
+    else d.setHours(0, 0, 0, 0);
     return d.toISOString();
   }
 
@@ -58,7 +59,8 @@ export function parseWhatsAppTimestamp(rawValue: string, now: Date = new Date())
   if (/^(ieri|yesterday)/i.test(lower)) {
     const d = new Date(now);
     d.setDate(d.getDate() - 1);
-    if (hhmmMatch) applyHHMM(d, hhmmMatch[0]); else d.setHours(12, 0, 0, 0);
+    if (hhmmMatch) applyHHMM(d, hhmmMatch[0]);
+    else d.setHours(12, 0, 0, 0);
     return d.toISOString();
   }
 
@@ -68,7 +70,8 @@ export function parseWhatsAppTimestamp(rawValue: string, now: Date = new Date())
     const d = new Date(now);
     const diff = (d.getDay() - weekday + 7) % 7 || 7;
     d.setDate(d.getDate() - diff);
-    if (hhmmMatch) applyHHMM(d, hhmmMatch[0]); else d.setHours(12, 0, 0, 0);
+    if (hhmmMatch) applyHHMM(d, hhmmMatch[0]);
+    else d.setHours(12, 0, 0, 0);
     return d.toISOString();
   }
 
@@ -91,7 +94,8 @@ export function parseWhatsAppTimestamp(rawValue: string, now: Date = new Date())
       const d = new Date(now);
       d.setMonth(month, Number(ddMmm[1]));
       if (d.getTime() > now.getTime()) d.setFullYear(d.getFullYear() - 1);
-      if (hhmmMatch) applyHHMM(d, hhmmMatch[0]); else d.setHours(12, 0, 0, 0);
+      if (hhmmMatch) applyHHMM(d, hhmmMatch[0]);
+      else d.setHours(12, 0, 0, 0);
       return d.toISOString();
     }
   }
@@ -103,7 +107,8 @@ export function parseWhatsAppTimestamp(rawValue: string, now: Date = new Date())
       const d = new Date(now);
       d.setMonth(month, Number(mmmDd[2]));
       if (d.getTime() > now.getTime()) d.setFullYear(d.getFullYear() - 1);
-      if (hhmmMatch) applyHHMM(d, hhmmMatch[0]); else d.setHours(12, 0, 0, 0);
+      if (hhmmMatch) applyHHMM(d, hhmmMatch[0]);
+      else d.setHours(12, 0, 0, 0);
       return d.toISOString();
     }
   }

@@ -16,10 +16,7 @@ import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
 import type { PartnerViewModel } from "@/types/partner-views";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { getPartnerDisplayCity } from "@/lib/partnerUtils";
-import {
-  SherlockLauncherDialog,
-  type SherlockLauncherTarget,
-} from "./sherlock/SherlockLauncherDialog";
+import { SherlockLauncherDialog, type SherlockLauncherTarget } from "./sherlock/SherlockLauncherDialog";
 import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
 import { SherlockLevelBadge } from "../atoms/SherlockLevelBadge";
 import type { SherlockLevel } from "@/v2/services/sherlock/sherlockTypes";
@@ -39,9 +36,7 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
   if (!partnerId) return null;
 
   const vm = partner as unknown as PartnerViewModel | undefined;
-  const title = isLoading
-    ? "Caricamento…"
-    : (vm?.company_name as string | undefined) ?? "Partner";
+  const title = isLoading ? "Caricamento…" : ((vm?.company_name as string | undefined) ?? "Partner");
 
   const target: SherlockLauncherTarget | null = vm
     ? {
@@ -68,12 +63,7 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
       <div className="flex items-center justify-between p-3 border-b border-border/40">
         <div className="flex items-center gap-2 min-w-0">
           <h2 className="text-sm font-semibold text-foreground truncate">{title}</h2>
-          {sherlockLevel && (
-            <SherlockLevelBadge
-              level={sherlockLevel.level}
-              completedAt={sherlockLevel.completed_at}
-            />
-          )}
+          {sherlockLevel && <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {vm && (
@@ -135,9 +125,7 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
         ) : vm ? (
           <PartnerDetailFull
             partner={vm}
-            onToggleFavorite={() =>
-              toggleFavorite.mutate({ id: partnerId, isFavorite: !vm.is_favorite })
-            }
+            onToggleFavorite={() => toggleFavorite.mutate({ id: partnerId, isFavorite: !vm.is_favorite })}
           />
         ) : (
           <p className="p-4 text-sm text-muted-foreground">Partner non trovato.</p>

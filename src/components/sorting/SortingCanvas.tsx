@@ -14,8 +14,37 @@ interface SortingCanvasProps {
 }
 
 const SANITIZE_CONFIG = {
-  ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'div', 'span', 'table', 'tr', 'td', 'th', 'thead', 'tbody', 'img', 'hr', 'blockquote', 'pre', 'code', 'b', 'i', 'u'],
-  ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'style', 'class'],
+  ALLOWED_TAGS: [
+    "p",
+    "br",
+    "strong",
+    "em",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "div",
+    "span",
+    "table",
+    "tr",
+    "td",
+    "th",
+    "thead",
+    "tbody",
+    "img",
+    "hr",
+    "blockquote",
+    "pre",
+    "code",
+    "b",
+    "i",
+    "u",
+  ],
+  ALLOWED_ATTR: ["href", "target", "src", "alt", "style", "class"],
 };
 
 /** Ensure legacy plain-text bodies get converted to HTML */
@@ -75,7 +104,8 @@ export function SortingCanvas({ job }: SortingCanvasProps) {
       <div className="px-4 py-2.5 border-b border-border flex items-center gap-3 bg-muted/30">
         <img
           src={`https://flagcdn.com/20x15/${(job.partners?.country_code || "").toLowerCase()}.png`}
-          alt="" className="w-5 h-4 rounded-sm shrink-0"
+          alt=""
+          className="w-5 h-4 rounded-sm shrink-0"
         />
         <span className="font-semibold text-sm truncate">{companyName}</span>
         {job.reviewed && (
@@ -90,11 +120,25 @@ export function SortingCanvas({ job }: SortingCanvasProps) {
         <div className="p-4">
           {editing ? (
             <div className="space-y-3">
-              <Input value={editSubject} onChange={(e) => setEditSubject(e.target.value)} placeholder="Oggetto" className="text-sm" />
-              <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={16} className="text-sm font-mono" />
+              <Input
+                value={editSubject}
+                onChange={(e) => setEditSubject(e.target.value)}
+                placeholder="Oggetto"
+                className="text-sm"
+              />
+              <Textarea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                rows={16}
+                className="text-sm font-mono"
+              />
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveEdit} disabled={updateMutation.isPending}>Salva</Button>
-                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Annulla</Button>
+                <Button size="sm" onClick={saveEdit} disabled={updateMutation.isPending}>
+                  Salva
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+                  Annulla
+                </Button>
               </div>
             </div>
           ) : (
@@ -104,15 +148,17 @@ export function SortingCanvas({ job }: SortingCanvasProps) {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Building2 className="w-3.5 h-3.5 shrink-0" />
                   <span className="font-medium text-foreground">{companyName}</span>
-                  <span>· {job.partners?.city}, {job.partners?.country_name}</span>
+                  <span>
+                    · {job.partners?.city}, {job.partners?.country_name}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <User className="w-3.5 h-3.5 shrink-0" />
                   <span>{contactName}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                   <Mail className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                   <span className="font-mono text-muted-foreground">{contactEmail || "nessuna email"}</span>
+                  <Mail className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                  <span className="font-mono text-muted-foreground">{contactEmail || "nessuna email"}</span>
                 </div>
               </div>
 
@@ -136,7 +182,12 @@ export function SortingCanvas({ job }: SortingCanvasProps) {
       {/* Actions */}
       <div className="p-3 border-t border-border flex items-center gap-2 flex-wrap">
         {!job.reviewed && (
-          <Button size="sm" variant="outline" onClick={() => reviewMutation.mutate({ id: job.id, reviewed: true })} disabled={reviewMutation.isPending}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => reviewMutation.mutate({ id: job.id, reviewed: true })}
+            disabled={reviewMutation.isPending}
+          >
             <CheckCircle2 className="w-4 h-4 mr-1" /> Approva
           </Button>
         )}
@@ -152,7 +203,12 @@ export function SortingCanvas({ job }: SortingCanvasProps) {
           {isSending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
           Invia ora
         </Button>
-        <Button size="sm" variant="destructive" onClick={() => cancelMutation.mutate([job.id])} disabled={cancelMutation.isPending}>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={() => cancelMutation.mutate([job.id])}
+          disabled={cancelMutation.isPending}
+        >
           <X className="w-4 h-4 mr-1" /> Scarta
         </Button>
       </div>

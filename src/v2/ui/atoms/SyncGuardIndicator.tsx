@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  getGuardSnapshot,
-  type GuardChannel,
-  type GuardSnapshot,
-} from "@/lib/syncGuard";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getGuardSnapshot, type GuardChannel, type GuardSnapshot } from "@/lib/syncGuard";
 
 /**
  * SyncGuardIndicator — badge "poliziotto" che segnala che il sistema sta
@@ -88,14 +82,12 @@ export function SyncGuardIndicator({
         <TooltipContent side="bottom" className="max-w-[260px] text-xs">
           <p className="font-semibold mb-1">Controllo tempi umani — {channel}</p>
           <p className="text-muted-foreground">
-            Una sola operazione per volta. Il sistema rispetta automaticamente
-            le pause tra apertura, lettura e chiusura dei thread, come farebbe
-            un essere umano. Niente aperture multiple, niente sovrapposizioni.
+            Una sola operazione per volta. Il sistema rispetta automaticamente le pause tra apertura, lettura e chiusura
+            dei thread, come farebbe un essere umano. Niente aperture multiple, niente sovrapposizioni.
           </p>
           {snap.step && (
             <p className="mt-1">
-              <span className="text-muted-foreground">Step:</span>{" "}
-              <span className="font-medium">{snap.step}</span>
+              <span className="text-muted-foreground">Step:</span> <span className="font-medium">{snap.step}</span>
             </p>
           )}
           {isWaiting && (

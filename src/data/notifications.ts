@@ -10,9 +10,15 @@ const log = createLogger("data/notifications");
 
 // ─── Types ──────────────────────────────────────────────
 
-export type NotificationType = 'email_received' | 'deal_stage_change' | 'ai_completed' | 'system_error' | 'outreach_reply' | 'reminder';
-export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
-export type EntityType = 'partner' | 'contact' | 'deal' | 'email';
+export type NotificationType =
+  | "email_received"
+  | "deal_stage_change"
+  | "ai_completed"
+  | "system_error"
+  | "outreach_reply"
+  | "reminder";
+export type NotificationPriority = "low" | "normal" | "high" | "urgent";
+export type EntityType = "partner" | "contact" | "deal" | "email";
 
 export interface Notification {
   id: string;
@@ -69,10 +75,7 @@ function toJsonRecord(meta: Record<string, unknown> | undefined): Json {
 
 // ─── Queries ────────────────────────────────────────────
 
-export async function listNotifications(
-  userId: string,
-  filters: NotificationFilters = {}
-): Promise<Notification[]> {
+export async function listNotifications(userId: string, filters: NotificationFilters = {}): Promise<Notification[]> {
   const { limit = 20, offset = 0, unreadOnly = false, type, priority } = filters;
 
   let query = supabase
@@ -167,10 +170,7 @@ export async function dismissNotification(notificationId: string): Promise<Notif
   return data as Notification;
 }
 
-export async function createNotification(
-  userId: string,
-  input: CreateNotificationInput
-): Promise<Notification | null> {
+export async function createNotification(userId: string, input: CreateNotificationInput): Promise<Notification | null> {
   const { data, error } = await supabase
     .from("notifications")
     .insert([
@@ -197,10 +197,7 @@ export async function createNotification(
   return data as Notification;
 }
 
-export async function deleteOldNotifications(
-  userId: string,
-  daysOld: number = 30
-): Promise<number> {
+export async function deleteOldNotifications(userId: string, daysOld: number = 30): Promise<number> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
@@ -240,7 +237,7 @@ export async function savePushSubscription(
       auth: string;
     };
   },
-  userAgent?: string
+  userAgent?: string,
 ): Promise<PushSubscription | null> {
   const { data, error } = await supabase
     .from("push_subscriptions")
@@ -254,7 +251,7 @@ export async function savePushSubscription(
           user_agent: userAgent,
         },
       ],
-      { onConflict: "user_id,endpoint" }
+      { onConflict: "user_id,endpoint" },
     )
     .select()
     .single();
@@ -268,10 +265,7 @@ export async function savePushSubscription(
 }
 
 export async function getPushSubscriptions(userId: string): Promise<PushSubscription[]> {
-  const { data, error } = await supabase
-    .from("push_subscriptions")
-    .select("*")
-    .eq("user_id", userId);
+  const { data, error } = await supabase.from("push_subscriptions").select("*").eq("user_id", userId);
 
   if (error) {
     log.error("Error fetching push subscriptions", { error: error.message });
@@ -282,10 +276,7 @@ export async function getPushSubscriptions(userId: string): Promise<PushSubscrip
 }
 
 export async function deletePushSubscription(endpoint: string): Promise<boolean> {
-  const { error } = await supabase
-    .from("push_subscriptions")
-    .delete()
-    .eq("endpoint", endpoint);
+  const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
 
   if (error) {
     log.error("Error deleting push subscription", { error: error.message });

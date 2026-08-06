@@ -47,10 +47,7 @@ export function GoldenLayout({
   const persistId = storageId ?? `${testId ?? "golden-layout"}:list-vs-detail`;
 
   return (
-    <div
-      data-testid={testId ?? "golden-layout"}
-      className={cn("flex flex-col h-full overflow-hidden", className)}
-    >
+    <div data-testid={testId ?? "golden-layout"} className={cn("flex flex-col h-full overflow-hidden", className)}>
       {!hideHeader && <GoldenHeaderBar trailingLabel={trailingLabel} actions={actions} />}
 
       {/* Mobile: list only, detail is overlay */}

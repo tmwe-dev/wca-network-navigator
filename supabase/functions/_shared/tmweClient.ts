@@ -161,10 +161,7 @@ function baseUrl(): string {
 }
 
 export function serviceClient(): SupabaseClient {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 }
 
 interface TokenResponse {
@@ -245,15 +242,10 @@ export interface UserTokenRecord {
   scopes: string[];
 }
 
-export async function getUserToken(
-  svc: SupabaseClient,
-  userId: string,
-): Promise<UserTokenRecord | null> {
+export async function getUserToken(svc: SupabaseClient, userId: string): Promise<UserTokenRecord | null> {
   const { data } = await svc
     .from("tmwe_user_tokens")
-    .select(
-      "user_id, tmwe_user_id, tmwe_email, access_token, refresh_token, expires_at, scopes",
-    )
+    .select("user_id, tmwe_user_id, tmwe_email, access_token, refresh_token, expires_at, scopes")
     .eq("user_id", userId)
     .maybeSingle();
 

@@ -42,7 +42,9 @@ Deno.serve(async (req: Request) => {
       if (body && typeof body === "object" && body !== null && (body as { force?: boolean }).force === true) {
         force = true;
       }
-    } catch { /* no body */ }
+    } catch {
+      /* no body */
+    }
     const STALE_HOURS = 24;
     const staleCutoff = new Date(Date.now() - STALE_HOURS * 3600_000).toISOString();
 
@@ -70,7 +72,7 @@ Deno.serve(async (req: Request) => {
       if (!contacts || contacts.length === 0) break;
 
       // Fetch interactions for these contacts
-      const contactIds = contacts.map(c => c.id);
+      const contactIds = contacts.map((c) => c.id);
       const { data: interactions } = await admin
         .from("contact_interactions")
         .select("contact_id, interaction_type")
@@ -90,7 +92,7 @@ Deno.serve(async (req: Request) => {
         interactionsByContact.set(i.contact_id, list);
       }
 
-      const bcSet = new Set((businessCards || []).map(bc => bc.matched_contact_id));
+      const bcSet = new Set((businessCards || []).map((bc) => bc.matched_contact_id));
 
       const now = Date.now();
       const nowIso = new Date().toISOString();
@@ -106,40 +108,65 @@ Deno.serve(async (req: Request) => {
         const breakdown: Record<string, number> = {};
 
         // Has email? +15
-        if (c.email) { score += 15; breakdown["Email"] = 15; }
+        if (c.email) {
+          score += 15;
+          breakdown["Email"] = 15;
+        }
 
         // Has phone? +10
-        if (c.phone || c.mobile) { score += 10; breakdown["Telefono"] = 10; }
+        if (c.phone || c.mobile) {
+          score += 10;
+          breakdown["Telefono"] = 10;
+        }
 
         // Interactions > 5? +15
-        if ((c.interaction_count || 0) > 5) { score += 15; breakdown["Interazioni 5+"] = 15; }
+        if ((c.interaction_count || 0) > 5) {
+          score += 15;
+          breakdown["Interazioni 5+"] = 15;
+        }
 
         // Check interaction types
         const types = interactionsByContact.get(c.id) || [];
-        if (types.includes("email_sent") && types.some(t => t === "email_received" || t === "email_reply")) {
-          score += 25; breakdown["Risposta email"] = 25;
+        if (types.includes("email_sent") && types.some((t) => t === "email_received" || t === "email_reply")) {
+          score += 25;
+          breakdown["Risposta email"] = 25;
         }
-        if (types.includes("meeting")) { score += 20; breakdown["Meeting"] = 20; }
+        if (types.includes("meeting")) {
+          score += 20;
+          breakdown["Meeting"] = 20;
+        }
 
         // Business card? +10
-        if (bcSet.has(c.id)) { score += 10; breakdown["Biglietto visita"] = 10; }
+        if (bcSet.has(c.id)) {
+          score += 10;
+          breakdown["Biglietto visita"] = 10;
+        }
 
         // Recency
         if (c.last_interaction_at) {
           const daysSince = (now - new Date(c.last_interaction_at).getTime()) / 86400000;
-          if (daysSince < 7) { score += 15; breakdown["Recente <7gg"] = 15; }
-          else if (daysSince < 30) { score += 10; breakdown["Recente <30gg"] = 10; }
-          else if (daysSince < 90) { score += 5; breakdown["Recente <90gg"] = 5; }
+          if (daysSince < 7) {
+            score += 15;
+            breakdown["Recente <7gg"] = 15;
+          } else if (daysSince < 30) {
+            score += 10;
+            breakdown["Recente <30gg"] = 10;
+          } else if (daysSince < 90) {
+            score += 5;
+            breakdown["Recente <90gg"] = 5;
+          }
         }
 
         // Status bonus
         if (c.lead_status === "negotiation" || c.lead_status === "converted") {
-          score += 20; breakdown["Status avanzato"] = 20;
+          score += 20;
+          breakdown["Status avanzato"] = 20;
         }
 
         // Origin bonus
         if (c.origin && c.origin.toLowerCase().includes("incontro")) {
-          score += 15; breakdown["Incontro personale"] = 15;
+          score += 15;
+          breakdown["Incontro personale"] = 15;
         }
 
         score = Math.min(score, 100);

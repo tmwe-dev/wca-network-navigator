@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { groupByCountry } from "@/lib/groupByCountry";
-import {
-  addCockpitPreselection,
-  consumeCockpitPreselection,
-  getCockpitPreselection,
-} from "@/lib/cockpitPreselection";
+import { addCockpitPreselection, consumeCockpitPreselection, getCockpitPreselection } from "@/lib/cockpitPreselection";
 import {
   asEnrichment,
   getRealLogoUrl,
@@ -29,7 +25,11 @@ describe("groupByCountry", () => {
   ];
 
   it("raggruppa per code e ordina per dimensione discendente", () => {
-    const groups = groupByCountry(items, (i) => i.code, (i) => i.name);
+    const groups = groupByCountry(
+      items,
+      (i) => i.code,
+      (i) => i.name,
+    );
     expect(groups).toHaveLength(2);
     expect(groups[0].countryCode).toBe("IT");
     expect(groups[0].items).toHaveLength(3);
@@ -41,14 +41,20 @@ describe("groupByCountry", () => {
     const out = groupByCountry(
       [{ code: "", name: "", v: 1 }],
       (i) => i.code,
-      (i) => i.name
+      (i) => i.name,
     );
     expect(out[0].countryCode).toBe("??");
     expect(out[0].countryName).toBe("Sconosciuto");
   });
 
   it("ritorna array vuoto su input vuoto", () => {
-    expect(groupByCountry([], (i: any) => i.code, (i: any) => i.name)).toEqual([]);
+    expect(
+      groupByCountry(
+        [],
+        (i: any) => i.code,
+        (i: any) => i.name,
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -211,9 +217,30 @@ describe("partnerUtils", () => {
 
   describe("sortPartners", () => {
     const partners = [
-      { company_name: "Charlie", rating: 3, member_since: "2020-01-01", country_name: "Germany", branch_cities: [{}, {}], partner_contacts: [{ email: "a@b.it", phone: "+39", mobile: "+39", name: "x" }] },
-      { company_name: "Alpha", rating: 5, member_since: "2010-01-01", country_name: "Italy", branch_cities: [{}, {}, {}], partner_contacts: [] },
-      { company_name: "Bravo", rating: 4, member_since: "2015-01-01", country_name: "France", branch_cities: [{}], partner_contacts: [{ email: "x" }] },
+      {
+        company_name: "Charlie",
+        rating: 3,
+        member_since: "2020-01-01",
+        country_name: "Germany",
+        branch_cities: [{}, {}],
+        partner_contacts: [{ email: "a@b.it", phone: "+39", mobile: "+39", name: "x" }],
+      },
+      {
+        company_name: "Alpha",
+        rating: 5,
+        member_since: "2010-01-01",
+        country_name: "Italy",
+        branch_cities: [{}, {}, {}],
+        partner_contacts: [],
+      },
+      {
+        company_name: "Bravo",
+        rating: 4,
+        member_since: "2015-01-01",
+        country_name: "France",
+        branch_cities: [{}],
+        partner_contacts: [{ email: "x" }],
+      },
     ];
 
     it("name_asc / name_desc", () => {

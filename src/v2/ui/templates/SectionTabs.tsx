@@ -55,18 +55,14 @@ export function SectionTabs({
         <div className="shrink-0 px-4 py-2 border-b border-border/40 bg-card/40">
           <div className="inline-flex items-center gap-0.5 rounded-md border border-border bg-card/60 p-0.5">
             {tabs.map((tab, idx) => {
-              const active = isRoot
-                ? idx === 0
-                : pathname === tab.to || pathname.startsWith(`${tab.to}/`);
+              const active = isRoot ? idx === 0 : pathname === tab.to || pathname.startsWith(`${tab.to}/`);
               return (
                 <NavLink
                   key={tab.key}
                   to={tab.to}
                   className={cn(
                     "rounded-sm px-2.5 py-1 text-[11px] font-medium transition-colors whitespace-nowrap",
-                    active
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
+                    active ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <span>{tab.label}</span>
@@ -80,12 +76,7 @@ export function SectionTabs({
             })}
           </div>
         </div>
-        <div
-          className={cn(
-            "flex-1 min-h-0",
-            contentOverflow === "contain" ? "overflow-hidden" : "overflow-y-auto",
-          )}
-        >
+        <div className={cn("flex-1 min-h-0", contentOverflow === "contain" ? "overflow-hidden" : "overflow-y-auto")}>
           {children}
         </div>
       </div>
@@ -97,18 +88,14 @@ export function SectionTabs({
       <div className="shrink-0 border-b border-border/40 bg-card/30 px-2 overflow-x-auto">
         <div className="flex items-center gap-0.5 min-w-max">
           {tabs.map((tab, idx) => {
-            const active = isRoot
-              ? idx === 0
-              : pathname === tab.to || pathname.startsWith(`${tab.to}/`);
+            const active = isRoot ? idx === 0 : pathname === tab.to || pathname.startsWith(`${tab.to}/`);
             return (
               <NavLink
                 key={tab.key}
                 to={tab.to}
                 className={cn(
                   "relative px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap",
-                  active
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span>{tab.label}</span>
@@ -117,20 +104,13 @@ export function SectionTabs({
                     {tab.badge}
                   </span>
                 )}
-                {active && (
-                  <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
-                )}
+                {active && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
               </NavLink>
             );
           })}
         </div>
       </div>
-      <div
-        className={cn(
-          "flex-1 min-h-0",
-          contentOverflow === "contain" ? "overflow-hidden" : "overflow-y-auto",
-        )}
-      >
+      <div className={cn("flex-1 min-h-0", contentOverflow === "contain" ? "overflow-hidden" : "overflow-y-auto")}>
         {children}
       </div>
     </div>

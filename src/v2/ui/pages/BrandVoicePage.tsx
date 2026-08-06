@@ -28,7 +28,10 @@ interface ChannelRoleAgg {
 }
 
 function aggregate(rows: ReadonlyArray<BrandVoiceOutcomeRow>): ChannelRoleAgg[] {
-  const map = new Map<string, { audits: number; sumScore: number; low: number; high: number; channel: string; role: string }>();
+  const map = new Map<
+    string,
+    { audits: number; sumScore: number; low: number; high: number; channel: string; role: string }
+  >();
   for (const r of rows) {
     const role = r.journalist_role ?? "—";
     const key = `${r.channel}::${role}`;
@@ -90,9 +93,10 @@ export function BrandVoicePage() {
   }
 
   const totalAudits = aggregated.reduce((s, r) => s + r.audits, 0);
-  const overallAvg = totalAudits > 0
-    ? Math.round((aggregated.reduce((s, r) => s + r.avgScore * r.audits, 0) / totalAudits) * 10) / 10
-    : 0;
+  const overallAvg =
+    totalAudits > 0
+      ? Math.round((aggregated.reduce((s, r) => s + r.avgScore * r.audits, 0) / totalAudits) * 10) / 10
+      : 0;
 
   return (
     <PageShell
@@ -127,7 +131,8 @@ export function BrandVoicePage() {
             <div className="p-8 text-sm text-muted-foreground text-center">Caricamento…</div>
           ) : aggregated.length === 0 ? (
             <div className="p-8 text-sm text-muted-foreground text-center">
-              Nessun audit registrato ancora. I messaggi prodotti saranno valutati automaticamente dal Journalist Review.
+              Nessun audit registrato ancora. I messaggi prodotti saranno valutati automaticamente dal Journalist
+              Review.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -148,9 +153,13 @@ export function BrandVoicePage() {
                       <td className="px-4 py-2 text-foreground">{r.channel}</td>
                       <td className="px-4 py-2 text-muted-foreground">{r.role}</td>
                       <td className="px-4 py-2 text-right text-foreground tabular-nums">{r.audits}</td>
-                      <td className={`px-4 py-2 text-right font-semibold tabular-nums ${scoreColor(r.avgScore)}`}>{r.avgScore}</td>
+                      <td className={`px-4 py-2 text-right font-semibold tabular-nums ${scoreColor(r.avgScore)}`}>
+                        {r.avgScore}
+                      </td>
                       <td className="px-4 py-2 text-right text-red-600 dark:text-red-400 tabular-nums">{r.low}</td>
-                      <td className="px-4 py-2 text-right text-emerald-600 dark:text-emerald-400 tabular-nums">{r.high}</td>
+                      <td className="px-4 py-2 text-right text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        {r.high}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -164,7 +173,8 @@ export function BrandVoicePage() {
           <header className="px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">Top 10 deviazioni ricorrenti</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Pattern di stile che il Journalist Review segnala più spesso. Usa la KB Supervisor per aggiornare il lessico.
+              Pattern di stile che il Journalist Review segnala più spesso. Usa la KB Supervisor per aggiornare il
+              lessico.
             </p>
           </header>
           {auditsQ.isLoading ? (

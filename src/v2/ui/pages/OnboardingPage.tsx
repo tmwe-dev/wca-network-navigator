@@ -37,7 +37,12 @@ interface OnboardingStep {
 }
 
 const AGENT_TEMPLATES = [
-  { name: "Luca", role: "director", emoji: "🧠", desc: "Direttore strategico. Coordina tutti gli agenti e crea piani." },
+  {
+    name: "Luca",
+    role: "director",
+    emoji: "🧠",
+    desc: "Direttore strategico. Coordina tutti gli agenti e crea piani.",
+  },
   { name: "Marco", role: "outreach", emoji: "📧", desc: "Esperto outreach email e primo contatto." },
   { name: "Sara", role: "sales", emoji: "💼", desc: "Esperta vendite e negoziazione." },
   { name: "Robin", role: "support", emoji: "🎯", desc: "Supporto clienti e follow-up." },
@@ -72,14 +77,29 @@ export function Onboarding() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { navigate("/auth", { replace: true }); return; }
+      if (!session) {
+        navigate("/auth", { replace: true });
+        return;
+      }
       setUserId(session.user.id);
     });
   }, [navigate]);
 
   const steps: OnboardingStep[] = [
-    { id: "profile", title: "La tua azienda", subtitle: "Nome, obiettivi e focus", icon: "🏢", completed: currentStep > 0 },
-    { id: "regions", title: "Target geografico", subtitle: "Dove vuoi operare", icon: "🌍", completed: currentStep > 1 },
+    {
+      id: "profile",
+      title: "La tua azienda",
+      subtitle: "Nome, obiettivi e focus",
+      icon: "🏢",
+      completed: currentStep > 0,
+    },
+    {
+      id: "regions",
+      title: "Target geografico",
+      subtitle: "Dove vuoi operare",
+      icon: "🌍",
+      completed: currentStep > 1,
+    },
     { id: "agents", title: "Attiva agenti AI", subtitle: "Chi lavora per te", icon: "🤖", completed: currentStep > 2 },
     { id: "confirm", title: "Conferma e avvia", subtitle: "Tutto pronto!", icon: "🚀", completed: currentStep > 3 },
   ];
@@ -89,7 +109,7 @@ export function Onboarding() {
   const sendChat = useCallback(async () => {
     if (!chatInput.trim() || chatLoading) return;
     const userMsg: ChatMessage = { role: "user", content: chatInput.trim() };
-    setChatMessages(prev => [...prev, userMsg]);
+    setChatMessages((prev) => [...prev, userMsg]);
     setChatInput("");
     setChatLoading(true);
 
@@ -99,15 +119,18 @@ export function Onboarding() {
         scope: "strategic",
         context: { source: "Onboarding.ai_assistant" },
         body: {
-          messages: [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content })),
+          messages: [...chatMessages, userMsg].map((m) => ({ role: m.role, content: m.content })),
           systemPrompt: `Sei l'assistente di onboarding. ${stepContext} Sii conciso (max 3 frasi).`,
         },
       });
       const reply = String(data?.reply || data?.content || "Non riesco a rispondere ora.");
-      setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      setChatMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
       log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
-      setChatMessages(prev => [...prev, { role: "assistant", content: "Mi dispiace, errore di connessione. Riprova." }]);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Mi dispiace, errore di connessione. Riprova." },
+      ]);
     } finally {
       setChatLoading(false);
     }
@@ -118,15 +141,11 @@ export function Onboarding() {
   }, [chatMessages]);
 
   const toggleAgent = (name: string) => {
-    setSelectedAgents(prev =>
-      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
-    );
+    setSelectedAgents((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
   };
 
   const toggleRegion = (code: string) => {
-    setSelectedRegions(prev =>
-      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
-    );
+    setSelectedRegions((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
   };
 
   const canProceed = () => {
@@ -164,7 +183,7 @@ export function Onboarding() {
           avatar_emoji: template.emoji,
           system_prompt: `Sei ${template.name}, ${template.desc}`,
           is_active: true,
-          territory_codes: selectedRegions.flatMap(r => COUNTRY_GROUPS.find(g => g.code === r)?.countries || []),
+          territory_codes: selectedRegions.flatMap((r) => COUNTRY_GROUPS.find((g) => g.code === r)?.countries || []),
         });
       }
 
@@ -187,7 +206,10 @@ export function Onboarding() {
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
             {steps.map((s, i) => (
-              <span key={s.id} className={cn("flex items-center gap-1", i <= currentStep ? "text-primary font-medium" : "")}>
+              <span
+                key={s.id}
+                className={cn("flex items-center gap-1", i <= currentStep ? "text-primary font-medium" : "")}
+              >
                 {s.completed ? <Check className="w-3 h-3" /> : <span>{s.icon}</span>}
                 <span className="hidden sm:inline">{s.title}</span>
               </span>
@@ -212,20 +234,38 @@ export function Onboarding() {
                     <div className="space-y-4">
                       <div>
                         <h2 className="text-lg font-semibold">🏢 La tua azienda</h2>
-                        <p className="text-sm text-muted-foreground">Queste info permetteranno all'AI di personalizzare ogni comunicazione.</p>
+                        <p className="text-sm text-muted-foreground">
+                          Queste info permetteranno all'AI di personalizzare ogni comunicazione.
+                        </p>
                       </div>
                       <div className="space-y-3">
                         <div>
                           <label className="text-sm font-medium">Nome azienda *</label>
-                          <Input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Es. Global Logistics Srl" className="mt-1" />
+                          <Input
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            placeholder="Es. Global Logistics Srl"
+                            className="mt-1"
+                          />
                         </div>
                         <div>
                           <label className="text-sm font-medium">Obiettivi di business</label>
-                          <Textarea value={businessGoals} onChange={e => setBusinessGoals(e.target.value)} placeholder="Es. Espandere la rete di partner in Europa..." className="mt-1" rows={3} />
+                          <Textarea
+                            value={businessGoals}
+                            onChange={(e) => setBusinessGoals(e.target.value)}
+                            placeholder="Es. Espandere la rete di partner in Europa..."
+                            className="mt-1"
+                            rows={3}
+                          />
                         </div>
                         <div>
                           <label className="text-sm font-medium">Focus corrente</label>
-                          <Input value={currentFocus} onChange={e => setCurrentFocus(e.target.value)} placeholder="Es. Acquisizione partner in Germania" className="mt-1" />
+                          <Input
+                            value={currentFocus}
+                            onChange={(e) => setCurrentFocus(e.target.value)}
+                            placeholder="Es. Acquisizione partner in Germania"
+                            className="mt-1"
+                          />
                         </div>
                       </div>
                     </div>
@@ -235,10 +275,12 @@ export function Onboarding() {
                     <div className="space-y-4">
                       <div>
                         <h2 className="text-lg font-semibold">🌍 Target geografico</h2>
-                        <p className="text-sm text-muted-foreground">Seleziona le regioni dove vuoi concentrare l'outreach.</p>
+                        <p className="text-sm text-muted-foreground">
+                          Seleziona le regioni dove vuoi concentrare l'outreach.
+                        </p>
                       </div>
                       <div className="grid grid-cols-1 gap-2">
-                        {COUNTRY_GROUPS.map(g => (
+                        {COUNTRY_GROUPS.map((g) => (
                           <button
                             key={g.code}
                             onClick={() => toggleRegion(g.code)}
@@ -246,7 +288,7 @@ export function Onboarding() {
                               "flex items-center justify-between p-3 rounded-lg border transition-all text-left",
                               selectedRegions.includes(g.code)
                                 ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                                : "border-border hover:border-primary/30"
+                                : "border-border hover:border-primary/30",
                             )}
                           >
                             <div>
@@ -264,10 +306,12 @@ export function Onboarding() {
                     <div className="space-y-4">
                       <div>
                         <h2 className="text-lg font-semibold">🤖 Attiva agenti AI</h2>
-                        <p className="text-sm text-muted-foreground">Scegli gli agenti che lavoreranno per te. Potrai aggiungerne altri dopo.</p>
+                        <p className="text-sm text-muted-foreground">
+                          Scegli gli agenti che lavoreranno per te. Potrai aggiungerne altri dopo.
+                        </p>
                       </div>
                       <div className="space-y-2">
-                        {AGENT_TEMPLATES.map(a => (
+                        {AGENT_TEMPLATES.map((a) => (
                           <button
                             key={a.name}
                             onClick={() => toggleAgent(a.name)}
@@ -275,14 +319,16 @@ export function Onboarding() {
                               "w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left",
                               selectedAgents.includes(a.name)
                                 ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                                : "border-border hover:border-primary/30"
+                                : "border-border hover:border-primary/30",
                             )}
                           >
                             <span className="text-2xl">{a.emoji}</span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-sm">{a.name}</span>
-                                <Badge variant="outline" className="text-[10px]">{a.role}</Badge>
+                                <Badge variant="outline" className="text-[10px]">
+                                  {a.role}
+                                </Badge>
                               </div>
                               <p className="text-xs text-muted-foreground">{a.desc}</p>
                             </div>
@@ -308,18 +354,26 @@ export function Onboarding() {
                         <div className="p-3 rounded-lg bg-muted/30 space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">Regioni target</p>
                           <div className="flex flex-wrap gap-1">
-                            {selectedRegions.map(r => {
-                              const g = COUNTRY_GROUPS.find(g => g.code === r);
-                              return <Badge key={r} variant="secondary" className="text-xs">{g?.label || r}</Badge>;
+                            {selectedRegions.map((r) => {
+                              const g = COUNTRY_GROUPS.find((g) => g.code === r);
+                              return (
+                                <Badge key={r} variant="secondary" className="text-xs">
+                                  {g?.label || r}
+                                </Badge>
+                              );
                             })}
                           </div>
                         </div>
                         <div className="p-3 rounded-lg bg-muted/30 space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">Agenti attivati</p>
                           <div className="flex flex-wrap gap-1">
-                            {selectedAgents.map(a => {
-                              const t = AGENT_TEMPLATES.find(t => t.name === a);
-                              return <Badge key={a} variant="secondary" className="text-xs">{t?.emoji} {a}</Badge>;
+                            {selectedAgents.map((a) => {
+                              const t = AGENT_TEMPLATES.find((t) => t.name === a);
+                              return (
+                                <Badge key={a} variant="secondary" className="text-xs">
+                                  {t?.emoji} {a}
+                                </Badge>
+                              );
                             })}
                           </div>
                         </div>
@@ -335,7 +389,7 @@ export function Onboarding() {
                   variant="ghost"
                   size="sm"
                   disabled={currentStep === 0}
-                  onClick={() => setCurrentStep(s => s - 1)}
+                  onClick={() => setCurrentStep((s) => s - 1)}
                 >
                   Indietro
                 </Button>
@@ -343,7 +397,7 @@ export function Onboarding() {
                   <Button
                     size="sm"
                     disabled={!canProceed()}
-                    onClick={() => setCurrentStep(s => s + 1)}
+                    onClick={() => setCurrentStep((s) => s + 1)}
                     className="gap-1"
                   >
                     Avanti <ChevronRight className="w-3 h-3" />
@@ -372,7 +426,13 @@ export function Onboarding() {
               )}
               <div className="space-y-2">
                 {chatMessages.map((m, i) => (
-                  <div key={i} className={cn("text-xs rounded-lg px-2.5 py-2 max-w-[95%]", m.role === "user" ? "bg-primary/10 ml-auto" : "bg-muted/50")}>
+                  <div
+                    key={i}
+                    className={cn(
+                      "text-xs rounded-lg px-2.5 py-2 max-w-[95%]",
+                      m.role === "user" ? "bg-primary/10 ml-auto" : "bg-muted/50",
+                    )}
+                  >
                     {m.content}
                   </div>
                 ))}
@@ -384,14 +444,27 @@ export function Onboarding() {
               </div>
             </ScrollArea>
             <div className="shrink-0 px-2 py-2 border-t border-border/30">
-              <form onSubmit={e => { e.preventDefault(); sendChat(); }} className="flex gap-1">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendChat();
+                }}
+                className="flex gap-1"
+              >
                 <Input
                   value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
+                  onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Chiedi all'AI..."
                   className="h-7 text-xs flex-1"
                 />
-                <Button type="submit" size="icon" variant="ghost" className="h-7 w-7 shrink-0" disabled={chatLoading || !chatInput.trim()} aria-label="Invia">
+                <Button
+                  type="submit"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 shrink-0"
+                  disabled={chatLoading || !chatInput.trim()}
+                  aria-label="Invia"
+                >
                   <Send className="w-3 h-3" />
                 </Button>
               </form>

@@ -56,7 +56,7 @@ interface RawSection {
   headerLine: string;
   bodyLines: string[];
   lineStart: number; // 1-based
-  lineEnd: number;   // 1-based, inclusive
+  lineEnd: number; // 1-based, inclusive
 }
 
 function splitFenceAware(source: string): RawSection[] {

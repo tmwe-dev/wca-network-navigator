@@ -9,13 +9,11 @@ import { mapOutreachQueueRow } from "../../../core/mappers/outreach-queue-mapper
 
 export async function fetchOutreachQueue(status?: string): Promise<Result<OutreachQueueItem[], AppError>> {
   try {
-    let query = supabase
-      .from("email_campaign_queue")
-      .select("*")
-      .order("position", { ascending: true });
+    let query = supabase.from("email_campaign_queue").select("*").order("position", { ascending: true });
     if (status) query = query.eq("status", status);
     const { data, error } = await query;
-    if (error) return err(ioError("DATABASE_ERROR", error.message, { table: "email_campaign_queue" }, "fetchOutreachQueue"));
+    if (error)
+      return err(ioError("DATABASE_ERROR", error.message, { table: "email_campaign_queue" }, "fetchOutreachQueue"));
     if (!data) return ok([]);
     const items: OutreachQueueItem[] = [];
     for (const row of data) {

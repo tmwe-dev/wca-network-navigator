@@ -12,8 +12,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  FileText, BookOpen, Wrench, Network, AlertTriangle, Zap,
-  ExternalLink, ShieldAlert, Variable, ArrowRight, Blocks,
+  FileText,
+  BookOpen,
+  Wrench,
+  Network,
+  AlertTriangle,
+  Zap,
+  ExternalLink,
+  ShieldAlert,
+  Variable,
+  ArrowRight,
+  Blocks,
 } from "lucide-react";
 import type { AgentRegistryEntry } from "@/constants/agentPrompts";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +50,9 @@ function Section({
         <Icon className="text-primary h-4 w-4" />
         <h3 className="text-xs font-semibold">{title}</h3>
         {count !== undefined && (
-          <Badge variant="secondary" className="ml-auto text-[9px]">{count}</Badge>
+          <Badge variant="secondary" className="ml-auto text-[9px]">
+            {count}
+          </Badge>
         )}
       </header>
       <div className="p-4">{children}</div>
@@ -59,19 +70,18 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
   useEffect(() => {
     if (!user?.id) return;
     setBlocksLoaded(false);
-    collectAllBlocks(user.id).then((all) => {
-      const groups = groupBlocksByAgent(all);
-      const myGroup = groups.get(agent.id);
-      setAgentBlocks(myGroup?.items ?? []);
-      setBlocksLoaded(true);
-    }).catch(() => setBlocksLoaded(true));
+    collectAllBlocks(user.id)
+      .then((all) => {
+        const groups = groupBlocksByAgent(all);
+        const myGroup = groups.get(agent.id);
+        setAgentBlocks(myGroup?.items ?? []);
+        setBlocksLoaded(true);
+      })
+      .catch(() => setBlocksLoaded(true));
   }, [user?.id, agent.id]);
 
   const hasApprovalTools = agent.approvalRequiredTools.length > 0;
-  const hasWarnings =
-    agent.requiredVars.length > 0 ||
-    agent.criticalProcedures.length > 5 ||
-    hasApprovalTools;
+  const hasWarnings = agent.requiredVars.length > 0 || agent.criticalProcedures.length > 5 || hasApprovalTools;
 
   return (
     <div className="space-y-4 p-4">
@@ -105,7 +115,9 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {agent.dependsOn.map((dep) => (
-                    <Badge key={dep} variant="outline" className="text-[10px]">{dep}</Badge>
+                    <Badge key={dep} variant="outline" className="text-[10px]">
+                      {dep}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -126,9 +138,7 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
                     <p className="text-muted-foreground mt-0.5 truncate text-[10px]" title={src.source}>
                       {src.source}
                     </p>
-                    {src.hint && (
-                      <p className="text-muted-foreground mt-0.5 text-[10px] italic">{src.hint}</p>
-                    )}
+                    {src.hint && <p className="text-muted-foreground mt-0.5 text-[10px] italic">{src.hint}</p>}
                   </div>
                   <Link
                     to={`/v2/prompt-lab?tab=${src.promptLabTab}`}
@@ -155,7 +165,9 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
                   <span className="text-muted-foreground text-[11px] italic">nessuna</span>
                 ) : (
                   agent.kbCategories.map((c) => (
-                    <Badge key={c} variant="secondary" className="text-[10px]">{c}</Badge>
+                    <Badge key={c} variant="secondary" className="text-[10px]">
+                      {c}
+                    </Badge>
                   ))
                 )}
               </div>
@@ -204,8 +216,8 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
               </div>
               {hasApprovalTools && (
                 <p className="text-muted-foreground text-[10px]">
-                  <ShieldAlert className="mr-1 inline h-3 w-3 text-destructive" />
-                  I tool in rosso richiedono approvazione esplicita prima dell'esecuzione.
+                  <ShieldAlert className="mr-1 inline h-3 w-3 text-destructive" />I tool in rosso richiedono
+                  approvazione esplicita prima dell'esecuzione.
                 </p>
               )}
             </div>
@@ -217,17 +229,13 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
           <Section icon={Network} title="Contratto runtime I/O">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-medium uppercase tracking-wider">
-                  Input
-                </p>
+                <p className="text-muted-foreground mb-1.5 text-[10px] font-medium uppercase tracking-wider">Input</p>
                 <pre className="bg-muted overflow-auto rounded-lg p-3 text-[11px] leading-relaxed">
                   {agent.contract.input}
                 </pre>
               </div>
               <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-medium uppercase tracking-wider">
-                  Output
-                </p>
+                <p className="text-muted-foreground mb-1.5 text-[10px] font-medium uppercase tracking-wider">Output</p>
                 <pre className="bg-muted overflow-auto rounded-lg p-3 text-[11px] leading-relaxed">
                   {agent.contract.output}
                 </pre>
@@ -247,8 +255,11 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
                     <div>
                       <p className="text-xs font-medium">Variabili obbligatorie</p>
                       <p className="text-muted-foreground mt-0.5 text-[11px]">
-                        Questo agente richiede: {agent.requiredVars.map((v) => (
-                          <code key={v} className="bg-muted mx-0.5 rounded px-1 py-0.5 text-[10px]">{v}</code>
+                        Questo agente richiede:{" "}
+                        {agent.requiredVars.map((v) => (
+                          <code key={v} className="bg-muted mx-0.5 rounded px-1 py-0.5 text-[10px]">
+                            {v}
+                          </code>
                         ))}
                       </p>
                     </div>
@@ -260,8 +271,8 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
                     <div>
                       <p className="text-xs font-medium">Prompt molto lungo</p>
                       <p className="text-muted-foreground mt-0.5 text-[11px]">
-                        {agent.criticalProcedures.length} procedure critiche iniettate — il prompt
-                        potrebbe essere troppo lungo e causare token overhead.
+                        {agent.criticalProcedures.length} procedure critiche iniettate — il prompt potrebbe essere
+                        troppo lungo e causare token overhead.
                       </p>
                     </div>
                   </div>
@@ -272,8 +283,8 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
                     <div>
                       <p className="text-xs font-medium">Richiede approvazione</p>
                       <p className="text-muted-foreground mt-0.5 text-[11px]">
-                        {agent.approvalRequiredTools.length} tool richiedono approvazione:
-                        {" "}{agent.approvalRequiredTools.join(", ")}
+                        {agent.approvalRequiredTools.length} tool richiedono approvazione:{" "}
+                        {agent.approvalRequiredTools.join(", ")}
                       </p>
                     </div>
                   </div>
@@ -290,15 +301,21 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
               <p className="text-muted-foreground text-xs italic">Caricamento blocchi...</p>
             ) : agentBlocks.length === 0 ? (
               <p className="text-muted-foreground text-xs italic">
-                Nessun blocco direttamente mappato a questo agente. I blocchi condivisi (KB doctrine globale) sono visibili tramite il tab Prompt Lab.
+                Nessun blocco direttamente mappato a questo agente. I blocchi condivisi (KB doctrine globale) sono
+                visibili tramite il tab Prompt Lab.
               </p>
             ) : (
               <div className="space-y-1.5 max-h-[400px] overflow-auto">
                 {agentBlocks.map(({ tabLabel, block }) => (
-                  <div key={block.id} className="group flex items-start gap-2 rounded border bg-muted/10 p-2 hover:bg-muted/30 transition-colors">
+                  <div
+                    key={block.id}
+                    className="group flex items-start gap-2 rounded border bg-muted/10 p-2 hover:bg-muted/30 transition-colors"
+                  >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{tabLabel}</Badge>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">
+                          {tabLabel}
+                        </Badge>
                         <span className="text-xs font-medium truncate">{block.label}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2 leading-snug">

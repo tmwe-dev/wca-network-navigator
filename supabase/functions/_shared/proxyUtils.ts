@@ -23,9 +23,9 @@ export async function proxyToMacro(
   const resp = await fetch(url, {
     method: "POST",
     headers: {
-      "Authorization": req.headers.get("Authorization") || "",
+      Authorization: req.headers.get("Authorization") || "",
       "Content-Type": "application/json",
-      "apikey": Deno.env.get("SUPABASE_ANON_KEY") || "",
+      apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
     },
     body: JSON.stringify(body),
   });
@@ -50,9 +50,9 @@ export async function forwardToFunction(
   const resp = await fetch(url, {
     method: "POST",
     headers: {
-      "Authorization": headers.get("Authorization") || "",
+      Authorization: headers.get("Authorization") || "",
       "Content-Type": "application/json",
-      "apikey": Deno.env.get("SUPABASE_ANON_KEY") || "",
+      apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
     },
     body: JSON.stringify(body),
   });

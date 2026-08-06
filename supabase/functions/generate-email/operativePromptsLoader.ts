@@ -9,7 +9,4 @@
  * Keeping this file as a re-export preserves the existing import path used by
  * `kbAndPlaybookAssembler.ts` so the email pipeline behaviour is unchanged.
  */
-export {
-  loadOperativePromptsBlock,
-  type OperativePromptsResult,
-} from "../_shared/operativePromptsLoader.ts";
+export { loadOperativePromptsBlock, type OperativePromptsResult } from "../_shared/operativePromptsLoader.ts";

@@ -27,8 +27,7 @@ export function buildAuditFromTrace(trace: ToolTrace): MessageAudit {
       status: s.status ?? "ok",
     }));
 
-  const driver = trace.driver
-    ?? (steps.length > 0 ? steps[steps.length - 1].toolId : "unknown");
+  const driver = trace.driver ?? (steps.length > 0 ? steps[steps.length - 1].toolId : "unknown");
 
   const references: AuditReference[] = (trace.references ?? []).map((r) => ({
     kind: r.kind,

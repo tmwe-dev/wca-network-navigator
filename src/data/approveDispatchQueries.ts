@@ -6,7 +6,9 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AiPendingActionsRow = Database["public"]["Tables"]["ai_pending_actions"]["Row"];
 
-export async function getPendingActionById(id: string): Promise<{ data: AiPendingActionsRow | null; error: { message: string } | null }> {
+export async function getPendingActionById(
+  id: string,
+): Promise<{ data: AiPendingActionsRow | null; error: { message: string } | null }> {
   const { data, error } = await supabase.from("ai_pending_actions").select("*").eq("id", id).maybeSingle();
   return { data: data as AiPendingActionsRow | null, error };
 }

@@ -17,11 +17,14 @@ bootstrapThemeClasses();
 
 // ── PWA: guard against iframe/preview contexts ──
 const isInIframe = (() => {
-  try { return window.self !== window.top; } catch { return true; }
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
 })();
 const isPreviewHost =
-  window.location.hostname.includes("id-preview--") ||
-  window.location.hostname.includes("lovableproject.com");
+  window.location.hostname.includes("id-preview--") || window.location.hostname.includes("lovableproject.com");
 
 if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((regs) => {

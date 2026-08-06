@@ -27,14 +27,17 @@ Deno.serve(async (req) => {
 
     // If no API key configured, return a clear message
     if (!PROXYCURL_API_KEY) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: "PROXYCURL_API_KEY not configured. Profile data will be extracted via extension fallback.",
-        fallback: true,
-      }), {
-        status: 200,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "PROXYCURL_API_KEY not configured. Profile data will be extracted via extension fallback.",
+          fallback: true,
+        }),
+        {
+          status: 200,
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Call Proxycurl Person Profile API
@@ -42,7 +45,7 @@ Deno.serve(async (req) => {
 
     const response = await fetch(apiUrl, {
       headers: {
-        "Authorization": `Bearer ${PROXYCURL_API_KEY}`,
+        Authorization: `Bearer ${PROXYCURL_API_KEY}`,
       },
     });
 

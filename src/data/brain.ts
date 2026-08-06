@@ -33,34 +33,33 @@ export interface BrainAgentRow {
 }
 
 export async function listBrainAgents(): Promise<BrainAgentRow[]> {
-  const { data, error } = await supabase
-    .from("v_agent_full")
-    .select("*")
-    .order("name", { ascending: true });
+  const { data, error } = await supabase.from("v_agent_full").select("*").order("name", { ascending: true });
   if (error) throw error;
-  return (data ?? []).map((row): BrainAgentRow => ({
-    agent_id: row.agent_id ?? "",
-    user_id: row.user_id,
-    name: row.name,
-    role: row.role,
-    avatar_emoji: row.avatar_emoji,
-    status: null,
-    system_prompt: row.system_prompt,
-    tone: row.tone,
-    custom_tone_prompt: row.custom_tone_prompt,
-    language: row.language,
-    style_rules: row.style_rules,
-    vocabulary_do: row.vocabulary_do,
-    vocabulary_dont: row.vocabulary_dont,
-    signature_template: row.signature_template,
-    allowed_tools: row.allowed_tools,
-    blocked_tools: row.blocked_tools,
-    approval_required_tools: row.approval_required_tools,
-    preferred_model: row.preferred_model,
-    execution_mode: row.execution_mode,
-    has_capabilities: row.has_capabilities,
-    has_persona: row.has_persona,
-  }));
+  return (data ?? []).map(
+    (row): BrainAgentRow => ({
+      agent_id: row.agent_id ?? "",
+      user_id: row.user_id,
+      name: row.name,
+      role: row.role,
+      avatar_emoji: row.avatar_emoji,
+      status: null,
+      system_prompt: row.system_prompt,
+      tone: row.tone,
+      custom_tone_prompt: row.custom_tone_prompt,
+      language: row.language,
+      style_rules: row.style_rules,
+      vocabulary_do: row.vocabulary_do,
+      vocabulary_dont: row.vocabulary_dont,
+      signature_template: row.signature_template,
+      allowed_tools: row.allowed_tools,
+      blocked_tools: row.blocked_tools,
+      approval_required_tools: row.approval_required_tools,
+      preferred_model: row.preferred_model,
+      execution_mode: row.execution_mode,
+      has_capabilities: row.has_capabilities,
+      has_persona: row.has_persona,
+    }),
+  );
 }
 
 export interface BrainPromptRow {

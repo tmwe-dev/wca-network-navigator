@@ -55,18 +55,23 @@ export async function findActiveJobs(): Promise<DownloadJob[]> {
 }
 
 export async function getDownloadJob(id: string): Promise<DownloadJob | null> {
-  const { data, error } = await supabase
-    .from("download_jobs")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await supabase.from("download_jobs").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data as DownloadJob | null;
 }
 
-export interface JobStatusResult { id: string; status: string; updated_at: string; [k: string]: unknown }
+export interface JobStatusResult {
+  id: string;
+  status: string;
+  updated_at: string;
+  [k: string]: unknown;
+}
 
-export async function findJobsByStatusSelect(statuses: string[], select = "id, status, updated_at", limit = 10): Promise<JobStatusResult[]> {
+export async function findJobsByStatusSelect(
+  statuses: string[],
+  select = "id, status, updated_at",
+  limit = 10,
+): Promise<JobStatusResult[]> {
   const { data, error } = await supabase
     .from("download_jobs")
     .select(select)
@@ -103,18 +108,26 @@ export async function findRunningJobs() {
 
 export async function updateDownloadJob(
   id: string,
-  updates: Partial<Pick<DownloadJob, "status" | "error_message" | "current_index" | "delay_seconds" |
-    "last_processed_wca_id" | "last_processed_company" | "last_contact_result" |
-    "contacts_found_count" | "contacts_missing_count">> & { processed_ids?: number[]; completed_at?: string; failed_ids?: unknown }
+  updates: Partial<
+    Pick<
+      DownloadJob,
+      | "status"
+      | "error_message"
+      | "current_index"
+      | "delay_seconds"
+      | "last_processed_wca_id"
+      | "last_processed_company"
+      | "last_contact_result"
+      | "contacts_found_count"
+      | "contacts_missing_count"
+    >
+  > & { processed_ids?: number[]; completed_at?: string; failed_ids?: unknown },
 ) {
   const { processed_ids, failed_ids, ...rest } = updates;
   const payload: Database["public"]["Tables"]["download_jobs"]["Update"] = { ...rest };
   if (processed_ids) payload.processed_ids = toJsonValue(processed_ids);
   if (failed_ids !== undefined) payload.failed_ids = toJsonValue(failed_ids);
-  const { error } = await supabase
-    .from("download_jobs")
-    .update(payload)
-    .eq("id", id);
+  const { error } = await supabase.from("download_jobs").update(payload).eq("id", id);
   if (error) throw error;
 }
 
@@ -126,7 +139,7 @@ export async function claimDownloadJob(jobId: string) {
     .eq("id", jobId)
     .in("status", ["pending", "paused", "running"])
     .select("id");
-  return !!(data?.length);
+  return !!data?.length;
 }
 
 export async function createDownloadJob(params: {
@@ -153,22 +166,19 @@ export async function createDownloadJob(params: {
 }
 
 export async function deleteJobsByStatus(statuses: string[]): Promise<number> {
-  const { data: jobs } = await supabase
-    .from("download_jobs")
-    .select("id")
-    .in("status", statuses);
+  const { data: jobs } = await supabase.from("download_jobs").select("id").in("status", statuses);
   if (!jobs || jobs.length === 0) return 0;
-  const { error } = await supabase
-    .from("download_jobs")
-    .delete()
-    .in("status", statuses);
+  const { error } = await supabase.from("download_jobs").delete().in("status", statuses);
   if (error) throw error;
   return jobs.length;
 }
 
 // ── Job Items ──
 
-export async function getJobItemsByJobId(jobId: string, select = "status, contacts_found, contacts_missing"): Promise<Array<{ status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }>> {
+export async function getJobItemsByJobId(
+  jobId: string,
+  select = "status, contacts_found, contacts_missing",
+): Promise<Array<{ status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }>> {
   const { data, error } = await supabase
     .from("download_job_items")
     .select(select)
@@ -199,15 +209,24 @@ export async function updateJobItem(itemId: string, updates: Record<string, unkn
   if (error) throw error;
 }
 
-export async function updateJobItemsByJobIdAndStatus(jobId: string, fromStatus: string | string[], updates: Record<string, unknown>) {
-  let q = supabase.from("download_job_items").update(updates as Database["public"]["Tables"]["download_job_items"]["Update"]).eq("job_id", jobId);
+export async function updateJobItemsByJobIdAndStatus(
+  jobId: string,
+  fromStatus: string | string[],
+  updates: Record<string, unknown>,
+) {
+  let q = supabase
+    .from("download_job_items")
+    .update(updates as Database["public"]["Tables"]["download_job_items"]["Update"])
+    .eq("job_id", jobId);
   if (Array.isArray(fromStatus)) q = q.in("status", fromStatus);
   else q = q.eq("status", fromStatus);
   const { error } = await q;
   if (error) throw error;
 }
 
-export async function insertJobItems(items: Array<{ job_id: string; wca_id: number; position: number; status: string }>) {
+export async function insertJobItems(
+  items: Array<{ job_id: string; wca_id: number; position: number; status: string }>,
+) {
   for (let i = 0; i < items.length; i += 500) {
     const { error } = await supabase.from("download_job_items").insert(items.slice(i, i + 500));
     if (error) throw error;
@@ -216,7 +235,12 @@ export async function insertJobItems(items: Array<{ job_id: string; wca_id: numb
 
 // ── Job Events ──
 
-export async function insertJobEvent(event: { job_id: string; item_id?: string; event_type: string; payload?: Record<string, unknown> }) {
+export async function insertJobEvent(event: {
+  job_id: string;
+  item_id?: string;
+  event_type: string;
+  payload?: Record<string, unknown>;
+}) {
   const { error } = await supabase.from("download_job_events").insert({
     job_id: event.job_id,
     item_id: event.item_id || undefined,
@@ -235,7 +259,7 @@ export async function findDeadPartnerIds(wcaIds: number[]) {
     .in("wca_id", wcaIds)
     .eq("resolved", false);
   if (error) throw error;
-  return (data ?? []).map(r => r.wca_id);
+  return (data ?? []).map((r) => r.wca_id);
 }
 
 // ── Cache ──
@@ -250,11 +274,7 @@ export function invalidateDownloadJobs(qc: QueryClient) {
 
 /** Legge il terminal_log corrente di un job (throw sulla `single()` mancante). */
 export async function getJobTerminalLog(jobId: string): Promise<unknown[]> {
-  const { data } = await supabase
-    .from("download_jobs")
-    .select("terminal_log")
-    .eq("id", jobId)
-    .single();
+  const { data } = await supabase.from("download_jobs").select("terminal_log").eq("id", jobId).single();
   return (data?.terminal_log as unknown[] | null) ?? [];
 }
 
@@ -268,10 +288,6 @@ export async function setJobTerminalLog(jobId: string, entries: unknown[]): Prom
 
 /** Set di ID già processati per un job (keep-alive loop di acquisizione). */
 export async function getDownloadJobProcessedIds(jobId: string): Promise<number[]> {
-  const { data } = await supabase
-    .from("download_jobs")
-    .select("processed_ids")
-    .eq("id", jobId)
-    .single();
-  return ((data?.processed_ids as number[]) || []);
+  const { data } = await supabase.from("download_jobs").select("processed_ids").eq("id", jobId).single();
+  return (data?.processed_ids as number[]) || [];
 }

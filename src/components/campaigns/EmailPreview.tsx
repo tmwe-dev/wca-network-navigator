@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,11 +38,11 @@ Best regards,
 WCA Partners CRM Team`);
   const [copied, setCopied] = useState(false);
 
-  const recipientsWithEmail = recipients.filter(r => r.email);
-  const uniqueCountries = new Set(recipientsWithEmail.map(r => r.country_name)).size;
+  const recipientsWithEmail = recipients.filter((r) => r.email);
+  const uniqueCountries = new Set(recipientsWithEmail.map((r) => r.country_name)).size;
 
   const handleCopyEmails = () => {
-    const emails = recipientsWithEmail.map(r => r.email).join("; ");
+    const emails = recipientsWithEmail.map((r) => r.email).join("; ");
     navigator.clipboard.writeText(emails);
     setCopied(true);
     toast.success("Indirizzi email copiati negli appunti");
@@ -76,12 +70,7 @@ WCA Partners CRM Team`);
           <div className="space-y-4 overflow-auto pr-2">
             <div>
               <Label htmlFor="subject">Oggetto</Label>
-              <Input
-                id="subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="mt-1.5"
-              />
+              <Input id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1.5" />
             </div>
 
             <div className="flex-1">
@@ -98,24 +87,27 @@ WCA Partners CRM Team`);
             <div>
               <Label className="text-muted-foreground">Template rapidi</Label>
               <div className="flex gap-2 mt-1.5 flex-wrap">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => setBody(`Dear Partner,
+                  onClick={() =>
+                    setBody(`Dear Partner,
 
 We are pleased to announce our new rate updates for Q1 2026. Please find attached our updated pricing schedule.
 
 If you have any questions, please don't hesitate to contact us.
 
 Best regards,
-WCA Partners CRM Team`)}
+WCA Partners CRM Team`)
+                  }
                 >
                   Rate Update
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => setBody(`Dear Partner,
+                  onClick={() =>
+                    setBody(`Dear Partner,
 
 We are excited to invite you to our upcoming WCA Network Annual Conference.
 
@@ -125,21 +117,24 @@ Location: [Location]
 Please RSVP by [deadline].
 
 Best regards,
-WCA Partners CRM Team`)}
+WCA Partners CRM Team`)
+                  }
                 >
                   Event Invitation
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => setBody(`Dear Partner,
+                  onClick={() =>
+                    setBody(`Dear Partner,
 
 This is a friendly reminder that your WCA Network membership is due for renewal.
 
 Please contact us to discuss renewal options.
 
 Best regards,
-WCA Partners CRM Team`)}
+WCA Partners CRM Team`)
+                  }
                 >
                   Renewal Reminder
                 </Button>
@@ -152,11 +147,7 @@ WCA Partners CRM Team`)}
             <div className="p-4 border-b bg-muted/30">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">Destinatari</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleCopyEmails}
-                >
+                <Button variant="outline" size="sm" onClick={handleCopyEmails}>
                   {copied ? (
                     <>
                       <Check className="w-4 h-4 mr-1" />
@@ -170,7 +161,7 @@ WCA Partners CRM Team`)}
                   )}
                 </Button>
               </div>
-              
+
               <div className="flex gap-4">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-muted-foreground" />
@@ -190,10 +181,7 @@ WCA Partners CRM Team`)}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-2">
                 {recipientsWithEmail.map((recipient) => (
-                  <div 
-                    key={recipient.id}
-                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50"
-                  >
+                  <div key={recipient.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
                     <span className="text-lg">{getCountryFlag(recipient.country_code)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{recipient.company_name}</p>

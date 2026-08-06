@@ -14,9 +14,7 @@ import { CSP_HEADER, CSP_META_CONTENT } from "@/lib/csp";
 describe("CSP alignment", () => {
   it("index.html meta CSP coincide con CSP_META_CONTENT", () => {
     const html = readFileSync(join(process.cwd(), "index.html"), "utf-8");
-    const match = html.match(
-      /http-equiv="Content-Security-Policy"\s*\n?\s*content="([^"]+)"/,
-    );
+    const match = html.match(/http-equiv="Content-Security-Policy"\s*\n?\s*content="([^"]+)"/);
     expect(match, "meta CSP non trovato in index.html").not.toBeNull();
     const fromHtml = (match![1] ?? "").replace(/\s+/g, " ").trim();
     const fromTs = CSP_META_CONTENT.replace(/\s+/g, " ").trim();

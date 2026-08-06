@@ -10,7 +10,7 @@ describe("extractMentions", () => {
   it("extracts proper names from text", () => {
     const result = extractMentions("please ask Jane Doe about it");
     expect(result.mentionedNames.length).toBeGreaterThan(0);
-    expect(result.mentionedNames.some(n => n.includes("Jane"))).toBe(true);
+    expect(result.mentionedNames.some((n) => n.includes("Jane"))).toBe(true);
   });
 
   it("returns empty arrays for text without mentions", () => {

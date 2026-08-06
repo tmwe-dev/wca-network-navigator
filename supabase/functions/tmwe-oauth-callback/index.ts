@@ -19,8 +19,7 @@ function htmlRedirect(url: string): Response {
 }
 
 const DEFAULT_APP_ORIGIN =
-  Deno.env.get("TMWE_APP_REDIRECT_BASE") ??
-  "https://id-preview--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app";
+  Deno.env.get("TMWE_APP_REDIRECT_BASE") ?? "https://id-preview--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app";
 
 let runtimeAppOrigin: string = DEFAULT_APP_ORIGIN;
 function appOrigin(): string {
@@ -49,22 +48,20 @@ function back(status: "ok" | "error", reason?: string, intent: "connect" | "logi
   const u = new URL(path, appOrigin());
   u.searchParams.set("tmwe", status);
   if (reason) u.searchParams.set("reason", reason);
-  console.log(JSON.stringify({
-    type: "tmwe_oauth_callback_redirect",
-    status,
-    reason: reason ?? null,
-    intent,
-    location: u.toString(),
-    ts: new Date().toISOString(),
-  }));
+  console.log(
+    JSON.stringify({
+      type: "tmwe_oauth_callback_redirect",
+      status,
+      reason: reason ?? null,
+      intent,
+      location: u.toString(),
+      ts: new Date().toISOString(),
+    }),
+  );
   return htmlRedirect(u.toString());
 }
 
-async function postForm(
-  baseUrl: string,
-  path: string,
-  body: Record<string, string>,
-): Promise<Record<string, unknown>> {
+async function postForm(baseUrl: string, path: string, body: Record<string, string>): Promise<Record<string, unknown>> {
   const res = await fetch(`${baseUrl}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -160,18 +157,19 @@ Deno.serve(async (req) => {
     // whitelist contains). Using @tmwe.local would block every operator whose
     // TMWE profile has email="" because the whitelist only has @tmwe.it.
     const TMWE_FALLBACK_DOMAIN = "tmwe.it";
-    const authEmail = tmweEmail
-      ?? (tmweUsername ? `${tmweUsername.toLowerCase()}@${TMWE_FALLBACK_DOMAIN}` : null);
-    console.log(JSON.stringify({
-      type: "tmwe_oauth_callback_email_resolution",
-      tmweEmail,
-      tmweUsername,
-      authEmail,
-      profile_top_keys: Object.keys(profile),
-      nested_user_keys: Object.keys(nestedUser),
-      nested_data_keys: Object.keys(nestedData),
-      profile_sample: JSON.stringify(profile).slice(0, 800),
-    }));
+    const authEmail = tmweEmail ?? (tmweUsername ? `${tmweUsername.toLowerCase()}@${TMWE_FALLBACK_DOMAIN}` : null);
+    console.log(
+      JSON.stringify({
+        type: "tmwe_oauth_callback_email_resolution",
+        tmweEmail,
+        tmweUsername,
+        authEmail,
+        profile_top_keys: Object.keys(profile),
+        nested_user_keys: Object.keys(nestedUser),
+        nested_data_keys: Object.keys(nestedData),
+        profile_sample: JSON.stringify(profile).slice(0, 800),
+      }),
+    );
     const tmweCompany = firstString(
       profile.company,
       profile.company_name,
@@ -194,29 +192,26 @@ Deno.serve(async (req) => {
       // ricadiamo su alias `<username>@tmwe.local` e lasciamo che sia la
       // whitelist `authorized_users` a decidere (l'admin può autorizzare
       // l'alias per username quando l'utente non ha email su TMWE).
-      const { data: isAuthorized, error: wlErr } = await svc.rpc(
-        "is_email_authorized",
-        { p_email: normalizedEmail },
-      );
+      const { data: isAuthorized, error: wlErr } = await svc.rpc("is_email_authorized", { p_email: normalizedEmail });
       if (wlErr) {
         console.error("[tmwe-oauth-callback] whitelist check failed:", wlErr.message);
         return back("error", "whitelist_check_failed", "login");
       }
       if (!isAuthorized) {
-        console.warn(JSON.stringify({
-          type: "tmwe_oauth_callback_blocked",
-          reason: "not_in_whitelist",
-          normalizedEmail,
-          tmweUsername,
-        }));
+        console.warn(
+          JSON.stringify({
+            type: "tmwe_oauth_callback_blocked",
+            reason: "not_in_whitelist",
+            normalizedEmail,
+            tmweUsername,
+          }),
+        );
         return back("error", "not_whitelisted", "login");
       }
 
-      const admin = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-        { auth: { persistSession: false } },
-      );
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+        auth: { persistSession: false },
+      });
 
       // Try to find an existing connection by tmwe_user_id first
       const { data: existingConn } = await svc
@@ -243,9 +238,7 @@ Deno.serve(async (req) => {
         for (let page = 1; page <= 5 && !foundUserId; page += 1) {
           const { data: list } = await admin.auth.admin.listUsers({ page, perPage: 200 });
           if (!list?.users || list.users.length === 0) break;
-          const match = list.users.find((u) =>
-            candidateEmails.has((u.email ?? "").toLowerCase()),
-          );
+          const match = list.users.find((u) => candidateEmails.has((u.email ?? "").toLowerCase()));
           if (match) foundUserId = match.id;
           if (list.users.length < 200) break;
         }
@@ -269,7 +262,8 @@ Deno.serve(async (req) => {
           }
           userId = created.user.id;
           // Mark profile flag + force onboarding (best effort)
-          await svc.from("profiles")
+          await svc
+            .from("profiles")
             .update({ created_via_tmwe: true, onboarding_completed: false })
             .eq("user_id", userId);
         }
@@ -293,8 +287,7 @@ Deno.serve(async (req) => {
       tmwe_user_id: tmweUserId,
       tmwe_email: tmweEmail,
       tmwe_company: tmweCompany,
-      tmwe_vat_number:
-        (profile.vat_number as string) ?? (profile.piva as string) ?? null,
+      tmwe_vat_number: (profile.vat_number as string) ?? (profile.piva as string) ?? null,
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
@@ -302,9 +295,7 @@ Deno.serve(async (req) => {
       connected_at: new Date().toISOString(),
     };
 
-    const { error: upErr } = await svc
-      .from("tmwe_user_tokens")
-      .upsert(upsert, { onConflict: "user_id" });
+    const { error: upErr } = await svc.from("tmwe_user_tokens").upsert(upsert, { onConflict: "user_id" });
     if (upErr) return back("error", "persist_failed", intent);
 
     // ─── Reconcile operators: ensure a row exists for this user. Bind any
@@ -345,17 +336,18 @@ Deno.serve(async (req) => {
           }
         }
       } catch (e) {
-        console.warn("[tmwe-oauth-callback] operator reconcile non-blocking:", e instanceof Error ? e.message : String(e));
+        console.warn(
+          "[tmwe-oauth-callback] operator reconcile non-blocking:",
+          e instanceof Error ? e.message : String(e),
+        );
       }
     }
 
     // ─── LOGIN: generate magic link and redirect there ──────────────────
     if (intent === "login" && authEmail) {
-      const admin = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-        { auth: { persistSession: false } },
-      );
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+        auth: { persistSession: false },
+      });
       const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
         type: "magiclink",
         email: authEmail,

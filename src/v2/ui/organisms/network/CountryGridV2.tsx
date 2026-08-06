@@ -35,10 +35,7 @@ export function CountryGridV2({ stats, selectedCountry, onSelectCountry }: Count
           {stats.length} paesi · {stats.reduce((s, c) => s + c.count, 0).toLocaleString("it-IT")} partner
         </p>
         {selectedCountry && (
-          <button
-            onClick={() => onSelectCountry(undefined)}
-            className="text-[10px] text-primary hover:underline"
-          >
+          <button onClick={() => onSelectCountry(undefined)} className="text-[10px] text-primary hover:underline">
             Rimuovi filtro
           </button>
         )}
@@ -53,7 +50,8 @@ export function CountryGridV2({ stats, selectedCountry, onSelectCountry }: Count
             className={cn(
               "flex flex-col items-center justify-center rounded border p-1 text-[10px] transition-all hover:scale-105",
               getDensityClass(s.count, maxCount),
-              selectedCountry === s.country_code && "ring-2 ring-primary ring-offset-1 ring-offset-background scale-110",
+              selectedCountry === s.country_code &&
+                "ring-2 ring-primary ring-offset-1 ring-offset-background scale-110",
             )}
           >
             <span className="text-sm leading-none">{getCountryFlag(s.country_code)}</span>

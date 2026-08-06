@@ -56,7 +56,9 @@ describe("DAL — mailboxes", () => {
 
   describe("listAccessibleMailboxes", () => {
     it("calls rpc and returns mailboxes", async () => {
-      const mboxes = [{ kind: "shared", mailbox_id: "m1", email: "a@b.com", label: "L", department: "D", is_default: false }];
+      const mboxes = [
+        { kind: "shared", mailbox_id: "m1", email: "a@b.com", label: "L", department: "D", is_default: false },
+      ];
       mockRpc.mockResolvedValue({ data: mboxes, error: null });
       const result = await listAccessibleMailboxes("op1");
       expect(result).toEqual(mboxes);

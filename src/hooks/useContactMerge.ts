@@ -15,7 +15,6 @@ import {
 } from "@/data/contactMergeQueries";
 import { extractDomain, calculateSimilarity } from "@/lib/contactSimilarity";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("useContactMerge");
 // levenshteinDistance / extractDomain / calculateSimilarity: helpers puri estratti
@@ -83,13 +82,7 @@ export function useFindDuplicates() {
             if (c1.phone !== c2.phone) differences.push(`Telefoni diversi`);
           }
           // Email domain + name similarity
-          else if (
-            c1.email &&
-            c2.email &&
-            extractDomain(c1.email) === extractDomain(c2.email) &&
-            c1.name &&
-            c2.name
-          ) {
+          else if (c1.email && c2.email && extractDomain(c1.email) === extractDomain(c2.email) && c1.name && c2.name) {
             const nameSim = calculateSimilarity(c1.name, c2.name);
             if (nameSim > 0.7) {
               confidence = Math.round(85 * nameSim);
@@ -97,13 +90,7 @@ export function useFindDuplicates() {
             }
           }
           // Same company + name similarity
-          else if (
-            c1.company_id &&
-            c2.company_id &&
-            c1.company_id === c2.company_id &&
-            c1.name &&
-            c2.name
-          ) {
+          else if (c1.company_id && c2.company_id && c1.company_id === c2.company_id && c1.name && c2.name) {
             const nameSim = calculateSimilarity(c1.name, c2.name);
             if (nameSim > 0.8) {
               confidence = Math.round(75 * nameSim);

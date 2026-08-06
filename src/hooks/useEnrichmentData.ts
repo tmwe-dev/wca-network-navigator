@@ -43,8 +43,17 @@ export interface EnrichedRow {
 }
 
 export type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";
-export type EnrichFilter = "all" | "with-logo" | "no-logo" | "with-linkedin" | "no-linkedin" | "with-domain" | "no-domain"
-  | "status-missing" | "status-partial" | "status-complete";
+export type EnrichFilter =
+  | "all"
+  | "with-logo"
+  | "no-logo"
+  | "with-linkedin"
+  | "no-linkedin"
+  | "with-domain"
+  | "no-domain"
+  | "status-missing"
+  | "status-partial"
+  | "status-complete";
 export type SortField = "name" | "domain" | "source" | "emailCount";
 export type SortDir = "asc" | "desc";
 
@@ -59,7 +68,6 @@ export function getEnrichStatus(r: EnrichedRow): EnrichStatus {
   if (s < 3) return "partial";
   return "complete";
 }
-
 
 export function useEnrichmentData() {
   const linkedInLookup = useLinkedInLookup();
@@ -76,10 +84,16 @@ export function useEnrichmentData() {
   const [dsTargetIds, setDsTargetIds] = useState<string[]>([]);
   const [dsMode, setDsMode] = useState<"partner" | "contact">("partner");
 
-  const toggleSort = useCallback((field: SortField) => {
-    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortField(field); setSortDir("asc"); }
-  }, [sortField]);
+  const toggleSort = useCallback(
+    (field: SortField) => {
+      if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      else {
+        setSortField(field);
+        setSortDir("asc");
+      }
+    },
+    [sortField],
+  );
 
   // ── Data queries ──
 
@@ -94,12 +108,17 @@ export function useEnrichmentData() {
         const cpHas = Array.isArray(cp) ? cp.length > 0 : !!(cp && typeof cp === "object" && Object.keys(cp).length);
         const hasDeep = cpHas || !!ed.reputation || !!ed.contact_mentions || !!ed.google_maps;
         return {
-          id: p.id, name: p.company_name,
+          id: p.id,
+          name: p.company_name,
           domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
-          source: "wca", hasLogo: !!p.logo_url, hasLinkedin: !!liUrl,
+          source: "wca",
+          hasLogo: !!p.logo_url,
+          hasLinkedin: !!liUrl,
           hasWebsiteExcerpt: !!ed.website_excerpt,
           linkedinUrl: liUrl || undefined,
-          email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
+          email: p.email || undefined,
+          country: p.country_code || undefined,
+          realId: p.id,
           logoUrl: p.logo_url || undefined,
           websiteExcerpt: (ed.website_excerpt as EnrichedRow["websiteExcerpt"]) || undefined,
           hasDeepSearch: hasDeep,
@@ -116,13 +135,22 @@ export function useEnrichmentData() {
       const data = await getEnrichmentContacts();
       return data.map((c): EnrichedRow => {
         const ed = (c.enrichment_data || {}) as Record<string, string | Record<string, string>>;
-        const liUrl = (ed.linkedin_profile_url as string) || (ed.linkedin_url as string) || (ed.social_links as Record<string, string>)?.linkedin || null;
+        const liUrl =
+          (ed.linkedin_profile_url as string) ||
+          (ed.linkedin_url as string) ||
+          (ed.social_links as Record<string, string>)?.linkedin ||
+          null;
         return {
-          id: c.id, name: c.name || c.company_name || c.email || "?",
+          id: c.id,
+          name: c.name || c.company_name || c.email || "?",
           domain: extractDomainFromEmail(c.email || ""),
-          source: "contacts", hasLogo: false, hasLinkedin: !!liUrl,
-          linkedinUrl: liUrl || undefined, email: c.email || undefined,
-          country: c.country || undefined, realId: c.id,
+          source: "contacts",
+          hasLogo: false,
+          hasLinkedin: !!liUrl,
+          linkedinUrl: liUrl || undefined,
+          email: c.email || undefined,
+          country: c.country || undefined,
+          realId: c.id,
         };
       });
     },
@@ -134,16 +162,22 @@ export function useEnrichmentData() {
     queryFn: async () => {
       const data = await getEnrichmentBusinessCards();
       // Join sui partner matchati per ricavare country + logo
-      const partnerIds = [...new Set(data.filter(b => b.matched_partner_id).map(b => b.matched_partner_id!))];
-      const pMap = partnerIds.length > 0 ? await getPartnersLookupByIds(partnerIds) : new Map<string, { country_code: string | null; website: string | null; logo_url: string | null }>();
+      const partnerIds = [...new Set(data.filter((b) => b.matched_partner_id).map((b) => b.matched_partner_id!))];
+      const pMap =
+        partnerIds.length > 0
+          ? await getPartnersLookupByIds(partnerIds)
+          : new Map<string, { country_code: string | null; website: string | null; logo_url: string | null }>();
       return data.map((b): EnrichedRow => {
         const p = b.matched_partner_id ? pMap.get(b.matched_partner_id) : null;
         // Estrai country da location (es. "Bangkok, Thailand" → ultimo segmento)
         const locCountry = b.location?.split(",").pop()?.trim();
         return {
-          id: b.id, name: b.company_name || b.contact_name || b.email || "?",
+          id: b.id,
+          name: b.company_name || b.contact_name || b.email || "?",
           domain: p?.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(b.email || ""),
-          source: "bca", hasLogo: !!p?.logo_url, hasLinkedin: false,
+          source: "bca",
+          hasLogo: !!p?.logo_url,
+          hasLinkedin: false,
           email: b.email || undefined,
           country: p?.country_code || locCountry || undefined,
           realId: b.id,
@@ -172,9 +206,16 @@ export function useEnrichmentData() {
         seen.add(addr);
         senderRows.push({
           id: `email-${addr}`,
-          name: addr.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-          domain, source: "email", hasLogo: false, hasLinkedin: false,
-          email: addr, emailCount: count,
+          name: addr
+            .split("@")[0]
+            .replace(/[._-]/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()),
+          domain,
+          source: "email",
+          hasLogo: false,
+          hasLinkedin: false,
+          email: addr,
+          emailCount: count,
         });
       }
       return senderRows;
@@ -187,8 +228,8 @@ export function useEnrichmentData() {
     queryFn: async () => {
       const queue = await getEnrichmentCockpitQueue();
       if (!queue.length) return [];
-      const partnerIds = [...new Set(queue.filter(q => q.partner_id).map(q => q.partner_id!))];
-      const contactIds = [...new Set(queue.filter(q => q.source_type === "contact").map(q => q.source_id))];
+      const partnerIds = [...new Set(queue.filter((q) => q.partner_id).map((q) => q.partner_id!))];
+      const contactIds = [...new Set(queue.filter((q) => q.source_type === "contact").map((q) => q.source_id))];
       const fetchPartnerBatch = async (ids: string[]) => {
         const { getPartnerLookupsByIds } = await import("@/data/partners");
         return getPartnerLookupsByIds(ids);
@@ -201,15 +242,24 @@ export function useEnrichmentData() {
         partnerIds.length ? fetchPartnerBatch(partnerIds) : [],
         contactIds.length ? fetchContactBatch(contactIds) : [],
       ]);
-      const pMap = new Map(pData.map(p => [p.id, p]));
-      const cMap = new Map(cData.map(c => [c.id, c]));
+      const pMap = new Map(pData.map((p) => [p.id, p]));
+      const cMap = new Map(cData.map((c) => [c.id, c]));
       return queue.map((q): EnrichedRow => {
         const partner = q.partner_id ? pMap.get(q.partner_id) : null;
         const contact = q.source_type === "contact" ? cMap.get(q.source_id) : null;
         const name = partner?.company_name || contact?.name || contact?.company_name || q.source_id.slice(0, 8);
         const email = partner?.email || contact?.email || undefined;
-        const domain = partner?.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(email || "");
-        return { id: `cockpit-${q.id}`, name, domain: domain || null, source: "cockpit", hasLogo: false, hasLinkedin: false, email };
+        const domain =
+          partner?.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(email || "");
+        return {
+          id: `cockpit-${q.id}`,
+          name,
+          domain: domain || null,
+          source: "cockpit",
+          hasLogo: false,
+          hasLinkedin: false,
+          email,
+        };
       });
     },
     staleTime: 60_000,
@@ -221,8 +271,12 @@ export function useEnrichmentData() {
     const emailTotal = emailSenders.reduce((sum, r) => sum + (r.emailCount || 0), 0);
     return {
       all: partners.length + contacts.length + bcaItems.length + emailSenders.length + cockpitItems.length,
-      wca: partners.length, contacts: contacts.length, bca: bcaItems.length,
-      email: emailSenders.length, emailTotal, cockpit: cockpitItems.length,
+      wca: partners.length,
+      contacts: contacts.length,
+      bca: bcaItems.length,
+      email: emailSenders.length,
+      emailTotal,
+      cockpit: cockpitItems.length,
     };
   }, [partners, contacts, bcaItems, emailSenders, cockpitItems]);
 
@@ -235,18 +289,39 @@ export function useEnrichmentData() {
     if (sourceTab === "all" || sourceTab === "cockpit") rows.push(...cockpitItems);
     if (search) {
       const q = search.toLowerCase();
-      rows = rows.filter(r => r.name.toLowerCase().includes(q) || r.domain?.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q));
+      rows = rows.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) || r.domain?.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q),
+      );
     }
     switch (enrichFilter) {
-      case "with-logo": rows = rows.filter(r => r.hasLogo); break;
-      case "no-logo": rows = rows.filter(r => !r.hasLogo); break;
-      case "with-linkedin": rows = rows.filter(r => r.hasLinkedin); break;
-      case "no-linkedin": rows = rows.filter(r => !r.hasLinkedin); break;
-      case "with-domain": rows = rows.filter(r => !!r.domain); break;
-      case "no-domain": rows = rows.filter(r => !r.domain); break;
-      case "status-missing": rows = rows.filter(r => getEnrichStatus(r) === "missing"); break;
-      case "status-partial": rows = rows.filter(r => getEnrichStatus(r) === "partial"); break;
-      case "status-complete": rows = rows.filter(r => getEnrichStatus(r) === "complete"); break;
+      case "with-logo":
+        rows = rows.filter((r) => r.hasLogo);
+        break;
+      case "no-logo":
+        rows = rows.filter((r) => !r.hasLogo);
+        break;
+      case "with-linkedin":
+        rows = rows.filter((r) => r.hasLinkedin);
+        break;
+      case "no-linkedin":
+        rows = rows.filter((r) => !r.hasLinkedin);
+        break;
+      case "with-domain":
+        rows = rows.filter((r) => !!r.domain);
+        break;
+      case "no-domain":
+        rows = rows.filter((r) => !r.domain);
+        break;
+      case "status-missing":
+        rows = rows.filter((r) => getEnrichStatus(r) === "missing");
+        break;
+      case "status-partial":
+        rows = rows.filter((r) => getEnrichStatus(r) === "partial");
+        break;
+      case "status-complete":
+        rows = rows.filter((r) => getEnrichStatus(r) === "complete");
+        break;
     }
     rows.sort((a, b) => {
       let cmp = 0;
@@ -259,55 +334,68 @@ export function useEnrichmentData() {
     return rows;
   }, [partners, contacts, bcaItems, emailSenders, cockpitItems, sourceTab, search, enrichFilter, sortField, sortDir]);
 
-  const stats = useMemo(() => ({
-    total: allRows.length,
-    withLogo: allRows.filter(r => r.hasLogo).length,
-    withDomain: allRows.filter(r => r.domain).length,
-    withLinkedin: allRows.filter(r => r.hasLinkedin).length,
-    completeCount: allRows.filter(r => getEnrichStatus(r) === "complete").length,
-    partialCount: allRows.filter(r => getEnrichStatus(r) === "partial").length,
-    missingCount: allRows.filter(r => getEnrichStatus(r) === "missing").length,
-  }), [allRows]);
+  const stats = useMemo(
+    () => ({
+      total: allRows.length,
+      withLogo: allRows.filter((r) => r.hasLogo).length,
+      withDomain: allRows.filter((r) => r.domain).length,
+      withLinkedin: allRows.filter((r) => r.hasLinkedin).length,
+      completeCount: allRows.filter((r) => getEnrichStatus(r) === "complete").length,
+      partialCount: allRows.filter((r) => getEnrichStatus(r) === "partial").length,
+      missingCount: allRows.filter((r) => getEnrichStatus(r) === "missing").length,
+    }),
+    [allRows],
+  );
 
-  const allSelected = allRows.length > 0 && allRows.every(r => selected.has(r.id));
-  const someSelected = allRows.some(r => selected.has(r.id));
-  const selectedCount = allRows.filter(r => selected.has(r.id)).length;
+  const allSelected = allRows.length > 0 && allRows.every((r) => selected.has(r.id));
+  const someSelected = allRows.some((r) => selected.has(r.id));
+  const selectedCount = allRows.filter((r) => selected.has(r.id)).length;
 
   const toggleAll = useCallback(() => {
     if (allSelected) setSelected(new Set());
-    else setSelected(new Set(allRows.map(r => r.id)));
+    else setSelected(new Set(allRows.map((r) => r.id)));
   }, [allSelected, allRows]);
 
   const toggleOne = useCallback((id: string) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
 
-  const getSelectedRows = useCallback(() => allRows.filter(r => selected.has(r.id)), [allRows, selected]);
+  const getSelectedRows = useCallback(() => allRows.filter((r) => selected.has(r.id)), [allRows, selected]);
 
   const openDeepSearchDialog = useCallback((rows: EnrichedRow[]) => {
-    const ids = rows.map(r => r.realId || r.id);
-    const isContact = rows.some(r => r.source === "contacts" || r.source === "bca");
+    const ids = rows.map((r) => r.realId || r.id);
+    const isContact = rows.some((r) => r.source === "contacts" || r.source === "bca");
     setDsTargetIds(ids);
     setDsMode(isContact ? "contact" : "partner");
     setDsDialogOpen(true);
   }, []);
 
-  const handleDeepSearchConfirm = useCallback((_options: Record<string, boolean>) => {
-    setDsDialogOpen(false);
-    if (dsTargetIds.length > 0) {
-      deepSearch.start(dsTargetIds, true, dsMode);
-    }
-  }, [dsTargetIds, dsMode, deepSearch]);
+  const handleDeepSearchConfirm = useCallback(
+    (_options: Record<string, boolean>) => {
+      setDsDialogOpen(false);
+      if (dsTargetIds.length > 0) {
+        deepSearch.start(dsTargetIds, true, dsMode);
+      }
+    },
+    [dsTargetIds, dsMode, deepSearch],
+  );
 
   const handleLinkedInBatch = useCallback(async () => {
-    const rows = getSelectedRows().filter(r => r.source === "contacts" && !r.hasLinkedin);
-    if (!rows.length) { toast({ title: "Nessun contatto senza LinkedIn nella selezione" }); return; }
-    if (!linkedInLookup.isAvailable) { toast({ title: "Partner Connect non disponibile", variant: "destructive" }); return; }
-    await linkedInLookup.lookupBatch(rows.map(r => r.realId || r.id));
+    const rows = getSelectedRows().filter((r) => r.source === "contacts" && !r.hasLinkedin);
+    if (!rows.length) {
+      toast({ title: "Nessun contatto senza LinkedIn nella selezione" });
+      return;
+    }
+    if (!linkedInLookup.isAvailable) {
+      toast({ title: "Partner Connect non disponibile", variant: "destructive" });
+      return;
+    }
+    await linkedInLookup.lookupBatch(rows.map((r) => r.realId || r.id));
     refetchContacts();
   }, [getSelectedRows, linkedInLookup, refetchContacts]);
 
@@ -315,7 +403,7 @@ export function useEnrichmentData() {
     const rows = getSelectedRows();
     if (!rows.length) return;
     const toOpen = rows.slice(0, 5);
-    toOpen.forEach(r => {
+    toOpen.forEach((r) => {
       const query = encodeURIComponent(`${r.name} company logo`);
       window.open(`https://www.google.com/search?tbm=isch&q=${query}`, "_blank");
     });
@@ -339,17 +427,40 @@ export function useEnrichmentData() {
 
   return {
     // Filter state
-    sourceTab, enrichFilter, search, sortField, sortDir, selected,
+    sourceTab,
+    enrichFilter,
+    search,
+    sortField,
+    sortDir,
+    selected,
     // Deep search dialog
-    dsDialogOpen, dsTargetIds, dsMode, setDsDialogOpen,
+    dsDialogOpen,
+    dsTargetIds,
+    dsMode,
+    setDsDialogOpen,
     // Derived
-    sourceCounts, allRows, stats, allSelected, someSelected, selectedCount,
+    sourceCounts,
+    allRows,
+    stats,
+    allSelected,
+    someSelected,
+    selectedCount,
     // Actions
-    changeSourceTab, setEnrichFilter, setSearch, toggleSort, toggleAll, toggleOne,
-    openDeepSearchDialog, handleDeepSearchConfirm, handleLinkedInBatch, handleBulkLogoSearch,
+    changeSourceTab,
+    setEnrichFilter,
+    setSearch,
+    toggleSort,
+    toggleAll,
+    toggleOne,
+    openDeepSearchDialog,
+    handleDeepSearchConfirm,
+    handleLinkedInBatch,
+    handleBulkLogoSearch,
     getSelectedRows,
     // Refetch
-    refetchPartners, refetchContacts, refetchAll,
+    refetchPartners,
+    refetchContacts,
+    refetchAll,
     // External hooks
     deepSearch,
   };

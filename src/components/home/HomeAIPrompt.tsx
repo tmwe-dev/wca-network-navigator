@@ -28,10 +28,11 @@ function formatQueryResultAsMarkdown(result: ToolResult): string {
     }
     const head = "| " + cols.map((c) => c.label).join(" | ") + " |";
     const sep = "| " + cols.map(() => "---").join(" | ") + " |";
-    const body = sample
-      .map((r) => "| " + cols.map((c) => String(r[c.key] ?? "—")).join(" | ") + " |")
-      .join("\n");
-    const more = count > sample.length ? `\n\n_…e altri ${count - sample.length}. Apri **/v2/command** per vederli tutti e selezionarli._` : "";
+    const body = sample.map((r) => "| " + cols.map((c) => String(r[c.key] ?? "—")).join(" | ") + " |").join("\n");
+    const more =
+      count > sample.length
+        ? `\n\n_…e altri ${count - sample.length}. Apri **/v2/command** per vederli tutti e selezionarli._`
+        : "";
     return header + head + "\n" + sep + "\n" + body + more;
   }
   if (result.kind === "result") {
@@ -74,16 +75,32 @@ function buildSmartPrompts(stats?: Props["systemStats"], briefingActions?: Brief
 
   const prompts: SmartPrompt[] = [];
   if (stats?.pendingActivities && stats.pendingActivities > 0) {
-    prompts.push({ label: `${stats.pendingActivities} attività aperte`, prompt: "Mostrami le attività in scadenza e suggeriscimi come procedere", icon: "📋" });
+    prompts.push({
+      label: `${stats.pendingActivities} attività aperte`,
+      prompt: "Mostrami le attività in scadenza e suggeriscimi come procedere",
+      icon: "📋",
+    });
   }
   if (stats?.partnersWithoutEmail && stats.partnersWithoutEmail > 20) {
-    prompts.push({ label: "Partner senza email", prompt: `Ho ${stats.partnersWithoutEmail} partner senza email. Avvia una Deep Search per i più importanti`, icon: "🔍" });
+    prompts.push({
+      label: "Partner senza email",
+      prompt: `Ho ${stats.partnersWithoutEmail} partner senza email. Avvia una Deep Search per i più importanti`,
+      icon: "🔍",
+    });
   }
   if (stats?.pendingReminders && stats.pendingReminders > 0) {
-    prompts.push({ label: `${stats.pendingReminders} reminder`, prompt: "Mostrami i reminder in scadenza", icon: "⏰" });
+    prompts.push({
+      label: `${stats.pendingReminders} reminder`,
+      prompt: "Mostrami i reminder in scadenza",
+      icon: "⏰",
+    });
   }
   if (stats?.activeJobs && stats.activeJobs > 0) {
-    prompts.push({ label: `${stats.activeJobs} job attivi`, prompt: "Qual è lo stato dei download attivi?", icon: "📥" });
+    prompts.push({
+      label: `${stats.activeJobs} job attivi`,
+      prompt: "Qual è lo stato dei download attivi?",
+      icon: "📥",
+    });
   }
   if (prompts.length === 0) {
     prompts.push(
@@ -96,7 +113,14 @@ function buildSmartPrompts(stats?: Props["systemStats"], briefingActions?: Brief
   return prompts.slice(0, 4);
 }
 
-export function HomeAIPrompt({ className, systemStats, briefingActions, agents, externalPrompt, onExternalPromptConsumed }: Props) {
+export function HomeAIPrompt({
+  className,
+  systemStats,
+  briefingActions,
+  agents,
+  externalPrompt,
+  onExternalPromptConsumed,
+}: Props) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
@@ -111,7 +135,7 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
 
   const currentVoiceConfig = useMemo(
     () => VOICE_LANGUAGE_MAP[currentVoiceLang] || VOICE_LANGUAGE_MAP.it,
-    [currentVoiceLang]
+    [currentVoiceLang],
   );
 
   const speech = useContinuousSpeech((text) => setInput(text), currentVoiceConfig.sttCode);
@@ -126,70 +150,74 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
     }
   }, [externalPrompt]);
 
-  const send = useCallback(async (text?: string) => {
-    const msg = (text || input).trim();
-    if (!msg || loading) return;
-    setInput("");
-    setLoading(true);
-    setResponse(null);
+  const send = useCallback(
+    async (text?: string) => {
+      const msg = (text || input).trim();
+      if (!msg || loading) return;
+      setInput("");
+      setLoading(true);
+      setResponse(null);
 
-    // Check for @AgentName routing
-    const agentMatch = msg.match(/^@(\w+)\s+(.+)/i);
-    let targetAgent: AgentStatusItem | undefined;
-    let cleanMsg = msg;
-    if (agentMatch && agents) {
-      const name = agentMatch[1].toLowerCase();
-      targetAgent = agents.find(a => a.name.toLowerCase() === name);
-      if (targetAgent) cleanMsg = agentMatch[2];
-    }
+      // Check for @AgentName routing
+      const agentMatch = msg.match(/^@(\w+)\s+(.+)/i);
+      let targetAgent: AgentStatusItem | undefined;
+      let cleanMsg = msg;
+      if (agentMatch && agents) {
+        const name = agentMatch[1].toLowerCase();
+        targetAgent = agents.find((a) => a.name.toLowerCase() === name);
+        if (targetAgent) cleanMsg = agentMatch[2];
+      }
 
-    const newMessages = [...history, { role: "user", content: cleanMsg }];
+      const newMessages = [...history, { role: "user", content: cleanMsg }];
 
-    try {
-      let data: unknown;
-      if (targetAgent) {
-        // Route to agent-execute
-        data = await invokeAi<Record<string, unknown>>("agent-execute", {
-          scope: "agent",
-          body: { agent_id: targetAgent.id, messages: newMessages },
-          context: { source: "HomeAIPrompt", route: "/v2", mode: "agent-execute" },
-        });
-      } else if (aiQueryTool.match(cleanMsg)) {
-        // UNIFIED with /v2/command: read-intent prompts go through the
-        // AI Query Planner + safe executor (same pipeline as the Direttore).
-        const result = (await aiQueryTool.execute(cleanMsg, {
-          originalPrompt: cleanMsg,
-          history: newMessages,
-        })) as ToolResult;
-        const raw = formatQueryResultAsMarkdown(result);
+      try {
+        let data: unknown;
+        if (targetAgent) {
+          // Route to agent-execute
+          data = await invokeAi<Record<string, unknown>>("agent-execute", {
+            scope: "agent",
+            body: { agent_id: targetAgent.id, messages: newMessages },
+            context: { source: "HomeAIPrompt", route: "/v2", mode: "agent-execute" },
+          });
+        } else if (aiQueryTool.match(cleanMsg)) {
+          // UNIFIED with /v2/command: read-intent prompts go through the
+          // AI Query Planner + safe executor (same pipeline as the Direttore).
+          const result = (await aiQueryTool.execute(cleanMsg, {
+            originalPrompt: cleanMsg,
+            history: newMessages,
+          })) as ToolResult;
+          const raw = formatQueryResultAsMarkdown(result);
+          setResponse(raw);
+          setHistory([...newMessages, { role: "assistant", content: raw }]);
+          return;
+        } else {
+          // Default: ai-assistant — Charter R1: scope "home"
+          data = await invokeAi<Record<string, unknown>>("ai-assistant", {
+            scope: "home",
+            body: { messages: newMessages },
+            context: { source: "HomeAIPrompt", route: "/v2", mode: "tool-decision" },
+          });
+        }
+        const raw = String(
+          (data as Record<string, unknown>)?.content || (data as Record<string, unknown>)?.message || "",
+        );
+        dispatchAiAgentEffects(parseAiAgentResponse(raw));
         setResponse(raw);
         setHistory([...newMessages, { role: "assistant", content: raw }]);
-        return;
-      } else {
-        // Default: ai-assistant — Charter R1: scope "home"
-        data = await invokeAi<Record<string, unknown>>("ai-assistant", {
-          scope: "home",
-          body: { messages: newMessages },
-          context: { source: "HomeAIPrompt", route: "/v2", mode: "tool-decision" },
-        });
+      } catch (e: unknown) {
+        setResponse("⚠️ " + ((e instanceof Error ? e.message : String(e)) || "Errore di comunicazione"));
+      } finally {
+        setLoading(false);
+        inputRef.current?.focus();
       }
-      const raw = String((data as Record<string, unknown>)?.content || (data as Record<string, unknown>)?.message || "");
-      dispatchAiAgentEffects(parseAiAgentResponse(raw));
-      setResponse(raw);
-      setHistory([...newMessages, { role: "assistant", content: raw }]);
-    } catch (e: unknown) {
-      setResponse("⚠️ " + ((e instanceof Error ? e.message : String(e)) || "Errore di comunicazione"));
-    } finally {
-      setLoading(false);
-      inputRef.current?.focus();
-    }
-  }, [input, loading, history, agents]);
+    },
+    [input, loading, history, agents],
+  );
 
-  const playTTS = useCallback(async (text: string) => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
+  const playTTS = useCallback(
+    async (text: string) => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -201,13 +229,18 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             voiceId: settings?.elevenlabs_custom_voice_id || currentVoiceConfig.voiceId,
             language: currentVoiceLang,
           }),
-        }
-      );
-      if (!res.ok) return;
-      const blob = await res.blob();
-      new Audio(URL.createObjectURL(blob)).play();
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
-  }, [currentVoiceConfig.voiceId, currentVoiceLang, settings?.elevenlabs_custom_voice_id]);
+        });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        new Audio(URL.createObjectURL(blob)).play();
+      } catch (e) {
+        log.debug("best-effort operation failed", {
+          error: e instanceof Error ? e.message : String(e),
+        }); /* best-effort */
+      }
+    },
+    [currentVoiceConfig.voiceId, currentVoiceLang, settings?.elevenlabs_custom_voice_id],
+  );
 
   return (
     <div className={cn("w-full max-w-2xl mx-auto space-y-3", className)}>
@@ -226,7 +259,10 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
                 Segretario Operativo
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => playTTS(response!)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                <button
+                  onClick={() => playTTS(response!)}
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                >
                   <Volume2 className="h-3.5 w-3.5" />
                 </button>
                 <button onClick={() => setResponse(null)} className="text-muted-foreground hover:text-foreground p-1">
@@ -251,22 +287,18 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
               "h-10 shrink-0 rounded-xl border px-3 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all",
               speech.listening
                 ? "border-accent/50 bg-accent/30 text-accent-foreground hover:bg-accent/35"
-                : "border-accent/35 bg-accent/15 text-accent-foreground hover:bg-accent/25"
+                : "border-accent/35 bg-accent/15 text-accent-foreground hover:bg-accent/25",
             )}
             onClick={speech.toggle}
             aria-label={speech.listening ? "Ferma ascolto" : `Avvia ascolto in ${currentVoiceConfig.label}`}
           >
-            {speech.listening ? (
-              <MicOff className="h-4 w-4 animate-pulse" />
-            ) : (
-              <Mic className="h-4 w-4" />
-            )}
+            {speech.listening ? <MicOff className="h-4 w-4 animate-pulse" /> : <Mic className="h-4 w-4" />}
             <span>{speech.listening ? "Stop" : "Parla"}</span>
           </Button>
 
           <input
             ref={inputRef}
-            value={speech.listening ? (input + (speech.interimText ? ` ${speech.interimText}` : "")) : input}
+            value={speech.listening ? input + (speech.interimText ? ` ${speech.interimText}` : "") : input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder={speech.listening ? "🎙 Sto ascoltando…" : "Chiedi al sistema qualsiasi cosa…"}
@@ -279,19 +311,13 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
             size="icon"
             className={cn(
               "h-10 w-10 shrink-0 rounded-full",
-              input.trim()
-                ? "text-primary hover:bg-primary/15"
-                : "text-muted-foreground"
+              input.trim() ? "text-primary hover:bg-primary/15" : "text-muted-foreground",
             )}
             onClick={() => send()}
             disabled={loading || !input.trim()}
             aria-label="Invia"
           >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </Button>
         </div>
 

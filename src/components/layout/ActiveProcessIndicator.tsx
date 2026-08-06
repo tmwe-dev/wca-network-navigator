@@ -19,7 +19,7 @@ export function ActiveProcessIndicator() {
   const pauseResume = usePauseResumeJob();
 
   const mainProcess = hasActive ? processes[0] : null;
-  const Icon = mainProcess ? (typeIcons[mainProcess.type] || Activity) : Activity;
+  const Icon = mainProcess ? typeIcons[mainProcess.type] || Activity : Activity;
 
   const handleAction = (proc: ActiveProcess, action: "pause" | "resume" | "cancel") => {
     if (proc.type !== "download") return;
@@ -37,7 +37,7 @@ export function ActiveProcessIndicator() {
               "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all relative overflow-hidden",
               hasActive
                 ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 cursor-pointer"
-                : "border-border bg-muted/30 text-muted-foreground cursor-default"
+                : "border-border bg-muted/30 text-muted-foreground cursor-default",
             )}
           >
             <span className="relative flex-shrink-0">
@@ -57,9 +57,8 @@ export function ActiveProcessIndicator() {
                 {mainProcess?.progress !== undefined && mainProcess.progress > 0 && !mainProcess?.countdownLabel && (
                   <span className="tabular-nums text-primary">{mainProcess.progress}%</span>
                 )}
-                {processes.length > 1 && (
-                  expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                )}
+                {processes.length > 1 &&
+                  (expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
               </>
             ) : (
               <span className="hidden sm:inline">Idle</span>
@@ -79,9 +78,7 @@ export function ActiveProcessIndicator() {
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-xs">
-          {hasActive
-            ? `${processes.length} processo/i attivo/i — clicca per dettagli`
-            : "Nessun processo attivo"}
+          {hasActive ? `${processes.length} processo/i attivo/i — clicca per dettagli` : "Nessun processo attivo"}
         </TooltipContent>
       </Tooltip>
 
@@ -109,33 +106,36 @@ export function ActiveProcessIndicator() {
   );
 }
 
-function ProcessRow({ process, onAction }: { process: ActiveProcess; onAction: (proc: ActiveProcess, action: "pause" | "resume" | "cancel") => void }) {
+function ProcessRow({
+  process,
+  onAction,
+}: {
+  process: ActiveProcess;
+  onAction: (proc: ActiveProcess, action: "pause" | "resume" | "cancel") => void;
+}) {
   const Icon = typeIcons[process.type] || Activity;
   const isPaused = process.status === "paused";
   const isDownload = process.type === "download";
 
   return (
     <div className="flex items-center gap-2.5 px-3 py-2">
-      <div className={cn(
-        "flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center",
-        isPaused ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary"
-      )}>
+      <div
+        className={cn(
+          "flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center",
+          isPaused ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary",
+        )}
+      >
         {isPaused ? <Pause className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-foreground truncate">{process.label}</span>
-          {process.detail && (
-            <span className="text-[10px] font-mono text-muted-foreground ml-2">{process.detail}</span>
-          )}
+          {process.detail && <span className="text-[10px] font-mono text-muted-foreground ml-2">{process.detail}</span>}
         </div>
         {process.progress !== undefined && (
           <div className="mt-1 h-1 w-full rounded-full bg-muted">
             <div
-              className={cn(
-                "h-full rounded-full transition-all duration-300",
-                isPaused ? "bg-primary" : "bg-primary"
-              )}
+              className={cn("h-full rounded-full transition-all duration-300", isPaused ? "bg-primary" : "bg-primary")}
               style={{ width: `${process.progress}%` }}
             />
           </div>
@@ -149,14 +149,20 @@ function ProcessRow({ process, onAction }: { process: ActiveProcess; onAction: (
       {isDownload && (
         <div className="flex items-center gap-0.5 shrink-0">
           <button
-            onClick={(e) => { e.stopPropagation(); onAction(process, isPaused ? "resume" : "pause"); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction(process, isPaused ? "resume" : "pause");
+            }}
             className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             title={isPaused ? "Riprendi" : "Pausa"}
           >
             {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onAction(process, "cancel"); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction(process, "cancel");
+            }}
             className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
             title="Annulla"
           >
@@ -166,14 +172,16 @@ function ProcessRow({ process, onAction }: { process: ActiveProcess; onAction: (
       )}
 
       {!isDownload && (
-        <span className={cn(
-          "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full",
-          isPaused
-            ? "bg-primary/15 text-primary"
-            : process.status === "running"
-              ? "bg-emerald-500/15 text-emerald-500"
-              : "bg-muted text-muted-foreground"
-        )}>
+        <span
+          className={cn(
+            "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full",
+            isPaused
+              ? "bg-primary/15 text-primary"
+              : process.status === "running"
+                ? "bg-emerald-500/15 text-emerald-500"
+                : "bg-muted text-muted-foreground",
+          )}
+        >
           {isPaused ? "PAUSA" : process.status === "running" ? "ATTIVO" : "CODA"}
         </span>
       )}

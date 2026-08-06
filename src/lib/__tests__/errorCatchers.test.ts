@@ -31,9 +31,7 @@ describe("installGlobalErrorCatchers", () => {
 
   it("registers both listeners in a single call", () => {
     installGlobalErrorCatchers();
-    const calls = addSpy.mock.calls.filter(
-      ([e]) => e === "unhandledrejection" || e === "error"
-    );
+    const calls = addSpy.mock.calls.filter(([e]) => e === "unhandledrejection" || e === "error");
     expect(calls.length).toBeGreaterThanOrEqual(2);
   });
 

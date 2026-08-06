@@ -40,12 +40,18 @@ function loadState(): PersistedState {
   try {
     const raw = localStorage.getItem(STATE_KEY);
     if (raw) return JSON.parse(raw) as PersistedState;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { nextRunAt: null, lastRunAt: null, slotsForDay: null, remainingSlotsMs: [] };
 }
 
 function saveState(s: PersistedState) {
-  try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(STATE_KEY, JSON.stringify(s));
+  } catch {
+    /* ignore */
+  }
 }
 
 function todayKey(): string {
@@ -75,20 +81,17 @@ function generateSlots(times: number, startHour: number, endHour: number): numbe
   return slots.sort((a, b) => a - b);
 }
 
-interface Opts { paused: boolean }
+interface Opts {
+  paused: boolean;
+}
 
 export function useLinkedInAutoSync({ paused }: Opts) {
   const { isAvailable, isReading, readNow } = useLinkedInSync();
   const { data: settings } = useAppSettings();
 
-  const enabled =
-    !paused &&
-    isAvailable &&
-    (settings?.linkedin_auto_sync_enabled ?? "true") !== "false";
+  const enabled = !paused && isAvailable && (settings?.linkedin_auto_sync_enabled ?? "true") !== "false";
 
-  const timesPerDay = Math.max(1, Math.min(6,
-    parseInt(settings?.linkedin_read_times_per_day || "3", 10) || 3,
-  ));
+  const timesPerDay = Math.max(1, Math.min(6, parseInt(settings?.linkedin_read_times_per_day || "3", 10) || 3));
   const startHour = parseInt(settings?.linkedin_read_start_hour || "9", 10);
   const endHour = parseInt(settings?.linkedin_read_end_hour || "19", 10);
 
@@ -97,11 +100,16 @@ export function useLinkedInAutoSync({ paused }: Opts) {
   const readingRef = useRef(false);
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
-  useEffect(() => { readingRef.current = isReading; }, [isReading]);
+  useEffect(() => {
+    readingRef.current = isReading;
+  }, [isReading]);
 
   useEffect(() => {
     function clearTimer() {
-      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     }
 
     function ensureSlotsForToday() {
@@ -132,12 +140,20 @@ export function useLinkedInAutoSync({ paused }: Opts) {
         next = tomorrow.getTime();
       }
       const wait = Math.max(60_000, next - Date.now());
-      timerRef.current = setTimeout(() => { void runTick(); }, wait);
+      timerRef.current = setTimeout(() => {
+        void runTick();
+      }, wait);
     }
 
     async function runTick() {
-      if (!enabledRef.current) { scheduleNext(); return; }
-      if (readingRef.current) { scheduleNext(); return; }
+      if (!enabledRef.current) {
+        scheduleNext();
+        return;
+      }
+      if (readingRef.current) {
+        scheduleNext();
+        return;
+      }
       if (typeof document !== "undefined" && document.visibilityState !== "visible") {
         // Riproveremo al prossimo visibilitychange
         return;
@@ -172,7 +188,9 @@ export function useLinkedInAutoSync({ paused }: Opts) {
     function onTrigger() {
       if (readingRef.current) return;
       void (async () => {
-        try { await readNow(); } finally {
+        try {
+          await readNow();
+        } finally {
           stateRef.current.lastRunAt = Date.now();
           saveState(stateRef.current);
           scheduleNext();

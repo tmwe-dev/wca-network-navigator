@@ -11,7 +11,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 interface Assertion {
-  type: "status_ok" | "response_min_length" | "response_contains" | "response_not_contains" | "response_contains_key" | "json_path_equals";
+  type:
+    | "status_ok"
+    | "response_min_length"
+    | "response_contains"
+    | "response_not_contains"
+    | "response_contains_key"
+    | "json_path_equals";
   value?: string | number;
   path?: string;
 }
@@ -58,11 +64,16 @@ function evaluateAssertions(assertions: Assertion[], status: number, response: u
           break;
         }
         case "json_path_equals": {
-          const parts = String(a.path ?? "").split(".").filter(Boolean);
+          const parts = String(a.path ?? "")
+            .split(".")
+            .filter(Boolean);
           let cur: unknown = response;
           for (const p of parts) {
             if (cur && typeof cur === "object") cur = (cur as Record<string, unknown>)[p];
-            else { cur = undefined; break; }
+            else {
+              cur = undefined;
+              break;
+            }
           }
           if (String(cur) !== String(a.value)) failed.push(`json_path_equals: ${a.path}=${cur} ≠ ${a.value}`);
           break;
@@ -88,7 +99,9 @@ serve(async (req: Request) => {
     const ANON = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "";
 
     const sb = createClient(SUPABASE_URL, ANON);
-    const { data: { user } } = await sb.auth.getUser(token);
+    const {
+      data: { user },
+    } = await sb.auth.getUser(token);
     if (!user) return jsonResp({ error: "Auth richiesta" }, 401, cors);
 
     const body = await req.json().catch(() => ({}));
@@ -107,53 +120,63 @@ serve(async (req: Request) => {
 
     const list = (scenarios ?? []) as unknown as Scenario[];
 
-    const results = await Promise.all(list.map(async (s) => {
-      const start = Date.now();
-      try {
-        const url = `${SUPABASE_URL}/functions/v1/${s.target_function}`;
-        const enriched = {
-          ...(s.payload || {}),
-          scope: s.ai_scope,
-          context: { source: "ai-test-hub", route: "/v2/ai-test-hub", mode: "test", extra: { scenario_id: s.id } },
-        };
-        const resp = await fetch(url, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            apikey: ANON,
-          },
-          body: JSON.stringify(enriched),
-        });
-        const text = await resp.text();
-        let parsed: unknown = text;
-        try { parsed = JSON.parse(text); } catch { /* keep text */ }
-        const failed = evaluateAssertions(s.assertions ?? [], resp.status, parsed);
-        return {
-          scenario_id: s.id,
-          name: s.name,
-          target_function: s.target_function,
-          status: failed.length === 0 ? "pass" : "fail",
-          http_status: resp.status,
-          duration_ms: Date.now() - start,
-          failed_assertions: failed,
-          response_preview: typeof parsed === "string" ? parsed.slice(0, 800) : JSON.stringify(parsed).slice(0, 800),
-        };
-      } catch (e) {
-        return {
-          scenario_id: s.id,
-          name: s.name,
-          target_function: s.target_function,
-          status: "error",
-          http_status: 0,
-          duration_ms: Date.now() - start,
-          failed_assertions: [`exception: ${(e as Error).message}`],
-          response_preview: "",
-        };
-      }
-    }));
+    const results = await Promise.all(
+      list.map(async (s) => {
+        const start = Date.now();
+        try {
+          const url = `${SUPABASE_URL}/functions/v1/${s.target_function}`;
+          const enriched = {
+            ...(s.payload || {}),
+            scope: s.ai_scope,
+            context: { source: "ai-test-hub", route: "/v2/ai-test-hub", mode: "test", extra: { scenario_id: s.id } },
+          };
+          const resp = await fetch(url, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              apikey: ANON,
+            },
+            body: JSON.stringify(enriched),
+          });
+          const text = await resp.text();
+          let parsed: unknown = text;
+          try {
+            parsed = JSON.parse(text);
+          } catch {
+            /* keep text */
+          }
+          const failed = evaluateAssertions(s.assertions ?? [], resp.status, parsed);
+          return {
+            scenario_id: s.id,
+            name: s.name,
+            target_function: s.target_function,
+            status: failed.length === 0 ? "pass" : "fail",
+            http_status: resp.status,
+            duration_ms: Date.now() - start,
+            failed_assertions: failed,
+            response_preview: typeof parsed === "string" ? parsed.slice(0, 800) : JSON.stringify(parsed).slice(0, 800),
+          };
+        } catch (e) {
+          return {
+            scenario_id: s.id,
+            name: s.name,
+            target_function: s.target_function,
+            status: "error",
+            http_status: 0,
+            duration_ms: Date.now() - start,
+            failed_assertions: [`exception: ${(e as Error).message}`],
+            response_preview: "",
+          };
+        }
+      }),
+    );
 
-    return jsonResp({ results, total: results.length, passed: results.filter(r => r.status === "pass").length }, 200, cors);
+    return jsonResp(
+      { results, total: results.length, passed: results.filter((r) => r.status === "pass").length },
+      200,
+      cors,
+    );
   } catch (e) {
     return jsonResp({ error: (e as Error).message }, 500, cors);
   }

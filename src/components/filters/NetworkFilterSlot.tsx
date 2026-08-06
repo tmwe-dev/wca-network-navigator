@@ -15,9 +15,7 @@ const QUALITY = [
 export function NetworkFilterSlot() {
   const g = useGlobalFilters();
 
-  const activeCount = [
-    g.filters.networkQuality !== "all",
-  ].filter(Boolean).length;
+  const activeCount = [g.filters.networkQuality !== "all"].filter(Boolean).length;
 
   return (
     <div className="space-y-3">
@@ -25,7 +23,7 @@ export function NetworkFilterSlot() {
       <FilterSection icon={Search} label="Cerca">
         <Input
           value={g.filters.networkSearch}
-          onChange={e => g.setNetworkSearch(e.target.value)}
+          onChange={(e) => g.setNetworkSearch(e.target.value)}
           placeholder="Partner, azienda..."
           className="h-7 text-xs bg-muted/30 border-border/40"
         />
@@ -34,17 +32,28 @@ export function NetworkFilterSlot() {
       {activeCount > 0 && (
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-primary font-medium">{activeCount} filtri attivi</span>
-          <button onClick={() => {
-            g.setNetworkQuality("all");
-          }} className="text-[9px] text-muted-foreground hover:text-destructive">Reset</button>
+          <button
+            onClick={() => {
+              g.setNetworkQuality("all");
+            }}
+            className="text-[9px] text-muted-foreground hover:text-destructive"
+          >
+            Reset
+          </button>
         </div>
       )}
 
       {/* Quality */}
       <FilterSection icon={Sparkles} label="Qualità dati">
         <ChipGroup>
-          {QUALITY.map(o => (
-            <Chip key={o.value} active={g.filters.networkQuality === o.value} onClick={() => g.setNetworkQuality(o.value)}>{o.label}</Chip>
+          {QUALITY.map((o) => (
+            <Chip
+              key={o.value}
+              active={g.filters.networkQuality === o.value}
+              onClick={() => g.setNetworkQuality(o.value)}
+            >
+              {o.label}
+            </Chip>
           ))}
         </ChipGroup>
       </FilterSection>
@@ -52,7 +61,15 @@ export function NetworkFilterSlot() {
   );
 }
 
-function FilterSection({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) {
+function FilterSection({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ElementType;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1">
@@ -75,7 +92,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
         "px-2 py-1 rounded-md text-[10px] font-medium transition-all border",
         active
           ? "bg-primary/15 border-primary/30 text-primary"
-          : "border-border/40 text-muted-foreground hover:bg-muted/40"
+          : "border-border/40 text-muted-foreground hover:bg-muted/40",
       )}
     >
       {children}

@@ -30,7 +30,8 @@ export function useCommandState() {
     (v: number | undefined | ((prev: number | undefined) => number | undefined)) =>
       phaseDispatch({
         type: "SET_CHAIN",
-        value: typeof v === "function" ? (v as (p: number | undefined) => number | undefined)(chainHighlightRef.current) : v,
+        value:
+          typeof v === "function" ? (v as (p: number | undefined) => number | undefined)(chainHighlightRef.current) : v,
       }),
     [],
   );
@@ -38,7 +39,11 @@ export function useCommandState() {
   const [execProgress, setExecProgress] = useState(0);
   const [execSteps, setExecSteps] = useState<ExecutionStep[]>([]);
   const [liveResult, setLiveResult] = useState<ToolResult | null>(null);
-  const [pendingApproval, setPendingApproval] = useState<{ toolId: string; payload: Record<string, unknown>; prompt: string } | null>(null);
+  const [pendingApproval, setPendingApproval] = useState<{
+    toolId: string;
+    payload: Record<string, unknown>;
+    prompt: string;
+  } | null>(null);
   const [planState, setPlanState] = useState<PlanExecutionState | null>(null);
   /** Selected row IDs (for selectable canvases) */
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -79,24 +84,45 @@ export function useCommandState() {
   }, []);
 
   return {
-    messages, setMessages,
-    input, setInput,
-    voiceSpeaking, setVoiceSpeaking,
-    inputFocused, setInputFocused,
-    lang, setLang,
-    canvas, setCanvas,
-    flowPhase, setFlowPhase,
-    activeToolKey, setActiveToolKey,
-    showTools, setShowTools,
-    toolPhase, setToolPhase,
-    chainHighlight, setChainHighlight,
-    execProgress, setExecProgress,
-    execSteps, setExecSteps,
-    liveResult, setLiveResult,
-    pendingApproval, setPendingApproval,
-    planState, setPlanState,
-    selectedIds, setSelectedIds, toggleSelected, selectAll, clearSelection,
-    queryContext, setQueryContext,
+    messages,
+    setMessages,
+    input,
+    setInput,
+    voiceSpeaking,
+    setVoiceSpeaking,
+    inputFocused,
+    setInputFocused,
+    lang,
+    setLang,
+    canvas,
+    setCanvas,
+    flowPhase,
+    setFlowPhase,
+    activeToolKey,
+    setActiveToolKey,
+    showTools,
+    setShowTools,
+    toolPhase,
+    setToolPhase,
+    chainHighlight,
+    setChainHighlight,
+    execProgress,
+    setExecProgress,
+    execSteps,
+    setExecSteps,
+    liveResult,
+    setLiveResult,
+    pendingApproval,
+    setPendingApproval,
+    planState,
+    setPlanState,
+    selectedIds,
+    setSelectedIds,
+    toggleSelected,
+    selectAll,
+    clearSelection,
+    queryContext,
+    setQueryContext,
     chatEndRef,
     isEmpty,
     ts,

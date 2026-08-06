@@ -60,12 +60,8 @@ export default function EmailPipelineBadge({ pipeline, summary }: Props): React.
       }}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[9px] uppercase tracking-[0.18em] font-mono text-muted-foreground">
-          Pipeline mail
-        </span>
-        {summary && (
-          <span className="text-[10px] font-mono text-muted-foreground truncate">{summary}</span>
-        )}
+        <span className="text-[9px] uppercase tracking-[0.18em] font-mono text-muted-foreground">Pipeline mail</span>
+        {summary && <span className="text-[10px] font-mono text-muted-foreground truncate">{summary}</span>}
       </div>
       <div className="flex items-center gap-1 flex-wrap">
         {pipeline.map((stage, i) => (
@@ -79,13 +75,9 @@ export default function EmailPipelineBadge({ pipeline, summary }: Props): React.
             >
               <StatusIcon status={stage.status} />
               <span className="font-medium">{stage.label}</span>
-              {stage.detail && (
-                <span className="text-foreground font-light">· {stage.detail}</span>
-              )}
+              {stage.detail && <span className="text-foreground font-light">· {stage.detail}</span>}
             </span>
-            {i < pipeline.length - 1 && (
-              <ChevronRight className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-            )}
+            {i < pipeline.length - 1 && <ChevronRight className="w-2.5 h-2.5 text-muted-foreground shrink-0" />}
           </React.Fragment>
         ))}
       </div>

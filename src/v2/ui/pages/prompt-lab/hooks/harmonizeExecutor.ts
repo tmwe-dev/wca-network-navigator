@@ -20,7 +20,6 @@ import { toJsonValue } from "@/lib/jsonGuards";
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("harmonizeExecutor");
 export interface ExecuteResult {
@@ -30,11 +29,7 @@ export interface ExecuteResult {
 }
 
 /** Esegue una singola proposta. Ritorna esito (no throw). */
-export async function executeProposal(
-  userId: string,
-  p: HarmonizeProposal,
-  runId?: string,
-): Promise<ExecuteResult> {
+export async function executeProposal(userId: string, p: HarmonizeProposal, runId?: string): Promise<ExecuteResult> {
   // 1. Read-only → registra come followup sviluppatore (se runId noto) e termina.
   if (p.resolution_layer === "contract" || p.resolution_layer === "code_policy") {
     let followupId: string | undefined;
@@ -98,7 +93,9 @@ export async function executeProposal(
           reasoning: p.reasoning,
         },
       });
-    } catch { /* audit errors don't block exec */ }
+    } catch {
+      /* audit errors don't block exec */
+    }
   }
 }
 
@@ -106,37 +103,46 @@ async function execKbEntry(userId: string, p: HarmonizeProposal): Promise<Execut
   switch (p.action) {
     case "INSERT": {
       const payload = (p.payload ?? {}) as Record<string, unknown>;
-      await upsertKbEntry({
-        title: String(payload.title ?? p.block_label ?? "Senza titolo"),
-        content: p.after ?? "",
-        category: String(payload.category ?? "doctrine"),
-        chapter: String(payload.chapter ?? "general"),
-        tags: Array.isArray(payload.tags) ? (payload.tags as string[]) : [],
-        priority: typeof payload.priority === "number" ? (payload.priority as number) : 50,
-        sort_order: 0,
-        is_active: true,
-      }, userId);
+      await upsertKbEntry(
+        {
+          title: String(payload.title ?? p.block_label ?? "Senza titolo"),
+          content: p.after ?? "",
+          category: String(payload.category ?? "doctrine"),
+          chapter: String(payload.chapter ?? "general"),
+          tags: Array.isArray(payload.tags) ? (payload.tags as string[]) : [],
+          priority: typeof payload.priority === "number" ? (payload.priority as number) : 50,
+          sort_order: 0,
+          is_active: true,
+        },
+        userId,
+      );
       return { ok: true };
     }
     case "UPDATE": {
       if (!p.target.id) return { ok: false, reason: "UPDATE richiede target.id." };
-      await upsertKbEntry({
-        id: p.target.id,
-        title: String((p.payload?.title as string) ?? p.block_label ?? "Senza titolo"),
-        content: p.after ?? "",
-      }, userId);
+      await upsertKbEntry(
+        {
+          id: p.target.id,
+          title: String((p.payload?.title as string) ?? p.block_label ?? "Senza titolo"),
+          content: p.after ?? "",
+        },
+        userId,
+      );
       return { ok: true };
     }
     case "MOVE": {
       if (!p.target.id) return { ok: false, reason: "MOVE richiede target.id." };
       const payload = (p.payload ?? {}) as Record<string, unknown>;
-      await upsertKbEntry({
-        id: p.target.id,
-        title: String(payload.title ?? p.block_label ?? "Senza titolo"),
-        content: p.after ?? p.before ?? "",
-        category: String(payload.category ?? "doctrine"),
-        chapter: String(payload.chapter ?? "general"),
-      }, userId);
+      await upsertKbEntry(
+        {
+          id: p.target.id,
+          title: String(payload.title ?? p.block_label ?? "Senza titolo"),
+          content: p.after ?? p.before ?? "",
+          category: String(payload.category ?? "doctrine"),
+          chapter: String(payload.chapter ?? "general"),
+        },
+        userId,
+      );
       return { ok: true };
     }
     case "DELETE": {
@@ -175,7 +181,9 @@ async function execEmailAddressRule(p: HarmonizeProposal): Promise<ExecuteResult
   if (p.action !== "UPDATE" || !p.target.id || !p.target.field) {
     return { ok: false, reason: "email_address_rules supporta solo UPDATE con field." };
   }
-  await updateEmailAddressRule(p.target.id, { [p.target.field]: p.after ?? "" } as Partial<import("@/data/emailAddressRules").EmailAddressRule>);
+  await updateEmailAddressRule(p.target.id, { [p.target.field]: p.after ?? "" } as Partial<
+    import("@/data/emailAddressRules").EmailAddressRule
+  >);
   return { ok: true };
 }
 
@@ -212,12 +220,8 @@ async function execAgent(userId: string, p: HarmonizeProposal): Promise<ExecuteR
     // Derivazione robusta dei campi minimi: il modello spesso popola solo block_label
     // e/o after. Usiamo fallback ragionevoli per evitare di bloccare l'applicazione
     // di proposte INSERT con metadati incompleti.
-    const name = String(
-      payload.name ?? p.block_label ?? p.target.field ?? "",
-    ).trim();
-    const role = String(
-      payload.role ?? payload.agent_role ?? p.target.field ?? "assistant",
-    ).trim() || "assistant";
+    const name = String(payload.name ?? p.block_label ?? p.target.field ?? "").trim();
+    const role = String(payload.role ?? payload.agent_role ?? p.target.field ?? "assistant").trim() || "assistant";
     if (!name) {
       return {
         ok: false,

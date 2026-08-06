@@ -62,7 +62,7 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
     enabled: tab === "partner",
     queryFn: async () => {
       const { data, count } = await fetchForgePartners({ search: debounced, country, limit: partnerLimit });
-      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
+      return { rows: data ?? [], total: count ?? data?.length ?? 0 };
     },
   });
 
@@ -70,9 +70,9 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
     queryKey: ["forge-picker", "contacts", debounced, country, contactLimit],
     enabled: tab === "contact",
     queryFn: async () => {
-      const countryName = country ? WCA_COUNTRIES_MAP[country]?.name ?? null : null;
+      const countryName = country ? (WCA_COUNTRIES_MAP[country]?.name ?? null) : null;
       const { data, count } = await fetchForgeContacts({ search: debounced, countryName, limit: contactLimit });
-      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
+      return { rows: data ?? [], total: count ?? data?.length ?? 0 };
     },
   });
 
@@ -81,7 +81,7 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
     enabled: tab === "bca",
     queryFn: async () => {
       const { data, count } = await fetchForgeBusinessCards({ search: debounced, limit: bcaLimit });
-      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
+      return { rows: data ?? [], total: count ?? data?.length ?? 0 };
     },
   });
 
@@ -94,16 +94,14 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <div className="font-medium truncate">{value.companyName || "(senza azienda)"}</div>
-              {value.contactName && (
-                <div className="text-muted-foreground truncate">{value.contactName}</div>
-              )}
-              {value.email && (
-                <div className="text-muted-foreground truncate text-[10px]">{value.email}</div>
-              )}
+              {value.contactName && <div className="text-muted-foreground truncate">{value.contactName}</div>}
+              {value.email && <div className="text-muted-foreground truncate text-[10px]">{value.email}</div>}
               <div className="flex items-center gap-1.5 text-xs text-foreground mt-1">
                 <SourceBadge source={value.source} />
                 {value.countryCode && (
-                  <span>{getCountryFlag(value.countryCode)} {value.countryCode}</span>
+                  <span>
+                    {getCountryFlag(value.countryCode)} {value.countryCode}
+                  </span>
                 )}
               </div>
             </div>
@@ -120,9 +118,18 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList className="h-7 w-full grid grid-cols-3">
-          <TabsTrigger value="partner" className="text-[10px] h-6"><Globe className="w-3 h-3 mr-1" />Partner</TabsTrigger>
-          <TabsTrigger value="contact" className="text-[10px] h-6"><Users className="w-3 h-3 mr-1" />Contatti</TabsTrigger>
-          <TabsTrigger value="bca" className="text-[10px] h-6"><CreditCard className="w-3 h-3 mr-1" />BCA</TabsTrigger>
+          <TabsTrigger value="partner" className="text-[10px] h-6">
+            <Globe className="w-3 h-3 mr-1" />
+            Partner
+          </TabsTrigger>
+          <TabsTrigger value="contact" className="text-[10px] h-6">
+            <Users className="w-3 h-3 mr-1" />
+            Contatti
+          </TabsTrigger>
+          <TabsTrigger value="bca" className="text-[10px] h-6">
+            <CreditCard className="w-3 h-3 mr-1" />
+            BCA
+          </TabsTrigger>
         </TabsList>
 
         <div className="relative mt-2">
@@ -135,9 +142,7 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
           />
         </div>
 
-        {tab === "partner" && (
-          <CountryFilter selected={country} onChange={setCountry} />
-        )}
+        {tab === "partner" && <CountryFilter selected={country} onChange={setCountry} />}
 
         <TabsContent value="partner" className="mt-2 max-h-[260px] overflow-auto space-y-1">
           {partnersQuery.isLoading && <LoadingRow />}
@@ -152,20 +157,22 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
               subtitle={[p.city, p.country_code].filter(Boolean).join(" · ")}
               meta={p.email ?? undefined}
               flag={p.country_code ? getCountryFlag(p.country_code) : undefined}
-              onClick={() => onChange({
-                source: "partner",
-                recordId: p.id,
-                partnerId: p.id,
-                contactId: null,
-                companyName: p.company_name || "",
-                contactName: null,
-                email: p.email,
-                countryCode: p.country_code,
-                countryName: p.country_code ? WCA_COUNTRIES_MAP[p.country_code]?.name ?? null : null,
-                website: (p as { website?: string | null }).website ?? null,
-                city: p.city ?? null,
-                linkedinUrl: (p as { linkedin_url?: string | null }).linkedin_url ?? null,
-              })}
+              onClick={() =>
+                onChange({
+                  source: "partner",
+                  recordId: p.id,
+                  partnerId: p.id,
+                  contactId: null,
+                  companyName: p.company_name || "",
+                  contactName: null,
+                  email: p.email,
+                  countryCode: p.country_code,
+                  countryName: p.country_code ? (WCA_COUNTRIES_MAP[p.country_code]?.name ?? null) : null,
+                  website: (p as { website?: string | null }).website ?? null,
+                  city: p.city ?? null,
+                  linkedinUrl: (p as { linkedin_url?: string | null }).linkedin_url ?? null,
+                })
+              }
             />
           ))}
         </TabsContent>
@@ -182,17 +189,19 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
               title={c.name || c.company_name || "(senza nome)"}
               subtitle={[c.company_name, c.position].filter(Boolean).join(" · ")}
               meta={c.email ?? undefined}
-              onClick={() => onChange({
-                source: "contact",
-                recordId: c.id,
-                partnerId: null,
-                contactId: c.id,
-                companyName: c.company_name || "",
-                contactName: c.name,
-                email: c.email,
-                countryCode: null,
-                countryName: c.country,
-              })}
+              onClick={() =>
+                onChange({
+                  source: "contact",
+                  recordId: c.id,
+                  partnerId: null,
+                  contactId: c.id,
+                  companyName: c.company_name || "",
+                  contactName: c.name,
+                  email: c.email,
+                  countryCode: null,
+                  countryName: c.country,
+                })
+              }
             />
           ))}
         </TabsContent>
@@ -209,17 +218,19 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
               title={c.contact_name || c.company_name || "(senza nome)"}
               subtitle={[c.company_name, c.location].filter(Boolean).join(" · ")}
               meta={c.email ?? undefined}
-              onClick={() => onChange({
-                source: "bca",
-                recordId: c.id,
-                partnerId: c.matched_partner_id ?? null,
-                contactId: null,
-                companyName: c.company_name || "",
-                contactName: c.contact_name,
-                email: c.email,
-                countryCode: null,
-                countryName: c.location,
-              })}
+              onClick={() =>
+                onChange({
+                  source: "bca",
+                  recordId: c.id,
+                  partnerId: c.matched_partner_id ?? null,
+                  contactId: null,
+                  companyName: c.company_name || "",
+                  contactName: c.contact_name,
+                  email: c.email,
+                  countryCode: null,
+                  countryName: c.location,
+                })
+              }
             />
           ))}
         </TabsContent>
@@ -235,14 +246,22 @@ function SourceBadge({ source }: { source: ForgeRecipientSource }) {
     bca: "Biglietto",
     manual: "Manuale",
   };
-  return (
-    <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-medium">
-      {map[source]}
-    </span>
-  );
+  return <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-medium">{map[source]}</span>;
 }
 
-function ResultRow({ title, subtitle, meta, flag, onClick }: { title: string; subtitle?: string; meta?: string; flag?: string; onClick: () => void }) {
+function ResultRow({
+  title,
+  subtitle,
+  meta,
+  flag,
+  onClick,
+}: {
+  title: string;
+  subtitle?: string;
+  meta?: string;
+  flag?: string;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -270,20 +289,16 @@ function LoadingRow() {
 }
 
 function EmptyRow() {
-  return (
-    <div className="text-center py-4 text-xs text-foreground">
-      Nessun risultato — affina la ricerca.
-    </div>
-  );
+  return <div className="text-center py-4 text-xs text-foreground">Nessun risultato — affina la ricerca.</div>;
 }
 
 function CountBar({ shown, total }: { shown: number; total: number }) {
   const truncated = shown < total;
   return (
-    <div className={`text-[9px] px-1.5 py-1 rounded ${truncated ? "bg-warning/10 text-warning dark:text-warning" : "text-muted-foreground"}`}>
-      {truncated
-        ? `Mostrati ${shown} di ${total} — affina la ricerca per vedere gli altri.`
-        : `${total} risultati`}
+    <div
+      className={`text-[9px] px-1.5 py-1 rounded ${truncated ? "bg-warning/10 text-warning dark:text-warning" : "text-muted-foreground"}`}
+    >
+      {truncated ? `Mostrati ${shown} di ${total} — affina la ricerca per vedere gli altri.` : `${total} risultati`}
     </div>
   );
 }

@@ -9,9 +9,16 @@ import { type ChannelMessage, messageId, userId, partnerId } from "../domain/ent
 export function mapChannelMessageRow(row: unknown): Result<ChannelMessage, AppError> {
   const parsed = ChannelMessageRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `ChannelMessage row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "channel-message-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `ChannelMessage row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "channel-message-mapper",
+      ),
+    );
   }
   const r = parsed.data;
   return ok({

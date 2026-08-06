@@ -7,13 +7,9 @@ import { ioError, fromUnknown, type AppError } from "../../../core/domain/errors
 import { type CampaignJob } from "../../../core/domain/entities";
 import { mapCampaignJobRow } from "../../../core/mappers/campaign-mapper";
 
-export async function fetchCampaignJobs(
-  batchId?: string,
-): Promise<Result<CampaignJob[], AppError>> {
+export async function fetchCampaignJobs(batchId?: string): Promise<Result<CampaignJob[], AppError>> {
   try {
-    let query = supabase
-      .from("campaign_jobs")
-      .select("*");
+    let query = supabase.from("campaign_jobs").select("*");
 
     if (batchId) query = query.eq("batch_id", batchId);
     query = query.order("created_at", { ascending: false }).limit(200);
@@ -21,9 +17,17 @@ export async function fetchCampaignJobs(
     const { data, error } = await query;
 
     if (error) {
-      return err(ioError("DATABASE_ERROR", error.message, {
-        table: "campaign_jobs", batchId,
-      }, "fetchCampaignJobs"));
+      return err(
+        ioError(
+          "DATABASE_ERROR",
+          error.message,
+          {
+            table: "campaign_jobs",
+            batchId,
+          },
+          "fetchCampaignJobs",
+        ),
+      );
     }
 
     if (!data) return ok([]);

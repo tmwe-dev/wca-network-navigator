@@ -7,9 +7,12 @@
 import { VERSION, DEFAULTS, ERR, CHANNELS } from "./config.js";
 import { discoverImapServer } from "./auto-discover.js";
 import {
-  getSyncState, updateSyncState,
-  saveBatchLocally, uploadToCloud,
-  getStats, updateStats
+  getSyncState,
+  updateSyncState,
+  saveBatchLocally,
+  uploadToCloud,
+  getStats,
+  updateStats,
 } from "./storage-manager.js";
 import { notifyNewEmails } from "./notifier.js";
 
@@ -55,9 +58,9 @@ async function logSent(channel, recipient, preview) {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg?.action) return false;
-  handleMessage(msg).then(sendResponse).catch(err =>
-    sendResponse({ success: false, error: err.message, code: err.code || "UNKNOWN" })
-  );
+  handleMessage(msg)
+    .then(sendResponse)
+    .catch((err) => sendResponse({ success: false, error: err.message, code: err.code || "UNKNOWN" }));
   return true;
 });
 
@@ -107,13 +110,13 @@ async function handleMessage(msg) {
 
     case "markRead": {
       const emails = await getCachedEmails();
-      await setCachedEmails(emails.map(e => e.uid === msg.uid ? { ...e, unread: false } : e));
+      await setCachedEmails(emails.map((e) => (e.uid === msg.uid ? { ...e, unread: false } : e)));
       return { success: true };
     }
 
     case "toggleFlag": {
       const emails = await getCachedEmails();
-      await setCachedEmails(emails.map(e => e.uid === msg.uid ? { ...e, flagged: msg.flagged } : e));
+      await setCachedEmails(emails.map((e) => (e.uid === msg.uid ? { ...e, flagged: msg.flagged } : e)));
       return { success: true };
     }
 
@@ -308,14 +311,21 @@ async function handleSendLinkedIn(msg) {
         target: { tabId },
         func: () => {
           const btns = Array.from(document.querySelectorAll("button"));
-          const msgBtn = btns.find(b => /^(message|messaggio)/i.test(b.textContent.trim()));
-          if (msgBtn) { msgBtn.click(); return { success: true }; }
+          const msgBtn = btns.find((b) => /^(message|messaggio)/i.test(b.textContent.trim()));
+          if (msgBtn) {
+            msgBtn.click();
+            return { success: true };
+          }
           return { success: false, error: "Pulsante Messaggio non trovato" };
         },
       });
 
       if (!clickResult?.[0]?.result?.success) {
-        return { success: false, code: ERR.INJECT_FAILED, error: clickResult?.[0]?.result?.error || "Pulsante Messaggio non trovato" };
+        return {
+          success: false,
+          code: ERR.INJECT_FAILED,
+          error: clickResult?.[0]?.result?.error || "Pulsante Messaggio non trovato",
+        };
       }
 
       await sleep(3000);
@@ -340,14 +350,23 @@ async function handleSendLinkedIn(msg) {
         target: { tabId },
         func: () => {
           const btns = Array.from(document.querySelectorAll("button"));
-          const msgBtn = btns.find(b => /^(message|messaggio)/i.test(b.textContent.trim()) && b.offsetParent !== null);
-          if (msgBtn) { msgBtn.click(); return { success: true }; }
+          const msgBtn = btns.find(
+            (b) => /^(message|messaggio)/i.test(b.textContent.trim()) && b.offsetParent !== null,
+          );
+          if (msgBtn) {
+            msgBtn.click();
+            return { success: true };
+          }
           return { success: false, error: "Nessun risultato trovato o pulsante Messaggio non disponibile" };
         },
       });
 
       if (!clickResult?.[0]?.result?.success) {
-        return { success: false, code: ERR.INJECT_FAILED, error: clickResult?.[0]?.result?.error || "Impossibile aprire la chat" };
+        return {
+          success: false,
+          code: ERR.INJECT_FAILED,
+          error: clickResult?.[0]?.result?.error || "Impossibile aprire la chat",
+        };
       }
 
       await sleep(3000);
@@ -400,10 +419,11 @@ async function handleSendLinkedIn(msg) {
         // Find and click send button
         setTimeout(() => {
           const sendBtns = Array.from(document.querySelectorAll("button"));
-          const sendBtn = sendBtns.find(b => {
-            const label = (b.getAttribute("aria-label") || b.textContent || "").toLowerCase();
-            return /^(send|invia)$/i.test(label.trim()) || /send|invia/i.test(b.getAttribute("type") || "");
-          }) || document.querySelector('.msg-form__send-button, button[type="submit"]');
+          const sendBtn =
+            sendBtns.find((b) => {
+              const label = (b.getAttribute("aria-label") || b.textContent || "").toLowerCase();
+              return /^(send|invia)$/i.test(label.trim()) || /send|invia/i.test(b.getAttribute("type") || "");
+            }) || document.querySelector('.msg-form__send-button, button[type="submit"]');
 
           if (sendBtn && sendBtn.offsetParent !== null) {
             sendBtn.click();
@@ -467,18 +487,18 @@ async function runSync() {
     if (emails.length > 0) {
       if (storageMode === "local") {
         const results = await saveBatchLocally(emails);
-        downloaded = results.filter(r => r.success).length;
-        errors = results.filter(r => !r.success).length;
+        downloaded = results.filter((r) => r.success).length;
+        errors = results.filter((r) => !r.success).length;
       } else {
         await uploadToCloud(cfg.proxyUrl, cfg.authToken, emails);
         downloaded = emails.length;
       }
 
       const existingEmails = await getCachedEmails();
-      const existingUids = new Set(existingEmails.map(e => e.uid));
+      const existingUids = new Set(existingEmails.map((e) => e.uid));
       const newEmails = emails
-        .filter(e => !existingUids.has(e.uid))
-        .map(e => ({
+        .filter((e) => !existingUids.has(e.uid))
+        .map((e) => ({
           uid: e.uid,
           subject: e.subject || "(senza oggetto)",
           from: e.from || "",
@@ -490,7 +510,7 @@ async function runSync() {
           raw: storageMode === "local" ? null : e.raw,
           unread: true,
           flagged: false,
-          hasAttachments: !!(e.attachments?.length),
+          hasAttachments: !!e.attachments?.length,
           attachments: e.attachments || [],
         }));
 
@@ -500,7 +520,9 @@ async function runSync() {
         await notifyNewEmails(emails, true);
       }
 
-      try { chrome.runtime.sendMessage({ action: "emailsUpdated" }); } catch { }
+      try {
+        chrome.runtime.sendMessage({ action: "emailsUpdated" });
+      } catch {}
     }
 
     await updateSyncState({
@@ -535,8 +557,11 @@ async function testImapConnection(cfg) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: cfg.email, password: cfg.password,
-        host: cfg.imapHost, port: cfg.imapPort, tls: cfg.imapTls !== false,
+        email: cfg.email,
+        password: cfg.password,
+        host: cfg.imapHost,
+        port: cfg.imapPort,
+        tls: cfg.imapTls !== false,
       }),
     });
     if (!res.ok) {
@@ -549,7 +574,9 @@ async function testImapConnection(cfg) {
   }
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 function waitForTabLoaded(tabId, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {

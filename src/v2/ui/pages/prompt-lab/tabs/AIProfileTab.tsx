@@ -43,35 +43,41 @@ export function AIProfileTab() {
     }));
   }, [settings.data]);
 
-  const onSave = useCallback(async (id: string) => {
-    const block = state.blocks.find((b) => b.id === id);
-    if (!block || !userId) return;
-    setSaving(id);
-    try {
-      await upsertAppSetting(userId, id, block.content);
-      await logSupervisorAudit({ action: "prompt_lab_save", target_table: "app_settings", target_id: id });
-      state.markClean(id);
-      toast.success(`${block.label} salvato`);
-    } catch (e) {
-      toast.error(String(e));
-    } finally {
-      setSaving(null);
-    }
-  }, [state, userId]);
+  const onSave = useCallback(
+    async (id: string) => {
+      const block = state.blocks.find((b) => b.id === id);
+      if (!block || !userId) return;
+      setSaving(id);
+      try {
+        await upsertAppSetting(userId, id, block.content);
+        await logSupervisorAudit({ action: "prompt_lab_save", target_table: "app_settings", target_id: id });
+        state.markClean(id);
+        toast.success(`${block.label} salvato`);
+      } catch (e) {
+        toast.error(String(e));
+      } finally {
+        setSaving(null);
+      }
+    },
+    [state, userId],
+  );
 
-  const onImprove = useCallback(async (id: string) => {
-    const block = state.blocks.find((b) => b.id === id);
-    if (!block) return;
-    setSaving(id);
-    try {
-      const improved = await lab.improveBlock({ block, tabLabel: "AI Profile" });
-      state.setImproved(id, improved);
-    } catch (e) {
-      toast.error(String(e));
-    } finally {
-      setSaving(null);
-    }
-  }, [lab, state]);
+  const onImprove = useCallback(
+    async (id: string) => {
+      const block = state.blocks.find((b) => b.id === id);
+      if (!block) return;
+      setSaving(id);
+      try {
+        const improved = await lab.improveBlock({ block, tabLabel: "AI Profile" });
+        state.setImproved(id, improved);
+      } catch (e) {
+        toast.error(String(e));
+      } finally {
+        setSaving(null);
+      }
+    },
+    [lab, state],
+  );
 
   if (state.loading) return <div className="p-4 text-sm text-muted-foreground">Caricamento...</div>;
 

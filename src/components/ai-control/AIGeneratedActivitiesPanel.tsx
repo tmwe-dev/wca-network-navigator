@@ -2,45 +2,50 @@
  * AIGeneratedActivitiesPanel — Adapted from tmwengine AIGeneratedActivitiesPanel.
  * Shows activities WHERE metadata->>'created_by_ai' = 'true' AND status = 'pending'.
  */
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { findAIGeneratedActivities, setActivityStatus, updateActivityDescription } from '@/data/activities';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle2, XCircle, Edit2, Calendar, Phone, ListTodo, Sparkles, Mail } from 'lucide-react';
-import { toast } from 'sonner';
-import { Textarea } from '@/components/ui/textarea';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { findAIGeneratedActivities, setActivityStatus, updateActivityDescription } from "@/data/activities";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, CheckCircle2, XCircle, Edit2, Calendar, Phone, ListTodo, Sparkles, Mail } from "lucide-react";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 import { queryKeys } from "@/lib/queryKeys";
 
 const ActivityIcon = ({ type }: { type: string }) => {
   switch (type) {
-    case 'meeting': return <Calendar className="h-5 w-5" />;
-    case 'call': return <Phone className="h-5 w-5" />;
-    case 'task': return <ListTodo className="h-5 w-5" />;
-    case 'email': return <Mail className="h-5 w-5" />;
-    default: return <Sparkles className="h-5 w-5" />;
+    case "meeting":
+      return <Calendar className="h-5 w-5" />;
+    case "call":
+      return <Phone className="h-5 w-5" />;
+    case "task":
+      return <ListTodo className="h-5 w-5" />;
+    case "email":
+      return <Mail className="h-5 w-5" />;
+    default:
+      return <Sparkles className="h-5 w-5" />;
   }
 };
 
 const ActivityLabel: Record<string, string> = {
-  meeting: 'Meeting',
-  call: 'Chiamata',
-  task: 'Task',
-  email: 'Email',
-  follow_up: 'Follow-Up',
+  meeting: "Meeting",
+  call: "Chiamata",
+  task: "Task",
+  email: "Email",
+  follow_up: "Follow-Up",
 };
 
 const PriorityColor: Record<string, string> = {
-  high: 'bg-red-500/10 text-red-400 border-red-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  low: 'bg-green-500/10 text-green-400 border-green-500/20',
+  high: "bg-red-500/10 text-red-400 border-red-500/20",
+  medium: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  low: "bg-green-500/10 text-green-400 border-green-500/20",
 };
 
 export function AIGeneratedActivitiesPanel() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editedDescription, setEditedDescription] = useState('');
+  const [editedDescription, setEditedDescription] = useState("");
 
   const { data: activities, isLoading } = useQuery({
     queryKey: queryKeys.activities.aiGenerated,
@@ -49,28 +54,29 @@ export function AIGeneratedActivitiesPanel() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: (activityId: string) => setActivityStatus(activityId, 'in_progress'),
+    mutationFn: (activityId: string) => setActivityStatus(activityId, "in_progress"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
-      toast.success('Attività approvata');
+      toast.success("Attività approvata");
     },
     onError: (err: Error) => toast.error(`Errore: ${err.message}`),
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (activityId: string) => setActivityStatus(activityId, 'cancelled'),
+    mutationFn: (activityId: string) => setActivityStatus(activityId, "cancelled"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
-      toast.success('Attività rifiutata');
+      toast.success("Attività rifiutata");
     },
     onError: (err: Error) => toast.error(`Errore: ${err.message}`),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, description }: { id: string; description: string }) => updateActivityDescription(id, description),
+    mutationFn: ({ id, description }: { id: string; description: string }) =>
+      updateActivityDescription(id, description),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.activities.aiGenerated });
-      toast.success('Descrizione aggiornata');
+      toast.success("Descrizione aggiornata");
       setEditingId(null);
     },
     onError: (err: Error) => toast.error(`Errore: ${err.message}`),
@@ -102,9 +108,7 @@ export function AIGeneratedActivitiesPanel() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Nessuna attività AI in sospeso
-          </p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nessuna attività AI in sospeso</p>
         </CardContent>
       </Card>
     );
@@ -116,7 +120,9 @@ export function AIGeneratedActivitiesPanel() {
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5" />
           Attività Generate dall'AI
-          <Badge variant="secondary" className="ml-auto">{activities.length}</Badge>
+          <Badge variant="secondary" className="ml-auto">
+            {activities.length}
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
@@ -137,7 +143,7 @@ export function AIGeneratedActivitiesPanel() {
                         <Badge variant="outline">
                           {ActivityLabel[activity.activity_type] || activity.activity_type}
                         </Badge>
-                        <Badge variant="outline" className={PriorityColor[activity.priority] || ''}>
+                        <Badge variant="outline" className={PriorityColor[activity.priority] || ""}>
                           {activity.priority}
                         </Badge>
                         {confidence != null && (
@@ -158,10 +164,21 @@ export function AIGeneratedActivitiesPanel() {
                         className="min-h-[80px]"
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => updateMutation.mutate({ id: activity.id, description: editedDescription })} disabled={updateMutation.isPending}>
+                        <Button
+                          size="sm"
+                          onClick={() => updateMutation.mutate({ id: activity.id, description: editedDescription })}
+                          disabled={updateMutation.isPending}
+                        >
                           Salva
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setEditingId(null); setEditedDescription(''); }}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditedDescription("");
+                          }}
+                        >
                           Annulla
                         </Button>
                       </div>
@@ -178,27 +195,43 @@ export function AIGeneratedActivitiesPanel() {
 
                   {activity.due_date && (
                     <div className="text-xs text-muted-foreground">
-                      📅 Scadenza: {new Date(activity.due_date).toLocaleDateString('it-IT')}
+                      📅 Scadenza: {new Date(activity.due_date).toLocaleDateString("it-IT")}
                     </div>
                   )}
 
                   <div className="flex gap-2 pt-2">
-                    <Button size="sm" onClick={() => approveMutation.mutate(activity.id)} disabled={approveMutation.isPending}>
+                    <Button
+                      size="sm"
+                      onClick={() => approveMutation.mutate(activity.id)}
+                      disabled={approveMutation.isPending}
+                    >
                       <CheckCircle2 className="h-4 w-4 mr-1" />
                       Approva
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => { setEditingId(activity.id); setEditedDescription(activity.description || ''); }}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingId(activity.id);
+                        setEditedDescription(activity.description || "");
+                      }}
+                    >
                       <Edit2 className="h-4 w-4 mr-1" />
                       Modifica
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => rejectMutation.mutate(activity.id)} disabled={rejectMutation.isPending}>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => rejectMutation.mutate(activity.id)}
+                      disabled={rejectMutation.isPending}
+                    >
                       <XCircle className="h-4 w-4 mr-1" />
                       Rifiuta
                     </Button>
                   </div>
 
                   <div className="text-xs text-muted-foreground">
-                    Creata: {new Date(activity.created_at).toLocaleString('it-IT')}
+                    Creata: {new Date(activity.created_at).toLocaleString("it-IT")}
                   </div>
                 </div>
               </div>

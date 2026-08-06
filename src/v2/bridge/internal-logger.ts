@@ -16,20 +16,20 @@ export function createLogger(module: string): Logger {
     debug(message, context) {
       if (typeof import.meta !== "undefined" && import.meta.env?.PROD) return;
       // eslint-disable-next-line no-console
-      console.debug(prefix, message, context ?? "");  
+      console.debug(prefix, message, context ?? "");
     },
     info(message, context) {
       if (typeof import.meta !== "undefined" && import.meta.env?.PROD) return;
       // eslint-disable-next-line no-console
-      console.info(prefix, message, context ?? "");  
+      console.info(prefix, message, context ?? "");
     },
     warn(message, context) {
       // eslint-disable-next-line no-console
-      console.warn(prefix, message, context ?? "");  
+      console.warn(prefix, message, context ?? "");
     },
     error(message, context) {
       // eslint-disable-next-line no-console
-      console.error(prefix, message, context ?? "");  
+      console.error(prefix, message, context ?? "");
     },
   };
 }

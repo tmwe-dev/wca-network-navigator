@@ -12,9 +12,7 @@ const MESSAGE_ROLES = ["user", "assistant", "tool", "system"] as const;
 type MessageRole = (typeof MESSAGE_ROLES)[number];
 
 function parseRole(value: string): MessageRole {
-  return (MESSAGE_ROLES as readonly string[]).includes(value)
-    ? (value as MessageRole)
-    : "assistant";
+  return (MESSAGE_ROLES as readonly string[]).includes(value) ? (value as MessageRole) : "assistant";
 }
 
 function mapMessage(row: Tables<"command_messages">): ConversationMessage {
@@ -29,12 +27,10 @@ function mapMessage(row: Tables<"command_messages">): ConversationMessage {
   };
 }
 
-export async function createConversation(
-  userId: string,
-  title?: string,
-): Promise<Result<Conversation>> {
+export async function createConversation(userId: string, title?: string): Promise<Result<Conversation>> {
   try {
-    const { data, error } = await supabase.from("command_conversations")
+    const { data, error } = await supabase
+      .from("command_conversations")
       .insert({ user_id: userId, title: title ?? null })
       .select()
       .single();
@@ -55,7 +51,8 @@ export async function appendMessage(
   },
 ): Promise<Result<ConversationMessage>> {
   try {
-    const { data, error } = await supabase.from("command_messages")
+    const { data, error } = await supabase
+      .from("command_messages")
       .insert({
         conversation_id: conversationId,
         role: msg.role,
@@ -68,7 +65,8 @@ export async function appendMessage(
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
 
     // Bump last_message_at
-    await supabase.from("command_conversations")
+    await supabase
+      .from("command_conversations")
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", conversationId);
 
@@ -78,14 +76,9 @@ export async function appendMessage(
   }
 }
 
-export async function updateConversationTitle(
-  id: string,
-  title: string,
-): Promise<Result<void>> {
+export async function updateConversationTitle(id: string, title: string): Promise<Result<void>> {
   try {
-    const { error } = await supabase.from("command_conversations")
-      .update({ title })
-      .eq("id", id);
+    const { error } = await supabase.from("command_conversations").update({ title }).eq("id", id);
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
     return ok(undefined);
   } catch (e) {
@@ -95,9 +88,7 @@ export async function updateConversationTitle(
 
 export async function archiveConversation(id: string): Promise<Result<void>> {
   try {
-    const { error } = await supabase.from("command_conversations")
-      .update({ archived: true })
-      .eq("id", id);
+    const { error } = await supabase.from("command_conversations").update({ archived: true }).eq("id", id);
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
     return ok(undefined);
   } catch (e) {

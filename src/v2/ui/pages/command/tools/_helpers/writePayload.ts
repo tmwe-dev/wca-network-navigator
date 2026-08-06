@@ -65,9 +65,7 @@ export async function resolvePartnerRef(
 /**
  * Risolve un riferimento a contatto (UUID o nome/email fuzzy) → id contatto.
  */
-export async function resolveContactRef(
-  ref: string | null | undefined,
-): Promise<{ id: string; name: string } | null> {
+export async function resolveContactRef(ref: string | null | undefined): Promise<{ id: string; name: string } | null> {
   const term = (ref ?? "").trim();
   if (!term) return null;
   if (isUuid(term)) {

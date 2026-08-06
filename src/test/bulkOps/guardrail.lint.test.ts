@@ -10,18 +10,23 @@ describe("ESLint rule no-direct-bulk-op", () => {
   it("regole valid/invalid", () => {
     tester.run("no-direct-bulk-op", rule, {
       valid: [
-        { filename: "/src/v2/services/bulkOps/entries/enrichBase.ts",
-          code: `import { invokeEdge } from "x"; invokeEdge("enrich-partner-website", {});` },
-        { filename: "/src/components/Foo.tsx",
-          code: `import { invokeEdge } from "x"; invokeEdge("send-email", {});` },
+        {
+          filename: "/src/v2/services/bulkOps/entries/enrichBase.ts",
+          code: `import { invokeEdge } from "x"; invokeEdge("enrich-partner-website", {});`,
+        },
+        { filename: "/src/components/Foo.tsx", code: `import { invokeEdge } from "x"; invokeEdge("send-email", {});` },
       ],
       invalid: [
-        { filename: "/src/components/Foo.tsx",
+        {
+          filename: "/src/components/Foo.tsx",
           code: `import { invokeEdge } from "x"; invokeEdge("enrich-partner-website", {});`,
-          errors: [{ messageId: "edge" }] },
-        { filename: "/src/v2/ui/pages/NetworkPage.tsx",
+          errors: [{ messageId: "edge" }],
+        },
+        {
+          filename: "/src/v2/ui/pages/NetworkPage.tsx",
           code: `import { useDeepSearchV2 } from "y";`,
-          errors: [{ messageId: "hook" }] },
+          errors: [{ messageId: "hook" }],
+        },
       ],
     });
   });

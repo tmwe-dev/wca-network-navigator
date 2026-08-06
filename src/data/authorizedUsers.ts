@@ -29,10 +29,7 @@ export async function findAuthorizedUsers(): Promise<AuthorizedUserRow[]> {
 }
 
 /** Inserisce un indirizzo in whitelist. Errori propagati. */
-export async function insertAuthorizedUser(params: {
-  email: string;
-  displayName: string | null;
-}): Promise<void> {
+export async function insertAuthorizedUser(params: { email: string; displayName: string | null }): Promise<void> {
   const { error } = await supabase
     .from("authorized_users")
     .insert([{ email: params.email, display_name: params.displayName }]);
@@ -41,10 +38,7 @@ export async function insertAuthorizedUser(params: {
 
 /** Attiva/disattiva un utente autorizzato. Errori propagati. */
 export async function setAuthorizedUserActive(id: string, isActive: boolean): Promise<void> {
-  const { error } = await supabase
-    .from("authorized_users")
-    .update({ is_active: isActive })
-    .eq("id", id);
+  const { error } = await supabase.from("authorized_users").update({ is_active: isActive }).eq("id", id);
   if (error) throw error;
 }
 

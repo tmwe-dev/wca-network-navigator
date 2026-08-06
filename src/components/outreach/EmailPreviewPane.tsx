@@ -21,11 +21,11 @@ export interface EmailPreviewItem {
   readonly companyName?: string | null;
   readonly subject: string;
   readonly htmlBody: string;
-  readonly sourceLabel: string;            // "Bozza AI", "Campagna", "Step 2/5 sequenza Primo Contatto WCA"
+  readonly sourceLabel: string; // "Bozza AI", "Campagna", "Step 2/5 sequenza Primo Contatto WCA"
   readonly sourceTone?: "primary" | "blue" | "amber" | "purple" | "muted";
   readonly scheduledAt?: string | null;
   readonly errorMessage?: string | null;
-  readonly readonly?: boolean;             // true per Inviati
+  readonly readonly?: boolean; // true per Inviati
 }
 
 interface EmailPreviewPaneProps {
@@ -46,7 +46,15 @@ const TONE_CLASS: Record<NonNullable<EmailPreviewItem["sourceTone"]>, string> = 
   muted: "bg-muted text-muted-foreground border-border",
 };
 
-export function EmailPreviewPane({ item, onClose, onAuthorize, onCancel, onReschedule, onEdit, onRetry }: EmailPreviewPaneProps) {
+export function EmailPreviewPane({
+  item,
+  onClose,
+  onAuthorize,
+  onCancel,
+  onReschedule,
+  onEdit,
+  onRetry,
+}: EmailPreviewPaneProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   if (!item) {
@@ -54,7 +62,9 @@ export function EmailPreviewPane({ item, onClose, onAuthorize, onCancel, onResch
       <div className="h-full flex flex-col items-center justify-center text-center px-6 text-muted-foreground bg-muted/5 border-l border-border/30">
         <Mail className="w-10 h-10 text-muted-foreground mb-3" />
         <p className="text-sm font-medium">Seleziona un messaggio</p>
-        <p className="text-xs mt-1">Clicca una riga a sinistra per vedere oggetto, corpo, sorgente e bottoni di azione.</p>
+        <p className="text-xs mt-1">
+          Clicca una riga a sinistra per vedere oggetto, corpo, sorgente e bottoni di azione.
+        </p>
       </div>
     );
   }
@@ -83,7 +93,9 @@ export function EmailPreviewPane({ item, onClose, onAuthorize, onCancel, onResch
 
       {/* Source + scheduled */}
       <div className="shrink-0 px-4 py-2 border-b border-border/30 flex items-center gap-2 flex-wrap text-[11px]">
-        <Badge variant="outline" className={`text-[10px] h-5 ${tone}`}>{item.sourceLabel}</Badge>
+        <Badge variant="outline" className={`text-[10px] h-5 ${tone}`}>
+          {item.sourceLabel}
+        </Badge>
         {item.scheduledAt && (
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <CalendarIcon className="w-3 h-3" />
@@ -102,7 +114,9 @@ export function EmailPreviewPane({ item, onClose, onAuthorize, onCancel, onResch
         <div className="p-4 space-y-3">
           <div>
             <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Oggetto</p>
-            <p className="text-sm font-medium text-foreground mt-0.5">{item.subject || <span className="italic text-muted-foreground">(nessun oggetto)</span>}</p>
+            <p className="text-sm font-medium text-foreground mt-0.5">
+              {item.subject || <span className="italic text-muted-foreground">(nessun oggetto)</span>}
+            </p>
           </div>
           <div>
             <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide mb-1">Corpo email</p>
@@ -112,7 +126,9 @@ export function EmailPreviewPane({ item, onClose, onAuthorize, onCancel, onResch
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.htmlBody) }}
               />
             ) : (
-              <p className="text-xs italic text-muted-foreground">Corpo non disponibile (la mail verrà composta al momento dell'invio dal template).</p>
+              <p className="text-xs italic text-muted-foreground">
+                Corpo non disponibile (la mail verrà composta al momento dell'invio dal template).
+              </p>
             )}
           </div>
         </div>
@@ -158,7 +174,12 @@ export function EmailPreviewPane({ item, onClose, onAuthorize, onCancel, onResch
             </Button>
           )}
           {onCancel && (
-            <Button size="sm" variant="ghost" className="h-7 text-[11px] gap-1 text-destructive ml-auto" onClick={() => onCancel(item.id)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-[11px] gap-1 text-destructive ml-auto"
+              onClick={() => onCancel(item.id)}
+            >
               <X className="w-3 h-3" /> Annulla
             </Button>
           )}

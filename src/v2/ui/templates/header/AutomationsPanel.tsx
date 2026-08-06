@@ -10,36 +10,79 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Cog, CheckCircle2, XCircle, Clock, AlertTriangle, ArrowDownLeft, ArrowUpRight, MessageCircle, Linkedin } from "lucide-react";
+import {
+  Cog,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  MessageCircle,
+  Linkedin,
+} from "lucide-react";
 import { listCronJobStatus, listCronRecentRuns, type CronJobStatus, type CronRunRow } from "@/data/cronJobs";
 import { listRecentChannelActivity, type ChannelActivityRow } from "@/data/channelActivity";
 import { queryKeys } from "@/lib/queryKeys";
 
 /** Etichette leggibili e descrizioni operative dei cron job. */
 const JOB_INFO: Record<string, { label: string; desc: string }> = {
-  outreach_scheduler_tick: { label: "Outreach · invio messaggi schedulati", desc: "Manda email/WA/LinkedIn pianificati ogni 5 min" },
-  email_cron_sync_tick: { label: "Email · sincronizzazione caselle", desc: "Scarica nuove email IMAP da tutte le caselle attive" },
-  agent_autonomous_cycle_tick: { label: "Agenti · ciclo autonomo", desc: "Gli agenti decidono prossime azioni sui lead" },
-  agent_autopilot_worker_tick: { label: "Autopilot · esecuzione missioni", desc: "Avanza missioni autopilot attive (KPI/budget)" },
+  outreach_scheduler_tick: {
+    label: "Outreach · invio messaggi schedulati",
+    desc: "Manda email/WA/LinkedIn pianificati ogni 5 min",
+  },
+  email_cron_sync_tick: {
+    label: "Email · sincronizzazione caselle",
+    desc: "Scarica nuove email IMAP da tutte le caselle attive",
+  },
+  agent_autonomous_cycle_tick: {
+    label: "Agenti · ciclo autonomo",
+    desc: "Gli agenti decidono prossime azioni sui lead",
+  },
+  agent_autopilot_worker_tick: {
+    label: "Autopilot · esecuzione missioni",
+    desc: "Avanza missioni autopilot attive (KPI/budget)",
+  },
   agent_task_drainer_tick: { label: "Agenti · esecuzione task in coda", desc: "Esegue tool richiesti dagli agenti" },
-  "agent-prompt-refiner-weekly": { label: "Prompt · raffinamento settimanale", desc: "Analizza i prompt e propone migliorie (ogni lunedì)" },
+  "agent-prompt-refiner-weekly": {
+    label: "Prompt · raffinamento settimanale",
+    desc: "Analizza i prompt e propone migliorie (ogni lunedì)",
+  },
   "ai-backup": { label: "AI · backup configurazioni", desc: "Snapshot prompt, agenti, KB (settimanale)" },
   "ai-learning-feedback": { label: "AI · learning feedback", desc: "Aggrega feedback per il fine-tuning" },
-  batch_enrichment_worker_tick: { label: "Arricchimento · batch worker", desc: "Arricchisce partner in coda (ogni 30 min)" },
+  batch_enrichment_worker_tick: {
+    label: "Arricchimento · batch worker",
+    desc: "Arricchisce partner in coda (ogni 30 min)",
+  },
   "cadence-engine": { label: "Cadenze · motore follow-up", desc: "Genera step successivi delle cadenze (ogni ora)" },
-  "classify-emails-batch-every-5min": { label: "Email · classificazione AI", desc: "Categorizza email inbound (ogni 5 min)" },
+  "classify-emails-batch-every-5min": {
+    label: "Email · classificazione AI",
+    desc: "Categorizza email inbound (ogni 5 min)",
+  },
   "cleanup-cron-runs": { label: "Manutenzione · pulizia run cron", desc: "Cancella vecchi log cron (notturno)" },
   "cleanup-rejected-actions": { label: "Manutenzione · azioni rifiutate", desc: "Pulisce ai_pending_actions scartate" },
   cron_run_log_cleanup: { label: "Manutenzione · log cron", desc: "Compatta il log dei run cron" },
-  "expire-stuck-import-logs": { label: "Import · timeout job bloccati", desc: "Marca import bloccati come scaduti (ogni 15 min)" },
-  "funnemail-policy-engine-10min": { label: "Funnemail · policy engine", desc: "Applica policy editoriali alle email (10 min)" },
+  "expire-stuck-import-logs": {
+    label: "Import · timeout job bloccati",
+    desc: "Marca import bloccati come scaduti (ogni 15 min)",
+  },
+  "funnemail-policy-engine-10min": {
+    label: "Funnemail · policy engine",
+    desc: "Applica policy editoriali alle email (10 min)",
+  },
   "funnemail-reminders-tick-1min": { label: "Funnemail · reminder", desc: "Manda reminder follow-up (ogni minuto)" },
-  kb_embed_backfill_daily: { label: "KB · embedding backfill", desc: "Calcola embedding mancanti della Knowledge Base" },
+  kb_embed_backfill_daily: {
+    label: "KB · embedding backfill",
+    desc: "Calcola embedding mancanti della Knowledge Base",
+  },
   "kb-doctrine-audit-weekly": { label: "KB · audit dottrina", desc: "Verifica duplicati e qualità KB (settimanale)" },
   "kb-promoter": { label: "KB · promozione contenuti", desc: "Promuove voci KB di alto valore" },
   memory_embed_backfill_daily: { label: "Memoria · embedding backfill", desc: "Indicizza memorie persistenti" },
   "memory-promoter": { label: "Memoria · promozione", desc: "Promuove memorie rilevanti" },
-  "process-inbound-enrichment-every-minute": { label: "Inbound · arricchimento", desc: "Arricchisce email/contatti in ingresso (ogni minuto)" },
+  "process-inbound-enrichment-every-minute": {
+    label: "Inbound · arricchimento",
+    desc: "Arricchisce email/contatti in ingresso (ogni minuto)",
+  },
   "prompt-test-runner-nightly": { label: "Prompt · test di regressione", desc: "Esegue test cases sui prompt (notte)" },
   "purge-runtime-traces": { label: "Trace · purge runtime", desc: "Pulisce trace AI vecchi" },
   "smart-scheduler": { label: "Smart Scheduler", desc: "Orchestratore generale delle automazioni (5:00)" },
@@ -77,14 +120,22 @@ function channelIcon(channel: string): React.ReactNode {
 
 function dispatchStatusLabel(s: string | null | undefined): string {
   switch (s) {
-    case "pending": return "in attesa";
-    case "queued": return "in coda";
-    case "processing": return "in invio";
-    case "sent": return "inviato";
-    case "delivered": return "consegnato";
-    case "failed": return "fallito";
-    case "skipped": return "saltato";
-    default: return s ?? "—";
+    case "pending":
+      return "in attesa";
+    case "queued":
+      return "in coda";
+    case "processing":
+      return "in invio";
+    case "sent":
+      return "inviato";
+    case "delivered":
+      return "consegnato";
+    case "failed":
+      return "fallito";
+    case "skipped":
+      return "saltato";
+    default:
+      return s ?? "—";
   }
 }
 
@@ -131,12 +182,20 @@ export function AutomationsPanel(): React.ReactElement {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" aria-label="Automazioni" title="Automazioni">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 text-xs"
+          aria-label="Automazioni"
+          title="Automazioni"
+        >
           <Cog className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="hidden xl:inline text-muted-foreground">Automazioni</span>
           <span className={`inline-block h-2 w-2 rounded-full ${dot}`} />
           {failed24h > 0 && (
-            <Badge variant="outline" className="h-4 px-1 text-[10px] text-amber-600 border-amber-500/40">{failed24h}</Badge>
+            <Badge variant="outline" className="h-4 px-1 text-[10px] text-amber-600 border-amber-500/40">
+              {failed24h}
+            </Badge>
           )}
         </Button>
       </PopoverTrigger>
@@ -147,9 +206,13 @@ export function AutomationsPanel(): React.ReactElement {
             <span className="text-sm font-medium">Automazioni</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Badge variant="secondary" className="text-[10px]">{totalActive} attivi</Badge>
+            <Badge variant="secondary" className="text-[10px]">
+              {totalActive} attivi
+            </Badge>
             {failed24h > 0 && (
-              <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-500/40">{failed24h} falliti 24h</Badge>
+              <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-500/40">
+                {failed24h} falliti 24h
+              </Badge>
             )}
           </div>
         </div>
@@ -158,11 +221,15 @@ export function AutomationsPanel(): React.ReactElement {
           <button
             onClick={() => setTab("cron")}
             className={`px-3 py-1 rounded-sm transition ${tab === "cron" ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >Cron job</button>
+          >
+            Cron job
+          </button>
           <button
             onClick={() => setTab("channels")}
             className={`px-3 py-1 rounded-sm transition ${tab === "channels" ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >Attività canali</button>
+          >
+            Attività canali
+          </button>
         </div>
 
         {tab === "cron" && (
@@ -171,16 +238,24 @@ export function AutomationsPanel(): React.ReactElement {
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Job schedulati</div>
               <ScrollArea className="h-[200px] pr-2">
                 {loadingJobs && <div className="text-xs text-muted-foreground">Caricamento…</div>}
-                {!loadingJobs && jobs.length === 0 && <div className="text-xs text-muted-foreground">Nessun cron job configurato.</div>}
+                {!loadingJobs && jobs.length === 0 && (
+                  <div className="text-xs text-muted-foreground">Nessun cron job configurato.</div>
+                )}
                 <ul className="space-y-1">
                   {jobs.map((j) => {
                     const info = infoFor(j.jobname);
                     return (
-                      <li key={j.jobname} className="flex items-start justify-between gap-2 text-xs rounded-md px-1.5 py-1 hover:bg-muted/50">
+                      <li
+                        key={j.jobname}
+                        className="flex items-start justify-between gap-2 text-xs rounded-md px-1.5 py-1 hover:bg-muted/50"
+                      >
                         <div className="flex items-start gap-2 min-w-0">
                           <span className="mt-0.5">{statusIcon(j.last_status)}</span>
                           <div className="min-w-0">
-                            <div className={`truncate font-medium ${j.active ? "" : "text-muted-foreground line-through"}`} title={j.jobname}>
+                            <div
+                              className={`truncate font-medium ${j.active ? "" : "text-muted-foreground line-through"}`}
+                              title={j.jobname}
+                            >
                               {info.label}
                             </div>
                             <div className="truncate text-[10px] text-muted-foreground" title={info.desc}>
@@ -188,7 +263,10 @@ export function AutomationsPanel(): React.ReactElement {
                             </div>
                           </div>
                         </div>
-                        <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums" title={j.last_run ?? ""}>
+                        <span
+                          className="text-[10px] text-muted-foreground shrink-0 tabular-nums"
+                          title={j.last_run ?? ""}
+                        >
                           {relativeTime(j.last_run)}
                         </span>
                       </li>
@@ -202,15 +280,22 @@ export function AutomationsPanel(): React.ReactElement {
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Ultimi run</div>
               <ScrollArea className="h-[150px] pr-2">
                 {loadingRuns && <div className="text-xs text-muted-foreground">Caricamento…</div>}
-                {!loadingRuns && runs.length === 0 && <div className="text-xs text-muted-foreground">Nessun run registrato.</div>}
+                {!loadingRuns && runs.length === 0 && (
+                  <div className="text-xs text-muted-foreground">Nessun run registrato.</div>
+                )}
                 <ul className="space-y-1">
                   {runs.map((r, idx) => {
                     const info = infoFor(r.jobname ?? "");
                     return (
-                      <li key={`${r.jobid}-${r.start_time}-${idx}`} className="flex items-center justify-between gap-2 text-xs rounded-md px-1.5 py-1 hover:bg-muted/50">
+                      <li
+                        key={`${r.jobid}-${r.start_time}-${idx}`}
+                        className="flex items-center justify-between gap-2 text-xs rounded-md px-1.5 py-1 hover:bg-muted/50"
+                      >
                         <div className="flex items-center gap-2 min-w-0">
                           {statusIcon(r.status)}
-                          <span className="truncate" title={r.return_message ?? r.status}>{info.label}</span>
+                          <span className="truncate" title={r.return_message ?? r.status}>
+                            {info.label}
+                          </span>
                         </div>
                         <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums" title={r.start_time}>
                           {relativeTime(r.start_time)}
@@ -232,20 +317,32 @@ export function AutomationsPanel(): React.ReactElement {
             <ScrollArea className="h-[360px] pr-2">
               {loadingAct && <div className="text-xs text-muted-foreground">Caricamento…</div>}
               {!loadingAct && activity.length === 0 && (
-                <div className="text-xs text-muted-foreground">Nessuna attività recente sui canali WhatsApp/LinkedIn.</div>
+                <div className="text-xs text-muted-foreground">
+                  Nessuna attività recente sui canali WhatsApp/LinkedIn.
+                </div>
               )}
               <ul className="space-y-1">
                 {activity.map((a) => {
                   const isOut = a.direction === "out";
-                  const verb = a.kind === "dispatch"
-                    ? `In invio (${dispatchStatusLabel(a.status)})`
-                    : isOut ? "Inviato a" : "Ricevuto da";
+                  const verb =
+                    a.kind === "dispatch"
+                      ? `In invio (${dispatchStatusLabel(a.status)})`
+                      : isOut
+                        ? "Inviato a"
+                        : "Ricevuto da";
                   return (
-                    <li key={`${a.kind}-${a.id}`} className="flex items-start justify-between gap-2 text-xs rounded-md px-1.5 py-1 hover:bg-muted/50">
+                    <li
+                      key={`${a.kind}-${a.id}`}
+                      className="flex items-start justify-between gap-2 text-xs rounded-md px-1.5 py-1 hover:bg-muted/50"
+                    >
                       <div className="flex items-start gap-2 min-w-0">
                         <span className="mt-0.5">{channelIcon(a.channel)}</span>
                         <span className="mt-0.5">
-                          {isOut ? <ArrowUpRight className="h-3 w-3 text-primary" /> : <ArrowDownLeft className="h-3 w-3 text-emerald-500" />}
+                          {isOut ? (
+                            <ArrowUpRight className="h-3 w-3 text-primary" />
+                          ) : (
+                            <ArrowDownLeft className="h-3 w-3 text-emerald-500" />
+                          )}
                         </span>
                         <div className="min-w-0">
                           <div className="truncate">

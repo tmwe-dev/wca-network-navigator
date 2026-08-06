@@ -4,7 +4,6 @@
  */
 import { protectedTest as test, expect } from "./fixtures/auth";
 
-
 test.describe("Mission Flow E2E", () => {
   test("should navigate to Command page", async ({ page }) => {
     await page.goto(`/v2/command`);
@@ -32,7 +31,9 @@ test.describe("Mission Flow E2E", () => {
     await page.waitForTimeout(2000);
 
     // Look for mission toggle
-    const missionToggle = page.locator("button:has-text('🚀'), button[title*='missione'], button[aria-label*='missione']").first();
+    const missionToggle = page
+      .locator("button:has-text('🚀'), button[title*='missione'], button[aria-label*='missione']")
+      .first();
     if (await missionToggle.isVisible()) {
       await missionToggle.click();
       await page.waitForTimeout(500);

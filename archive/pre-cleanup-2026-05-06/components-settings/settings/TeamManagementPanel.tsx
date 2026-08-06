@@ -3,7 +3,16 @@
  * Manage teams, members, and team roles
  */
 import { useState } from "react";
-import { useTeams, useTeamMembers, useCreateTeam, useUpdateTeam, useDeleteTeam, useAddTeamMember, useRemoveTeamMember, useUpdateMemberRole } from "@/hooks/useRBAC";
+import {
+  useTeams,
+  useTeamMembers,
+  useCreateTeam,
+  useUpdateTeam,
+  useDeleteTeam,
+  useAddTeamMember,
+  useRemoveTeamMember,
+  useUpdateMemberRole,
+} from "@/hooks/useRBAC";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -157,11 +166,19 @@ export default function TeamManagementPanel() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Nome</label>
-              <Input value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} placeholder="Es: Sales Team" />
+              <Input
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                placeholder="Es: Sales Team"
+              />
             </div>
             <div>
               <label className="text-sm font-medium">Descrizione</label>
-              <Input value={newTeamDesc} onChange={(e) => setNewTeamDesc(e.target.value)} placeholder="Descrizione opzionale" />
+              <Input
+                value={newTeamDesc}
+                onChange={(e) => setNewTeamDesc(e.target.value)}
+                placeholder="Descrizione opzionale"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -262,7 +279,9 @@ export default function TeamManagementPanel() {
                           <TableCell className="text-center">
                             <Badge variant="outline">{teamMembers.length}</Badge>
                           </TableCell>
-                          <TableCell className="text-sm">{format(new Date(team.created_at), "PPP", { locale: it })}</TableCell>
+                          <TableCell className="text-sm">
+                            {format(new Date(team.created_at), "PPP", { locale: it })}
+                          </TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button variant="ghost" size="sm" onClick={() => setSelectedTeamId(team.id)}>
                               <Users className="h-4 w-4 mr-2" />
@@ -321,7 +340,12 @@ export default function TeamManagementPanel() {
                               <TableCell className="font-medium">{user?.email}</TableCell>
                               <TableCell>{user?.display_name || "-"}</TableCell>
                               <TableCell>
-                                <Select value={member.role ?? undefined} onValueChange={(role) => handleUpdateMemberRole(selectedTeamId ?? "", member.user_id ?? "", role)}>
+                                <Select
+                                  value={member.role ?? undefined}
+                                  onValueChange={(role) =>
+                                    handleUpdateMemberRole(selectedTeamId ?? "", member.user_id ?? "", role)
+                                  }
+                                >
                                   <SelectTrigger className="w-32">
                                     <SelectValue />
                                   </SelectTrigger>
@@ -332,9 +356,15 @@ export default function TeamManagementPanel() {
                                   </SelectContent>
                                 </Select>
                               </TableCell>
-                              <TableCell className="text-sm">{format(new Date(member.joined_at ?? Date.now()), "PPP", { locale: it })}</TableCell>
+                              <TableCell className="text-sm">
+                                {format(new Date(member.joined_at ?? Date.now()), "PPP", { locale: it })}
+                              </TableCell>
                               <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => handleRemoveMember(selectedTeamId ?? "", member.user_id ?? "")}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveMember(selectedTeamId ?? "", member.user_id ?? "")}
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </TableCell>

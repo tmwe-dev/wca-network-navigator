@@ -11,7 +11,7 @@ export async function handleSendEmail(
   args: Record<string, unknown>,
   userId: string,
   authHeader: string,
-  ctx?: { agentId?: string }
+  ctx?: { agentId?: string },
 ): Promise<unknown> {
   const partnerId = args.partner_id ? String(args.partner_id) : null;
 
@@ -55,7 +55,10 @@ export async function handleSendEmail(
         };
       }
     } catch (cerr) {
-      console.warn("[send_email] contract/detector failed (non-blocking):", cerr instanceof Error ? cerr.message : cerr);
+      console.warn(
+        "[send_email] contract/detector failed (non-blocking):",
+        cerr instanceof Error ? cerr.message : cerr,
+      );
     }
   }
 
@@ -66,17 +69,26 @@ export async function handleSendEmail(
       let leadStatus = "new";
       let companyName: string | null = null;
       if (partnerId) {
-        const { data: p } = await supabase.from("partners").select("lead_status, company_name, country_name").eq("id", partnerId).maybeSingle();
+        const { data: p } = await supabase
+          .from("partners")
+          .select("lead_status, company_name, country_name")
+          .eq("id", partnerId)
+          .maybeSingle();
         leadStatus = (p as { lead_status?: string } | null)?.lead_status || "new";
         companyName = (p as { company_name?: string } | null)?.company_name || null;
       }
-      const review = await journalistReview(supabase, userId, {
-        final_draft: String(args.html_body),
-        resolved_brief: { objective: args.subject ? String(args.subject) : undefined },
-        channel: "email",
-        commercial_state: { lead_status: leadStatus },
-        partner: { id: partnerId, company_name: companyName },
-      }, { mode: optimus.mode, strictness: optimus.strictness });
+      const review = await journalistReview(
+        supabase,
+        userId,
+        {
+          final_draft: String(args.html_body),
+          resolved_brief: { objective: args.subject ? String(args.subject) : undefined },
+          channel: "email",
+          commercial_state: { lead_status: leadStatus },
+          partner: { id: partnerId, company_name: companyName },
+        },
+        { mode: optimus.mode, strictness: optimus.strictness },
+      );
       if (review.verdict === "block") {
         console.warn("[send_email] BLOCKED by journalist:", JSON.stringify(review.warnings));
         return {
@@ -97,12 +109,21 @@ export async function handleSendEmail(
   }
 
   const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
-    method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
     body: JSON.stringify({ to: args.to_email, toName: args.to_name, subject: args.subject, html: args.html_body }),
   });
   const data = await response.json();
   if (!response.ok) return { error: data.error || "Errore invio" };
-  if (partnerId) await supabase.from("interactions").insert({ partner_id: partnerId, interaction_type: "email", subject: String(args.subject), notes: `Inviata a ${args.to_email}` });
+  if (partnerId)
+    await supabase
+      .from("interactions")
+      .insert({
+        partner_id: partnerId,
+        interaction_type: "email",
+        subject: String(args.subject),
+        notes: `Inviata a ${args.to_email}`,
+      });
 
   // ── POST-SEND PIPELINE UNIFICATA (LOVABLE-85) ──
   const seqDay = typeof args.sequence_day === "number" ? args.sequence_day : 0;
@@ -118,7 +139,6 @@ export async function handleSendEmail(
     agentId: ctx?.agentId,
     source: "agent",
   });
-  
 
   return { success: true, message: `Email inviata a ${args.to_email}.`, post_send: pipelineResult };
 }
@@ -127,7 +147,7 @@ export async function handleSendWhatsApp(
   supabase: SupabaseClient,
   args: Record<string, unknown>,
   userId: string,
-  ctx?: { agentId?: string }
+  ctx?: { agentId?: string },
 ): Promise<unknown> {
   // ── WhatsApp gate (Costituzione §4) ──
   const partnerId = args.partner_id ? String(args.partner_id) : null;
@@ -139,7 +159,10 @@ export async function handleSendWhatsApp(
     const { count } = await supabase
       .from("channel_messages")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", userId).eq("partner_id", partnerId).eq("channel", "whatsapp").eq("direction", "inbound");
+      .eq("user_id", userId)
+      .eq("partner_id", partnerId)
+      .eq("channel", "whatsapp")
+      .eq("direction", "inbound");
     hasInboundWa = (count || 0) > 0;
   }
   const now = new Date();
@@ -162,16 +185,25 @@ export async function handleSendWhatsApp(
   try {
     const optimus = await loadOptimusSettings(supabase, userId);
     if (args.message) {
-      const review = await journalistReview(supabase, userId, {
-        final_draft: String(args.message),
-        resolved_brief: {},
-        channel: "whatsapp",
-        commercial_state: { lead_status: leadStatus || "new" },
-        partner: { id: partnerId, company_name: null },
-      }, { mode: optimus.mode, strictness: optimus.strictness });
+      const review = await journalistReview(
+        supabase,
+        userId,
+        {
+          final_draft: String(args.message),
+          resolved_brief: {},
+          channel: "whatsapp",
+          commercial_state: { lead_status: leadStatus || "new" },
+          partner: { id: partnerId, company_name: null },
+        },
+        { mode: optimus.mode, strictness: optimus.strictness },
+      );
       if (review.verdict === "block") {
         console.warn("[send_whatsapp] BLOCKED by journalist:", JSON.stringify(review.warnings));
-        return { error: "Journalist Review ha bloccato questo messaggio.", blocked_by: "journalist_review", warnings: review.warnings };
+        return {
+          error: "Journalist Review ha bloccato questo messaggio.",
+          blocked_by: "journalist_review",
+          warnings: review.warnings,
+        };
       }
       if (review.verdict === "pass_with_edits" && review.edited_text) {
         args.message = review.edited_text;
@@ -204,13 +236,15 @@ export async function handleSendWhatsApp(
       source: `agent:${ctx?.agentId || "unknown"}`,
       status: "pending",
     })
-    .select("id").maybeSingle();
+    .select("id")
+    .maybeSingle();
   if (pendErr) return { error: `queue_failed: ${pendErr.message}`, blocked_by: "queue_insert" };
   return {
     success: true,
     queued_for_approval: true,
     pending_action_id: pending?.id ?? null,
-    message: "WhatsApp NON inviato. Proposta accodata in ai_pending_actions: l'operatore deve approvarlo e inviarlo manualmente dal cockpit.",
+    message:
+      "WhatsApp NON inviato. Proposta accodata in ai_pending_actions: l'operatore deve approvarlo e inviarlo manualmente dal cockpit.",
   };
 }
 
@@ -218,7 +252,7 @@ export async function handleSendLinkedIn(
   supabase: SupabaseClient,
   args: Record<string, unknown>,
   userId: string,
-  ctx?: { agentId?: string }
+  ctx?: { agentId?: string },
 ): Promise<unknown> {
   const partnerId = args.partner_id ? String(args.partner_id) : null;
   let leadStatus: string | null = null;
@@ -233,16 +267,25 @@ export async function handleSendLinkedIn(
   try {
     const optimus = await loadOptimusSettings(supabase, userId);
     if (args.message) {
-      const review = await journalistReview(supabase, userId, {
-        final_draft: String(args.message),
-        resolved_brief: {},
-        channel: "linkedin",
-        commercial_state: { lead_status: leadStatus || "new" },
-        partner: { id: partnerId, company_name: null },
-      }, { mode: optimus.mode, strictness: optimus.strictness });
+      const review = await journalistReview(
+        supabase,
+        userId,
+        {
+          final_draft: String(args.message),
+          resolved_brief: {},
+          channel: "linkedin",
+          commercial_state: { lead_status: leadStatus || "new" },
+          partner: { id: partnerId, company_name: null },
+        },
+        { mode: optimus.mode, strictness: optimus.strictness },
+      );
       if (review.verdict === "block") {
         console.warn("[send_linkedin] BLOCKED by journalist:", JSON.stringify(review.warnings));
-        return { error: "Journalist Review ha bloccato questo messaggio.", blocked_by: "journalist_review", warnings: review.warnings };
+        return {
+          error: "Journalist Review ha bloccato questo messaggio.",
+          blocked_by: "journalist_review",
+          warnings: review.warnings,
+        };
       }
       if (review.verdict === "pass_with_edits" && review.edited_text) {
         args.message = review.edited_text;
@@ -277,55 +320,74 @@ export async function handleSendLinkedIn(
       source: `agent:${ctx?.agentId || "unknown"}`,
       status: "pending",
     })
-    .select("id").maybeSingle();
+    .select("id")
+    .maybeSingle();
   if (pendErr) return { error: `queue_failed: ${pendErr.message}`, blocked_by: "queue_insert" };
   return {
     success: true,
     queued_for_approval: true,
     pending_action_id: pending?.id ?? null,
-    message: "LinkedIn NON inviato. Proposta accodata in ai_pending_actions: l'operatore deve approvarlo e inviarlo manualmente dal cockpit.",
+    message:
+      "LinkedIn NON inviato. Proposta accodata in ai_pending_actions: l'operatore deve approvarlo e inviarlo manualmente dal cockpit.",
   };
 }
 
 export async function handleQueueOutreach(
   supabase: SupabaseClient,
   args: Record<string, unknown>,
-  userId: string
+  userId: string,
 ): Promise<unknown> {
   const channel = String(args.channel || "email");
   const body = String(args.body || "");
   if (!body) return { error: "body è obbligatorio" };
-  const { data, error } = await supabase.from("outreach_queue").insert({
-    user_id: userId, channel,
-    recipient_name: args.recipient_name ? String(args.recipient_name) : null,
-    recipient_email: args.recipient_email ? String(args.recipient_email) : null,
-    recipient_phone: args.recipient_phone ? String(args.recipient_phone) : null,
-    recipient_linkedin_url: args.recipient_linkedin_url ? String(args.recipient_linkedin_url) : null,
-    partner_id: args.partner_id ? String(args.partner_id) : null,
-    contact_id: args.contact_id ? String(args.contact_id) : null,
-    subject: args.subject ? String(args.subject) : null,
-    body, priority: Number(args.priority) || 0, created_by: "agent",
-  }).select("id, channel, recipient_name, status").single();
+  const { data, error } = await supabase
+    .from("outreach_queue")
+    .insert({
+      user_id: userId,
+      channel,
+      recipient_name: args.recipient_name ? String(args.recipient_name) : null,
+      recipient_email: args.recipient_email ? String(args.recipient_email) : null,
+      recipient_phone: args.recipient_phone ? String(args.recipient_phone) : null,
+      recipient_linkedin_url: args.recipient_linkedin_url ? String(args.recipient_linkedin_url) : null,
+      partner_id: args.partner_id ? String(args.partner_id) : null,
+      contact_id: args.contact_id ? String(args.contact_id) : null,
+      subject: args.subject ? String(args.subject) : null,
+      body,
+      priority: Number(args.priority) || 0,
+      created_by: "agent",
+    })
+    .select("id, channel, recipient_name, status")
+    .single();
   if (error) return { error: error.message };
-  return { success: true, queue_id: data.id, channel: data.channel, recipient: data.recipient_name, message: `Messaggio ${channel} accodato per ${data.recipient_name || "destinatario"}.` };
+  return {
+    success: true,
+    queue_id: data.id,
+    channel: data.channel,
+    recipient: data.recipient_name,
+    message: `Messaggio ${channel} accodato per ${data.recipient_name || "destinatario"}.`,
+  };
 }
 
 export async function handleScheduleEmail(
   supabase: SupabaseClient,
   args: Record<string, unknown>,
-  userId: string
+  userId: string,
 ): Promise<unknown> {
   const scheduledAt = String(args.scheduled_at);
-  const { data, error } = await supabase.from("email_campaign_queue").insert({
-    recipient_email: String(args.to_email),
-    recipient_name: args.to_name ? String(args.to_name) : null,
-    subject: String(args.subject),
-    html_body: String(args.html_body),
-    partner_id: args.partner_id ? String(args.partner_id) : "00000000-0000-0000-0000-000000000000",
-    scheduled_at: scheduledAt,
-    status: "pending",
-    user_id: userId,
-  } as Record<string, unknown>).select("id").single();
+  const { data, error } = await supabase
+    .from("email_campaign_queue")
+    .insert({
+      recipient_email: String(args.to_email),
+      recipient_name: args.to_name ? String(args.to_name) : null,
+      subject: String(args.subject),
+      html_body: String(args.html_body),
+      partner_id: args.partner_id ? String(args.partner_id) : "00000000-0000-0000-0000-000000000000",
+      scheduled_at: scheduledAt,
+      status: "pending",
+      user_id: userId,
+    } as Record<string, unknown>)
+    .select("id")
+    .single();
   if (error) return { error: error.message };
   await supabase.from("activities").insert({
     title: `Email programmata: ${args.subject}`,
@@ -340,15 +402,19 @@ export async function handleScheduleEmail(
     email_body: String(args.html_body),
     source_meta: { company_name: args.to_name || args.to_email, scheduled: true } as Record<string, unknown>,
   });
-  return { success: true, queue_id: data.id, scheduled_at: scheduledAt, message: `Email programmata per ${scheduledAt} a ${args.to_email}.` };
+  return {
+    success: true,
+    queue_id: data.id,
+    scheduled_at: scheduledAt,
+    message: `Email programmata per ${scheduledAt} a ${args.to_email}.`,
+  };
 }
 
-export async function handleGenerateOutreach(
-  authHeader: string,
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGenerateOutreach(authHeader: string, args: Record<string, unknown>): Promise<unknown> {
   const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-outreach`, {
-    method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader }, body: JSON.stringify(args),
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify(args),
   });
   const data = await response.json();
   if (!response.ok) return { error: data.error || "Errore generazione" };

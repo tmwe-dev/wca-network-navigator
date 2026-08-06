@@ -20,10 +20,26 @@ export function ArenaFiltersSection() {
   return (
     <>
       <FilterSection icon={Zap} label="Focus">
-        <ChipGroup>{ARENA_FOCUS.map(o => <Chip key={o.value} active={g.filters.search === o.value} onClick={() => g.setSearch(o.value)}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>
+          {ARENA_FOCUS.map((o) => (
+            <Chip key={o.value} active={g.filters.search === o.value} onClick={() => g.setSearch(o.value)}>
+              {o.label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
       <FilterSection icon={Globe} label="Canale">
-        <ChipGroup>{ARENA_CHANNEL.map(o => <Chip key={o.value} active={g.filters.inreachChannel === o.value} onClick={() => g.setInreachChannel(o.value as "email" | "whatsapp" | "linkedin")}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>
+          {ARENA_CHANNEL.map((o) => (
+            <Chip
+              key={o.value}
+              active={g.filters.inreachChannel === o.value}
+              onClick={() => g.setInreachChannel(o.value as "email" | "whatsapp" | "linkedin")}
+            >
+              {o.label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
     </>
   );

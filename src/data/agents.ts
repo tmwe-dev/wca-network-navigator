@@ -35,22 +35,16 @@ export async function findAgents(_userId?: string): Promise<Agent[]> {
   return (data ?? []) as Agent[];
 }
 
-export async function findActiveAgents(fields = "name, role, avatar_emoji, is_active, stats, territory_codes"): Promise<Array<Record<string, unknown>>> {
-  const { data, error } = await supabase
-    .from("agents")
-    .select(fields)
-    .is("deleted_at", null)
-    .eq("is_active", true);
+export async function findActiveAgents(
+  fields = "name, role, avatar_emoji, is_active, stats, territory_codes",
+): Promise<Array<Record<string, unknown>>> {
+  const { data, error } = await supabase.from("agents").select(fields).is("deleted_at", null).eq("is_active", true);
   if (error) throw error;
-  return toRecords((data ?? []));
+  return toRecords(data ?? []);
 }
 
 export async function getAgentById(id: string): Promise<Agent | null> {
-  const { data, error } = await supabase
-    .from("agents")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await supabase.from("agents").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data as Agent | null;
 }
@@ -58,11 +52,7 @@ export async function getAgentById(id: string): Promise<Agent | null> {
 // ── Writes ──
 
 export async function createAgent(agent: AgentInsert): Promise<Agent> {
-  const { data, error } = await supabase
-    .from("agents")
-    .insert(agent)
-    .select()
-    .single();
+  const { data, error } = await supabase.from("agents").insert(agent).select().single();
   if (error) throw error;
   return data as Agent;
 }
@@ -76,20 +66,24 @@ export async function updateAgent(id: string, updates: AgentUpdate): Promise<voi
 }
 
 export async function deleteAgent(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("agents")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("agents").delete().eq("id", id);
   if (error) throw error;
 }
 
 export async function countActiveAgents() {
-  const { count, error } = await supabase.from("agents").select("id", { count: "planned", head: true }).is("deleted_at", null).eq("is_active", true);
+  const { count, error } = await supabase
+    .from("agents")
+    .select("id", { count: "planned", head: true })
+    .is("deleted_at", null)
+    .eq("is_active", true);
   if (error) throw error;
   return count ?? 0;
 }
 
-export async function findAgentsByUser(userId: string, select = "id, name, role, avatar_emoji, is_active, stats"): Promise<Array<Record<string, unknown>>> {
+export async function findAgentsByUser(
+  userId: string,
+  select = "id, name, role, avatar_emoji, is_active, stats",
+): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await supabase
     .from("agents")
     .select(select)
@@ -167,11 +161,7 @@ export interface AgentBasicRow {
 
 /** Dati minimi di un agente per il pannello "Agente di riferimento" nel drawer contatto. */
 export async function findAgentBasicById(id: string): Promise<AgentBasicRow | null> {
-  const { data } = await supabase
-    .from("agents")
-    .select("id, name, avatar_emoji, role")
-    .eq("id", id)
-    .single();
+  const { data } = await supabase.from("agents").select("id, name, avatar_emoji, role").eq("id", id).single();
   return data ?? null;
 }
 

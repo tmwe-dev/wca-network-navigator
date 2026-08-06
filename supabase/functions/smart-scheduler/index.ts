@@ -22,28 +22,24 @@ Deno.serve(async (req) => {
       const auth = await requireAuth(req, dynCors);
       if (isAuthError(auth)) return auth;
       // Verifica ruolo admin via has_role()
-      const adminCheck = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-        { auth: { autoRefreshToken: false, persistSession: false } },
-      );
+      const adminCheck = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
       const { data: isAdmin } = await adminCheck.rpc("has_role", {
         _user_id: auth.userId,
         _role: "admin",
       });
       if (!isAdmin) {
-        return new Response(
-          JSON.stringify({ error: "FORBIDDEN", message: "Admin role required" }),
-          { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: "FORBIDDEN", message: "Admin role required" }), {
+          status: 403,
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        });
       }
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     // Cron kill-switch: blocca solo invocazioni automatiche (cronAuthorized).
     if (cronAuthorized) {
@@ -104,7 +100,7 @@ Deno.serve(async (req) => {
 
         const avgTime = patternMap.get(`${contact.country}_email`) ?? 999;
         const bestChannel = avgTime < 48 ? "email" : "whatsapp";
-        const isStale = staleContacts?.some(c => c.id === contact.id) ?? false;
+        const isStale = staleContacts?.some((c) => c.id === contact.id) ?? false;
 
         // Schedule for next Tue-Thu at 9am
         const scheduledDate = new Date();
@@ -152,15 +148,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ success: true, totalProposals }),
-      { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ success: true, totalProposals }), {
+      status: 200,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("[smart-scheduler] Error:", err);
-    return new Response(
-      JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

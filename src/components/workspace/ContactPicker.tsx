@@ -28,7 +28,11 @@ interface PartnerContact {
 }
 
 export default function ContactPicker({
-  activityId, partnerId, selectedContactId, compact = false, onContactSelected,
+  activityId,
+  partnerId,
+  selectedContactId,
+  compact = false,
+  onContactSelected,
 }: ContactPickerProps) {
   const updateActivity = useUpdateActivity();
 
@@ -72,12 +76,12 @@ export default function ContactPicker({
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId),
-    [contacts, selectedContactId]
+    [contacts, selectedContactId],
   );
 
   const otherContacts = useMemo(
     () => contacts.filter((c) => c.id !== selectedContactId),
-    [contacts, selectedContactId]
+    [contacts, selectedContactId],
   );
 
   if (!partnerId) return null;
@@ -102,16 +106,10 @@ export default function ContactPicker({
         {otherContacts.length > 0 && (
           <Popover>
             <PopoverTrigger asChild>
-              <button className="text-[10px] text-primary hover:underline font-medium">
-                +{otherContacts.length}
-              </button>
+              <button className="text-[10px] text-primary hover:underline font-medium">+{otherContacts.length}</button>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-2" align="start">
-              <ContactList
-                contacts={contacts}
-                selectedId={selectedContactId}
-                onSelect={handleSelect}
-              />
+              <ContactList contacts={contacts} selectedId={selectedContactId} onSelect={handleSelect} />
             </PopoverContent>
           </Popover>
         )}
@@ -125,9 +123,7 @@ export default function ContactPicker({
       <div className="flex items-center gap-2 w-full">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-          <span className="text-xs font-medium truncate">
-            {selectedContact.contact_alias || selectedContact.name}
-          </span>
+          <span className="text-xs font-medium truncate">{selectedContact.contact_alias || selectedContact.name}</span>
           {selectedContact.email && (
             <span className="text-[10px] text-muted-foreground truncate flex items-center gap-0.5">
               <Mail className="w-2.5 h-2.5" />
@@ -138,20 +134,19 @@ export default function ContactPicker({
         {otherContacts.length > 0 && (
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 border-primary/20 hover:bg-primary/10">
-                <ArrowRightLeft className="w-3 h-3" />
-                +{otherContacts.length}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-[10px] gap-1 px-2 border-primary/20 hover:bg-primary/10"
+              >
+                <ArrowRightLeft className="w-3 h-3" />+{otherContacts.length}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-72 p-2" align="end">
               <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-1.5 px-1">
                 Cambia contatto
               </p>
-              <ContactList
-                contacts={contacts}
-                selectedId={selectedContactId}
-                onSelect={handleSelect}
-              />
+              <ContactList contacts={contacts} selectedId={selectedContactId} onSelect={handleSelect} />
             </PopoverContent>
           </Popover>
         )}
@@ -196,12 +191,7 @@ function ContactList({
   return (
     <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
       {contacts.map((c) => (
-        <ContactRow
-          key={c.id}
-          contact={c}
-          isSelected={c.id === selectedId}
-          onSelect={() => onSelect(c.id)}
-        />
+        <ContactRow key={c.id} contact={c} isSelected={c.id === selectedId} onSelect={() => onSelect(c.id)} />
       ))}
     </div>
   );
@@ -221,9 +211,7 @@ function ContactRow({
       onClick={onSelect}
       className={cn(
         "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors",
-        isSelected
-          ? "bg-primary/10 border border-primary/20"
-          : "hover:bg-muted/50 border border-transparent"
+        isSelected ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50 border border-transparent",
       )}
     >
       <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-muted">
@@ -235,9 +223,7 @@ function ContactRow({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
-          <span className="text-xs font-medium truncate">
-            {c.contact_alias || c.name}
-          </span>
+          <span className="text-xs font-medium truncate">{c.contact_alias || c.name}</span>
           {c.title && <span className="text-[10px] text-muted-foreground">· {c.title}</span>}
           {c.linkedin_url && <Linkedin className="w-3 h-3 text-primary shrink-0" />}
         </div>
@@ -249,9 +235,7 @@ function ContactRow({
           <span className="text-[10px] text-destructive">no email</span>
         )}
       </div>
-      {!isSelected && (
-        <span className="text-[10px] text-primary font-medium shrink-0">Usa</span>
-      )}
+      {!isSelected && <span className="text-[10px] text-primary font-medium shrink-0">Usa</span>}
     </button>
   );
 }

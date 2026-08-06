@@ -14,17 +14,10 @@ export function createTestQueryClient() {
 export function createWrapper() {
   const queryClient = createTestQueryClient();
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(
-      QueryClientProvider,
-      { client: queryClient },
-      children
-    );
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
   };
 }
 
-export function renderHookWithProviders<T>(
-  hook: () => T,
-  options?: Omit<RenderHookOptions<T>, "wrapper">
-) {
+export function renderHookWithProviders<T>(hook: () => T, options?: Omit<RenderHookOptions<T>, "wrapper">) {
   return renderHook(hook, { wrapper: createWrapper(), ...options });
 }

@@ -68,7 +68,13 @@ export function validateResponse<T = unknown>(data: unknown, schema: ResponseSch
 
 export const outreachSchema: ResponseSchema = {
   required: { channel: "string", body: "string", language: "string" },
-  optional: { subject: "string", contact_name: "string", contact_email: "string", company_name: "string", _debug: "object" },
+  optional: {
+    subject: "string",
+    contact_name: "string",
+    contact_email: "string",
+    company_name: "string",
+    _debug: "object",
+  },
 };
 
 export const emailSchema: ResponseSchema = {

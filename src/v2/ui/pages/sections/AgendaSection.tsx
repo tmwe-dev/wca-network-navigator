@@ -32,9 +32,9 @@ const DuplicateDetector = lazy(() =>
 );
 
 const TABS: readonly SectionTab[] = [
-  { key: "today",     label: "Agenda",    to: "/v2/agenda" },
-  { key: "reparti",   label: "Reparti",   to: "/v2/agenda/reparti" },
-  { key: "pipeline",  label: "Pipeline",  to: "/v2/agenda/pipeline" },
+  { key: "today", label: "Agenda", to: "/v2/agenda" },
+  { key: "reparti", label: "Reparti", to: "/v2/agenda/reparti" },
+  { key: "pipeline", label: "Pipeline", to: "/v2/agenda/pipeline" },
   { key: "duplicati", label: "Duplicati", to: "/v2/agenda/duplicati" },
 ];
 

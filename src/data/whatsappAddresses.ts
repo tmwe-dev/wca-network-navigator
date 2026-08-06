@@ -27,10 +27,12 @@ export interface WhatsAppAddressRow {
   linked_partner?: { id: string; company_name: string | null } | null;
 }
 
-export async function listWhatsAppAddresses(opts: {
-  search?: string;
-  limit?: number;
-} = {}): Promise<WhatsAppAddressRow[]> {
+export async function listWhatsAppAddresses(
+  opts: {
+    search?: string;
+    limit?: number;
+  } = {},
+): Promise<WhatsAppAddressRow[]> {
   const limit = opts.limit ?? 500;
   let q = supabase
     .from("whatsapp_addresses")

@@ -145,7 +145,7 @@ export const SCENARIOS: Record<string, Scenario> = {
     assistantMessages: [
       {
         content:
-          "Ho generato 10 bozze usando il motore email drafting e i dati già nel sistema:\n\n**Search Contacts** → 6 contatti dal modulo card capture + 4 dal CRM Core\n**Read Company Report** → Contesto aziendale per 8 destinatari dal modulo workspace documents\n**Create Email Draft** → 10 bozze generate dal motore email drafting con personalizzazione cross-source\n**Load Template** → Template \"Follow-up Partner Asia\" caricato dal modulo template memory\n\nOgni bozza include: nome (card capture), azienda (CRM Core), settore (company reports), storico (activity engine).\n\nLe bozze sono nel workspace. Pronte per revisione.",
+          'Ho generato 10 bozze usando il motore email drafting e i dati già nel sistema:\n\n**Search Contacts** → 6 contatti dal modulo card capture + 4 dal CRM Core\n**Read Company Report** → Contesto aziendale per 8 destinatari dal modulo workspace documents\n**Create Email Draft** → 10 bozze generate dal motore email drafting con personalizzazione cross-source\n**Load Template** → Template "Follow-up Partner Asia" caricato dal modulo template memory\n\nOgni bozza include: nome (card capture), azienda (CRM Core), settore (company reports), storico (activity engine).\n\nLe bozze sono nel workspace. Pronte per revisione.',
         agentName: "Communication",
         meta: "contact-db · card-capture · workspace-docs · email-draft · template-memory · 5 moduli · 1.9s",
       },
@@ -256,7 +256,6 @@ export async function detectScenario(text: string): Promise<string | null> {
   // No mock fallback: if no real tool matches, return null and let the
   // caller produce a short, direct answer (or escalate to AI Q&A).
   // Only the "voice" pseudo-scenario stays for explicit voice-read commands.
-  if (lower.includes("leggi ad alta voce") || lower.includes("leggi a voce alta"))
-    return "voice";
+  if (lower.includes("leggi ad alta voce") || lower.includes("leggi a voce alta")) return "voice";
   return null;
 }

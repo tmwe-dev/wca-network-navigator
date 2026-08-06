@@ -59,8 +59,7 @@ export function useUpsertRAProspect() {
 export function useUpdateRALeadStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: RALeadStatus }) =>
-      updateRALeadStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: RALeadStatus }) => updateRALeadStatus(id, status),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: RA_PROSPECTS_KEY });
     },

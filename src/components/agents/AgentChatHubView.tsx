@@ -1,7 +1,19 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone, BookOpen, ThumbsUp, ThumbsDown } from "lucide-react";
+import {
+  Send,
+  Volume2,
+  Loader2,
+  Wrench,
+  Circle,
+  Mic,
+  MicOff,
+  Phone,
+  BookOpen,
+  ThumbsUp,
+  ThumbsDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAgents, type AgentInsert } from "@/hooks/useAgents";
@@ -66,10 +78,28 @@ export default function AgentChatHub() {
     (async () => {
       setSeeding(true);
       const roster: Array<Partial<AgentInsert>> = [
-        { name: "Luca", role: "director", avatar_emoji: "🧠", is_active: true, system_prompt: "Sei Luca, director strategico." },
-        { name: "Marco", role: "outreach", avatar_emoji: "📧", is_active: true, system_prompt: "Sei Marco, specialista outreach email." },
+        {
+          name: "Luca",
+          role: "director",
+          avatar_emoji: "🧠",
+          is_active: true,
+          system_prompt: "Sei Luca, director strategico.",
+        },
+        {
+          name: "Marco",
+          role: "outreach",
+          avatar_emoji: "📧",
+          is_active: true,
+          system_prompt: "Sei Marco, specialista outreach email.",
+        },
         { name: "Sara", role: "sales", avatar_emoji: "💼", is_active: true, system_prompt: "Sei Sara, sales manager." },
-        { name: "Robin", role: "support", avatar_emoji: "🎯", is_active: true, system_prompt: "Sei Robin, supporto clienti." },
+        {
+          name: "Robin",
+          role: "support",
+          avatar_emoji: "🎯",
+          is_active: true,
+          system_prompt: "Sei Robin, supporto clienti.",
+        },
       ];
       try {
         for (const a of roster) {
@@ -84,11 +114,13 @@ export default function AgentChatHub() {
         if (!cancelled) setSeeding(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isLoading, agents.length, seeding, createAgent]);
 
   const activeAgent = agents.find((a) => a.id === activeId) ?? null;
-  const messages = activeId ? chatMapRef.current.get(activeId) ?? [] : [];
+  const messages = activeId ? (chatMapRef.current.get(activeId) ?? []) : [];
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
@@ -124,68 +156,75 @@ export default function AgentChatHub() {
   const playTTS = async (text: string) => {
     if (!activeAgent?.elevenlabs_voice_id) return;
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: text.slice(0, 3000), voiceId: activeAgent.elevenlabs_voice_id }),
-        }
-      );
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text: text.slice(0, 3000), voiceId: activeAgent.elevenlabs_voice_id }),
+      });
       if (!res.ok) return;
       const blob = await res.blob();
       new Audio(URL.createObjectURL(blob)).play();
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* intentionally ignored: best-effort cleanup */
+    }
   };
 
-  const handleFeedback = useCallback(async (msgIndex: number, type: "positive" | "negative") => {
-    const key = `${activeId}-${msgIndex}`;
-    if (feedbackGiven.has(key)) return;
-    setFeedbackGiven(prev => new Set(prev).add(key));
+  const handleFeedback = useCallback(
+    async (msgIndex: number, type: "positive" | "negative") => {
+      const key = `${activeId}-${msgIndex}`;
+      if (feedbackGiven.has(key)) return;
+      setFeedbackGiven((prev) => new Set(prev).add(key));
 
-    const msgs = activeId ? chatMapRef.current.get(activeId) ?? [] : [];
-    const msg = msgs[msgIndex];
-    const userMsg = msgs[msgIndex - 1];
+      const msgs = activeId ? (chatMapRef.current.get(activeId) ?? []) : [];
+      const msg = msgs[msgIndex];
+      const userMsg = msgs[msgIndex - 1];
 
-    try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-      if (!user) return;
+      try {
+        const {
+          data: { session: __s },
+        } = await supabase.auth.getSession();
+        const user = __s?.user ?? null;
+        if (!user) return;
 
-      if (type === "negative") {
-        await invokeEdge("save-correction-memory", {
-          // save-correction-memory NON è un'edge AI conversazionale: scrive memoria.
-          // Resta su invokeEdge (charter non si applica).
-          body: {
-            correction_type: "chat_response_negative",
-            original_value: msg?.content?.substring(0, 300) || "",
-            corrected_value: "Risposta non soddisfacente",
-            context: `Risposta AI non soddisfacente. Domanda utente: "${userMsg?.content?.substring(0, 200) || ""}". Migliorare su questo tipo di richiesta.`,
-          },
-          context: "AgentChatHub.feedback",
-        });
-        toast.info("Feedback registrato — l'AI migliorerà");
-      } else {
-        await createMemory({
-          user_id: user.id,
-          memory_type: "preference",
-          content: `L'utente ha apprezzato la risposta per: "${userMsg?.content?.substring(0, 200) || ""}". Mantieni questo stile.`,
-          tags: ["feedback_positivo", "stile_approvato"],
-          level: 1,
-          importance: 3,
-          confidence: 0.7,
-          decay_rate: 0.01,
-          source: "user_positive_feedback",
-        });
-        toast.success("Feedback positivo registrato");
+        if (type === "negative") {
+          await invokeEdge("save-correction-memory", {
+            // save-correction-memory NON è un'edge AI conversazionale: scrive memoria.
+            // Resta su invokeEdge (charter non si applica).
+            body: {
+              correction_type: "chat_response_negative",
+              original_value: msg?.content?.substring(0, 300) || "",
+              corrected_value: "Risposta non soddisfacente",
+              context: `Risposta AI non soddisfacente. Domanda utente: "${userMsg?.content?.substring(0, 200) || ""}". Migliorare su questo tipo di richiesta.`,
+            },
+            context: "AgentChatHub.feedback",
+          });
+          toast.info("Feedback registrato — l'AI migliorerà");
+        } else {
+          await createMemory({
+            user_id: user.id,
+            memory_type: "preference",
+            content: `L'utente ha apprezzato la risposta per: "${userMsg?.content?.substring(0, 200) || ""}". Mantieni questo stile.`,
+            tags: ["feedback_positivo", "stile_approvato"],
+            level: 1,
+            importance: 3,
+            confidence: 0.7,
+            decay_rate: 0.01,
+            source: "user_positive_feedback",
+          });
+          toast.success("Feedback positivo registrato");
+        }
+      } catch (e) {
+        log.debug("feedback save failed", { error: e instanceof Error ? e.message : String(e) });
       }
-    } catch (e) {
-      log.debug("feedback save failed", { error: e instanceof Error ? e.message : String(e) });
-    }
-  }, [activeId, feedbackGiven]);
+    },
+    [activeId, feedbackGiven],
+  );
 
   if (isLoading) {
     return (
@@ -238,7 +277,12 @@ export default function AgentChatHub() {
                 </span>
                 <span>·</span>
                 <span className="flex items-center gap-1">
-                  <Circle className={cn("w-2 h-2 fill-current", activeAgent.is_active ? "text-emerald-500" : "text-muted-foreground")} />
+                  <Circle
+                    className={cn(
+                      "w-2 h-2 fill-current",
+                      activeAgent.is_active ? "text-emerald-500" : "text-muted-foreground",
+                    )}
+                  />
                   {activeAgent.is_active ? "Attivo" : "Inattivo"}
                 </span>
               </div>
@@ -292,9 +336,7 @@ export default function AgentChatHub() {
             <div
               className={cn(
                 "max-w-[80%] md:max-w-[65%] rounded-2xl px-4 py-2.5 text-sm",
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-br-md"
-                  : "bg-muted/50 rounded-bl-md"
+                msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted/50 rounded-bl-md",
               )}
             >
               {msg.role === "assistant" ? (
@@ -304,7 +346,10 @@ export default function AgentChatHub() {
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                     {activeAgent?.elevenlabs_voice_id && (
-                      <button onClick={() => playTTS(msg.content)} className="mt-1 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                      <button
+                        onClick={() => playTTS(msg.content)}
+                        className="mt-1 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         <Volume2 className="w-3.5 h-3.5" />
                       </button>
                     )}
@@ -315,7 +360,9 @@ export default function AgentChatHub() {
                       disabled={feedbackGiven.has(`${activeId}-${i}`)}
                       className={cn(
                         "p-1 rounded-full transition-colors",
-                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground" : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10"
+                        feedbackGiven.has(`${activeId}-${i}`)
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10",
                       )}
                     >
                       <ThumbsUp className="w-3 h-3" />
@@ -325,7 +372,9 @@ export default function AgentChatHub() {
                       disabled={feedbackGiven.has(`${activeId}-${i}`)}
                       className={cn(
                         "p-1 rounded-full transition-colors",
-                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground" : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                        feedbackGiven.has(`${activeId}-${i}`)
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10",
                       )}
                     >
                       <ThumbsDown className="w-3 h-3" />
@@ -392,16 +441,20 @@ export default function AgentChatHub() {
           </Button>
 
           {/* Send */}
-          <Button size="icon" aria-label="Invia" onClick={send} disabled={!input.trim() || sending || !activeAgent} className="rounded-xl">
+          <Button
+            size="icon"
+            aria-label="Invia"
+            onClick={send}
+            disabled={!input.trim() || sending || !activeAgent}
+            className="rounded-xl"
+          >
             <Send className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {/* Voice call overlay */}
-      {voiceCallOpen && activeAgent && (
-        <AgentVoiceCall agent={activeAgent} onClose={() => setVoiceCallOpen(false)} />
-      )}
+      {voiceCallOpen && activeAgent && <AgentVoiceCall agent={activeAgent} onClose={() => setVoiceCallOpen(false)} />}
     </div>
   );
 }

@@ -13,10 +13,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 
-export function invalidateEnrichmentCaches(
-  qc: QueryClient,
-  partnerId?: string | null,
-): void {
+export function invalidateEnrichmentCaches(qc: QueryClient, partnerId?: string | null): void {
   // Settings → Arricchimento (lista partner + lista contatti + BCA)
   qc.invalidateQueries({ queryKey: queryKeys.partners.enrichment() });
   qc.invalidateQueries({ queryKey: queryKeys.enrichment.contacts() });

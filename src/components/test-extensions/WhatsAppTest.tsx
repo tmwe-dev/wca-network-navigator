@@ -49,9 +49,14 @@ export function WhatsAppTest() {
         if (!fixed) localStorage.setItem(WA_FIXED_RECIPIENT_KEY, JSON.stringify(fixedRecipient));
         setSendPhone(fixedPhone);
         setLastSentTo(fixedPhone);
-        log(`📌 Destinatario FISSO WhatsApp: ${saved.name || fixedPhone}${saved.company ? " — " + saved.company : ""} (${fixedPhone}). Non viene aggiornato dagli invii successivi.`, "info");
+        log(
+          `📌 Destinatario FISSO WhatsApp: ${saved.name || fixedPhone}${saved.company ? " — " + saved.company : ""} (${fixedPhone}). Non viene aggiornato dagli invii successivi.`,
+          "info",
+        );
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [log]);
 
   // Stream eventi Optimus nel terminal in tempo reale
@@ -61,7 +66,10 @@ export function WhatsAppTest() {
       if (e.kind === "cache-hit") {
         log(`🤖 Optimus: piano cache (v${e.planVersion}) · ${e.pageType}`, "ok");
       } else if (e.kind === "ai-fresh") {
-        log(`🤖 Optimus: nuovo piano AI generato in ${e.latencyMs}ms · confidence ${(e.confidence * 100).toFixed(0)}% · v${e.planVersion}`, "info");
+        log(
+          `🤖 Optimus: nuovo piano AI generato in ${e.latencyMs}ms · confidence ${(e.confidence * 100).toFixed(0)}% · v${e.planVersion}`,
+          "info",
+        );
       } else if (e.kind === "stale") {
         log(`⚠️ Optimus: AI non risponde, uso ultimo piano cache (stale) · ${e.pageType}`, "warn");
       } else if (e.kind === "error") {
@@ -81,10 +89,19 @@ export function WhatsAppTest() {
     const version = ping.version as string | undefined;
     if (!isExpectedWaVersion(version)) {
       if (version === "3.4.0") {
-        log(`⚠️ Hai installata Partner Connect (v3.4.0) che risponde al posto della WhatsApp extension. Rimuovi Partner Connect o aggiornala alla v3.4.1+`, "error");
+        log(
+          `⚠️ Hai installata Partner Connect (v3.4.0) che risponde al posto della WhatsApp extension. Rimuovi Partner Connect o aggiornala alla v3.4.1+`,
+          "error",
+        );
       } else {
-        log(`⚠️ Estensione v${version} ancora installata in Chrome. Serve la v${WHATSAPP_EXTENSION_REQUIRED_VERSION}.`, "error");
-        log(`AZIONE: chrome://extensions → RIMUOVI la v${version} (non solo disattiva) → scarica nuovo ZIP → estrai in CARTELLA NUOVA → 'Carica estensione non pacchettizzata'.`, "warn");
+        log(
+          `⚠️ Estensione v${version} ancora installata in Chrome. Serve la v${WHATSAPP_EXTENSION_REQUIRED_VERSION}.`,
+          "error",
+        );
+        log(
+          `AZIONE: chrome://extensions → RIMUOVI la v${version} (non solo disattiva) → scarica nuovo ZIP → estrai in CARTELLA NUOVA → 'Carica estensione non pacchettizzata'.`,
+          "warn",
+        );
       }
       return { ...ping, outdated: true };
     }
@@ -100,10 +117,19 @@ export function WhatsAppTest() {
       if (isExpectedWaVersion(version)) log(`✅ Estensione attiva (v${version})`, "ok");
       else {
         if (version === "3.4.0") {
-          log(`⚠️ Hai installata Partner Connect (v3.4.0) che risponde al posto della WhatsApp extension. Rimuovi Partner Connect o aggiornala alla v3.4.1+`, "error");
+          log(
+            `⚠️ Hai installata Partner Connect (v3.4.0) che risponde al posto della WhatsApp extension. Rimuovi Partner Connect o aggiornala alla v3.4.1+`,
+            "error",
+          );
         } else {
-          log(`⚠️ Estensione v${version} ancora installata in Chrome — richiesta v${WHATSAPP_EXTENSION_REQUIRED_VERSION}`, "error");
-          log(`AZIONE: chrome://extensions → RIMUOVI la v${version} (non solo disattiva) → estrai il nuovo ZIP in una CARTELLA NUOVA → 'Carica estensione non pacchettizzata'.`, "warn");
+          log(
+            `⚠️ Estensione v${version} ancora installata in Chrome — richiesta v${WHATSAPP_EXTENSION_REQUIRED_VERSION}`,
+            "error",
+          );
+          log(
+            `AZIONE: chrome://extensions → RIMUOVI la v${version} (non solo disattiva) → estrai il nuovo ZIP in una CARTELLA NUOVA → 'Carica estensione non pacchettizzata'.`,
+            "warn",
+          );
         }
       }
       const wid = (r as Record<string, unknown>).workerTabId;
@@ -119,7 +145,7 @@ export function WhatsAppTest() {
     setRunning(true);
     log("🚀 Pre-warm worker tab WhatsApp (apre web.whatsapp.com in background)...");
     const t0 = Date.now();
-    const r = await waMsg("ensureWorkerTab", {}, 60000) as Record<string, unknown>;
+    const r = (await waMsg("ensureWorkerTab", {}, 60000)) as Record<string, unknown>;
     const elapsed = Date.now() - t0;
     if (r?.success) {
       const created = r.reused ? "riusata" : "creata";
@@ -134,7 +160,10 @@ export function WhatsAppTest() {
   const testSession = async () => {
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
-    if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
+    if (!ping || (ping as Record<string, unknown>).outdated) {
+      setRunning(false);
+      return;
+    }
     log("🔑 Verifica sessione WhatsApp Web...");
     let r = await waMsg("verifySession", {}, 60000);
     if (!r?.success && /timeout/i.test(String(r?.error || ""))) {
@@ -157,20 +186,33 @@ export function WhatsAppTest() {
   const testReadUnread = async () => {
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
-    if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
+    if (!ping || (ping as Record<string, unknown>).outdated) {
+      setRunning(false);
+      return;
+    }
     log("📨 Lettura messaggi (readUnread)...");
     const r = await waMsg("readUnread", {}, 60000);
-    if (!r?.success) { log(`❌ Fallito: ${r?.error || JSON.stringify(r)}`, "error"); setRunning(false); return; }
+    if (!r?.success) {
+      log(`❌ Fallito: ${r?.error || JSON.stringify(r)}`, "error");
+      setRunning(false);
+      return;
+    }
     log(`✅ Metodo: ${r.method || "?"} | Scansionati: ${r.scanned || "?"}`, "ok");
 
     // Riepilogo Optimus inline (dalla response)
-    const opt = r.optimus as { cached?: boolean; planVersion?: number; confidence?: number; latencyMs?: number; dropped?: number } | undefined;
+    const opt = r.optimus as
+      | { cached?: boolean; planVersion?: number; confidence?: number; latencyMs?: number; dropped?: number }
+      | undefined;
     if (opt) {
       const tag = opt.cached ? "cache" : "AI fresh";
       const conf = typeof opt.confidence === "number" ? `${(opt.confidence * 100).toFixed(0)}%` : "n/d";
       const lat = opt.latencyMs ? `${opt.latencyMs}ms` : "—";
-      const dropped = typeof opt.dropped === "number" && opt.dropped > 0 ? ` · ${opt.dropped} scartati (dati insufficienti)` : "";
-      log(`🤖 Optimus: piano [${tag}] · confidence ${conf} · ${((r.messages as unknown[]) || []).length} estratti in ${lat}${dropped}`, opt.cached ? "ok" : "info");
+      const dropped =
+        typeof opt.dropped === "number" && opt.dropped > 0 ? ` · ${opt.dropped} scartati (dati insufficienti)` : "";
+      log(
+        `🤖 Optimus: piano [${tag}] · confidence ${conf} · ${((r.messages as unknown[]) || []).length} estratti in ${lat}${dropped}`,
+        opt.cached ? "ok" : "info",
+      );
     } else if (r.method && String(r.method).startsWith("legacy")) {
       log(`⚠️ Optimus non disponibile, fallback ${r.method}`, "warn");
     }
@@ -180,7 +222,10 @@ export function WhatsAppTest() {
     for (const m of msgs) {
       const verify = m.isVerify ? " 🔄VERIFY" : "";
       const unread = (m.unreadCount as number) > 0 ? ` (${m.unreadCount} non letti)` : "";
-      log(`  👤 ${m.contact}${unread}${verify} — "${((m.lastMessage as string) || "").slice(0, 80)}" — ⏰ ${m.time || "?"}`, (m.unreadCount as number) > 0 ? "ok" : "info");
+      log(
+        `  👤 ${m.contact}${unread}${verify} — "${((m.lastMessage as string) || "").slice(0, 80)}" — ⏰ ${m.time || "?"}`,
+        (m.unreadCount as number) > 0 ? "ok" : "info",
+      );
     }
     if (msgs.length === 0) {
       log("❌ Optimus: DOM non riconosciuto · 0 estratti · serve intervento", "error");
@@ -194,19 +239,31 @@ export function WhatsAppTest() {
     const cleanedPhone = normalizeWaTestPhone(sendPhone);
     if (!cleanedPhone) {
       if (selectedRecipient && !selectedRecipient.bestPhone) {
-        log(`⛔ Il contatto selezionato "${selectedRecipient.name}" non ha telefono in DB (${selectedRecipient.source}). Aggiorna il record o scegli un altro destinatario qui sotto.`, "error");
+        log(
+          `⛔ Il contatto selezionato "${selectedRecipient.name}" non ha telefono in DB (${selectedRecipient.source}). Aggiorna il record o scegli un altro destinatario qui sotto.`,
+          "error",
+        );
       } else {
         log("⛔ Numero fisso WhatsApp mancante. Inserisci una volta il numero e premi 📌 Fissa test.", "error");
       }
       return;
     }
-    if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
+    if (!sendText.trim()) {
+      log("⚠️ Inserisci il testo del messaggio", "warn");
+      return;
+    }
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
-    if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
+    if (!ping || (ping as Record<string, unknown>).outdated) {
+      setRunning(false);
+      return;
+    }
     const target = cleanedPhone;
     if (selectedRecipient) {
-      log(`🎯 Destinatario CRM: ${selectedRecipient.name}${selectedRecipient.company ? " — " + selectedRecipient.company : ""} [${selectedRecipient.source}] → ${target}`, "info");
+      log(
+        `🎯 Destinatario CRM: ${selectedRecipient.name}${selectedRecipient.company ? " — " + selectedRecipient.company : ""} [${selectedRecipient.source}] → ${target}`,
+        "info",
+      );
     }
     log(`📤 Invio WhatsApp a "${target}" via URL diretto /send?phone=: "${sendText.slice(0, 60)}..."`);
     // Se il destinatario è cambiato rispetto all'ultimo invio, chiediamo
@@ -216,7 +273,9 @@ export function WhatsAppTest() {
       try {
         await waMsg("closeActiveChat", {}, 5000);
         log(`🧹 Chat precedente chiusa (destinatario cambiato: ${lastSentTo} → ${target})`, "info");
-      } catch { /* opzionale, l'estensione potrebbe non supportarlo */ }
+      } catch {
+        /* opzionale, l'estensione potrebbe non supportarlo */
+      }
     }
     const r = await waMsg("sendWhatsApp", { phone: target, text: sendText }, 60000);
     if (r?.success) {
@@ -231,7 +290,10 @@ export function WhatsAppTest() {
 
   const pinFixedRecipient = () => {
     const fixedPhone = normalizeWaTestPhone(sendPhone);
-    if (!fixedPhone) { log("⛔ Numero non valido: inserisci un E.164 reale e poi fissalo.", "error"); return; }
+    if (!fixedPhone) {
+      log("⛔ Numero non valido: inserisci un E.164 reale e poi fissalo.", "error");
+      return;
+    }
     const fixedRecipient: StoredWaTestRecipient = {
       phone: fixedPhone,
       name: selectedRecipient?.name || null,
@@ -253,7 +315,7 @@ export function WhatsAppTest() {
     setDbResults([]);
     try {
       const raw = localStorage.getItem(WA_FIXED_RECIPIENT_KEY);
-      const saved = raw ? JSON.parse(raw) as StoredWaTestRecipient : null;
+      const saved = raw ? (JSON.parse(raw) as StoredWaTestRecipient) : null;
       const fixedPhone = saved?.phone ? normalizeWaTestPhone(saved.phone) : null;
       if (fixedPhone) {
         setSendPhone(fixedPhone);
@@ -261,7 +323,9 @@ export function WhatsAppTest() {
         log(`🔄 Reset sessione: ripristinato destinatario fisso ${fixedPhone}.`, "info");
         return;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     log("🔄 Reset sessione: nessun destinatario fisso salvato.", "info");
   };
 
@@ -275,8 +339,11 @@ export function WhatsAppTest() {
     try {
       const results = await searchWaRecipients(q, 25);
       setDbResults(results);
-      const withPhone = results.filter(r => r.bestPhone).length;
-      log(`🔎 Trovati ${results.length} record nel database (${withPhone} con telefono inviabile)`, results.length > 0 ? "ok" : "warn");
+      const withPhone = results.filter((r) => r.bestPhone).length;
+      log(
+        `🔎 Trovati ${results.length} record nel database (${withPhone} con telefono inviabile)`,
+        results.length > 0 ? "ok" : "warn",
+      );
     } catch (e) {
       log(`❌ Ricerca database fallita: ${e instanceof Error ? e.message : String(e)}`, "error");
     } finally {
@@ -291,14 +358,20 @@ export function WhatsAppTest() {
       log(`✅ Destinatario selezionato: ${r.name}${r.company ? " — " + r.company : ""} → ${r.bestPhone}`, "ok");
     } else {
       setSendPhone("");
-      log(`⛔ ${r.name} non ha telefono nel database (${r.source}). Aggiorna il record o scegli un altro destinatario.`, "error");
+      log(
+        `⛔ ${r.name} non ha telefono nel database (${r.source}). Aggiorna il record o scegli un altro destinatario.`,
+        "error",
+      );
     }
   };
 
   const testRawDom = async () => {
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
-    if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
+    if (!ping || (ping as Record<string, unknown>).outdated) {
+      setRunning(false);
+      return;
+    }
     log("🔍 Test DOM diretto — cerco selettori sulla pagina WA...");
     const r = await sendToExtension("from-webapp-wa", "from-extension-wa", "diagnosticDom", {}, 30000);
     log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 2000)}`, r?.success ? "ok" : "error");
@@ -368,11 +441,16 @@ export function WhatsAppTest() {
   const testRemapSendDom = async () => {
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
-    if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
+    if (!ping || (ping as Record<string, unknown>).outdated) {
+      setRunning(false);
+      return;
+    }
     log("🔧 Rimappa DOM invio: l'AI sta studiando la pagina WhatsApp Web...");
     const r = await waMsg("remapSendDom", {}, 60000);
     if (r?.success) {
-      const fields = r.fields as Record<string, { primary?: string; fallback?: string; confidence?: number }> | undefined;
+      const fields = r.fields as
+        | Record<string, { primary?: string; fallback?: string; confidence?: number }>
+        | undefined;
       log(`✅ Mappa salvata (hash ${String(r.domHash || "").slice(0, 8)}, plan v${r.planVersion ?? "?"})`, "ok");
       if (fields) {
         for (const [k, v] of Object.entries(fields)) {
@@ -391,12 +469,36 @@ export function WhatsAppTest() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <Button onClick={testPing} disabled={running} size="sm">🔌 Ping</Button>
-        <Button onClick={testPreWarm} disabled={running} size="sm" variant="outline" title="Apre la worker tab persistente su web.whatsapp.com. Una volta sola, poi tutte le azioni sono istantanee.">🚀 Pre-warm</Button>
-        <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
-        <Button onClick={testReadUnread} disabled={running} size="sm">📨 Leggi Messaggi</Button>
-        <Button onClick={testRawDom} disabled={running} size="sm" variant="outline">🔍 Diagnostica DOM</Button>
-        <Button onClick={testRemapSendDom} disabled={running} size="sm" variant="outline" title="L'AI rilegge il DOM e salva selettori freschi per l'invio. Usalo se l'invio fallisce dopo un aggiornamento di WhatsApp Web.">🔧 Rimappa DOM invio</Button>
+        <Button onClick={testPing} disabled={running} size="sm">
+          🔌 Ping
+        </Button>
+        <Button
+          onClick={testPreWarm}
+          disabled={running}
+          size="sm"
+          variant="outline"
+          title="Apre la worker tab persistente su web.whatsapp.com. Una volta sola, poi tutte le azioni sono istantanee."
+        >
+          🚀 Pre-warm
+        </Button>
+        <Button onClick={testSession} disabled={running} size="sm">
+          🔑 Sessione
+        </Button>
+        <Button onClick={testReadUnread} disabled={running} size="sm">
+          📨 Leggi Messaggi
+        </Button>
+        <Button onClick={testRawDom} disabled={running} size="sm" variant="outline">
+          🔍 Diagnostica DOM
+        </Button>
+        <Button
+          onClick={testRemapSendDom}
+          disabled={running}
+          size="sm"
+          variant="outline"
+          title="L'AI rilegge il DOM e salva selettori freschi per l'invio. Usalo se l'invio fallisce dopo un aggiornamento di WhatsApp Web."
+        >
+          🔧 Rimappa DOM invio
+        </Button>
         <Button
           size="sm"
           variant="outline"
@@ -412,11 +514,21 @@ export function WhatsAppTest() {
             }
             setRunning(false);
           }}
-        >🧠 AI Extract</Button>
-        <Button onClick={testGuardSequence} disabled={running} size="sm" variant="secondary">🛡️ Verifica Controllo</Button>
-        <Button onClick={testGuardConcurrent} disabled={running} size="sm" variant="secondary">🚦 Test Concorrenza</Button>
-        <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
-        <div className="ml-auto flex items-center"><SyncGuardIndicator channel="whatsapp" /></div>
+        >
+          🧠 AI Extract
+        </Button>
+        <Button onClick={testGuardSequence} disabled={running} size="sm" variant="secondary">
+          🛡️ Verifica Controllo
+        </Button>
+        <Button onClick={testGuardConcurrent} disabled={running} size="sm" variant="secondary">
+          🚦 Test Concorrenza
+        </Button>
+        <Button onClick={() => setLogs([])} size="sm" variant="ghost">
+          🗑️ Pulisci
+        </Button>
+        <div className="ml-auto flex items-center">
+          <SyncGuardIndicator channel="whatsapp" />
+        </div>
       </div>
       <div className="flex gap-2">
         <Input
@@ -425,25 +537,46 @@ export function WhatsAppTest() {
           placeholder="Numero fisso test WhatsApp E.164 (es. +393331234567)"
           className="flex-1"
         />
-        <Button onClick={pinFixedRecipient} disabled={running} size="sm" variant="secondary" title="Salva questo numero come destinatario fisso dei test WhatsApp">
+        <Button
+          onClick={pinFixedRecipient}
+          disabled={running}
+          size="sm"
+          variant="secondary"
+          title="Salva questo numero come destinatario fisso dei test WhatsApp"
+        >
           📌 Fissa test
         </Button>
       </div>
       <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2">
         <div className="text-xs font-semibold text-muted-foreground">🔎 Cerca destinatario nel database CRM</div>
         <div className="text-[11px] text-muted-foreground leading-snug">
-          Cerca tra: <strong>imported_contacts</strong> (lead importati), <strong>partner_contacts</strong> (referenti partner), <strong>partners</strong> (aziende partner) e <strong>business_cards</strong> (biglietti da visita OCR). Serve per recuperare il <strong>numero E.164</strong> del destinatario — il nome chat di WhatsApp Web non basta per inviare in modo affidabile.
+          Cerca tra: <strong>imported_contacts</strong> (lead importati), <strong>partner_contacts</strong> (referenti
+          partner), <strong>partners</strong> (aziende partner) e <strong>business_cards</strong> (biglietti da visita
+          OCR). Serve per recuperare il <strong>numero E.164</strong> del destinatario — il nome chat di WhatsApp Web
+          non basta per inviare in modo affidabile.
         </div>
         <div className="flex gap-2">
           <Input
             value={dbQuery}
             onChange={(e) => setDbQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") runDbSearch(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") runDbSearch();
+            }}
             placeholder="Nome, azienda, email o telefono (es. Gianfranco)"
             className="flex-1"
           />
-          <Button onClick={() => runDbSearch()} disabled={dbSearching} size="sm" variant="secondary">{dbSearching ? "Cerco…" : "Cerca DB"}</Button>
-          <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Resetta la sessione e ricarica il destinatario fisso">🔄 Reset</Button>
+          <Button onClick={() => runDbSearch()} disabled={dbSearching} size="sm" variant="secondary">
+            {dbSearching ? "Cerco…" : "Cerca DB"}
+          </Button>
+          <Button
+            onClick={resetSendForm}
+            disabled={running}
+            size="sm"
+            variant="outline"
+            title="Resetta la sessione e ricarica il destinatario fisso"
+          >
+            🔄 Reset
+          </Button>
         </div>
         {dbResults.length > 0 && (
           <div className="max-h-64 overflow-auto divide-y divide-border rounded-md border border-border bg-background">
@@ -460,13 +593,22 @@ export function WhatsAppTest() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{r.name || "(senza nome)"} {r.company && <span className="text-muted-foreground font-normal">— {r.company}</span>}</div>
+                      <div className="font-medium truncate">
+                        {r.name || "(senza nome)"}{" "}
+                        {r.company && <span className="text-muted-foreground font-normal">— {r.company}</span>}
+                      </div>
                       <div className="text-muted-foreground truncate">
-                        {r.bestPhone ? <span className="text-green-500">📱 {r.bestPhone}</span> : <span className="text-red-500">⛔ no phone</span>}
+                        {r.bestPhone ? (
+                          <span className="text-green-500">📱 {r.bestPhone}</span>
+                        ) : (
+                          <span className="text-red-500">⛔ no phone</span>
+                        )}
                         {r.email && <span> · ✉️ {r.email}</span>}
                       </div>
                     </div>
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">{r.source.replace("_", " ")}</span>
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
+                      {r.source.replace("_", " ")}
+                    </span>
                   </div>
                 </button>
               );
@@ -483,7 +625,10 @@ export function WhatsAppTest() {
       </div>
       {foundContacts.length > 0 && (
         <details className="text-xs text-muted-foreground" open>
-          <summary className="cursor-pointer">📨 Chat lette da WhatsApp Web ({foundContacts.length}) — clicca un nome per cercarlo nel CRM e usarlo come destinatario</summary>
+          <summary className="cursor-pointer">
+            📨 Chat lette da WhatsApp Web ({foundContacts.length}) — clicca un nome per cercarlo nel CRM e usarlo come
+            destinatario
+          </summary>
           <div className="mt-2 max-h-64 overflow-auto divide-y divide-border rounded-md border border-border bg-background">
             {foundContacts.slice(0, 30).map((c, i) => (
               <button
@@ -505,7 +650,12 @@ export function WhatsAppTest() {
         </details>
       )}
       <div className="flex gap-2">
-        <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1" />
+        <Input
+          value={sendText}
+          onChange={(e) => setSendText(e.target.value)}
+          placeholder="Testo del messaggio"
+          className="flex-1"
+        />
         {(() => {
           const digits = sendPhone.replace(/[^0-9+]/g, "").replace(/^\+/, "");
           const phoneOk = digits.length >= 7;
@@ -514,8 +664,8 @@ export function WhatsAppTest() {
           const tip = !phoneOk
             ? "Numero fisso mancante o troppo corto: inseriscilo e premi Fissa test"
             : !textOk
-            ? "Inserisci il testo del messaggio"
-            : `Invia a +${digits}`;
+              ? "Inserisci il testo del messaggio"
+              : `Invia a +${digits}`;
           return (
             <Button onClick={testSendMessage} disabled={disabled} size="sm" variant="default" title={tip}>
               📤 Invia WA{phoneOk ? ` → +${digits}` : ""}

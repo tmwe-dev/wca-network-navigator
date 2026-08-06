@@ -20,7 +20,13 @@ function makeCachedFetcher(rows: Row[], now: () => number) {
     cache = { at: t, data: rows };
     return await Promise.resolve(rows);
   };
-  return { fetcher, calls: () => calls, reset: () => { cache = null; } };
+  return {
+    fetcher,
+    calls: () => calls,
+    reset: () => {
+      cache = null;
+    },
+  };
 }
 
 Deno.test("[FN-CLASSIFY] cache TTL: 3 chiamate entro TTL → 1 query", async () => {

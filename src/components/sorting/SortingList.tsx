@@ -20,7 +20,13 @@ interface SortingListProps {
 }
 
 export function SortingList({
-  jobs, selectedId, selectedIds, onSelect, onToggleCheck, onSelectAll, onSelectNone,
+  jobs,
+  selectedId,
+  selectedIds,
+  onSelect,
+  onToggleCheck,
+  onSelectAll,
+  onSelectNone,
 }: SortingListProps) {
   const { filters } = useGlobalFilters();
   const search = filters.sortingSearch;
@@ -35,18 +41,24 @@ export function SortingList({
     if (filter === "scheduled") list = list.filter((j) => !!j.scheduled_at);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter((j) =>
-        (j.partners?.company_name || "").toLowerCase().includes(q) ||
-        (j.partners?.company_alias || "").toLowerCase().includes(q) ||
-        (j.selected_contact?.name || "").toLowerCase().includes(q)
+      list = list.filter(
+        (j) =>
+          (j.partners?.company_name || "").toLowerCase().includes(q) ||
+          (j.partners?.company_alias || "").toLowerCase().includes(q) ||
+          (j.selected_contact?.name || "").toLowerCase().includes(q),
       );
     }
     return list;
   }, [jobs, filter, search]);
 
   const groups = useMemo(
-    () => groupByCountry(filtered, (j) => j.partners?.country_code || "??", (j) => j.partners?.country_name || ""),
-    [filtered]
+    () =>
+      groupByCountry(
+        filtered,
+        (j) => j.partners?.country_code || "??",
+        (j) => j.partners?.country_name || "",
+      ),
+    [filtered],
   );
 
   const reviewedCount = jobs.filter((j) => j.reviewed).length;
@@ -62,8 +74,12 @@ export function SortingList({
       {/* Select controls */}
       <div className="px-4 pb-2">
         <div className="flex gap-2 text-xs">
-          <button onClick={onSelectAll} className="text-primary hover:underline">Seleziona tutti</button>
-          <button onClick={onSelectNone} className="text-muted-foreground hover:underline">Nessuno</button>
+          <button onClick={onSelectAll} className="text-primary hover:underline">
+            Seleziona tutti
+          </button>
+          <button onClick={onSelectNone} className="text-muted-foreground hover:underline">
+            Nessuno
+          </button>
         </div>
       </div>
 
@@ -73,7 +89,11 @@ export function SortingList({
           {groups.map((g) => (
             <div key={g.countryCode}>
               <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                <img src={`https://flagcdn.com/16x12/${g.countryCode.toLowerCase()}.png`} alt="" className="w-4 h-3 rounded-sm" />
+                <img
+                  src={`https://flagcdn.com/16x12/${g.countryCode.toLowerCase()}.png`}
+                  alt=""
+                  className="w-4 h-3 rounded-sm"
+                />
                 {g.countryName} ({g.items.length})
               </div>
               {g.items.map((job) => (
@@ -82,7 +102,7 @@ export function SortingList({
                   onClick={() => onSelect(job.id)}
                   className={cn(
                     "flex items-start gap-2 px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors",
-                    selectedId === job.id ? "bg-accent" : "hover:bg-muted/50"
+                    selectedId === job.id ? "bg-accent" : "hover:bg-muted/50",
                   )}
                 >
                   <Checkbox
@@ -92,9 +112,12 @@ export function SortingList({
                     className="mt-0.5"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{job.partners?.company_alias || job.partners?.company_name}</div>
+                    <div className="font-medium truncate">
+                      {job.partners?.company_alias || job.partners?.company_name}
+                    </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {job.selected_contact?.contact_alias || job.selected_contact?.name || "—"} · {job.selected_contact?.email || "no email"}
+                      {job.selected_contact?.contact_alias || job.selected_contact?.name || "—"} ·{" "}
+                      {job.selected_contact?.email || "no email"}
                     </div>
                     {job.email_subject && (
                       <div className="text-xs text-muted-foreground truncate mt-0.5">✉ {job.email_subject}</div>

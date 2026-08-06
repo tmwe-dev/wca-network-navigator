@@ -56,17 +56,12 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   // accessibile dall'utente corrente. Senza questo check, un id "fantasma"
   // (es. cache stale di un account precedente) farebbe vedere a Luigi
   // l'inbox di Luca.
-  const trustedActiveOp =
-    activeOperator && operators.some((o) => o.id === activeOperator.id)
-      ? activeOperator
-      : null;
+  const trustedActiveOp = activeOperator && operators.some((o) => o.id === activeOperator.id) ? activeOperator : null;
   // Allinea Funnemail al switcher operatore (come InArrivoTab).
   // - viewingAll       => null (RLS decide la visibilità globale).
   // - operatore scelto => filtra channel_messages.user_id su di lui.
   // - fallback         => utente loggato.
-  const targetUserId: string | null = viewingAll
-    ? null
-    : trustedActiveOp?.user_id ?? user?.id ?? null;
+  const targetUserId: string | null = viewingAll ? null : (trustedActiveOp?.user_id ?? user?.id ?? null);
   const folderOwnerUserId = targetUserId ?? user?.id ?? null;
   // Filtro casella: passiamo personal/shared al DAL così la inbox mostra
   // solo i messaggi della casella attiva nel selettore in header.
@@ -77,10 +72,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   }, [activeMailbox]);
   const mailboxKey = activeMailbox ? `${activeMailbox.kind}:${activeMailbox.mailbox_id}` : "none";
   const rawSelectedFolder = g.filters.funnemailFolder || "all";
-  const setSelectedFolder = React.useCallback(
-    (slug: string) => g.setFilter("funnemailFolder", slug),
-    [g],
-  );
+  const setSelectedFolder = React.useCallback((slug: string) => g.setFilter("funnemailFolder", slug), [g]);
   const [selectedMessageId, setSelectedMessageId] = React.useState<string | null>(null);
 
   const groupedQ = useQuery({
@@ -97,7 +89,8 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   );
   const folders = React.useMemo<FunnemailGroupFolder[]>(() => grouped.folders, [grouped.folders]);
   const validFolderSlugs = React.useMemo(() => new Set(folders.map((f) => f.slug)), [folders]);
-  const selectedFolder = rawSelectedFolder === "all" || validFolderSlugs.has(rawSelectedFolder) ? rawSelectedFolder : "all";
+  const selectedFolder =
+    rawSelectedFolder === "all" || validFolderSlugs.has(rawSelectedFolder) ? rawSelectedFolder : "all";
   const mails = React.useMemo<ChannelMessage[]>(() => grouped.messages, [grouped.messages]);
 
   React.useEffect(() => {
@@ -132,9 +125,13 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     if (toMark.length === 0) return;
     const ids = toMark.map((m) => m.id);
     ids.forEach((id) => autoReadDoneRef.current.set(id, now));
-    void markFunnemailMessagesRead(ids).then(() => {
-      qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
-    }).catch(() => { /* silent */ });
+    void markFunnemailMessagesRead(ids)
+      .then(() => {
+        qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
+      })
+      .catch(() => {
+        /* silent */
+      });
   }, [folders, mails, qc, user?.id]);
 
   // Filtri client-side guidati dalla sidebar globale.
@@ -176,7 +173,10 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   }, [filteredMails, selectedMessageId]);
 
   const selectedFolderLabel = React.useMemo<string>(
-    () => selectedFolder === "all" ? "Tutte le email" : folders.find((f) => f.slug === selectedFolder)?.label ?? selectedFolder,
+    () =>
+      selectedFolder === "all"
+        ? "Tutte le email"
+        : (folders.find((f) => f.slug === selectedFolder)?.label ?? selectedFolder),
     [folders, selectedFolder],
   );
 
@@ -198,20 +198,21 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   );
 
   const reclassifyMutation = useMutation({
-    mutationFn: async (message: ChannelMessage) => invokeAi("funnemail-classify", {
-      scope: "classify",
-      context: { source: "useFunnemailInbox", route: "/v2/funnemail-inbox", mode: "reclassify" },
-      body: {
-        message_id: message.message_id_external ?? message.id,
-        from_address: message.from_address ?? "",
-        subject: message.subject ?? "",
-        body_text: message.body_text ?? "",
-        partner_id: message.partner_id,
-        user_id: message.user_id,
-        prior_classification: (message as ChannelMessage & { category?: string | null }).category ?? undefined,
-        force: true,
-      },
-    }),
+    mutationFn: async (message: ChannelMessage) =>
+      invokeAi("funnemail-classify", {
+        scope: "classify",
+        context: { source: "useFunnemailInbox", route: "/v2/funnemail-inbox", mode: "reclassify" },
+        body: {
+          message_id: message.message_id_external ?? message.id,
+          from_address: message.from_address ?? "",
+          subject: message.subject ?? "",
+          body_text: message.body_text ?? "",
+          partner_id: message.partner_id,
+          user_id: message.user_id,
+          prior_classification: (message as ChannelMessage & { category?: string | null }).category ?? undefined,
+          force: true,
+        },
+      }),
     onSuccess: () => {
       toast.success("Email riclassificata");
       qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
@@ -268,7 +269,9 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
       },
     })
       .then(() => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root }))
-      .catch(() => { /* silent */ });
+      .catch(() => {
+        /* silent */
+      });
   }, [selectedMessageId, filteredMails, qc]);
 
   // ─── Bulk actions per gruppi della lista ──────────────────────────
@@ -279,58 +282,70 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     [],
   );
 
-  const bulkMarkRead = React.useCallback(async (msgs: ChannelMessage[]) => {
-    const ids = msgs.filter((m) => !m.read_at).map((m) => m.id);
-    if (ids.length === 0) return;
-    try {
-      await markFunnemailMessagesRead(ids);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Errore aggiornamento email");
-      return;
-    }
-    toast.success(`${ids.length} email segnate come lette`);
-    qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
-    qc.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
-  }, [qc]);
-
-  const bulkArchive = React.useCallback((msgs: ChannelMessage[]) => {
-    if (msgs.length === 0) return;
-    bulk.mutate(
-      { messages: minimal(msgs), action: "archive" },
-      { onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root }) },
-    );
-  }, [bulk, minimal, qc]);
-
-  const bulkDelete = React.useCallback((msgs: ChannelMessage[]) => {
-    if (msgs.length === 0) return;
-    bulk.mutate(
-      { messages: minimal(msgs), action: "delete" },
-      { onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root }) },
-    );
-  }, [bulk, minimal, qc]);
-
-  const bulkAssignGroup = React.useCallback(async (msgs: ChannelMessage[], groupName: string) => {
-    if (!user?.id || msgs.length === 0) return;
-    const addrs = new Set<string>();
-    for (const m of msgs) {
-      const raw = m.from_address ?? "";
-      const match = raw.match(/<([^>]+)>/);
-      const addr = (match ? match[1] : raw).trim().toLowerCase();
-      if (addr) addrs.add(addr);
-    }
-    let ok = 0;
-    for (const addr of addrs) {
+  const bulkMarkRead = React.useCallback(
+    async (msgs: ChannelMessage[]) => {
+      const ids = msgs.filter((m) => !m.read_at).map((m) => m.id);
+      if (ids.length === 0) return;
       try {
-        await upsertEmailAddressRule(user.id, addr, { group_name: groupName });
-        ok++;
-      } catch {
-        // continua sugli altri
+        await markFunnemailMessagesRead(ids);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Errore aggiornamento email");
+        return;
       }
-    }
-    toast.success(`${ok} mittente${ok === 1 ? "" : "i"} assegnato/i a "${groupName}"`);
-    qc.invalidateQueries({ queryKey: ["email-address-groups"] });
-    qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
-  }, [qc, user?.id]);
+      toast.success(`${ids.length} email segnate come lette`);
+      qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
+      qc.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+    },
+    [qc],
+  );
+
+  const bulkArchive = React.useCallback(
+    (msgs: ChannelMessage[]) => {
+      if (msgs.length === 0) return;
+      bulk.mutate(
+        { messages: minimal(msgs), action: "archive" },
+        { onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root }) },
+      );
+    },
+    [bulk, minimal, qc],
+  );
+
+  const bulkDelete = React.useCallback(
+    (msgs: ChannelMessage[]) => {
+      if (msgs.length === 0) return;
+      bulk.mutate(
+        { messages: minimal(msgs), action: "delete" },
+        { onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root }) },
+      );
+    },
+    [bulk, minimal, qc],
+  );
+
+  const bulkAssignGroup = React.useCallback(
+    async (msgs: ChannelMessage[], groupName: string) => {
+      if (!user?.id || msgs.length === 0) return;
+      const addrs = new Set<string>();
+      for (const m of msgs) {
+        const raw = m.from_address ?? "";
+        const match = raw.match(/<([^>]+)>/);
+        const addr = (match ? match[1] : raw).trim().toLowerCase();
+        if (addr) addrs.add(addr);
+      }
+      let ok = 0;
+      for (const addr of addrs) {
+        try {
+          await upsertEmailAddressRule(user.id, addr, { group_name: groupName });
+          ok++;
+        } catch {
+          // continua sugli altri
+        }
+      }
+      toast.success(`${ok} mittente${ok === 1 ? "" : "i"} assegnato/i a "${groupName}"`);
+      qc.invalidateQueries({ queryKey: ["email-address-groups"] });
+      qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
+    },
+    [qc, user?.id],
+  );
 
   return {
     folders,

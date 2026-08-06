@@ -1,7 +1,4 @@
-import {
-  Mail, Phone, Users, RotateCcw, MoreHorizontal,
-  Check, Circle, Clock, CheckCircle2,
-} from "lucide-react";
+import { Mail, Phone, Users, RotateCcw, MoreHorizontal, Check, Circle, Clock, CheckCircle2 } from "lucide-react";
 
 /* ── Activity type config ── */
 

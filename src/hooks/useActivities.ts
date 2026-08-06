@@ -49,7 +49,15 @@ export function useCreateActivities() {
 export function useUpdateActivity() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; status?: "pending" | "in_progress" | "completed" | "cancelled"; completed_at?: string | null; selected_contact_id?: string | null }) => {
+    mutationFn: async ({
+      id,
+      ...updates
+    }: {
+      id: string;
+      status?: "pending" | "in_progress" | "completed" | "cancelled";
+      completed_at?: string | null;
+      selected_contact_id?: string | null;
+    }) => {
       await updateActivity(id, updates);
     },
     onSuccess: () => invalidateActivityCache(qc),

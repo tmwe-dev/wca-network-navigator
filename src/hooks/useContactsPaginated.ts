@@ -17,8 +17,7 @@ export function useContactsPaginated(filters?: ContactPaginatedFilters) {
       return findContactsPaginated(filters ?? {}, pageParam, PAGE_SIZE);
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.page + 1 : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: 30_000,
   });
 }

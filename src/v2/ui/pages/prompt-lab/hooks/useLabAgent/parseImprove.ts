@@ -32,10 +32,7 @@ export function parseImproveResponse(raw: string): ParsedImproveResult {
   const archMatch = raw.match(ARCH_NOTE_LINE_RE);
   if (archMatch) architecturalNote = archMatch[1].trim();
 
-  const text = raw
-    .replace(OUTCOME_LINE_RE, "")
-    .replace(ARCH_NOTE_LINE_RE, "")
-    .trim();
+  const text = raw.replace(OUTCOME_LINE_RE, "").replace(ARCH_NOTE_LINE_RE, "").trim();
 
   return { text: text || raw.trim(), outcomeType, architecturalNote };
 }

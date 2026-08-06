@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 
 /**
  * BUG REGISTRY CONFIRMATION TESTS
- * 
+ *
  * Each test confirms or refutes a specific BF-xxx bug by analyzing
  * the actual source code logic or simulating the exact scenario.
- * 
+ *
  * Test matrix coverage: A05, C09, C10, C14, D09, D10, D13, D15, D16, F02, F04
  */
 
@@ -18,11 +18,46 @@ describe("BF-001: sent_count must not increment on failure", () => {
   it("C09: batch 3 sent / 2 failed → sent_count = 3", () => {
     // Simulates the EXACT loop from process-email-queue/index.ts lines 150-212
     const queueItems = [
-      { id: "1", recipient_email: "a@test.com", subject: "s1", html_body: "<p>1</p>", partner_id: "p1", retry_count: 0 },
-      { id: "2", recipient_email: "b@test.com", subject: "s2", html_body: "<p>2</p>", partner_id: "p2", retry_count: 0 },
-      { id: "3", recipient_email: "c@test.com", subject: "s3", html_body: "<p>3</p>", partner_id: "p3", retry_count: 0 },
-      { id: "4", recipient_email: "d@test.com", subject: "s4", html_body: "<p>4</p>", partner_id: "p4", retry_count: 0 },
-      { id: "5", recipient_email: "e@test.com", subject: "s5", html_body: "<p>5</p>", partner_id: "p5", retry_count: 0 },
+      {
+        id: "1",
+        recipient_email: "a@test.com",
+        subject: "s1",
+        html_body: "<p>1</p>",
+        partner_id: "p1",
+        retry_count: 0,
+      },
+      {
+        id: "2",
+        recipient_email: "b@test.com",
+        subject: "s2",
+        html_body: "<p>2</p>",
+        partner_id: "p2",
+        retry_count: 0,
+      },
+      {
+        id: "3",
+        recipient_email: "c@test.com",
+        subject: "s3",
+        html_body: "<p>3</p>",
+        partner_id: "p3",
+        retry_count: 0,
+      },
+      {
+        id: "4",
+        recipient_email: "d@test.com",
+        subject: "s4",
+        html_body: "<p>4</p>",
+        partner_id: "p4",
+        retry_count: 0,
+      },
+      {
+        id: "5",
+        recipient_email: "e@test.com",
+        subject: "s5",
+        html_body: "<p>5</p>",
+        partner_id: "p5",
+        retry_count: 0,
+      },
     ];
     const smtpResults = [true, false, true, true, false]; // items 2,5 fail
 
@@ -52,9 +87,9 @@ describe("BF-001: sent_count must not increment on failure", () => {
     expect(sentCount).toBe(3);
     expect(failedCount).toBe(2);
     expect(dbSentCount).toBe(3);
-    
+
     // Verify consistency: dbSentCount must equal items with status "sent"
-    const actualSentItems = Object.values(itemStatuses).filter(s => s === "sent").length;
+    const actualSentItems = Object.values(itemStatuses).filter((s) => s === "sent").length;
     expect(dbSentCount).toBe(actualSentItems);
   });
 
@@ -68,15 +103,15 @@ describe("BF-001: sent_count must not increment on failure", () => {
       { status: "failed" },
     ];
 
-    const sent = queueRecords.filter(s => s.status === "sent").length;
-    const failed = queueRecords.filter(s => s.status === "failed").length;
+    const sent = queueRecords.filter((s) => s.status === "sent").length;
+    const failed = queueRecords.filter((s) => s.status === "failed").length;
 
     // Finalization writes sent_count = sent (line 130)
     const finalSentCount = sent;
-    
+
     expect(finalSentCount).toBe(3);
     expect(failed).toBe(2);
-    expect(finalSentCount).toBe(queueRecords.filter(s => s.status === "sent").length);
+    expect(finalSentCount).toBe(queueRecords.filter((s) => s.status === "sent").length);
   });
 });
 
@@ -89,7 +124,7 @@ describe("BF-002: tasks_completed must not increment on failure", () => {
   it("D13: task failed → only tasks_failed increments", () => {
     // Simulates exact logic from agent-execute lines 346-352
     const stats = { tasks_completed: 5, tasks_failed: 1 };
-    
+
     // Scenario: task fails
     const taskStatus: string = "failed";
     const updatedStats = { ...stats };
@@ -135,12 +170,12 @@ describe("BF-003: Time window consistency", () => {
     expect(isOutsideWorkHours(10, 6, 24)).toBe(false);
     expect(isOutsideWorkHours(6, 6, 24)).toBe(false);
     expect(isOutsideWorkHours(23, 6, 24)).toBe(false);
-    
+
     // Outside work hours
     expect(isOutsideWorkHours(5, 6, 24)).toBe(true);
     expect(isOutsideWorkHours(0, 6, 24)).toBe(true);
     expect(isOutsideWorkHours(3, 6, 24)).toBe(true);
-    
+
     // Boundary: hour 24 means midnight → outside
     expect(isOutsideWorkHours(24, 6, 24)).toBe(true);
   });
@@ -151,11 +186,11 @@ describe("BF-003: Time window consistency", () => {
     // from _shared/timeUtils.ts at line 3.
     // The local versions work identically but this is dead import + code duplication.
     // Risk: if _shared/timeUtils.ts is updated, the local copies won't change.
-    
+
     // This test documents the bug exists - the imported functions are shadowed
     const importLine = `import { getCETHour, isOutsideWorkHours } from "../_shared/timeUtils.ts";`;
     const localDeclaration = `function getCETHour(): number {`;
-    
+
     // Both exist in the same file = shadowing bug
     expect(importLine).toBeTruthy();
     expect(localDeclaration).toBeTruthy();
@@ -174,7 +209,7 @@ describe("BF-004: Agent cycle must use DB settings over hardcoded", () => {
   it("D09: budgetPerAgent reads from app_settings with fallback", () => {
     // Simulates lines 167-182
     const DEFAULT_BUDGET_PER_AGENT = 10;
-    
+
     // Case 1: setting exists
     const cfg1: Record<string, string> = { agent_max_actions_per_cycle: "5" };
     const budget1 = parseInt(cfg1["agent_max_actions_per_cycle"] || String(DEFAULT_BUDGET_PER_AGENT), 10);
@@ -190,7 +225,7 @@ describe("BF-004: Agent cycle must use DB settings over hardcoded", () => {
     // BUG CONFIRMED: line 83 uses DEFAULT_CYCLE_LOOKBACK_MINUTES directly
     // instead of reading from app_settings
     const DEFAULT_CYCLE_LOOKBACK_MINUTES = 12;
-    
+
     // The screenIncomingMessages function uses this directly:
     // const lookback = new Date(Date.now() - DEFAULT_CYCLE_LOOKBACK_MINUTES * 60 * 1000)
     // This is NOT configurable via app_settings
@@ -209,13 +244,13 @@ describe("BF-005: Side effects must be identical for direct and queue sends", ()
     // Verify both files import and use the same shared function
     // send-email: line 4 imports, line 186 calls logEmailSideEffects
     // process-email-queue: line 3 imports, line 176 calls logEmailSideEffects
-    
+
     // The shared function performs:
     // 1. Insert interactions
     // 2. Insert activities
     // 3. Update partners.lead_status new→contacted
     // 4. Increment partners.interaction_count
-    
+
     // Both paths now call the same function = consistent
     const sharedEffects = [
       "insert_interaction",
@@ -223,13 +258,13 @@ describe("BF-005: Side effects must be identical for direct and queue sends", ()
       "update_lead_status",
       "increment_interaction_count",
     ];
-    
+
     // Direct send effects (from logEmailSideEffects)
     const directEffects = [...sharedEffects];
-    
-    // Queue send effects (from logEmailSideEffects)  
+
+    // Queue send effects (from logEmailSideEffects)
     const queueEffects = [...sharedEffects];
-    
+
     expect(directEffects).toEqual(queueEffects);
   });
 
@@ -239,7 +274,7 @@ describe("BF-005: Side effects must be identical for direct and queue sends", ()
     // This is expected behavior, not a bug
     const directParams = { agent_id: "some-agent-id" };
     const queueParams = { agent_id: undefined };
-    
+
     // Difference is acceptable: queue sends are user-initiated campaigns
     expect(directParams.agent_id).toBeDefined();
     expect(queueParams.agent_id).toBeUndefined();
@@ -256,12 +291,12 @@ describe("BF-007: Retry must not create duplicate sends", () => {
     // BUG CONFIRMED: process-email-queue only selects status='pending' (line 112)
     // If function crashes after SMTP send but before DB update to 'sent',
     // the item stays in 'sending' status forever (zombie)
-    
+
     const selectQuery = `.eq("status", "pending")`;
     // Items in "sending" will NOT be re-selected → they're stuck
     // But also won't be sent twice → no duplicate sends (good)
     // However, the email WAS sent but not recorded (bad)
-    
+
     // The real risk is not duplicate sends but LOST sends
     // (email sent, DB doesn't know)
     expect(selectQuery).toContain("pending");
@@ -282,17 +317,17 @@ describe("BF-008: DB failure after successful send leaves inconsistent state", (
     // 3. Update item to "sent" (line 169) → IF THIS FAILS...
     // 4. logEmailSideEffects (line 176) → NEVER REACHED
     // 5. sentCount++ (line 191) → NEVER REACHED
-    
+
     // Result: email sent but item stays "sending", no side effects logged
     // BUG CONFIRMED: no recovery mechanism exists
-    
+
     let smtpSent = false;
     let dbUpdated = false;
     let sideEffectsLogged = false;
-    
+
     // Simulate: SMTP succeeds
     smtpSent = true;
-    
+
     // Simulate: DB update throws
     try {
       throw new Error("DB connection lost");
@@ -303,7 +338,7 @@ describe("BF-008: DB failure after successful send leaves inconsistent state", (
       // Item gets marked as "failed" with error message
       // But the email WAS actually sent!
     }
-    
+
     expect(smtpSent).toBe(true);
     expect(dbUpdated).toBe(false);
     expect(sideEffectsLogged).toBe(false);
@@ -339,13 +374,13 @@ describe("BF-011: High-stakes tasks must always require approval", () => {
   it("D14: forceApproval=true overrides auto_approved", () => {
     // Lines 152-154: status = (stakes || forceApproval) ? "proposed" : "pending"
     // target_filters.auto_approved = !stakes && !forceApproval
-    
+
     const forceApproval = true;
     const stakes = false;
-    
-    const status = (stakes || forceApproval) ? "proposed" : "pending";
+
+    const status = stakes || forceApproval ? "proposed" : "pending";
     const autoApproved = !stakes && !forceApproval;
-    
+
     expect(status).toBe("proposed");
     expect(autoApproved).toBe(false);
   });
@@ -353,10 +388,10 @@ describe("BF-011: High-stakes tasks must always require approval", () => {
   it("D14: high-stakes + forceApproval=false still blocks", () => {
     const forceApproval = false;
     const stakes = true;
-    
-    const status = (stakes || forceApproval) ? "proposed" : "pending";
+
+    const status = stakes || forceApproval ? "proposed" : "pending";
     const autoApproved = !stakes && !forceApproval;
-    
+
     expect(status).toBe("proposed");
     expect(autoApproved).toBe(false);
   });
@@ -367,7 +402,7 @@ describe("BF-011: High-stakes tasks must always require approval", () => {
     // The partner's actual source field is ignored, "wca" is always used
     // Since isHighStakes checks source === "ex_client", this means
     // ex_client partners are NEVER detected as high-stakes in Phase 2
-    
+
     function isHighStakes(item: any): boolean {
       if (item.lead_status === "in_progress" || item.lead_status === "negotiation") return true;
       if (item.source === "ex_client") return true;
@@ -378,9 +413,9 @@ describe("BF-011: High-stakes tasks must always require approval", () => {
     // Partner is ex_client but Phase 2 overrides source to "wca"
     const partner = { lead_status: "contacted", rating: 2, source: "ex_client" };
     const phase2Item = { ...partner, source: "wca" }; // line 235 overrides
-    
-    expect(isHighStakes(partner)).toBe(true);      // Real: high-stakes
-    expect(isHighStakes(phase2Item)).toBe(false);   // Phase 2: NOT detected!
+
+    expect(isHighStakes(partner)).toBe(true); // Real: high-stakes
+    expect(isHighStakes(phase2Item)).toBe(false); // Phase 2: NOT detected!
     // BUG: ex_client partners slip through in Phase 2
   });
 });
@@ -394,19 +429,16 @@ describe("BF-020: Email deduplication", () => {
   it("D02: agent task dedup uses message_id in target_filters", () => {
     // Lines 100-110: checks existing tasks by target_filters.message_id
     // Lines 238-244: Phase 2 also checks .contains({ message_id: msg.id })
-    
-    const existingTasks = [
-      { target_filters: { message_id: "msg-1" } },
-      { target_filters: { message_id: "msg-2" } },
-    ];
-    
+
+    const existingTasks = [{ target_filters: { message_id: "msg-1" } }, { target_filters: { message_id: "msg-2" } }];
+
     const alreadyProcessedIds = new Set(
-      existingTasks.map(t => (t.target_filters as any)?.message_id).filter(Boolean)
+      existingTasks.map((t) => (t.target_filters as any)?.message_id).filter(Boolean),
     );
-    
+
     expect(alreadyProcessedIds.has("msg-1")).toBe(true);
     expect(alreadyProcessedIds.has("msg-3")).toBe(false);
-    
+
     // Phase 1 dedup works via Set
     // Phase 2 dedup works via .contains() query
     // Both mechanisms exist - dedup is functional for agent tasks
@@ -428,14 +460,14 @@ describe("BF-022: Dashboard state must match DB reality", () => {
       { status: "cancelled" },
     ];
 
-    const sent = queueRecords.filter(s => s.status === "sent").length;
-    const failed = queueRecords.filter(s => s.status === "failed").length;
+    const sent = queueRecords.filter((s) => s.status === "sent").length;
+    const failed = queueRecords.filter((s) => s.status === "failed").length;
 
     // Finalization sets sent_count = sent (derived from records)
     // This CORRECTS any mid-batch counter drift
     expect(sent).toBe(3);
     expect(failed).toBe(1);
-    
+
     // The dashboard reads sent_count which is now derived = correct
   });
 
@@ -444,15 +476,15 @@ describe("BF-022: Dashboard state must match DB reality", () => {
     // This is eventually consistent: finalization corrects it
     // Temporary drift during processing is acceptable as long as
     // finalization runs correctly
-    
+
     // Simulate mid-batch: 2 items processed, sent_count = 2
     // Total batch: 5 items, 3 will succeed
     // Mid-batch: sent_count shows 2 (correct so far)
     // After finalization: sent_count shows 3 (correct)
-    
+
     const midBatchSentCount = 2;
     const finalSentCount = 3;
-    
+
     expect(midBatchSentCount).toBeLessThanOrEqual(finalSentCount);
   });
 });
@@ -467,10 +499,10 @@ describe("BF-009: No duplicate tasks from concurrent cycles", () => {
       { id: "msg-1", partner_id: "p1" },
       { id: "msg-2", partner_id: "p2" },
     ];
-    
+
     const existingTasks = [{ target_filters: { message_id: "msg-1" } }];
     const alreadyProcessedIds = new Set(
-      existingTasks.map(t => (t.target_filters as any)?.message_id).filter(Boolean)
+      existingTasks.map((t) => (t.target_filters as any)?.message_id).filter(Boolean),
     );
 
     const newTasks: string[] = [];
@@ -506,22 +538,22 @@ describe("BF-010: No zombie tasks in running status", () => {
     // Line 305: taskStatus defaults to "completed"
     // Line 328,334: set to "failed" on error
     // Line 339: unconditional update with completed_at
-    
+
     // The task is updated in all paths:
     // - Success: status="completed", completed_at=now
     // - AI error: status="failed", completed_at=now
     // - HTTP error: status="failed", completed_at=now
-    
+
     // However: if the ENTIRE function crashes (e.g., OOM, timeout),
     // the task stays in its previous status. This is a runtime risk
     // but not a code bug.
-    
+
     const scenarios = [
       { aiOk: true, toolsOk: true, expected: "completed" },
       { aiOk: true, toolsOk: false, expected: "completed" }, // tools fail but AI responds
       { aiOk: false, toolsOk: false, expected: "failed" },
     ];
-    
+
     for (const s of scenarios) {
       let taskStatus = "completed";
       if (!s.aiOk) taskStatus = "failed";
@@ -544,9 +576,9 @@ describe("BF-016: auto_approved must be consistent with status", () => {
     ];
 
     for (const s of scenarios) {
-      const status = (s.stakes || s.forceApproval) ? "proposed" : "pending";
+      const status = s.stakes || s.forceApproval ? "proposed" : "pending";
       const autoApproved = !s.stakes && !s.forceApproval;
-      
+
       // Consistency rule: auto_approved=true → status must be "pending"
       if (autoApproved) {
         expect(status).toBe("pending");

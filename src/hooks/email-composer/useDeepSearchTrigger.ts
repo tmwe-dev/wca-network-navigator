@@ -43,7 +43,9 @@ export function useDeepSearchTrigger(partnerId: string | null) {
       const { status, ageDays } = computeStatus(scrapedAt);
       setState({ status, ageDays, scrapedAt });
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [partnerId, refreshTick]);
 
   const trigger = useCallback(async () => {

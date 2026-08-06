@@ -13,6 +13,7 @@ Quattro livelli, dal più forte al più debole. Una regola di livello superiore 
 Regole codificate in TypeScript che bloccano azioni a runtime. Non discutibili, non aggirabili dall'AI.
 
 **Esempi reali nel WCA Network Navigator**:
+
 - `src/v2/agent/policy/hardGuards.ts` → `FORBIDDEN_TABLES` (auth.users, vault.secrets, ecc.) e `AI_WRITABLE_TABLES` (whitelist).
 - `src/v2/agent/policy/hardGuards.ts` → `assertNotDestructive()` impedisce qualsiasi DELETE/DROP/TRUNCATE.
 - `src/v2/agent/policy/hardGuards.ts` → `MAX_BULK_CAP_HARD = 100` cap assoluto bulk.
@@ -27,6 +28,7 @@ Regole codificate in TypeScript che bloccano azioni a runtime. Non discutibili, 
 Regole di business e dottrina commerciale, vivono in `kb_entries` con categorie `system_doctrine`, `sales_doctrine`, `doctrine`. Modificabili dall'Harmonizer ma con cautela e **mai senza evidenza forte**.
 
 **Esempi reali**:
+
 - "Politica visibilità contatti condivisi" — tutti i contatti sono visibili a tutti gli operatori (vedi `mem://business/shared-contacts-visibility-policy`).
 - "Same-Location Guard" — un lead ha un unico agente assegnato (vedi `mem://business/commercial-strategy-rules`).
 - "Workflow commerciale standard a 6 fasi" (`sales_standard`) — Discovery → Qualification → ...
@@ -40,6 +42,7 @@ Regole di business e dottrina commerciale, vivono in `kb_entries` con categorie 
 System prompt degli agenti, persona templates, operative prompts strutturati. Vivono in `agents.system_prompt`, `agent_personas.custom_tone_prompt`, `operative_prompts.objective/procedure/criteria`.
 
 **Esempi reali**:
+
 - Tono di voce di Luca (Director) — asciutto, referente strategico.
 - Persona Bruce — outreach commerciale.
 - Operative prompt "Cold call apertura" — script con objective, procedure, criteria.
@@ -54,12 +57,12 @@ Testo composto in chat dall'operatore, parametri di una mission, note libere su 
 
 Tabella di decisione:
 
-| Cosa hai trovato | resolution_layer | Cosa fai |
-|---|---|---|
-| Una regola che richiede vincolo runtime (es: "blocca invio se non c'è approvazione") | `code_policy` | `readonly_note` per dev, no scrittura DB |
-| Un campo backend mancante (es: "manca `recipient_country` in EmailBrief") | `contract` | `readonly_note` con `missing_contracts: [...]` |
-| Una regola di business in `kb_entries` ma in categoria sbagliata | `kb_governance` | MOVE proposto |
-| Un testo in `kb_entries` o prompt che va solo riscritto | `text` | UPDATE o INSERT testuale |
+| Cosa hai trovato                                                                     | resolution_layer | Cosa fai                                       |
+| ------------------------------------------------------------------------------------ | ---------------- | ---------------------------------------------- |
+| Una regola che richiede vincolo runtime (es: "blocca invio se non c'è approvazione") | `code_policy`    | `readonly_note` per dev, no scrittura DB       |
+| Un campo backend mancante (es: "manca `recipient_country` in EmailBrief")            | `contract`       | `readonly_note` con `missing_contracts: [...]` |
+| Una regola di business in `kb_entries` ma in categoria sbagliata                     | `kb_governance`  | MOVE proposto                                  |
+| Un testo in `kb_entries` o prompt che va solo riscritto                              | `text`           | UPDATE o INSERT testuale                       |
 
 ## Errori da evitare
 

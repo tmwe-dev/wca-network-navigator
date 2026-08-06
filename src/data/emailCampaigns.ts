@@ -37,7 +37,10 @@ export async function countPendingCampaignEmails() {
 }
 
 export async function updateEmailDraft(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("email_drafts").update(updates as EmailDraftUpdate).eq("id", id);
+  const { error } = await supabase
+    .from("email_drafts")
+    .update(updates as EmailDraftUpdate)
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -209,7 +212,9 @@ export async function findRecentCampaignQueueItemsAll(limit = 50): Promise<Recen
 }
 
 /** Ultime N righe di email_campaign_queue per la vista Campagne (outreach). */
-export async function findRecentEmailQueue<T = Database["public"]["Tables"]["email_campaign_queue"]["Row"]>(limit = 50): Promise<T[]> {
+export async function findRecentEmailQueue<T = Database["public"]["Tables"]["email_campaign_queue"]["Row"]>(
+  limit = 50,
+): Promise<T[]> {
   const { data } = await supabase
     .from("email_campaign_queue")
     .select("*")

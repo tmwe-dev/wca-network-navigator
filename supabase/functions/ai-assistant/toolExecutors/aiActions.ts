@@ -71,19 +71,16 @@ export async function executeRejectAiAction(
         user_id: userId,
         memory_type: "decision",
         content: `L'utente ha rifiutato un'azione AI (${actionId}). Motivo: "${reason}". Non ripetere questo tipo di azione in futuro senza chiedere conferma.`,
-        tags: [
-          "feedback_negativo",
-          "correzione_utente",
-          "azione_rifiutata",
-        ],
+        tags: ["feedback_negativo", "correzione_utente", "azione_rifiutata"],
         level: 1,
         importance: 4,
         confidence: 0.6,
         decay_rate: 0.01,
         source: "user_rejection",
       })
-      .then(() => {}, (e: unknown) =>
-        console.warn("rejection memory save failed:", extractErrorMessage(e))
+      .then(
+        () => {},
+        (e: unknown) => console.warn("rejection memory save failed:", extractErrorMessage(e)),
       );
   }
 
@@ -96,32 +93,25 @@ export async function executeSuggestNextContacts(
 ): Promise<unknown> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const res = await fetch(
-    `${supabaseUrl}/functions/v1/ai-arena-suggest`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${authHeader || serviceKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        focus: (args?.focus as string) || "tutti",
-        preferred_channel: (args?.channel as string) || "email",
-        batch_size: Math.min(Number(args?.batch_size) || 5, 10),
-        excluded_ids: [],
-      }),
+  const res = await fetch(`${supabaseUrl}/functions/v1/ai-arena-suggest`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${authHeader || serviceKey}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      focus: (args?.focus as string) || "tutti",
+      preferred_channel: (args?.channel as string) || "email",
+      batch_size: Math.min(Number(args?.batch_size) || 5, 10),
+      excluded_ids: [],
+    }),
+  });
   if (!res.ok) return { error: await res.text() };
   return await res.json();
 }
 
-export async function executeDetectLanguage(
-  args: Record<string, unknown>,
-): Promise<unknown> {
-  const { getLanguageHint } = await import(
-    "../../_shared/textUtils.ts"
-  );
+export async function executeDetectLanguage(args: Record<string, unknown>): Promise<unknown> {
+  const { getLanguageHint } = await import("../../_shared/textUtils.ts");
   const hint = getLanguageHint(String(args.country_code || "US"));
   return { country_code: args.country_code, ...hint };
 }

@@ -550,4 +550,3 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
     ],
   },
 };
-

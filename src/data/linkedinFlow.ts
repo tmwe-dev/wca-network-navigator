@@ -13,7 +13,10 @@ export async function createLinkedInFlowJob(job: FlowJobInsert) {
   return data;
 }
 
-export async function updateLinkedInFlowJob(id: string, updates: Partial<Database["public"]["Tables"]["linkedin_flow_jobs"]["Update"]>) {
+export async function updateLinkedInFlowJob(
+  id: string,
+  updates: Partial<Database["public"]["Tables"]["linkedin_flow_jobs"]["Update"]>,
+) {
   const { error } = await supabase.from("linkedin_flow_jobs").update(updates).eq("id", id);
   if (error) throw error;
 }
@@ -35,7 +38,10 @@ export async function findPendingFlowItems(jobId: string) {
   return data ?? [];
 }
 
-export async function updateLinkedInFlowItem(id: string, updates: Partial<Database["public"]["Tables"]["linkedin_flow_items"]["Update"]>) {
+export async function updateLinkedInFlowItem(
+  id: string,
+  updates: Partial<Database["public"]["Tables"]["linkedin_flow_items"]["Update"]>,
+) {
   const { error } = await supabase.from("linkedin_flow_items").update(updates).eq("id", id);
   if (error) throw error;
 }

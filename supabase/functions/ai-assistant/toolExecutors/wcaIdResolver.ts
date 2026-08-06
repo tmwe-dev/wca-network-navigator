@@ -29,10 +29,8 @@ export async function loadWcaIds(
       const members = row.members as Record<string, unknown>[];
       if (Array.isArray(members)) {
         for (const m of members) {
-          const id = typeof m === "object"
-            ? ((m as Record<string, unknown>).wca_id ||
-              (m as Record<string, unknown>).id)
-            : m;
+          const id =
+            typeof m === "object" ? (m as Record<string, unknown>).wca_id || (m as Record<string, unknown>).id : m;
           if (id) dirIds.push(Number(id));
         }
       }
@@ -42,12 +40,8 @@ export async function loadWcaIds(
       .select("wca_id")
       .eq("country_code", countryCode)
       .not("wca_id", "is", null);
-    const existingSet = new Set(
-      (existing || []).map((p: Record<string, unknown>) => p.wca_id),
-    );
-    wcaIds = [...new Set(dirIds)].filter(
-      (id) => !existingSet.has(id) && !deadIdSet.has(id),
-    );
+    const existingSet = new Set((existing || []).map((p: Record<string, unknown>) => p.wca_id));
+    wcaIds = [...new Set(dirIds)].filter((id) => !existingSet.has(id) && !deadIdSet.has(id));
   } else if (mode === "no_profile") {
     const { data: noProfile } = await supabase
       .from("partners")
@@ -55,9 +49,7 @@ export async function loadWcaIds(
       .eq("country_code", countryCode)
       .not("wca_id", "is", null)
       .is("raw_profile_html", null);
-    wcaIds = (noProfile || [])
-      .map((p: Record<string, unknown>) => p.wca_id as number)
-      .filter(Boolean);
+    wcaIds = (noProfile || []).map((p: Record<string, unknown>) => p.wca_id as number).filter(Boolean);
 
     const { data: cacheRows } = await supabase
       .from("directory_cache")
@@ -69,17 +61,13 @@ export async function loadWcaIds(
         .select("wca_id")
         .eq("country_code", countryCode)
         .not("wca_id", "is", null);
-      const existingSet = new Set(
-        (allExisting || []).map((p: Record<string, unknown>) => p.wca_id),
-      );
+      const existingSet = new Set((allExisting || []).map((p: Record<string, unknown>) => p.wca_id));
       for (const row of cacheRows) {
         const members = row.members as Record<string, unknown>[];
         if (Array.isArray(members)) {
           for (const m of members) {
-            const id = typeof m === "object"
-              ? ((m as Record<string, unknown>).wca_id ||
-                (m as Record<string, unknown>).id)
-              : m;
+            const id =
+              typeof m === "object" ? (m as Record<string, unknown>).wca_id || (m as Record<string, unknown>).id : m;
             if (id && !existingSet.has(Number(id))) {
               wcaIds.push(Number(id));
             }
@@ -94,9 +82,7 @@ export async function loadWcaIds(
       .select("wca_id")
       .eq("country_code", countryCode)
       .not("wca_id", "is", null);
-    wcaIds = (dbPartners || [])
-      .map((p: Record<string, unknown>) => p.wca_id as number)
-      .filter(Boolean);
+    wcaIds = (dbPartners || []).map((p: Record<string, unknown>) => p.wca_id as number).filter(Boolean);
     const { data: cacheRows } = await supabase
       .from("directory_cache")
       .select("members")
@@ -106,10 +92,8 @@ export async function loadWcaIds(
         const members = row.members as Record<string, unknown>[];
         if (Array.isArray(members)) {
           for (const m of members) {
-            const id = typeof m === "object"
-              ? ((m as Record<string, unknown>).wca_id ||
-                (m as Record<string, unknown>).id)
-              : m;
+            const id =
+              typeof m === "object" ? (m as Record<string, unknown>).wca_id || (m as Record<string, unknown>).id : m;
             if (id) wcaIds.push(Number(id));
           }
         }

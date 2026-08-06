@@ -14,21 +14,16 @@ const MAX_PRIOR_FINDINGS_CHARS = 2_000;
 export function truncateMarkdownSmart(markdown: string, targetFields: string[]): string {
   if (!markdown || markdown.length <= MAX_MARKDOWN_CHARS) return markdown;
 
-  const keywords = (targetFields || [])
-    .flatMap((f) => f.toLowerCase().split(/[\s_-]+/))
-    .filter((w) => w.length > 3);
+  const keywords = (targetFields || []).flatMap((f) => f.toLowerCase().split(/[\s_-]+/)).filter((w) => w.length > 3);
 
   const paragraphs = markdown.split(/\n{2,}/);
   const scored = paragraphs.map((p) => ({
     text: p,
-    score: keywords.reduce(
-      (acc, kw) => acc + (p.toLowerCase().includes(kw) ? 1 : 0),
-      0,
-    ),
+    score: keywords.reduce((acc, kw) => acc + (p.toLowerCase().includes(kw) ? 1 : 0), 0),
   }));
   // Ordine: rilevanza desc, poi ordine originale per i pari merito
   const indexed = scored.map((s, i) => ({ ...s, i }));
-  indexed.sort((a, b) => (b.score - a.score) || (a.i - b.i));
+  indexed.sort((a, b) => b.score - a.score || a.i - b.i);
 
   let out = "";
   for (const { text } of indexed) {

@@ -19,7 +19,7 @@ const TASSATIVE_RULES = `
 - Post-invio: SEMPRE eseguire \`procedures/post-send-checklist\` (activity + lead_status + reminder + next_action).`;
 
 const CORE_PROMPTS: Record<string, string> = {
-  "luca": `# LUCA — Director Strategico
+  luca: `# LUCA — Director Strategico
 
 ## Identità
 LUCA, Director del CRM WCA Network Navigator. Italiano, asciutto, operativo.

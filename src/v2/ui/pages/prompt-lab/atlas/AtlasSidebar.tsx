@@ -33,9 +33,7 @@ const ROLE_LABEL: Record<string, string> = {
   classifier: "Classificatore",
 };
 
-const CATEGORY_ORDER: AgentCategory[] = [
-  "core", "email", "outreach", "analysis", "voice", "autonomous", "classifier",
-];
+const CATEGORY_ORDER: AgentCategory[] = ["core", "email", "outreach", "analysis", "voice", "autonomous", "classifier"];
 
 const CATEGORY_LABEL: Record<AgentCategory, string> = {
   core: "Core",
@@ -59,9 +57,7 @@ export function AtlasSidebar({ agents, selectedId, onSelect }: AtlasSidebarProps
     return m;
   }, [agents]);
 
-  const SelectedIcon = selected
-    ? (resolveLucideIcon(selected.avatarIcon))
-    : Icons.Bot;
+  const SelectedIcon = selected ? resolveLucideIcon(selected.avatarIcon) : Icons.Bot;
 
   return (
     <aside className="bg-muted/30 flex w-72 shrink-0 flex-col overflow-hidden border-r">
@@ -69,7 +65,12 @@ export function AtlasSidebar({ agents, selectedId, onSelect }: AtlasSidebarProps
       {selected && (
         <div className="border-b p-4">
           <div className="flex items-start gap-3">
-            <div className={cn("flex h-14 w-14 shrink-0 items-center justify-center rounded-xl", COLOR_MAP[selected.avatarColor])}>
+            <div
+              className={cn(
+                "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl",
+                COLOR_MAP[selected.avatarColor],
+              )}
+            >
               <SelectedIcon className="h-7 w-7" />
             </div>
             <div className="min-w-0 flex-1">
@@ -118,9 +119,7 @@ export function AtlasSidebar({ agents, selectedId, onSelect }: AtlasSidebarProps
                       onClick={() => onSelect(a.id)}
                       className={cn(
                         "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted",
+                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted",
                       )}
                     >
                       <Ico className="h-3.5 w-3.5 shrink-0" />

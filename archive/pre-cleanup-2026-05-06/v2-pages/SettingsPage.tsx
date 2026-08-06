@@ -3,7 +3,33 @@
  */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins, Power, Activity, Puzzle, Layers } from "lucide-react";
+import {
+  Loader2,
+  Settings as SettingsIcon,
+  Brain,
+  Link,
+  Download,
+  FileText,
+  Volume2,
+  Users,
+  Mail,
+  Image,
+  Database,
+  Shield,
+  Briefcase,
+  Clock,
+  Cpu,
+  Package,
+  Bell,
+  Square as LogSquare,
+  KeyRound,
+  UsersRound,
+  Coins,
+  Power,
+  Activity,
+  Puzzle,
+  Layers,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import AICommandCenter from "@/components/settings/AICommandCenter";
@@ -175,36 +201,44 @@ export function SettingsPage() {
   }, [searchParams]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
-  const tabs: VerticalTab[] = ([
-    { value: "ai-monitor", label: "AI Monitor", icon: Activity },
-    { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
-    { value: "enrichment", label: "Arricchimento", icon: Image },
-    { value: "audit", label: "Audit Trail", icon: LogSquare },
-    { value: "backup-export", label: "Backup & Export", icon: Package },
-    { value: "wca", label: "Connessioni", icon: Link },
-    { value: "development", label: "Development", icon: Layers },
-    { value: "download-email", label: "Download Email", icon: Mail },
-    { value: "estensioni", label: "Estensioni", icon: Puzzle },
-    { value: "generale", label: "Generale", icon: SettingsIcon },
-    { value: "import-export", label: "Importa", icon: Download },
-    { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
-    { value: "memoria-ai", label: "Memoria AI", icon: Database },
-    { value: "notifiche", label: "Notifiche", icon: Bell },
-    { value: "operatori", label: "Operatori", icon: Users },
-    { value: "processi-automatici", label: "Processi Automatici", icon: Power },
-    { value: "provider-ai", label: "Provider AI", icon: Cpu },
-    { value: "reportaziende", label: "Report Aziende", icon: FileText },
-    { value: "ruoli", label: "Ruoli & Permessi", icon: KeyRound },
-    { value: "ruoli-utenti", label: "Ruoli Utenti", icon: UsersRound },
-    { value: "team", label: "Team", icon: Users },
-    { value: "timing", label: "Timing & Schedule", icon: Clock },
-    { value: "token-ai", label: "Token AI", icon: Coins },
-    { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
-    { value: "voce-ai", label: "Voce AI", icon: Volume2 },
-  ] satisfies VerticalTab[]).slice().sort((a, b) => a.label.localeCompare(b.label, "it"));
+  const tabs: VerticalTab[] = (
+    [
+      { value: "ai-monitor", label: "AI Monitor", icon: Activity },
+      { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
+      { value: "enrichment", label: "Arricchimento", icon: Image },
+      { value: "audit", label: "Audit Trail", icon: LogSquare },
+      { value: "backup-export", label: "Backup & Export", icon: Package },
+      { value: "wca", label: "Connessioni", icon: Link },
+      { value: "development", label: "Development", icon: Layers },
+      { value: "download-email", label: "Download Email", icon: Mail },
+      { value: "estensioni", label: "Estensioni", icon: Puzzle },
+      { value: "generale", label: "Generale", icon: SettingsIcon },
+      { value: "import-export", label: "Importa", icon: Download },
+      { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
+      { value: "memoria-ai", label: "Memoria AI", icon: Database },
+      { value: "notifiche", label: "Notifiche", icon: Bell },
+      { value: "operatori", label: "Operatori", icon: Users },
+      { value: "processi-automatici", label: "Processi Automatici", icon: Power },
+      { value: "provider-ai", label: "Provider AI", icon: Cpu },
+      { value: "reportaziende", label: "Report Aziende", icon: FileText },
+      { value: "ruoli", label: "Ruoli & Permessi", icon: KeyRound },
+      { value: "ruoli-utenti", label: "Ruoli Utenti", icon: UsersRound },
+      { value: "team", label: "Team", icon: Users },
+      { value: "timing", label: "Timing & Schedule", icon: Clock },
+      { value: "token-ai", label: "Token AI", icon: Coins },
+      { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
+      { value: "voce-ai", label: "Voce AI", icon: Volume2 },
+    ] satisfies VerticalTab[]
+  )
+    .slice()
+    .sort((a, b) => a.label.localeCompare(b.label, "it"));
 
   return (
     <div data-testid="page-settings" className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -214,137 +248,173 @@ export function SettingsPage() {
         direction="horizontal"
         className="flex-1 min-h-0"
       >
-      <ResizablePanel defaultSize={16} minSize={8} maxSize={40} className="min-h-0">
-        <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} fluid />
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={84} minSize={40} className="min-h-0">
-      <div className={cn("h-full min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
-        {tab === "download-email" ? (
-          <EmailDownloadPage />
-        ) : (
-          <div className="max-w-4xl">
-            {tab === "generale" && (
-              <div className="space-y-4">
-                <div className="float-panel p-5">
-                  <GeneralSettings settings={settings} updateSetting={updateSetting} />
-                </div>
-                <div className="float-panel p-5">
-                  <LanguageSwitcher />
-                </div>
+        <ResizablePanel defaultSize={16} minSize={8} maxSize={40} className="min-h-0">
+          <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} fluid />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={84} minSize={40} className="min-h-0">
+          <div className={cn("h-full min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
+            {tab === "download-email" ? (
+              <EmailDownloadPage />
+            ) : (
+              <div className="max-w-4xl">
+                {tab === "generale" && (
+                  <div className="space-y-4">
+                    <div className="float-panel p-5">
+                      <GeneralSettings settings={settings} updateSetting={updateSetting} />
+                    </div>
+                    <div className="float-panel p-5">
+                      <LanguageSwitcher />
+                    </div>
+                  </div>
+                )}
+                {tab === "wca" && (
+                  <div className="float-panel p-5">
+                    <ConnectionsSettings settings={settings} updateSetting={updateSetting} />
+                  </div>
+                )}
+                {tab === "voce-ai" && (
+                  <div className="float-panel p-5">
+                    <ElevenLabsSettings settings={settings} updateSetting={updateSetting} />
+                  </div>
+                )}
+                {tab === "provider-ai" && (
+                  <div className="float-panel p-5">
+                    <AIProviderSettings settings={settings} updateSetting={updateSetting} />
+                  </div>
+                )}
+                {tab === "import-export" && (
+                  <div className="float-panel p-5">
+                    <ImportExportSettings />
+                  </div>
+                )}
+                {tab === "reportaziende" && (
+                  <div className="float-panel p-5">
+                    <RASettings settings={settings} updateSetting={updateSetting} />
+                  </div>
+                )}
+                {tab === "ai-prompt" && (
+                  <div className="float-panel p-5">
+                    <AICommandCenter />
+                  </div>
+                )}
+                {tab === "operatori" && <OperatorsSettings />}
+                <PermissionGate
+                  permission="settings.manage_users"
+                  fallback={
+                    <div className="float-panel p-5">
+                      <p className="text-sm text-muted-foreground">
+                        Non hai il permesso per accedere a questa sezione.
+                      </p>
+                    </div>
+                  }
+                >
+                  {tab === "utenti" && <AdminUsers />}
+                </PermissionGate>
+                {tab === "enrichment" && <EnrichmentSettings />}
+                {tab === "memoria-ai" && (
+                  <div className="float-panel p-5">
+                    <MemoryDashboard />
+                  </div>
+                )}
+                {tab === "guida-operativa" && (
+                  <div className="float-panel p-5">
+                    <OperativeJobsBoard />
+                  </div>
+                )}
+                {tab === "timing" && (
+                  <div className="float-panel p-5">
+                    <TimingSettings />
+                  </div>
+                )}
+                {tab === "token-ai" && (
+                  <div className="float-panel p-5">
+                    <TokenSettingsPanel />
+                  </div>
+                )}
+                {tab === "processi-automatici" && (
+                  <div className="float-panel p-5">
+                    <AutomatedProcessesPanel />
+                  </div>
+                )}
+                {tab === "ai-monitor" && (
+                  <div className="float-panel p-5">
+                    <AiMonitorPanel />
+                  </div>
+                )}
+                {tab === "estensioni" && (
+                  <div className="float-panel p-5">
+                    <ExtensionsPanel />
+                  </div>
+                )}
+                {tab === "notifiche" && (
+                  <div className="float-panel p-5">
+                    <NotificationPreferences />
+                  </div>
+                )}
+                <PermissionGate
+                  permission="settings.manage_roles"
+                  fallback={
+                    <div className="float-panel p-5">
+                      <p className="text-sm text-muted-foreground">
+                        Non hai il permesso per accedere a questa sezione.
+                      </p>
+                    </div>
+                  }
+                >
+                  {tab === "ruoli" && (
+                    <div className="float-panel p-5">
+                      <RoleManagementPanel />
+                    </div>
+                  )}
+                </PermissionGate>
+                <PermissionGate
+                  permission="settings.manage_roles"
+                  fallback={
+                    <div className="float-panel p-5">
+                      <p className="text-sm text-muted-foreground">
+                        Non hai il permesso per accedere a questa sezione.
+                      </p>
+                    </div>
+                  }
+                >
+                  {tab === "ruoli-utenti" && (
+                    <div className="float-panel p-5">
+                      <UserRolesPanel />
+                    </div>
+                  )}
+                </PermissionGate>
+                <PermissionGate
+                  permission="settings.manage_teams"
+                  fallback={
+                    <div className="float-panel p-5">
+                      <p className="text-sm text-muted-foreground">
+                        Non hai il permesso per accedere a questa sezione.
+                      </p>
+                    </div>
+                  }
+                >
+                  {tab === "team" && (
+                    <div className="float-panel p-5">
+                      <TeamManagementPanel />
+                    </div>
+                  )}
+                </PermissionGate>
+                {tab === "audit" && (
+                  <div className="float-panel p-5">
+                    <AuditTrailPanel />
+                  </div>
+                )}
+                {tab === "backup-export" && (
+                  <div className="float-panel p-5">
+                    <BackupExportTab />
+                  </div>
+                )}
+                {tab === "development" && <DevelopmentPagesPanel />}
               </div>
             )}
-            {tab === "wca" && (
-              <div className="float-panel p-5">
-                <ConnectionsSettings settings={settings} updateSetting={updateSetting} />
-              </div>
-            )}
-            {tab === "voce-ai" && (
-              <div className="float-panel p-5">
-                <ElevenLabsSettings settings={settings} updateSetting={updateSetting} />
-              </div>
-            )}
-            {tab === "provider-ai" && (
-              <div className="float-panel p-5">
-                <AIProviderSettings settings={settings} updateSetting={updateSetting} />
-              </div>
-            )}
-            {tab === "import-export" && (
-              <div className="float-panel p-5">
-                <ImportExportSettings />
-              </div>
-            )}
-            {tab === "reportaziende" && (
-              <div className="float-panel p-5">
-                <RASettings settings={settings} updateSetting={updateSetting} />
-              </div>
-            )}
-            {tab === "ai-prompt" && (
-              <div className="float-panel p-5">
-                <AICommandCenter />
-              </div>
-            )}
-            {tab === "operatori" && <OperatorsSettings />}
-            <PermissionGate permission="settings.manage_users" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
-              {tab === "utenti" && <AdminUsers />}
-            </PermissionGate>
-            {tab === "enrichment" && <EnrichmentSettings />}
-            {tab === "memoria-ai" && (
-              <div className="float-panel p-5">
-                <MemoryDashboard />
-              </div>
-            )}
-            {tab === "guida-operativa" && (
-              <div className="float-panel p-5">
-                <OperativeJobsBoard />
-              </div>
-            )}
-            {tab === "timing" && (
-              <div className="float-panel p-5">
-                <TimingSettings />
-              </div>
-            )}
-            {tab === "token-ai" && (
-              <div className="float-panel p-5">
-                <TokenSettingsPanel />
-              </div>
-            )}
-            {tab === "processi-automatici" && (
-              <div className="float-panel p-5">
-                <AutomatedProcessesPanel />
-              </div>
-            )}
-            {tab === "ai-monitor" && (
-              <div className="float-panel p-5">
-                <AiMonitorPanel />
-              </div>
-            )}
-            {tab === "estensioni" && (
-              <div className="float-panel p-5">
-                <ExtensionsPanel />
-              </div>
-            )}
-            {tab === "notifiche" && (
-              <div className="float-panel p-5">
-                <NotificationPreferences />
-              </div>
-            )}
-            <PermissionGate permission="settings.manage_roles" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
-              {tab === "ruoli" && (
-                <div className="float-panel p-5">
-                  <RoleManagementPanel />
-                </div>
-              )}
-            </PermissionGate>
-            <PermissionGate permission="settings.manage_roles" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
-              {tab === "ruoli-utenti" && (
-                <div className="float-panel p-5">
-                  <UserRolesPanel />
-                </div>
-              )}
-            </PermissionGate>
-            <PermissionGate permission="settings.manage_teams" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
-              {tab === "team" && (
-                <div className="float-panel p-5">
-                  <TeamManagementPanel />
-                </div>
-              )}
-            </PermissionGate>
-            {tab === "audit" && (
-              <div className="float-panel p-5">
-                <AuditTrailPanel />
-              </div>
-            )}
-            {tab === "backup-export" && (
-              <div className="float-panel p-5">
-                <BackupExportTab />
-              </div>
-            )}
-            {tab === "development" && <DevelopmentPagesPanel />}
           </div>
-        )}
-      </div>
-      </ResizablePanel>
+        </ResizablePanel>
       </PersistentResizablePanelGroup>
     </div>
   );

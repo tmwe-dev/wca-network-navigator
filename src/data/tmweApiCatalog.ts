@@ -35,7 +35,9 @@ export const tmweCatalogKeys = {
 export async function listTmweCatalog(): Promise<TmweCatalogRow[]> {
   const { data, error } = await supabase
     .from("tmwe_api_catalog")
-    .select("id, op, method, path, description, scopes, api_group, risk_level, identity, enabled, requires_confirmation, is_alias, alias_of, source, verified_at, last_called_at, call_count")
+    .select(
+      "id, op, method, path, description, scopes, api_group, risk_level, identity, enabled, requires_confirmation, is_alias, alias_of, source, verified_at, last_called_at, call_count",
+    )
     .order("api_group", { ascending: true })
     .order("op", { ascending: true })
     .limit(2000);
@@ -44,14 +46,18 @@ export async function listTmweCatalog(): Promise<TmweCatalogRow[]> {
 }
 
 export async function setTmweCatalogEnabled(op: string, enabled: boolean): Promise<void> {
-  const { error } = await supabase
-    .from("tmwe_api_catalog")
-    .update({ enabled })
-    .eq("op", op);
+  const { error } = await supabase.from("tmwe_api_catalog").update({ enabled }).eq("op", op);
   if (error) throw new Error(error.message);
 }
 
-export async function syncTmweCatalog(): Promise<{ ok: boolean; total_endpoints?: number; upserted?: number; aliases?: number; groups?: number; error?: string }> {
+export async function syncTmweCatalog(): Promise<{
+  ok: boolean;
+  total_endpoints?: number;
+  upserted?: number;
+  aliases?: number;
+  groups?: number;
+  error?: string;
+}> {
   const { data, error } = await supabase.functions.invoke("tmwe-catalog-sync", { body: {} });
   if (error) return { ok: false, error: error.message };
   return data as { ok: boolean; total_endpoints?: number; upserted?: number; aliases?: number; groups?: number };

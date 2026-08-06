@@ -1,4 +1,14 @@
-import { CreditCard, Sparkles, ChevronDown, ChevronUp, Mail, Linkedin, Phone, CalendarClock, Reply } from "lucide-react";
+import {
+  CreditCard,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Mail,
+  Linkedin,
+  Phone,
+  CalendarClock,
+  Reply,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import type { ContactOrigin } from "@/types/cockpit";
@@ -30,10 +40,28 @@ const priorityColor = (p: number) => {
 
 const originConfig: Record<ContactOrigin, { label: string; bg: string; text: string; border: string; dot: string }> = {
   wca: { label: "WCA", bg: "bg-chart-1/15", text: "text-chart-1", border: "border-chart-1/30", dot: "bg-chart-1" },
-  report_aziende: { label: "RA", bg: "bg-chart-4/15", text: "text-chart-4", border: "border-chart-4/30", dot: "bg-chart-4" },
-  import: { label: "Import", bg: "bg-chart-3/15", text: "text-chart-3", border: "border-chart-3/30", dot: "bg-chart-3" },
+  report_aziende: {
+    label: "RA",
+    bg: "bg-chart-4/15",
+    text: "text-chart-4",
+    border: "border-chart-4/30",
+    dot: "bg-chart-4",
+  },
+  import: {
+    label: "Import",
+    bg: "bg-chart-3/15",
+    text: "text-chart-3",
+    border: "border-chart-3/30",
+    dot: "bg-chart-3",
+  },
   bca: { label: "BCA", bg: "bg-primary/15", text: "text-primary", border: "border-primary/30", dot: "bg-primary" },
-  manual: { label: "Manuale", bg: "bg-success/15", text: "text-success", border: "border-success/30", dot: "bg-success" },
+  manual: {
+    label: "Manuale",
+    bg: "bg-success/15",
+    text: "text-success",
+    border: "border-success/30",
+    dot: "bg-success",
+  },
 };
 
 interface CockpitContactHeaderProps {
@@ -46,7 +74,12 @@ interface CockpitContactHeaderProps {
 }
 
 export function CockpitContactHeader({
-  contact, isExpanded, isWorked, hasAnyData, onToggleExpand, contactHeadline,
+  contact,
+  isExpanded,
+  isWorked,
+  hasAnyData,
+  onToggleExpand,
+  contactHeadline,
 }: CockpitContactHeaderProps) {
   const oc = originConfig[contact.origin];
 
@@ -65,34 +98,48 @@ export function CockpitContactHeader({
           <div className="flex items-center gap-1.5">
             {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
             <span className="text-[15px] font-bold text-foreground truncate leading-tight">
-              {contact.name && contact.name !== "—" ? contact.name : (contact.company || "Contatto")}
+              {contact.name && contact.name !== "—" ? contact.name : contact.company || "Contatto"}
             </span>
             <button
-              onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
-              className={cn("flex items-center gap-0.5 rounded-md p-0.5 transition-colors", hasAnyData ? "hover:bg-primary/10" : "hover:bg-muted/50")}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
+              className={cn(
+                "flex items-center gap-0.5 rounded-md p-0.5 transition-colors",
+                hasAnyData ? "hover:bg-primary/10" : "hover:bg-muted/50",
+              )}
               aria-label={isExpanded ? "Comprimi" : "Espandi"}
             >
-              {isExpanded ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+              {isExpanded ? (
+                <ChevronUp className="w-3 h-3 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              )}
             </button>
           </div>
           {/* Riga 2: AZIENDA · paese */}
           <div className="flex items-center gap-1.5 text-xs truncate">
             <span className="truncate font-semibold text-foreground/90">{contact.company}</span>
-            {contact.country && <span className="text-success text-[10px] uppercase tracking-wide">· {contact.country}</span>}
+            {contact.country && (
+              <span className="text-success text-[10px] uppercase tracking-wide">· {contact.country}</span>
+            )}
           </div>
           {contact.role && <div className="text-[11px] text-foreground truncate">{contact.role}</div>}
 
           {/* Riga 3: TIPO AZIONE + dettaglio leggibile (subject pulito o canale) */}
           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
             <InfoTooltip content={actionTooltip}>
-              <span className={cn(
-                "inline-flex items-center justify-center rounded-md p-0.5 border",
-                isReply
-                  ? "bg-chart-3/20 text-chart-3 border-chart-3/40"
-                  : isScheduled
-                    ? "bg-warning/20 text-warning border-warning/40"
-                    : "bg-success/15 text-success border-success/30"
-              )}>
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center rounded-md p-0.5 border",
+                  isReply
+                    ? "bg-chart-3/20 text-chart-3 border-chart-3/40"
+                    : isScheduled
+                      ? "bg-warning/20 text-warning border-warning/40"
+                      : "bg-success/15 text-success border-success/30",
+                )}
+              >
                 <ActionIcon className="w-3 h-3" />
               </span>
             </InfoTooltip>
@@ -105,9 +152,7 @@ export function CockpitContactHeader({
                   .replace(/^📅\s*/, "")}
               </span>
             )}
-            {contactHeadline && (
-              <span className="text-[10px] text-muted-foreground truncate">· {contactHeadline}</span>
-            )}
+            {contactHeadline && <span className="text-[10px] text-muted-foreground truncate">· {contactHeadline}</span>}
           </div>
 
           {/* Riga 4: RIFERIMENTI a colpo d'occhio — chip per email/tel/LinkedIn quando presenti */}
@@ -145,17 +190,28 @@ export function CockpitContactHeader({
           <div className="flex items-center gap-1">
             {hasAnyData && (
               <InfoTooltip content="Enrichment AI completato">
-                <span className="p-0.5 rounded bg-primary/10"><Sparkles className="w-3 h-3 text-primary" /></span>
+                <span className="p-0.5 rounded bg-primary/10">
+                  <Sparkles className="w-3 h-3 text-primary" />
+                </span>
               </InfoTooltip>
             )}
             <InfoTooltip content={`Origine: ${contact.originDetail}`}>
-              <span className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1", oc.bg, oc.text, oc.border)}>
+              <span
+                className={cn(
+                  "text-[9px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1",
+                  oc.bg,
+                  oc.text,
+                  oc.border,
+                )}
+              >
                 <span className={cn("w-1.5 h-1.5 rounded-full", oc.dot)} />
                 {oc.label}
               </span>
             </InfoTooltip>
           </div>
-          <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full border", priorityColor(contact.priority))}>
+          <span
+            className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full border", priorityColor(contact.priority))}
+          >
             P{contact.priority}
           </span>
           {isWorked && (
@@ -178,14 +234,16 @@ export function CockpitContactHeader({
               {contact.seniority}
             </span>
           )}
-          {contact.networks?.map(n => (
-            <span key={n} className="text-[9px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/30">
+          {contact.networks?.map((n) => (
+            <span
+              key={n}
+              className="text-[9px] px-1 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/30"
+            >
               {n}
             </span>
           ))}
         </div>
       )}
-
     </>
   );
 }

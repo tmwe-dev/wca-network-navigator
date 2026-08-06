@@ -15,11 +15,7 @@ interface Props {
   readonly children: React.ReactNode;
 }
 
-export function DeferredOnVisible({
-  placeholder,
-  rootMargin = "200px",
-  children,
-}: Props): React.ReactElement {
+export function DeferredOnVisible({ placeholder, rootMargin = "200px", children }: Props): React.ReactElement {
   const [visible, setVisible] = React.useState(false);
   const ref = React.useRef<HTMLDivElement | null>(null);
 

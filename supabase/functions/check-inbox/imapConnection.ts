@@ -29,11 +29,7 @@ interface UidBatch {
   hasMore: boolean;
 }
 
-export async function createImapConfig(
-  imapHost: string,
-  imapUser: string,
-  imapPassword: string
-): Promise<ImapConfig> {
+export async function createImapConfig(imapHost: string, imapUser: string, imapPassword: string): Promise<ImapConfig> {
   return {
     host: imapHost,
     port: 993,
@@ -59,7 +55,7 @@ export async function connectToImap(config: ImapConfig): Promise<ImapClient> {
       if (attempt === 2) {
         throw new Error(`IMAP connection failed after 2 attempts: ${extractErrorMessage(connErr)}`);
       }
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
 
@@ -92,10 +88,7 @@ export async function handleUidvalidityChange(
     await q;
     return 0;
   } else if (uidvalidity && storedUidvalidity !== uidvalidity) {
-    let q = supabase
-      .from("email_sync_state")
-      .update({ stored_uidvalidity: uidvalidity })
-      .eq("user_id", userId);
+    let q = supabase.from("email_sync_state").update({ stored_uidvalidity: uidvalidity }).eq("user_id", userId);
     q = mailboxId ? q.eq("mailbox_id", mailboxId) : q.is("mailbox_id", null);
     await q;
   }
@@ -140,11 +133,7 @@ export async function skipDuplicateUid(
   uid: number,
   mailboxId: string | null = null,
 ): Promise<boolean> {
-  let dupQ = supabase
-    .from("channel_messages")
-    .select("id")
-    .eq("imap_uid", uid)
-    .eq("user_id", userId);
+  let dupQ = supabase.from("channel_messages").select("id").eq("imap_uid", uid).eq("user_id", userId);
   dupQ = mailboxId ? dupQ.eq("mailbox_id", mailboxId) : dupQ.is("mailbox_id", null);
   const { data: existingByUid } = await dupQ.maybeSingle();
 
@@ -157,10 +146,7 @@ export async function skipDuplicateUid(
       .eq("channel", "email")
       .not("imap_uid", "is", null);
     maxQ = mailboxId ? maxQ.eq("mailbox_id", mailboxId) : maxQ.is("mailbox_id", null);
-    const { data: maxRow } = await maxQ
-      .order("imap_uid", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data: maxRow } = await maxQ.order("imap_uid", { ascending: false }).limit(1).maybeSingle();
     const dbMaxUid = (maxRow?.imap_uid as number | undefined) ?? uid;
     const jumpTo = Math.max(dbMaxUid, uid);
     await updateSyncState(supabase, userId, jumpTo, mailboxId);
@@ -177,10 +163,7 @@ export async function getSyncState(
   imapUser: string,
   mailboxId: string | null = null,
 ): Promise<SyncState> {
-  let selQ = supabase
-    .from("email_sync_state")
-    .select("last_uid, stored_uidvalidity")
-    .eq("user_id", userId);
+  let selQ = supabase.from("email_sync_state").select("last_uid, stored_uidvalidity").eq("user_id", userId);
   selQ = mailboxId ? selQ.eq("mailbox_id", mailboxId) : selQ.is("mailbox_id", null);
   const { data: syncState } = await selQ.maybeSingle();
 
@@ -188,15 +171,13 @@ export async function getSyncState(
   const storedUidvalidity = syncState?.stored_uidvalidity || null;
 
   if (!syncState) {
-    await supabase.from("email_sync_state").insert(
-      {
-        user_id: userId,
-        mailbox_id: mailboxId,
-        last_uid: 0,
-        imap_host: imapHost,
-        imap_user: imapUser,
-      },
-    );
+    await supabase.from("email_sync_state").insert({
+      user_id: userId,
+      mailbox_id: mailboxId,
+      last_uid: 0,
+      imap_host: imapHost,
+      imap_user: imapUser,
+    });
   }
 
   return { lastUid, storedUidvalidity };

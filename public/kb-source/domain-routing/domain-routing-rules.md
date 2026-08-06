@@ -6,16 +6,19 @@ tags: [domain_routing, procedures, email, routing, classification, operational-d
 # Regole smistamento per dominio
 
 ## Obiettivo
+
 Definire criteri chiari per il routing delle email ricevute verso i 4 domini (commercial, operative, administrative, support).
 
 ## Classi di email e routing
 
 ### CLASSE 1: EMAIL COMMERCIALE
+
 **Dominio**: commercial@domain
 **Destinatari**: Sales team, BD, commercial managers
 **Urgenza**: ALTA
 
 #### Segnali di riconoscimento
+
 - Prospect non ancora cliente (no booking confermato)
 - Richiesta di preventivo iniziale
 - Domanda sulla roadmap/future features
@@ -23,16 +26,19 @@ Definire criteri chiari per il routing delle email ricevute verso i 4 domini (co
 - Lead freddo (referral, inbound)
 
 #### Esempi di email
+
 - "Potete inviarmi un preventivo per [SERVIZIO]?"
 - "Siamo interessati a conoscere i vostri servizi"
 - "Abbiamo una partnership da proporvi"
 - "Quali sono le vostre tariffe per [SERVIZIO]?"
 
 #### Risposta SLA
+
 - **First contact** (prospect nuovo): entro 4 ore
 - **Follow-up su preventivo**: entro 24 ore
 
 #### Template di risposta commerciale
+
 ```
 Caro [Nome],
 
@@ -48,11 +54,13 @@ Rimango in attesa.
 ---
 
 ### CLASSE 2: EMAIL OPERATIVA
+
 **Dominio**: operative@domain
 **Destinatari**: Logistica, operations, delivery teams
 **Urgenza**: CRITICA
 
 #### Segnali di riconoscimento
+
 - Cliente ha booking confermato
 - Richiesta su stato consegna/tracking
 - Domanda su dettagli ordine
@@ -61,6 +69,7 @@ Rimango in attesa.
 - Richiesta di numero di tracking
 
 #### Esempi di email
+
 - "Dove è la mia consegna?"
 - "Devo cambiare indirizzo di consegna"
 - "Il pacco è arrivato danneggiato"
@@ -68,11 +77,13 @@ Rimango in attesa.
 - "Posso rinviare la consegna a domani?"
 
 #### Risposta SLA
+
 - **Tracking/stato**: entro 1 ora
 - **Modifica booking**: entro 2 ore
 - **Problema logistico**: entro 30 minuti (escalation)
 
 #### Template di risposta operativa
+
 ```
 Caro [Nome],
 
@@ -88,6 +99,7 @@ Se urgente, potete contattarmi direttamente al [PHONE].
 ```
 
 #### Checklist operativa
+
 - [ ] Localizza booking nel sistema
 - [ ] Verifica status con corriere (se necessario)
 - [ ] Proposte soluzioni concrete (non scuse)
@@ -97,11 +109,13 @@ Se urgente, potete contattarmi direttamente al [PHONE].
 ---
 
 ### CLASSE 3: EMAIL AMMINISTRATIVA
+
 **Dominio**: administrative@domain o admin@domain
 **Destinatari**: Accounting, billing, administrative staff
 **Urgenza**: MEDIA
 
 #### Segnali di riconoscimento
+
 - Richiesta di fattura
 - Sollecito di pagamento ricevuto
 - Domanda su documento bilancio
@@ -111,6 +125,7 @@ Se urgente, potete contattarmi direttamente al [PHONE].
 - Richiesta di nota di credito
 
 #### Esempi di email
+
 - "Potete mandarmi la fattura?"
 - "Abbiamo ricevuto un sollecito di pagamento per..."
 - "L'importo in fattura non corrisponde all'ordine"
@@ -118,11 +133,13 @@ Se urgente, potete contattarmi direttamente al [PHONE].
 - "Potete fare una nota di credito per la merce danneggiata?"
 
 #### Risposta SLA
+
 - **Richiesta fattura**: entro 24 ore
 - **Domanda pagamento**: entro 4 ore
 - **Disputa importo**: entro 24 ore (investigazione)
 
 #### Template di risposta amministrativa
+
 ```
 Caro [Nome],
 
@@ -139,6 +156,7 @@ Se avete domande, rimango a disposizione al [PHONE].
 ```
 
 #### Checklist amministrativa
+
 - [ ] Verifica ordine esiste e corrisponde
 - [ ] Controlla stato pagamento
 - [ ] Allega documento richiesto (se esiste)
@@ -148,11 +166,13 @@ Se avete domande, rimango a disposizione al [PHONE].
 ---
 
 ### CLASSE 4: EMAIL DI SUPPORT
+
 **Dominio**: support@domain
 **Destinatari**: Customer service, support manager, retention
 **Urgenza**: ALTA
 
 #### Segnali di riconoscimento
+
 - Cliente ha un problema/reclamo
 - Richiesta di assistenza post-consegna
 - Feedback negativo
@@ -162,6 +182,7 @@ Se avete domande, rimango a disposizione al [PHONE].
 - Segnalazione bug/problema tecnico
 
 #### Esempi di email
+
 - "Ho ricevuto il pacco, ma..."
 - "Non so come usare il servizio"
 - "Avete risolto il problema di cui avevo scritto?"
@@ -169,11 +190,13 @@ Se avete domande, rimango a disposizione al [PHONE].
 - "Non riesco a fare il login"
 
 #### Risposta SLA
+
 - **Reclamo/problema**: entro 2 ore (first contact)
 - **Richiesta feedback positivo**: entro 24 ore (risposta)
 - **Problema tecnico**: entro 4 ore (diagnosi)
 
 #### Template di risposta support
+
 ```
 Caro [Nome],
 
@@ -191,6 +214,7 @@ Grazie della pazienza.
 ```
 
 #### Checklist support
+
 - [ ] Tono: empatico, non difensivo
 - [ ] Localizza ordine/booking
 - [ ] Propone soluzione concreta (non promesse vaghe)
@@ -226,14 +250,17 @@ EMAIL RICEVUTA
 ## Regole di escalation tra domini
 
 ### Se COMMERCIAL riceve richiesta operativa (es. tracking su prospect)
+
 - Rispondi: "Perfetto, abbiamo ancora il booking in preparazione. Ecco lo status..."
 - Poi gira a OPERATIVE per follow-up
 
 ### Se OPERATIVE riceve richiesta amministrativa (es. fattura da client)
+
 - Rispondi: "Perfetto, vi metto in contatto con amministrazione che vi invierà la fattura"
 - Gira a ADMINISTRATIVE, metti cliente in CC
 
 ### Se SUPPORT riceve richiesta commerciale (es. upsell)
+
 - Non vendere da support (erode fiducia)
 - Rispondi: "Ottima domanda! Vi collego con il team commerciale che vi farà una proposta"
 - Gira a COMMERCIAL
@@ -263,13 +290,17 @@ Se non è chiaro quale dominio, applica questa priorità:
 ## Template di auto-risposta per ciascun dominio
 
 ### Commercial
+
 "Grazie per averci contattato! Il team commerciale vi risponderà entro 4 ore."
 
 ### Operative
+
 "Ci siamo! Stiamo verificando il vostro booking e vi rispondiamo urgentemente entro 1 ora."
 
 ### Administrative
+
 "Abbiamo ricevuto. Ufficio amministrativo vi risponderà entro 24 ore."
 
 ### Support
+
 "Siamo qui per aiutarvi! Vi contatteremo entro 2 ore per risolvere il vostro problema."

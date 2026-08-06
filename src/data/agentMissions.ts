@@ -8,7 +8,6 @@ import { toRecord } from "@/lib/records";
 type MissionUpdate = Database["public"]["Tables"]["agent_missions"]["Update"];
 type MissionInsert = Database["public"]["Tables"]["agent_missions"]["Insert"];
 
-
 type MissionDbRow = Database["public"]["Tables"]["agent_missions"]["Row"];
 type MissionEventDbRow = Database["public"]["Tables"]["agent_mission_events"]["Row"];
 
@@ -98,10 +97,7 @@ export async function insertAgentMission(payload: MissionInsert): Promise<void> 
 
 /** Tutte le missioni autopilot, più recenti prima (MissionsAutopilotPage). */
 export async function findAllAgentMissions(): Promise<AgentMissionRow[]> {
-  const { data, error } = await supabase
-    .from("agent_missions")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("agent_missions").select("*").order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapMissionRow);
 }
@@ -137,13 +133,12 @@ export interface MissionOverviewRow {
 }
 
 /** Elenco missioni con colonne ridotte + count, per il tool "list-missions". */
-export async function findAgentMissionsOverview(limit = 40): Promise<{ rows: MissionOverviewRow[]; count: number | null }> {
+export async function findAgentMissionsOverview(
+  limit = 40,
+): Promise<{ rows: MissionOverviewRow[]; count: number | null }> {
   const { data, error, count } = await supabase
     .from("agent_missions")
-    .select(
-      "id,title,goal_type,status,autopilot,kpi_target,kpi_current,budget,budget_consumed",
-      { count: "exact" },
-    )
+    .select("id,title,goal_type,status,autopilot,kpi_target,kpi_current,budget,budget_consumed", { count: "exact" })
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;

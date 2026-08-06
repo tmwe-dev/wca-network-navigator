@@ -11,7 +11,15 @@ import { createLogger } from "@/lib/log";
 const log = createLogger("ContactAIBar");
 
 export interface AICommand {
-  type: "apply_filters" | "set_sort" | "select_contacts" | "update_status" | "export_csv" | "send_to_workspace" | "create_jobs" | "multi";
+  type:
+    | "apply_filters"
+    | "set_sort"
+    | "select_contacts"
+    | "update_status"
+    | "export_csv"
+    | "send_to_workspace"
+    | "create_jobs"
+    | "multi";
   filters?: Partial<ContactFilters>;
   groupBy?: ContactFilters["groupBy"];
   sort?: string;
@@ -100,7 +108,11 @@ export function ContactAIBar({ filters, totalContacts, selectedCount, sortKey, o
       }
     } catch (e: unknown) {
       log.error("ai bar error", { message: e instanceof Error ? e.message : String(e) });
-      toast({ title: "Errore", description: e instanceof Error ? e.message : "Errore di comunicazione", variant: "destructive" });
+      toast({
+        title: "Errore",
+        description: e instanceof Error ? e.message : "Errore di comunicazione",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
       inputRef.current?.focus();

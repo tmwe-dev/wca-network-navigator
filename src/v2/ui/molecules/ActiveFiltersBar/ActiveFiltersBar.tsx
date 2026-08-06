@@ -43,10 +43,7 @@ export function ActiveFiltersBar({
   return (
     <div
       data-testid="active-filters-bar"
-      className={cn(
-        "flex items-center gap-2 flex-wrap px-4 py-1.5 border-b border-border/30 bg-muted/20",
-        className
-      )}
+      className={cn("flex items-center gap-2 flex-wrap px-4 py-1.5 border-b border-border/30 bg-muted/20", className)}
     >
       <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
         <Filter className="w-3 h-3" />
@@ -58,12 +55,9 @@ export function ActiveFiltersBar({
           variant="outline"
           className={cn(
             "text-[10px] py-0 pl-1.5 pr-1 h-5 flex items-center gap-1",
-            chip.tone === "primary" &&
-              "bg-primary/10 text-primary border-primary/30",
-            chip.tone === "warning" &&
-              "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400",
-            (!chip.tone || chip.tone === "default") &&
-              "bg-card/60 text-foreground border-border/50"
+            chip.tone === "primary" && "bg-primary/10 text-primary border-primary/30",
+            chip.tone === "warning" && "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400",
+            (!chip.tone || chip.tone === "default") && "bg-card/60 text-foreground border-border/50",
           )}
         >
           {chip.icon === "holding" && <Plane className="w-2.5 h-2.5" />}

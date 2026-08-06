@@ -37,8 +37,15 @@ function showScreen(name) {
   const quickBar = $("#quick-bar");
   if (quickBar) quickBar.classList.toggle("hidden", name !== "dashboard");
 }
-function showOnboarding() { showScreen("onboarding"); goToStep(0); }
-function showDashboard() { showScreen("dashboard"); switchChannel(activeChannel); refreshDashboard(); }
+function showOnboarding() {
+  showScreen("onboarding");
+  goToStep(0);
+}
+function showDashboard() {
+  showScreen("dashboard");
+  switchChannel(activeChannel);
+  refreshDashboard();
+}
 function showCompose(channel) {
   composeChannel = channel || activeChannel;
   showScreen("compose");
@@ -48,11 +55,14 @@ function showCompose(channel) {
 function goToStep(n) {
   currentStep = n;
   const allSteps = ["step-0", "step-1", "step-1b", "step-2", "step-3", "step-4", "step-5"];
-  allSteps.forEach(id => $(`#${id}`)?.classList.remove("active"));
+  allSteps.forEach((id) => $(`#${id}`)?.classList.remove("active"));
   const stepMap = { 0: "step-0", 1: "step-1", "1b": "step-1b", 2: "step-2", 3: "step-3", 4: "step-4", 5: "step-5" };
   $(`#${stepMap[n]}`)?.classList.add("active");
   const dotIndex = typeof n === "number" ? n : 1;
-  dots.forEach((d, i) => { d.classList.toggle("active", i === dotIndex); d.classList.toggle("done", i < dotIndex); });
+  dots.forEach((d, i) => {
+    d.classList.toggle("active", i === dotIndex);
+    d.classList.toggle("done", i < dotIndex);
+  });
 }
 
 /* ── Events ───────────────────────────────────────────────── */
@@ -63,7 +73,10 @@ function bindEvents() {
   $("#btn-email-discover")?.addEventListener("click", handleEmailDiscover);
   $("#btn-email-manual")?.addEventListener("click", () => {
     const email = $("#email-addr").value.trim();
-    if (!email) { showStatus("email-discover-status", "Inserisci l'email", "warning"); return; }
+    if (!email) {
+      showStatus("email-discover-status", "Inserisci l'email", "warning");
+      return;
+    }
     $("#email-host").value = "";
     $("#email-port").value = "993";
     $("#email-tls").value = "true";
@@ -78,7 +91,10 @@ function bindEvents() {
 
   $("#btn-email-test")?.addEventListener("click", async () => {
     const host = $("#email-host").value.trim();
-    if (!host) { showStatus("email-test-status", "Inserisci l'host IMAP", "warning"); return; }
+    if (!host) {
+      showStatus("email-test-status", "Inserisci l'host IMAP", "warning");
+      return;
+    }
     onboardingState.email = {
       email: $("#email-addr").value.trim(),
       password: $("#email-pw").value,
@@ -118,22 +134,32 @@ function bindEvents() {
 
   // ── LINKEDIN ──
   $("#btn-li-save")?.addEventListener("click", () => {
-    onboardingState.linkedin = { profileUrl: $("#li-profile").value.trim(), notifications: $("#li-notifications").checked };
+    onboardingState.linkedin = {
+      profileUrl: $("#li-profile").value.trim(),
+      notifications: $("#li-notifications").checked,
+    };
     goToStep(4);
   });
   $("#skip-li")?.addEventListener("click", () => goToStep(4));
 
   // ── AI ──
   $("#btn-ai-save")?.addEventListener("click", () => {
-    onboardingState.ai = { openaiKey: $("#openai-key").value.trim(), anthropicKey: $("#anthropic-key").value.trim(), defaultModel: $("#ai-default-model").value };
+    onboardingState.ai = {
+      openaiKey: $("#openai-key").value.trim(),
+      anthropicKey: $("#anthropic-key").value.trim(),
+      defaultModel: $("#ai-default-model").value,
+    };
     goToStep(5);
     renderSummary();
   });
-  $("#skip-ai")?.addEventListener("click", () => { goToStep(5); renderSummary(); });
+  $("#skip-ai")?.addEventListener("click", () => {
+    goToStep(5);
+    renderSummary();
+  });
 
   // Eye toggles
   $("#eye-email")?.addEventListener("click", () => togglePw("email-pw", "eye-email"));
-  $$(".btn-eye[data-target]").forEach(btn => {
+  $$(".btn-eye[data-target]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const inp = $(`#${btn.dataset.target}`);
       const show = inp.type === "password";
@@ -143,9 +169,9 @@ function bindEvents() {
   });
 
   // Storage options
-  $$(".storage-option").forEach(opt => {
+  $$(".storage-option").forEach((opt) => {
     opt.addEventListener("click", () => {
-      $$(".storage-option").forEach(o => o.classList.remove("selected"));
+      $$(".storage-option").forEach((o) => o.classList.remove("selected"));
       opt.classList.add("selected");
       opt.querySelector("input").checked = true;
     });
@@ -155,7 +181,7 @@ function bindEvents() {
   $("#btn-finish")?.addEventListener("click", handleFinish);
 
   // ── DASHBOARD ──
-  $$(".channel-tab").forEach(tab => {
+  $$(".channel-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       if (tab.classList.contains("disabled")) return;
       switchChannel(tab.dataset.channel);
@@ -183,9 +209,9 @@ function bindEvents() {
     renderEmailList();
     $("#search-bar").classList.add("hidden");
   });
-  $$(".filter-tab").forEach(tab => {
+  $$(".filter-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
-      $$(".filter-tab").forEach(t => t.classList.remove("active"));
+      $$(".filter-tab").forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
       currentFilter = tab.dataset.filter;
       renderEmailList();
@@ -206,7 +232,7 @@ function bindEvents() {
   // Listen for messages from background
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === "showEmail" && msg.emailId) {
-      const email = allEmails.find(e => e.uid === msg.emailId);
+      const email = allEmails.find((e) => e.uid === msg.emailId);
       if (email) openReader(email);
     }
     if (msg.action === "emailsUpdated") loadEmails();
@@ -214,7 +240,7 @@ function bindEvents() {
 
   // ── COMPOSE ──
   $("#btn-compose-back")?.addEventListener("click", () => showDashboard());
-  $$(".compose-ch-btn").forEach(btn => {
+  $$(".compose-ch-btn").forEach((btn) => {
     btn.addEventListener("click", () => setupComposeChannel(btn.dataset.composeCh));
   });
   $("#btn-send")?.addEventListener("click", handleSend);
@@ -263,14 +289,15 @@ function renderEmailList() {
   const searchQuery = ($("#search-input")?.value || "").toLowerCase();
 
   let filtered = allEmails;
-  if (currentFilter === "unread") filtered = filtered.filter(e => e.unread);
-  else if (currentFilter === "flagged") filtered = filtered.filter(e => e.flagged);
+  if (currentFilter === "unread") filtered = filtered.filter((e) => e.unread);
+  else if (currentFilter === "flagged") filtered = filtered.filter((e) => e.flagged);
 
   if (searchQuery) {
-    filtered = filtered.filter(e =>
-      (e.subject || "").toLowerCase().includes(searchQuery) ||
-      (e.from || "").toLowerCase().includes(searchQuery) ||
-      (e.snippet || "").toLowerCase().includes(searchQuery)
+    filtered = filtered.filter(
+      (e) =>
+        (e.subject || "").toLowerCase().includes(searchQuery) ||
+        (e.from || "").toLowerCase().includes(searchQuery) ||
+        (e.snippet || "").toLowerCase().includes(searchQuery),
     );
   }
 
@@ -284,10 +311,11 @@ function renderEmailList() {
   }
 
   if (empty) empty.classList.add("hidden");
-  list.innerHTML = filtered.map(email => {
-    const initials = getInitials(email.from);
-    const isActive = selectedEmail?.uid === email.uid;
-    return `
+  list.innerHTML = filtered
+    .map((email) => {
+      const initials = getInitials(email.from);
+      const isActive = selectedEmail?.uid === email.uid;
+      return `
       <div class="email-row${email.unread ? " unread" : ""}${isActive ? " active" : ""}"
            data-uid="${email.uid}">
         <div class="email-avatar">${initials}</div>
@@ -303,12 +331,13 @@ function renderEmailList() {
         </div>
       </div>
     `;
-  }).join("");
+    })
+    .join("");
 
-  list.querySelectorAll(".email-row").forEach(row => {
+  list.querySelectorAll(".email-row").forEach((row) => {
     row.addEventListener("click", () => {
       const uid = parseInt(row.dataset.uid);
-      const email = allEmails.find(e => e.uid === uid);
+      const email = allEmails.find((e) => e.uid === uid);
       if (email) openReader(email);
     });
   });
@@ -322,8 +351,12 @@ function openReader(email) {
   $("#reader-from").textContent = email.from || "Sconosciuto";
   $("#reader-date").textContent = email.date
     ? new Date(email.date).toLocaleString("it-IT", {
-        weekday: "long", day: "numeric", month: "long",
-        year: "numeric", hour: "2-digit", minute: "2-digit"
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       })
     : "";
   $("#reader-avatar").textContent = getInitials(email.from);
@@ -350,7 +383,9 @@ function openReader(email) {
         a { color: #6366f1; }
       </style></head><body>${email.bodyHtml}</body></html>`);
       doc.close();
-      setTimeout(() => { iframe.style.height = doc.body.scrollHeight + 20 + "px"; }, 100);
+      setTimeout(() => {
+        iframe.style.height = doc.body.scrollHeight + 20 + "px";
+      }, 100);
     });
     iframe.src = "about:blank";
   } else if (email.bodyText) {
@@ -363,13 +398,17 @@ function openReader(email) {
   const attList = $("#attachment-list");
   if (email.attachments?.length) {
     attContainer.classList.remove("hidden");
-    attList.innerHTML = email.attachments.map(att => `
+    attList.innerHTML = email.attachments
+      .map(
+        (att) => `
       <div class="attachment-chip" data-path="${escapeHtml(att.path || "")}">
         <span class="att-icon">${getFileIcon(att.filename)}</span>
         <span>${escapeHtml(att.filename)}</span>
         <span class="att-size">${formatSize(att.size)}</span>
       </div>
-    `).join("");
+    `,
+      )
+      .join("");
   } else {
     attContainer.classList.add("hidden");
   }
@@ -397,16 +436,22 @@ function closeReader() {
 /* ── Compose ──────────────────────────────────────────────── */
 function setupComposeChannel(ch) {
   composeChannel = ch;
-  $$(".compose-ch-btn").forEach(b => b.classList.toggle("active", b.dataset.composeCh === ch));
+  $$(".compose-ch-btn").forEach((b) => b.classList.toggle("active", b.dataset.composeCh === ch));
 
   const badgeMap = { email: "📧 Email", whatsapp: "💬 WhatsApp", linkedin: "💼 LinkedIn" };
   const titleMap = { email: "Nuova email", whatsapp: "Nuovo messaggio WhatsApp", linkedin: "Nuovo messaggio LinkedIn" };
   $("#compose-badge").textContent = badgeMap[ch];
   $("#compose-title").textContent = titleMap[ch];
 
-  ["email", "wa", "li"].forEach(prefix => {
+  ["email", "wa", "li"].forEach((prefix) => {
     const el = $(`#compose-${prefix === "email" ? "email" : prefix}-fields`);
-    if (el) el.classList.toggle("hidden", (prefix === "email" && ch !== "email") || (prefix === "wa" && ch !== "whatsapp") || (prefix === "li" && ch !== "linkedin"));
+    if (el)
+      el.classList.toggle(
+        "hidden",
+        (prefix === "email" && ch !== "email") ||
+          (prefix === "wa" && ch !== "whatsapp") ||
+          (prefix === "li" && ch !== "linkedin"),
+      );
   });
 
   hideStatus("compose-status");
@@ -446,11 +491,18 @@ async function handleSend() {
     if (result?.success) {
       showStatus("compose-status", "✅ Messaggio inviato con successo!", "success");
       if (composeChannel === "email") {
-        $("#compose-to").value = ""; $("#compose-cc").value = ""; $("#compose-subject").value = ""; $("#compose-body").value = "";
+        $("#compose-to").value = "";
+        $("#compose-cc").value = "";
+        $("#compose-subject").value = "";
+        $("#compose-body").value = "";
       } else if (composeChannel === "whatsapp") {
-        $("#compose-wa-phone").value = ""; $("#compose-wa-body").value = ""; $("#wa-char-count").textContent = "0";
+        $("#compose-wa-phone").value = "";
+        $("#compose-wa-body").value = "";
+        $("#wa-char-count").textContent = "0";
       } else {
-        $("#compose-li-recipient").value = ""; $("#compose-li-body").value = ""; $("#li-char-count").textContent = "0";
+        $("#compose-li-recipient").value = "";
+        $("#compose-li-body").value = "";
+        $("#li-char-count").textContent = "0";
       }
     } else {
       showStatus("compose-status", `❌ ${result?.error || "Invio fallito"}`, "error");
@@ -500,7 +552,10 @@ async function handleQuickSend() {
 async function handleEmailDiscover() {
   const email = $("#email-addr").value.trim();
   const password = $("#email-pw").value;
-  if (!email || !password) { showStatus("email-discover-status", "Inserisci email e password", "error"); return; }
+  if (!email || !password) {
+    showStatus("email-discover-status", "Inserisci email e password", "error");
+    return;
+  }
 
   const btn = $("#btn-email-discover");
   btn.disabled = true;
@@ -526,12 +581,17 @@ async function handleEmailDiscover() {
     showStatus("email-discover-status", err.message, "error");
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '🔍 Trova server automaticamente';
+    btn.innerHTML = "🔍 Trova server automaticamente";
   }
 }
 
 function friendlyMethod(m) {
-  const map = { "well-known": "Database provider noti", "autoconfig": "Mozilla Autoconfig", "mx-heuristic": "Analisi record MX", "guess": "Deduzione automatica" };
+  const map = {
+    "well-known": "Database provider noti",
+    autoconfig: "Mozilla Autoconfig",
+    "mx-heuristic": "Analisi record MX",
+    guess: "Deduzione automatica",
+  };
   return map[m] || m;
 }
 
@@ -544,13 +604,17 @@ function renderSummary() {
     { icon: "💼", label: "LinkedIn", on: !!onboardingState.linkedin },
     { icon: "🤖", label: "AI Agent", on: !!(onboardingState.ai?.openaiKey || onboardingState.ai?.anthropicKey) },
   ];
-  el.innerHTML = rows.map(r => `
+  el.innerHTML = rows
+    .map(
+      (r) => `
     <div class="summary-row">
       <span class="summary-icon">${r.icon}</span>
       <span class="summary-label">${r.label}</span>
       <span class="summary-status ${r.on ? "on" : "off"}">${r.on ? "✅ Configurato" : "⏭ Saltato"}</span>
     </div>
-  `).join("");
+  `,
+    )
+    .join("");
 }
 
 /* ── Finish ───────────────────────────────────────────────── */
@@ -582,7 +646,7 @@ async function handleFinish() {
 /* ── Dashboard channel switch ─────────────────────────────── */
 async function switchChannel(channel) {
   activeChannel = channel;
-  $$(".channel-tab").forEach(t => t.classList.toggle("active", t.dataset.channel === channel));
+  $$(".channel-tab").forEach((t) => t.classList.toggle("active", t.dataset.channel === channel));
 
   const avatarMap = { email: "📧", whatsapp: "💬", linkedin: "💼" };
   const nameMap = { email: "Email", whatsapp: "WhatsApp", linkedin: "LinkedIn" };
@@ -604,7 +668,9 @@ async function switchChannel(channel) {
     const chCfg = cfg?.[channel];
     const connected = !!chCfg;
     $("#dash-channel-info").textContent = connected
-      ? (channel === "whatsapp" ? chCfg.phone || "Connesso" : chCfg.profileUrl || "Connesso")
+      ? channel === "whatsapp"
+        ? chCfg.phone || "Connesso"
+        : chCfg.profileUrl || "Connesso"
       : "Non configurato";
 
     const status = $("#channel-status");
@@ -656,9 +722,7 @@ async function handleSync() {
     const res = await send("syncNow");
     $("#progress-fill").style.width = "100%";
     if (res?.success) {
-      const msg = res.downloaded > 0
-        ? `✅ Scaricati ${res.downloaded} messaggi`
-        : "✅ Nessun nuovo messaggio";
+      const msg = res.downloaded > 0 ? `✅ Scaricati ${res.downloaded} messaggi` : "✅ Nessun nuovo messaggio";
       showStatus("sync-result", msg, "success");
       if (res.downloaded > 0) loadEmails();
     } else {
@@ -694,13 +758,13 @@ async function refreshDashboard() {
     $("#stat-last").textContent = "Mai";
   }
 
-  ["email", "whatsapp", "linkedin"].forEach(ch => {
+  ["email", "whatsapp", "linkedin"].forEach((ch) => {
     const tab = $(`.channel-tab[data-channel="${ch}"]`);
     const configured = ch === "email" ? !!config?.email : !!config?.[ch];
     tab.classList.toggle("disabled", !configured);
   });
 
-  ["email", "whatsapp", "linkedin"].forEach(ch => {
+  ["email", "whatsapp", "linkedin"].forEach((ch) => {
     const btn = $(`.compose-ch-btn[data-compose-ch="${ch}"]`);
     if (!btn) return;
     const configured = ch === "email" ? !!config?.email : !!config?.[ch];
@@ -709,12 +773,33 @@ async function refreshDashboard() {
 }
 
 /* ── Helpers ──────────────────────────────────────────────── */
-function send(action, data = {}) { return chrome.runtime.sendMessage({ action, ...data }); }
-function showStatus(id, text, type) { const el = $(`#${id}`); if (!el) return; el.textContent = text; el.className = `status-box ${type}`; el.classList.remove("hidden"); }
-function hideStatus(id) { $(`#${id}`)?.classList.add("hidden"); }
-function formatNum(n) { return n >= 1000 ? (n / 1000).toFixed(1) + "K" : String(n); }
-function togglePw(inputId, btnId) { const inp = $(`#${inputId}`); const show = inp.type === "password"; inp.type = show ? "text" : "password"; $(`#${btnId}`).textContent = show ? "🙈" : "👁️"; }
-function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+function send(action, data = {}) {
+  return chrome.runtime.sendMessage({ action, ...data });
+}
+function showStatus(id, text, type) {
+  const el = $(`#${id}`);
+  if (!el) return;
+  el.textContent = text;
+  el.className = `status-box ${type}`;
+  el.classList.remove("hidden");
+}
+function hideStatus(id) {
+  $(`#${id}`)?.classList.add("hidden");
+}
+function formatNum(n) {
+  return n >= 1000 ? (n / 1000).toFixed(1) + "K" : String(n);
+}
+function togglePw(inputId, btnId) {
+  const inp = $(`#${inputId}`);
+  const show = inp.type === "password";
+  inp.type = show ? "text" : "password";
+  $(`#${btnId}`).textContent = show ? "🙈" : "👁️";
+}
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
 function extractName(from) {
   if (!from) return "Sconosciuto";
   const match = from.match(/^"?([^"<]+)"?\s*</);
@@ -731,7 +816,8 @@ function formatDate(dateStr) {
   const d = new Date(dateStr);
   const now = new Date();
   const diff = now - d;
-  if (diff < 86400000 && d.getDate() === now.getDate()) return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  if (diff < 86400000 && d.getDate() === now.getDate())
+    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
   if (diff < 604800000) return d.toLocaleDateString("it-IT", { weekday: "short" });
   return d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
 }
@@ -745,11 +831,26 @@ function getFileIcon(filename) {
   if (!filename) return "📄";
   const ext = filename.split(".").pop()?.toLowerCase();
   const icons = {
-    pdf: "📕", doc: "📘", docx: "📘", xls: "📗", xlsx: "📗",
-    ppt: "📙", pptx: "📙", zip: "📦", rar: "📦",
-    jpg: "🖼️", jpeg: "🖼️", png: "🖼️", gif: "🖼️", webp: "🖼️",
-    mp3: "🎵", mp4: "🎬", mov: "🎬",
-    csv: "📊", txt: "📝", html: "🌐",
+    pdf: "📕",
+    doc: "📘",
+    docx: "📘",
+    xls: "📗",
+    xlsx: "📗",
+    ppt: "📙",
+    pptx: "📙",
+    zip: "📦",
+    rar: "📦",
+    jpg: "🖼️",
+    jpeg: "🖼️",
+    png: "🖼️",
+    gif: "🖼️",
+    webp: "🖼️",
+    mp3: "🎵",
+    mp4: "🎬",
+    mov: "🎬",
+    csv: "📊",
+    txt: "📝",
+    html: "🌐",
   };
   return icons[ext] || "📄";
 }
@@ -763,4 +864,6 @@ function downloadEml(email) {
   a.click();
   URL.revokeObjectURL(url);
 }
-function getProxyUrl() { return "https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/email-imap-proxy"; }
+function getProxyUrl() {
+  return "https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/email-imap-proxy";
+}

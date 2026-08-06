@@ -32,10 +32,7 @@ export type HealthCheckFn = () => Promise<ServiceHealth>;
 
 const checks = new Map<string, HealthCheckFn>();
 
-export function registerHealthCheck(
-  serviceName: string,
-  checkFn: HealthCheckFn,
-): void {
+export function registerHealthCheck(serviceName: string, checkFn: HealthCheckFn): void {
   checks.set(serviceName, checkFn);
   logger.debug("health check registered", { service: serviceName });
 }
@@ -65,11 +62,7 @@ export async function checkAll(): Promise<HealthReport> {
   const hasUnhealthy = services.some((s) => s.status === "unhealthy");
   const hasDegraded = services.some((s) => s.status === "degraded");
 
-  const overallStatus: HealthStatus = hasUnhealthy
-    ? "unhealthy"
-    : hasDegraded
-      ? "degraded"
-      : "healthy";
+  const overallStatus: HealthStatus = hasUnhealthy ? "unhealthy" : hasDegraded ? "degraded" : "healthy";
 
   const report: HealthReport = {
     overallStatus,

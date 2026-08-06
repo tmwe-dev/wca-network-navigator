@@ -33,13 +33,9 @@ export function parseOutreachResponse(
   let body = rawContent;
 
   if (channel === "email") {
-    const parsed = safeParseEmailResponse(
-      rawContent,
-      "generate-outreach",
-      model,
-      _parseEmailInternal,
-      { fallbackSubject: "Follow-up" },
-    );
+    const parsed = safeParseEmailResponse(rawContent, "generate-outreach", model, _parseEmailInternal, {
+      fallbackSubject: "Follow-up",
+    });
     subject = parsed.subject;
     body = parsed.body;
     // Append signature

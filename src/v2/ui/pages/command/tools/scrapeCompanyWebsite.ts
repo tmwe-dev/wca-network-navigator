@@ -18,18 +18,14 @@ interface ScrapeResult {
 export const scrapeCompanyWebsiteTool: Tool = {
   id: "scrape-company-website",
   label: "Scrape sito aziendale",
-  description:
-    "Scarica una pagina web ed estrae email, telefoni, titolo, headings e link",
-  match: (p: string) =>
-    /scrape.*sito|scrape.*website|estrai.*sito|scrape\s+https?:\/\//i.test(p),
+  description: "Scarica una pagina web ed estrae email, telefoni, titolo, headings e link",
+  match: (p: string) => /scrape.*sito|scrape.*website|estrai.*sito|scrape\s+https?:\/\//i.test(p),
   execute: async (prompt, context) => {
     const urlMatch = prompt.match(/https?:\/\/[^\s"']+/);
     const url = (context?.payload?.url as string) ?? urlMatch?.[0];
 
     if (!url) {
-      throw new Error(
-        "URL non trovato nel prompt. Includi un link valido (https://...)",
-      );
+      throw new Error("URL non trovato nel prompt. Includi un link valido (https://...)");
     }
 
     if (!context?.confirmed) {
@@ -54,8 +50,7 @@ export const scrapeCompanyWebsiteTool: Tool = {
 
     const mode = (context?.payload?.mode as string) ?? "static";
     const res = await invokeEdgeRaw("scrape-website", { url, mode });
-    if (res._tag === "Err")
-      throw new Error(res.error.message ?? "Scrape fallito");
+    if (res._tag === "Err") throw new Error(res.error.message ?? "Scrape fallito");
 
     const data = res.value as ScrapeResult;
     const cacheNote = data.fromCache ? " (da cache)" : "";

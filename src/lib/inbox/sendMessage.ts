@@ -70,7 +70,9 @@ async function persistOutbound(params: {
   thread_id?: string;
   external_id?: string;
 }): Promise<string | null> {
-  const { data: userData } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+  const { data: userData } = await supabase.auth
+    .getSession()
+    .then((r) => ({ data: { user: r.data.session?.user ?? null } }));
   const user_id = userData.user?.id;
   if (!user_id) {
     log.error("send.no_user");
@@ -78,18 +80,18 @@ async function persistOutbound(params: {
   }
 
   const { data, error } = await insertChannelMessageReturningId({
-      user_id,
-      channel: params.channel,
-      direction: "outbound",
-      to_address: params.to,
-      from_address: null,
-      subject: params.subject,
-      body_text: params.body_text,
-      body_html: params.body_html,
-      message_id_external: params.external_id ?? null,
-      thread_id: params.thread_id ?? null,
-      partner_id: params.partner_id ?? null,
-      created_at: new Date().toISOString(),
+    user_id,
+    channel: params.channel,
+    direction: "outbound",
+    to_address: params.to,
+    from_address: null,
+    subject: params.subject,
+    body_text: params.body_text,
+    body_html: params.body_html,
+    message_id_external: params.external_id ?? null,
+    thread_id: params.thread_id ?? null,
+    partner_id: params.partner_id ?? null,
+    created_at: new Date().toISOString(),
   });
 
   if (error) {
@@ -107,7 +109,7 @@ function rateLimitKey(channel: ChannelKind, userId: string): string {
 }
 
 async function currentUserId(): Promise<string> {
-  const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
+  const { data } = await supabase.auth.getSession().then((r) => ({ data: { user: r.data.session?.user ?? null } }));
   return data.user?.id ?? "anonymous";
 }
 
@@ -129,7 +131,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendResult> {
         },
         headers: params.mailbox_id ? { "x-mailbox-id": params.mailbox_id } : undefined,
         context: "sendMessage.email",
-      })
+      }),
     );
 
     const messageId = await persistOutbound({
@@ -159,16 +161,16 @@ export async function sendEmail(params: SendEmailParams): Promise<SendResult> {
  * Iniettata dall'hook React (`useWhatsAppExtensionBridge`) per evitare
  * dipendenza circolare hook→lib.
  */
-export type WhatsAppBridgeSender = (recipient: string, text: string) => Promise<{
+export type WhatsAppBridgeSender = (
+  recipient: string,
+  text: string,
+) => Promise<{
   success: boolean;
   external_id?: string;
   error?: string;
 }>;
 
-export async function sendWhatsApp(
-  params: SendWhatsAppParams,
-  bridge: WhatsAppBridgeSender
-): Promise<SendResult> {
+export async function sendWhatsApp(params: SendWhatsAppParams, bridge: WhatsAppBridgeSender): Promise<SendResult> {
   const userId = await currentUserId();
   const key = rateLimitKey("whatsapp", userId);
 
@@ -202,20 +204,15 @@ export async function sendWhatsApp(
 
 export type LinkedInBridgeSender = (
   recipientUrl: string,
-  text: string
+  text: string,
 ) => Promise<{ success: boolean; external_id?: string; error?: string }>;
 
-export async function sendLinkedIn(
-  params: SendLinkedInParams,
-  bridge: LinkedInBridgeSender
-): Promise<SendResult> {
+export async function sendLinkedIn(params: SendLinkedInParams, bridge: LinkedInBridgeSender): Promise<SendResult> {
   const userId = await currentUserId();
   const key = rateLimitKey("linkedin", userId);
 
   try {
-    const result = await withRateLimit(key, () =>
-      bridge(params.recipient_url, params.text)
-    );
+    const result = await withRateLimit(key, () => bridge(params.recipient_url, params.text));
     if (!result.success) {
       throw new Error(result.error || "LinkedIn bridge returned failure");
     }
@@ -265,7 +262,10 @@ async function handleSendError(channel: ChannelKind, err: unknown): Promise<Send
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function redact(addr: string): string {

@@ -15,17 +15,26 @@ interface CompanyListHeaderProps {
 }
 
 export function CompanyListHeader({
-  countryName, filteredCount, selectedCount, selectedContactCount,
-  isBcaSource, onSelectAll, onDeselectAll, onAddToCampaign, hasPartners,
+  countryName,
+  filteredCount,
+  selectedCount,
+  selectedContactCount,
+  isBcaSource,
+  onSelectAll,
+  onDeselectAll,
+  onAddToCampaign,
+  hasPartners,
 }: CompanyListHeaderProps) {
   return (
     <>
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-primary">
-          {isBcaSource ? <Handshake className="w-4 h-4 text-primary" /> : <Building2 className="w-4 h-4 text-primary" />}
-          {countryName
-            ? (isBcaSource ? `BCA in ${countryName}` : `Aziende in ${countryName}`)
-            : "Seleziona un paese"}
+          {isBcaSource ? (
+            <Handshake className="w-4 h-4 text-primary" />
+          ) : (
+            <Building2 className="w-4 h-4 text-primary" />
+          )}
+          {countryName ? (isBcaSource ? `BCA in ${countryName}` : `Aziende in ${countryName}`) : "Seleziona un paese"}
         </h3>
         <Badge variant="outline">{filteredCount} risultati</Badge>
       </div>
@@ -44,7 +53,8 @@ export function CompanyListHeader({
       {(selectedCount > 0 || selectedContactCount > 0) && (
         <Button onClick={onAddToCampaign} className="w-full space-button-primary">
           <Plus className="w-4 h-4 mr-2" />
-          Aggiungi alla campagna ({selectedCount} aziende{selectedContactCount > 0 ? `, ${selectedContactCount} contatti` : ""})
+          Aggiungi alla campagna ({selectedCount} aziende
+          {selectedContactCount > 0 ? `, ${selectedContactCount} contatti` : ""})
         </Button>
       )}
     </>

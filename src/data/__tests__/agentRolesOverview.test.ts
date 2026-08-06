@@ -9,17 +9,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 type BuilderReturn = { data: unknown; error: unknown };
 
 function makeBuilder(result: BuilderReturn, calls: string[]) {
-  const proxy: unknown = new Proxy({}, {
-    get(_t, prop) {
-      if (prop === "then") {
-        return (resolve: (v: BuilderReturn) => unknown) => resolve(result);
-      }
-      return (...args: unknown[]) => {
-        calls.push(`${String(prop)}(${args.map((a) => JSON.stringify(a)).join(",")})`);
-        return proxy;
-      };
+  const proxy: unknown = new Proxy(
+    {},
+    {
+      get(_t, prop) {
+        if (prop === "then") {
+          return (resolve: (v: BuilderReturn) => unknown) => resolve(result);
+        }
+        return (...args: unknown[]) => {
+          calls.push(`${String(prop)}(${args.map((a) => JSON.stringify(a)).join(",")})`);
+          return proxy;
+        };
+      },
     },
-  });
+  );
   return proxy;
 }
 
@@ -35,10 +38,31 @@ describe("DAL — fetchAgentRolesOverview", () => {
 
   it("esegue 5 query parallele con chain builder esatta e mapping dati", async () => {
     const seq: BuilderReturn[] = [
-      { data: [{ id: "a1", name: "Alice", role: "sales", avatar_emoji: "🦊", is_active: true, can_send_email: true, can_send_whatsapp: false, can_access_inbox: null, assigned_tools: ["t1"] }], error: null },
+      {
+        data: [
+          {
+            id: "a1",
+            name: "Alice",
+            role: "sales",
+            avatar_emoji: "🦊",
+            is_active: true,
+            can_send_email: true,
+            can_send_whatsapp: false,
+            can_access_inbox: null,
+            assigned_tools: ["t1"],
+          },
+        ],
+        error: null,
+      },
       { data: [{ agent_id: "a1" }], error: null },
       { data: [{ agent_id: "a1", allowed_tools: ["x", "y"], execution_mode: "auto" }], error: null },
-      { data: [{ id: "tpl1", enabled: true }, { id: "tpl2", enabled: false }], error: null },
+      {
+        data: [
+          { id: "tpl1", enabled: true },
+          { id: "tpl2", enabled: false },
+        ],
+        error: null,
+      },
       { data: [{ id: "w1", is_active: true }], error: null },
     ];
     const perCall: string[][] = [[], [], [], [], []];
@@ -54,7 +78,9 @@ describe("DAL — fetchAgentRolesOverview", () => {
     expect(fromMock).toHaveBeenNthCalledWith(5, "wake_up_rules");
 
     const agentsChain = perCall[0].join(" ");
-    expect(agentsChain).toContain('select("id, name, role, avatar_emoji, is_active, can_send_email, can_send_whatsapp, can_access_inbox, assigned_tools")');
+    expect(agentsChain).toContain(
+      'select("id, name, role, avatar_emoji, is_active, can_send_email, can_send_whatsapp, can_access_inbox, assigned_tools")',
+    );
     expect(agentsChain).toContain('is("deleted_at",null)');
     expect(agentsChain).toContain('eq("is_active",true)');
     expect(agentsChain).toContain('order("role",{"ascending":true})');

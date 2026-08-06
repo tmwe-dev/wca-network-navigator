@@ -12,19 +12,16 @@ export function TexturedEarth({ rotation }: TexturedEarthProps) {
   const cloudsRef = useRef<THREE.Mesh>(null);
 
   // Load textures
-  const [dayTexture, nightTexture, bumpTexture, specularTexture] = useLoader(
-    THREE.TextureLoader,
-    [
-      '/textures/earth-day.jpg',
-      '/textures/earth-night.jpg', 
-      '/textures/earth-bump.png',
-      '/textures/earth-specular.png',
-    ]
-  );
+  const [dayTexture, nightTexture, bumpTexture, specularTexture] = useLoader(THREE.TextureLoader, [
+    "/textures/earth-day.jpg",
+    "/textures/earth-night.jpg",
+    "/textures/earth-bump.png",
+    "/textures/earth-specular.png",
+  ]);
 
   // Configure textures
   useMemo(() => {
-    [dayTexture, nightTexture, bumpTexture, specularTexture].forEach(texture => {
+    [dayTexture, nightTexture, bumpTexture, specularTexture].forEach((texture) => {
       if (texture) {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
@@ -148,7 +145,7 @@ export function TexturedEarth({ rotation }: TexturedEarthProps) {
     <>
       {/* Outer atmosphere glow */}
       <Sphere args={[1.2, 64, 64]} material={atmosphereMaterial} />
-      
+
       {/* Inner atmosphere rim */}
       <Sphere args={[1.02, 64, 64]} material={innerGlowMaterial} />
 
@@ -161,12 +158,7 @@ export function TexturedEarth({ rotation }: TexturedEarthProps) {
       {/* Clouds layer - semi-transparent white with subtle texture */}
       <mesh ref={cloudsRef} rotation={[0, rotation, 0]}>
         <sphereGeometry args={[1.008, 64, 64]} />
-        <meshPhongMaterial 
-          color="#ffffff"
-          transparent
-          opacity={0.15}
-          depthWrite={false}
-        />
+        <meshPhongMaterial color="#ffffff" transparent opacity={0.15} depthWrite={false} />
       </mesh>
     </>
   );
@@ -178,12 +170,7 @@ export function SimpleEarth() {
     <>
       {/* Earth base - deep ocean */}
       <Sphere args={[1, 128, 128]}>
-        <meshPhongMaterial
-          color="#0c1929"
-          emissive="#0a1525"
-          emissiveIntensity={0.1}
-          shininess={25}
-        />
+        <meshPhongMaterial color="#0c1929" emissive="#0a1525" emissiveIntensity={0.1} shininess={25} />
       </Sphere>
 
       {/* Wireframe overlay */}
@@ -200,12 +187,7 @@ export function SimpleEarth() {
 
       {/* Grid overlay */}
       <Sphere args={[1.006, 48, 48]}>
-        <meshBasicMaterial
-          color="#3b82f6"
-          transparent
-          opacity={0.08}
-          wireframe
-        />
+        <meshBasicMaterial color="#3b82f6" transparent opacity={0.08} wireframe />
       </Sphere>
     </>
   );

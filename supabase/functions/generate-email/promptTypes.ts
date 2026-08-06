@@ -31,9 +31,17 @@ export interface ContactData {
   contact_alias: string | null;
 }
 
-export interface NetworkRow { network_name: string; }
-export interface ServiceRow { service_category: string; }
-export interface SocialLinkRow { platform: string; url: string; contact_id: string | null; }
+export interface NetworkRow {
+  network_name: string;
+}
+export interface ServiceRow {
+  service_category: string;
+}
+export interface SocialLinkRow {
+  platform: string;
+  url: string;
+  contact_id: string | null;
+}
 
 export interface EmailPromptContext {
   partner: PartnerData;

@@ -3,6 +3,7 @@ name: WCA v2.1 Risk Gate
 description: Tassonomia rischio 7 livelli + two-phase commit + hard gate su ai_pending_actions
 type: feature
 ---
+
 Adottati 3 elementi di WCA v2.1 (resto scartato per non duplicare journalistReview/promptSanitizer/agent_personas):
 
 1. **Enum `ai_action_risk`**: READ < PREPARE < WRITE < SEND < EXTERNAL_AUTOMATION < BULK < DESTRUCTIVE.

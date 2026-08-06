@@ -50,7 +50,9 @@ Deno.serve(async (req) => {
     // 1. Fetch due actions
     const { data: actions, error: fetchErr } = await supabase
       .from("mission_actions")
-      .select("id, mission_id, user_id, action_type, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position, metadata, retry_count")
+      .select(
+        "id, mission_id, user_id, action_type, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position, metadata, retry_count",
+      )
       .lte("scheduled_at", new Date().toISOString())
       .not("scheduled_at", "is", null)
       .eq("status", "pending")
@@ -64,7 +66,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    let executed = 0, pendingReview = 0, cancelled = 0;
+    let executed = 0,
+      pendingReview = 0,
+      cancelled = 0;
 
     // SC:DEFENSE — per-cycle cache for ai_automations_paused. Cadence-engine
     // processes up to 50 actions/cycle and many share the same user_id. Without
@@ -87,19 +91,25 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        await processAction(supabase, action, { executed: () => executed++, pendingReview: () => pendingReview++, cancelled: () => cancelled++ });
+        await processAction(supabase, action, {
+          executed: () => executed++,
+          pendingReview: () => pendingReview++,
+          cancelled: () => cancelled++,
+        });
       } catch (e) {
         console.error(`[cadence-engine] Error processing action ${action.id}:`, extractErrorMessage(e));
       }
     }
 
-    return new Response(JSON.stringify({
-      processed: actions.length,
-      executed,
-      pending_review: pendingReview,
-      cancelled,
-    }), { headers: { ...headers, "Content-Type": "application/json" } });
-
+    return new Response(
+      JSON.stringify({
+        processed: actions.length,
+        executed,
+        pending_review: pendingReview,
+        cancelled,
+      }),
+      { headers: { ...headers, "Content-Type": "application/json" } },
+    );
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : JSON.stringify(e);
     console.error("[cadence-engine] Fatal:", msg);
@@ -114,18 +124,24 @@ async function processAction(
 ) {
   const maxAttempts = action.cadence_rule?.max_attempts ?? 5;
   if ((action as ActionRow & { retry_count?: number | null }).retry_count >= maxAttempts) {
-    await supabase.from("mission_actions").update({
-      status: "expired",
-      completed_at: new Date().toISOString(),
-      last_error: `Max attempts reached (${maxAttempts})`,
-    }).eq("id", action.id);
+    await supabase
+      .from("mission_actions")
+      .update({
+        status: "expired",
+        completed_at: new Date().toISOString(),
+        last_error: `Max attempts reached (${maxAttempts})`,
+      })
+      .eq("id", action.id);
     counters.cancelled();
     return;
   }
 
-  await supabase.from("mission_actions").update({
-    retry_count: ((action as ActionRow & { retry_count?: number | null }).retry_count || 0) + 1,
-  }).eq("id", action.id);
+  await supabase
+    .from("mission_actions")
+    .update({
+      retry_count: ((action as ActionRow & { retry_count?: number | null }).retry_count || 0) + 1,
+    })
+    .eq("id", action.id);
 
   // Extract target email from metadata
   const meta = action.metadata as Record<string, unknown> | null;
@@ -152,11 +168,14 @@ async function processAction(
     // Handle based on what we found
     if (conditionMet.reason === "positive_response_received") {
       // Positive response → cancel follow-up
-      await supabase.from("mission_actions").update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        last_error: "Risposta positiva ricevuta, follow-up non necessario",
-      }).eq("id", action.id);
+      await supabase
+        .from("mission_actions")
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          last_error: "Risposta positiva ricevuta, follow-up non necessario",
+        })
+        .eq("id", action.id);
       counters.cancelled();
       return;
     }
@@ -164,21 +183,27 @@ async function processAction(
     if (conditionMet.reason === "negative_response_received" && action.cadence_rule?.on_negative) {
       const onNeg = action.cadence_rule.on_negative;
       if (onNeg === "stop") {
-        await supabase.from("mission_actions").update({
-          status: "failed",
-          completed_at: new Date().toISOString(),
-          last_error: "Risposta negativa ricevuta, cadenza fermata",
-        }).eq("id", action.id);
+        await supabase
+          .from("mission_actions")
+          .update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            last_error: "Risposta negativa ricevuta, cadenza fermata",
+          })
+          .eq("id", action.id);
         counters.cancelled();
         return;
       }
       if (onNeg === "slow_down") {
         // Reschedule with doubled delay
         const delay = (action.cadence_rule.delay_days || 3) * 2;
-        await supabase.from("mission_actions").update({
-          scheduled_at: new Date(Date.now() + delay * 86400000).toISOString(),
-          cadence_rule: { ...action.cadence_rule, delay_days: delay },
-        }).eq("id", action.id);
+        await supabase
+          .from("mission_actions")
+          .update({
+            scheduled_at: new Date(Date.now() + delay * 86400000).toISOString(),
+            cadence_rule: { ...action.cadence_rule, delay_days: delay },
+          })
+          .eq("id", action.id);
         counters.cancelled();
         return;
       }
@@ -207,21 +232,25 @@ async function processAction(
   }
 
   // Log decision
-  const { data: decisionLog } = await supabase.from("ai_decision_log").insert({
-    user_id: action.user_id,
-    partner_id: partnerId,
-    email_address: targetEmail,
-    decision_type: "schedule_followup",
-    input_context: {
-      action_id: action.id,
-      trigger_condition: trigger,
-      cadence_rule: action.cadence_rule,
-      conversation_summary: convCtx?.conversation_summary,
-    },
-    ai_reasoning: `Cadence trigger "${trigger}" met. Action type: ${action.action_type}.${autoExecute ? " Auto-executing." : " Queued for review."}`,
-    confidence: 0.85,
-    was_auto_executed: autoExecute,
-  }).select("id").single();
+  const { data: decisionLog } = await supabase
+    .from("ai_decision_log")
+    .insert({
+      user_id: action.user_id,
+      partner_id: partnerId,
+      email_address: targetEmail,
+      decision_type: "schedule_followup",
+      input_context: {
+        action_id: action.id,
+        trigger_condition: trigger,
+        cadence_rule: action.cadence_rule,
+        conversation_summary: convCtx?.conversation_summary,
+      },
+      ai_reasoning: `Cadence trigger "${trigger}" met. Action type: ${action.action_type}.${autoExecute ? " Auto-executing." : " Queued for review."}`,
+      confidence: 0.85,
+      was_auto_executed: autoExecute,
+    })
+    .select("id")
+    .single();
 
   const actionType = mapActionType(action.action_type);
 
@@ -229,41 +258,44 @@ async function processAction(
     // Hard gate: never auto-send to blacklisted/archived targets, whatever the cadence proposes.
     const gate = await hardGate(supabase, "SEND", partnerId, null);
     if (!gate.allowed) {
-      await supabase.from("mission_actions").update({
-        status: "failed",
-        completed_at: new Date().toISOString(),
-        last_error: `hard_gate_blocked:${gate.reason ?? "denied"}`,
-      }).eq("id", action.id);
+      await supabase
+        .from("mission_actions")
+        .update({
+          status: "failed",
+          completed_at: new Date().toISOString(),
+          last_error: `hard_gate_blocked:${gate.reason ?? "denied"}`,
+        })
+        .eq("id", action.id);
       counters.cancelled();
       return;
     }
     // Mark action as executing and invoke mission-executor
-    await supabase.from("mission_actions").update({
-      status: "approved",
-    }).eq("id", action.id);
+    await supabase
+      .from("mission_actions")
+      .update({
+        status: "approved",
+      })
+      .eq("id", action.id);
 
     // Step 1: Generate real content via generate-outreach
     let executionResult: Record<string, unknown> = {};
     let executionStatus = "executed";
 
     try {
-      const genResponse = await fetch(
-        `${supabaseUrl}/functions/v1/generate-outreach`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${serviceRoleKey}`,
-          },
-          body: JSON.stringify({
-            partnerId,
-            email: targetEmail,
-            channel: action.action_type || "email",
-            userId: action.user_id,
-            context: `Cadence follow-up step ${action.cadence_rule?.current_step || 0}. Trigger: ${trigger}.`,
-          }),
+      const genResponse = await fetch(`${supabaseUrl}/functions/v1/generate-outreach`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
         },
-      );
+        body: JSON.stringify({
+          partnerId,
+          email: targetEmail,
+          channel: action.action_type || "email",
+          userId: action.user_id,
+          context: `Cadence follow-up step ${action.cadence_rule?.current_step || 0}. Trigger: ${trigger}.`,
+        }),
+      });
 
       if (genResponse.ok) {
         const genData = await genResponse.json();
@@ -276,24 +308,21 @@ async function processAction(
 
         // Step 2: If email, attempt real send
         if (actionType === "send_email" && targetEmail && genData.body) {
-          const sendResponse = await fetch(
-            `${supabaseUrl}/functions/v1/send-email`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${serviceRoleKey}`,
-              },
-              body: JSON.stringify({
-                to: targetEmail,
-                subject: genData.subject,
-                html: genData.body,
-                partnerId,
-                partner_id: partnerId,
-                source: "cadence_engine",
-              }),
+          const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serviceRoleKey}`,
             },
-          );
+            body: JSON.stringify({
+              to: targetEmail,
+              subject: genData.subject,
+              html: genData.body,
+              partnerId,
+              partner_id: partnerId,
+              source: "cadence_engine",
+            }),
+          });
           executionResult.sent = sendResponse.ok;
           if (!sendResponse.ok) {
             executionStatus = "failed";
@@ -335,23 +364,20 @@ async function processAction(
     // Pre-generate content so reviewer sees real text
     let pendingPayload: Record<string, unknown> = {};
     try {
-      const genResponse = await fetch(
-        `${supabaseUrl}/functions/v1/generate-outreach`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${serviceRoleKey}`,
-          },
-          body: JSON.stringify({
-            partnerId,
-            email: targetEmail,
-            channel: action.action_type || "email",
-            userId: action.user_id,
-            context: `Cadence follow-up step ${action.cadence_rule?.current_step || 0}. Trigger: ${trigger}. PENDING REVIEW.`,
-          }),
+      const genResponse = await fetch(`${supabaseUrl}/functions/v1/generate-outreach`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
         },
-      );
+        body: JSON.stringify({
+          partnerId,
+          email: targetEmail,
+          channel: action.action_type || "email",
+          userId: action.user_id,
+          context: `Cadence follow-up step ${action.cadence_rule?.current_step || 0}. Trigger: ${trigger}. PENDING REVIEW.`,
+        }),
+      });
       if (genResponse.ok) {
         const genData = await genResponse.json();
         pendingPayload = {
@@ -361,10 +387,16 @@ async function processAction(
           generated: true,
         };
       } else {
-        pendingPayload = { note: "Generazione contenuto non riuscita. Creare manualmente.", status: genResponse.status };
+        pendingPayload = {
+          note: "Generazione contenuto non riuscita. Creare manualmente.",
+          status: genResponse.status,
+        };
       }
     } catch (genErr) {
-      pendingPayload = { note: "Generazione contenuto fallita.", error: genErr instanceof Error ? genErr.message : String(genErr) };
+      pendingPayload = {
+        note: "Generazione contenuto fallita.",
+        error: genErr instanceof Error ? genErr.message : String(genErr),
+      };
     }
 
     await supabase.from("ai_pending_actions").insert({
@@ -447,10 +479,7 @@ async function checkTriggerCondition(
   }
 }
 
-async function scheduleNextStep(
-  supabase: ReturnType<typeof createClient>,
-  action: ActionRow,
-) {
+async function scheduleNextStep(supabase: ReturnType<typeof createClient>, action: ActionRow) {
   const rule = action.cadence_rule;
   if (!rule?.sequence?.length) return;
 

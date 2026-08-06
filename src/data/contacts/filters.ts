@@ -44,8 +44,7 @@ export async function getHoldingPatternStats() {
   };
   (data ?? []).forEach((r: { lead_status: string | null }) => {
     stats.total++;
-    if (r.lead_status && stats[r.lead_status] !== undefined)
-      stats[r.lead_status]++;
+    if (r.lead_status && stats[r.lead_status] !== undefined) stats[r.lead_status]++;
   });
   return stats;
 }
@@ -66,7 +65,7 @@ export async function getContactFilterOptions() {
 export async function fetchGroupContactIds(
   groupType: string,
   groupKey: string,
-  holdingPattern?: "out" | "in" | "all"
+  holdingPattern?: "out" | "in" | "all",
 ): Promise<string[]> {
   let q = supabase
     .from("imported_contacts")
@@ -78,14 +77,10 @@ export async function fetchGroupContactIds(
 
   switch (groupType) {
     case "country":
-      q = (groupKey === "??" || groupKey === "Sconosciuto")
-        ? q.is("country", null)
-        : q.eq("country", groupKey);
+      q = groupKey === "??" || groupKey === "Sconosciuto" ? q.is("country", null) : q.eq("country", groupKey);
       break;
     case "origin":
-      q = groupKey === "Sconosciuta"
-        ? q.is("origin", null)
-        : q.eq("origin", groupKey);
+      q = groupKey === "Sconosciuta" ? q.is("origin", null) : q.eq("origin", groupKey);
       break;
     case "status":
       q = q.eq("lead_status", groupKey);
@@ -95,9 +90,7 @@ export async function fetchGroupContactIds(
         q = q.is("created_at", null);
       } else {
         const [y, m] = groupKey.split("-").map(Number);
-        q = q
-          .gte("created_at", `${groupKey}-01T00:00:00Z`)
-          .lt("created_at", new Date(y, m, 1).toISOString());
+        q = q.gte("created_at", `${groupKey}-01T00:00:00Z`).lt("created_at", new Date(y, m, 1).toISOString());
       }
       break;
   }
@@ -111,12 +104,9 @@ export async function findContactsByGroup(
   groupKey: string,
   page: number = 0,
   pageSize: number = 200,
-  holdingPattern?: "out" | "in" | "all"
+  holdingPattern?: "out" | "in" | "all",
 ) {
-  let q = supabase
-    .from("imported_contacts")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
+  let q = supabase.from("imported_contacts").select("*", { count: "exact" }).order("created_at", { ascending: false });
 
   q = q.or("company_name.not.is.null,name.not.is.null,email.not.is.null");
 
@@ -146,9 +136,7 @@ export async function findContactsByGroup(
         q = q.is("created_at", null);
       } else {
         const [y, m] = groupKey.split("-").map(Number);
-        q = q
-          .gte("created_at", `${groupKey}-01T00:00:00Z`)
-          .lt("created_at", new Date(y, m, 1).toISOString());
+        q = q.gte("created_at", `${groupKey}-01T00:00:00Z`).lt("created_at", new Date(y, m, 1).toISOString());
       }
       break;
   }

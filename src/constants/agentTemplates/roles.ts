@@ -29,41 +29,77 @@ export const ROBIN_VOICE_CALL_URL = "https://elevenlabs.io/app/talk-to?agent_id=
 
 export const ALL_OPERATIONAL_TOOLS: string[] = [
   // Partner
-  "search_partners", "get_partner_detail", "update_partner", "add_partner_note",
-  "manage_partner_contact", "bulk_update_partners",
+  "search_partners",
+  "get_partner_detail",
+  "update_partner",
+  "add_partner_note",
+  "manage_partner_contact",
+  "bulk_update_partners",
   // Network / data quality — niente download/scansioni WCA nei workflow AI conversazionali
-  "get_country_overview", "get_directory_status",
-  "list_jobs", "check_job_status", "get_partners_without_contacts",
+  "get_country_overview",
+  "get_directory_status",
+  "list_jobs",
+  "check_job_status",
+  "get_partners_without_contacts",
   // Ricerca
-  "deep_search_partner", "deep_search_contact", "enrich_partner_website", "generate_aliases",
+  "deep_search_partner",
+  "deep_search_contact",
+  "enrich_partner_website",
+  "generate_aliases",
   // CRM
-  "search_contacts", "get_contact_detail", "update_lead_status", "search_prospects",
+  "search_contacts",
+  "get_contact_detail",
+  "update_lead_status",
+  "search_prospects",
   // Outreach
-  "generate_outreach", "send_email", "schedule_email", "queue_outreach",
+  "generate_outreach",
+  "send_email",
+  "schedule_email",
+  "queue_outreach",
   // Agenda
-  "create_activity", "list_activities", "update_activity",
-  "create_reminder", "update_reminder", "list_reminders",
+  "create_activity",
+  "list_activities",
+  "update_activity",
+  "create_reminder",
+  "update_reminder",
+  "list_reminders",
   // Sistema
-  "check_blacklist", "get_global_summary", "save_memory", "search_memory",
-  "delete_records", "search_business_cards", "execute_ui_action",
+  "check_blacklist",
+  "get_global_summary",
+  "save_memory",
+  "search_memory",
+  "delete_records",
+  "search_business_cards",
+  "execute_ui_action",
   "get_operations_dashboard",
   // Communication & Holding Pattern
-  "get_inbox", "get_conversation_history", "get_holding_pattern",
-  "update_message_status", "get_email_thread", "analyze_incoming_email",
+  "get_inbox",
+  "get_conversation_history",
+  "get_holding_pattern",
+  "update_message_status",
+  "get_email_thread",
+  "analyze_incoming_email",
 ];
 
 // Management tools — only for Director (Luca)
 export const MANAGEMENT_TOOLS: string[] = [
-  "create_agent_task", "list_agent_tasks", "get_team_status",
-  "update_agent_prompt", "add_agent_kb_entry",
+  "create_agent_task",
+  "list_agent_tasks",
+  "get_team_status",
+  "update_agent_prompt",
+  "add_agent_kb_entry",
   // Director-only campaign tools
-  "assign_contacts_to_agent", "create_campaign",
+  "assign_contacts_to_agent",
+  "create_campaign",
 ];
 
 // Strategic tools — only for Director (Luca)
 export const STRATEGIC_TOOLS: string[] = [
-  "create_work_plan", "list_work_plans", "update_work_plan",
-  "manage_workspace_preset", "get_system_analytics",
+  "create_work_plan",
+  "list_work_plans",
+  "update_work_plan",
+  "manage_workspace_preset",
+  "get_system_analytics",
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

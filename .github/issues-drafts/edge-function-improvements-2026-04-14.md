@@ -12,6 +12,7 @@ Filed from audit 2026-04-14.
 4. **Credential storage** (`save-linkedin-cookie`, `save-ra-cookie`, `save-wca-cookie`) — validate cookie format
 
 **Pattern to follow:**
+
 ```typescript
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 const BodySchema = z.object({ cookie: z.string().min(10).max(10000) });
@@ -22,10 +23,15 @@ if (!parsed.success) return new Response(JSON.stringify({ error: parsed.error.fl
 ## MEDIUM: Add AbortController Timeouts
 
 ~15 functions call external APIs without timeout. Add:
+
 ```typescript
 const ctrl = new AbortController();
 const timer = setTimeout(() => ctrl.abort(), 30_000);
-try { await fetch(url, { signal: ctrl.signal }); } finally { clearTimeout(timer); }
+try {
+  await fetch(url, { signal: ctrl.signal });
+} finally {
+  clearTimeout(timer);
+}
 ```
 
 Priority: `ai-assistant`, `agent-execute`, `elevenlabs-tts`, `parse-profile-ai`
@@ -33,6 +39,7 @@ Priority: `ai-assistant`, `agent-execute`, `elevenlabs-tts`, `parse-profile-ai`
 ## MEDIUM: Rate Limiting
 
 AI-heavy functions should adopt `_shared/rateLimiter.ts`:
+
 - `ai-assistant` — 15 req/min per user
 - `generate-email` / `generate-outreach` — 20 req/min per user
 - `elevenlabs-tts` — 10 req/min per user
@@ -41,6 +48,7 @@ AI-heavy functions should adopt `_shared/rateLimiter.ts`:
 ## LOW: Idempotency Keys
 
 Financial write operations should accept `Idempotency-Key` header:
+
 - `buy-credits`
 - `consume-credits`
 - `send-email`
@@ -49,6 +57,7 @@ Financial write operations should accept `Idempotency-Key` header:
 ## LOW: Extension JWT Migration
 
 Browser extensions should be upgraded to pass real user JWT tokens:
+
 - `public/linkedin-extension/auth.js` — use stored session token
 - `public/ra-extension/background.js` — use stored session token
 - `public/partner-connect-extension/brain.js` — use stored session token
@@ -57,4 +66,4 @@ Currently accepted via `extensionAuth.ts` anon-key fallback.
 
 ---
 
-*Filed: 2026-04-14*
+_Filed: 2026-04-14_

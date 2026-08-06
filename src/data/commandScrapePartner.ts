@@ -15,12 +15,10 @@ export interface ScrapePartnerRow {
   phone: string | null;
 }
 
-export async function getCachedScrapePayload(url: string): Promise<{ payload: Record<string, unknown>; scraped_at: string } | null> {
-  const { data } = await supabase
-    .from("scrape_cache")
-    .select("payload, scraped_at")
-    .eq("url", url)
-    .maybeSingle();
+export async function getCachedScrapePayload(
+  url: string,
+): Promise<{ payload: Record<string, unknown>; scraped_at: string } | null> {
+  const { data } = await supabase.from("scrape_cache").select("payload, scraped_at").eq("url", url).maybeSingle();
   if (!data) return null;
   return { payload: (data.payload ?? {}) as Record<string, unknown>, scraped_at: data.scraped_at };
 }
@@ -31,11 +29,11 @@ export async function setCachedScrapePayload(url: string, payload: Record<string
     .upsert({ url, payload: toJsonValue(payload), scraped_at: new Date().toISOString() });
 }
 
-export async function updatePartnerFields(partnerId: string, updateData: PartnerUpdate): Promise<{ error: { message: string } | null }> {
-  return await supabase
-    .from("partners")
-    .update(updateData)
-    .eq("id", partnerId);
+export async function updatePartnerFields(
+  partnerId: string,
+  updateData: PartnerUpdate,
+): Promise<{ error: { message: string } | null }> {
+  return await supabase.from("partners").update(updateData).eq("id", partnerId);
 }
 
 export async function findPartnerBySearchTerm(searchTerm: string): Promise<ScrapePartnerRow | null> {

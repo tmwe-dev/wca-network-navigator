@@ -16,9 +16,7 @@ export interface LabGuideHeaderProps {
   readonly right?: React.ReactNode;
 }
 
-export function LabGuideHeader({
-  title, subtitle, steps, right,
-}: LabGuideHeaderProps): React.ReactElement {
+export function LabGuideHeader({ title, subtitle, steps, right }: LabGuideHeaderProps): React.ReactElement {
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div className="max-w-2xl">

@@ -4,8 +4,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Mail, Phone, User, Building2, ChevronRight, AlertTriangle,
-  Globe, Linkedin, MessageCircle, Send,
+  Mail,
+  Phone,
+  User,
+  Building2,
+  ChevronRight,
+  AlertTriangle,
+  Globe,
+  Linkedin,
+  MessageCircle,
+  Send,
   Sparkles,
 } from "lucide-react";
 import ContactPicker from "@/components/workspace/ContactPicker";
@@ -40,14 +48,22 @@ function matchesFilter(a: AllActivity, f: WorkspaceFilterKey): boolean {
   const contact = a.selected_contact;
   const d = getDisplayFields(a);
   switch (f) {
-    case "with_email": return !!contact?.email || !!d.email;
-    case "no_email": return !contact?.email && !d.email;
-    case "with_contact": return !!contact || !!d.contactName;
-    case "no_contact": return !contact && !d.contactName;
-    case "with_alias": return !!(contact?.contact_alias || a.partners?.company_alias);
-    case "no_alias": return !contact?.contact_alias && !a.partners?.company_alias;
-    case "enriched": return d.isEnriched;
-    case "not_enriched": return !d.isEnriched;
+    case "with_email":
+      return !!contact?.email || !!d.email;
+    case "no_email":
+      return !contact?.email && !d.email;
+    case "with_contact":
+      return !!contact || !!d.contactName;
+    case "no_contact":
+      return !contact && !d.contactName;
+    case "with_alias":
+      return !!(contact?.contact_alias || a.partners?.company_alias);
+    case "no_alias":
+      return !contact?.contact_alias && !a.partners?.company_alias;
+    case "enriched":
+      return d.isEnriched;
+    case "not_enriched":
+      return !d.isEnriched;
   }
 }
 
@@ -55,7 +71,11 @@ function useLinkedInLinks(partnerIds: string[]) {
   return useQuery({
     queryKey: queryKeys.socialLinks.linkedin(partnerIds),
     queryFn: async () => {
-      if (!partnerIds.length) return { companyByPartner: {}, contactById: {} } as { companyByPartner: Record<string, string>; contactById: Record<string, string> };
+      if (!partnerIds.length)
+        return { companyByPartner: {}, contactById: {} } as {
+          companyByPartner: Record<string, string>;
+          contactById: Record<string, string>;
+        };
       const data = await findSocialLinksByPartnerIds(partnerIds, "linkedin");
       const companyByPartner: Record<string, string> = {};
       const contactById: Record<string, string> = {};
@@ -85,24 +105,44 @@ interface ContactListPanelProps {
 }
 
 export default function ContactListPanel({
-  selectedActivityId, onSelect, search = "", sourceType,
-  selectedIds, onToggleSelect, onSelectAll, onDeselectAll, onFilteredIdsChange,
+  selectedActivityId,
+  onSelect,
+  search = "",
+  sourceType,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
+  onDeselectAll,
+  onFilteredIdsChange,
 }: ContactListPanelProps) {
   const { data: activities, isLoading } = useAllActivities();
   const { filters } = useGlobalFilters();
   const activeFilters = filters.workspaceFilters;
   const emailGenFilter = filters.emailGenFilter;
   const selectedCountries = filters.workspaceCountries;
-  const [dmTarget, setDmTarget] = useState<{ url: string; contactName: string | null; companyName: string; partnerId?: string; contactId?: string } | null>(null);
+  const [dmTarget, setDmTarget] = useState<{
+    url: string;
+    contactName: string | null;
+    companyName: string;
+    partnerId?: string;
+    contactId?: string;
+  } | null>(null);
 
   const emailActivities = useMemo(() => {
     if (!activities) return [];
     return activities.filter(
-      (a) => a.activity_type === "send_email" && a.status !== "completed" && a.status !== "cancelled" && (!sourceType || a.source_type === sourceType)
+      (a) =>
+        a.activity_type === "send_email" &&
+        a.status !== "completed" &&
+        a.status !== "cancelled" &&
+        (!sourceType || a.source_type === sourceType),
     );
   }, [activities, sourceType]);
 
-  const partnerIds = useMemo(() => [...new Set(emailActivities.map((a) => a.partner_id).filter(Boolean))] as string[], [emailActivities]);
+  const partnerIds = useMemo(
+    () => [...new Set(emailActivities.map((a) => a.partner_id).filter(Boolean))] as string[],
+    [emailActivities],
+  );
   const { data: linkedinMap } = useLinkedInLinks(partnerIds);
 
   const searched = useMemo(() => {
@@ -110,12 +150,14 @@ export default function ContactListPanel({
     const q = search.toLowerCase();
     return emailActivities.filter((a) => {
       const d = getDisplayFields(a);
-      return d.companyName?.toLowerCase().includes(q) ||
+      return (
+        d.companyName?.toLowerCase().includes(q) ||
         d.contactName?.toLowerCase().includes(q) ||
         d.countryName?.toLowerCase().includes(q) ||
         d.city?.toLowerCase().includes(q) ||
         a.title?.toLowerCase().includes(q) ||
-        a.description?.toLowerCase().includes(q);
+        a.description?.toLowerCase().includes(q)
+      );
     });
   }, [emailActivities, search]);
 
@@ -124,7 +166,9 @@ export default function ContactListPanel({
 
     if (activeFilters.size > 0) {
       result = result.filter((a) => {
-        for (const f of activeFilters) { if (!matchesFilter(a, f)) return false; }
+        for (const f of activeFilters) {
+          if (!matchesFilter(a, f)) return false;
+        }
         return true;
       });
     }
@@ -151,8 +195,13 @@ export default function ContactListPanel({
   }, [searched]);
 
   const grouped = useMemo(
-    () => groupByCountry(filtered, (a) => getDisplayFields(a).countryCode, (a) => getDisplayFields(a).countryName),
-    [filtered]
+    () =>
+      groupByCountry(
+        filtered,
+        (a) => getDisplayFields(a).countryCode,
+        (a) => getDisplayFields(a).countryName,
+      ),
+    [filtered],
   );
 
   const filteredIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
@@ -177,28 +226,33 @@ export default function ContactListPanel({
       {/* Header with select-all and counts */}
       <div className="px-3 py-2 border-b border-border/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Checkbox checked={allSelected}
-            onCheckedChange={() => allSelected ? onDeselectAll() : onSelectAll(filteredIds)} />
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={() => (allSelected ? onDeselectAll() : onSelectAll(filteredIds))}
+          />
           <p className="text-[11px] text-muted-foreground font-medium">
             {selectedIds.size > 0 ? (
               <span className="text-primary font-bold">{selectedIds.size} selezionati</span>
             ) : (
-              <>{filtered.length} attività · {grouped.length} paesi</>
+              <>
+                {filtered.length} attività · {grouped.length} paesi
+              </>
             )}
           </p>
         </div>
         {/* Email gen mini-counters */}
         <div className="flex items-center gap-1.5 text-[10px]">
           <span className="text-success font-medium" title="Email generate">
-            <Sparkles className="w-3 h-3 inline mr-0.5" />{emailGenCounts.generated}
+            <Sparkles className="w-3 h-3 inline mr-0.5" />
+            {emailGenCounts.generated}
           </span>
           <span className="text-muted-foreground">/</span>
           <span className="text-warning font-medium" title="Da generare">
-            <Mail className="w-3 h-3 inline mr-0.5" />{emailGenCounts.to_generate}
+            <Mail className="w-3 h-3 inline mr-0.5" />
+            {emailGenCounts.to_generate}
           </span>
         </div>
       </div>
-
 
       {/* List */}
       <ScrollArea className="flex-1">
@@ -221,50 +275,84 @@ export default function ContactListPanel({
                 const displayName = d.contactName;
                 const companyDisplay = d.companyName;
                 const contactLinkedinUrl = contact?.id ? linkedinMap?.contactById?.[contact.id] : undefined;
-                const companyLinkedinUrl = activity.partner_id ? linkedinMap?.companyByPartner?.[activity.partner_id] : undefined;
+                const companyLinkedinUrl = activity.partner_id
+                  ? linkedinMap?.companyByPartner?.[activity.partner_id]
+                  : undefined;
                 const linkedinUrl = contactLinkedinUrl || companyLinkedinUrl;
                 const hasGeneratedEmail = !!activity.email_subject;
 
                 return (
-                  <div key={activity.id}
+                  <div
+                    key={activity.id}
                     className={cn(
                       "flex items-start gap-2 p-2 rounded-md transition-colors duration-150 group",
                       "hover:bg-muted/50",
-                      isSelected ? "bg-muted border border-primary/20" : "border border-transparent"
-                    )}>
-                    <Checkbox checked={isChecked} onCheckedChange={() => onToggleSelect(activity.id)} className="mt-1.5" />
+                      isSelected ? "bg-muted border border-primary/20" : "border border-transparent",
+                    )}
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => onToggleSelect(activity.id)}
+                      className="mt-1.5"
+                    />
                     <button onClick={() => onSelect(activity)} className="flex-1 text-left min-w-0">
                       <div className="flex items-start gap-2">
-                        <div className={cn(
-                          "w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors relative",
-                          isSelected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                        )}>
+                        <div
+                          className={cn(
+                            "w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors relative",
+                            isSelected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                          )}
+                        >
                           <Building2 className="w-3.5 h-3.5" />
                           {d.isEnriched && (
-                            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-background" title="Arricchito" />
+                            <div
+                              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-background"
+                              title="Arricchito"
+                            />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="font-medium text-sm text-foreground truncate">{companyDisplay}</span>
                             {hasGeneratedEmail && (
-                              <span title="Email generata"><Sparkles className="w-3 h-3 text-success shrink-0" /></span>
+                              <span title="Email generata">
+                                <Sparkles className="w-3 h-3 text-success shrink-0" />
+                              </span>
                             )}
                             {d.hasWebsite && <Globe className="w-3 h-3 text-primary shrink-0" />}
                             {linkedinUrl && (
                               <>
-                                <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()} title="LinkedIn">
+                                <a
+                                  href={linkedinUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="LinkedIn"
+                                >
                                   <Linkedin className="w-3 h-3 text-[#0A66C2] shrink-0 hover:scale-110 transition-transform" />
                                 </a>
-                                <button onClick={(e) => { e.stopPropagation(); setDmTarget({ url: linkedinUrl, contactName: displayName || null, companyName: companyDisplay || "", partnerId: activity.partner_id || undefined, contactId: contact?.id }); }}
-                                  title="Invia messaggio LinkedIn" className="inline-flex">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDmTarget({
+                                      url: linkedinUrl,
+                                      contactName: displayName || null,
+                                      companyName: companyDisplay || "",
+                                      partnerId: activity.partner_id || undefined,
+                                      contactId: contact?.id,
+                                    });
+                                  }}
+                                  title="Invia messaggio LinkedIn"
+                                  className="inline-flex"
+                                >
                                   <Send className="w-3 h-3 text-[#0A66C2]/60 shrink-0 hover:text-[#0A66C2] hover:scale-110 transition-all" />
                                 </button>
                               </>
                             )}
                           </div>
-                          {activity.source_type === "partner" && activity.partner_id && !activity.selected_contact_id ? (
+                          {activity.source_type === "partner" &&
+                          activity.partner_id &&
+                          !activity.selected_contact_id ? (
                             <div className="mt-0.5">
                               <ContactPicker
                                 activityId={activity.id}
@@ -273,11 +361,12 @@ export default function ContactListPanel({
                                 compact
                               />
                             </div>
-                          ) : (contact || displayName) ? (
+                          ) : contact || displayName ? (
                             <div className="flex items-center gap-1 mt-0.5">
                               <User className="w-3 h-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground truncate">
-                                {displayName}{contact?.title && ` · ${contact.title}`}
+                                {displayName}
+                                {contact?.title && ` · ${contact.title}`}
                               </span>
                             </div>
                           ) : (
@@ -290,9 +379,11 @@ export default function ContactListPanel({
                             {hasEmail ? (
                               <div className="flex items-center gap-1">
                                 <Mail className="w-3 h-3 text-sky-400 shrink-0" />
-                                <span className="text-[11px] text-sky-400 font-medium truncate max-w-[160px]">{contact?.email || d.email}</span>
+                                <span className="text-[11px] text-sky-400 font-medium truncate max-w-[160px]">
+                                  {contact?.email || d.email}
+                                </span>
                               </div>
-                            ) : (contact || displayName) ? (
+                            ) : contact || displayName ? (
                               <div className="flex items-center gap-1">
                                 <Mail className="w-3 h-3 text-destructive" />
                                 <span className="text-[11px] text-destructive">No email</span>
@@ -301,20 +392,29 @@ export default function ContactListPanel({
                             {(contact?.direct_phone || contact?.mobile) && (
                               <div className="flex items-center gap-1">
                                 <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
-                                <span className="text-[11px] text-emerald-400 font-medium truncate max-w-[120px]">{contact.mobile || contact.direct_phone}</span>
-                                <a href={`https://wa.me/${(contact.mobile || contact.direct_phone || "").replace(/[^0-9+]/g, "")}`}
-                                  target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                                  title="WhatsApp" className="inline-flex ml-0.5">
+                                <span className="text-[11px] text-emerald-400 font-medium truncate max-w-[120px]">
+                                  {contact.mobile || contact.direct_phone}
+                                </span>
+                                <a
+                                  href={`https://wa.me/${(contact.mobile || contact.direct_phone || "").replace(/[^0-9+]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="WhatsApp"
+                                  className="inline-flex ml-0.5"
+                                >
                                   <MessageCircle className="w-3 h-3 text-success hover:scale-110 transition-transform" />
                                 </a>
                               </div>
                             )}
                           </div>
                         </div>
-                        <ChevronRight className={cn(
-                          "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground",
-                          isSelected && "text-primary rotate-90"
-                        )} />
+                        <ChevronRight
+                          className={cn(
+                            "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground",
+                            isSelected && "text-primary rotate-90",
+                          )}
+                        />
                       </div>
                     </button>
                   </div>
@@ -323,9 +423,7 @@ export default function ContactListPanel({
             </div>
           ))}
           {grouped.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              Nessuna attività email trovata
-            </div>
+            <div className="text-center py-8 text-muted-foreground text-sm">Nessuna attività email trovata</div>
           )}
         </div>
       </ScrollArea>
@@ -333,7 +431,9 @@ export default function ContactListPanel({
       {dmTarget && (
         <LinkedInDMDialog
           open={!!dmTarget}
-          onOpenChange={(open) => { if (!open) setDmTarget(null); }}
+          onOpenChange={(open) => {
+            if (!open) setDmTarget(null);
+          }}
           profileUrl={dmTarget.url}
           contactName={dmTarget.contactName}
           companyName={dmTarget.companyName}

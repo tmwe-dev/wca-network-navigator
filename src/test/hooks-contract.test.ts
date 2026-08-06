@@ -34,8 +34,14 @@ describe("useAgents — Contract", () => {
   it("Agent type has required fields", () => {
     // Validate the shape that components depend on
     const requiredFields = [
-      "id", "name", "role", "avatar_emoji", "is_active",
-      "system_prompt", "assigned_tools", "user_id",
+      "id",
+      "name",
+      "role",
+      "avatar_emoji",
+      "is_active",
+      "system_prompt",
+      "assigned_tools",
+      "user_id",
     ];
     requiredFields.forEach((f) => {
       expect(typeof f).toBe("string");

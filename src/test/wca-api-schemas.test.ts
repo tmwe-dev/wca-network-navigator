@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DiscoverResultSchema, CheckIdsResultSchema, JobStartResultSchema, WcaMemberSchema, ScrapeProfileSchema, safeParseDiscover, safeParseScrape, safeParseCheckIds, safeParseJobStart } from "@/lib/api/wcaAppApi.schemas";
+import {
+  DiscoverResultSchema,
+  CheckIdsResultSchema,
+  JobStartResultSchema,
+  WcaMemberSchema,
+  ScrapeProfileSchema,
+  safeParseDiscover,
+  safeParseScrape,
+  safeParseCheckIds,
+  safeParseJobStart,
+} from "@/lib/api/wcaAppApi.schemas";
 
 describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
   describe("WcaMemberSchema", () => {
@@ -104,18 +114,12 @@ describe("wcaAppApi.schemas — runtime validation (Vol. II §5.3)", () => {
 
   describe("JobStartResultSchema", () => {
     it("accetta action enum", () => {
-      expect(
-        JobStartResultSchema.safeParse({ success: true, action: "paused" }).success
-      ).toBe(true);
-      expect(
-        JobStartResultSchema.safeParse({ success: true, action: "resumed" }).success
-      ).toBe(true);
+      expect(JobStartResultSchema.safeParse({ success: true, action: "paused" }).success).toBe(true);
+      expect(JobStartResultSchema.safeParse({ success: true, action: "resumed" }).success).toBe(true);
     });
 
     it("rifiuta action sconosciuta", () => {
-      expect(
-        JobStartResultSchema.safeParse({ success: true, action: "exploded" }).success
-      ).toBe(false);
+      expect(JobStartResultSchema.safeParse({ success: true, action: "exploded" }).success).toBe(false);
     });
   });
 

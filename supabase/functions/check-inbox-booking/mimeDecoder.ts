@@ -31,17 +31,29 @@ export function decodeQuotedPrintable(input: Uint8Array): Uint8Array {
   let i = 0;
   while (i < input.length) {
     const byte = input[i];
-    if (byte === 0x3D) {
-      if (i + 1 < input.length && input[i + 1] === 0x0A) { i += 2; continue; }
-      if (i + 2 < input.length && input[i + 1] === 0x0D && input[i + 2] === 0x0A) { i += 3; continue; }
+    if (byte === 0x3d) {
+      if (i + 1 < input.length && input[i + 1] === 0x0a) {
+        i += 2;
+        continue;
+      }
+      if (i + 2 < input.length && input[i + 1] === 0x0d && input[i + 2] === 0x0a) {
+        i += 3;
+        continue;
+      }
       if (i + 2 < input.length) {
         const hex = String.fromCharCode(input[i + 1], input[i + 2]);
         const val = parseInt(hex, 16);
-        if (!isNaN(val)) { result.push(val); i += 3; continue; }
+        if (!isNaN(val)) {
+          result.push(val);
+          i += 3;
+          continue;
+        }
       }
-      result.push(byte); i++;
+      result.push(byte);
+      i++;
     } else {
-      result.push(byte); i++;
+      result.push(byte);
+      i++;
     }
   }
   return new Uint8Array(result);
@@ -64,13 +76,19 @@ export function decodeMimePart(rawBytes: Uint8Array, encoding: string, charset?:
   const enc = (encoding || "7BIT").toUpperCase();
   let decoded: Uint8Array;
   switch (enc) {
-    case "QUOTED-PRINTABLE": decoded = decodeQuotedPrintable(rawBytes); break;
-    case "BASE64": decoded = decodeBase64Bytes(rawBytes); break;
-    default: decoded = rawBytes;
+    case "QUOTED-PRINTABLE":
+      decoded = decodeQuotedPrintable(rawBytes);
+      break;
+    case "BASE64":
+      decoded = decodeBase64Bytes(rawBytes);
+      break;
+    default:
+      decoded = rawBytes;
   }
   const cs = normalizeCharset(charset);
-  try { return new TextDecoder(cs).decode(decoded); }
-  catch (e: unknown) {
+  try {
+    return new TextDecoder(cs).decode(decoded);
+  } catch (e: unknown) {
     console.debug("charset decode failed, falling back to utf-8:", extractErrorMessage(e));
     return new TextDecoder("utf-8", { fatal: false }).decode(decoded);
   }
@@ -81,7 +99,9 @@ export function decodeMimePart(rawBytes: Uint8Array, encoding: string, charset?:
 export async function sha256hex(data: Uint8Array): Promise<string> {
   const buf = new Uint8Array(data);
   const hashBuffer = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // ━━━ RFC 3501 §6.4.5 — BODYSTRUCTURE navigation ━━━
@@ -114,9 +134,7 @@ export function decodeRfc2231(value: string): string {
     const charset = match[1] || "utf-8";
     const encoded = match[3];
     try {
-      const decoded = encoded.replace(/%([0-9A-Fa-f]{2})/g, (_, hex) =>
-        String.fromCharCode(parseInt(hex, 16))
-      );
+      const decoded = encoded.replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
       const bytes = new Uint8Array(decoded.length);
       for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
       return new TextDecoder(normalizeCharset(charset)).decode(bytes);
@@ -129,8 +147,9 @@ export function decodeRfc2231(value: string): string {
 }
 
 export function getPartFilename(part: Record<string, unknown>): string {
-  const extFilename = getPartParameter(part?.dispositionParameters as Record<string, string> | undefined, "filename*") ||
-                      getPartParameter(part?.parameters as Record<string, string> | undefined, "name*");
+  const extFilename =
+    getPartParameter(part?.dispositionParameters as Record<string, string> | undefined, "filename*") ||
+    getPartParameter(part?.parameters as Record<string, string> | undefined, "name*");
   if (extFilename) return decodeRfc2231(extFilename);
 
   return (
@@ -153,7 +172,7 @@ export function collectMimeLeafParts(part: Record<string, unknown>, path: string
   if (!part) return [];
   if (Array.isArray(part.childParts) && part.childParts.length > 0) {
     return (part.childParts as Record<string, unknown>[]).flatMap((child: Record<string, unknown>, index: number) =>
-      collectMimeLeafParts(child, path ? `${path}.${index + 1}` : `${index + 1}`)
+      collectMimeLeafParts(child, path ? `${path}.${index + 1}` : `${index + 1}`),
     );
   }
 
@@ -169,28 +188,47 @@ export function collectMimeLeafParts(part: Record<string, unknown>, path: string
   if (type === "message" && subtype === "rfc822") {
     const isAttachedMessage = dispositionType === "attachment" || !!filename;
     if (isAttachedMessage || !part.messageBodyStructure) {
-      return [{
-        section, type, subtype, encoding, charset, contentId, dispositionType,
-        filename: filename || `message-${section}.eml`,
-        size: (part.size as number) || 0,
-        isInlineBody: false, isInlineImage: false, isAttachment: true,
-      }];
+      return [
+        {
+          section,
+          type,
+          subtype,
+          encoding,
+          charset,
+          contentId,
+          dispositionType,
+          filename: filename || `message-${section}.eml`,
+          size: (part.size as number) || 0,
+          isInlineBody: false,
+          isInlineImage: false,
+          isAttachment: true,
+        },
+      ];
     }
     return collectMimeLeafParts(part.messageBodyStructure as Record<string, unknown>, section);
   }
 
-  const isTextBody = type === "text" && (subtype === "plain" || subtype === "html") &&
-    dispositionType !== "attachment" && !filename;
+  const isTextBody =
+    type === "text" && (subtype === "plain" || subtype === "html") && dispositionType !== "attachment" && !filename;
 
   const isInlineImage = type === "image" && !!contentId && dispositionType !== "attachment";
 
-  return [{
-    section, type, subtype, encoding, charset, contentId, dispositionType,
-    filename: filename || (isTextBody ? "" : `${type}_${subtype}.${subtype}`),
-    size: (part.size as number) || 0,
-    isInlineBody: isTextBody, isInlineImage,
-    isAttachment: !isTextBody && !isInlineImage,
-  }];
+  return [
+    {
+      section,
+      type,
+      subtype,
+      encoding,
+      charset,
+      contentId,
+      dispositionType,
+      filename: filename || (isTextBody ? "" : `${type}_${subtype}.${subtype}`),
+      size: (part.size as number) || 0,
+      isInlineBody: isTextBody,
+      isInlineImage,
+      isAttachment: !isTextBody && !isInlineImage,
+    },
+  ];
 }
 
 // ━━━ RFC 2047 — Encoded-Word decoder ━━━
@@ -205,18 +243,21 @@ export function decodeRfc2047(input: string): string {
         const binary = atob(text);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        try { return new TextDecoder(cs).decode(bytes); }
-        catch (e: unknown) {
+        try {
+          return new TextDecoder(cs).decode(bytes);
+        } catch (e: unknown) {
           console.debug("RFC 2047 B decode fallback:", extractErrorMessage(e));
           return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
         }
       }
-      const decoded = text.replace(/_/g, " ")
+      const decoded = text
+        .replace(/_/g, " ")
         .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
       const bytes = new Uint8Array(decoded.length);
       for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
-      try { return new TextDecoder(cs).decode(bytes); }
-      catch (e: unknown) {
+      try {
+        return new TextDecoder(cs).decode(bytes);
+      } catch (e: unknown) {
         console.debug("RFC 2047 Q decode fallback:", extractErrorMessage(e));
         return decoded;
       }
@@ -286,9 +327,7 @@ export function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): F
     } else if (contentType.startsWith("image/") && cid) {
       try {
         const imgBytes = new TextEncoder().encode(bodyPart);
-        const decoded = encoding.toUpperCase() === "BASE64"
-          ? decodeBase64Bytes(imgBytes)
-          : imgBytes;
+        const decoded = encoding.toUpperCase() === "BASE64" ? decodeBase64Bytes(imgBytes) : imgBytes;
         inlineImages.push({ cid, contentType, data: decoded });
       } catch (e: unknown) {
         console.debug("inline image decode skipped:", extractErrorMessage(e));

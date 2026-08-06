@@ -26,7 +26,13 @@ export function KnowledgeBaseTab({ categories }: Props) {
     <div className="space-y-2 text-xs">
       <div className="flex items-center justify-between">
         <div className="text-[11px] text-muted-foreground">
-          {categories?.length ? <>Categorie: <span className="font-mono">{categories.join(", ")}</span></> : "Tutte le categorie"}
+          {categories?.length ? (
+            <>
+              Categorie: <span className="font-mono">{categories.join(", ")}</span>
+            </>
+          ) : (
+            "Tutte le categorie"
+          )}
           {" · "}
           <span>{entries.length} voci</span>
         </div>
@@ -55,8 +61,12 @@ export function KnowledgeBaseTab({ categories }: Props) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-medium text-xs truncate">{e.title}</span>
-                  <Badge variant="outline" className="text-[9px]">{e.category}</Badge>
-                  <Badge variant="outline" className="text-[9px]">P{e.priority}</Badge>
+                  <Badge variant="outline" className="text-[9px]">
+                    {e.category}
+                  </Badge>
+                  <Badge variant="outline" className="text-[9px]">
+                    P{e.priority}
+                  </Badge>
                   <span className="text-xs text-foreground">{e.content.length.toLocaleString()} char</span>
                 </div>
                 <div className="text-xs text-foreground line-clamp-2 mt-1">{e.content}</div>
@@ -64,7 +74,10 @@ export function KnowledgeBaseTab({ categories }: Props) {
               <div className="flex items-center gap-1.5 shrink-0">
                 <Switch
                   checked={e.is_active}
-                  onCheckedChange={async (v) => { await toggleActive(e.id, v); setSavedAt(Date.now()); }}
+                  onCheckedChange={async (v) => {
+                    await toggleActive(e.id, v);
+                    setSavedAt(Date.now());
+                  }}
                   disabled={savingId === e.id}
                 />
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditing(e)}>
@@ -81,7 +94,11 @@ export function KnowledgeBaseTab({ categories }: Props) {
           entry={editing}
           saving={savingId === editing.id}
           onClose={() => setEditing(null)}
-          onSave={async (patch) => { await update(editing.id, patch); setEditing(null); setSavedAt(Date.now()); }}
+          onSave={async (patch) => {
+            await update(editing.id, patch);
+            setEditing(null);
+            setSavedAt(Date.now());
+          }}
         />
       )}
 
@@ -89,7 +106,13 @@ export function KnowledgeBaseTab({ categories }: Props) {
         <CreateEntryDialog
           defaultCategory={categories?.[0] ?? "vendita"}
           onClose={() => setCreating(false)}
-          onCreate={async (input) => { const r = await insert(input); if (r) { setCreating(false); setSavedAt(Date.now()); } }}
+          onCreate={async (input) => {
+            const r = await insert(input);
+            if (r) {
+              setCreating(false);
+              setSavedAt(Date.now());
+            }
+          }}
         />
       )}
 
@@ -99,7 +122,10 @@ export function KnowledgeBaseTab({ categories }: Props) {
 }
 
 function EditEntryDialog({
-  entry, saving, onClose, onSave,
+  entry,
+  saving,
+  onClose,
+  onSave,
 }: {
   entry: ForgeKbEntry;
   saving: boolean;
@@ -117,15 +143,33 @@ function EditEntryDialog({
           <DialogTitle className="text-sm">Modifica voce KB · {entry.category}</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-8 text-xs" placeholder="Titolo" />
-          <Textarea value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[260px] text-xs font-mono" />
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="h-8 text-xs"
+            placeholder="Titolo"
+          />
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="min-h-[260px] text-xs font-mono"
+          />
           <div className="flex items-center gap-2 text-xs">
             <span className="text-muted-foreground">Priorità</span>
-            <Input type="number" min={0} max={10} value={priority} onChange={(e) => setPriority(Number(e.target.value) || 0)} className="h-7 w-20 text-xs" />
+            <Input
+              type="number"
+              min={0}
+              max={10}
+              value={priority}
+              onChange={(e) => setPriority(Number(e.target.value) || 0)}
+              className="h-7 w-20 text-xs"
+            />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={saving}>Annulla</Button>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            Annulla
+          </Button>
           <Button onClick={() => onSave({ title, content, priority })} disabled={saving}>
             {saving && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
             Salva
@@ -137,7 +181,9 @@ function EditEntryDialog({
 }
 
 function CreateEntryDialog({
-  defaultCategory, onClose, onCreate,
+  defaultCategory,
+  onClose,
+  onCreate,
 }: {
   defaultCategory: string;
   onClose: () => void;
@@ -156,16 +202,40 @@ function CreateEntryDialog({
           <DialogTitle className="text-sm">Nuova voce KB</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-8 text-xs" placeholder="Titolo" />
-          <Input value={category} onChange={(e) => setCategory(e.target.value)} className="h-8 text-xs" placeholder="Categoria (es. vendita, negoziazione)" />
-          <Textarea value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[200px] text-xs font-mono" placeholder="Contenuto della voce KB…" />
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="h-8 text-xs"
+            placeholder="Titolo"
+          />
+          <Input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="h-8 text-xs"
+            placeholder="Categoria (es. vendita, negoziazione)"
+          />
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="min-h-[200px] text-xs font-mono"
+            placeholder="Contenuto della voce KB…"
+          />
           <div className="flex items-center gap-2 text-xs">
             <span className="text-muted-foreground">Priorità</span>
-            <Input type="number" min={0} max={10} value={priority} onChange={(e) => setPriority(Number(e.target.value) || 0)} className="h-7 w-20 text-xs" />
+            <Input
+              type="number"
+              min={0}
+              max={10}
+              value={priority}
+              onChange={(e) => setPriority(Number(e.target.value) || 0)}
+              className="h-7 w-20 text-xs"
+            />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={saving}>Annulla</Button>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            Annulla
+          </Button>
           <Button
             onClick={async () => {
               if (!title.trim() || !content.trim()) return;

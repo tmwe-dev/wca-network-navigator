@@ -56,11 +56,11 @@ Vedi anche: `/v2/pipeline-traces` per la timeline live di ogni procedura.
 
 ## Strumenti di osservazione
 
-| Cosa | Dove |
-|---|---|
-| Timeline passo-passo per email | `/v2/pipeline-traces` (cerca per trace_id = message_id) |
-| Storico chiamate AI con thumbs up/down | `/v2/ai-interactions-log` |
-| Test prompt regressione | `/v2/prompt-lab/tests` |
-| Audit governance | `supervisor_audit_log` (DB) |
-| Metriche edge function | `edge_metrics` (DB) |
-| Log invii email | `email_send_log` (DB, dedup per `message_id`) |
+| Cosa                                   | Dove                                                    |
+| -------------------------------------- | ------------------------------------------------------- |
+| Timeline passo-passo per email         | `/v2/pipeline-traces` (cerca per trace_id = message_id) |
+| Storico chiamate AI con thumbs up/down | `/v2/ai-interactions-log`                               |
+| Test prompt regressione                | `/v2/prompt-lab/tests`                                  |
+| Audit governance                       | `supervisor_audit_log` (DB)                             |
+| Metriche edge function                 | `edge_metrics` (DB)                                     |
+| Log invii email                        | `email_send_log` (DB, dedup per `message_id`)           |

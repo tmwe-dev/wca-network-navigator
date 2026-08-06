@@ -38,11 +38,7 @@ export interface RouterInput {
 /**
  * INTERESTED / MEETING_REQUEST
  */
-export async function handleInterested(
-  supabase: SupabaseClient,
-  input: RouterInput,
-  result: PostClassificationResult,
-) {
+export async function handleInterested(supabase: SupabaseClient, input: RouterInput, result: PostClassificationResult) {
   const now = new Date().toISOString();
 
   // a) Escalate status
@@ -58,10 +54,8 @@ export async function handleInterested(
 
     if (["new", "first_touch_sent"].includes(current)) nextStatus = "engaged";
     else if (current === "holding") nextStatus = "engaged";
-    else if (current === "engaged" && input.category === "meeting_request")
-      nextStatus = "qualified";
-    else if (current === "qualified" && input.category === "meeting_request")
-      nextStatus = "negotiation";
+    else if (current === "engaged" && input.category === "meeting_request") nextStatus = "qualified";
+    else if (current === "qualified" && input.category === "meeting_request") nextStatus = "negotiation";
 
     if (nextStatus) {
       try {
@@ -90,8 +84,7 @@ export async function handleInterested(
   }
 
   // b) Crea pending action per risposta
-  const actionType =
-    input.category === "meeting_request" ? "schedule_meeting" : "reply_interested";
+  const actionType = input.category === "meeting_request" ? "schedule_meeting" : "reply_interested";
   let pendingActionId: string | null = null;
   try {
     const actionPayload = enrichActionPayload(
@@ -128,20 +121,25 @@ export async function handleInterested(
       result.actionsExecuted.push(`pending_action_${actionType}`);
 
       if (actionType === "reply_interested") {
-        generateReplyDraft(supabase, pendingActionId as string, {
-          userId: input.userId,
-          partnerId: input.partnerId,
-          contactId: null,
-          category: input.category,
-          confidence: input.confidence,
-          senderEmail: input.senderEmail,
-          senderName: input.senderName,
-          subject: input.subject,
-          aiSummary: input.aiSummary,
-          urgency: input.urgency,
-          sentiment: input.sentiment,
-          emailAddressRule: input.emailAddressRule,
-        }, "reply_interested").catch((e) => {
+        generateReplyDraft(
+          supabase,
+          pendingActionId as string,
+          {
+            userId: input.userId,
+            partnerId: input.partnerId,
+            contactId: null,
+            category: input.category,
+            confidence: input.confidence,
+            senderEmail: input.senderEmail,
+            senderName: input.senderName,
+            subject: input.subject,
+            aiSummary: input.aiSummary,
+            urgency: input.urgency,
+            sentiment: input.sentiment,
+            emailAddressRule: input.emailAddressRule,
+          },
+          "reply_interested",
+        ).catch((e) => {
           console.warn(`[LOVABLE-93] Draft generation failed: ${e}`);
         });
       }
@@ -201,8 +199,7 @@ export async function handleNotInterested(
         subject: input.subject,
         ai_summary: input.aiSummary,
         confidence: input.confidence,
-        suggested_action:
-          "Confidence bassa: verificare manualmente se è davvero disinteressato",
+        suggested_action: "Confidence bassa: verificare manualmente se è davvero disinteressato",
       },
       status: "pending",
       priority: "normal",
@@ -256,8 +253,7 @@ export async function handleNotInterested(
       reply_to: input.senderEmail,
       original_subject: input.subject,
       ai_summary: input.aiSummary,
-      suggested_action:
-        "Invia chiusura elegante (Chiusore): ringrazia, lascia porta aperta, nessuna pressione",
+      suggested_action: "Invia chiusura elegante (Chiusore): ringrazia, lascia porta aperta, nessuna pressione",
     },
     input.emailAddressRule,
   );
@@ -280,20 +276,25 @@ export async function handleNotInterested(
       result.pendingActionCreated = true;
       result.actionsExecuted.push("pending_graceful_close");
 
-      generateReplyDraft(supabase, insertedAction.id, {
-        userId: input.userId,
-        partnerId: input.partnerId,
-        contactId: null,
-        category: input.category,
-        confidence: input.confidence,
-        senderEmail: input.senderEmail,
-        senderName: input.senderName,
-        subject: input.subject,
-        aiSummary: input.aiSummary,
-        urgency: input.urgency,
-        sentiment: input.sentiment,
-        emailAddressRule: input.emailAddressRule,
-      }, "send_graceful_close").catch((e) => {
+      generateReplyDraft(
+        supabase,
+        insertedAction.id,
+        {
+          userId: input.userId,
+          partnerId: input.partnerId,
+          contactId: null,
+          category: input.category,
+          confidence: input.confidence,
+          senderEmail: input.senderEmail,
+          senderName: input.senderName,
+          subject: input.subject,
+          aiSummary: input.aiSummary,
+          urgency: input.urgency,
+          sentiment: input.sentiment,
+          emailAddressRule: input.emailAddressRule,
+        },
+        "send_graceful_close",
+      ).catch((e) => {
         console.warn(`[LOVABLE-93] Draft generation failed: ${e}`);
       });
     }
@@ -305,16 +306,9 @@ export async function handleNotInterested(
 /**
  * FOLLOW_UP (dal partner)
  */
-export async function handleFollowUp(
-  supabase: SupabaseClient,
-  input: RouterInput,
-  result: PostClassificationResult,
-) {
+export async function handleFollowUp(supabase: SupabaseClient, input: RouterInput, result: PostClassificationResult) {
   if (input.partnerId) {
-    await supabase
-      .from("partners")
-      .update({ last_interaction_at: new Date().toISOString() })
-      .eq("id", input.partnerId);
+    await supabase.from("partners").update({ last_interaction_at: new Date().toISOString() }).eq("id", input.partnerId);
   }
 
   if (input.partnerId) {

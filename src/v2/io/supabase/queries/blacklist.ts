@@ -11,8 +11,5 @@ export async function fetchBlacklistEntriesRaw(): Promise<{
   data: BlacklistEntryRow[] | null;
   error: PostgrestError | null;
 }> {
-  return supabase
-    .from("blacklist_entries")
-    .select("*")
-    .order("company_name");
+  return supabase.from("blacklist_entries").select("*").order("company_name");
 }

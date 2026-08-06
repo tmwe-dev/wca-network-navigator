@@ -3,19 +3,27 @@
  * Charter R3: vietato chiamare edge function AI senza passare da invokeAi.
  */
 const AI_FUNCTIONS = new Set([
-  "ai-assistant", "agent-execute", "agent-loop", "agent-simulate",
-  "agent-prompt-refiner", "agent-task-drainer", "unified-assistant",
-  "generate-email", "generate-outreach", "improve-email",
+  "ai-assistant",
+  "agent-execute",
+  "agent-loop",
+  "agent-simulate",
+  "agent-prompt-refiner",
+  "agent-task-drainer",
+  "unified-assistant",
+  "generate-email",
+  "generate-outreach",
+  "improve-email",
   "classify-inbound-message",
-  "categorize-content", "suggest-email-groups", "parse-business-card",
-  "agentic-decide", "sherlock-extract", "prompt-test-runner", "daily-briefing",
+  "categorize-content",
+  "suggest-email-groups",
+  "parse-business-card",
+  "agentic-decide",
+  "sherlock-extract",
+  "prompt-test-runner",
+  "daily-briefing",
 ]);
 
-const ALLOWED_FILES = [
-  "src/lib/ai/invokeAi.ts",
-  "src/lib/api/invokeEdge.ts",
-  "src/test/invoke-edge.test.ts",
-];
+const ALLOWED_FILES = ["src/lib/ai/invokeAi.ts", "src/lib/api/invokeEdge.ts", "src/test/invoke-edge.test.ts"];
 
 module.exports = {
   meta: {

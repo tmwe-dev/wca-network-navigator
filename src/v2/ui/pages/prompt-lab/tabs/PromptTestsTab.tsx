@@ -33,15 +33,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Play, Plus, Trash2, XCircle, History, Building2, Languages, BookOpen, ChevronRight } from "lucide-react";
 import {
-  QK_PROMPTS,
-  qkCases,
-  qkRuns,
-  SEVERITY_COLORS,
-  STATUS_ICON,
-  emptyDraft,
-} from "./promptTestsTab.constants";
+  Loader2,
+  Play,
+  Plus,
+  Trash2,
+  XCircle,
+  History,
+  Building2,
+  Languages,
+  BookOpen,
+  ChevronRight,
+} from "lucide-react";
+import { QK_PROMPTS, qkCases, qkRuns, SEVERITY_COLORS, STATUS_ICON, emptyDraft } from "./promptTestsTab.constants";
 
 export function PromptTestsTab() {
   const { user } = useAuth();
@@ -111,8 +115,14 @@ export function PromptTestsTab() {
       } catch {
         throw new Error("input_payload non è JSON valido");
       }
-      const expContains = containsText.split("\n").map((s) => s.trim()).filter(Boolean);
-      const expNot = notContainsText.split("\n").map((s) => s.trim()).filter(Boolean);
+      const expContains = containsText
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const expNot = notContainsText
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
 
       return upsertTestCase({
         id: draft.id,
@@ -259,15 +269,17 @@ export function PromptTestsTab() {
                   <div className="flex items-center gap-1.5">
                     {lastRun ? STATUS_ICON[lastRun.status] : <span className="h-3.5 w-3.5 inline-block" />}
                     <span className="flex-1 truncate">{tc.name}</span>
-                    {!tc.is_active && <Badge variant="outline" className="text-[9px] py-0">off</Badge>}
+                    {!tc.is_active && (
+                      <Badge variant="outline" className="text-[9px] py-0">
+                        off
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 ml-5">
                     <Badge variant="outline" className={`text-[9px] py-0 px-1 ${SEVERITY_COLORS[tc.severity]}`}>
                       {tc.severity}
                     </Badge>
-                    {lastRun && (
-                      <span className="text-[9px] text-muted-foreground">{lastRun.duration_ms}ms</span>
-                    )}
+                    {lastRun && <span className="text-[9px] text-muted-foreground">{lastRun.duration_ms}ms</span>}
                   </div>
                 </button>
               );
@@ -310,7 +322,9 @@ export function PromptTestsTab() {
                     value={(draft.severity as string) ?? "warning"}
                     onValueChange={(v) => setDraft({ ...draft, severity: v as PromptTestCase["severity"] })}
                   >
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="critical">critical</SelectItem>
                       <SelectItem value="warning">warning</SelectItem>
@@ -414,7 +428,11 @@ export function PromptTestsTab() {
                       onClick={() => runOneMutation.mutate(draft.id!)}
                       disabled={runOneMutation.isPending}
                     >
-                      {runOneMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Play className="h-3 w-3 mr-1" />}
+                      {runOneMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <Play className="h-3 w-3 mr-1" />
+                      )}
                       Esegui
                     </Button>
                     <Button
@@ -444,7 +462,7 @@ export function PromptTestsTab() {
                         .filter((r) => r.test_case_id === draft.id)
                         .slice(0, 5)
                         .map((r) => (
-                        <RunCard key={r.id} run={r} />
+                          <RunCard key={r.id} run={r} />
                         ))}
                       {(runsQuery.data ?? []).filter((r) => r.test_case_id === draft.id).length === 0 && (
                         <p className="text-[10px] text-muted-foreground">Nessun run ancora. Premi "Esegui".</p>
@@ -484,10 +502,10 @@ function RunCard({ run }: { run: PromptTestRun }) {
     run.status === "passed"
       ? "bg-success/15 text-success border-success/30"
       : run.status === "failed"
-      ? "bg-destructive/15 text-destructive border-destructive/30"
-      : run.status === "error"
-      ? "bg-warning/15 text-warning border-warning/30"
-      : "bg-muted text-muted-foreground border-border";
+        ? "bg-destructive/15 text-destructive border-destructive/30"
+        : run.status === "error"
+          ? "bg-warning/15 text-warning border-warning/30"
+          : "bg-muted text-muted-foreground border-border";
 
   return (
     <div className="border rounded-md p-3 space-y-2 bg-card">
@@ -514,17 +532,13 @@ function RunCard({ run }: { run: PromptTestRun }) {
             <BookOpen className="h-3 w-3" /> KB {kbCount}
           </Badge>
         )}
-        <span className="ml-auto text-muted-foreground">
-          {new Date(run.created_at).toLocaleString()}
-        </span>
+        <span className="ml-auto text-muted-foreground">{new Date(run.created_at).toLocaleString()}</span>
       </div>
 
       {/* Identità iniettata */}
       <div
         className={`flex flex-wrap items-center gap-2 text-[11px] rounded px-2 py-1.5 border ${
-          identityLoaded
-            ? "bg-muted/40 border-border"
-            : "bg-destructive/10 border-destructive/30 text-destructive"
+          identityLoaded ? "bg-muted/40 border-border" : "bg-destructive/10 border-destructive/30 text-destructive"
         }`}
       >
         <Building2 className="h-3 w-3 shrink-0" />
@@ -543,9 +557,7 @@ function RunCard({ run }: { run: PromptTestRun }) {
       {/* Failure reasons */}
       {run.failure_reasons.length > 0 && (
         <div className="space-y-0.5">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase">
-            Check falliti
-          </div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase">Check falliti</div>
           {run.failure_reasons.map((reason, i) => (
             <div key={i} className="flex items-start gap-1.5 text-[11px] text-destructive">
               <XCircle className="h-3 w-3 mt-0.5 shrink-0" />
@@ -575,9 +587,7 @@ function RunCard({ run }: { run: PromptTestRun }) {
             onClick={() => setShowPrompt((v) => !v)}
             className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ChevronRight
-              className={`h-3 w-3 transition-transform ${showPrompt ? "rotate-90" : ""}`}
-            />
+            <ChevronRight className={`h-3 w-3 transition-transform ${showPrompt ? "rotate-90" : ""}`} />
             Prompt costruito ({systemPrompt.length} ch)
           </button>
           {showPrompt && (

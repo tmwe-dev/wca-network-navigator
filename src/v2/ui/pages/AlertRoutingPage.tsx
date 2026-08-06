@@ -76,7 +76,15 @@ export function AlertRoutingPage() {
         timezone: draft.timezone ?? "Europe/Rome",
       });
       toast.success("Responsabile salvato");
-      setDraft({ name: "", role: "", whatsapp_e164: "", categories: [], min_urgency_score: 70, is_active: true, timezone: "Europe/Rome" });
+      setDraft({
+        name: "",
+        role: "",
+        whatsapp_e164: "",
+        categories: [],
+        min_urgency_score: 70,
+        is_active: true,
+        timezone: "Europe/Rome",
+      });
       refresh();
     } catch (e) {
       toast.error((e as Error).message);
@@ -115,15 +123,27 @@ export function AlertRoutingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <Label>Nome</Label>
-            <Input value={draft.name ?? ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Mario Rossi" />
+            <Input
+              value={draft.name ?? ""}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              placeholder="Mario Rossi"
+            />
           </div>
           <div>
             <Label>Ruolo</Label>
-            <Input value={draft.role ?? ""} onChange={(e) => setDraft({ ...draft, role: e.target.value })} placeholder="Resp. operations" />
+            <Input
+              value={draft.role ?? ""}
+              onChange={(e) => setDraft({ ...draft, role: e.target.value })}
+              placeholder="Resp. operations"
+            />
           </div>
           <div>
             <Label>WhatsApp (E.164)</Label>
-            <Input value={draft.whatsapp_e164 ?? ""} onChange={(e) => setDraft({ ...draft, whatsapp_e164: e.target.value })} placeholder="+39333..." />
+            <Input
+              value={draft.whatsapp_e164 ?? ""}
+              onChange={(e) => setDraft({ ...draft, whatsapp_e164: e.target.value })}
+              placeholder="+39333..."
+            />
           </div>
           <div>
             <Label>Soglia urgenza minima (0-100)</Label>
@@ -163,10 +183,18 @@ export function AlertRoutingPage() {
           {(recipientsQ.data ?? []).map((r) => (
             <div key={r.id} className="flex items-center justify-between p-3 border rounded">
               <div>
-                <div className="font-medium">{r.name} <span className="text-muted-foreground text-sm">{r.role}</span></div>
-                <div className="text-sm text-muted-foreground">{r.whatsapp_e164} · soglia {r.min_urgency_score}</div>
+                <div className="font-medium">
+                  {r.name} <span className="text-muted-foreground text-sm">{r.role}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {r.whatsapp_e164} · soglia {r.min_urgency_score}
+                </div>
                 <div className="flex gap-1 mt-1">
-                  {r.categories.map((c) => <Badge key={c} variant="secondary">{c}</Badge>)}
+                  {r.categories.map((c) => (
+                    <Badge key={c} variant="secondary">
+                      {c}
+                    </Badge>
+                  ))}
                   {!r.is_active && <Badge variant="outline">disattivo</Badge>}
                 </div>
               </div>
@@ -192,9 +220,7 @@ export function AlertRoutingPage() {
               <span className="text-muted-foreground">urgency {l.urgency_score}</span>
             </div>
           ))}
-          {(logQ.data ?? []).length === 0 && (
-            <p className="text-muted-foreground">Nessun alert ancora inviato.</p>
-          )}
+          {(logQ.data ?? []).length === 0 && <p className="text-muted-foreground">Nessun alert ancora inviato.</p>}
         </div>
       </Card>
     </PageShell>

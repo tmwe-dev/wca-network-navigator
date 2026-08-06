@@ -111,9 +111,10 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
   // Inietta scope+context nel body inviato all'edge function.
   // Ogni edge AI deve leggerli via _shared/aiInvocationGuard.ts.
   const bodyRecord = body as Record<string, unknown>;
-  const payloadContext = bodyRecord.context && typeof bodyRecord.context === "object" && !Array.isArray(bodyRecord.context)
-    ? bodyRecord.context as Record<string, unknown>
-    : {};
+  const payloadContext =
+    bodyRecord.context && typeof bodyRecord.context === "object" && !Array.isArray(bodyRecord.context)
+      ? (bodyRecord.context as Record<string, unknown>)
+      : {};
   const enrichedBody = {
     ...bodyRecord,
     scope,
@@ -188,9 +189,7 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
     void logAiInteraction({
       interaction_type: "chat_text",
       role: "assistant",
-      content: _ok
-        ? `[ok] ${functionName}`
-        : `[err] ${functionName}: ${_errMsg ?? "unknown error"}`,
+      content: _ok ? `[ok] ${functionName}` : `[err] ${functionName}: ${_errMsg ?? "unknown error"}`,
       surface: scope,
       page_context: route ?? null,
       duration_ms: Date.now() - start,
@@ -204,9 +203,7 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
         correlation_id: corr,
         // riassunto risposta (limitato per non gonfiare DB)
         response_keys:
-          _result && typeof _result === "object"
-            ? Object.keys(_result as Record<string, unknown>).slice(0, 20)
-            : null,
+          _result && typeof _result === "object" ? Object.keys(_result as Record<string, unknown>).slice(0, 20) : null,
       },
     });
   }

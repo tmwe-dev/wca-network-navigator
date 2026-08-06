@@ -75,11 +75,15 @@ describe("PLATFORM_TOOLS integrity", () => {
 describe("ApiError completezza", () => {
   it("mappa tutti gli status HTTP critici", () => {
     // Verifica che invokeEdge copra gli status principali
-    const invokeSource = fs.readFileSync(
-      path.resolve(__dirname, "../lib/api/invokeEdge.ts"),
-      "utf-8"
-    );
-    const expectedPatterns = ["status === 401", "status === 403", "status === 404", "status === 422", "status === 429", "status >= 500"];
+    const invokeSource = fs.readFileSync(path.resolve(__dirname, "../lib/api/invokeEdge.ts"), "utf-8");
+    const expectedPatterns = [
+      "status === 401",
+      "status === 403",
+      "status === 404",
+      "status === 422",
+      "status === 429",
+      "status >= 500",
+    ];
     for (const pattern of expectedPatterns) {
       expect(invokeSource).toContain(pattern);
     }

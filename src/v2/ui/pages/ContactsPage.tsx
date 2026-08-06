@@ -5,12 +5,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
 import { Users, X } from "lucide-react";
-import {
-  getContactById,
-  bulkUpdateContactsOrigin,
-  listDistinctContactOrigins,
-  contactKeys,
-} from "@/data/contacts";
+import { getContactById, bulkUpdateContactsOrigin, listDistinctContactOrigins, contactKeys } from "@/data/contacts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";
@@ -61,7 +56,9 @@ export function ContactsPage() {
         setSelectedContact(data as unknown as ContactDetail);
         trackEntityOpen("contact", id);
       }
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); }
+    } catch (e) {
+      log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) });
+    }
   }, []);
 
   useEffect(() => {
@@ -71,7 +68,6 @@ export function ContactsPage() {
     if (!urlContactId && selectedContact) {
       setSelectedContact(null);
     }
-     
   }, [urlContactId]);
 
   const handleContactUpdated = useCallback((updated: Record<string, unknown>) => {
@@ -99,12 +95,12 @@ export function ContactsPage() {
       setUrlContactId(contact.id);
       void loadContactById(contact.id);
     },
-    [setUrlContactId, loadContactById]
+    [setUrlContactId, loadContactById],
   );
 
   const handleBulkAddToCockpit = useCallback((sel: CompanyEntity[]) => {
     window.dispatchEvent(
-      new CustomEvent("cockpit-add-bulk-contacts", { detail: { companyIds: sel.map((s) => s.id) } })
+      new CustomEvent("cockpit-add-bulk-contacts", { detail: { companyIds: sel.map((s) => s.id) } }),
     );
     toast.success(`${sel.length} aziende aggiunte al Cockpit`);
   }, []);
@@ -114,7 +110,7 @@ export function ContactsPage() {
     window.dispatchEvent(
       new CustomEvent("campaign-create-bulk", {
         detail: { companyIds: withEmail.map((s) => s.id), source: "crm" },
-      })
+      }),
     );
     toast.success(`Campagna creata per ${withEmail.length} destinatari`);
   }, []);

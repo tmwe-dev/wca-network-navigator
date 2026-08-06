@@ -11,7 +11,8 @@ function makeReq(headers: Record<string, string> = {}): Request {
   return new Request("https://x.test/fn", { method: "POST", headers });
 }
 
-const verifierOk = (userId: string): ClaimsVerifier =>
+const verifierOk =
+  (userId: string): ClaimsVerifier =>
   async () => ({ sub: userId, error: null });
 
 const verifierInvalid: ClaimsVerifier = async () => ({
@@ -31,13 +32,10 @@ Deno.test("verbose default: AUTH_REQUIRED byte-identico pre-E2 (missing Bearer)"
   assertEquals(res.status, 401);
   assertEquals(res.headers.get("Content-Type"), "application/json");
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
-  assertEquals(
-    await res.text(),
-    JSON.stringify({ error: "AUTH_REQUIRED", message: "Bearer token required" }),
-  );
+  assertEquals(await res.text(), JSON.stringify({ error: "AUTH_REQUIRED", message: "Bearer token required" }));
 });
 
-Deno.test("terse: AUTH_REQUIRED body == {\"error\":\"AUTH_REQUIRED\"} (missing Bearer)", async () => {
+Deno.test('terse: AUTH_REQUIRED body == {"error":"AUTH_REQUIRED"} (missing Bearer)', async () => {
   const res = await requireAuth(makeReq(), CORS, {
     errorFormat: "terse",
     _claimsVerifier: verifierNever,
@@ -68,13 +66,10 @@ Deno.test("verbose default: AUTH_INVALID byte-identico pre-E2 (token invalido)",
   if (!isAuthError(res)) throw new Error("expected Response");
   assertEquals(res.status, 401);
   assertEquals(res.headers.get("Content-Type"), "application/json");
-  assertEquals(
-    await res.text(),
-    JSON.stringify({ error: "AUTH_INVALID", message: "Invalid or expired token" }),
-  );
+  assertEquals(await res.text(), JSON.stringify({ error: "AUTH_INVALID", message: "Invalid or expired token" }));
 });
 
-Deno.test("terse: AUTH_INVALID body == {\"error\":\"AUTH_INVALID\"} (token invalido)", async () => {
+Deno.test('terse: AUTH_INVALID body == {"error":"AUTH_INVALID"} (token invalido)', async () => {
   const res = await requireAuth(makeReq({ Authorization: "Bearer bogus" }), CORS, {
     errorFormat: "terse",
     _claimsVerifier: verifierInvalid,

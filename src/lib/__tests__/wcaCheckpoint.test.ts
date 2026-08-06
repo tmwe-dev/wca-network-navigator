@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { setGreenZoneDelay, getGreenZoneDelay, isGreenZone, markRequestSent, getElapsedSinceLastRequest } from "@/lib/wcaCheckpoint";
+import {
+  setGreenZoneDelay,
+  getGreenZoneDelay,
+  isGreenZone,
+  markRequestSent,
+  getElapsedSinceLastRequest,
+} from "@/lib/wcaCheckpoint";
 
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 

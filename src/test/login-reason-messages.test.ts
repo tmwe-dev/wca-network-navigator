@@ -22,10 +22,7 @@ const CALLBACK_REASONS = [
 async function loadReasonMessages(): Promise<Record<string, string>> {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
-  const src = await fs.readFile(
-    path.resolve(process.cwd(), "src/v2/ui/pages/LoginPage.tsx"),
-    "utf-8",
-  );
+  const src = await fs.readFile(path.resolve(process.cwd(), "src/v2/ui/pages/LoginPage.tsx"), "utf-8");
   const match = src.match(/REASON_MESSAGES:\s*Record<string,\s*string>\s*=\s*\{([\s\S]*?)\};/);
   if (!match) throw new Error("REASON_MESSAGES non trovata in LoginPage.tsx");
   const body = match[1];

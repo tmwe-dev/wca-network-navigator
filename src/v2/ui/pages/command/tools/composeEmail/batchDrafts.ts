@@ -11,11 +11,7 @@ export const MAX_BATCH_DRAFTS = 20;
 /** Bozze generate in parallelo: riduce l'attesa senza saturare il rate-limit per utente. */
 const BATCH_CONCURRENCY = 3;
 
-async function generateOneDraft(
-  partner: PartnerRow,
-  tone: DetectedTone,
-  goal: string,
-): Promise<ComposerDraft> {
+async function generateOneDraft(partner: PartnerRow, tone: DetectedTone, goal: string): Promise<ComposerDraft> {
   const contact = await fetchPrimaryContact(partner.id);
   const recipientEmail = contact.email ?? partner.email ?? "";
   const recipientName = contact.name;
@@ -49,26 +45,23 @@ async function generateOneDraft(
         kb_sections?: string[];
         playbook_active?: boolean;
       };
-    }>(
-      "generate-email",
-      {
-        scope: "command",
-        context: { source: "composeEmail.batchDrafts", mode: "generate" },
-        body: {
-          standalone: true,
-          partner_id: partner.id,
-          recipient_name: recipientName,
-          recipient_company: partner.company_name,
-          recipient_countries: partner.country_code ?? "",
-          oracle_type: "primo_contatto",
-          oracle_tone: tone,
-          goal,
-          quality: "standard",
-          use_kb: true,
-          language: "it",
-        },
+    }>("generate-email", {
+      scope: "command",
+      context: { source: "composeEmail.batchDrafts", mode: "generate" },
+      body: {
+        standalone: true,
+        partner_id: partner.id,
+        recipient_name: recipientName,
+        recipient_company: partner.company_name,
+        recipient_countries: partner.country_code ?? "",
+        oracle_type: "primo_contatto",
+        oracle_tone: tone,
+        goal,
+        quality: "standard",
+        use_kb: true,
+        language: "it",
       },
-    );
+    });
     const cs = gen?._context_summary;
     const pipeline = buildEmailPipeline({
       partner,
@@ -163,9 +156,7 @@ export async function generateDraftsBatch(
     }
   }
 
-  await Promise.all(
-    Array.from({ length: Math.min(BATCH_CONCURRENCY, total) }, () => worker()),
-  );
+  await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, total) }, () => worker()));
   return out;
 }
 
@@ -183,8 +174,7 @@ export function buildBatchComposerResult(args: {
   const recipientLines = drafts
     .slice(0, 30)
     .map((d, i) => {
-      const tag =
-        d.status === "ok" ? "✓" : d.status === "no_email" ? "⚠️ no email" : "✗ AI fail";
+      const tag = d.status === "ok" ? "✓" : d.status === "no_email" ? "⚠️ no email" : "✗ AI fail";
       return `${i + 1}. **${d.partnerName}** · ${tag}${d.contactEmail ? ` · ${d.contactEmail}` : ""}`;
     })
     .join("\n");

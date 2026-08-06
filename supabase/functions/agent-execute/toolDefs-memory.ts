@@ -10,7 +10,12 @@ export const MEMORY_TOOLS: Record<string, unknown> = {
       description: "Save a memory to persistent storage.",
       parameters: {
         type: "object",
-        properties: { content: { type: "string" }, memory_type: { type: "string" }, tags: { type: "array", items: { type: "string" } }, importance: { type: "number" } },
+        properties: {
+          content: { type: "string" },
+          memory_type: { type: "string" },
+          tags: { type: "array", items: { type: "string" } },
+          importance: { type: "number" },
+        },
         required: ["content", "memory_type", "tags"],
       },
     },
@@ -20,7 +25,14 @@ export const MEMORY_TOOLS: Record<string, unknown> = {
     function: {
       name: "search_memory",
       description: "Search persistent memory.",
-      parameters: { type: "object", properties: { tags: { type: "array", items: { type: "string" } }, search_text: { type: "string" }, limit: { type: "number" } } },
+      parameters: {
+        type: "object",
+        properties: {
+          tags: { type: "array", items: { type: "string" } },
+          search_text: { type: "string" },
+          limit: { type: "number" },
+        },
+      },
     },
   },
 };

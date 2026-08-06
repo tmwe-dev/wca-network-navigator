@@ -5,10 +5,7 @@
 
 import * as React from "react";
 import { useState, useMemo, useCallback } from "react";
-import {
-  Table, TableBody, TableCell, TableHead,
-  TableHeader, TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "../atoms/Button";
 import { EmptyState } from "../atoms/EmptyState";
 import { cn } from "@/lib/utils";
@@ -41,25 +38,32 @@ interface DataTableProps<T> {
 // ── Component ────────────────────────────────────────────────────────
 
 export function DataTable<T>({
-  columns, rows, getRowId, pageSize = 25,
+  columns,
+  rows,
+  getRowId,
+  pageSize = 25,
   emptyTitle = "Nessun risultato",
   emptyDescription = "Non ci sono dati da visualizzare.",
-  onRowClick, className,
+  onRowClick,
+  className,
 }: DataTableProps<T>): React.ReactElement {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>(null);
   const [currentPage, setCurrentPage] = useState(0);
 
-  const handleSort = useCallback((colId: string) => {
-    if (sortColumn === colId) {
-      setSortDir((prev) => (prev === "asc" ? "desc" : prev === "desc" ? null : "asc"));
-      if (sortDir === "desc") setSortColumn(null);
-    } else {
-      setSortColumn(colId);
-      setSortDir("asc");
-    }
-    setCurrentPage(0);
-  }, [sortColumn, sortDir]);
+  const handleSort = useCallback(
+    (colId: string) => {
+      if (sortColumn === colId) {
+        setSortDir((prev) => (prev === "asc" ? "desc" : prev === "desc" ? null : "asc"));
+        if (sortDir === "desc") setSortColumn(null);
+      } else {
+        setSortColumn(colId);
+        setSortDir("asc");
+      }
+      setCurrentPage(0);
+    },
+    [sortColumn, sortDir],
+  );
 
   const sortedRows = useMemo(() => {
     if (!sortColumn || !sortDir) return rows;
@@ -99,7 +103,11 @@ export function DataTable<T>({
                     >
                       {col.header}
                       {sortColumn === col.id ? (
-                        sortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        sortDir === "asc" ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        )
                       ) : (
                         <ChevronsUpDown className="h-3 w-3 opacity-30" />
                       )}
@@ -134,15 +142,19 @@ export function DataTable<T>({
           <span>{sortedRows.length} risultati</span>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline" size="sm"
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0}
             >
               ←
             </Button>
-            <span>{currentPage + 1} / {totalPages}</span>
+            <span>
+              {currentPage + 1} / {totalPages}
+            </span>
             <Button
-              variant="outline" size="sm"
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={currentPage >= totalPages - 1}
             >

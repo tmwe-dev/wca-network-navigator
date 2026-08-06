@@ -17,20 +17,23 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser();
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -39,25 +42,39 @@ Deno.serve(async (req) => {
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const body = await req.json();
-    const { channel, direction, from_address, to_address, from_name, to_name, body_text, body_html, subject, partner_id, dispatch_id, message_id_external, chat_thread_id, profile_url, headline } = body;
+    const {
+      channel,
+      direction,
+      from_address,
+      to_address,
+      from_name,
+      to_name,
+      body_text,
+      body_html,
+      subject,
+      partner_id,
+      dispatch_id,
+      message_id_external,
+      chat_thread_id,
+      profile_url,
+      headline,
+    } = body;
 
     if (!channel || !direction) {
       return new Response(JSON.stringify({ error: "channel and direction required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Resolve operator_id for this user
-    const { data: opRow } = await supabase
-      .from("operators")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const { data: opRow } = await supabase.from("operators").select("id").eq("user_id", user.id).maybeSingle();
     const operator_id = opRow?.id ?? null;
     if (!operator_id) {
       console.warn(`[receive-channel-message] No operator found for user ${user.id}, skipping insert`);
       return new Response(JSON.stringify({ error: "no_operator", detail: "User has no active operator" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -79,7 +96,9 @@ Deno.serve(async (req) => {
     if (to_name) row.to_name = to_name;
 
     if (!message_id_external) {
-      console.warn(`[receive-channel-message] Missing message_id_external for ${direction} ${channel} (legacy fallback)`);
+      console.warn(
+        `[receive-channel-message] Missing message_id_external for ${direction} ${channel} (legacy fallback)`,
+      );
     }
 
     const { data: msgRows, error: insertErr } = message_id_external
@@ -87,15 +106,13 @@ Deno.serve(async (req) => {
           .from("channel_messages")
           .upsert([row], { onConflict: "user_id,message_id_external", ignoreDuplicates: true })
           .select("id")
-      : await supabase
-          .from("channel_messages")
-          .insert(row)
-          .select("id");
+      : await supabase.from("channel_messages").insert(row).select("id");
 
     if (insertErr) {
       console.error("[receive-channel-message] Insert error:", insertErr);
       return new Response(JSON.stringify({ error: "insert_failed", detail: insertErr.message }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -114,7 +131,7 @@ Deno.serve(async (req) => {
             p_user_id: user.id,
             p_operator_id: operator_id,
             p_handle: String(counterpartyAddr),
-            p_phone_e164: phone.startsWith("+") ? phone : (phone ? `+${phone}` : null),
+            p_phone_e164: phone.startsWith("+") ? phone : phone ? `+${phone}` : null,
             p_display_name: counterpartyName ?? null,
             p_chat_thread_id: chat_thread_id ?? null,
             p_direction: direction,
@@ -151,18 +168,22 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message_id: msgId,
-      duplicate: wasDuplicate,
-    }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message_id: msgId,
+        duplicate: wasDuplicate,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (err: unknown) {
     console.error("[receive-channel-message] Error:", err);
     return new Response(JSON.stringify({ error: "internal_error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

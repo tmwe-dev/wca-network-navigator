@@ -31,11 +31,7 @@ export async function calculateDataCompleteness(
   sources.push(!!partner.has_branches);
 
   // Enrichment data sources
-  const websiteQualityScore = extractFromEnrichment<number>(
-    partner.enrichment_data,
-    "website_quality_score",
-    null,
-  );
+  const websiteQualityScore = extractFromEnrichment<number>(partner.enrichment_data, "website_quality_score", null);
   sources.push(websiteQualityScore !== null);
 
   const hasReputation = extractFromEnrichment<unknown>(partner.enrichment_data, "reputation", null) !== null;
@@ -44,11 +40,7 @@ export async function calculateDataCompleteness(
   const googleMapsData = extractFromEnrichment<unknown>(partner.enrichment_data, "google_maps", null);
   sources.push(googleMapsData !== null);
 
-  const contactProfiles = extractFromEnrichment<unknown[]>(
-    partner.enrichment_data,
-    "contact_profiles",
-    null,
-  );
+  const contactProfiles = extractFromEnrichment<unknown[]>(partner.enrichment_data, "contact_profiles", null);
   sources.push(contactProfiles !== null && contactProfiles.length > 0);
 
   const deepSearchAt = extractFromEnrichment<string>(partner.enrichment_data, "deep_search_at", null);

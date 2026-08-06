@@ -13,7 +13,8 @@ export const harmonizeProposalChatTool: Tool = {
   id: "harmonize-proposal-chat",
   label: "Armonizza proposta chat",
   description: "Consolida e armonizza una proposta commerciale costruita in chat (per chat_id).",
-  match: (p) => /\b(armonizza|consolida|harmonize|finalizza)\b[^.]{0,30}\b(proposta|proposal|chat|conversazione)\b/i.test(p),
+  match: (p) =>
+    /\b(armonizza|consolida|harmonize|finalizza)\b[^.]{0,30}\b(proposta|proposal|chat|conversazione)\b/i.test(p),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     const chatId = extractChatRef(prompt);
@@ -44,7 +45,8 @@ export const harmonizeProposalChatTool: Tool = {
     return {
       kind: "result",
       title: res?.error ? "Armonizzazione fallita" : "Proposta armonizzata",
-      message: res?.error ?? res?.summary ?? `Proposta consolidata${res?.proposal_id ? ` (id: ${res.proposal_id})` : ""}.`,
+      message:
+        res?.error ?? res?.summary ?? `Proposta consolidata${res?.proposal_id ? ` (id: ${res.proposal_id})` : ""}.`,
       meta: { count: 1, sourceLabel: "Edge · harmonize-proposal-chat" },
     };
   },

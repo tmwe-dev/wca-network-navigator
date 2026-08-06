@@ -43,7 +43,9 @@ describe("withRateLimit", () => {
       baseBackoffMs: 1,
       maxBackoffMs: 2,
     });
-    const failing = async () => { throw new Error("permanent failure"); };
+    const failing = async () => {
+      throw new Error("permanent failure");
+    };
     for (let i = 0; i < 3; i++) {
       await expect(withRateLimit("test:circuit", failing, 0)).rejects.toThrow();
     }
@@ -59,12 +61,16 @@ describe("withRateLimit", () => {
       maxBackoffMs: 2,
     });
     await expect(
-      withRateLimit("test:open", async () => { throw new Error("fail"); }, 0)
+      withRateLimit(
+        "test:open",
+        async () => {
+          throw new Error("fail");
+        },
+        0,
+      ),
     ).rejects.toThrow();
     // Next call should hit open circuit
-    await expect(
-      withRateLimit("test:open", async () => "should not run")
-    ).rejects.toBeInstanceOf(CircuitOpenError);
+    await expect(withRateLimit("test:open", async () => "should not run")).rejects.toBeInstanceOf(CircuitOpenError);
   });
 
   it("resets failures on successful call", async () => {
@@ -75,7 +81,13 @@ describe("withRateLimit", () => {
       maxBackoffMs: 2,
     });
     await expect(
-      withRateLimit("test:reset", async () => { throw new Error("transient"); }, 0)
+      withRateLimit(
+        "test:reset",
+        async () => {
+          throw new Error("transient");
+        },
+        0,
+      ),
     ).rejects.toThrow();
     await withRateLimit("test:reset", async () => "ok");
     const state = getRateLimiterState("test:reset");
@@ -89,11 +101,15 @@ describe("withRateLimit", () => {
       maxBackoffMs: 2,
     });
     let attempts = 0;
-    const result = await withRateLimit("test:retry", async () => {
-      attempts++;
-      if (attempts < 3) throw new Error("network timeout");
-      return "ok";
-    }, 5);
+    const result = await withRateLimit(
+      "test:retry",
+      async () => {
+        attempts++;
+        if (attempts < 3) throw new Error("network timeout");
+        return "ok";
+      },
+      5,
+    );
     expect(result).toBe("ok");
     expect(attempts).toBe(3);
   });

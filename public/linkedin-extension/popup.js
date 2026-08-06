@@ -1,4 +1,3 @@
-
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
 const mainBtn = document.getElementById("mainBtn");
@@ -53,7 +52,7 @@ function renderResult(result) {
   }
 
   const reason = result && result.reason ? result.reason : "generic_error";
-  const message = result && (result.message || result.error) ? (result.message || result.error) : "Login non completato.";
+  const message = result && (result.message || result.error) ? result.message || result.error : "Login non completato.";
 
   if (reason === "google_auth_timeout") {
     setStatus("⚠️ Completa Google nel tab aperto", "error");

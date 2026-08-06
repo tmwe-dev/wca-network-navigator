@@ -31,24 +31,16 @@ export function ChannelIcons({
   const sz = size === "md" ? "w-3.5 h-3.5" : "w-3 h-3";
   const items = [
     email && <Mail key="mail" className={cn(sz, "text-primary")} aria-label="Email" />,
-    whatsapp && (
-      <MessageCircle key="wa" className={cn(sz, "text-emerald-500/80")} aria-label="WhatsApp" />
-    ),
-    linkedin && (
-      <Linkedin key="li" className={cn(sz, "text-sky-500/80")} aria-label="LinkedIn" />
-    ),
+    whatsapp && <MessageCircle key="wa" className={cn(sz, "text-emerald-500/80")} aria-label="WhatsApp" />,
+    linkedin && <Linkedin key="li" className={cn(sz, "text-sky-500/80")} aria-label="LinkedIn" />,
     phone && !email && !whatsapp && (
       <Phone key="phone" className={cn(sz, "text-muted-foreground")} aria-label="Telefono" />
     ),
-    website && (
-      <Globe2 key="web" className={cn(sz, "text-emerald-400/80")} aria-label="Website" />
-    ),
+    website && <Globe2 key="web" className={cn(sz, "text-emerald-400/80")} aria-label="Website" />,
   ].filter(Boolean);
 
   if (items.length === 0) return null;
-  return (
-    <div className={cn("flex items-center justify-start flex-wrap gap-1", className)}>{items}</div>
-  );
+  return <div className={cn("flex items-center justify-start flex-wrap gap-1", className)}>{items}</div>;
 }
 
 export default ChannelIcons;

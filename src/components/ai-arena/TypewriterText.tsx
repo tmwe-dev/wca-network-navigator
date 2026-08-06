@@ -35,9 +35,7 @@ export function TypewriterText({ text, speed = 20, className, onComplete }: Type
   return (
     <span className={className}>
       {displayed}
-      {indexRef.current < text.length && (
-        <span className="animate-pulse text-primary">▊</span>
-      )}
+      {indexRef.current < text.length && <span className="animate-pulse text-primary">▊</span>}
     </span>
   );
 }

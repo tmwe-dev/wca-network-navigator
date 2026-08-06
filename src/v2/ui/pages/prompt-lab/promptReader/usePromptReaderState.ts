@@ -40,13 +40,19 @@ export function usePromptReaderState() {
   }, [expandedPanel, sidebarOpen]);
 
   useEffect(() => {
-    try { localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(panelOrder)); } catch { /* noop */ }
+    try {
+      localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(panelOrder));
+    } catch {
+      /* noop */
+    }
   }, [panelOrder]);
   useEffect(() => {
     try {
       if (expandedPanel) localStorage.setItem(COPILOT_EXPANDED_KEY, expandedPanel);
       else localStorage.removeItem(COPILOT_EXPANDED_KEY);
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }, [expandedPanel]);
 
   const selected = allAgents.find((a) => a.id === selectedId) ?? allAgents[0];
@@ -54,9 +60,9 @@ export function usePromptReaderState() {
 
   useEffect(() => {
     if (data?.assembled?.system_prompt) {
-      setTargetBlock((prev) => prev.name === "system_prompt"
-        ? { name: "system_prompt", content: data.assembled.system_prompt }
-        : prev);
+      setTargetBlock((prev) =>
+        prev.name === "system_prompt" ? { name: "system_prompt", content: data.assembled.system_prompt } : prev,
+      );
     }
   }, [data]);
 
@@ -90,31 +96,31 @@ export function usePromptReaderState() {
 
   useEffect(() => {
     if (selected) void load(selected.id);
-     
   }, [selectedId]);
 
   useEffect(() => {
-    findKbEntries().then(setKbAll).catch((e) => {
-      log.error("KB load failed", { detail: e });
-      toast.error("Caricamento KB fallito");
-      setKbAll([]);
-    });
+    findKbEntries()
+      .then(setKbAll)
+      .catch((e) => {
+        log.error("KB load failed", { detail: e });
+        toast.error("Caricamento KB fallito");
+        setKbAll([]);
+      });
   }, []);
 
-  const kbCurrent = useMemo(
-    () => (kbAll && selected ? kbForAgent(kbAll, selected) : []),
-    [kbAll, selected],
-  );
+  const kbCurrent = useMemo(() => (kbAll && selected ? kbForAgent(kbAll, selected) : []), [kbAll, selected]);
 
   async function downloadAgent() {
     if (!selected) return;
     setDownloading("agent");
     try {
-      const sim = cache[selected.id] ?? (await runAgentSimulator({
-        agentId: selected.id,
-        userMessage: "(export)",
-        dryRunAI: false,
-      }));
+      const sim =
+        cache[selected.id] ??
+        (await runAgentSimulator({
+          agentId: selected.id,
+          userMessage: "(export)",
+          dryRunAI: false,
+        }));
       const md = buildAgentMarkdown(selected, sim, kbCurrent);
       downloadText(`${slug(selected.displayName)}-prompt-kb.md`, md);
       toast.success("Download avviato");
@@ -174,13 +180,29 @@ export function usePromptReaderState() {
   }
 
   return {
-    allAgents, selected, selectedId, setSelectedId,
-    sidebarOpen, setSidebarOpen,
-    data, loadingId, errorMsg, kbAll, kbCurrent,
-    grouped, panelOrder, setPanelOrder, expandedPanel, setExpandedPanel,
-    copilotWrapperRef, copilotCompact,
+    allAgents,
+    selected,
+    selectedId,
+    setSelectedId,
+    sidebarOpen,
+    setSidebarOpen,
+    data,
+    loadingId,
+    errorMsg,
+    kbAll,
+    kbCurrent,
+    grouped,
+    panelOrder,
+    setPanelOrder,
+    expandedPanel,
+    setExpandedPanel,
+    copilotWrapperRef,
+    copilotCompact,
     targetBlock,
     downloading,
-    load, downloadAgent, downloadAllAgents, downloadTools,
+    load,
+    downloadAgent,
+    downloadAllAgents,
+    downloadTools,
   };
 }

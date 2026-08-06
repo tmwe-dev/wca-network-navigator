@@ -55,11 +55,9 @@ export async function requireInternalOrUser(
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: `Bearer ${jwt}` } } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
+    });
     const { data, error } = await supabase.auth.getClaims(jwt);
     if (error || !data?.claims?.sub) {
       return { kind: "error", response: unauthorized(responseHeaders) };

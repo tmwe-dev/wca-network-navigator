@@ -4,7 +4,7 @@ import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 const SUPPORTED_PROVIDERS = ["openai", "google", "anthropic"] as const;
-type Provider = typeof SUPPORTED_PROVIDERS[number];
+type Provider = (typeof SUPPORTED_PROVIDERS)[number];
 
 const CREDITS_PER_1K: Record<Provider, { input: number; output: number }> = {
   openai: { input: 1, output: 4 },
@@ -32,22 +32,25 @@ serve(async (req) => {
 
   // ── Bypass globale per uso interno ──
   if (!limitsEnabled()) {
-    return new Response(JSON.stringify({
-      allowed: true,
-      byok: false,
-      credits_consumed: 0,
-      balance: Number.MAX_SAFE_INTEGER,
-      message: "Uso interno illimitato — credit gate disattivato",
-    }), {
-      headers: { ...dynCors, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({
+        allowed: true,
+        byok: false,
+        credits_consumed: 0,
+        balance: Number.MAX_SAFE_INTEGER,
+        message: "Uso interno illimitato — credit gate disattivato",
+      }),
+      {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   }
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
+    { auth: { persistSession: false } },
   );
 
   try {
@@ -67,7 +70,10 @@ serve(async (req) => {
     }
 
     if (!isValidProvider(provider)) {
-      return edgeError("VALIDATION_ERROR", `Unknown provider: ${provider}. Supported: ${SUPPORTED_PROVIDERS.join(", ")}`);
+      return edgeError(
+        "VALIDATION_ERROR",
+        `Unknown provider: ${provider}. Supported: ${SUPPORTED_PROVIDERS.join(", ")}`,
+      );
     }
 
     // Check if user has their own API key for this provider
@@ -80,21 +86,24 @@ serve(async (req) => {
       .maybeSingle();
 
     if (apiKey?.api_key) {
-      return new Response(JSON.stringify({
-        allowed: true,
-        byok: true,
-        credits_consumed: 0,
-        message: "Using your own API key - no credits consumed",
-      }), {
-        headers: { ...dynCors, "Content-Type": "application/json" },
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          allowed: true,
+          byok: true,
+          credits_consumed: 0,
+          message: "Using your own API key - no credits consumed",
+        }),
+        {
+          headers: { ...dynCors, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
     }
 
     // Calculate credit cost
     const rates = CREDITS_PER_1K[provider];
-    const inputCost = Math.ceil((input_tokens || 0) / 1000 * rates.input);
-    const outputCost = Math.ceil((output_tokens || 0) / 1000 * rates.output);
+    const inputCost = Math.ceil(((input_tokens || 0) / 1000) * rates.input);
+    const outputCost = Math.ceil(((output_tokens || 0) / 1000) * rates.output);
     const totalCredits = inputCost + outputCost;
 
     // Atomic credit deduction using DB function
@@ -109,29 +118,35 @@ serve(async (req) => {
 
     const row = (deductResult as Array<{ success: boolean; new_balance: number }>)?.[0];
     if (!row?.success) {
-      return new Response(JSON.stringify({
-        allowed: false,
-        byok: false,
-        credits_consumed: 0,
-        balance: row?.new_balance || 0,
-        required: totalCredits,
-        message: "Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API.",
-      }), {
-        headers: { ...dynCors, "Content-Type": "application/json" },
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          allowed: false,
+          byok: false,
+          credits_consumed: 0,
+          balance: row?.new_balance || 0,
+          required: totalCredits,
+          message: "Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API.",
+        }),
+        {
+          headers: { ...dynCors, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
     }
 
-    return new Response(JSON.stringify({
-      allowed: true,
-      byok: false,
-      credits_consumed: totalCredits,
-      balance: row.new_balance,
-      message: `${totalCredits} crediti consumati`,
-    }), {
-      headers: { ...dynCors, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({
+        allowed: true,
+        byok: false,
+        credits_consumed: totalCredits,
+        balance: row.new_balance,
+        message: `${totalCredits} crediti consumati`,
+      }),
+      {
+        headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   } catch (e: unknown) {
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }

@@ -6,11 +6,7 @@
  * espandere la lista per vedere dettagli e suggerimenti.
  */
 import { useCallback, useEffect, useState } from "react";
-import {
-  analyzeAndGenerateSignals,
-  getRecentSignalCount,
-  type PromptLabSignal,
-} from "@/data/promptLabSignals";
+import { analyzeAndGenerateSignals, getRecentSignalCount, type PromptLabSignal } from "@/data/promptLabSignals";
 
 export interface SignalsState {
   loading: boolean;
@@ -28,9 +24,11 @@ export function usePromptLabSignals(userId: string) {
   // Check badge count on mount (lightweight)
   useEffect(() => {
     if (!userId) return;
-    getRecentSignalCount(userId).then((count) => {
-      setState((s) => ({ ...s, badgeCount: count }));
-    }).catch(() => {});
+    getRecentSignalCount(userId)
+      .then((count) => {
+        setState((s) => ({ ...s, badgeCount: count }));
+      })
+      .catch(() => {});
   }, [userId]);
 
   // Full analysis (heavier — called on demand)
@@ -48,18 +46,14 @@ export function usePromptLabSignals(userId: string) {
   const dismiss = useCallback((signalId: string) => {
     setState((s) => ({
       ...s,
-      signals: s.signals.map((sig) =>
-        sig.id === signalId ? { ...sig, status: "dismissed" as const } : sig,
-      ),
+      signals: s.signals.map((sig) => (sig.id === signalId ? { ...sig, status: "dismissed" as const } : sig)),
     }));
   }, []);
 
   const acknowledge = useCallback((signalId: string) => {
     setState((s) => ({
       ...s,
-      signals: s.signals.map((sig) =>
-        sig.id === signalId ? { ...sig, status: "acknowledged" as const } : sig,
-      ),
+      signals: s.signals.map((sig) => (sig.id === signalId ? { ...sig, status: "acknowledged" as const } : sig)),
     }));
   }, []);
 

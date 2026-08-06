@@ -40,7 +40,9 @@ export default function FunnemailInboxPage(): React.ReactElement {
   React.useEffect(() => {
     const prev = document.title;
     document.title = "Funnemail Inbox · WCA";
-    return () => { document.title = prev; };
+    return () => {
+      document.title = prev;
+    };
   }, []);
 
   return (
@@ -51,54 +53,59 @@ export default function FunnemailInboxPage(): React.ReactElement {
         direction="horizontal"
         className="flex min-h-0 flex-1"
       >
-        <ResizablePanel defaultSize={32} minSize={22} maxSize={60} className="flex min-h-0 flex-col overflow-hidden border-r border-border">
-        {/* Tab vista lette/non lette — dimensioni standard, ben visibili */}
-        <div className="flex-shrink-0 border-b border-border bg-muted/30 px-3 py-2">
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <div className="inline-flex shrink-0 rounded-md border border-border bg-background p-0.5">
-              {VIEW_TABS.map((tab) => {
-                const active = g.filters.funnemailView === tab.value;
-                return (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    onClick={() => g.setFilter("funnemailView", tab.value)}
-                    className={cn(
-                      "shrink-0 rounded px-3 py-1.5 text-sm font-medium transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
+        <ResizablePanel
+          defaultSize={32}
+          minSize={22}
+          maxSize={60}
+          className="flex min-h-0 flex-col overflow-hidden border-r border-border"
+        >
+          {/* Tab vista lette/non lette — dimensioni standard, ben visibili */}
+          <div className="flex-shrink-0 border-b border-border bg-muted/30 px-3 py-2">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <div className="inline-flex shrink-0 rounded-md border border-border bg-background p-0.5">
+                {VIEW_TABS.map((tab) => {
+                  const active = g.filters.funnemailView === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => g.setFilter("funnemailView", tab.value)}
+                      className={cn(
+                        "shrink-0 rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                <strong className="text-foreground">{ctrl.filteredMails.length}</strong> · {ctrl.selectedFolderLabel}
+              </span>
             </div>
-            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-              <strong className="text-foreground">{ctrl.filteredMails.length}</strong> · {ctrl.selectedFolderLabel}
-            </span>
           </div>
-        </div>
 
-        {ctrl.mailsLoading ? (
-          <div className="flex h-32 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <FunnemailMailList
-            messages={ctrl.filteredMails}
-            selectedId={ctrl.selectedMessageId}
-            onSelect={(message) => ctrl.setSelectedMessageId(message.id)}
-            bulkMarkRead={ctrl.bulkMarkRead}
-            bulkArchive={ctrl.bulkArchive}
-            bulkDelete={ctrl.bulkDelete}
-            bulkAssignGroup={ctrl.bulkAssignGroup}
-            bulkBusy={ctrl.bulkBusy}
-            onReclassify={ctrl.reclassify}
-            reclassifying={ctrl.reclassifying}
-          />
-        )}
+          {ctrl.mailsLoading ? (
+            <div className="flex h-32 items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <FunnemailMailList
+              messages={ctrl.filteredMails}
+              selectedId={ctrl.selectedMessageId}
+              onSelect={(message) => ctrl.setSelectedMessageId(message.id)}
+              bulkMarkRead={ctrl.bulkMarkRead}
+              bulkArchive={ctrl.bulkArchive}
+              bulkDelete={ctrl.bulkDelete}
+              bulkAssignGroup={ctrl.bulkAssignGroup}
+              bulkBusy={ctrl.bulkBusy}
+              onReclassify={ctrl.reclassify}
+              reclassifying={ctrl.reclassifying}
+            />
+          )}
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={68} minSize={40} className="flex min-h-0 flex-col overflow-hidden">

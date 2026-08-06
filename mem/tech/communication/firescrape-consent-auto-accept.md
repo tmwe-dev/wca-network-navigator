@@ -3,11 +3,13 @@ name: FireScrape Consent Auto-Accept
 description: Estensione Partner Connect 3.4.5 — autoAcceptConsent() chiamato in BackgroundTab.navigate, handleScrape, withTab, handleCrawlStart, handleMap. Selettori CMP + fallback testuale multilingua con scoring, blocklist (reject/manage/subscribe/login/save choices), retry x3 con re-render, shadow DOM, allFrames:true.
 type: feature
 ---
+
 Senza auto-accept lo scraper restituiva solo il testo del banner: il contenuto reale era gated da overflow:hidden sul body o non renderizzato finché non davi consenso.
 
 **Punto critico fix 2026-05-15:** prima il gate era SOLO in `withTab()`, ma il Deep Search Sherlock usa il flusso `fs.readUrl → navigateBackground → BackgroundTab.navigate → handleScrape`, che NON passa da withTab. Quindi i popup non venivano mai chiusi nel percorso reale. Ora il gate è in `BackgroundTab.navigate` (subito dopo waitForTabLoad) E in `handleScrape` come rete di sicurezza.
 
 **Cascata:**
+
 1. Selettori noti CMP (id/class deterministici): OneTrust, Cookiebot, Didomi, Iubenda, Quantcast, CookieYes, Usercentrics, Termly, Complianz, Axeptio, TrustArc, HubSpot, Funding Choices.
 2. Fallback testuale con SCORING: scan light DOM + shadow DOM aperti, regex multilingua, +10 se contiene "all/tutti/tutto/tout/alle", +8 se contiene "accept/accetta/aceptar".
 3. BLOCKLIST hard: reject/decline/deny, manage/preferences/settings, subscribe/login/buy/checkout, save choices/salva preferenze. Mai cliccati anche se matchano altri pattern.

@@ -31,11 +31,13 @@ export function partnerCompletenessScore(partner: PartnerV2): number {
 
 export function validatePartnerForOutreach(partner: PartnerV2): Result<PartnerV2, AppError> {
   if (!partner.email && !partner.phone) {
-    return err(domainError(
-      "BUSINESS_RULE_VIOLATED",
-      "Partner must have at least one contact method (email or phone) for outreach",
-      { partnerId: String(partner.id) },
-    ));
+    return err(
+      domainError(
+        "BUSINESS_RULE_VIOLATED",
+        "Partner must have at least one contact method (email or phone) for outreach",
+        { partnerId: String(partner.id) },
+      ),
+    );
   }
 
   return ok(partner);

@@ -133,9 +133,7 @@ export async function parseUploadedFile(file: File): Promise<ParsedFile> {
   const sizeKb = Math.round(file.size / 1024);
 
   if (!SUPPORTED_EXTENSIONS.includes(extension)) {
-    throw new Error(
-      `Unsupported file type: ${extension}. Supported types are: ${SUPPORTED_EXTENSIONS.join(", ")}`
-    );
+    throw new Error(`Unsupported file type: ${extension}. Supported types are: ${SUPPORTED_EXTENSIONS.join(", ")}`);
   }
 
   let content: string;

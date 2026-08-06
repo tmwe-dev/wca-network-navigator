@@ -31,7 +31,7 @@ export function useContactCompleteness() {
   const data = query.data
     ? (() => {
         const byCountry: Record<string, CountryContactStats> = {};
-        Object.values(query.data.byCountry).forEach(s => {
+        Object.values(query.data.byCountry).forEach((s) => {
           byCountry[s.country_code] = {
             country_code: s.country_code,
             total_partners: s.total_partners,
@@ -60,7 +60,9 @@ export function useContactCompleteness() {
 }
 
 /** Check if a single partner has personal contacts */
-export function getPartnerContactQuality(partnerContacts: Array<Record<string, unknown>> | undefined): "complete" | "partial" | "missing" {
+export function getPartnerContactQuality(
+  partnerContacts: Array<Record<string, unknown>> | undefined,
+): "complete" | "partial" | "missing" {
   if (!partnerContacts || partnerContacts.length === 0) return "missing";
   const hasEmail = partnerContacts.some((c) => !!c.email);
   const hasPhone = partnerContacts.some((c) => !!c.direct_phone || !!c.mobile);

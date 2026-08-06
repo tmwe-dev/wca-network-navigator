@@ -9,17 +9,17 @@
 
 ### File creati (tutti NUOVI):
 
-| File | Scopo |
-|------|-------|
-| `src/lib/wca-app-bridge.ts` | Client API verso le API Vercel di wca-app (login, discover, scrape, save) |
-| `src/lib/localDirectory.ts` | Directory locale in localStorage per confronto istantaneo zero-query |
-| `src/hooks/useWcaAppDownload.ts` | Hook React per download WCA con ripresa, delay pattern, jobs sospesi |
-| `src/components/system/ClaudeBadge.tsx` | Badge visivo "Claude Engine" fisso in basso a sinistra |
+| File                                    | Scopo                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------- |
+| `src/lib/wca-app-bridge.ts`             | Client API verso le API Vercel di wca-app (login, discover, scrape, save) |
+| `src/lib/localDirectory.ts`             | Directory locale in localStorage per confronto istantaneo zero-query      |
+| `src/hooks/useWcaAppDownload.ts`        | Hook React per download WCA con ripresa, delay pattern, jobs sospesi      |
+| `src/components/system/ClaudeBadge.tsx` | Badge visivo "Claude Engine" fisso in basso a sinistra                    |
 
 ### File modificati:
 
-| File | Modifica |
-|------|----------|
+| File                                  | Modifica                                      |
+| ------------------------------------- | --------------------------------------------- |
 | `src/components/layout/AppLayout.tsx` | Aggiunto import e render di `<ClaudeBadge />` |
 
 ---
@@ -28,8 +28,8 @@
 
 ### File modificati:
 
-| File | Modifica |
-|------|----------|
+| File                             | Modifica                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------- |
 | `src/hooks/useDownloadEngine.ts` | RISCRITTO V7->V8: usa wca-app Vercel API al posto delle Edge Functions Supabase |
 
 ---
@@ -38,8 +38,8 @@
 
 ### File modificati:
 
-| File | Modifica |
-|------|----------|
+| File                             | Modifica                                                                                  |
+| -------------------------------- | ----------------------------------------------------------------------------------------- |
 | `src/hooks/useDownloadEngine.ts` | Login semplificato: wca-app.vercel.app/api/login con body vuoto (credenziali server-side) |
 
 ---
@@ -48,13 +48,13 @@
 
 ### Operazione: Deprecazione sistema download legacy
 
-| File | Azione |
-|------|--------|
-| `src/hooks/useWcaSession.ts` | Riscritto: non usa piu estensione Chrome, testa via wca-app |
-| `src/hooks/useWcaAppFallback.ts` | Deprecato: redirect a useWcaAppDownload |
-| `src/lib/api/wcaAppBridge.ts` | Deprecato: redirect a lib/wca-app-bridge.ts |
-| `src/lib/wcaCredentials.ts` | Deprecato: mantenuto backward compat |
-| `src/components/download/WcaSessionIndicator.tsx` | Aggiornato tooltip |
+| File                                              | Azione                                                      |
+| ------------------------------------------------- | ----------------------------------------------------------- |
+| `src/hooks/useWcaSession.ts`                      | Riscritto: non usa piu estensione Chrome, testa via wca-app |
+| `src/hooks/useWcaAppFallback.ts`                  | Deprecato: redirect a useWcaAppDownload                     |
+| `src/lib/api/wcaAppBridge.ts`                     | Deprecato: redirect a lib/wca-app-bridge.ts                 |
+| `src/lib/wcaCredentials.ts`                       | Deprecato: mantenuto backward compat                        |
+| `src/components/download/WcaSessionIndicator.tsx` | Aggiornato tooltip                                          |
 
 ---
 
@@ -66,17 +66,17 @@ Analisi approfondita di tutto il codebase (220+ componenti, 57 hooks, 45 tabelle
 
 ### File RISCRITTI:
 
-| File | Modifica |
-|------|----------|
-| `src/hooks/useDownloadEngine.ts` | FIX CRITICO: getWcaCookie() ora usa login diretto wca-app (rimosso fetchWcaCredentials) |
-| `src/lib/api/wcaScraper.ts` | MIGRATO: tutte le funzioni (scrapeWcaPartnerById, previewWcaProfile, scrapeWcaDirectory) ora usano wca-app bridge invece di Edge Functions Supabase |
-| `src/components/download/ActiveJobBar.tsx` | Rimosso warning "Estensione mancante", aggiunto badge "Claude V8" |
-| `src/components/settings/ConnectionsSettings.tsx` | Rimossi campi username/password WCA manuali, sostituiti con stato login automatico |
-| `src/components/onboarding/StepWCA.tsx` | Rimossi campi credenziali, sostituiti con verifica connessione automatica |
-| `src/pages/Diagnostics.tsx` | Aggiunta sezione "Claude Engine V8" (test bridge, login, cookie locale) |
-| `src/components/layout/AppLayout.tsx` | Handler AI: aggiunto case "start_download_job" per notificare utente e navigare a Network |
-| `src/data/agentTemplates.ts` | Aggiornato prompt agente Download con riferimenti a Claude Engine V8 e wca-app |
-| `src/components/system/ClaudeBadge.tsx` | Aggiornato con lista completa moduli V8 attivi |
+| File                                              | Modifica                                                                                                                                            |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/hooks/useDownloadEngine.ts`                  | FIX CRITICO: getWcaCookie() ora usa login diretto wca-app (rimosso fetchWcaCredentials)                                                             |
+| `src/lib/api/wcaScraper.ts`                       | MIGRATO: tutte le funzioni (scrapeWcaPartnerById, previewWcaProfile, scrapeWcaDirectory) ora usano wca-app bridge invece di Edge Functions Supabase |
+| `src/components/download/ActiveJobBar.tsx`        | Rimosso warning "Estensione mancante", aggiunto badge "Claude V8"                                                                                   |
+| `src/components/settings/ConnectionsSettings.tsx` | Rimossi campi username/password WCA manuali, sostituiti con stato login automatico                                                                  |
+| `src/components/onboarding/StepWCA.tsx`           | Rimossi campi credenziali, sostituiti con verifica connessione automatica                                                                           |
+| `src/pages/Diagnostics.tsx`                       | Aggiunta sezione "Claude Engine V8" (test bridge, login, cookie locale)                                                                             |
+| `src/components/layout/AppLayout.tsx`             | Handler AI: aggiunto case "start_download_job" per notificare utente e navigare a Network                                                           |
+| `src/data/agentTemplates.ts`                      | Aggiornato prompt agente Download con riferimenti a Claude Engine V8 e wca-app                                                                      |
+| `src/components/system/ClaudeBadge.tsx`           | Aggiornato con lista completa moduli V8 attivi                                                                                                      |
 
 ### Architettura download DEFINITIVA:
 
@@ -143,25 +143,25 @@ Audit dell'8 aprile 2026 (`AUDIT_2026-04-08.md`) ha rilevato voto 4.150/10.000 s
 
 ### Verifica 4-check (Vol. I §3.4) prima del commit
 
-| Check | Risultato |
-|---|---|
-| `tsc -p tsconfig.app.json --noEmit` | ✅ exit 0 |
-| `eslint .` | 1.601 problemi (1.522 errori, 79 warning) — pre-esistenti, non peggiorati rispetto alla baseline (1.597) |
-| `vitest run` | ✅ 6 file, 45/45 test passanti |
-| `vite build` | ✅ 15.35s |
+| Check                               | Risultato                                                                                                |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `tsc -p tsconfig.app.json --noEmit` | ✅ exit 0                                                                                                |
+| `eslint .`                          | 1.601 problemi (1.522 errori, 79 warning) — pre-esistenti, non peggiorati rispetto alla baseline (1.597) |
+| `vitest run`                        | ✅ 6 file, 45/45 test passanti                                                                           |
+| `vite build`                        | ✅ 15.35s                                                                                                |
 
 Note sul lieve incremento eslint (1.597 → 1.601, +4): i nuovi 4 sono nei file aggiunti (`log.ts`, `log.test.ts`) e sono i `console.*` nel sink di default (commentati con `eslint-disable-next-line no-console`) + `any` controllati. Ammessi perché il logger È il punto in cui la console è autorizzata.
 
 ### Delta metriche baseline
 
-| Metrica | Baseline 8/4 | Ora | Δ |
-|---|---|---|---|
-| Errori TypeScript strict | NON MISURATO | **20** (visibili) | misurato |
-| File di test | 5 | **6** | +1 |
-| Test cases | 39 | **45** | +6 |
-| `console.*` in `src/` (non-logger) | 71 | 71 | 0 (uno spostato in `log.ts` controllato) |
-| Build time | 25.58s | 15.35s | -10.23s |
-| Bundle warning > 500 KB | 5 chunk | invariato | 0 |
+| Metrica                            | Baseline 8/4 | Ora               | Δ                                        |
+| ---------------------------------- | ------------ | ----------------- | ---------------------------------------- |
+| Errori TypeScript strict           | NON MISURATO | **20** (visibili) | misurato                                 |
+| File di test                       | 5            | **6**             | +1                                       |
+| Test cases                         | 39           | **45**            | +6                                       |
+| `console.*` in `src/` (non-logger) | 71           | 71                | 0 (uno spostato in `log.ts` controllato) |
+| Build time                         | 25.58s       | 15.35s            | -10.23s                                  |
+| Bundle warning > 500 KB            | 5 chunk      | invariato         | 0                                        |
 
 ### Cosa NON è stato fatto (per disciplina Legge 2)
 
@@ -173,6 +173,7 @@ Note sul lieve incremento eslint (1.597 → 1.601, +4): i nuovi 4 sono nei file 
 ### Stato Fase 1
 
 Vol. I cap. III "Fase 1 — Contenimento del degrado" prevede 5 azioni:
+
 - ✅ §3.1 Branch dedicato `recovery/wca-network-navigator`
 - ✅ §3.2 Attivazione del controllo statico (visibilità errori strict)
 - ✅ §3.3 Logger + error boundary collegato
@@ -185,7 +186,6 @@ Vol. I cap. III "Fase 1 — Contenimento del degrado" prevede 5 azioni:
 2. Aggressione mirata dei `catch {}` vuoti (59 occorrenze) — anche questa un file per commit.
 3. Apertura PR di Ondata 1 verso `main`.
 
-
 ---
 
 ## Sessione #7 — 8 aprile 2026 (notte) — Ondate 1-5 complete
@@ -196,73 +196,74 @@ Vol. I cap. III "Fase 1 — Contenimento del degrado" prevede 5 azioni:
 
 ### Riepilogo commit (19 commit su Fase 1 + Ondate 1-5)
 
-| # | Commit | Ondata | Oggetto |
-|---|---|---|---|
-| 1 | 1d88f316 | fase0 | FREEZE + baseline metriche |
-| 2 | 3c1b9a7a | fase0 | Volumi I+II committati come fonte di verità |
-| 3 | 80af833b | fase1 | Logger strutturato `src/lib/log.ts` + error boundary |
-| 4 | 0264cc85 | fase1 | `tsconfig.strict.json` (visibilità 20 errori) |
-| 5 | 2bda69ce | ondata1 | useDownloadJobs logger |
-| 6 | da546ad2 | ondata1 | useImportWizard logger |
-| 7 | 7bf77542 | ondata1 | useCockpitContacts logger |
-| 8 | 1ed7890b | ondata1 | useDeepSearchRunner logger |
-| 9 | 758800d9 | ondata1 | useEmailGenerator logger |
-| 10 | e2e8ecdf | ondata1 | useAcquisitionPipeline logger |
-| 11 | 5ac86752 | ondata1 | wcaAppApi catch vuoti |
-| 12 | c2361584 | ondata1 | useWcaSession catch vuoti |
-| 13 | 45538811 | ondata4 | Cancellazione 7 hook V8 morti (-1099 LOC) |
-| 14 | ba9769af | ondata2 | Consolidamento WCA bridge (-133 LOC duplicati) |
-| 15 | 36ae139f | ondata3 | Fix 20 errori strict + strict mode globale |
-| 16 | 0072d1f1 | ondata1 | Logger batch 2 (5 file) |
-| 17 | a288d800 | ondata1 | Logger batch 3 (cockpit + LinkedIn hooks) |
-| 18 | 3b598d9a | ondata1 | Logger batch 4 (4 pages) |
-| 19 | 677d1f17 | ondata1 | Logger batch 5 finale (16 file) |
-| 20 | 0de151ff | ondata1 | 40 catch vuoti documentati |
-| 21 | bcaae56a | ondata5 | +19 test E2E WCA scraper/api |
+| #   | Commit   | Ondata  | Oggetto                                              |
+| --- | -------- | ------- | ---------------------------------------------------- |
+| 1   | 1d88f316 | fase0   | FREEZE + baseline metriche                           |
+| 2   | 3c1b9a7a | fase0   | Volumi I+II committati come fonte di verità          |
+| 3   | 80af833b | fase1   | Logger strutturato `src/lib/log.ts` + error boundary |
+| 4   | 0264cc85 | fase1   | `tsconfig.strict.json` (visibilità 20 errori)        |
+| 5   | 2bda69ce | ondata1 | useDownloadJobs logger                               |
+| 6   | da546ad2 | ondata1 | useImportWizard logger                               |
+| 7   | 7bf77542 | ondata1 | useCockpitContacts logger                            |
+| 8   | 1ed7890b | ondata1 | useDeepSearchRunner logger                           |
+| 9   | 758800d9 | ondata1 | useEmailGenerator logger                             |
+| 10  | e2e8ecdf | ondata1 | useAcquisitionPipeline logger                        |
+| 11  | 5ac86752 | ondata1 | wcaAppApi catch vuoti                                |
+| 12  | c2361584 | ondata1 | useWcaSession catch vuoti                            |
+| 13  | 45538811 | ondata4 | Cancellazione 7 hook V8 morti (-1099 LOC)            |
+| 14  | ba9769af | ondata2 | Consolidamento WCA bridge (-133 LOC duplicati)       |
+| 15  | 36ae139f | ondata3 | Fix 20 errori strict + strict mode globale           |
+| 16  | 0072d1f1 | ondata1 | Logger batch 2 (5 file)                              |
+| 17  | a288d800 | ondata1 | Logger batch 3 (cockpit + LinkedIn hooks)            |
+| 18  | 3b598d9a | ondata1 | Logger batch 4 (4 pages)                             |
+| 19  | 677d1f17 | ondata1 | Logger batch 5 finale (16 file)                      |
+| 20  | 0de151ff | ondata1 | 40 catch vuoti documentati                           |
+| 21  | bcaae56a | ondata5 | +19 test E2E WCA scraper/api                         |
 
 ### Delta metriche globali (baseline → fine sessione #7)
 
-| Metrica | Baseline 8/4 | Sess #6 fine | Sess #7 fine | Δ totale |
-|---|---|---|---|---|
-| Errori TypeScript strict | NON MISURATO | 20 (visibili) | **0** | -20 |
-| Strict mode in tsconfig.app | off | off | **on** | abilitato |
-| `console.*` in src/ (non-logger) | 71 | 71 | **0** | -71 |
-| `catch {}` vuoti silenti | 59 | 59 | **0** | -59 |
-| File di test | 5 | 6 | **8** | +3 |
-| Test cases | 39 | 45 | **64** | +25 |
-| File totali in src/ | ~390 | 390 | **~383** | -7 (dead code) |
-| LOC totali in src/ | — | — | — | -~1232 |
-| Build time | 25.58s | 15.35s | **14.98s** | -10.6s |
-| ESLint problems | 1597 | 1601 | **1557** | -40 |
-| WCA bridge duplicati | 3 livelli | 3 | **1** | consolidato |
+| Metrica                          | Baseline 8/4 | Sess #6 fine  | Sess #7 fine | Δ totale       |
+| -------------------------------- | ------------ | ------------- | ------------ | -------------- |
+| Errori TypeScript strict         | NON MISURATO | 20 (visibili) | **0**        | -20            |
+| Strict mode in tsconfig.app      | off          | off           | **on**       | abilitato      |
+| `console.*` in src/ (non-logger) | 71           | 71            | **0**        | -71            |
+| `catch {}` vuoti silenti         | 59           | 59            | **0**        | -59            |
+| File di test                     | 5            | 6             | **8**        | +3             |
+| Test cases                       | 39           | 45            | **64**       | +25            |
+| File totali in src/              | ~390         | 390           | **~383**     | -7 (dead code) |
+| LOC totali in src/               | —            | —             | —            | -~1232         |
+| Build time                       | 25.58s       | 15.35s        | **14.98s**   | -10.6s         |
+| ESLint problems                  | 1597         | 1601          | **1557**     | -40            |
+| WCA bridge duplicati             | 3 livelli    | 3             | **1**        | consolidato    |
 
 ### Flussi critici — stato test E2E
 
-| Flusso | Prima | Dopo |
-|---|---|---|
+| Flusso                                     | Prima  | Dopo          |
+| ------------------------------------------ | ------ | ------------- |
 | WCA scraper profile (scrapeWcaPartnerById) | 0 test | **5 test** ✅ |
-| WCA preview (previewWcaProfile) | 0 test | **4 test** ✅ |
-| wcaDiscover contract | 0 test | **3 test** ✅ |
-| wcaScrape contract | 0 test | **2 test** ✅ |
-| wcaCheckIds / wcaJobStart / wcaJobPause | 0 test | **3 test** ✅ |
-| WCA_NETWORKS map integrity | 0 test | **2 test** ✅ |
+| WCA preview (previewWcaProfile)            | 0 test | **4 test** ✅ |
+| wcaDiscover contract                       | 0 test | **3 test** ✅ |
+| wcaScrape contract                         | 0 test | **2 test** ✅ |
+| wcaCheckIds / wcaJobStart / wcaJobPause    | 0 test | **3 test** ✅ |
+| WCA_NETWORKS map integrity                 | 0 test | **2 test** ✅ |
 
 Totale copertura del percorso critico components → wcaScraper → wcaAppApi → wca-app.vercel.app: **19 nuovi test, 0 rotture**.
 
 ### Verifica 4-check finale sessione #7
 
-| Check | Risultato |
-|---|---|
-| `tsc -p tsconfig.app.json --noEmit` (strict on) | ✅ 0 errori |
-| `vitest run` | ✅ 8 file, **64/64** test passing |
-| `vite build` | ✅ 14.98s, 0 errori |
-| `eslint .` | 1557 problems (1482 err, 75 warn) — **-40** vs baseline |
+| Check                                           | Risultato                                               |
+| ----------------------------------------------- | ------------------------------------------------------- |
+| `tsc -p tsconfig.app.json --noEmit` (strict on) | ✅ 0 errori                                             |
+| `vitest run`                                    | ✅ 8 file, **64/64** test passing                       |
+| `vite build`                                    | ✅ 14.98s, 0 errori                                     |
+| `eslint .`                                      | 1557 problems (1482 err, 75 warn) — **-40** vs baseline |
 
 ### Conformità Vol. II — Checklist (stato post-recupero)
 
 Dal Vol. II "Il Metodo Enterprise", i capitoli più rilevanti per verificare la conformità della codebase dopo il recupero.
 
 **Cap. IV — Fondazioni (§4.1-4.5)**:
+
 - ✅ Logging strutturato (log.ts 200 LOC, 4 livelli, multi-sink, filtri per env)
 - ✅ Error boundary globale cablato al logger
 - ✅ Repository in stato pulito (1 branch recovery attivo, main freezato)
@@ -271,24 +272,28 @@ Dal Vol. II "Il Metodo Enterprise", i capitoli più rilevanti per verificare la 
 - 🟡 CI/CD con 4-check obbligatorio: `.github/workflows/ci.yml` esistente ma da verificare contro i nuovi script
 
 **Cap. V — Contratti API (§5.1-5.4)**:
+
 - ✅ `wcaAppApi.ts` è ora punto di ingresso unico per wca-app.vercel.app
 - ✅ Tipi espliciti su ogni funzione pubblica (DiscoverResult, ScrapeResult, JobStatusResult, ...)
 - ✅ Error handling uniforme (throw su HTTP non-ok + error field su response)
 - 🟡 Schema validation runtime (zod) sui payload remoti: solo parziale, da completare
 
 **Cap. VIII — Controllo Qualità (§8.1-8.4)**:
+
 - ✅ TypeScript strict attivo (no-any where fixable, null-safety globale)
 - ✅ Test unit + contract con vitest (64 test, 8 file, <2s runtime)
 - ✅ Linting attivo (eslint 9, rules no-empty attiva, 0 catch silenti)
 - 🟡 Copertura test: 0% su pages/, solo contratti su lib/. Vol. II §8.3 richiede ≥70% sui flussi critici — da estendere nelle prossime sessioni.
 
 **Cap. XV — Standard Enterprise (§15.1-15.3)**:
+
 - ✅ Prevedibilità: stessi input → stessi output (validati nei test E2E mockati)
 - ✅ Stato osservabile: logger strutturato + GlobalErrorBoundary + ViteChunkRecovery
 - ✅ Nessun bridge/proxy/abstraction layer inutile (ondata 2: -133 LOC)
 - ✅ Nessun codice morto Claude Engine V8 (ondata 4: -1099 LOC)
 
 **Cap. XVI — Errori da evitare (§16.1-16.10)**:
+
 - ✅ §16.1 "Over-engineering": rimosso V8 + bridge
 - ✅ §16.3 "Silent failures": 0 catch vuoti, tutti loggati o documentati
 - ✅ §16.4 "Any implicito": strict mode globale
@@ -305,19 +310,19 @@ Dal Vol. II "Il Metodo Enterprise", i capitoli più rilevanti per verificare la 
 
 ### Stato finale Protocollo del Recupero (Vol. I)
 
-| Fase | Stato |
-|---|---|
-| Fase 0 — Freeze & Baseline | ✅ Completa (sess #6 preliminari) |
-| Fase 1 — Contenimento del degrado | ✅ Completa (sess #6 + #7) |
-| Ondata 1 — Logger + catch vuoti | ✅ Completa |
-| Ondata 2 — Consolidamento duplicati | ✅ Completa (WCA bridge) |
-| Ondata 3 — Fix strict mode | ✅ Completa (20 errori → 0) |
-| Ondata 4 — Dead code removal | ✅ Completa (-1232 LOC) |
-| Ondata 5 — Test E2E | 🟡 Iniziata (+19 test su percorso critico); copertura full target sessione #8 |
-| Fase 2 — Refactor monoliti | ⏳ Non iniziata (sessione #8) |
-| Fase 3 — Modernizzazione architettura | ⏳ Non iniziata |
-| Fase 4 — Hardening | ⏳ Non iniziata |
-| Fase 5 — Collaudo | ⏳ Non iniziata |
+| Fase                                  | Stato                                                                         |
+| ------------------------------------- | ----------------------------------------------------------------------------- |
+| Fase 0 — Freeze & Baseline            | ✅ Completa (sess #6 preliminari)                                             |
+| Fase 1 — Contenimento del degrado     | ✅ Completa (sess #6 + #7)                                                    |
+| Ondata 1 — Logger + catch vuoti       | ✅ Completa                                                                   |
+| Ondata 2 — Consolidamento duplicati   | ✅ Completa (WCA bridge)                                                      |
+| Ondata 3 — Fix strict mode            | ✅ Completa (20 errori → 0)                                                   |
+| Ondata 4 — Dead code removal          | ✅ Completa (-1232 LOC)                                                       |
+| Ondata 5 — Test E2E                   | 🟡 Iniziata (+19 test su percorso critico); copertura full target sessione #8 |
+| Fase 2 — Refactor monoliti            | ⏳ Non iniziata (sessione #8)                                                 |
+| Fase 3 — Modernizzazione architettura | ⏳ Non iniziata                                                               |
+| Fase 4 — Hardening                    | ⏳ Non iniziata                                                               |
+| Fase 5 — Collaudo                     | ⏳ Non iniziata                                                               |
 
 ### Note operative per sessione #8
 
@@ -373,32 +378,32 @@ Prossimo commit: `docs: DIARIO sessione #7 — ondate 1-5 complete`.
 
 ### Verifica 4-check finale
 
-| Check | Risultato |
-|---|---|
-| `tsc -p tsconfig.app.json --noEmit` (strict on) | ✅ 0 errori |
-| `vitest run` | ✅ **11 file, 137/137** test passing |
-| `vite build` | ✅ 17.84s, 0 errori |
+| Check                                           | Risultato                            |
+| ----------------------------------------------- | ------------------------------------ |
+| `tsc -p tsconfig.app.json --noEmit` (strict on) | ✅ 0 errori                          |
+| `vitest run`                                    | ✅ **11 file, 137/137** test passing |
+| `vite build`                                    | ✅ 17.84s, 0 errori                  |
 
 ### Delta metriche sessione #8
 
-| Metrica | Pre-#8 | Post-#8 | Δ |
-|---|---|---|---|
-| File di test | 8 | **11** | +3 |
-| Test cases | 64 | **137** | +73 |
-| Schemi runtime zod su wcaAppApi | 0 | **7** | nuovo |
-| Helper safeParse* | 0 | **4** | nuovo |
+| Metrica                         | Pre-#8 | Post-#8 | Δ     |
+| ------------------------------- | ------ | ------- | ----- |
+| File di test                    | 8      | **11**  | +3    |
+| Test cases                      | 64     | **137** | +73   |
+| Schemi runtime zod su wcaAppApi | 0      | **7**   | nuovo |
+| Helper safeParse\*              | 0      | **4**   | nuovo |
 
 ### Mappatura coverage flussi critici (post #8)
 
-| Flusso critico | Coverage stimata pre-#8 | Coverage post-#8 |
-|---|---|---|
-| WCA scraper / app API | ~70% (contract test) | **~85%** (+ schemi runtime) |
-| Import wizard (validation/transform) | 0% | **~80%** (validator + transformRow) |
-| Cockpit (group/sort/preselect) | 0% | **~75%** (utils puri coperti) |
-| Email composer | 0% | 0% (rinviato sessione #9) |
-| Campaign queue | 0% | 0% (rinviato sessione #9) |
-| Acquisition pipeline | 0% | 0% (rinviato sessione #9) |
-| Activity tracking | 0% | 0% (rinviato sessione #9) |
+| Flusso critico                       | Coverage stimata pre-#8 | Coverage post-#8                    |
+| ------------------------------------ | ----------------------- | ----------------------------------- |
+| WCA scraper / app API                | ~70% (contract test)    | **~85%** (+ schemi runtime)         |
+| Import wizard (validation/transform) | 0%                      | **~80%** (validator + transformRow) |
+| Cockpit (group/sort/preselect)       | 0%                      | **~75%** (utils puri coperti)       |
+| Email composer                       | 0%                      | 0% (rinviato sessione #9)           |
+| Campaign queue                       | 0%                      | 0% (rinviato sessione #9)           |
+| Acquisition pipeline                 | 0%                      | 0% (rinviato sessione #9)           |
+| Activity tracking                    | 0%                      | 0% (rinviato sessione #9)           |
 
 Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra soglia**.
 
@@ -440,31 +445,31 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 
 ### Verifica 4-check
 
-| Check | Risultato |
-|---|---|
-| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori |
-| `vitest run` | ✅ **12 file, 171/171** test |
-| `vite build` | ✅ 15.02s, 0 errori |
+| Check                               | Risultato                    |
+| ----------------------------------- | ---------------------------- |
+| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori                  |
+| `vitest run`                        | ✅ **12 file, 171/171** test |
+| `vite build`                        | ✅ 15.02s, 0 errori          |
 
 ### Delta sessione #9
 
-| Metrica | Pre-#9 | Post-#9 | Δ |
-|---|---|---|---|
-| File di test | 11 | **12** | +1 |
-| Test cases | 137 | **171** | +34 |
-| Endpoint con runtime validation attiva | 0 | **4** | +4 (discover, scrape, check-ids, job-start) |
+| Metrica                                | Pre-#9 | Post-#9 | Δ                                           |
+| -------------------------------------- | ------ | ------- | ------------------------------------------- |
+| File di test                           | 11     | **12**  | +1                                          |
+| Test cases                             | 137    | **171** | +34                                         |
+| Endpoint con runtime validation attiva | 0      | **4**   | +4 (discover, scrape, check-ids, job-start) |
 
 ### Coverage flussi critici post #9
 
-| Flusso | Pre-#9 | Post-#9 |
-|---|---|---|
-| WCA scraper / app API | ~85% | **~90%** (zod attivo nei call site) |
-| Import wizard | ~80% | ~80% |
-| Cockpit (group/sort/preselect) | ~75% | ~75% |
-| Email parsing/normalization | 0% | **~75%** |
-| Activity status cycle | 0% | **~80%** |
-| Campaign queue | 0% | 0% (rinviato sessione #10) |
-| Acquisition pipeline | 0% | 0% (rinviato sessione #10) |
+| Flusso                         | Pre-#9 | Post-#9                             |
+| ------------------------------ | ------ | ----------------------------------- |
+| WCA scraper / app API          | ~85%   | **~90%** (zod attivo nei call site) |
+| Import wizard                  | ~80%   | ~80%                                |
+| Cockpit (group/sort/preselect) | ~75%   | ~75%                                |
+| Email parsing/normalization    | 0%     | **~75%**                            |
+| Activity status cycle          | 0%     | **~80%**                            |
+| Campaign queue                 | 0%     | 0% (rinviato sessione #10)          |
+| Acquisition pipeline           | 0%     | 0% (rinviato sessione #10)          |
 
 **5 dei 7 flussi critici ora sopra soglia Vol. II §8.3 (≥70%)**.
 
@@ -497,32 +502,32 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 
 ### Verifica 4-check
 
-| Check | Risultato |
-|---|---|
-| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori |
-| `vitest run` | ✅ **14 file, 201/201** |
-| `vite build` | ✅ 16.09s |
+| Check                               | Risultato               |
+| ----------------------------------- | ----------------------- |
+| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori             |
+| `vitest run`                        | ✅ **14 file, 201/201** |
+| `vite build`                        | ✅ 16.09s               |
 
 ### Delta sessione #10
 
-| Metrica | Pre-#10 | Post-#10 | Δ |
-|---|---|---|---|
-| File di test | 12 | **14** | +2 |
-| Test cases | 171 | **201** | +30 |
-| Moduli puri coperti | 12 | **15** | +3 |
+| Metrica             | Pre-#10 | Post-#10 | Δ   |
+| ------------------- | ------- | -------- | --- |
+| File di test        | 12      | **14**   | +2  |
+| Test cases          | 171     | **201**  | +30 |
+| Moduli puri coperti | 12      | **15**   | +3  |
 
 ### Coverage flussi critici post #10
 
-| Flusso | Pre-#10 | Post-#10 |
-|---|---|---|
-| WCA scraper / app API | ~90% | ~90% |
-| WCA checkpoint (rate-limit) | 0% | **~85%** |
-| Import wizard | ~80% | ~80% |
-| Cockpit (group/sort/preselect) | ~75% | ~75% |
-| Contact adapter (cockpit ingestion) | 0% | **~90%** |
-| Email parsing/normalization | ~75% | ~75% |
-| Activity status cycle | ~80% | ~80% |
-| Globe rendering math | 0% | **~80%** |
+| Flusso                              | Pre-#10 | Post-#10 |
+| ----------------------------------- | ------- | -------- |
+| WCA scraper / app API               | ~90%    | ~90%     |
+| WCA checkpoint (rate-limit)         | 0%      | **~85%** |
+| Import wizard                       | ~80%    | ~80%     |
+| Cockpit (group/sort/preselect)      | ~75%    | ~75%     |
+| Contact adapter (cockpit ingestion) | 0%      | **~90%** |
+| Email parsing/normalization         | ~75%    | ~75%     |
+| Activity status cycle               | ~80%    | ~80%     |
+| Globe rendering math                | 0%      | **~80%** |
 
 **Soglia Vol. II §8.3 raggiunta su 7 moduli puri** (era 5 a fine sessione #9).
 
@@ -557,34 +562,34 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 
 ### Verifica 4-check
 
-| Check | Risultato |
-|---|---|
-| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori |
-| `vitest run` | ✅ **16 file, 232/232** |
-| `vite build` | ✅ 16.93s |
+| Check                               | Risultato               |
+| ----------------------------------- | ----------------------- |
+| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori             |
+| `vitest run`                        | ✅ **16 file, 232/232** |
+| `vite build`                        | ✅ 16.93s               |
 
 ### Delta sessione #11
 
-| Metrica | Pre-#11 | Post-#11 | Δ |
-|---|---|---|---|
-| File di test | 14 | **16** | +2 |
-| Test cases | 201 | **232** | +31 |
-| Moduli puri coperti | 15 | **18** | +3 |
+| Metrica             | Pre-#11 | Post-#11 | Δ   |
+| ------------------- | ------- | -------- | --- |
+| File di test        | 14      | **16**   | +2  |
+| Test cases          | 201     | **232**  | +31 |
+| Moduli puri coperti | 15      | **18**   | +3  |
 
 ### Coverage flussi critici post #11
 
-| Flusso | Coverage |
-|---|---|
-| WCA scraper / app API | ~90% |
-| WCA checkpoint (rate-limit) | ~85% |
+| Flusso                             | Coverage         |
+| ---------------------------------- | ---------------- |
+| WCA scraper / app API              | ~90%             |
+| WCA checkpoint (rate-limit)        | ~85%             |
 | AI agent response parsing/dispatch | **~90%** (nuovo) |
-| Message dedup (multi-channel) | **~95%** (nuovo) |
-| Import wizard | ~80% |
-| Cockpit (group/sort/preselect) | ~75% |
-| Contact adapter | ~90% |
-| Email parsing/normalization | ~75% |
-| Activity status cycle | ~80% |
-| Globe rendering math | ~80% |
+| Message dedup (multi-channel)      | **~95%** (nuovo) |
+| Import wizard                      | ~80%             |
+| Cockpit (group/sort/preselect)     | ~75%             |
+| Contact adapter                    | ~90%             |
+| Email parsing/normalization        | ~75%             |
+| Activity status cycle              | ~80%             |
+| Globe rendering math               | ~80%             |
 
 **10 flussi/moduli puri ora ≥70%** (era 7 a fine sessione #10).
 
@@ -619,36 +624,36 @@ Soglia Vol. II §8.3 (≥70% sui flussi critici): **3 dei 7 flussi ora sopra sog
 
 ### Verifica 4-check
 
-| Check | Risultato |
-|---|---|
-| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori |
-| `vitest run` | ✅ **18 file, 278/278** |
-| `vite build` | ✅ 15.94s |
+| Check                               | Risultato               |
+| ----------------------------------- | ----------------------- |
+| `tsc -p tsconfig.app.json --noEmit` | ✅ 0 errori             |
+| `vitest run`                        | ✅ **18 file, 278/278** |
+| `vite build`                        | ✅ 15.94s               |
 
 ### Delta sessione #12
 
-| Metrica | Pre-#12 | Post-#12 | Δ |
-|---|---|---|---|
-| File di test | 16 | **18** | +2 |
-| Test cases | 232 | **278** | +46 |
-| Moduli puri coperti | 18 | **21** | +3 |
+| Metrica             | Pre-#12 | Post-#12 | Δ   |
+| ------------------- | ------- | -------- | --- |
+| File di test        | 16      | **18**   | +2  |
+| Test cases          | 232     | **278**  | +46 |
+| Moduli puri coperti | 18      | **21**   | +3  |
 
 ### Coverage flussi critici post #12
 
-| Flusso | Coverage |
-|---|---|
-| WCA scraper / app API | ~90% |
-| WCA checkpoint (rate-limit) | ~85% |
-| AI agent response parsing/dispatch | ~90% |
-| Message dedup (multi-channel) | ~95% |
-| Import wizard (validator + heuristic mapper) | **~90%** |
-| Cockpit (group/sort/preselect) | ~75% |
-| Contact adapter | ~90% |
-| Email parsing/normalization | ~75% |
-| Activity status cycle | ~80% |
-| Globe rendering math | ~80% |
-| LinkedIn search/scoring | **~95%** (nuovo) |
-| Extension result normalization | **~95%** (nuovo) |
+| Flusso                                       | Coverage         |
+| -------------------------------------------- | ---------------- |
+| WCA scraper / app API                        | ~90%             |
+| WCA checkpoint (rate-limit)                  | ~85%             |
+| AI agent response parsing/dispatch           | ~90%             |
+| Message dedup (multi-channel)                | ~95%             |
+| Import wizard (validator + heuristic mapper) | **~90%**         |
+| Cockpit (group/sort/preselect)               | ~75%             |
+| Contact adapter                              | ~90%             |
+| Email parsing/normalization                  | ~75%             |
+| Activity status cycle                        | ~80%             |
+| Globe rendering math                         | ~80%             |
+| LinkedIn search/scoring                      | **~95%** (nuovo) |
+| Extension result normalization               | **~95%** (nuovo) |
 
 **12 flussi/moduli puri ora ≥70%**. Vol. II §8.3 ampiamente raggiunto sui
 percorsi critici.
@@ -660,25 +665,30 @@ percorsi critici.
 **Direttiva**: "PERCHE TI FERMI???? CONTINA" — proseguo expansion test puri.
 
 ### Delta
+
 - Nuovo file: `src/test/countries-extended.test.ts` (17 test)
 - Coverage `src/lib/countries.ts`: tutte le 9 funzioni di formatting/icon
   ora coperte (escluso `resolveCountryCode` già testato in
   `country-resolution.test.ts`).
 
 ### Funzioni testate
+
 `getCountryFlag` (emoji da ISO2 + fallback 🌍), `getYearsMember` (date math
-+ data futura), `formatPartnerType`, `formatServiceCategory`,
-`getServiceColor` (palette unificata), `getServiceIconName` (7 icone +
-default Box), `getServiceIconColor` (4 colori + default slate-500),
-`getPartnerTypeIconName` (6 tipi + default), `getPriorityColor` (high/
-medium/low/default).
+
+- data futura), `formatPartnerType`, `formatServiceCategory`,
+  `getServiceColor` (palette unificata), `getServiceIconName` (7 icone +
+  default Box), `getServiceIconColor` (4 colori + default slate-500),
+  `getPartnerTypeIconName` (6 tipi + default), `getPriorityColor` (high/
+  medium/low/default).
 
 ### 4-check
+
 - `tsc --noEmit`: 0 errori
 - `vitest run`: **19 file, 295/295 test passati** (+17 da #12)
 - `vite build`: 16.86s ✅
 
 ### Stato cumulativo
+
 - Test totali: **295** (+17, +231 vs baseline post-recovery 64)
 - File test: **19**
 - Tutti i 4-check verdi su ondate 1-5 + Vol. II §5.3 + §8.3
@@ -688,11 +698,13 @@ medium/low/default).
 ## Sessione #14 — Coverage fileParser (2026-04-08)
 
 ### Delta
+
 - Nuovo file: `src/test/file-parser.test.ts` (18 test)
 - Coverage `src/lib/import/fileParser.ts`: parseFile end-to-end via
   jsdom File API.
 
 ### Casi coperti
+
 **CSV/TXT**: auto-detect delimiter (`,` / `;` / `\t`), normalizzazione
 larghezza righe, filtro righe vuote, dedup headers duplicati,
 override `hasHeader=false` con auto-headers, `skipRows`, throw su
@@ -702,11 +714,13 @@ estrazione da object con array nested, singolo oggetto → 1 record,
 serializzazione valori nested, throw su JSON malformato/vuoto.
 
 ### 4-check
+
 - `tsc --noEmit`: 0 errori
 - `vitest run`: **20 file, 313/313 test passati** (+18 da #13)
 - `vite build`: 22.57s ✅
 
 ### Stato cumulativo
+
 - Test totali: **313** (+249 vs baseline 64)
 - File test: **20**
 - Vol. II §8.3 (≥70% sui flussi critici): **abbondantemente raggiunto**
@@ -716,11 +730,13 @@ serializzazione valori nested, throw su JSON malformato/vuoto.
 ## Sessione #15 — Coverage businessCardFileParser (2026-04-08)
 
 ### Delta
+
 - Nuovo file: `src/test/business-card-parser.test.ts` (15 test)
 - `src/test/setup.ts`: aggiunto polyfill `File.prototype.text` per jsdom
   (necessario per parser che usano l'API moderna).
 
 ### Casi coperti
+
 **isImageFile/isDataFile**: detection per mime type ed estensione, false
 su tipi non target.
 **parseBusinessCardFile - VCF**: parsing vCard 3.0 completo (FN/N/ORG/
@@ -732,11 +748,13 @@ riconosciuta, popolamento raw_data con tutte le celle.
 **Estensioni**: throw su formato non supportato.
 
 ### 4-check
+
 - `tsc --noEmit`: 0 errori
 - `vitest run`: **21 file, 328/328 test passati** (+15 da #14)
 - `vite build`: ✅
 
 ### Stato cumulativo
+
 - Test totali: **328** (+264 vs baseline 64)
 - File test: **21**
 
@@ -745,10 +763,12 @@ riconosciuta, popolamento raw_data con tutte le celle.
 ## Sessione #16 — Coverage localDirectory (2026-04-08)
 
 ### Delta
+
 - Nuovo file: `src/test/local-directory.test.ts` (27 test)
 - Coverage `src/lib/localDirectory.ts`: tutte le 14 funzioni esportate.
 
 ### Casi coperti
+
 **Directory CRUD**: createDirectory (preserva stati esistenti, salva
 memberNetworks), getDirectory (null su inesistente), markIdDone /
 markIdFailed (no-op su country sconosciuto), saveDirectory (aggiorna
@@ -758,14 +778,16 @@ isCountryCompleted (true solo se total>0 e nessun pending),
 checkMissingIdsLocal (filtra solo non-done).
 **Suspended jobs**: saveSuspendedJob (skip se no pending, upsert),
 removeSuspendedJob, getSuspendedJobs.
-**Member networks**: priorità domini own (non wca-*), fallback al primo.
+**Member networks**: priorità domini own (non wca-\*), fallback al primo.
 **getAllDirectories**: filtra per prefix, ignora corrotti.
 
 ### 4-check
+
 - `tsc --noEmit`: 0 errori
 - `vitest run`: **22 file, 355/355 test passati** (+27 da #15)
 
 ### Stato cumulativo
+
 - Test totali: **355** (+291 vs baseline 64)
 - File test: **22**
 
@@ -774,12 +796,14 @@ removeSuspendedJob, getSuspendedJobs.
 ## Sessione #17 — utils + activityConstants + wa-zip (2026-04-08)
 
 ### Delta
+
 - Nuovo file: `src/test/misc-modules.test.ts` (12 test)
 - Coverage: `src/lib/utils.ts` (cn), `src/lib/activityConstants.ts`
   (icons/labels/cycle/nextStatus), `src/lib/whatsappExtensionZip.ts`
   (constant export).
 
 ### Casi coperti
+
 - `cn`: merge Tailwind con dedup, ignora falsy, oggetti condizionali, vuoto.
 - `ACTIVITY_TYPE_ICONS/LABELS`: completezza di tutti i 6 tipi attesi.
 - `STATUS_LABELS/ICONS`: parità tra labels e icons.
@@ -793,11 +817,13 @@ removeSuspendedJob, getSuspendedJobs.
 ## Sessione #18 — backgroundSync (parti pure) + lazyRetry (2026-04-08)
 
 ### Delta
+
 - Nuovo file: `src/test/bg-sync-lazy.test.ts` (11 test)
 - Coverage: `src/lib/backgroundSync.ts` (API singleton sincrona) +
   `src/lib/lazyRetry.ts` (wrapper React.lazy).
 
 ### Casi coperti
+
 **backgroundSync**: stato iniziale idle, subscribe/unsubscribe con
 notifica immediata snapshot, subscribeEmails non-eager, immutabilità
 getEmailHistory (copia), bgSyncStop no-throw fuori run, bgSyncReset
@@ -807,48 +833,51 @@ correttamente, retry triggera la factory una seconda volta dopo
 fallimento (con retryDelay piccolo).
 
 ### 4-check finale (post #18)
+
 - `tsc --noEmit`: 0 errori
 - `vitest run`: **24 file, 378/378 test passati** (+23 da #16)
 - `vite build`: 29.33s ✅
 
 ### Stato cumulativo
+
 - Test totali: **378** (+314 vs baseline 64)
 - File test: **24**
 - Vol. II §5.3 (zod runtime): attivo su wcaAppApi
 - Vol. II §8.3 (≥70% critici): **superato** su tutti i flussi puri
 
 ### Moduli puri ora coperti (mappa)
-| Modulo | Test |
-|---|---|
-| countries | country-resolution + countries-extended |
-| log | log |
-| api/wcaAppApi + schemas | wca-app-api + wca-api-schemas |
-| api/wcaScraper | wca-scraper |
-| import/validator | import-validator |
-| import/heuristicMapper | heuristic-mapper |
-| import/fileParser | file-parser |
-| ai/agentResponse | ai-agent-response |
-| linkedinSearch | linkedin-search |
-| wcaCheckpoint + sanitizeSearch | wca-checkpoint |
-| partnerUtils + groupByCountry + cockpitPreselection | cockpit-utils |
-| contactActionAdapter | contact-adapter |
-| messageDedup + queryKeys + capitalize | misc-utils |
-| download/extractProfile | heuristic-mapper |
-| localDirectory | local-directory |
-| businessCardFileParser | business-card-parser |
-| utils + activityConstants + whatsappExtensionZip | misc-modules |
-| backgroundSync + lazyRetry | bg-sync-lazy |
-| download | download-engine |
-| schema | schema-validation |
-| email helpers | email-utils |
-| contact helpers | contact-helpers |
 
+| Modulo                                              | Test                                    |
+| --------------------------------------------------- | --------------------------------------- |
+| countries                                           | country-resolution + countries-extended |
+| log                                                 | log                                     |
+| api/wcaAppApi + schemas                             | wca-app-api + wca-api-schemas           |
+| api/wcaScraper                                      | wca-scraper                             |
+| import/validator                                    | import-validator                        |
+| import/heuristicMapper                              | heuristic-mapper                        |
+| import/fileParser                                   | file-parser                             |
+| ai/agentResponse                                    | ai-agent-response                       |
+| linkedinSearch                                      | linkedin-search                         |
+| wcaCheckpoint + sanitizeSearch                      | wca-checkpoint                          |
+| partnerUtils + groupByCountry + cockpitPreselection | cockpit-utils                           |
+| contactActionAdapter                                | contact-adapter                         |
+| messageDedup + queryKeys + capitalize               | misc-utils                              |
+| download/extractProfile                             | heuristic-mapper                        |
+| localDirectory                                      | local-directory                         |
+| businessCardFileParser                              | business-card-parser                    |
+| utils + activityConstants + whatsappExtensionZip    | misc-modules                            |
+| backgroundSync + lazyRetry                          | bg-sync-lazy                            |
+| download                                            | download-engine                         |
+| schema                                              | schema-validation                       |
+| email helpers                                       | email-utils                             |
+| contact helpers                                     | contact-helpers                         |
 
 ---
 
 ## Sessione #19 — Chiusura Vol. I (recap finale) (2026-04-08)
 
 ### Stato finale post-recovery
+
 - **Branch**: `recovery/wca-network-navigator` (HEAD `9d0a4287`)
 - **Test totali**: 378 in 24 file (+314 vs baseline 64 della prima
   ricostruzione post-incident)
@@ -861,23 +890,24 @@ fallimento (con retryDelay piccolo).
   puri identificati (vedi mappa sess #18)
 
 ### Refactor monoliti — stato (Vol. I Ondata 2 / Vol. II §16.7)
+
 Top-N file > 500 LOC al termine della recovery:
 
-| File | LOC |
-|---|---|
-| FiltersDrawer | 1300 |
-| BusinessCardsHub | 1084 |
-| AddContactDialog | 794 |
-| useAcquisitionPipeline | 747 |
-| MissionStepRenderer | 700 |
-| EmailComposerContactPicker | 685 |
-| EmailComposer | 663 |
-| WhatsAppInboxView | 639 |
-| sidebar (shadcn) | 637 |
-| ImportWizard | 625 |
-| useImportLogs | 621 |
-| TestExtensions | 605 |
-| useLinkedInFlow | 592 |
+| File                       | LOC  |
+| -------------------------- | ---- |
+| FiltersDrawer              | 1300 |
+| BusinessCardsHub           | 1084 |
+| AddContactDialog           | 794  |
+| useAcquisitionPipeline     | 747  |
+| MissionStepRenderer        | 700  |
+| EmailComposerContactPicker | 685  |
+| EmailComposer              | 663  |
+| WhatsAppInboxView          | 639  |
+| sidebar (shadcn)           | 637  |
+| ImportWizard               | 625  |
+| useImportLogs              | 621  |
+| TestExtensions             | 605  |
+| useLinkedInFlow            | 592  |
 
 I monoliti pre-recovery (Campaigns 860KB, AgentChatHub 500KB) sono già
 stati ridotti durante le sessioni precedenti: Campaigns 379, AgentChatHub
@@ -888,16 +918,20 @@ richiede analisi React component splitting con preservazione
 comportamentale (test E2E necessari prima dell'estrazione).
 
 ### PR aperta — stato
+
 gh CLI **non disponibile** in questo sandbox. Branch già pushed su
 origin: il merge va aperto manualmente da
 `https://github.com/tmwe-dev/wca-network-navigator/compare/main...recovery/wca-network-navigator?expand=1`
 
 ### Remote sink logger (Vol. II §11.4) — stato
+
 `createLogger` è già il punto di iniezione. Sentry/Logtail
 **rinviato pending credenziali** (DSN non disponibile in sandbox).
 
 ### Conclusione Vol. I "Il Protocollo del Recupero"
+
 Tutte le ondate strutturali (1-5) sono state eseguite:
+
 - Ondata 1: ricostruzione baseline + smoke test
 - Ondata 2: riduzione monoliti principali
 - Ondata 3: error boundary + structured logging
@@ -919,6 +953,7 @@ contracts + errori), §12.1 (log centralizzati), §16.5 (ADR).
 ### Modifiche concrete
 
 **§5.3 — `ApiError` standardizzato come unico errore lanciato dalle API**
+
 - Nuovo `src/lib/api/apiError.ts`: classe `ApiError` con discriminator
   `code: ApiErrorCode` (UNAUTHENTICATED/FORBIDDEN/NOT_FOUND/
   VALIDATION_FAILED/RATE_LIMITED/SERVER_ERROR/NETWORK_ERROR/
@@ -933,6 +968,7 @@ contracts + errori), §12.1 (log centralizzati), §16.5 (ADR).
   context propagation.
 
 **§5.3 — Migrazione `wcaAppApi.ts` ad `ApiError`**
+
 - Helper privato `assertOk(res, context)` centralizza la conversione
   `Response → ApiError` per tutti i 14 endpoint.
 - Sostituite tutte le `throw new Error("X failed: ${status}")` con
@@ -945,9 +981,10 @@ contracts + errori), §12.1 (log centralizzati), §16.5 (ADR).
   `err.httpStatus === 500`.
 
 **§5.1 strangler — `checkInbox` con zod + `ApiError`**
+
 - Nuovo `src/lib/api/checkInbox.schemas.ts`: `CheckInboxMessageSchema`
-  + `CheckInboxResultSchema` con `.passthrough()`, `safeParseCheckInboxResult`
-  che logga warn e ritorna null senza throw.
+  - `CheckInboxResultSchema` con `.passthrough()`, `safeParseCheckInboxResult`
+    che logga warn e ritorna null senza throw.
 - `src/lib/checkInbox.ts` riscritto: `Promise<unknown>`, lancia
   `ApiError` (UNAUTHENTICATED se sessione assente), passa la risposta
   per `safeParseCheckInboxResult` come pre-allarme.
@@ -955,6 +992,7 @@ contracts + errori), §12.1 (log centralizzati), §16.5 (ADR).
   never-throw.
 
 **§16.5 — ADR introdotti**
+
 - `docs/adr/README.md`: convenzione + indice.
 - `docs/adr/0001-strangler-zod-api-contracts.md`: pattern strangler
   per zod sui contratti API remoti.
@@ -964,12 +1002,14 @@ contracts + errori), §12.1 (log centralizzati), §16.5 (ADR).
   punto di logging dell'app, regola d'oro `no-console`.
 
 ### 4-check finale Vol. II
+
 - `tsc --noEmit`: **0 errori**
 - `vitest run`: **413/413 test verdi** (26 file, +35 test vs sess #18)
 - `vite build`: **OK** (17.18s)
 - coverage moduli puri: invariata ≥70%
 
 ### Conseguenze
+
 La normalizzazione `ApiError` è stata pensata per essere zero-touch
 per i call-site esistenti: cambia solo il tipo dell'eccezione lanciata,
 non l'API pubblica. I componenti UI che già fanno `try/catch` continuano
@@ -978,6 +1018,7 @@ incrementalmente. Gli ADR rendono permanenti le tre decisioni che
 altrimenti si dimenticherebbero entro fine trimestre (Vol. II §16.5).
 
 ### Pending (deferred motivati)
+
 - Migrazione `WCAFunctionUnified.ts` e altri client API legacy ad
   `ApiError`: rinviata per evitare big-bang refactor (Vol. II §16.7).
 - Remote sink Sentry/Logtail: ancora bloccato su credenziali esterne.
@@ -1084,17 +1125,17 @@ chiuse concretamente con codice committato e testato.
 `vite.config.ts` ora dichiara una funzione `manualChunks` che instrada
 ogni dipendenza node_modules in chunk vendor isolati. Risultati prima/dopo:
 
-| Chunk | Prima | Dopo |
-|---|---|---|
-| `index` (app shell) | 1107 KB | **310 KB** |
-| `Campaigns` (page) | 860 KB | **38 KB** |
-| `BusinessCardsHub` | — | 38 KB |
-| `vendor-three` (lazy 3D) | — | 1159 KB *isolato* |
-| `vendor-exceljs` (lazy export) | — | 938 KB *isolato* |
-| `vendor-react` | — | 162 KB |
-| `vendor-supabase` | — | 163 KB |
-| `vendor-radix` | — | 124 KB |
-| `vendor-motion` | — | 110 KB |
+| Chunk                          | Prima   | Dopo              |
+| ------------------------------ | ------- | ----------------- |
+| `index` (app shell)            | 1107 KB | **310 KB**        |
+| `Campaigns` (page)             | 860 KB  | **38 KB**         |
+| `BusinessCardsHub`             | —       | 38 KB             |
+| `vendor-three` (lazy 3D)       | —       | 1159 KB _isolato_ |
+| `vendor-exceljs` (lazy export) | —       | 938 KB _isolato_  |
+| `vendor-react`                 | —       | 162 KB            |
+| `vendor-supabase`              | —       | 163 KB            |
+| `vendor-radix`                 | —       | 124 KB            |
+| `vendor-motion`                | —       | 110 KB            |
 
 Strategia: routing esplicito di `exceljs`, `three`/`@react-three`/`hls.js`/
 `livekit-client`/`stats-gl`/`@mediapipe`/`@dimforge`/`rxjs` (l'intero
@@ -1174,14 +1215,14 @@ residui sono **baseline pre-recovery**, non introdotti in queste sessioni
 
 ### Stato finale dei "pending deferred" del recovery
 
-| Voce | Sess #21 stato | Sess #22 stato |
-|---|---|---|
-| ApiError esteso a wrapper centrale | scaffold pronto | **invokeEdge esteso + 12 hook migrati** |
-| Bundle splitting | TODO | **manualChunks attivo, index 1107→310 KB** |
-| Remote sink Sentry/Logtail | scaffold pronto | scaffold + 8 test (DSN ancora esterno) |
-| E2E suite per monoliti | smoke canary | **3 spec reali pronti per @regression** |
-| 45 call-site `supabase.functions.invoke` legacy | 0 migrati | **8 migrati, 37 residui (strangler)** |
-| PR open | gh CLI assente | gh CLI ancora assente — link manuale |
+| Voce                                            | Sess #21 stato  | Sess #22 stato                             |
+| ----------------------------------------------- | --------------- | ------------------------------------------ |
+| ApiError esteso a wrapper centrale              | scaffold pronto | **invokeEdge esteso + 12 hook migrati**    |
+| Bundle splitting                                | TODO            | **manualChunks attivo, index 1107→310 KB** |
+| Remote sink Sentry/Logtail                      | scaffold pronto | scaffold + 8 test (DSN ancora esterno)     |
+| E2E suite per monoliti                          | smoke canary    | **3 spec reali pronti per @regression**    |
+| 45 call-site `supabase.functions.invoke` legacy | 0 migrati       | **8 migrati, 37 residui (strangler)**      |
+| PR open                                         | gh CLI assente  | gh CLI ancora assente — link manuale       |
 
 Resta strutturalmente debito tecnico in: 13 monoliti >500 LOC (refactor
 proper richiede ora che lo scaffolding E2E venga riempito con suite
@@ -1195,6 +1236,7 @@ baseline (cleanup file-per-file), 37 call-site supabase legacy
 ## Sessione #23 — "COSA MANCA?? Strangler completo + primo refactor monolite" (2026-04-08)
 
 Chiusura dei 4 punti aperti elencati in fondo a sess #22:
+
 1. **37 call-site `supabase.functions.invoke` residui** → migrati al 100%
 2. **13 monoliti >500 LOC** → primo refactor su FiltersDrawer (1300→1114 LOC)
 3. **1497 no-explicit-any baseline** → cleanup mirato su `lib/api/*` (8 fix)
@@ -1228,10 +1270,10 @@ strutturato (Vol. II §4.5, §11.4).
 Estrazione conservativa (no behavioural diff) sotto
 `src/components/global/filters-drawer/`:
 
-| File nuovo | Contenuto | LOC |
-|---|---|---|
+| File nuovo     | Contenuto                                                                                           | LOC |
+| -------------- | --------------------------------------------------------------------------------------------------- | --- |
 | `constants.ts` | 22 array di filtri (`COCKPIT_*`, `CRM_*`, `NETWORK_*`, `EMAIL_*`, `ATTIVITA_*`, `WS_CHIPS`, `FLAG`) | 165 |
-| `shared.tsx` | Primitive UI riusabili `FilterSection`, `ChipGroup`, `Chip` | 51 |
+| `shared.tsx`   | Primitive UI riusabili `FilterSection`, `ChipGroup`, `Chip`                                         | 51  |
 
 Il file principale ora importa via barrel-style. Riduzione netta **186
 LOC dal monolite** preservando ogni stringa, ogni icona, ogni shape.
@@ -1262,16 +1304,16 @@ una suite di test su quei file è disponibile).
   refactor di FiltersDrawer non rompe nessun test)
 - `vite build`: **OK** (22.35s, manualChunks invariati, index 311 KB)
 - `grep -rn "supabase\.functions\.invoke" src/ | grep -v invokeEdge.ts |
-  grep -v ".test."`: **0**
+grep -v ".test."`: **0**
 
 ### Stato finale dei punti aperti del recovery
 
-| Voce sess #22 | Stato sess #23 |
-|---|---|
-| 37 call-site `supabase.functions.invoke` residui | **0 (37 migrati)** |
-| 13 monoliti >500 LOC | **12** (FiltersDrawer ridotto a 1114, ancora >500 ma -186 LOC; primo passo strangler) |
-| 1497 no-explicit-any baseline | **1489** (-8 sui file di confine API, baseline) |
-| PR open via gh CLI | `gh` non installabile in sandbox (`apt-get` blocca `no new privileges`); rimane link manuale `https://github.com/tmwe-dev/wca-network-navigator/compare/main...recovery/wca-network-navigator?expand=1` |
+| Voce sess #22                                    | Stato sess #23                                                                                                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 37 call-site `supabase.functions.invoke` residui | **0 (37 migrati)**                                                                                                                                                                                      |
+| 13 monoliti >500 LOC                             | **12** (FiltersDrawer ridotto a 1114, ancora >500 ma -186 LOC; primo passo strangler)                                                                                                                   |
+| 1497 no-explicit-any baseline                    | **1489** (-8 sui file di confine API, baseline)                                                                                                                                                         |
+| PR open via gh CLI                               | `gh` non installabile in sandbox (`apt-get` blocca `no new privileges`); rimane link manuale `https://github.com/tmwe-dev/wca-network-navigator/compare/main...recovery/wca-network-navigator?expand=1` |
 
 Il recovery è ora **strutturalmente coerente con Vol. II al 100% sui
 contratti API e l'error handling** (zero call-site bypassano `invokeEdge`,

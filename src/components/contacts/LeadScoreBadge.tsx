@@ -28,9 +28,19 @@ export function LeadScoreBadge({ score, breakdown, size = "sm" }: Props) {
 
   const content = (
     <div className="flex items-center gap-1.5">
-      <span className={cn("text-[10px] font-bold tabular-nums", s >= 61 ? "text-emerald-400" : s >= 31 ? "text-amber-400" : "text-destructive")}>{s}</span>
+      <span
+        className={cn(
+          "text-[10px] font-bold tabular-nums",
+          s >= 61 ? "text-emerald-400" : s >= 31 ? "text-amber-400" : "text-destructive",
+        )}
+      >
+        {s}
+      </span>
       <div className={cn(width, height, "rounded-full bg-muted/50 overflow-hidden")}>
-        <div className={cn("h-full rounded-full transition-all", getScoreColor(s))} style={{ width: `${Math.min(s, 100)}%` }} />
+        <div
+          className={cn("h-full rounded-full transition-all", getScoreColor(s))}
+          style={{ width: `${Math.min(s, 100)}%` }}
+        />
       </div>
     </div>
   );
@@ -41,7 +51,9 @@ export function LeadScoreBadge({ score, breakdown, size = "sm" }: Props) {
     <Tooltip>
       <TooltipTrigger asChild>{content}</TooltipTrigger>
       <TooltipContent className="text-[10px] space-y-0.5 max-w-48">
-        <p className="font-semibold mb-1">Score {s}/100 — {getScoreLabel(s)}</p>
+        <p className="font-semibold mb-1">
+          Score {s}/100 — {getScoreLabel(s)}
+        </p>
         {Object.entries(breakdown).map(([k, v]) => (
           <div key={k} className="flex justify-between gap-2">
             <span className="text-muted-foreground">{k}</span>

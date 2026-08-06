@@ -11,29 +11,37 @@ Queste policy vivono in TypeScript e bloccano l'AI a runtime. **L'Harmonizer non
 ## Policy in `src/v2/agent/policy/hardGuards.ts`
 
 ### `FORBIDDEN_TABLES`
+
 Tabelle assolutamente vietate alle scritture AI: `auth.users`, `auth.sessions`, `user_roles`, `authorized_users`, `vault.secrets`, `supabase_functions`, `storage.objects`.
 
 ### `AI_WRITABLE_TABLES` (whitelist)
+
 Solo queste tabelle accettano scritture AI: `activities`, `ai_conversations`, `ai_daily_plans`, `ai_memory`, `ai_pending_actions`, `ai_work_plans`, `agent_tasks`, `channel_messages`, `email_drafts`, `imported_contacts`, `kb_entries`, `mission_actions`, `outreach_queue`, `outreach_schedules`, `partners`, `partner_contacts`.
 
 ### `APPROVAL_REQUIRED_TOOLS`
+
 Tool che richiedono approvazione esplicita prima dell'esecuzione: `send_email`, `send_whatsapp`, `send_linkedin`, `execute_bulk_outreach`, `schedule_campaign`, `update_partner_status_bulk`, `update_contact_status_bulk`.
 
 ### `assertNotDestructive()`
+
 Blocca qualsiasi azione che inizi con `delete`, `drop`, `truncate`. Se un gap propone "elimina X" → `code_policy`.
 
 ### Bulk caps
+
 `DEFAULT_BULK_CAP=5` (auto-approvabile fino a 5 record), `MAX_BULK_CAP_HARD=100` (mai oltre, neanche con conferma).
 
 ## Policy da `mem://constraints/`
 
 ### `no-physical-delete`
+
 Trigger DB intercetta DELETE su tabelle business e lo trasforma in soft delete (`deleted_at = now()`). Mai bypassabile.
 
 ### `no-wca-download-ai`
+
 Gli agenti AI non devono proporre o orchestrare download/scansioni WCA. Solo arricchimento e deep search.
 
 ### `email-download-integrity`
+
 Codice di download/sync email è intoccabile da AI. Modifiche solo dallo sviluppatore.
 
 ## Policy in `src/v2/lib/feature-flags.ts` (selezionate)

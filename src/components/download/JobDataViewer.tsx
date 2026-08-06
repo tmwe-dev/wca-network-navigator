@@ -1,16 +1,26 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { findPartnersWithContactsByWcaIds, findDirectoryCacheMembers } from "@/data/downloadViews";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import {
-  ChevronLeft, ChevronRight, Mail, Phone, Smartphone, User,
-  CheckCircle, XCircle, Building2, Loader2, MapPin, Radio, ExternalLink, AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Mail,
+  Phone,
+  Smartphone,
+  User,
+  CheckCircle,
+  XCircle,
+  Building2,
+  Loader2,
+  MapPin,
+  Radio,
+  ExternalLink,
+  AlertTriangle,
 } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
 import { queryKeys } from "@/lib/queryKeys";
@@ -49,7 +59,15 @@ interface PartnerWithContacts {
 type AnimPhase = "idle" | "exit" | "enter";
 
 export function JobDataViewer({
-  open, onOpenChange, processedIds, failedIds = [], countryName, countryCode, networkName, isDark, jobStatus,
+  open,
+  onOpenChange,
+  processedIds,
+  failedIds = [],
+  countryName,
+  countryCode,
+  networkName,
+  isDark,
+  jobStatus,
 }: JobDataViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [liveMode, setLiveMode] = useState(false);
@@ -127,8 +145,8 @@ export function JobDataViewer({
   const total = partners?.length ?? 0;
   const current = partners?.[currentIndex];
 
-  const goPrev = () => setCurrentIndex(i => Math.max(0, i - 1));
-  const goNext = () => setCurrentIndex(i => Math.min(total - 1, i + 1));
+  const goPrev = () => setCurrentIndex((i) => Math.max(0, i - 1));
+  const goNext = () => setCurrentIndex((i) => Math.min(total - 1, i + 1));
 
   const bg = "bg-card backdrop-blur-xl border-border text-foreground";
   const subColor = "text-muted-foreground";
@@ -188,8 +206,7 @@ export function JobDataViewer({
           <>
             {/* Navigation + Live toggle */}
             <div className="flex items-center justify-between gap-2">
-              <Button size="sm" variant="outline" onClick={goPrev}
-                disabled={currentIndex === 0 || liveMode}>
+              <Button size="sm" variant="outline" onClick={goPrev} disabled={currentIndex === 0 || liveMode}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
 
@@ -219,8 +236,7 @@ export function JobDataViewer({
                     />
                   </div>
                 )}
-                <Button size="sm" variant="outline" onClick={goNext}
-                  disabled={currentIndex >= total - 1 || liveMode}>
+                <Button size="sm" variant="outline" onClick={goNext} disabled={currentIndex >= total - 1 || liveMode}>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -246,8 +262,18 @@ export function JobDataViewer({
                         WCA #{current.wca_id}
                       </div>
                       <div className="flex flex-col gap-1 mt-2">
-                        <DataRow icon={<Mail className="w-3.5 h-3.5" />} value={current.email} label="Email" isDark={isDark} />
-                        <DataRow icon={<Phone className="w-3.5 h-3.5" />} value={current.phone} label="Telefono" isDark={isDark} />
+                        <DataRow
+                          icon={<Mail className="w-3.5 h-3.5" />}
+                          value={current.email}
+                          label="Email"
+                          isDark={isDark}
+                        />
+                        <DataRow
+                          icon={<Phone className="w-3.5 h-3.5" />}
+                          value={current.phone}
+                          label="Telefono"
+                          isDark={isDark}
+                        />
                       </div>
                     </div>
 
@@ -257,29 +283,40 @@ export function JobDataViewer({
                         <User className="w-3.5 h-3.5 inline mr-1" />
                         Contatti ({current.partner_contacts?.length || 0})
                       </p>
-                      {(!current.partner_contacts || current.partner_contacts.length === 0) ? (
-                        <div className={`text-xs py-3 text-center ${dimColor}`}>
-                          Nessun contatto salvato
-                        </div>
+                      {!current.partner_contacts || current.partner_contacts.length === 0 ? (
+                        <div className={`text-xs py-3 text-center ${dimColor}`}>Nessun contatto salvato</div>
                       ) : (
                         <div className="space-y-2">
-                          {current.partner_contacts.map(c => (
+                          {current.partner_contacts.map((c) => (
                             <div key={c.id} className={`p-3 rounded-lg border ${cardBg} space-y-1.5`}>
                               <div className="flex items-center gap-2">
-                       <span className={`text-sm font-medium ${bodyColor}`}>{c.name}</span>
+                                <span className={`text-sm font-medium ${bodyColor}`}>{c.name}</span>
                                 {c.is_primary && (
                                   <Badge className="text-[10px] px-1.5 py-0 bg-primary/20 text-primary border-primary/30">
                                     Primario
                                   </Badge>
                                 )}
                               </div>
-                              {c.title && (
-                                <p className={`text-xs ${dimColor}`}>{c.title}</p>
-                              )}
+                              {c.title && <p className={`text-xs ${dimColor}`}>{c.title}</p>}
                               <div className="flex flex-col gap-1 mt-1">
-                                <DataRow icon={<Mail className="w-3 h-3" />} value={c.email} label="Email" isDark={isDark} />
-                                <DataRow icon={<Phone className="w-3 h-3" />} value={c.direct_phone} label="Telefono" isDark={isDark} />
-                                <DataRow icon={<Smartphone className="w-3 h-3" />} value={c.mobile} label="Mobile" isDark={isDark} />
+                                <DataRow
+                                  icon={<Mail className="w-3 h-3" />}
+                                  value={c.email}
+                                  label="Email"
+                                  isDark={isDark}
+                                />
+                                <DataRow
+                                  icon={<Phone className="w-3 h-3" />}
+                                  value={c.direct_phone}
+                                  label="Telefono"
+                                  isDark={isDark}
+                                />
+                                <DataRow
+                                  icon={<Smartphone className="w-3 h-3" />}
+                                  value={c.mobile}
+                                  label="Mobile"
+                                  isDark={isDark}
+                                />
                               </div>
                             </div>
                           ))}
@@ -295,13 +332,14 @@ export function JobDataViewer({
                           Profili non scaricati ({failedIds.length})
                         </p>
                         <div className="space-y-1.5">
-                          {failedIds.map(fid => (
-                            <div key={fid} className={`flex items-center justify-between p-2 rounded-lg border ${cardBg}`}>
+                          {failedIds.map((fid) => (
+                            <div
+                              key={fid}
+                              className={`flex items-center justify-between p-2 rounded-lg border ${cardBg}`}
+                            >
                               <div className="flex items-center gap-2">
                                 <XCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                                <span className={`text-xs ${bodyColor}`}>
-                                  {failedNames?.get(fid) || `WCA ${fid}`}
-                                </span>
+                                <span className={`text-xs ${bodyColor}`}>{failedNames?.get(fid) || `WCA ${fid}`}</span>
                                 <span className={`text-[10px] font-mono ${dimColor}`}>#{fid}</span>
                               </div>
                               <a
@@ -329,7 +367,17 @@ export function JobDataViewer({
   );
 }
 
-function DataRow({ icon, value, label, isDark: _isDark }: { icon: React.ReactNode; value: string | null; label: string; isDark: boolean }) {
+function DataRow({
+  icon,
+  value,
+  label,
+  isDark: _isDark,
+}: {
+  icon: React.ReactNode;
+  value: string | null;
+  label: string;
+  isDark: boolean;
+}) {
   const has = !!value && value.trim().length > 0;
   return (
     <div className="flex items-center gap-2 text-xs">

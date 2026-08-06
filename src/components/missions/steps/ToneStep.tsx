@@ -25,11 +25,16 @@ export function ToneStep({ data, onChange }: MissionStepProps) {
       <div>
         <p className="text-sm font-medium mb-2">Livello di qualità</p>
         <div className="space-y-2">
-          {qualities.map(q => (
-            <button key={q.key} onClick={() => set({ quality: q.key })}
+          {qualities.map((q) => (
+            <button
+              key={q.key}
+              onClick={() => set({ quality: q.key })}
               className={`w-full p-3 rounded-xl border text-left transition-all ${
-                tc.quality === q.key ? "bg-primary/10 border-primary ring-1 ring-primary/30" : "bg-muted/30 border-border hover:border-primary/50"
-              }`}>
+                tc.quality === q.key
+                  ? "bg-primary/10 border-primary ring-1 ring-primary/30"
+                  : "bg-muted/30 border-border hover:border-primary/50"
+              }`}
+            >
               <div className="text-sm font-medium">{q.label}</div>
               <div className="text-xs text-muted-foreground">{q.desc}</div>
             </button>
@@ -39,22 +44,36 @@ export function ToneStep({ data, onChange }: MissionStepProps) {
       <div>
         <p className="text-sm font-medium mb-2">Tono</p>
         <div className="flex flex-wrap gap-2">
-          {tones.map(t => (
-            <button key={t} onClick={() => set({ tone: t })}
+          {tones.map((t) => (
+            <button
+              key={t}
+              onClick={() => set({ tone: t })}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all capitalize ${
-                tc.tone === t ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 text-foreground border-border hover:border-primary/50"
-              }`}>{t}</button>
+                tc.tone === t
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted/50 text-foreground border-border hover:border-primary/50"
+              }`}
+            >
+              {t}
+            </button>
           ))}
         </div>
       </div>
       <div>
         <p className="text-sm font-medium mb-2">Lingua</p>
         <div className="flex flex-wrap gap-2">
-          {languages.map(l => (
-            <button key={l.key} onClick={() => set({ language: l.key })}
+          {languages.map((l) => (
+            <button
+              key={l.key}
+              onClick={() => set({ language: l.key })}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                tc.language === l.key ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 text-foreground border-border hover:border-primary/50"
-              }`}>{l.label}</button>
+                tc.language === l.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted/50 text-foreground border-border hover:border-primary/50"
+              }`}
+            >
+              {l.label}
+            </button>
           ))}
         </div>
       </div>

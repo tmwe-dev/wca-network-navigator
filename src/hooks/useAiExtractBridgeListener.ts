@@ -41,10 +41,7 @@ export function useAiExtractBridgeListener() {
           snapshot?: unknown;
           pageType?: string;
         };
-        const edgeFn =
-          payload.channel === "linkedin"
-            ? "linkedin-ai-extract"
-            : "whatsapp-ai-extract";
+        const edgeFn = payload.channel === "linkedin" ? "linkedin-ai-extract" : "whatsapp-ai-extract";
         try {
           const body: Record<string, unknown> = { mode: payload.mode };
           if (payload.html !== undefined) body.html = payload.html;
@@ -108,10 +105,7 @@ export function useAiExtractBridgeListener() {
       // ── LinkedIn credentials lookup ──────────────────────
       if (data.direction === "from-extension-li-creds-request") {
         try {
-          const res = await supabase.functions.invoke(
-            "get-linkedin-credentials",
-            { body: {} },
-          );
+          const res = await supabase.functions.invoke("get-linkedin-credentials", { body: {} });
           if (res.error) throw res.error;
           window.postMessage(
             {

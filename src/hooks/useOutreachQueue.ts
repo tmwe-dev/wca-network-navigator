@@ -42,7 +42,9 @@ export function useOutreachQueue() {
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
 
-  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   const updateStatus = async (id: string, status: string, error?: string) => {
     const updates: Record<string, unknown> = { status, processed_at: new Date().toISOString() };
@@ -53,7 +55,7 @@ export function useOutreachQueue() {
   const incrementAttempts = async (id: string) => {
     const data = await getOutreachItemField(id, "attempts");
     if (data) {
-      await updateOutreachItem(id, { attempts: ((toRecord(data)).attempts as number || 0) + 1 });
+      await updateOutreachItem(id, { attempts: ((toRecord(data).attempts as number) || 0) + 1 });
     }
   };
 
@@ -71,16 +73,16 @@ export function useOutreachQueue() {
         await updateStatus(item.id, "failed", `Canale non supportato: ${item.channel}`);
         return false;
       }
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const userId = session?.user?.id ?? item.created_by;
       if (!userId) {
         await updateStatus(item.id, "failed", "Sessione utente assente");
         return false;
       }
       const actionType =
-        item.channel === "whatsapp" ? "send_whatsapp" :
-        item.channel === "linkedin" ? "send_linkedin" :
-        "send_email";
+        item.channel === "whatsapp" ? "send_whatsapp" : item.channel === "linkedin" ? "send_linkedin" : "send_email";
       const payload: Record<string, unknown> = {
         recipient: item.recipient_email || item.recipient_phone || item.recipient_linkedin_url,
         message_text: item.body,
@@ -105,7 +107,10 @@ export function useOutreachQueue() {
         return false;
       }
       await updateStatus(item.id, "transferred");
-      toast({ title: "📥 Messaggio in coda di approvazione", description: `${item.channel.toUpperCase()} → ${item.recipient_name || item.recipient_email || item.recipient_phone}` });
+      toast({
+        title: "📥 Messaggio in coda di approvazione",
+        description: `${item.channel.toUpperCase()} → ${item.recipient_name || item.recipient_email || item.recipient_phone}`,
+      });
       return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -121,17 +126,23 @@ export function useOutreachQueue() {
     setProcessing(true);
     try {
       const items = await findPendingOutreachItems(5);
-      if (!items || items.length === 0) { setPendingCount(0); return; }
+      if (!items || items.length === 0) {
+        setPendingCount(0);
+        return;
+      }
       setPendingCount(items.length);
       for (const item of items as QueueItem[]) {
         if (pausedRef.current) break;
         await processItem(item);
         const delay = CHANNEL_DELAYS[item.channel] || 3000;
-        await new Promise(r => setTimeout(r, delay));
+        await new Promise((r) => setTimeout(r, delay));
       }
     } catch (err: unknown) {
       log.error("processQueue failed", { error: err instanceof Error ? err.message : String(err) });
-    } finally { processingRef.current = false; setProcessing(false); }
+    } finally {
+      processingRef.current = false;
+      setProcessing(false);
+    }
   }, [processItem]);
 
   // Hold latest processQueue in a ref so polling/realtime effects can stay
@@ -139,10 +150,14 @@ export function useOutreachQueue() {
   // unstable bridge returns (wa/li). Without this, the interval was being
   // re-created on every render, piling up dozens of concurrent fetches.
   const processQueueRef = useRef(processQueue);
-  useEffect(() => { processQueueRef.current = processQueue; }, [processQueue]);
+  useEffect(() => {
+    processQueueRef.current = processQueue;
+  }, [processQueue]);
 
   useEffect(() => {
-    const tick = () => { if (!pausedRef.current) processQueueRef.current(); };
+    const tick = () => {
+      if (!pausedRef.current) processQueueRef.current();
+    };
     const interval = setInterval(tick, 5000);
     tick();
     return () => clearInterval(interval);
@@ -155,7 +170,9 @@ export function useOutreachQueue() {
         if (!pausedRef.current) setTimeout(() => processQueueRef.current(), 1000);
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return { pendingCount, processing, paused, setPaused };

@@ -63,8 +63,12 @@ function groupMessages(
       if (!groupMap.has(pid)) {
         const p = partnerMap.get(pid)!;
         groupMap.set(pid, {
-          partnerId: pid, companyName: p.company_name, email: p.email,
-          leadStatus: p.lead_status, messages: [], unreadCount: 0,
+          partnerId: pid,
+          companyName: p.company_name,
+          email: p.email,
+          leadStatus: p.lead_status,
+          messages: [],
+          unreadCount: 0,
           latestDate: msg.email_date || msg.created_at,
         });
       }
@@ -82,7 +86,8 @@ function groupMessages(
           companyName: contact.name || addr,
           email: contact.email,
           leadStatus: contact.lead_status || "contacted",
-          messages: [], unreadCount: 0,
+          messages: [],
+          unreadCount: 0,
           latestDate: msg.email_date || msg.created_at,
           isImportedContact: true,
         });
@@ -94,7 +99,7 @@ function groupMessages(
   }
 
   return Array.from(groupMap.values()).sort(
-    (a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime()
+    (a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime(),
   );
 }
 
@@ -108,8 +113,28 @@ describe("HOLDING_STATUSES", () => {
 describe("deduplicateMessages", () => {
   it("deduplicates by message_id_external", () => {
     const msgs: MockMessage[] = [
-      { id: "1", message_id_external: "ext-1", subject: "A", from_address: "a@b.com", email_date: null, created_at: "2025-01-01", partner_id: null, read_at: null, direction: "inbound" },
-      { id: "2", message_id_external: "ext-1", subject: "A", from_address: "a@b.com", email_date: null, created_at: "2025-01-01", partner_id: null, read_at: null, direction: "inbound" },
+      {
+        id: "1",
+        message_id_external: "ext-1",
+        subject: "A",
+        from_address: "a@b.com",
+        email_date: null,
+        created_at: "2025-01-01",
+        partner_id: null,
+        read_at: null,
+        direction: "inbound",
+      },
+      {
+        id: "2",
+        message_id_external: "ext-1",
+        subject: "A",
+        from_address: "a@b.com",
+        email_date: null,
+        created_at: "2025-01-01",
+        partner_id: null,
+        read_at: null,
+        direction: "inbound",
+      },
     ];
     expect(deduplicateMessages(msgs)).toHaveLength(1);
     expect(deduplicateMessages(msgs)[0].id).toBe("1");
@@ -117,16 +142,56 @@ describe("deduplicateMessages", () => {
 
   it("deduplicates by fallback key (subject|from|date)", () => {
     const msgs: MockMessage[] = [
-      { id: "1", message_id_external: null, subject: "Hello", from_address: "x@y.com", email_date: "2025-06-01", created_at: "2025-06-01", partner_id: null, read_at: null, direction: "inbound" },
-      { id: "2", message_id_external: null, subject: "Hello", from_address: "x@y.com", email_date: "2025-06-01", created_at: "2025-06-01", partner_id: null, read_at: null, direction: "inbound" },
+      {
+        id: "1",
+        message_id_external: null,
+        subject: "Hello",
+        from_address: "x@y.com",
+        email_date: "2025-06-01",
+        created_at: "2025-06-01",
+        partner_id: null,
+        read_at: null,
+        direction: "inbound",
+      },
+      {
+        id: "2",
+        message_id_external: null,
+        subject: "Hello",
+        from_address: "x@y.com",
+        email_date: "2025-06-01",
+        created_at: "2025-06-01",
+        partner_id: null,
+        read_at: null,
+        direction: "inbound",
+      },
     ];
     expect(deduplicateMessages(msgs)).toHaveLength(1);
   });
 
   it("keeps messages with different external IDs", () => {
     const msgs: MockMessage[] = [
-      { id: "1", message_id_external: "ext-1", subject: "A", from_address: "a@b.com", email_date: null, created_at: "2025-01-01", partner_id: null, read_at: null, direction: "inbound" },
-      { id: "2", message_id_external: "ext-2", subject: "A", from_address: "a@b.com", email_date: null, created_at: "2025-01-01", partner_id: null, read_at: null, direction: "inbound" },
+      {
+        id: "1",
+        message_id_external: "ext-1",
+        subject: "A",
+        from_address: "a@b.com",
+        email_date: null,
+        created_at: "2025-01-01",
+        partner_id: null,
+        read_at: null,
+        direction: "inbound",
+      },
+      {
+        id: "2",
+        message_id_external: "ext-2",
+        subject: "A",
+        from_address: "a@b.com",
+        email_date: null,
+        created_at: "2025-01-01",
+        partner_id: null,
+        read_at: null,
+        direction: "inbound",
+      },
     ];
     expect(deduplicateMessages(msgs)).toHaveLength(2);
   });
@@ -135,8 +200,28 @@ describe("deduplicateMessages", () => {
 describe("groupMessages", () => {
   it("sorts groups by latestDate descending", () => {
     const msgs: MockMessage[] = [
-      { id: "1", message_id_external: "e1", subject: "Old", from_address: "a@b.com", email_date: "2025-01-01", created_at: "2025-01-01", partner_id: "p1", read_at: null, direction: "inbound" },
-      { id: "2", message_id_external: "e2", subject: "New", from_address: "c@d.com", email_date: "2025-06-01", created_at: "2025-06-01", partner_id: "p2", read_at: null, direction: "inbound" },
+      {
+        id: "1",
+        message_id_external: "e1",
+        subject: "Old",
+        from_address: "a@b.com",
+        email_date: "2025-01-01",
+        created_at: "2025-01-01",
+        partner_id: "p1",
+        read_at: null,
+        direction: "inbound",
+      },
+      {
+        id: "2",
+        message_id_external: "e2",
+        subject: "New",
+        from_address: "c@d.com",
+        email_date: "2025-06-01",
+        created_at: "2025-06-01",
+        partner_id: "p2",
+        read_at: null,
+        direction: "inbound",
+      },
     ];
     const pMap = new Map([
       ["p1", { id: "p1", company_name: "OldCo", email: "a@b.com", lead_status: "contacted" }],
@@ -149,7 +234,17 @@ describe("groupMessages", () => {
 
   it("marks groups from contactEmailMap as isImportedContact", () => {
     const msgs: MockMessage[] = [
-      { id: "1", message_id_external: "e1", subject: "Hi", from_address: "import@test.com", email_date: "2025-06-01", created_at: "2025-06-01", partner_id: null, read_at: null, direction: "inbound" },
+      {
+        id: "1",
+        message_id_external: "e1",
+        subject: "Hi",
+        from_address: "import@test.com",
+        email_date: "2025-06-01",
+        created_at: "2025-06-01",
+        partner_id: null,
+        read_at: null,
+        direction: "inbound",
+      },
     ];
     const contactMap = new Map([
       ["import@test.com", { id: "c1", name: "Import Guy", email: "import@test.com", lead_status: "contacted" }],

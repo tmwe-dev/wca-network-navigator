@@ -32,9 +32,7 @@ Deno.serve(async (req) => {
   });
 
   try {
-    const sinceIso = new Date(
-      Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000,
-    ).toISOString();
+    const sinceIso = new Date(Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000).toISOString();
 
     // ── Pass 1: solo IDs (payload minimo) per scartare già classificati ──
     const { data: idRows, error: idErr } = await supabase
@@ -46,18 +44,12 @@ Deno.serve(async (req) => {
       .limit(500);
 
     if (idErr) {
-      return new Response(
-        JSON.stringify({ error: "select_failed", details: idErr.message }),
-        { status: 500, headers },
-      );
+      return new Response(JSON.stringify({ error: "select_failed", details: idErr.message }), { status: 500, headers });
     }
 
     const candidateIds = (idRows ?? []).map((r) => r.id as string);
     if (candidateIds.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, processed: 0, candidates: 0 }),
-        { status: 200, headers },
-      );
+      return new Response(JSON.stringify({ success: true, processed: 0, candidates: 0 }), { status: 200, headers });
     }
 
     const { data: alreadyClassified } = await supabase
@@ -65,19 +57,15 @@ Deno.serve(async (req) => {
       .select("message_id")
       .in("message_id", candidateIds);
 
-    const classifiedSet = new Set(
-      (alreadyClassified ?? []).map((r) => r.message_id as string),
-    );
+    const classifiedSet = new Set((alreadyClassified ?? []).map((r) => r.message_id as string));
 
-    const unclassifiedIds = candidateIds
-      .filter((id) => !classifiedSet.has(id))
-      .slice(0, BATCH_SIZE);
+    const unclassifiedIds = candidateIds.filter((id) => !classifiedSet.has(id)).slice(0, BATCH_SIZE);
 
     if (unclassifiedIds.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, processed: 0, candidates: candidateIds.length }),
-        { status: 200, headers },
-      );
+      return new Response(JSON.stringify({ success: true, processed: 0, candidates: candidateIds.length }), {
+        status: 200,
+        headers,
+      });
     }
 
     // ── Pass 2: payload completo solo per i 50 effettivi ──
@@ -87,10 +75,10 @@ Deno.serve(async (req) => {
       .in("id", unclassifiedIds);
 
     if (fullErr || !toProcess) {
-      return new Response(
-        JSON.stringify({ error: "select_full_failed", details: fullErr?.message ?? "no rows" }),
-        { status: 500, headers },
-      );
+      return new Response(JSON.stringify({ error: "select_full_failed", details: fullErr?.message ?? "no rows" }), {
+        status: 500,
+        headers,
+      });
     }
 
     let dispatched = 0;
@@ -117,7 +105,11 @@ Deno.serve(async (req) => {
           }),
         });
         // Consume body to avoid resource leak (Deno).
-        try { await resp.text(); } catch { /* noop */ }
+        try {
+          await resp.text();
+        } catch {
+          /* noop */
+        }
         if (resp.ok) dispatched += 1;
       } catch {
         // continue
@@ -134,9 +126,9 @@ Deno.serve(async (req) => {
       { status: 200, headers },
     );
   } catch (e) {
-    return new Response(
-      JSON.stringify({ error: "batch_failed", details: (e as Error).message }),
-      { status: 500, headers },
-    );
+    return new Response(JSON.stringify({ error: "batch_failed", details: (e as Error).message }), {
+      status: 500,
+      headers,
+    });
   }
 });

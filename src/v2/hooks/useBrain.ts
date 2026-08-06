@@ -22,11 +22,41 @@ export interface BrainChannelDef {
 }
 
 export const BRAIN_CHANNELS: readonly BrainChannelDef[] = [
-  { id: "email",    label: "Email",     emoji: "✉️", contexts: ["email", "email-quality", "post-send", "outreach"], agentHints: ["email", "mail", "outreach"] },
-  { id: "whatsapp", label: "WhatsApp",  emoji: "💬", contexts: ["whatsapp", "multi-channel"], agentHints: ["whatsapp", "wa "] },
-  { id: "linkedin", label: "LinkedIn",  emoji: "🔗", contexts: ["linkedin", "multi-channel"], agentHints: ["linkedin", "li "] },
-  { id: "voice",    label: "Voce",      emoji: "🎙", contexts: ["general", "conversation-summary"], agentHints: ["voice", "vocal", "aurora", "robin"] },
-  { id: "command",  label: "Command",   emoji: "🧭", contexts: ["command", "agent-loop", "general", "classification"], agentHints: ["luca", "director", "command", "assistant"] },
+  {
+    id: "email",
+    label: "Email",
+    emoji: "✉️",
+    contexts: ["email", "email-quality", "post-send", "outreach"],
+    agentHints: ["email", "mail", "outreach"],
+  },
+  {
+    id: "whatsapp",
+    label: "WhatsApp",
+    emoji: "💬",
+    contexts: ["whatsapp", "multi-channel"],
+    agentHints: ["whatsapp", "wa "],
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    emoji: "🔗",
+    contexts: ["linkedin", "multi-channel"],
+    agentHints: ["linkedin", "li "],
+  },
+  {
+    id: "voice",
+    label: "Voce",
+    emoji: "🎙",
+    contexts: ["general", "conversation-summary"],
+    agentHints: ["voice", "vocal", "aurora", "robin"],
+  },
+  {
+    id: "command",
+    label: "Command",
+    emoji: "🧭",
+    contexts: ["command", "agent-loop", "general", "classification"],
+    agentHints: ["luca", "director", "command", "assistant"],
+  },
 ] as const;
 
 export type BrainToneId = "formale" | "cordiale" | "diretto" | "caloroso" | "tecnico";
@@ -40,11 +70,11 @@ export interface BrainToneDef {
 }
 
 export const BRAIN_TONES: readonly BrainToneDef[] = [
-  { id: "formale",  label: "Formale",   emoji: "🎩", match: ["formal", "formale", "professional", "professionale"] },
-  { id: "cordiale", label: "Cordiale",  emoji: "🤝", match: ["cordial", "cordiale", "friendly", "amichevole"] },
-  { id: "diretto",  label: "Diretto",   emoji: "🎯", match: ["direct", "diretto", "concise", "sintetico", "decisivo"] },
-  { id: "caloroso", label: "Caloroso",  emoji: "🔥", match: ["warm", "caloroso", "empathetic", "empatico"] },
-  { id: "tecnico",  label: "Tecnico",   emoji: "🔧", match: ["technical", "tecnico", "expert", "esperto"] },
+  { id: "formale", label: "Formale", emoji: "🎩", match: ["formal", "formale", "professional", "professionale"] },
+  { id: "cordiale", label: "Cordiale", emoji: "🤝", match: ["cordial", "cordiale", "friendly", "amichevole"] },
+  { id: "diretto", label: "Diretto", emoji: "🎯", match: ["direct", "diretto", "concise", "sintetico", "decisivo"] },
+  { id: "caloroso", label: "Caloroso", emoji: "🔥", match: ["warm", "caloroso", "empathetic", "empatico"] },
+  { id: "tecnico", label: "Tecnico", emoji: "🔧", match: ["technical", "tecnico", "expert", "esperto"] },
 ] as const;
 
 export function useBrainAgents() {

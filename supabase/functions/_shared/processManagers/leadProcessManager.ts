@@ -22,13 +22,7 @@
  */
 
 import { applyLeadStatusChange, type ApplyLeadStatusResult } from "../leadStatusGuard.ts";
-import {
-  eventBus,
-  createEvent,
-  publishAndPersist,
-  type LeadStatus,
-  type EventActor,
-} from "../domainEvents.ts";
+import { eventBus, createEvent, publishAndPersist, type LeadStatus, type EventActor } from "../domainEvents.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = import("../supabaseClient.ts").AnySupabaseClient;
@@ -258,11 +252,7 @@ export class LeadProcessManager {
    * Handle outbound for business_card — apply new→first_touch_sent.
    * Routes through applyLeadStatusChange guard for audit trail + validation.
    */
-  async onBusinessCardOutbound(
-    businessCardId: string,
-    channel: string,
-    source: string,
-  ): Promise<{ applied: boolean }> {
+  async onBusinessCardOutbound(businessCardId: string, channel: string, source: string): Promise<{ applied: boolean }> {
     const { data: bc } = await this.supabase
       .from("business_cards")
       .select("lead_status")
@@ -328,7 +318,9 @@ export class LeadProcessManager {
     const operativeCategories = ["quote_request", "booking_request", "rate_inquiry"];
     if (operativeCategories.includes(category)) {
       // Publish qualification signal (non auto-apply — Director decides)
-      const event = createEvent("lead.qualification_signal", userId,
+      const event = createEvent(
+        "lead.qualification_signal",
+        userId,
         { type: "system", name: "LeadProcessManager" },
         {
           partnerId,
@@ -341,7 +333,9 @@ export class LeadProcessManager {
     }
 
     if (category === "conversion_signal" || actionSuggested === "confirm_conversion") {
-      const event = createEvent("lead.conversion_signal", userId,
+      const event = createEvent(
+        "lead.conversion_signal",
+        userId,
         { type: "system", name: "LeadProcessManager" },
         {
           partnerId,
@@ -434,11 +428,7 @@ export class LeadProcessManager {
     return ((data as { lead_status: string | null }).lead_status || "new") as LeadStatus;
   }
 
-  private async loadLeadContext(
-    partnerId: string,
-    userId: string,
-    currentStatus: LeadStatus,
-  ): Promise<LeadContext> {
+  private async loadLeadContext(partnerId: string, userId: string, currentStatus: LeadStatus): Promise<LeadContext> {
     // Last outbound
     const { data: lastOut } = await this.supabase
       .from("activities")
@@ -524,7 +514,11 @@ export class LeadProcessManager {
       userId,
       actor: { type: opts.actor.type as "user" | "ai_agent" | "system" | "cron", name: opts.actor.name },
       decisionOrigin: (opts.decisionOrigin || (opts.autoApplied ? "system_trigger" : "manual")) as
-        "manual" | "ai_auto" | "ai_approved" | "system_cron" | "system_trigger",
+        | "manual"
+        | "ai_auto"
+        | "ai_approved"
+        | "system_cron"
+        | "system_trigger",
       trigger: opts.trigger,
       reason: opts.reason,
       metadata: opts.metadata,
@@ -532,17 +526,23 @@ export class LeadProcessManager {
 
     if (result.applied) {
       // Publish domain event
-      const event = createEvent("lead.status_changed", userId, opts.actor, {
-        partnerId,
-        previousStatus: previousStatus as LeadStatus,
-        newStatus: newStatus as LeadStatus,
-        trigger: opts.trigger,
-        autoApplied: opts.autoApplied,
-      }, {
-        correlationId: opts.correlationId,
-        causationId: opts.causationId,
-        metadata: opts.metadata,
-      });
+      const event = createEvent(
+        "lead.status_changed",
+        userId,
+        opts.actor,
+        {
+          partnerId,
+          previousStatus: previousStatus as LeadStatus,
+          newStatus: newStatus as LeadStatus,
+          trigger: opts.trigger,
+          autoApplied: opts.autoApplied,
+        },
+        {
+          correlationId: opts.correlationId,
+          causationId: opts.causationId,
+          metadata: opts.metadata,
+        },
+      );
 
       await publishAndPersist(this.supabase, event);
     }

@@ -47,14 +47,16 @@ const TONE_CLS: Record<ChipTone, string> = {
 };
 
 export function UnifiedListToolbar({
-  counter, chips, onOpenFilters, sort, actions, className,
+  counter,
+  chips,
+  onOpenFilters,
+  sort,
+  actions,
+  className,
 }: Props): React.ReactElement {
   return (
     <div
-      className={cn(
-        "flex items-center gap-2 px-3 py-1.5 border-b border-border/30 shrink-0 min-h-[36px]",
-        className,
-      )}
+      className={cn("flex items-center gap-2 px-3 py-1.5 border-b border-border/30 shrink-0 min-h-[36px]", className)}
       data-testid="unified-list-toolbar"
     >
       {/* Counter (clickable → opens drawer) */}

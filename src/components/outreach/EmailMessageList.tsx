@@ -23,13 +23,13 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
   const parentRef = useRef<HTMLDivElement>(null);
   const sourceIds = useMemo(() => {
     const ids: { partnerId?: string; contactId?: string }[] = [];
-    messages.forEach(msg => {
+    messages.forEach((msg) => {
       if (msg.partner_id) ids.push({ partnerId: msg.partner_id });
       if (msg.source_type === "imported_contact" && msg.source_id) ids.push({ contactId: msg.source_id });
     });
     return ids;
   }, [messages]);
-  
+
   const holdingSet = useHoldingPatternEmails(sourceIds);
   const { getGroup } = useEmailAddressGroups();
   const markRead = useMarkAsRead();
@@ -37,7 +37,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
 
   const displayMessages = useMemo(() => {
     if (!holdingFilter) return messages;
-    return messages.filter(msg => {
+    return messages.filter((msg) => {
       if (msg.partner_id && holdingSet.has(`p:${msg.partner_id}`)) return true;
       if (msg.source_type === "imported_contact" && msg.source_id && holdingSet.has(`c:${msg.source_id}`)) return true;
       return false;
@@ -70,10 +70,10 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
           const { brand } = extractSenderBrand(msg.from_address || "");
           const displayDate = msg.email_date || msg.created_at;
           const secondaryLine = msg.from_address || msg.to_address || "(mittente sconosciuto)";
-          
-          const isInHolding = msg.partner_id 
+
+          const isInHolding = msg.partner_id
             ? holdingSet.has(`p:${msg.partner_id}`)
-            : (msg.source_type === "imported_contact" && msg.source_id)
+            : msg.source_type === "imported_contact" && msg.source_id
               ? holdingSet.has(`c:${msg.source_id}`)
               : false;
 
@@ -87,16 +87,19 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
           const displayBrand = partner?.company_alias || partner?.company_name || brand;
           // Sorgente (partner / contact) mostrata come piccolo chip in alto a destra,
           // sopra al group badge — niente più chip “buttati al centro card”.
-          const sourceChip = (msg.source_type && msg.source_type !== "unknown") ? (
-            <span
-              className="inline-flex items-center gap-1 rounded border border-border/60 bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-              title={msg.source_type.replace("_", " ")}
-            >
-              {msg.source_type === "partner"
-                ? <Building2 className="h-2.5 w-2.5" />
-                : <User className="h-2.5 w-2.5" />}
-            </span>
-          ) : null;
+          const sourceChip =
+            msg.source_type && msg.source_type !== "unknown" ? (
+              <span
+                className="inline-flex items-center gap-1 rounded border border-border/60 bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                title={msg.source_type.replace("_", " ")}
+              >
+                {msg.source_type === "partner" ? (
+                  <Building2 className="h-2.5 w-2.5" />
+                ) : (
+                  <User className="h-2.5 w-2.5" />
+                )}
+              </span>
+            ) : null;
 
           const groupBadge = (
             <div className="flex items-center gap-1">
@@ -111,10 +114,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                   title={`Gruppo: ${group.groupName}`}
                 >
                   {groupColor && (
-                    <span
-                      className="inline-block h-2 w-2 rounded-full"
-                      style={{ backgroundColor: groupColor }}
-                    />
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: groupColor }} />
                   )}
                   {group.groupIcon && <span>{group.groupIcon}</span>}
                   <span className="max-w-[140px] truncate">{group.groupName}</span>
@@ -144,17 +144,17 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
           const chips = (
             <>
               {partner?.lead_status && (
-                <span
-                  className={cn(chipBase, "border-border bg-muted text-foreground")}
-                  title="Stato commerciale"
-                >
+                <span className={cn(chipBase, "border-border bg-muted text-foreground")} title="Stato commerciale">
                   <Gauge className="h-3 w-3" />
                   {partner.lead_status.replace(/_/g, " ")}
                 </span>
               )}
               {enriched && (
                 <span
-                  className={cn(chipBase, "border-emerald-500/30 bg-emerald-500/10 font-medium text-emerald-600 dark:text-emerald-400")}
+                  className={cn(
+                    chipBase,
+                    "border-emerald-500/30 bg-emerald-500/10 font-medium text-emerald-600 dark:text-emerald-400",
+                  )}
                   title={partner ? "Partner conosciuto a sistema" : "Mittente arricchito (intel dominio)"}
                 >
                   <CheckCheck className="h-3 w-3" />

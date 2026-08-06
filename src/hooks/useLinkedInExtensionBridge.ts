@@ -30,7 +30,9 @@ export function useLinkedInExtensionBridge() {
   const availableRef = useRef(false);
   const configSentRef = useRef(false);
 
-  useEffect(() => { availableRef.current = isAvailable; }, [isAvailable]);
+  useEffect(() => {
+    availableRef.current = isAvailable;
+  }, [isAvailable]);
 
   // Send Supabase config to extension when it becomes available
   const sendConfig = useCallback(() => {
@@ -40,13 +42,16 @@ export function useLinkedInExtensionBridge() {
     if (!url || !key) return;
     configSentRef.current = true;
     log.debug("→ sending setConfig to extension");
-    window.postMessage({
-      direction: "from-webapp-li",
-      action: "setConfig",
-      requestId: `li_setConfig_${Date.now()}`,
-      supabaseUrl: url,
-      supabaseAnonKey: key,
-    }, window.location.origin);
+    window.postMessage(
+      {
+        direction: "from-webapp-li",
+        action: "setConfig",
+        requestId: `li_setConfig_${Date.now()}`,
+        supabaseUrl: url,
+        supabaseAnonKey: key,
+      },
+      window.location.origin,
+    );
   }, []);
 
   // Listen for responses from the content script
@@ -56,10 +61,26 @@ export function useLinkedInExtensionBridge() {
       const data = event.data;
       if (!data || data.direction !== "from-extension-li") return;
 
-      if (data.action === "contentScriptReady") { setIsAvailable(true); sendConfig(); return; }
-      if (data.action === "extensionDead") { setIsAvailable(false); configSentRef.current = false; return; }
-      if (data.action === "ping" && data.response?.success) { setIsAvailable(true); sendConfig(); return; }
-      if (data.action === "ping" && data.response?.error) { setIsAvailable(false); configSentRef.current = false; return; }
+      if (data.action === "contentScriptReady") {
+        setIsAvailable(true);
+        sendConfig();
+        return;
+      }
+      if (data.action === "extensionDead") {
+        setIsAvailable(false);
+        configSentRef.current = false;
+        return;
+      }
+      if (data.action === "ping" && data.response?.success) {
+        setIsAvailable(true);
+        sendConfig();
+        return;
+      }
+      if (data.action === "ping" && data.response?.error) {
+        setIsAvailable(false);
+        configSentRef.current = false;
+        return;
+      }
 
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
@@ -75,16 +96,21 @@ export function useLinkedInExtensionBridge() {
   // Continuous polling
   useEffect(() => {
     const doPing = () => {
-      window.postMessage({
-        direction: "from-webapp-li",
-        action: "ping",
-        requestId: `poll_li_${Date.now()}`,
-      }, window.location.origin);
+      window.postMessage(
+        {
+          direction: "from-webapp-li",
+          action: "ping",
+          requestId: `poll_li_${Date.now()}`,
+        },
+        window.location.origin,
+      );
     };
 
     doPing();
     pollRef.current = setInterval(doPing, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
 
   const sendMessage = useCallback(
@@ -119,49 +145,33 @@ export function useLinkedInExtensionBridge() {
         window.postMessage({ direction: "from-webapp-li", action, requestId, ...payload }, window.location.origin);
       });
     },
-    []
+    [],
   );
 
-  const verifySession = useCallback(
-    () => sendMessage("verifySession", {}, 30000),
-    [sendMessage]
-  );
+  const verifySession = useCallback(() => sendMessage("verifySession", {}, 30000), [sendMessage]);
 
-  const syncCookie = useCallback(
-    () => sendMessage("syncCookie", {}, 15000),
-    [sendMessage]
-  );
+  const syncCookie = useCallback(() => sendMessage("syncCookie", {}, 15000), [sendMessage]);
 
-  const autoLogin = useCallback(
-    () => sendMessage("autoLogin", {}, 60000),
-    [sendMessage]
-  );
+  const autoLogin = useCallback(() => sendMessage("autoLogin", {}, 60000), [sendMessage]);
 
-  const extractProfile = useCallback(
-    (url: string) => sendMessage("extractProfile", { url }, 30000),
-    [sendMessage]
-  );
+  const extractProfile = useCallback((url: string) => sendMessage("extractProfile", { url }, 30000), [sendMessage]);
 
   const sendDirectMessage = useCallback(
-    (profileUrl: string, message: string) =>
-      sendMessage("sendMessage", { url: profileUrl, message }, 120000),
-    [sendMessage]
+    (profileUrl: string, message: string) => sendMessage("sendMessage", { url: profileUrl, message }, 120000),
+    [sendMessage],
   );
 
   const sendConnectionRequest = useCallback(
     (profileUrl: string, note?: string) =>
       sendMessage("sendConnectionRequest", { url: profileUrl, note: note || "" }, 120000),
-    [sendMessage]
+    [sendMessage],
   );
 
-  const searchProfile = useCallback(
-    (query: string) => sendMessage("searchProfile", { query }, 30000),
-    [sendMessage]
-  );
+  const searchProfile = useCallback((query: string) => sendMessage("searchProfile", { query }, 30000), [sendMessage]);
 
   const learnDom = useCallback(
     (pageType?: string) => sendMessage("learnDom", { pageType: pageType || "profile" }, 60000),
-    [sendMessage]
+    [sendMessage],
   );
 
   /**
@@ -178,7 +188,10 @@ export function useLinkedInExtensionBridge() {
       // Use cache if fresh
       const now = Date.now();
       if (now - lastAuthCheck.current.ts < cacheTtlMs) {
-        return { ok: lastAuthCheck.current.ok, reason: lastAuthCheck.current.ok ? "cached_ok" : "cached_not_authenticated" };
+        return {
+          ok: lastAuthCheck.current.ok,
+          reason: lastAuthCheck.current.ok ? "cached_ok" : "cached_not_authenticated",
+        };
       }
       try {
         const r = await sendMessage("verifySession", {}, 30000);
@@ -191,8 +204,19 @@ export function useLinkedInExtensionBridge() {
         return { ok: false, reason: "verify_error" };
       }
     },
-    [sendMessage]
+    [sendMessage],
   );
 
-  return { isAvailable, verifySession, syncCookie, autoLogin, extractProfile, sendDirectMessage, sendConnectionRequest, searchProfile, learnDom, ensureAuthenticated };
+  return {
+    isAvailable,
+    verifySession,
+    syncCookie,
+    autoLogin,
+    extractProfile,
+    sendDirectMessage,
+    sendConnectionRequest,
+    searchProfile,
+    learnDom,
+    ensureAuthenticated,
+  };
 }

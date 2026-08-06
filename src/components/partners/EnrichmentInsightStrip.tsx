@@ -41,7 +41,9 @@ const COUNTRY_ALIASES: Readonly<Record<string, string>> = {
 };
 
 function stringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
 }
 
 function numberValue(value: unknown): number | null {
@@ -61,7 +63,12 @@ function firstText(...values: readonly unknown[]): string | null {
 }
 
 function countryCodeFromLabel(label: string): string | null {
-  const clean = label.toLowerCase().replace(/[()]/g, " ").split(/[/,;|]/)[0]?.trim() ?? "";
+  const clean =
+    label
+      .toLowerCase()
+      .replace(/[()]/g, " ")
+      .split(/[/,;|]/)[0]
+      ?.trim() ?? "";
   return COUNTRY_ALIASES[clean] || resolveCountryCode(label) || resolveCountryCode(clean);
 }
 
@@ -71,33 +78,46 @@ function routeItems(value: unknown): RouteLike[] {
     if (typeof item === "string" && item.trim()) return [{ from: item.trim(), to: "" }];
     if (!item || typeof item !== "object") return [];
     const route = item as Record<string, unknown>;
-    return [{
-      from: textValue(route.from) ?? undefined,
-      origin: textValue(route.origin) ?? undefined,
-      to: textValue(route.to) ?? undefined,
-      destination: textValue(route.destination) ?? undefined,
-    }];
+    return [
+      {
+        from: textValue(route.from) ?? undefined,
+        origin: textValue(route.origin) ?? undefined,
+        to: textValue(route.to) ?? undefined,
+        destination: textValue(route.destination) ?? undefined,
+      },
+    ];
   });
 }
 
-export function EnrichmentInsightStrip({ partner, enrichment, services, branchCountries, networks = [] }: Props): React.ReactElement | null {
-  const companyProfile = enrichment?.company_profile && typeof enrichment.company_profile === "object"
-    ? enrichment.company_profile as Record<string, unknown>
-    : null;
-  const aiProfile = enrichment?.ai_profile && typeof enrichment.ai_profile === "object"
-    ? enrichment.ai_profile as Record<string, unknown>
-    : null;
+export function EnrichmentInsightStrip({
+  partner,
+  enrichment,
+  services,
+  branchCountries,
+  networks = [],
+}: Props): React.ReactElement | null {
+  const companyProfile =
+    enrichment?.company_profile && typeof enrichment.company_profile === "object"
+      ? (enrichment.company_profile as Record<string, unknown>)
+      : null;
+  const aiProfile =
+    enrichment?.ai_profile && typeof enrichment.ai_profile === "object"
+      ? (enrichment.ai_profile as Record<string, unknown>)
+      : null;
 
-  const summary = firstText(enrichment?.summary_it, enrichment?.summary_en, aiProfile?.summary, companyProfile?.recent_news);
+  const summary = firstText(
+    enrichment?.summary_it,
+    enrichment?.summary_en,
+    aiProfile?.summary,
+    companyProfile?.recent_news,
+  );
   const markets = stringArray(enrichment?.key_markets).slice(0, 8);
   const routes = routeItems(enrichment?.key_routes).slice(0, 4);
   const additionalServices = stringArray(enrichment?.additional_services).slice(0, 8);
   const specialties = stringArray(companyProfile?.specialties).slice(0, 8);
-  const serviceLabels = [...new Set([
-    ...services.map((service) => service.service_category),
-    ...additionalServices,
-    ...specialties,
-  ])].slice(0, 12);
+  const serviceLabels = [
+    ...new Set([...services.map((service) => service.service_category), ...additionalServices, ...specialties]),
+  ].slice(0, 12);
 
   const warehouseSqm = numberValue(enrichment?.warehouse_sqm);
   const employeeCount = numberValue(enrichment?.employee_count) ?? numberValue(companyProfile?.employee_count_estimate);
@@ -105,16 +125,24 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
   const fleetDetails = textValue(enrichment?.fleet_details);
   const warehouseDetails = textValue(enrichment?.warehouse_details);
   const hasWarehouses = enrichment?.has_warehouses === true || warehouseSqm != null || !!warehouseDetails;
-  const hasData = !!summary || serviceLabels.length > 0 || markets.length > 0 || routes.length > 0 || hasWarehouses || employeeCount != null || foundingYear != null || !!fleetDetails || branchCountries.length > 0 || networks.length > 0;
+  const hasData =
+    !!summary ||
+    serviceLabels.length > 0 ||
+    markets.length > 0 ||
+    routes.length > 0 ||
+    hasWarehouses ||
+    employeeCount != null ||
+    foundingYear != null ||
+    !!fleetDetails ||
+    branchCountries.length > 0 ||
+    networks.length > 0;
 
   if (!hasData && !partner.enriched_at) return null;
 
   return (
     <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5 space-y-2.5">
       {/* Row 1 — pitch sintetico */}
-      {summary && (
-        <p className="text-[11px] leading-relaxed text-foreground line-clamp-2">{summary}</p>
-      )}
+      {summary && <p className="text-[11px] leading-relaxed text-foreground line-clamp-2">{summary}</p>}
 
       {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
       {serviceLabels.length > 0 && (
@@ -144,13 +172,13 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
               label={warehouseSqm ? `${warehouseSqm.toLocaleString("it-IT")} m² warehouse` : "Warehousing"}
             />
           )}
-          {employeeCount != null && <Metric icon={Users} label={`${employeeCount.toLocaleString("it-IT")} dipendenti`} />}
+          {employeeCount != null && (
+            <Metric icon={Users} label={`${employeeCount.toLocaleString("it-IT")} dipendenti`} />
+          )}
           {foundingYear != null && <Metric icon={Calendar} label={`Dal ${foundingYear}`} />}
           {fleetDetails && <Metric icon={Truck} label={fleetDetails} />}
           {warehouseDetails && (
-            <span className="text-[10px] leading-snug text-muted-foreground italic max-w-full">
-              {warehouseDetails}
-            </span>
+            <span className="text-[10px] leading-snug text-muted-foreground italic max-w-full">{warehouseDetails}</span>
           )}
         </div>
       )}
@@ -180,7 +208,10 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
               const fromCode = countryCodeFromLabel(from);
               const toCode = countryCodeFromLabel(to);
               return (
-                <span key={`${from}-${to}-${index}`} className="inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] text-foreground">
+                <span
+                  key={`${from}-${to}-${index}`}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] text-foreground"
+                >
                   <span className="text-sm leading-none">{fromCode ? getCountryFlag(fromCode) : "🌍"}</span>
                   <span className="max-w-[7rem] truncate text-foreground">{from || "—"}</span>
                   <ArrowRight className="h-3 w-3 text-primary shrink-0" strokeWidth={1.8} />
@@ -206,13 +237,14 @@ export function EnrichmentInsightStrip({ partner, enrichment, services, branchCo
           </div>
         </div>
       )}
-
     </div>
   );
 }
 
 function CountryChip({
-  code, label, highlight = false,
+  code,
+  label,
+  highlight = false,
 }: {
   readonly code: string | null;
   readonly label: string;
@@ -222,7 +254,13 @@ function CountryChip({
     ? "border-primary/35 bg-primary/10 text-foreground"
     : "border-primary/15 bg-card/60 text-foreground";
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-medium", toneClasses)} title={highlight ? `Filiale · ${label}` : label}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-medium",
+        toneClasses,
+      )}
+      title={highlight ? `Filiale · ${label}` : label}
+    >
       <span className="text-sm leading-none">{code ? getCountryFlag(code) : "🌍"}</span>
       <span className="max-w-[8rem] truncate">{label}</span>
     </span>
@@ -239,7 +277,10 @@ function NetworkBadge({ name }: { readonly name: string }): React.ReactElement {
     .slice(0, 4)
     .toUpperCase();
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 pl-1 pr-2 py-0.5 text-[10px] font-medium text-foreground" title={name}>
+    <span
+      className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 pl-1 pr-2 py-0.5 text-[10px] font-medium text-foreground"
+      title={name}
+    >
       <span className="inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded bg-primary/80 px-1 text-[9px] font-extrabold tracking-tight text-primary-foreground">
         {initials}
       </span>
@@ -248,9 +289,22 @@ function NetworkBadge({ name }: { readonly name: string }): React.ReactElement {
   );
 }
 
-function Metric({ icon: Icon, label, className }: { readonly icon: React.ElementType; readonly label: string; readonly className?: string }): React.ReactElement {
+function Metric({
+  icon: Icon,
+  label,
+  className,
+}: {
+  readonly icon: React.ElementType;
+  readonly label: string;
+  readonly className?: string;
+}): React.ReactElement {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] font-medium text-foreground", className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] font-medium text-foreground",
+        className,
+      )}
+    >
       <Icon className="h-3.5 w-3.5 text-primary" strokeWidth={1.6} />
       {label}
     </span>

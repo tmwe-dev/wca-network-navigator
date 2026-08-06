@@ -41,13 +41,21 @@ export function CanvasNetworkBadges({ networks, linkedinLinks, showNetworks, sho
   return (
     <>
       {networks.length > 0 && (
-        <div className={cn("transition-all duration-500", showNetworks ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
+        <div
+          className={cn(
+            "transition-all duration-500",
+            showNetworks ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+          )}
+        >
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Network WCA</h3>
           <div className="flex flex-wrap gap-2">
             {networks.map((net) => {
               const logo = getNetworkLogo(net);
               return (
-                <div key={net} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border text-xs">
+                <div
+                  key={net}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border text-xs"
+                >
                   {logo && <OptimizedImage src={logo} alt="" className="w-5 h-5 object-contain" />}
                   <span className="text-muted-foreground">{net}</span>
                 </div>
@@ -57,11 +65,22 @@ export function CanvasNetworkBadges({ networks, linkedinLinks, showNetworks, sho
         </div>
       )}
       {linkedinLinks.length > 0 && (
-        <div className={cn("transition-all duration-500", showLinkedin ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
+        <div
+          className={cn(
+            "transition-all duration-500",
+            showLinkedin ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+          )}
+        >
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">LinkedIn</h3>
           <div className="flex flex-wrap gap-2">
             {linkedinLinks.map((l, i) => (
-              <a key={i} href={l.url} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+              <a
+                key={i}
+                href={l.url}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+              >
                 <Linkedin className="w-3 h-3" />
                 {l.name}
               </a>

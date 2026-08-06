@@ -3,13 +3,7 @@
  */
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, useDismissNotification, useMarkAsRead } from "@/hooks/useNotifications";
@@ -130,10 +124,7 @@ export default function NotificationsPage(): React.ReactElement {
         <ScrollArea className="max-h-[60vh] border border-border rounded-lg bg-card">
           <div className="divide-y">
             {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className="hover:bg-muted/50 transition-colors"
-              >
+              <div key={notification.id} className="hover:bg-muted/50 transition-colors">
                 <NotificationItem
                   notification={notification}
                   onDismiss={handleDismiss}

@@ -65,55 +65,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus((prev) => (prev === "unauthenticated" ? prev : "unauthenticated"));
   }, []);
 
-  const applyValidatedSession = useCallback(async (currentSession: Session | null) => {
-    if (!currentSession) {
-      setUnauthenticated();
-      return;
-    }
+  const applyValidatedSession = useCallback(
+    async (currentSession: Session | null) => {
+      if (!currentSession) {
+        setUnauthenticated();
+        return;
+      }
 
-    // Trust the local JWT if it has a valid structure and isn't expired
-    if (!currentSession.user?.id || !hasValidAccessToken(currentSession.access_token)) {
-      clearSupabaseAuthStorage();
-      await supabase.auth.signOut({ scope: "local" });
-      setUnauthenticated();
-      return;
-    }
+      // Trust the local JWT if it has a valid structure and isn't expired
+      if (!currentSession.user?.id || !hasValidAccessToken(currentSession.access_token)) {
+        clearSupabaseAuthStorage();
+        await supabase.auth.signOut({ scope: "local" });
+        setUnauthenticated();
+        return;
+      }
 
-    // Session JWT is valid — authenticate immediately without network call.
-    // getUser() was causing sign-outs when the DB returned 503.
-    // Stable-reference emit: skip setState if access_token is unchanged so that
-    // TOKEN_REFRESHED / cross-tab visibility events don't cascade re-renders
-    // through every consumer of useAuth() (which would re-trigger refetchInterval
-    // on dependent React Query hooks).
-    setSession((prev) =>
-      prev?.access_token === currentSession.access_token ? prev : currentSession,
-    );
-    setUser((prev) =>
-      prev?.id === currentSession.user.id ? prev : currentSession.user,
-    );
-    setStatus((prev) => (prev === "authenticated" ? prev : "authenticated"));
-  }, [setUnauthenticated]);
+      // Session JWT is valid — authenticate immediately without network call.
+      // getUser() was causing sign-outs when the DB returned 503.
+      // Stable-reference emit: skip setState if access_token is unchanged so that
+      // TOKEN_REFRESHED / cross-tab visibility events don't cascade re-renders
+      // through every consumer of useAuth() (which would re-trigger refetchInterval
+      // on dependent React Query hooks).
+      setSession((prev) => (prev?.access_token === currentSession.access_token ? prev : currentSession));
+      setUser((prev) => (prev?.id === currentSession.user.id ? prev : currentSession.user));
+      setStatus((prev) => (prev === "authenticated" ? prev : "authenticated"));
+    },
+    [setUnauthenticated],
+  );
 
   useEffect(() => {
     let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (authEvent, currentSession) => {
-        if (!mounted) return;
-        setEvent(authEvent);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((authEvent, currentSession) => {
+      if (!mounted) return;
+      setEvent(authEvent);
 
-        // When a fresh session arrives (login or refreshed token), clear any
-        // circuit breakers that were opened by the previous corrupted JWT —
-        // otherwise edge function calls keep failing for up to 60s after login.
-        if (authEvent === "SIGNED_IN" || authEvent === "TOKEN_REFRESHED") {
-          if (currentSession?.access_token) {
-            resetAllCircuits();
-          }
+      // When a fresh session arrives (login or refreshed token), clear any
+      // circuit breakers that were opened by the previous corrupted JWT —
+      // otherwise edge function calls keep failing for up to 60s after login.
+      if (authEvent === "SIGNED_IN" || authEvent === "TOKEN_REFRESHED") {
+        if (currentSession?.access_token) {
+          resetAllCircuits();
         }
+      }
 
-        void applyValidatedSession(currentSession);
-      },
-    );
+      void applyValidatedSession(currentSession);
+    });
 
     supabase.auth.getSession().then(({ data: { session: initial } }) => {
       if (!mounted || initialised.current) return;
@@ -127,11 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [applyValidatedSession]);
 
-  return (
-    <AuthContext.Provider value={{ session, user, status, event }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ session, user, status, event }}>{children}</AuthContext.Provider>;
 }
 
 /**

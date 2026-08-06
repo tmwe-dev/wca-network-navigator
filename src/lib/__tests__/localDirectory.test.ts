@@ -4,7 +4,9 @@ import { getDirectory, saveDirectory, createDirectory } from "@/lib/localDirecto
 vi.mock("@/lib/log", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 
 describe("localDirectory", () => {
-  beforeEach(() => { localStorage.clear(); });
+  beforeEach(() => {
+    localStorage.clear();
+  });
 
   it("getDirectory returns null for non-existent country", () => {
     expect(getDirectory("XX")).toBeNull();
@@ -12,9 +14,11 @@ describe("localDirectory", () => {
 
   it("saveDirectory stores and retrieves directory", () => {
     const dir = {
-      countryCode: "IT", countryName: "Italy",
+      countryCode: "IT",
+      countryName: "Italy",
       ids: { "1": "pending" as const, "2": "done" as const },
-      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     saveDirectory("IT", dir);
     const result = getDirectory("IT");

@@ -10,11 +10,30 @@ export function extractDomainFromEmail(from: string): string | null {
 
 /** Known personal email providers — no company logo available */
 const PERSONAL_PROVIDERS = new Set([
-  "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com",
-  "icloud.com", "me.com", "mac.com", "aol.com", "protonmail.com",
-  "fastmail.com", "zoho.com", "mail.com", "yandex.com", "gmx.com",
-  "libero.it", "virgilio.it", "alice.it", "tin.it", "tiscali.it",
-  "yahoo.it", "hotmail.it", "outlook.it", "pec.it",
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "live.com",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "aol.com",
+  "protonmail.com",
+  "fastmail.com",
+  "zoho.com",
+  "mail.com",
+  "yandex.com",
+  "gmx.com",
+  "libero.it",
+  "virgilio.it",
+  "alice.it",
+  "tin.it",
+  "tiscali.it",
+  "yahoo.it",
+  "hotmail.it",
+  "outlook.it",
+  "pec.it",
 ]);
 
 export function isPersonalEmail(domain: string): boolean {
@@ -23,16 +42,76 @@ export function isPersonalEmail(domain: string): boolean {
 
 /** Country TLD → flag emoji mapping */
 const TLD_TO_FLAG: Record<string, string> = {
-  ae: "🇦🇪", ar: "🇦🇷", at: "🇦🇹", au: "🇦🇺", be: "🇧🇪", bg: "🇧🇬", br: "🇧🇷",
-  ca: "🇨🇦", ch: "🇨🇭", cl: "🇨🇱", cn: "🇨🇳", co: "🇨🇴", cz: "🇨🇿", de: "🇩🇪",
-  dk: "🇩🇰", ee: "🇪🇪", eg: "🇪🇬", es: "🇪🇸", fi: "🇫🇮", fr: "🇫🇷", gb: "🇬🇧",
-  gr: "🇬🇷", hk: "🇭🇰", hr: "🇭🇷", hu: "🇭🇺", id: "🇮🇩", ie: "🇮🇪", il: "🇮🇱",
-  in: "🇮🇳", is: "🇮🇸", it: "🇮🇹", jp: "🇯🇵", ke: "🇰🇪", kr: "🇰🇷", kw: "🇰🇼",
-  lt: "🇱🇹", lu: "🇱🇺", lv: "🇱🇻", ma: "🇲🇦", mx: "🇲🇽", my: "🇲🇾", ng: "🇳🇬",
-  nl: "🇳🇱", no: "🇳🇴", nz: "🇳🇿", om: "🇴🇲", pe: "🇵🇪", ph: "🇵🇭", pk: "🇵🇰",
-  pl: "🇵🇱", pt: "🇵🇹", qa: "🇶🇦", ro: "🇷🇴", rs: "🇷🇸", ru: "🇷🇺", sa: "🇸🇦",
-  se: "🇸🇪", sg: "🇸🇬", si: "🇸🇮", sk: "🇸🇰", th: "🇹🇭", tn: "🇹🇳", tr: "🇹🇷",
-  tw: "🇹🇼", ua: "🇺🇦", uk: "🇬🇧", us: "🇺🇸", uy: "🇺🇾", vn: "🇻🇳", za: "🇿🇦",
+  ae: "🇦🇪",
+  ar: "🇦🇷",
+  at: "🇦🇹",
+  au: "🇦🇺",
+  be: "🇧🇪",
+  bg: "🇧🇬",
+  br: "🇧🇷",
+  ca: "🇨🇦",
+  ch: "🇨🇭",
+  cl: "🇨🇱",
+  cn: "🇨🇳",
+  co: "🇨🇴",
+  cz: "🇨🇿",
+  de: "🇩🇪",
+  dk: "🇩🇰",
+  ee: "🇪🇪",
+  eg: "🇪🇬",
+  es: "🇪🇸",
+  fi: "🇫🇮",
+  fr: "🇫🇷",
+  gb: "🇬🇧",
+  gr: "🇬🇷",
+  hk: "🇭🇰",
+  hr: "🇭🇷",
+  hu: "🇭🇺",
+  id: "🇮🇩",
+  ie: "🇮🇪",
+  il: "🇮🇱",
+  in: "🇮🇳",
+  is: "🇮🇸",
+  it: "🇮🇹",
+  jp: "🇯🇵",
+  ke: "🇰🇪",
+  kr: "🇰🇷",
+  kw: "🇰🇼",
+  lt: "🇱🇹",
+  lu: "🇱🇺",
+  lv: "🇱🇻",
+  ma: "🇲🇦",
+  mx: "🇲🇽",
+  my: "🇲🇾",
+  ng: "🇳🇬",
+  nl: "🇳🇱",
+  no: "🇳🇴",
+  nz: "🇳🇿",
+  om: "🇴🇲",
+  pe: "🇵🇪",
+  ph: "🇵🇭",
+  pk: "🇵🇰",
+  pl: "🇵🇱",
+  pt: "🇵🇹",
+  qa: "🇶🇦",
+  ro: "🇷🇴",
+  rs: "🇷🇸",
+  ru: "🇷🇺",
+  sa: "🇸🇦",
+  se: "🇸🇪",
+  sg: "🇸🇬",
+  si: "🇸🇮",
+  sk: "🇸🇰",
+  th: "🇹🇭",
+  tn: "🇹🇳",
+  tr: "🇹🇷",
+  tw: "🇹🇼",
+  ua: "🇺🇦",
+  uk: "🇬🇧",
+  us: "🇺🇸",
+  uy: "🇺🇾",
+  vn: "🇻🇳",
+  za: "🇿🇦",
 };
 
 export function getFlagFromDomain(domain: string): string | null {
@@ -69,7 +148,14 @@ interface CompanyLogoProps {
  * Displays a company logo from Clearbit with InitialsAvatar fallback.
  * Optionally shows a country flag based on the email TLD.
  */
-export function CompanyLogo({ domain: domainProp, email, name, size = 32, className, showFlag = false }: CompanyLogoProps) {
+export function CompanyLogo({
+  domain: domainProp,
+  email,
+  name,
+  size = 32,
+  className,
+  showFlag = false,
+}: CompanyLogoProps) {
   const rawDomain = domainProp || (email ? extractDomainFromEmail(email) : null);
   const rootDomain = rawDomain ? getRootDomain(rawDomain) : null;
   // Try root domain for logo lookup (better Clearbit hit rate)
@@ -158,15 +244,12 @@ function InitialsAvatar({ name, size, className }: { name: string; size: number;
     .split(/[\s.]+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() || "")
+    .map((w) => w[0]?.toUpperCase() || "")
     .join("");
 
   return (
     <div
-      className={cn(
-        "rounded bg-muted flex items-center justify-center text-muted-foreground font-semibold",
-        className
-      )}
+      className={cn("rounded bg-muted flex items-center justify-center text-muted-foreground font-semibold", className)}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
       {initials || "?"}
@@ -178,7 +261,12 @@ function InitialsAvatar({ name, size, className }: { name: string; size: number;
  * Inline company logo — only renders if Clearbit has a real logo.
  * No fallback, no placeholder. Returns null if no logo found.
  */
-export function CompanyLogoInline({ domain: domainProp, email, size = 18, className }: {
+export function CompanyLogoInline({
+  domain: domainProp,
+  email,
+  size = 18,
+  className,
+}: {
   domain?: string | null;
   email?: string | null;
   size?: number;
@@ -207,11 +295,15 @@ export function CompanyLogoInline({ domain: domainProp, email, size = 18, classN
       width={size}
       height={size}
       className={cn("rounded object-contain inline-block", className)}
-      onError={() => { setSrc("none"); logoCache.set(domain, "none"); }}
+      onError={() => {
+        setSrc("none");
+        logoCache.set(domain, "none");
+      }}
       onLoad={(e) => {
         const img = e.currentTarget;
         if (img.naturalWidth < 16 || img.naturalHeight < 16) {
-          setSrc("none"); logoCache.set(domain, "none");
+          setSrc("none");
+          logoCache.set(domain, "none");
         } else {
           logoCache.set(domain, "clearbit");
         }
@@ -225,7 +317,12 @@ export function CompanyLogoInline({ domain: domainProp, email, size = 18, classN
 /**
  * Standalone country flag from email TLD. Returns null if no flag found.
  */
-export function CountryFlag({ domain: domainProp, email, size = 22, className }: {
+export function CountryFlag({
+  domain: domainProp,
+  email,
+  size = 22,
+  className,
+}: {
   domain?: string | null;
   email?: string | null;
   size?: number;
@@ -234,5 +331,9 @@ export function CountryFlag({ domain: domainProp, email, size = 22, className }:
   const domain = domainProp || (email ? extractDomainFromEmail(email) : null);
   const flag = domain ? getFlagFromDomain(domain) : null;
   if (!flag) return null;
-  return <span className={cn("leading-none", className)} style={{ fontSize: size }}>{flag}</span>;
+  return (
+    <span className={cn("leading-none", className)} style={{ fontSize: size }}>
+      {flag}
+    </span>
+  );
 }

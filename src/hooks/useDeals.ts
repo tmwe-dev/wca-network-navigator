@@ -4,14 +4,7 @@
  * hook for optional deal linking; we return an empty list with no DB calls.
  */
 import type { Deal } from "@/types/deals";
-export type {
-  Deal,
-  DealActivity,
-  DealFilters,
-  DealStats,
-  DealStage,
-  DealWithRelations,
-} from "@/types/deals";
+export type { Deal, DealActivity, DealFilters, DealStats, DealStage, DealWithRelations } from "@/types/deals";
 
 export function useDeals() {
   return {

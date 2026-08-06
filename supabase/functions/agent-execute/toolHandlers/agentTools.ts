@@ -32,18 +32,12 @@ interface AgentTaskRow {
 export async function handleCreateAgentTask(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
-  let agentQuery = supabase
-    .from("agents")
-    .select("id, name")
-    .eq("user_id", userId);
+  let agentQuery = supabase.from("agents").select("id, name").eq("user_id", userId);
 
   if (args.agent_name) {
-    agentQuery = agentQuery.ilike(
-      "name",
-      `%${escapeLike(args.agent_name as string)}%`
-    );
+    agentQuery = agentQuery.ilike("name", `%${escapeLike(args.agent_name as string)}%`);
   } else if (args.agent_role) {
     agentQuery = agentQuery.eq("role", args.agent_role);
   }
@@ -65,8 +59,7 @@ export async function handleCreateAgentTask(
       user_id: userId,
       task_type: String(args.task_type || "research"),
       description: String(args.description),
-      target_filters:
-        (args.target_filters || {}) as Record<string, unknown>,
+      target_filters: (args.target_filters || {}) as Record<string, unknown>,
     })
     .select("id")
     .single();
@@ -86,13 +79,11 @@ export async function handleCreateAgentTask(
 export async function handleListAgentTasks(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let query = supabase
     .from("agent_tasks")
-    .select(
-      "id, agent_id, task_type, description, status, result_summary, created_at"
-    )
+    .select("id, agent_id, task_type, description, status, result_summary, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(Number(args.limit) || 30);
@@ -109,10 +100,7 @@ export async function handleListAgentTasks(
 
   const typedTasks = (tasks || []) as AgentTaskRow[];
   const agentIds = [...new Set(typedTasks.map((t) => t.agent_id))];
-  const { data: agentsData } = await supabase
-    .from("agents")
-    .select("id, name")
-    .in("id", agentIds);
+  const { data: agentsData } = await supabase.from("agents").select("id, name").in("id", agentIds);
 
   const nameMap: Record<string, string> = {};
   for (const a of (agentsData || []) as Array<{ id: string; name: string }>) {
@@ -126,19 +114,14 @@ export async function handleListAgentTasks(
 
   if (args.agent_name) {
     results = results.filter((t) =>
-      (t.agent_name as string)
-        .toLowerCase()
-        .includes(String(args.agent_name).toLowerCase())
+      (t.agent_name as string).toLowerCase().includes(String(args.agent_name).toLowerCase()),
     );
   }
 
   return { count: results.length, tasks: results };
 }
 
-export async function handleGetTeamStatus(
-  supabase: AnySupabaseClient,
-  userId: string
-): Promise<unknown> {
+export async function handleGetTeamStatus(supabase: AnySupabaseClient, userId: string): Promise<unknown> {
   const { data: agents } = await supabase
     .from("agents")
     .select("id, name, role, is_active, stats, avatar_emoji, updated_at")
@@ -151,15 +134,9 @@ export async function handleGetTeamStatus(
 
   const typedAgents = agents as AgentRow[];
   const agentIds = typedAgents.map((a) => a.id);
-  const { data: tasks } = await supabase
-    .from("agent_tasks")
-    .select("agent_id, status")
-    .in("agent_id", agentIds);
+  const { data: tasks } = await supabase.from("agent_tasks").select("agent_id, status").in("agent_id", agentIds);
 
-  const taskStats: Record<
-    string,
-    { pending: number; running: number; completed: number; failed: number }
-  > = {};
+  const taskStats: Record<string, { pending: number; running: number; completed: number; failed: number }> = {};
 
   for (const t of (tasks || []) as Array<{ agent_id: string; status: string }>) {
     if (!taskStats[t.agent_id]) {
@@ -171,14 +148,8 @@ export async function handleGetTeamStatus(
       };
     }
 
-    if (
-      taskStats[t.agent_id][
-        t.status as keyof typeof taskStats[string]
-      ] !== undefined
-    ) {
-      taskStats[t.agent_id][
-        t.status as keyof typeof taskStats[string]
-      ]++;
+    if (taskStats[t.agent_id][t.status as keyof (typeof taskStats)[string]] !== undefined) {
+      taskStats[t.agent_id][t.status as keyof (typeof taskStats)[string]]++;
     }
   }
 
@@ -205,7 +176,7 @@ export async function handleGetTeamStatus(
 export async function handleUpdateAgentPrompt(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const { data: agents } = await supabase
     .from("agents")
@@ -250,7 +221,7 @@ export async function handleUpdateAgentPrompt(
 export async function handleAddAgentKbEntry(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const { data: agents } = await supabase
     .from("agents")

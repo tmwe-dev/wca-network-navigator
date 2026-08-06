@@ -44,14 +44,16 @@ serve(async (req) => {
 
     if (pauseSettings?.value === "true") {
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 503,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
     const { original_html, edited_html, recipient_country, email_type } = await req.json();
     if (!original_html || !edited_html) {
       return new Response(JSON.stringify({ error: "original_html and edited_html required" }), {
-        status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -59,9 +61,8 @@ serve(async (req) => {
     const editedText = stripHtml(edited_html);
 
     // Quick heuristic: if texts are nearly identical, skip AI call
-    const lengthChangePct = originalText.length > 0
-      ? Math.round(((editedText.length - originalText.length) / originalText.length) * 100)
-      : 0;
+    const lengthChangePct =
+      originalText.length > 0 ? Math.round(((editedText.length - originalText.length) / originalText.length) * 100) : 0;
 
     if (Math.abs(lengthChangePct) < 10 && originalText.length > 0) {
       // Check word-level similarity
@@ -69,13 +70,16 @@ serve(async (req) => {
       const editWords = editedText.split(/\s+/).length;
       const wordDiff = Math.abs(origWords - editWords);
       if (wordDiff < 5) {
-        return new Response(JSON.stringify({
-          significance: "low",
-          length_change_pct: lengthChangePct,
-          tone_shift: null,
-          structural_changes: [],
-          suggested_memory: null,
-        }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+        return new Response(
+          JSON.stringify({
+            significance: "low",
+            length_change_pct: lengthChangePct,
+            tone_shift: null,
+            structural_changes: [],
+            suggested_memory: null,
+          }),
+          { headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
       }
     }
 
@@ -115,25 +119,30 @@ Analizza e rispondi SOLO con JSON valido:
     // Parse JSON from AI response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return new Response(JSON.stringify({
-        significance: "low",
-        length_change_pct: lengthChangePct,
-        tone_shift: null,
-        structural_changes: [],
-        suggested_memory: null,
-      }), { headers: { ...dynCors, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          significance: "low",
+          length_change_pct: lengthChangePct,
+          tone_shift: null,
+          structural_changes: [],
+          suggested_memory: null,
+        }),
+        { headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
 
-    return new Response(JSON.stringify({
-      significance: parsed.significance || "low",
-      length_change_pct: lengthChangePct,
-      tone_shift: parsed.tone_shift || null,
-      structural_changes: Array.isArray(parsed.structural_changes) ? parsed.structural_changes : [],
-      suggested_memory: parsed.suggested_memory || null,
-    }), { headers: { ...dynCors, "Content-Type": "application/json" } });
-
+    return new Response(
+      JSON.stringify({
+        significance: parsed.significance || "low",
+        length_change_pct: lengthChangePct,
+        tone_shift: parsed.tone_shift || null,
+        structural_changes: Array.isArray(parsed.structural_changes) ? parsed.structural_changes : [],
+        suggested_memory: parsed.suggested_memory || null,
+      }),
+      { headers: { ...dynCors, "Content-Type": "application/json" } },
+    );
   } catch (e: unknown) {
     console.error("analyze-email-edit error:", e);
     return mapErrorToResponse(e, dynCors);

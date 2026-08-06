@@ -5,33 +5,20 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import {
-  getMaxLevelByPartner,
-  getMaxLevelByContact,
-  type SherlockLevelMap,
-} from "@/data/sherlockInvestigations";
+import { getMaxLevelByPartner, getMaxLevelByContact, type SherlockLevelMap } from "@/data/sherlockInvestigations";
 
-export function useSherlockLevels(
-  scope: "partner" | "contact",
-  ids: readonly string[],
-): SherlockLevelMap {
+export function useSherlockLevels(scope: "partner" | "contact", ids: readonly string[]): SherlockLevelMap {
   const cleanIds = (ids ?? []).filter(Boolean);
   const query = useQuery({
     queryKey: queryKeys.v2.sherlockLevels(scope, cleanIds),
-    queryFn: () =>
-      scope === "partner"
-        ? getMaxLevelByPartner(cleanIds)
-        : getMaxLevelByContact(cleanIds),
+    queryFn: () => (scope === "partner" ? getMaxLevelByPartner(cleanIds) : getMaxLevelByContact(cleanIds)),
     enabled: cleanIds.length > 0,
     staleTime: 30_000,
   });
   return query.data ?? {};
 }
 
-export function useSherlockLevel(
-  scope: "partner" | "contact",
-  id: string | null | undefined,
-) {
+export function useSherlockLevel(scope: "partner" | "contact", id: string | null | undefined) {
   const map = useSherlockLevels(scope, id ? [id] : []);
-  return id ? map[id] ?? null : null;
+  return id ? (map[id] ?? null) : null;
 }

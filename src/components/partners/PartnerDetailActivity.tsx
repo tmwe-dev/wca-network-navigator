@@ -1,7 +1,18 @@
 import * as React from "react";
 import {
-  Clock, MessageSquare, ShieldAlert, Mail, MessageCircle, Linkedin,
-  Phone, StickyNote, Search, ArrowUpRight, ArrowDownLeft, Plus, ExternalLink,
+  Clock,
+  MessageSquare,
+  ShieldAlert,
+  Mail,
+  MessageCircle,
+  Linkedin,
+  Phone,
+  StickyNote,
+  Search,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Plus,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -34,10 +45,12 @@ interface Reminder {
 
 function Section({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn(
-      "bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-2",
-      className
-    )}>
+    <div
+      className={cn(
+        "bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-2",
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -62,22 +75,35 @@ interface PartnerDetailActivityProps {
 
 function channelMeta(type?: string | null, channel?: string | null) {
   const k = (channel || type || "").toLowerCase();
-  if (k.includes("whatsapp") || k === "wa") return { icon: MessageCircle, label: "WhatsApp", color: "text-emerald-500" };
+  if (k.includes("whatsapp") || k === "wa")
+    return { icon: MessageCircle, label: "WhatsApp", color: "text-emerald-500" };
   if (k.includes("linkedin") || k === "li") return { icon: Linkedin, label: "LinkedIn", color: "text-sky-500" };
   if (k === "call" || k.includes("phone")) return { icon: Phone, label: "Chiamata", color: "text-amber-500" };
   if (k === "meeting") return { icon: MessageSquare, label: "Incontro", color: "text-violet-400" };
   if (k === "note") return { icon: StickyNote, label: "Nota", color: "text-muted-foreground" };
-  if (k.includes("deep_search") || k.includes("sherlock")) return { icon: Search, label: "Deep Search", color: "text-amber-400" };
+  if (k.includes("deep_search") || k.includes("sherlock"))
+    return { icon: Search, label: "Deep Search", color: "text-amber-400" };
   return { icon: Mail, label: "Email", color: "text-primary" };
 }
 
 function flagEmoji(cc?: string | null) {
   if (!cc || cc.length !== 2) return "";
   const A = 127397;
-  return String.fromCodePoint(...cc.toUpperCase().split("").map(c => c.charCodeAt(0) + A));
+  return String.fromCodePoint(
+    ...cc
+      .toUpperCase()
+      .split("")
+      .map((c) => c.charCodeAt(0) + A),
+  );
 }
 
-export function PartnerDetailActivity({ partnerId, interactions, reminders, isBlacklisted, blacklistEntries }: PartnerDetailActivityProps) {
+export function PartnerDetailActivity({
+  partnerId,
+  interactions,
+  reminders,
+  isBlacklisted,
+  blacklistEntries,
+}: PartnerDetailActivityProps) {
   const [noteOpen, setNoteOpen] = React.useState(false);
   return (
     <>
@@ -89,7 +115,10 @@ export function PartnerDetailActivity({ partnerId, interactions, reminders, isBl
             <p className="text-sm text-destructive mt-0.5">
               {blacklistEntries.length} segnalazione/i.
               {blacklistEntries[0]?.total_owed_amount && (
-                <> Importo: <strong>${Number(blacklistEntries[0].total_owed_amount).toLocaleString()}</strong></>
+                <>
+                  {" "}
+                  Importo: <strong>${Number(blacklistEntries[0].total_owed_amount).toLocaleString()}</strong>
+                </>
               )}
             </p>
           </div>
@@ -132,17 +161,26 @@ export function PartnerDetailActivity({ partnerId, interactions, reminders, isBl
               const flag = flagEmoji(it_.country_code);
               const d = new Date(it_.interaction_date);
               return (
-                <div key={it_.id} className="flex gap-2.5 p-2.5 rounded-lg bg-card/60 border border-primary/10 hover:bg-primary/5 transition-colors">
-                  <div className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-primary/5 border border-primary/10",
-                    meta.color,
-                  )}>
+                <div
+                  key={it_.id}
+                  className="flex gap-2.5 p-2.5 rounded-lg bg-card/60 border border-primary/10 hover:bg-primary/5 transition-colors"
+                >
+                  <div
+                    className={cn(
+                      "w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-primary/5 border border-primary/10",
+                      meta.color,
+                    )}
+                  >
                     <Icon className="w-3.5 h-3.5" strokeWidth={1.8} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <DirIcon className={cn("w-3 h-3 shrink-0", isInbound ? "text-emerald-500" : "text-sky-500")} />
-                      {flag && <span className="text-[11px]" aria-hidden>{flag}</span>}
+                      {flag && (
+                        <span className="text-[11px]" aria-hidden>
+                          {flag}
+                        </span>
+                      )}
                       <span className="text-[11px] text-foreground font-medium truncate">
                         {it_.contact_name || meta.label}
                       </span>
@@ -178,17 +216,24 @@ export function PartnerDetailActivity({ partnerId, interactions, reminders, isBl
           <SectionTitle icon={Clock}>Promemoria</SectionTitle>
           <div className="space-y-1.5">
             {reminders.map((r) => (
-              <div key={r.id} className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-primary/10">
+              <div
+                key={r.id}
+                className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-primary/10"
+              >
                 <div>
                   <p className="font-medium text-xs text-foreground">{r.title}</p>
                   <p className="text-[10px] text-muted-foreground">
                     {format(new Date(r.due_date), "d MMM yyyy", { locale: it })}
                   </p>
                 </div>
-                <span className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full font-medium border",
-                  r.status === "completed" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-primary/10 text-primary border-primary/20"
-                )}>
+                <span
+                  className={cn(
+                    "text-[10px] px-2 py-0.5 rounded-full font-medium border",
+                    r.status === "completed"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      : "bg-primary/10 text-primary border-primary/20",
+                  )}
+                >
                   {r.status === "completed" ? "Completato" : "In attesa"}
                 </span>
               </div>

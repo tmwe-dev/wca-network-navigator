@@ -55,8 +55,7 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
     onMessage: (message: unknown) => {
       // Log every message exchanged in the voice conversation
       const m = message as { source?: string; message?: string; type?: string };
-      const role: "user" | "assistant" =
-        m.source === "user" ? "user" : "assistant";
+      const role: "user" | "assistant" = m.source === "user" ? "user" : "assistant";
       const text = typeof m.message === "string" ? m.message : "";
       if (!text.trim()) return;
       void logAiInteraction({
@@ -84,13 +83,10 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const data = await invokeEdge<{ token?: string; bridge_token?: string }>(
-        "elevenlabs-conversation-token",
-        {
-          body: { agent_id: agent.elevenlabs_agent_id },
-          context: "AgentVoiceCall.elevenlabs_conversation_token",
-        }
-      );
+      const data = await invokeEdge<{ token?: string; bridge_token?: string }>("elevenlabs-conversation-token", {
+        body: { agent_id: agent.elevenlabs_agent_id },
+        context: "AgentVoiceCall.elevenlabs_conversation_token",
+      });
       if (!data?.token) throw new Error("No token received");
 
       // Store bridge token for the voice session
@@ -140,9 +136,7 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
               </span>
             )}
             {isConnected && (
-              <span className="text-emerald-500">
-                {conversation.isSpeaking ? "Sta parlando…" : "In ascolto…"}
-              </span>
+              <span className="text-emerald-500">{conversation.isSpeaking ? "Sta parlando…" : "In ascolto…"}</span>
             )}
             {!isConnected && !isConnecting && <span>Pronto per la chiamata</span>}
           </div>
@@ -161,29 +155,17 @@ export function AgentVoiceCall({ agent, onClose }: Props) {
                 disabled={isConnecting || !agent.elevenlabs_agent_id}
                 className="rounded-full h-14 w-14 bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                {isConnecting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Phone className="w-5 h-5" />
-                )}
+                {isConnecting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
               </Button>
             ) : (
-              <Button
-                size="lg"
-                variant="destructive"
-                onClick={endCall}
-                className="rounded-full h-14 w-14"
-              >
+              <Button size="lg" variant="destructive" onClick={endCall} className="rounded-full h-14 w-14">
                 <PhoneOff className="w-5 h-5" />
               </Button>
             )}
           </div>
 
           {!isConnected && (
-            <button
-              onClick={onClose}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               Chiudi
             </button>
           )}

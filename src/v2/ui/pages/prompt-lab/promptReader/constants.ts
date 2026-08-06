@@ -6,7 +6,13 @@ export const COPILOT_EXPANDED_KEY = "prompt-reader.copilot-expanded";
 export type PanelId = "reader" | "copilot";
 
 export const CATEGORY_ORDER: AgentCategory[] = [
-  "core", "email", "outreach", "analysis", "voice", "autonomous", "classifier",
+  "core",
+  "email",
+  "outreach",
+  "analysis",
+  "voice",
+  "autonomous",
+  "classifier",
 ];
 
 export const CATEGORY_LABEL: Record<AgentCategory, string> = {
@@ -24,11 +30,18 @@ export function readPanelOrder(): [PanelId, PanelId] {
     const raw = localStorage.getItem(PANEL_ORDER_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length === 2 && parsed.every((x) => x === "reader" || x === "copilot") && parsed[0] !== parsed[1]) {
+      if (
+        Array.isArray(parsed) &&
+        parsed.length === 2 &&
+        parsed.every((x) => x === "reader" || x === "copilot") &&
+        parsed[0] !== parsed[1]
+      ) {
         return parsed as [PanelId, PanelId];
       }
     }
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
   return ["reader", "copilot"];
 }
 
@@ -36,6 +49,8 @@ export function readExpanded(): PanelId | null {
   try {
     const raw = localStorage.getItem(COPILOT_EXPANDED_KEY);
     if (raw === "copilot" || raw === "reader") return raw;
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
   return null;
 }

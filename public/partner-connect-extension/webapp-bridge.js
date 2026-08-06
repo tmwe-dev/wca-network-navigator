@@ -21,8 +21,11 @@
   }
 
   function post(payload) {
-    try { window.postMessage(payload, window.location.origin); }
-    catch (_) { window.postMessage(payload, "*"); }
+    try {
+      window.postMessage(payload, window.location.origin);
+    } catch (_) {
+      window.postMessage(payload, "*");
+    }
   }
 
   function failResponse(direction, data, error) {
@@ -121,10 +124,19 @@
   // errore esplicito invece di tentare un relay rotto. Tutto il resto
   // continua a fluire come prima.
   var LI_BLOCKED_ACTIONS = [
-    "sendMessage", "sendMessageWithMethod", "sendConnectionRequest",
-    "searchProfile", "readLinkedInInbox", "readLinkedInThread",
-    "backfillLinkedInThread", "syncCookie", "autoLogin",
-    "learnDom", "diagnosticLinkedInDom", "remapSendDom", "getSendPlan",
+    "sendMessage",
+    "sendMessageWithMethod",
+    "sendConnectionRequest",
+    "searchProfile",
+    "readLinkedInInbox",
+    "readLinkedInThread",
+    "backfillLinkedInThread",
+    "syncCookie",
+    "autoLogin",
+    "learnDom",
+    "diagnosticLinkedInDom",
+    "remapSendDom",
+    "getSendPlan",
     "setConfig",
   ];
 
@@ -179,7 +191,7 @@
             requestId: data.requestId,
             response: response || { success: false, error: "No response" },
           });
-        }
+        },
       );
     } catch (err) {
       failResponse("from-extension", data, "Extension context invalidated");
@@ -188,10 +200,10 @@
 
   // ── Listen for push events from background.js (WA sidebar changes) ──
   chrome.runtime.onMessage.addListener(function (msg) {
-    if (msg.type === 'wa-push-event') {
+    if (msg.type === "wa-push-event") {
       post({
-        direction: 'from-extension-wa',
-        action: 'sidebarChanged',
+        direction: "from-extension-wa",
+        action: "sidebarChanged",
         timestamp: msg.timestamp,
       });
     }

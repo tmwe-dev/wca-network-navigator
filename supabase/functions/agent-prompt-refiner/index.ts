@@ -27,17 +27,14 @@ serve(async (req) => {
   const headerSecret = req.headers.get("x-cron-secret");
   const authHeader = req.headers.get("Authorization");
   if (!(cronSecret && headerSecret === cronSecret) && !authHeader?.startsWith("Bearer ")) {
-    return new Response(
-      JSON.stringify({ error: "UNAUTHORIZED", message: "Bearer token or cron secret required" }),
-      { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "UNAUTHORIZED", message: "Bearer token or cron secret required" }), {
+      status: 401,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
@@ -80,7 +77,8 @@ serve(async (req) => {
       .select("id, name, system_prompt, user_id")
       .eq("is_active", true);
 
-    const LOVABLE_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
         status: 500,
@@ -126,7 +124,7 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${LOVABLE_KEY}`,
+            Authorization: `Bearer ${LOVABLE_KEY}`,
           },
           body: JSON.stringify({
             model: "google/gemini-2.5-flash-lite",
@@ -190,9 +188,9 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
     });
   } catch (e: unknown) {
     console.error("agent-prompt-refiner error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

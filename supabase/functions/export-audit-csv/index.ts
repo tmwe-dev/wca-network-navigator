@@ -24,10 +24,7 @@ serve(async (req) => {
     const days = parseInt(url.searchParams.get("days") ?? "30", 10);
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-    const serviceSb = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const serviceSb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: logs, error: qErr } = await serviceSb
       .from("agent_action_log")
@@ -51,11 +48,13 @@ serve(async (req) => {
     const csvLines = [
       headers.join(","),
       ...rows.map((r) =>
-        headers.map((h) => {
-          const val = r[h];
-          const str = typeof val === "object" ? JSON.stringify(val) : String(val ?? "");
-          return `"${str.replace(/"/g, '""')}"`;
-        }).join(",")
+        headers
+          .map((h) => {
+            const val = r[h];
+            const str = typeof val === "object" ? JSON.stringify(val) : String(val ?? "");
+            return `"${str.replace(/"/g, '""')}"`;
+          })
+          .join(","),
       ),
     ];
 

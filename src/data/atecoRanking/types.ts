@@ -13,8 +13,8 @@
  */
 
 export interface AtecoRank {
-  volume: number;       // 1-5
-  valore: number;       // 1-5
+  volume: number; // 1-5
+  valore: number; // 1-5
   intl: string;
   paga: string;
   note: string;
@@ -22,9 +22,9 @@ export interface AtecoRank {
 
 const INTL_MULT: Record<string, number> = {
   "MOLTO ALTO": 1.0,
-  "ALTO": 0.8,
-  "MEDIO": 0.5,
-  "BASSO": 0.3,
+  ALTO: 0.8,
+  MEDIO: 0.5,
+  BASSO: 0.3,
   "MOLTO DIFFICILE": 0.1,
 };
 

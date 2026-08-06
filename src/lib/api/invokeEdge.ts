@@ -36,10 +36,7 @@ export interface InvokeEdgeOptions {
   responseSchema?: ResponseSchema;
 }
 
-export async function invokeEdge<T = unknown>(
-  functionName: string,
-  options: InvokeEdgeOptions,
-): Promise<T> {
+export async function invokeEdge<T = unknown>(functionName: string, options: InvokeEdgeOptions): Promise<T> {
   const { body, context, headers, responseSchema } = options;
 
   // Guardrail: block if session budget exceeded
@@ -55,7 +52,7 @@ export async function invokeEdge<T = unknown>(
     // Retry su 503 BOOT_ERROR (cold-start transitorio durante batch paralleli):
     // 2 tentativi extra con backoff 400ms / 1200ms.
     let attempt = 0;
-     
+
     while (true) {
       result = await supabase.functions.invoke(functionName, {
         body: body as Record<string, unknown> | undefined,
@@ -73,7 +70,12 @@ export async function invokeEdge<T = unknown>(
     }
   } catch (err) {
     log.warn("invoke threw", { functionName, context, err });
-    Sentry.addBreadcrumb({ category: "edge-function", message: `${functionName} threw`, level: "error", data: { functionName, context } });
+    Sentry.addBreadcrumb({
+      category: "edge-function",
+      message: `${functionName} threw`,
+      level: "error",
+      data: { functionName, context },
+    });
     Sentry.captureException(err, { tags: { "edge.function": functionName } });
     traceCollector.push({
       type: "edge.invoke",
@@ -103,7 +105,7 @@ export async function invokeEdge<T = unknown>(
     const isResponse = typeof Response !== "undefined" && ctxResponse instanceof Response;
     const status = isResponse
       ? (ctxResponse as Response).status
-      : (ctxResponse as { status?: number } | undefined)?.status ?? errAny?.status;
+      : ((ctxResponse as { status?: number } | undefined)?.status ?? errAny?.status);
 
     let body: Record<string, unknown> | undefined;
     if (isResponse) {
@@ -117,19 +119,30 @@ export async function invokeEdge<T = unknown>(
     }
 
     const code: ApiError["code"] =
-      status === 401 ? "UNAUTHENTICATED" :
-      status === 403 ? "FORBIDDEN" :
-      status === 404 ? "NOT_FOUND" :
-      status === 422 ? "VALIDATION_FAILED" :
-      status === 429 ? "RATE_LIMITED" :
-      typeof status === "number" && status >= 500 ? "SERVER_ERROR" :
-      "UNKNOWN_ERROR";
+      status === 401
+        ? "UNAUTHENTICATED"
+        : status === 403
+          ? "FORBIDDEN"
+          : status === 404
+            ? "NOT_FOUND"
+            : status === 422
+              ? "VALIDATION_FAILED"
+              : status === 429
+                ? "RATE_LIMITED"
+                : typeof status === "number" && status >= 500
+                  ? "SERVER_ERROR"
+                  : "UNKNOWN_ERROR";
 
     const parsed = parseEdgeErrorBody(body);
     const messageFromBody = parsed?.message ?? undefined;
 
     log.warn("invoke returned error", { functionName, context, status, name: errAny?.name });
-    Sentry.addBreadcrumb({ category: "edge-function", message: `${functionName} failed: ${status}`, level: "error", data: { functionName, context, status } });
+    Sentry.addBreadcrumb({
+      category: "edge-function",
+      message: `${functionName} failed: ${status}`,
+      level: "error",
+      data: { functionName, context, status },
+    });
     traceCollector.push({
       type: "edge.invoke",
       scope: "edge",
@@ -170,9 +183,7 @@ export async function invokeEdge<T = unknown>(
   });
 
   // Guardrail: track cost if _debug.credits_consumed is present
-  const debugInfo = (data as Record<string, unknown> | null)?._debug as
-    | { credits_consumed?: number }
-    | undefined;
+  const debugInfo = (data as Record<string, unknown> | null)?._debug as { credits_consumed?: number } | undefined;
   if (debugInfo?.credits_consumed) {
     const crossed = trackCost(functionName, debugInfo.credits_consumed);
     if (crossed) {

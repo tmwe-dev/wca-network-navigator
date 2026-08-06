@@ -41,14 +41,11 @@ export function FunnemailEvalTab() {
     );
   }
 
-  const sortedRuns = [...(runs ?? [])].sort(
-    (a, b) => new Date(b.run_at).getTime() - new Date(a.run_at).getTime()
-  );
+  const sortedRuns = [...(runs ?? [])].sort((a, b) => new Date(b.run_at).getTime() - new Date(a.run_at).getTime());
 
   const latest = sortedRuns[0];
-  const avgAccuracy = sortedRuns.length > 0
-    ? sortedRuns.reduce((sum, r) => sum + (r.accuracy ?? 0), 0) / sortedRuns.length
-    : 0;
+  const avgAccuracy =
+    sortedRuns.length > 0 ? sortedRuns.reduce((sum, r) => sum + (r.accuracy ?? 0), 0) / sortedRuns.length : 0;
 
   return (
     <div className="space-y-4 p-4">
@@ -99,7 +96,9 @@ export function FunnemailEvalTab() {
           <CardContent>
             <div className="flex items-center gap-2">
               {avgAccuracy >= 85 ? (
-                <Badge variant="default" className="text-xs">Raggiunto</Badge>
+                <Badge variant="default" className="text-xs">
+                  Raggiunto
+                </Badge>
               ) : (
                 <Badge variant="destructive" className="text-xs">
                   <AlertTriangle className="h-3 w-3 mr-1" />

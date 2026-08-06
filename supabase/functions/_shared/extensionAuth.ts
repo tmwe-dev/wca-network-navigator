@@ -34,20 +34,20 @@ export async function requireExtensionAuth(
   if (extKey && serviceKey && extKey === serviceKey) {
     const uid = opts?.bodyUserId;
     if (!uid || typeof uid !== "string") {
-      return new Response(
-        JSON.stringify({ success: false, message: "user_id required for service-role calls" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ success: false, message: "user_id required for service-role calls" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     return { userId: uid, authMethod: "service" };
   }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(
-      JSON.stringify({ success: false, message: "Authorization required" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ success: false, message: "Authorization required" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const token = authHeader.replace("Bearer ", "");
@@ -55,10 +55,10 @@ export async function requireExtensionAuth(
   // Path 3 (LEGACY): anon key fallback. Rejected in strict mode.
   if (token === anonKey) {
     if (strict) {
-      return new Response(
-        JSON.stringify({ success: false, message: "Anon-key auth disabled (EXT_ANON_REJECTED)" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ success: false, message: "Anon-key auth disabled (EXT_ANON_REJECTED)" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     console.warn("extensionAuth: legacy anon-key auth from origin:", req.headers.get("origin"));
     return { userId: "extension-anon", authMethod: "anon-key" };
@@ -68,13 +68,16 @@ export async function requireExtensionAuth(
   const authClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
-  const { data: { user }, error } = await authClient.auth.getUser(token);
+  const {
+    data: { user },
+    error,
+  } = await authClient.auth.getUser(token);
 
   if (error || !user) {
-    return new Response(
-      JSON.stringify({ success: false, message: "Invalid or expired token" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ success: false, message: "Invalid or expired token" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   return { userId: user.id, authMethod: "jwt" };

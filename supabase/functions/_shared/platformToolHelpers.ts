@@ -7,10 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { escapeLike } from "./sqlEscape.ts";
 
 // deno-lint-ignore no-explicit-any
-export const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+export const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 // ── Local interfaces for query row shapes ──
 export interface CountryStatRow {
@@ -139,15 +136,9 @@ export interface HoldingItem {
   interactions?: number;
 }
 
-export async function resolvePartnerId(
-  args: Record<string, unknown>,
-): Promise<{ id: string; name: string } | null> {
+export async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
   if (args.partner_id) {
-    const { data } = await supabase
-      .from("partners")
-      .select("id, company_name")
-      .eq("id", args.partner_id)
-      .single();
+    const { data } = await supabase.from("partners").select("id, company_name").eq("id", args.partner_id).single();
     return data ? { id: data.id, name: data.company_name } : null;
   }
   if (args.company_name) {

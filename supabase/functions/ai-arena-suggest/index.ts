@@ -24,7 +24,9 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) return json({ error: "Unauthorized" }, 401);
@@ -54,7 +56,9 @@ serve(async (req) => {
     // Build query for never-contacted partners
     let query = supabase
       .from("partners")
-      .select("id, company_name, company_alias, country_code, country_name, city, email, phone, rating, enrichment_data, profile_description")
+      .select(
+        "id, company_name, company_alias, country_code, country_name, city, email, phone, rating, enrichment_data, profile_description",
+      )
       .not("email", "is", null);
 
     if (focus === "italia") query = query.eq("country_code", "IT");
@@ -85,7 +89,9 @@ serve(async (req) => {
       .in("activity_type", ["send_email", "email", "outreach", "linkedin_message", "whatsapp"]);
 
     const contactedSet = new Set((existingActivities || []).map((a: Record<string, unknown>) => a.partner_id));
-    const neverContacted = candidates.filter((c: Record<string, unknown>) => !contactedSet.has(c.id as string)).slice(0, batchSize);
+    const neverContacted = candidates
+      .filter((c: Record<string, unknown>) => !contactedSet.has(c.id as string))
+      .slice(0, batchSize);
 
     if (neverContacted.length === 0) {
       return json({ suggestions: [], message: "Tutti i partner disponibili sono già stati contattati." });
@@ -113,23 +119,32 @@ serve(async (req) => {
 
       let targetLanguage = langInfo.language;
       let languageLabel = langInfo.label;
-      if (sendLanguage === "english") { targetLanguage = "English"; languageLabel = "Inglese"; }
-      else if (sendLanguage === "italian") { targetLanguage = "Italiano"; languageLabel = "Italiano"; }
+      if (sendLanguage === "english") {
+        targetLanguage = "English";
+        languageLabel = "Inglese";
+      } else if (sendLanguage === "italian") {
+        targetLanguage = "Italiano";
+        languageLabel = "Italiano";
+      }
 
       const contactName = contact ? ((contact.contact_alias || contact.name) as string) : null;
-      const contactEmail = contact?.email as string || partner.email as string;
+      const contactEmail = (contact?.email as string) || (partner.email as string);
 
       // Generate reasoning
       let aiReasoning = "";
       try {
         const reasonResult = await aiChat({
           models: ["google/gemini-2.5-flash-lite"],
-          messages: [{
-            role: "user",
-            content: `In ONE sentence in Italian, explain why a freight forwarding company should reach out to "${partner.company_name}" in ${partner.country_name || countryCode}${partner.profile_description ? `. Company profile: ${(partner.profile_description as string).substring(0, 300)}` : ""}${partner.rating ? `. Rating: ${partner.rating}/5` : ""}. Focus on business opportunity.`
-          }],
+          messages: [
+            {
+              role: "user",
+              content: `In ONE sentence in Italian, explain why a freight forwarding company should reach out to "${partner.company_name}" in ${partner.country_name || countryCode}${partner.profile_description ? `. Company profile: ${(partner.profile_description as string).substring(0, 300)}` : ""}${partner.rating ? `. Rating: ${partner.rating}/5` : ""}. Focus on business opportunity.`,
+            },
+          ],
           max_tokens: 256,
-          timeoutMs: 10000, maxRetries: 0, context: "arena-reason",
+          timeoutMs: 10000,
+          maxRetries: 0,
+          context: "arena-reason",
         });
         aiReasoning = reasonResult.content?.trim() || "Partner mai contattato — opportunità di primo contatto.";
       } catch {
@@ -145,15 +160,17 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: `You are a B2B logistics sales expert. Write a short outreach email in ${targetLanguage}. First line MUST be "Subject: <subject>". Then a blank line, then the HTML body. Keep it under 150 words. Professional, warm, specific to freight forwarding partnership.`
+              content: `You are a B2B logistics sales expert. Write a short outreach email in ${targetLanguage}. First line MUST be "Subject: <subject>". Then a blank line, then the HTML body. Keep it under 150 words. Professional, warm, specific to freight forwarding partnership.`,
             },
             {
               role: "user",
-              content: `Write an outreach email to ${contactName || "the team"} at ${partner.company_name} (${partner.country_name || countryCode}${partner.city ? `, ${partner.city}` : ""}). Goal: propose freight forwarding partnership. Language: ${targetLanguage}.`
-            }
+              content: `Write an outreach email to ${contactName || "the team"} at ${partner.company_name} (${partner.country_name || countryCode}${partner.city ? `, ${partner.city}` : ""}). Goal: propose freight forwarding partnership. Language: ${targetLanguage}.`,
+            },
           ],
           max_tokens: 512,
-          timeoutMs: 15000, maxRetries: 1, context: "arena-draft",
+          timeoutMs: 15000,
+          maxRetries: 1,
+          context: "arena-draft",
         });
 
         const content = draftResult.content || "";

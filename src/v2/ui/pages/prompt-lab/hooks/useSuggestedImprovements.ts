@@ -40,10 +40,7 @@ export function useSuggestedImprovements(userId: string, isAdmin: boolean = fals
     if (!userId) return;
     setLoading(true);
     try {
-      const [c, prefs] = await Promise.all([
-        countByStatus(),
-        listUserPreferences(userId),
-      ]);
+      const [c, prefs] = await Promise.all([countByStatus(), listUserPreferences(userId)]);
 
       // Notifica admin se ci sono nuovi suggerimenti pending
       if (isAdmin && c.pending > prevPendingCount.current && prevPendingCount.current > 0) {
@@ -59,10 +56,7 @@ export function useSuggestedImprovements(userId: string, isAdmin: boolean = fals
       setPreferences(prefs);
 
       if (isAdmin) {
-        const [p, a] = await Promise.all([
-          listPendingForAdmin(),
-          listApprovedForArchitect(),
-        ]);
+        const [p, a] = await Promise.all([listPendingForAdmin(), listApprovedForArchitect()]);
         setPending(p);
         setApproved(a);
       }

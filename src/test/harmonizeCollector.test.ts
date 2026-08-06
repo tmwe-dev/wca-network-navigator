@@ -11,7 +11,11 @@ describe("harmonizeCollector placeholder detection", () => {
   });
 
   it("does not block a real large document that mentions placeholder in intro text", () => {
-    const sections = Array.from({ length: 12 }, (_, index) => `## 📄 Voce ${index + 1}\n**Categoria suggerita:** doctrine\n**Capitolo:** c${index + 1}\n**Priorità:** 50\n\nQuesto blocco contiene contenuto reale molto esteso per la libreria TMWE. `.repeat(6)).join("\n\n");
+    const sections = Array.from({ length: 12 }, (_, index) =>
+      `## 📄 Voce ${index + 1}\n**Categoria suggerita:** doctrine\n**Capitolo:** c${index + 1}\n**Priorità:** 50\n\nQuesto blocco contiene contenuto reale molto esteso per la libreria TMWE. `.repeat(
+        6,
+      ),
+    ).join("\n\n");
 
     const source = `# Libreria TMWE completa\n\nNota editoriale: la parola placeholder compare qui solo come esempio storico e non indica uno stub.\n\n${sections}`;
 

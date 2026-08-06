@@ -15,7 +15,8 @@ export const healthCheckTool: Tool = {
   id: "health-check",
   label: "Diagnostica sistema",
   description: "Verifica lo stato di edge functions, DB, integrazioni email/extension.",
-  match: (p) => /\b(health\s*check|diagnos(?:i|tica)|status\s+sistema|stato\s+(?:del\s+)?sistema|tutto\s+ok)\b/i.test(p),
+  match: (p) =>
+    /\b(health\s*check|diagnos(?:i|tica)|status\s+sistema|stato\s+(?:del\s+)?sistema|tutto\s+ok)\b/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
     const res = await invokeEdge<Resp>("health-check", {

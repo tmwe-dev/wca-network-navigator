@@ -60,10 +60,7 @@ export function CalendarPage() {
         {/* Sidebar */}
         <div className="w-full lg:w-80 lg:border-l border-t lg:border-t-0 border-border bg-card/40 overflow-auto p-4 sm:p-6 space-y-6">
           {/* Upcoming Events Widget */}
-          <UpcomingEventsWidget
-            limit={5}
-            onEventClick={handleSelectEvent}
-          />
+          <UpcomingEventsWidget limit={5} onEventClick={handleSelectEvent} />
 
           {/* Filters */}
           <div className="space-y-3">
@@ -152,11 +149,7 @@ export function CalendarPage() {
       </div>
 
       {/* Dialogs */}
-      <CreateEventDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        initialDate={createDialogDate}
-      />
+      <CreateEventDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} initialDate={createDialogDate} />
 
       <EventDetailSheet
         eventId={selectedEvent?.id || null}

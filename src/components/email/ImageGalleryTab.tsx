@@ -28,8 +28,12 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
     queryFn: async () => {
       const data = await listEmailImages();
       return data
-        .filter(f => f.name && !f.name.startsWith("."))
-        .map(f => ({ name: f.name, url: getEmailImagePublicUrl(f.name), created_at: f.created_at || "" })) as EmailImage[];
+        .filter((f) => f.name && !f.name.startsWith("."))
+        .map((f) => ({
+          name: f.name,
+          url: getEmailImagePublicUrl(f.name),
+          created_at: f.created_at || "",
+        })) as EmailImage[];
     },
   });
 
@@ -82,14 +86,7 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
     <div className="flex-1 flex flex-col min-h-0">
       {/* Upload */}
       <div className="shrink-0 px-2 py-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handleUpload}
-        />
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
         <Button
           size="sm"
           variant="outline"
@@ -116,8 +113,11 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-1.5">
-            {images.map(img => (
-              <div key={img.name} className="group relative rounded-md overflow-hidden border border-border/30 aspect-square bg-muted/20">
+            {images.map((img) => (
+              <div
+                key={img.name}
+                className="group relative rounded-md overflow-hidden border border-border/30 aspect-square bg-muted/20"
+              >
                 <img
                   src={img.url}
                   alt={img.name}
@@ -131,7 +131,10 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
                     size="icon"
                     variant="ghost"
                     className="h-5 w-5 text-white hover:bg-white/20"
-                    onClick={(e) => { e.stopPropagation(); copyUrl(img.url); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyUrl(img.url);
+                    }}
                     title="Copia URL"
                     aria-label="Copia"
                   >
@@ -141,7 +144,10 @@ export function ImageGalleryTab({ onInsertImage }: ImageGalleryTabProps) {
                     size="icon"
                     variant="ghost"
                     className="h-5 w-5 text-white hover:bg-destructive/50"
-                    onClick={(e) => { e.stopPropagation(); deleteImage.mutate(img.name); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteImage.mutate(img.name);
+                    }}
                     title="Elimina"
                     aria-label="Elimina"
                   >

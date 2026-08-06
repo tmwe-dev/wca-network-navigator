@@ -82,20 +82,14 @@ export interface ChannelSession {
 }
 
 /** Type guard helpers per discriminare il payload. */
-export function isEmailMessage(
-  msg: ChannelMessage
-): msg is ChannelMessage<"email"> {
+export function isEmailMessage(msg: ChannelMessage): msg is ChannelMessage<"email"> {
   return msg.channel === "email";
 }
 
-export function isWhatsAppMessage(
-  msg: ChannelMessage
-): msg is ChannelMessage<"whatsapp"> {
+export function isWhatsAppMessage(msg: ChannelMessage): msg is ChannelMessage<"whatsapp"> {
   return msg.channel === "whatsapp";
 }
 
-export function isLinkedInMessage(
-  msg: ChannelMessage
-): msg is ChannelMessage<"linkedin"> {
+export function isLinkedInMessage(msg: ChannelMessage): msg is ChannelMessage<"linkedin"> {
   return msg.channel === "linkedin";
 }

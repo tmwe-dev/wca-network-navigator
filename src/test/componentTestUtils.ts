@@ -8,17 +8,12 @@ function AllProviders({ children }: { children: React.ReactNode }) {
     defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
   });
   return React.createElement(
-    BrowserRouter, null,
-    React.createElement(
-      QueryClientProvider, { client: queryClient },
-      children
-    )
+    BrowserRouter,
+    null,
+    React.createElement(QueryClientProvider, { client: queryClient }, children),
   );
 }
 
-export function renderWithProviders(
-  ui: React.ReactElement,
-  options?: Omit<RenderOptions, "wrapper">
-) {
+export function renderWithProviders(ui: React.ReactElement, options?: Omit<RenderOptions, "wrapper">) {
   return render(ui, { wrapper: AllProviders, ...options });
 }

@@ -19,7 +19,7 @@ const ScrollIndicator = ({ labels, activeIndex, onNavigate }: ScrollIndicatorPro
           onMouseLeave={() => setHoveredIndex(null)}
           className="group flex items-center gap-2 transition-all"
         >
-          {(hoveredIndex === i) && (
+          {hoveredIndex === i && (
             <span className="text-xs text-white/70 bg-white/10 px-2 py-0.5 rounded-full backdrop-blur-sm whitespace-nowrap animate-fade-in">
               {label}
             </span>

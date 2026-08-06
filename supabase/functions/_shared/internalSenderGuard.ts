@@ -19,7 +19,12 @@ function emailDomain(addr: string | null | undefined): string | null {
   if (!addr) return null;
   const at = addr.lastIndexOf("@");
   if (at < 0) return null;
-  return addr.slice(at + 1).trim().toLowerCase() || null;
+  return (
+    addr
+      .slice(at + 1)
+      .trim()
+      .toLowerCase() || null
+  );
 }
 
 /**
@@ -29,24 +34,20 @@ function emailDomain(addr: string | null | undefined): string | null {
 const domainCache = new Map<string, { at: number; domains: Set<string> }>();
 const DOMAIN_TTL_MS = 60_000;
 
-async function loadOwnerDomains(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<Set<string>> {
+async function loadOwnerDomains(supabase: SupabaseClient, userId: string): Promise<Set<string>> {
   const cached = domainCache.get(userId);
   if (cached && Date.now() - cached.at < DOMAIN_TTL_MS) return cached.domains;
 
   const domains = new Set<string>();
   try {
-    const { data } = await supabase
-      .from("email_mailboxes")
-      .select("email_address")
-      .eq("user_id", userId);
+    const { data } = await supabase.from("email_mailboxes").select("email_address").eq("user_id", userId);
     for (const row of (data ?? []) as Array<{ email_address: string | null }>) {
       const d = emailDomain(row.email_address);
       if (d) domains.add(d);
     }
-  } catch { /* fail-open */ }
+  } catch {
+    /* fail-open */
+  }
 
   domainCache.set(userId, { at: Date.now(), domains });
   return domains;
@@ -69,11 +70,7 @@ export async function checkInternalOrSelf(
 
   if (partnerId) {
     try {
-      const { data: p } = await supabase
-        .from("partners")
-        .select("email")
-        .eq("id", partnerId)
-        .maybeSingle();
+      const { data: p } = await supabase.from("partners").select("email").eq("id", partnerId).maybeSingle();
       const partnerDomain = emailDomain((p as { email?: string | null } | null)?.email ?? null);
       if (partnerDomain && ownerDomains.has(partnerDomain)) return "self_partner";
 
@@ -86,7 +83,9 @@ export async function checkInternalOrSelf(
         const d = emailDomain(c.email);
         if (d && ownerDomains.has(d)) return "self_partner";
       }
-    } catch { /* fail-open */ }
+    } catch {
+      /* fail-open */
+    }
   }
 
   return null;

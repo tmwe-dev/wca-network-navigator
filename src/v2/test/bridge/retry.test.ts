@@ -27,7 +27,9 @@ describe("Retry", () => {
 
   it("returns Err after all attempts exhausted", async () => {
     const r = await withRetry(
-      async () => { throw new Error("always fail"); },
+      async () => {
+        throw new Error("always fail");
+      },
       { maxAttempts: 2, baseDelayMs: 1, maxDelayMs: 10 },
     );
     expect(isErr(r)).toBe(true);
@@ -37,7 +39,10 @@ describe("Retry", () => {
   it("respects shouldRetry predicate", async () => {
     let attempts = 0;
     const r = await withRetry(
-      async () => { attempts++; throw new Error("stop"); },
+      async () => {
+        attempts++;
+        throw new Error("stop");
+      },
       {
         maxAttempts: 5,
         baseDelayMs: 1,

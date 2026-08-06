@@ -31,11 +31,15 @@ serve(async (req) => {
 
     if (pauseSettings?.value === "true") {
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 503,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const body = await req.json().catch((e) => { console.warn("[country-kb-generator] Invalid JSON body:", e.message); return {}; });
+    const body = await req.json().catch((e) => {
+      console.warn("[country-kb-generator] Invalid JSON body:", e.message);
+      return {};
+    });
     const countryCodes: string[] = body.country_codes || [];
     const maxCountries = Math.min(countryCodes.length || 5, 10);
 
@@ -51,7 +55,9 @@ serve(async (req) => {
         .not("country_code", "is", null)
         .limit(200);
 
-      const uniqueCodes = [...new Set((partnerCountries || []).map((p: Record<string, unknown>) => p.country_code as string))];
+      const uniqueCodes = [
+        ...new Set((partnerCountries || []).map((p: Record<string, unknown>) => p.country_code as string)),
+      ];
 
       const { data: existingKb } = await supabase
         .from("kb_entries")
@@ -62,18 +68,24 @@ serve(async (req) => {
       const coveredCodes = new Set<string>();
       for (const entry of (existingKb || []) as Record<string, unknown>[]) {
         const tags = entry.tags as string[] | null;
-        if (tags) tags.forEach(t => { if (t.length === 2) coveredCodes.add(t.toLowerCase()); });
+        if (tags)
+          tags.forEach((t) => {
+            if (t.length === 2) coveredCodes.add(t.toLowerCase());
+          });
       }
 
       targetCountries = uniqueCodes
-        .filter(code => code && !coveredCodes.has(code.toLowerCase()))
+        .filter((code) => code && !coveredCodes.has(code.toLowerCase()))
         .slice(0, maxCountries);
     }
 
     if (targetCountries.length === 0) {
-      return new Response(JSON.stringify({ success: true, generated: 0, message: "Tutti i paesi hanno già regole KB" }), {
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ success: true, generated: 0, message: "Tutti i paesi hanno già regole KB" }),
+        {
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const stats = { generated: 0, failed: 0, countries: [] as string[] };
@@ -141,14 +153,13 @@ Rispondi SOLO con un JSON valido con questa struttura:
       }
     }
 
-
     return new Response(JSON.stringify({ success: true, ...stats }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

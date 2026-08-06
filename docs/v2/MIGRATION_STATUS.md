@@ -7,8 +7,8 @@
 - `src/pages/` **non esiste più**: tutte le pagine sono native sotto `src/v2/ui/pages/`.
 - Nessun file in `src/v2/` importa più da `@/pages/*` (guardrail ESLint attivo
   in `eslint.config.js`, blocco "V2 migration guardrail").
-- Il residuo legacy non è più a livello di *pagina* ma a livello di *componenti
-  di feature* in `src/components/*` (es. `acquisition/`, `campaigns/`,
+- Il residuo legacy non è più a livello di _pagina_ ma a livello di _componenti
+  di feature_ in `src/components/*` (es. `acquisition/`, `campaigns/`,
   `cockpit/`, `email/`, `operations/`): le pagine v2 li compongono. Questi NON
   sono codice morto — sono l'implementazione attiva e vanno migrati per dominio,
   non in blocco, per non rompere i nodi critici.

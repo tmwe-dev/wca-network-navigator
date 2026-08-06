@@ -7,13 +7,26 @@
 import type { ReviewChannel } from "./journalistTypes.ts";
 
 const FORBIDDEN_LEXICON = [
-  "soluzioni", "valore aggiunto", "sinergie", "innovativo",
-  "leader del settore", "leader globale",
-  "win-win", "best-in-class", "cutting-edge", "game-changer",
-  "spero ti trovi bene", "spero vi trovi bene", "spero la trovi bene",
-  "scusate il disturbo", "vi disturbo per",
-  "non vediamo l'ora", "saremmo onorati", "grandissima opportunità",
-  "ultima opportunità", "imperdibile",
+  "soluzioni",
+  "valore aggiunto",
+  "sinergie",
+  "innovativo",
+  "leader del settore",
+  "leader globale",
+  "win-win",
+  "best-in-class",
+  "cutting-edge",
+  "game-changer",
+  "spero ti trovi bene",
+  "spero vi trovi bene",
+  "spero la trovi bene",
+  "scusate il disturbo",
+  "vi disturbo per",
+  "non vediamo l'ora",
+  "saremmo onorati",
+  "grandissima opportunità",
+  "ultima opportunità",
+  "imperdibile",
 ];
 
 const LENGTH_RANGES: Record<ReviewChannel, { min: number; max: number; unit: "words" | "chars" }> = {
@@ -30,8 +43,7 @@ const EMOJI_LIMITS: Record<ReviewChannel, number> = {
   voice_script: 0,
 };
 
-const EMOJI_REGEX =
-  /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/gu;
+const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/gu;
 
 export interface BrandVoiceSignals {
   word_count: number;
@@ -58,12 +70,12 @@ function detectSignature(text: string, channel: ReviewChannel): boolean {
   return lower.includes("tmwe") || /firmat[oa]/i.test(lower);
 }
 
-export function scoreBrandVoice(
-  text: string,
-  channel: ReviewChannel,
-): BrandVoiceScoreResult {
+export function scoreBrandVoice(text: string, channel: ReviewChannel): BrandVoiceScoreResult {
   const deviations: Array<{ type: string; description: string }> = [];
-  const cleaned = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const cleaned = text
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   const words = cleaned ? cleaned.split(/\s+/) : [];
   const word_count = words.length;
   const char_count = cleaned.length;

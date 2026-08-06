@@ -89,22 +89,16 @@ export async function resolveCaller(
   let isServiceRoleJwt = false;
   if (!isExactServiceMatch && !isNewSecretFormat && token.split(".").length === 3) {
     try {
-      const payload = JSON.parse(
-        atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
-      ) as { role?: string };
+      const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as { role?: string };
       if (payload?.role === "service_role") isServiceRoleJwt = true;
-    } catch { /* not a JWT we can decode */ }
+    } catch {
+      /* not a JWT we can decode */
+    }
   }
   if (isExactServiceMatch || isNewSecretFormat || isServiceRoleJwt) {
-    const bodyUserId =
-      bodyJson && typeof bodyJson.user_id === "string" ? (bodyJson.user_id as string) : null;
+    const bodyUserId = bodyJson && typeof bodyJson.user_id === "string" ? (bodyJson.user_id as string) : null;
     if (!bodyUserId) {
-      return jsonError(
-        400,
-        "MISSING_USER_ID",
-        "service-role calls require user_id in body",
-        cors,
-      );
+      return jsonError(400, "MISSING_USER_ID", "service-role calls require user_id in body", cors);
     }
     return { userId: bodyUserId, token, isService: true, bodyJson };
   }
@@ -127,11 +121,9 @@ export async function resolveCaller(
 
 /** Returns a service-role client (no user context). */
 export function serviceClient(): SupabaseClient {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 /**
@@ -150,11 +142,7 @@ export async function assertOwnedBy(
   const idCol = opts.idColumn || "id";
   const ownerCol = opts.ownerColumn || "user_id";
   const label = opts.resourceLabel || table;
-  const { data, error } = await supabase
-    .from(table)
-    .select(`${idCol}, ${ownerCol}`)
-    .eq(idCol, rowId)
-    .maybeSingle();
+  const { data, error } = await supabase.from(table).select(`${idCol}, ${ownerCol}`).eq(idCol, rowId).maybeSingle();
   if (error || !data) {
     return jsonError(404, "NOT_FOUND", `${label} not found`, cors);
   }
@@ -164,33 +152,17 @@ export async function assertOwnedBy(
   return null;
 }
 
-export const assertAgentOwned = (
-  s: SupabaseClient,
-  agentId: string,
-  userId: string,
-  cors: Cors,
-) => assertOwnedBy(s, "agents", agentId, userId, cors, { resourceLabel: "agent" });
+export const assertAgentOwned = (s: SupabaseClient, agentId: string, userId: string, cors: Cors) =>
+  assertOwnedBy(s, "agents", agentId, userId, cors, { resourceLabel: "agent" });
 
-export const assertDraftOwned = (
-  s: SupabaseClient,
-  draftId: string,
-  userId: string,
-  cors: Cors,
-) => assertOwnedBy(s, "email_drafts", draftId, userId, cors, { resourceLabel: "draft" });
+export const assertDraftOwned = (s: SupabaseClient, draftId: string, userId: string, cors: Cors) =>
+  assertOwnedBy(s, "email_drafts", draftId, userId, cors, { resourceLabel: "draft" });
 
-export const assertJobOwned = (
-  s: SupabaseClient,
-  jobId: string,
-  userId: string,
-  cors: Cors,
-) => assertOwnedBy(s, "download_jobs", jobId, userId, cors, { resourceLabel: "job" });
+export const assertJobOwned = (s: SupabaseClient, jobId: string, userId: string, cors: Cors) =>
+  assertOwnedBy(s, "download_jobs", jobId, userId, cors, { resourceLabel: "job" });
 
-export const assertMessageOwned = (
-  s: SupabaseClient,
-  messageId: string,
-  userId: string,
-  cors: Cors,
-) => assertOwnedBy(s, "channel_messages", messageId, userId, cors, { resourceLabel: "message" });
+export const assertMessageOwned = (s: SupabaseClient, messageId: string, userId: string, cors: Cors) =>
+  assertOwnedBy(s, "channel_messages", messageId, userId, cors, { resourceLabel: "message" });
 
 /**
  * Operator ownership: an operator is "owned" by a user when

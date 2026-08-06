@@ -15,13 +15,56 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type Role = "rompighiaccio" | "risvegliatore" | "chiusore" | "accompagnatore";
-type Field = "prompt_full" | "prompt_voice" | "prompt_writing" | "tone" | "rules" | "donts" | "kb_sources" | "must_know";
+type Field =
+  | "prompt_full"
+  | "prompt_voice"
+  | "prompt_writing"
+  | "tone"
+  | "rules"
+  | "donts"
+  | "kb_sources"
+  | "must_know";
 
-const JOURNALISTS: Array<{ role: Role; label: string; icon: LucideIcon; color: string; desc: string; states: string[] }> = [
-  { role: "rompighiaccio", label: "Rompighiaccio", icon: Zap, color: "text-info bg-info/10", desc: "Primo contatto. Apertura dialogo.", states: ["new", "first_touch_sent"] },
-  { role: "risvegliatore", label: "Risvegliatore", icon: Newspaper, color: "text-warning bg-warning/10", desc: "Dopo silenzio. Riattivazione.", states: ["holding", "archived"] },
-  { role: "chiusore", label: "Chiusore", icon: Gavel, color: "text-destructive bg-destructive/10", desc: "Momento decisione. Chiusura.", states: ["qualified", "negotiation"] },
-  { role: "accompagnatore", label: "Accompagnatore", icon: Handshake, color: "text-success bg-success/10", desc: "Relazione attiva. Continuità.", states: ["converted"] },
+const JOURNALISTS: Array<{
+  role: Role;
+  label: string;
+  icon: LucideIcon;
+  color: string;
+  desc: string;
+  states: string[];
+}> = [
+  {
+    role: "rompighiaccio",
+    label: "Rompighiaccio",
+    icon: Zap,
+    color: "text-info bg-info/10",
+    desc: "Primo contatto. Apertura dialogo.",
+    states: ["new", "first_touch_sent"],
+  },
+  {
+    role: "risvegliatore",
+    label: "Risvegliatore",
+    icon: Newspaper,
+    color: "text-warning bg-warning/10",
+    desc: "Dopo silenzio. Riattivazione.",
+    states: ["holding", "archived"],
+  },
+  {
+    role: "chiusore",
+    label: "Chiusore",
+    icon: Gavel,
+    color: "text-destructive bg-destructive/10",
+    desc: "Momento decisione. Chiusura.",
+    states: ["qualified", "negotiation"],
+  },
+  {
+    role: "accompagnatore",
+    label: "Accompagnatore",
+    icon: Handshake,
+    color: "text-success bg-success/10",
+    desc: "Relazione attiva. Continuità.",
+    states: ["converted"],
+  },
 ];
 
 const FIELD_LABELS: Record<Field, string> = {
@@ -44,12 +87,18 @@ export function JournalistsTab() {
   const mode = data.journalist_optimus_mode || "review_and_correct";
   const strictness = parseInt(data.journalist_optimus_strictness || "7", 10);
 
-  const save = useCallback((key: string, value: string) => {
-    updateSetting.mutate({ key, value }, {
-      onSuccess: () => toast.success("Salvato"),
-      onError: (e) => toast.error("Errore", { description: String(e) }),
-    });
-  }, [updateSetting]);
+  const save = useCallback(
+    (key: string, value: string) => {
+      updateSetting.mutate(
+        { key, value },
+        {
+          onSuccess: () => toast.success("Salvato"),
+          onError: (e) => toast.error("Errore", { description: String(e) }),
+        },
+      );
+    },
+    [updateSetting],
+  );
 
   return (
     <div className="space-y-3 overflow-auto">
@@ -60,7 +109,9 @@ export function JournalistsTab() {
         </h3>
         <div className="flex items-center gap-3 flex-wrap">
           <Select value={mode} onValueChange={(v) => save("journalist_optimus_mode", v)}>
-            <SelectTrigger className="w-[170px] h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[170px] h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="review_and_correct">Rivedi e correggi</SelectItem>
               <SelectItem value="review_only">Solo revisione</SelectItem>
@@ -69,18 +120,34 @@ export function JournalistsTab() {
           </Select>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-muted-foreground whitespace-nowrap">Rigore {strictness}/10</span>
-            <Slider className="w-24" value={[strictness]} onValueChange={([v]) => save("journalist_optimus_strictness", String(v))} min={1} max={10} step={1} />
+            <Slider
+              className="w-24"
+              value={[strictness]}
+              onValueChange={([v]) => save("journalist_optimus_strictness", String(v))}
+              min={1}
+              max={10}
+              step={1}
+            />
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-xs">Optimus</span>
-            <Switch checked={enabled} onCheckedChange={(v) => save("journalist_optimus_enabled", v ? "true" : "false")} />
+            <Switch
+              checked={enabled}
+              onCheckedChange={(v) => save("journalist_optimus_enabled", v ? "true" : "false")}
+            />
           </div>
         </div>
       </div>
 
       <div className="p-2 rounded border border-border/30 bg-muted/30 text-[11px] space-y-1">
-        <div><span className="text-success font-medium">FA:</span> corregge tono/ritmo/CTA · adatta al giornalista attivo · segnala incoerenze brief↔testo · blocca promesse non verificabili.</div>
-        <div><span className="text-destructive font-medium">NON FA:</span> non cambia strategia/stato/canale/playbook · non bypassa guardrail · non inventa informazioni.</div>
+        <div>
+          <span className="text-success font-medium">FA:</span> corregge tono/ritmo/CTA · adatta al giornalista attivo ·
+          segnala incoerenze brief↔testo · blocca promesse non verificabili.
+        </div>
+        <div>
+          <span className="text-destructive font-medium">NON FA:</span> non cambia strategia/stato/canale/playbook · non
+          bypassa guardrail · non inventa informazioni.
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -90,14 +157,20 @@ export function JournalistsTab() {
       </div>
 
       <div className="p-2 rounded border border-accent/20 bg-accent/5 text-[11px] text-foreground">
-        <span className="text-accent font-medium">engaged</span> → auto-selezione contestuale: risposta positiva &lt;5gg → Accompagnatore | silenzio &gt;5gg → Risvegliatore. <span className="text-destructive font-medium">blacklisted</span> → blocco totale.
+        <span className="text-accent font-medium">engaged</span> → auto-selezione contestuale: risposta positiva &lt;5gg
+        → Accompagnatore | silenzio &gt;5gg → Risvegliatore.{" "}
+        <span className="text-destructive font-medium">blacklisted</span> → blocco totale.
       </div>
     </div>
   );
 }
 
-function JournalistCard({ journalist: j, data, onSave }: {
-  journalist: typeof JOURNALISTS[number];
+function JournalistCard({
+  journalist: j,
+  data,
+  onSave,
+}: {
+  journalist: (typeof JOURNALISTS)[number];
   data: Record<string, string>;
   onSave: (key: string, value: string) => void;
 }) {
@@ -121,11 +194,15 @@ function JournalistCard({ journalist: j, data, onSave }: {
   return (
     <div className="p-3 rounded border border-border/40 bg-card space-y-2">
       <div className="flex items-center gap-2">
-        <div className={cn("p-1 rounded", j.color)}><Icon className="h-3.5 w-3.5" /></div>
+        <div className={cn("p-1 rounded", j.color)}>
+          <Icon className="h-3.5 w-3.5" />
+        </div>
         <span className="font-semibold text-sm">{j.label}</span>
         <div className="flex gap-1 ml-auto flex-wrap">
           {j.states.map((s) => (
-            <span key={s} className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[9px] font-mono">{s}</span>
+            <span key={s} className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[9px] font-mono">
+              {s}
+            </span>
           ))}
         </div>
       </div>
@@ -140,9 +217,21 @@ function JournalistCard({ journalist: j, data, onSave }: {
               <div key={field} className="space-y-1">
                 <Label className="text-[10px] uppercase tracking-wide">{FIELD_LABELS[field]}</Label>
                 {isShort ? (
-                  <Input value={local[field]} onChange={(e) => setLocal({ ...local, [field]: e.target.value })} onBlur={blur(field)} className="h-7 text-xs" placeholder="(default)" />
+                  <Input
+                    value={local[field]}
+                    onChange={(e) => setLocal({ ...local, [field]: e.target.value })}
+                    onBlur={blur(field)}
+                    className="h-7 text-xs"
+                    placeholder="(default)"
+                  />
                 ) : (
-                  <Textarea value={local[field]} onChange={(e) => setLocal({ ...local, [field]: e.target.value })} onBlur={blur(field)} className={cn("text-xs", isLong ? "min-h-[100px]" : "min-h-[60px]")} placeholder="(default)" />
+                  <Textarea
+                    value={local[field]}
+                    onChange={(e) => setLocal({ ...local, [field]: e.target.value })}
+                    onBlur={blur(field)}
+                    className={cn("text-xs", isLong ? "min-h-[100px]" : "min-h-[60px]")}
+                    placeholder="(default)"
+                  />
                 )}
               </div>
             );

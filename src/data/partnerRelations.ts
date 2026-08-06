@@ -13,10 +13,28 @@ type PartnerCertInsert = Database["public"]["Tables"]["partner_certifications"][
 type PartnerSocialLinkInsert = Database["public"]["Tables"]["partner_social_links"]["Insert"];
 
 // ── partner_contacts ──
-export interface PartnerContactResult { id: string; name: string; email: string | null; direct_phone: string | null; mobile: string | null; title: string | null; contact_alias: string | null; is_primary?: boolean | null; partner_id?: string; [k: string]: unknown }
+export interface PartnerContactResult {
+  id: string;
+  name: string;
+  email: string | null;
+  direct_phone: string | null;
+  mobile: string | null;
+  title: string | null;
+  contact_alias: string | null;
+  is_primary?: boolean | null;
+  partner_id?: string;
+  [k: string]: unknown;
+}
 
-export async function findPartnerContacts(partnerId: string, select = "id, name, email, direct_phone, mobile, title, contact_alias"): Promise<PartnerContactResult[]> {
-  const { data, error } = await supabase.from("partner_contacts").select(select).eq("partner_id", partnerId).returns<PartnerContactResult[]>();
+export async function findPartnerContacts(
+  partnerId: string,
+  select = "id, name, email, direct_phone, mobile, title, contact_alias",
+): Promise<PartnerContactResult[]> {
+  const { data, error } = await supabase
+    .from("partner_contacts")
+    .select(select)
+    .eq("partner_id", partnerId)
+    .returns<PartnerContactResult[]>();
   if (error) throw error;
   return data ?? [];
 }
@@ -33,13 +51,20 @@ export async function findPartnerContactByEmail(email: string) {
 }
 
 export async function insertPartnerContact(contact: Record<string, unknown>) {
-  const { data, error } = await supabase.from("partner_contacts").insert(contact as PartnerContactInsert).select().single();
+  const { data, error } = await supabase
+    .from("partner_contacts")
+    .insert(contact as PartnerContactInsert)
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }
 
 export async function updatePartnerContact(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("partner_contacts").update(updates as PartnerContactUpdate).eq("id", id);
+  const { error } = await supabase
+    .from("partner_contacts")
+    .update(updates as PartnerContactUpdate)
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -70,7 +95,10 @@ export async function insertPartnerNetworks(networks: Record<string, unknown>[])
 
 // ── partner_services ──
 export async function findPartnerServices(partnerId: string) {
-  const { data, error } = await supabase.from("partner_services").select("service_category").eq("partner_id", partnerId);
+  const { data, error } = await supabase
+    .from("partner_services")
+    .select("service_category")
+    .eq("partner_id", partnerId);
   if (error) throw error;
   return data ?? [];
 }
@@ -83,7 +111,10 @@ export async function insertPartnerServices(services: Record<string, unknown>[])
 
 // ── partner_certifications ──
 export async function findPartnerCertifications(partnerId: string) {
-  const { data, error } = await supabase.from("partner_certifications").select("certification").eq("partner_id", partnerId);
+  const { data, error } = await supabase
+    .from("partner_certifications")
+    .select("certification")
+    .eq("partner_id", partnerId);
   if (error) throw error;
   return data ?? [];
 }
@@ -96,30 +127,61 @@ export async function insertPartnerCertifications(certs: Record<string, unknown>
 
 // ── partner_social_links ──
 export async function findSocialLinksByPartnerIds(partnerIds: string[], platform?: string) {
-  let q = supabase.from("partner_social_links").select("partner_id, contact_id, platform, url").in("partner_id", partnerIds);
+  let q = supabase
+    .from("partner_social_links")
+    .select("partner_id, contact_id, platform, url")
+    .in("partner_id", partnerIds);
   if (platform) q = q.eq("platform", platform as Database["public"]["Enums"]["social_platform"]);
   const { data, error } = await q;
   if (error) throw error;
   return data ?? [];
 }
 
-export async function insertPartnerSocialLink(link: { partner_id: string; contact_id: string | null; platform: string; url: string }) {
+export async function insertPartnerSocialLink(link: {
+  partner_id: string;
+  contact_id: string | null;
+  platform: string;
+  url: string;
+}) {
   const { error } = await supabase.from("partner_social_links").insert(link as PartnerSocialLinkInsert);
   return { error };
 }
 
 // ── partner_contacts by IDs ──
-export async function getPartnerContactsByIds(ids: string[], select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias"): Promise<PartnerContactResult[]> {
-  const { data, error } = await supabase.from("partner_contacts").select(select).in("id", ids).returns<PartnerContactResult[]>();
+export async function getPartnerContactsByIds(
+  ids: string[],
+  select = "id, name, title, email, direct_phone, mobile, partner_id, contact_alias",
+): Promise<PartnerContactResult[]> {
+  const { data, error } = await supabase
+    .from("partner_contacts")
+    .select(select)
+    .in("id", ids)
+    .returns<PartnerContactResult[]>();
   if (error) throw error;
   return data ?? [];
 }
 
 // ── prospect_contacts by IDs ──
-export interface ProspectContactResult { id: string; name: string; role: string | null; email: string | null; phone: string | null; prospect_id: string; linkedin_url: string | null; [k: string]: unknown }
+export interface ProspectContactResult {
+  id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  prospect_id: string;
+  linkedin_url: string | null;
+  [k: string]: unknown;
+}
 
-export async function getProspectContactsByIds(ids: string[], select = "id, name, role, email, phone, prospect_id, linkedin_url"): Promise<ProspectContactResult[]> {
-  const { data, error } = await supabase.from("prospect_contacts").select(select).in("id", ids).returns<ProspectContactResult[]>();
+export async function getProspectContactsByIds(
+  ids: string[],
+  select = "id, name, role, email, phone, prospect_id, linkedin_url",
+): Promise<ProspectContactResult[]> {
+  const { data, error } = await supabase
+    .from("prospect_contacts")
+    .select(select)
+    .in("id", ids)
+    .returns<ProspectContactResult[]>();
   if (error) throw error;
   return data ?? [];
 }

@@ -32,7 +32,13 @@ export async function saveProposal(userId: string, p: GlobalProposal): Promise<{
       if (src.key === SYSTEM_PROMPT_KEY) {
         const raw = await getAppSetting(SYSTEM_PROMPT_KEY, userId);
         let stored: Array<{ id: string; label: string; content: string }> = [];
-        if (raw) { try { stored = JSON.parse(raw); } catch { /* noop */ } }
+        if (raw) {
+          try {
+            stored = JSON.parse(raw);
+          } catch {
+            /* noop */
+          }
+        }
         const baseId = block.id.replace(/^sp::/, "");
         const idx = stored.findIndex((s) => s.id === baseId);
         if (idx >= 0) stored[idx] = { ...stored[idx], content: after };
@@ -43,7 +49,13 @@ export async function saveProposal(userId: string, p: GlobalProposal): Promise<{
       if (src.key === TYPES_KEY) {
         const raw = await getAppSetting(TYPES_KEY, userId);
         let stored: Array<{ id: string; name: string; prompt: string }> = [];
-        if (raw) { try { stored = JSON.parse(raw); } catch { /* noop */ } }
+        if (raw) {
+          try {
+            stored = JSON.parse(raw);
+          } catch {
+            /* noop */
+          }
+        }
         const baseId = block.id.replace(/^et::/, "");
         const idx = stored.findIndex((s) => s.id === baseId);
         if (idx >= 0) stored[idx] = { ...stored[idx], prompt: after };
@@ -92,6 +104,10 @@ export async function auditSaveProposal(meta: { table: string; id: string }, pro
     action: "prompt_lab_global_save",
     target_table: meta.table,
     target_id: meta.id,
-    payload: { block_id: proposal.block.id, before_len: proposal.before.length, after_len: (proposal.after ?? "").length },
+    payload: {
+      block_id: proposal.block.id,
+      before_len: proposal.before.length,
+      after_len: (proposal.after ?? "").length,
+    },
   });
 }

@@ -15,7 +15,11 @@ import { aiCall, delay, cleanCompanyName, type GoogleSearchResult } from "./useD
 
 type FsBridge = ReturnType<typeof useFireScrapeExtensionBridge>;
 
-interface ContactMention { url: string; title: string; snippet: string; }
+interface ContactMention {
+  url: string;
+  title: string;
+  snippet: string;
+}
 
 interface GoogleMapsData {
   address: string | null;
@@ -28,18 +32,22 @@ interface GoogleMapsData {
   placeUrl: string | null;
 }
 
-interface WebsiteTeamMember { name: string; role: string; email?: string; }
+interface WebsiteTeamMember {
+  name: string;
+  role: string;
+  email?: string;
+}
 
 interface WebsiteMultiPageData {
   pagesScraped: string[];
   team: WebsiteTeamMember[];
-  contactsExtra: { phones: string[]; emails: string[]; addresses: string[]; };
+  contactsExtra: { phones: string[]; emails: string[]; addresses: string[] };
   about: string | null;
 }
 
 interface ReputationData {
-  trustpilot: { url: string; rating: number | null; reviewsCount: number | null; } | null;
-  wikipedia: { url: string; summary: string | null; } | null;
+  trustpilot: { url: string; rating: number | null; reviewsCount: number | null } | null;
+  wikipedia: { url: string; summary: string | null } | null;
   news: Array<{ title: string; url: string; date?: string }>;
 }
 
@@ -109,16 +117,22 @@ ${result.markdown.slice(0, 3000)}`;
  *  SITO MULTI-PAGINA — homepage + about + team + contacts
  * ============================================================ */
 const SUBPAGE_PATHS = [
-  "/about", "/about-us", "/chi-siamo", "/azienda",
-  "/team", "/our-team", "/il-team", "/staff",
-  "/contact", "/contacts", "/contatti",
-  "/people", "/management",
+  "/about",
+  "/about-us",
+  "/chi-siamo",
+  "/azienda",
+  "/team",
+  "/our-team",
+  "/il-team",
+  "/staff",
+  "/contact",
+  "/contacts",
+  "/contatti",
+  "/people",
+  "/management",
 ];
 
-export async function scrapeWebsiteSubpages(
-  fs: FsBridge,
-  baseWebsite: string,
-): Promise<WebsiteMultiPageData> {
+export async function scrapeWebsiteSubpages(fs: FsBridge, baseWebsite: string): Promise<WebsiteMultiPageData> {
   const result: WebsiteMultiPageData = {
     pagesScraped: [],
     team: [],
@@ -177,7 +191,9 @@ ${combined.slice(0, 12000)}`;
       };
     }
     if (typeof parsed.about === "string") result.about = parsed.about.slice(0, 500);
-  } catch { /* AI risposta non valida, ritorno dati grezzi */ }
+  } catch {
+    /* AI risposta non valida, ritorno dati grezzi */
+  }
 
   return result;
 }
@@ -196,9 +212,7 @@ export async function scrapeReputation(
 
   // 1) Trustpilot via Google
   try {
-    const tpQuery = website
-      ? `${cleanCo} site:trustpilot.com`
-      : `"${cleanCo}" site:trustpilot.com`;
+    const tpQuery = website ? `${cleanCo} site:trustpilot.com` : `"${cleanCo}" site:trustpilot.com`;
     const tpResults = await googleSearch(tpQuery, 3);
     const tpHit = tpResults.find((r) => /trustpilot\.com\/review\//i.test(r.url));
     if (tpHit) {
@@ -221,7 +235,9 @@ export async function scrapeReputation(
         }
       }
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   // 2) Wikipedia (it + en)
   try {
@@ -233,21 +249,26 @@ export async function scrapeReputation(
       if (navResult.success) {
         await delay(1500);
         const scraped = await fs.scrape(true);
-        const summary = scraped.success && scraped.markdown
-          ? scraped.markdown.split("\n").slice(0, 30).join(" ").slice(0, 600)
-          : null;
+        const summary =
+          scraped.success && scraped.markdown
+            ? scraped.markdown.split("\n").slice(0, 30).join(" ").slice(0, 600)
+            : null;
         result.wikipedia = { url: wkHit.url, summary };
       } else {
         result.wikipedia = { url: wkHit.url, summary: null };
       }
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   // 3) News tab — Google News
   try {
     const newsResults = await googleSearch(`"${cleanCo}" news`, 5);
     result.news = newsResults.slice(0, 5).map((r) => ({ title: r.title, url: r.url }));
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   return result;
 }

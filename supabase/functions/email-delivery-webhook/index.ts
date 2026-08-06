@@ -42,10 +42,7 @@ const EventSchema = z.object({
   raw: z.record(z.unknown()).optional(),
 });
 
-const BodySchema = z.union([
-  EventSchema,
-  z.object({ events: z.array(EventSchema).min(1).max(500) }),
-]);
+const BodySchema = z.union([EventSchema, z.object({ events: z.array(EventSchema).min(1).max(500) })]);
 
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -91,10 +88,7 @@ Deno.serve(async (req) => {
 
   const events = "events" in parsed.data ? parsed.data.events : [parsed.data];
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   const rows = events.map((e) => ({
     event_type: e.event_type,

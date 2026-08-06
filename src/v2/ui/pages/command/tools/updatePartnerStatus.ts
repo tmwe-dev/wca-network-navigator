@@ -14,7 +14,9 @@ import { mergePayload, resolvePartnerRef, isUuid } from "./_helpers/writePayload
 
 function fallbackFromPrompt(prompt: string): Record<string, unknown> {
   const idMatch = prompt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-  const nameMatch = prompt.match(/partner\s+["']?([A-Za-z0-9][\w\s&.\-']+?)["']?(?:\s+(?:a|come|stato|status)\b|[,.]|$)/i);
+  const nameMatch = prompt.match(
+    /partner\s+["']?([A-Za-z0-9][\w\s&.\-']+?)["']?(?:\s+(?:a|come|stato|status)\b|[,.]|$)/i,
+  );
   const statusMatch = prompt.match(/(?:stato|status|come|a)\s+["']?([\w-]+)/i);
   return {
     partner_id: idMatch?.[0] ?? "",

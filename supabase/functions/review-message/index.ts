@@ -24,24 +24,24 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const token = authHeader.replace("Bearer ", "");
     const { data: claims, error: authErr } = await supabase.auth.getClaims(token);
     if (authErr || !claims?.claims?.sub) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const userId = claims.claims.sub as string;
 
-    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const body = await req.json().catch(() => ({}) as Record<string, unknown>);
     const channel = String(body.channel || "") as ReviewChannel;
     const draft = String(body.draft || "");
     const partnerId = body.partner_id ? String(body.partner_id) : null;
@@ -49,12 +49,14 @@ Deno.serve(async (req) => {
 
     if (!ALLOWED_CHANNELS.includes(channel)) {
       return new Response(JSON.stringify({ error: "invalid_channel", allowed: ALLOWED_CHANNELS }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!draft.trim()) {
       return new Response(JSON.stringify({ error: "empty_draft" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -66,7 +68,8 @@ Deno.serve(async (req) => {
       const { data: p } = await supabase
         .from("partners")
         .select("lead_status, company_name, country")
-        .eq("id", partnerId).maybeSingle();
+        .eq("id", partnerId)
+        .maybeSingle();
       if (p) {
         leadStatus = (p as { lead_status?: string }).lead_status || "new";
         companyName = (p as { company_name?: string }).company_name ?? null;
@@ -78,7 +81,9 @@ Deno.serve(async (req) => {
     if (contactId) {
       const { data: c } = await supabase
         .from("imported_contacts")
-        .select("name, role").eq("id", contactId).maybeSingle();
+        .select("name, role")
+        .eq("id", contactId)
+        .maybeSingle();
       if (c) {
         contactName = (c as { name?: string }).name ?? null;
         contactRole = (c as { role?: string }).role ?? null;
@@ -99,18 +104,25 @@ Deno.serve(async (req) => {
       strictness: optimus.strictness,
     });
 
-    return new Response(JSON.stringify({
-      verdict: result.verdict,
-      edited_text: result.edited_text,
-      warnings: result.warnings,
-      reasoning_summary: result.reasoning_summary,
-      quality_score: result.quality_score,
-      journalist: result.journalist,
-    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({
+        verdict: result.verdict,
+        edited_text: result.edited_text,
+        warnings: result.warnings,
+        reasoning_summary: result.reasoning_summary,
+        quality_score: result.quality_score,
+        journalist: result.journalist,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (err) {
     console.error("[review-message] error:", err);
-    return new Response(JSON.stringify({ error: "internal_error", detail: err instanceof Error ? err.message : String(err) }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "internal_error", detail: err instanceof Error ? err.message : String(err) }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

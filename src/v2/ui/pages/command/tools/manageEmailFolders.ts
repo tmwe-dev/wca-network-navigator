@@ -11,8 +11,9 @@ function detectAction(prompt: string): "create" | "rename" | "delete" | null {
   return null;
 }
 function extractFolder(prompt: string): string | null {
-  const m = prompt.match(/\bcartella\s+["“”']?([^"“”'\n]{1,80})["“”']?/i)
-    ?? prompt.match(/\bfolder\s+["“”']?([^"“”'\n]{1,80})["“”']?/i);
+  const m =
+    prompt.match(/\bcartella\s+["“”']?([^"“”'\n]{1,80})["“”']?/i) ??
+    prompt.match(/\bfolder\s+["“”']?([^"“”'\n]{1,80})["“”']?/i);
   return m ? m[1].trim() : null;
 }
 
@@ -20,7 +21,10 @@ export const manageEmailFoldersTool: Tool = {
   id: "manage-email-folders",
   label: "Gestisci cartelle email",
   description: "Crea / rinomina / elimina cartelle dell'inbox (IMAP). Richiede approvazione.",
-  match: (p) => /\b(crea|rinomina|elimina|cancella|gestisci)\b[^.]{0,30}\b(cartella|folder|cartelle|folders)\b[^.]{0,30}\b(email|inbox|mail)\b/i.test(p),
+  match: (p) =>
+    /\b(crea|rinomina|elimina|cancella|gestisci)\b[^.]{0,30}\b(cartella|folder|cartelle|folders)\b[^.]{0,30}\b(email|inbox|mail)\b/i.test(
+      p,
+    ),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     const action = detectAction(prompt);
@@ -48,10 +52,10 @@ export const manageEmailFoldersTool: Tool = {
         meta: { count: 0, sourceLabel: "manage-email-folders" },
       };
     }
-    const res = await invokeEdge<{ success?: boolean; message?: string; error?: string }>(
-      "manage-email-folders",
-      { body: { action: String(p.action), folder: String(p.folder), new_name: p.new_name ?? null }, context: "command:manage-email-folders" },
-    );
+    const res = await invokeEdge<{ success?: boolean; message?: string; error?: string }>("manage-email-folders", {
+      body: { action: String(p.action), folder: String(p.folder), new_name: p.new_name ?? null },
+      context: "command:manage-email-folders",
+    });
     return {
       kind: "result",
       title: res?.error ? "Operazione fallita" : "Cartella aggiornata",

@@ -1,6 +1,16 @@
 import {
-  Handshake, RefreshCw, Search, Briefcase, Globe, FileText,
-  Target, Mail, TrendingUp, Users, Package, FileCheck,
+  Handshake,
+  RefreshCw,
+  Search,
+  Briefcase,
+  Globe,
+  FileText,
+  Target,
+  Mail,
+  TrendingUp,
+  Users,
+  Package,
+  FileCheck,
 } from "lucide-react";
 import { createLogger } from "@/lib/log";
 
@@ -24,5 +34,10 @@ export function formatSize(bytes: number) {
 }
 
 export function hostname(url: string) {
-  try { return new URL(url).hostname; } catch (e) { log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) }); return url; }
+  try {
+    return new URL(url).hostname;
+  } catch (e) {
+    log.debug("fallback used after parse failure", { error: e instanceof Error ? e.message : String(e) });
+    return url;
+  }
 }

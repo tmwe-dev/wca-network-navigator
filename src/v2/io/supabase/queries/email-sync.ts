@@ -11,9 +11,5 @@ export async function fetchEmailSyncJobsRaw(limit: number): Promise<{
   data: EmailSyncJobRow[] | null;
   error: PostgrestError | null;
 }> {
-  return supabase
-    .from("email_sync_jobs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  return supabase.from("email_sync_jobs").select("*").order("created_at", { ascending: false }).limit(limit);
 }

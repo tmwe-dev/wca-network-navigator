@@ -21,40 +21,19 @@ function n(count: number | null | undefined): number {
 }
 
 export async function fetchSmartSuggestionCounts(): Promise<SmartSuggestionCounts> {
-  const [
-    pendingTasksRes,
-    unreadEmailsRes,
-    pendingApprovalRes,
-    pendingOutreachRes,
-    draftEmailsRes,
-    activeJobsRes,
-  ] = await Promise.all([
-    supabase
-      .from("agent_tasks")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "proposed"),
-    supabase
-      .from("channel_messages")
-      .select("id", { count: "exact", head: true })
-      .eq("direction", "inbound")
-      .is("read_at", null),
-    supabase
-      .from("mission_actions")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["proposed"]),
-    supabase
-      .from("outreach_schedules")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending"),
-    supabase
-      .from("email_drafts")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "draft"),
-    supabase
-      .from("download_jobs")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["pending", "running"]),
-  ]);
+  const [pendingTasksRes, unreadEmailsRes, pendingApprovalRes, pendingOutreachRes, draftEmailsRes, activeJobsRes] =
+    await Promise.all([
+      supabase.from("agent_tasks").select("id", { count: "exact", head: true }).eq("status", "proposed"),
+      supabase
+        .from("channel_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("direction", "inbound")
+        .is("read_at", null),
+      supabase.from("mission_actions").select("id", { count: "exact", head: true }).in("status", ["proposed"]),
+      supabase.from("outreach_schedules").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("email_drafts").select("id", { count: "exact", head: true }).eq("status", "draft"),
+      supabase.from("download_jobs").select("id", { count: "exact", head: true }).in("status", ["pending", "running"]),
+    ]);
 
   // Propaga eventuali errori auth/RLS/network — non mascherare.
   const firstError =

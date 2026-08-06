@@ -9,12 +9,7 @@ export function KpiCard({
   value: string;
   tone?: "default" | "ok" | "warn";
 }) {
-  const toneCls =
-    tone === "warn"
-      ? "text-primary"
-      : tone === "ok"
-      ? "text-success"
-      : "text-foreground";
+  const toneCls = tone === "warn" ? "text-primary" : tone === "ok" ? "text-success" : "text-foreground";
   return (
     <div className="p-4 rounded-xl border border-border bg-card">
       <div className="text-[11px] uppercase font-semibold text-muted-foreground">{label}</div>

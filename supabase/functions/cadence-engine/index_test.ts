@@ -1,5 +1,9 @@
 import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
-try { loadSync({ export: true, examplePath: null }); } catch { /* intentionally empty */ }
+try {
+  loadSync({ export: true, examplePath: null });
+} catch {
+  /* intentionally empty */
+}
 import { assertEquals, assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL")!;
@@ -45,7 +49,12 @@ Deno.test("Response body is valid JSON", async () => {
   });
   const text = await res.text();
   let parsed = false;
-  try { JSON.parse(text); parsed = true; } catch { /* */ }
+  try {
+    JSON.parse(text);
+    parsed = true;
+  } catch {
+    /* */
+  }
   assert(parsed, `Response is not valid JSON: ${text.substring(0, 100)}`);
 });
 

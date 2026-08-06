@@ -28,13 +28,17 @@ export async function discoverImapServer(email, proxyUrl) {
   try {
     const autoconfig = await tryMozillaAutoconfig(domain);
     if (autoconfig) return { ...autoconfig, method: "autoconfig" };
-  } catch { /* continue */ }
+  } catch {
+    /* continue */
+  }
 
   // ── Strategy 3: MX heuristic via DNS-over-HTTPS ──
   try {
     const mxResult = await tryMxLookup(domain);
     if (mxResult) return { ...mxResult, method: "mx-heuristic" };
-  } catch { /* continue */ }
+  } catch {
+    /* continue */
+  }
 
   // ── Strategy 4: Common subdomain guess ──
   const guess = {
@@ -50,14 +54,18 @@ export async function discoverImapServer(email, proxyUrl) {
     try {
       const ok = await verifyImapServer(proxyUrl, guess.host, guess.port, guess.tls);
       if (ok) return guess;
-    } catch { /* continue */ }
+    } catch {
+      /* continue */
+    }
 
     // Try mail.domain as fallback
     const fallback = { ...guess, host: `mail.${domain}` };
     try {
       const ok = await verifyImapServer(proxyUrl, fallback.host, fallback.port, fallback.tls);
       if (ok) return { ...fallback, method: "guess-fallback" };
-    } catch { /* continue */ }
+    } catch {
+      /* continue */
+    }
   }
 
   // Return the guess anyway — let the user confirm
@@ -80,7 +88,9 @@ async function tryMozillaAutoconfig(domain) {
       const xml = await res.text();
       const parsed = parseAutoconfigXml(xml);
       if (parsed) return parsed;
-    } catch { continue; }
+    } catch {
+      continue;
+    }
   }
   return null;
 }
@@ -89,9 +99,7 @@ function parseAutoconfigXml(xml) {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xml, "text/xml");
-    const incoming = doc.querySelector(
-      'incomingServer[type="imap"], incomingServer[type="IMAP"]'
-    );
+    const incoming = doc.querySelector('incomingServer[type="imap"], incomingServer[type="IMAP"]');
     if (!incoming) return null;
 
     const hostname = incoming.querySelector("hostname")?.textContent?.trim();
@@ -114,10 +122,9 @@ function parseAutoconfigXml(xml) {
 /* ── MX Lookup via Google DoH ─────────────────────────────────── */
 
 async function tryMxLookup(domain) {
-  const res = await fetch(
-    `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`,
-    { signal: AbortSignal.timeout(5000) }
-  );
+  const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`, {
+    signal: AbortSignal.timeout(5000),
+  });
   if (!res.ok) return null;
   const data = await res.json();
   const answers = data.Answer || [];
@@ -125,7 +132,7 @@ async function tryMxLookup(domain) {
 
   // Sort by priority (lowest = preferred)
   const sorted = answers
-    .filter(a => a.type === 15)
+    .filter((a) => a.type === 15)
     .sort((a, b) => {
       const pa = parseInt(a.data.split(" ")[0]) || 0;
       const pb = parseInt(b.data.split(" ")[0]) || 0;

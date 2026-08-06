@@ -9,6 +9,7 @@ type: preference
 I trigger esplciti restano validi come rinforzo: `codex`, `applica codex`, `modalità codex`, `quick codex`.
 
 **Cosa fare quando attivo**:
+
 1. Leggo `docs/governance/lovable-quick-codex.md` come riferimento.
 2. Per CRITICAL leggo anche `docs/governance/lovable-codex.md`.
 3. Classifico l'intervento (TRIM / STANDARD / CRITICAL) usando §1 del Quick Codex.

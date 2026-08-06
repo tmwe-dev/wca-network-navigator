@@ -10,13 +10,8 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
 
-const PER_USER_STORAGE_PREFIXES = [
-  "activeOperator:v2:",
-  "lov:active-mailbox:v2:",
-];
-const LEGACY_STORAGE_KEYS = [
-  "activeOperator:v1",
-];
+const PER_USER_STORAGE_PREFIXES = ["activeOperator:v2:", "lov:active-mailbox:v2:"];
+const LEGACY_STORAGE_KEYS = ["activeOperator:v1"];
 
 function purgePerUserStorage(keepUserId: string | null): void {
   if (typeof window === "undefined") return;

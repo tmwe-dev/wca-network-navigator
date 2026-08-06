@@ -21,41 +21,36 @@ describe("B6 — orphan edge function cleanup", () => {
     expect(existsSync("supabase/functions/classify-email-response")).toBe(false);
   });
 
-  it(
-    "nessun riferimento residuo a classify-email-response fuori dall'allowlist storica",
-    () => {
-      let raw = "";
-      try {
-        raw = execSync(
-          "grep -rl 'classify-email-response' src supabase/functions scripts eslint-rules 2>/dev/null || true",
-          { encoding: "utf8", timeout: 25_000 },
-        );
-      } catch {
-        raw = "";
-      }
-      const files = raw.split("\n").map((s) => s.trim()).filter(Boolean);
-      const offenders = files.filter((f) => !HISTORICAL_COMMENT_ALLOWLIST.has(f));
-      expect(offenders, `Riferimenti residui: ${offenders.join(", ")}`).toEqual([]);
-    },
-    30_000,
-  );
+  it("nessun riferimento residuo a classify-email-response fuori dall'allowlist storica", () => {
+    let raw = "";
+    try {
+      raw = execSync(
+        "grep -rl 'classify-email-response' src supabase/functions scripts eslint-rules 2>/dev/null || true",
+        { encoding: "utf8", timeout: 25_000 },
+      );
+    } catch {
+      raw = "";
+    }
+    const files = raw
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const offenders = files.filter((f) => !HISTORICAL_COMMENT_ALLOWLIST.has(f));
+    expect(offenders, `Riferimenti residui: ${offenders.join(", ")}`).toEqual([]);
+  }, 30_000);
 
-  it(
-    "nessun caller runtime (invoke/fetch) verso classify-email-response",
-    () => {
-      let raw = "";
-      try {
-        raw = execSync(
-          "grep -rEn --exclude=b6-cleanup-guardrails.test.ts \"(functions/v1/classify-email-response|invoke\\(['\\\"]classify-email-response|fetch\\([^)]*classify-email-response)\" src supabase/functions 2>/dev/null || true",
-          { encoding: "utf8", timeout: 25_000 },
-        );
-      } catch {
-        raw = "";
-      }
-      expect(raw.trim(), `Caller runtime residui:\n${raw}`).toBe("");
-    },
-    30_000,
-  );
+  it("nessun caller runtime (invoke/fetch) verso classify-email-response", () => {
+    let raw = "";
+    try {
+      raw = execSync(
+        'grep -rEn --exclude=b6-cleanup-guardrails.test.ts "(functions/v1/classify-email-response|invoke\\([\'\\"]classify-email-response|fetch\\([^)]*classify-email-response)" src supabase/functions 2>/dev/null || true',
+        { encoding: "utf8", timeout: 25_000 },
+      );
+    } catch {
+      raw = "";
+    }
+    expect(raw.trim(), `Caller runtime residui:\n${raw}`).toBe("");
+  }, 30_000);
 
   it("path canonico classify-inbound-message resta presente", () => {
     expect(existsSync("supabase/functions/classify-inbound-message/index.ts")).toBe(true);

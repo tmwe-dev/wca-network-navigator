@@ -45,9 +45,7 @@ export const scheduleActivityTool: Tool = {
   description:
     "Programma un'attività: o come task per un agente AI (kind=agent_task), o come attività umana in agenda (kind=human_activity). Distingue sempre 'eseguo io' vs 'metto in agenda tua'.",
   match: (p) =>
-    /\b(programma|pianifica|schedula|metti\s+in\s+agenda|aggiungi\s+all'?agenda|crea\s+attivit|ricordamelo)\b/i.test(
-      p,
-    ),
+    /\b(programma|pianifica|schedula|metti\s+in\s+agenda|aggiungi\s+all'?agenda|crea\s+attivit|ricordamelo)\b/i.test(p),
 
   execute: async (_prompt, context?: ToolContext): Promise<ToolResult> => {
     const data = normalize(context?.payload);

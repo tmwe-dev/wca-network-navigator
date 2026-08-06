@@ -23,7 +23,14 @@ type Phase = "idle" | "searching" | "results" | "scraping" | "done";
 
 export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filters }: Props) {
   const th = t(isDark);
-  const { isAvailable, scrapeByAteco: _scrapeByAteco, searchOnly, getScrapingStatus, stopScraping, scrapeSelected } = useRAExtensionBridge();
+  const {
+    isAvailable,
+    scrapeByAteco: _scrapeByAteco,
+    searchOnly,
+    getScrapingStatus,
+    stopScraping,
+    scrapeSelected,
+  } = useRAExtensionBridge();
   const { settings } = useScrapingSettings();
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -38,7 +45,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
   // Check for already-running job on mount
   useEffect(() => {
     if (!isAvailable) return;
-    getScrapingStatus().then(res => {
+    getScrapingStatus().then((res) => {
       if (res.success && res.active) {
         setJobBlocked(true);
         setPhase("scraping");
@@ -62,11 +69,13 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
   useEffect(() => {
     if (phase === "searching") {
       setSearchElapsed(0);
-      searchTimerRef.current = setInterval(() => setSearchElapsed(prev => prev + 1), 1000);
+      searchTimerRef.current = setInterval(() => setSearchElapsed((prev) => prev + 1), 1000);
     } else {
       if (searchTimerRef.current) clearInterval(searchTimerRef.current);
     }
-    return () => { if (searchTimerRef.current) clearInterval(searchTimerRef.current); };
+    return () => {
+      if (searchTimerRef.current) clearInterval(searchTimerRef.current);
+    };
   }, [phase]);
 
   // Poll status while scraping OR searching
@@ -96,7 +105,9 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
     };
     poll();
     pollRef.current = setInterval(poll, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [phase, getScrapingStatus]);
 
   useEffect(() => {
@@ -111,8 +122,10 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
   // ── Phase 1: Search only ──
   const handleSearch = async (
-    overrideAteco?: string[], overrideRegions?: string[],
-    overrideProvinces?: string[], overrideFilters?: ProspectFilters
+    overrideAteco?: string[],
+    overrideRegions?: string[],
+    overrideProvinces?: string[],
+    overrideFilters?: ProspectFilters,
   ) => {
     const ac = overrideAteco ?? wizardAteco;
     const rg = overrideRegions ?? wizardRegions;
@@ -121,7 +134,10 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
     if (ac.length === 0 && rg.length === 0 && pr.length === 0) return;
     const checkRes = await getScrapingStatus();
-    if (checkRes.success && checkRes.active) { setJobBlocked(true); return; }
+    if (checkRes.success && checkRes.active) {
+      setJobBlocked(true);
+      return;
+    }
 
     setPhase("searching");
     setSearchResults([]);
@@ -141,7 +157,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
       const deduped = await dedupAgainstDb(res.results as never);
       setSearchResults(deduped);
       // Auto-select only new ones
-      const newSet = new Set(deduped.filter(r => !r.inDb).map(r => r.url));
+      const newSet = new Set(deduped.filter((r) => !r.inDb).map((r) => r.url));
       setSelected(newSet);
       setPhase("results");
       setLogs(res.log || []);
@@ -152,7 +168,17 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
     }
   };
 
-  const handleWizardStart = ({ atecoCodes: ac, regions: rg, provinces: pr, filters: fl }: { atecoCodes: string[]; regions: string[]; provinces: string[]; filters: ProspectFilters }) => {
+  const handleWizardStart = ({
+    atecoCodes: ac,
+    regions: rg,
+    provinces: pr,
+    filters: fl,
+  }: {
+    atecoCodes: string[];
+    regions: string[];
+    provinces: string[];
+    filters: ProspectFilters;
+  }) => {
     setWizardAteco(ac);
     setWizardRegions(rg);
     setWizardProvinces(pr);
@@ -168,7 +194,7 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
     const dbPivas = new Set((existing || []).map((e) => e.partita_iva?.trim()).filter(Boolean));
     const dbNames = new Set((existing || []).map((e) => e.company_name?.toLowerCase().trim()).filter(Boolean));
 
-    return results.map(r => ({
+    return results.map((r) => ({
       ...r,
       inDb: (r.piva && dbPivas.has(r.piva.trim())) || dbNames.has(r.name.toLowerCase().trim()),
     }));
@@ -178,9 +204,12 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
   const handleScrape = async () => {
     if (selected.size === 0) return;
     const checkRes = await getScrapingStatus();
-    if (checkRes.success && checkRes.active) { setJobBlocked(true); return; }
+    if (checkRes.success && checkRes.active) {
+      setJobBlocked(true);
+      return;
+    }
 
-    const urls = searchResults.filter(r => selected.has(r.url)).map(r => ({ name: r.name, url: r.url }));
+    const urls = searchResults.filter((r) => selected.has(r.url)).map((r) => ({ name: r.name, url: r.url }));
     setPhase("scraping");
     setJobBlocked(false);
     setLogs([]);
@@ -195,19 +224,20 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
 
   // ── Selection handlers ──
   const toggleUrl = useCallback((url: string) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(url)) next.delete(url); else next.add(url);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
       return next;
     });
   }, []);
 
   const selectAll = useCallback(() => {
-    setSelected(new Set(searchResults.map(r => r.url)));
+    setSelected(new Set(searchResults.map((r) => r.url)));
   }, [searchResults]);
 
   const selectNew = useCallback(() => {
-    setSelected(new Set(searchResults.filter(r => !r.inDb).map(r => r.url)));
+    setSelected(new Set(searchResults.filter((r) => !r.inDb).map((r) => r.url)));
   }, [searchResults]);
 
   const deselectAll = useCallback(() => setSelected(new Set()), []);
@@ -227,10 +257,13 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
     return (
       <div className="h-full flex flex-col">
         {jobBlocked && (
-          <div className={`flex items-center gap-2 text-xs px-3 py-2 mx-4 mt-4 rounded-xl ${isDark
-            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-            : "bg-amber-50 text-amber-600 border border-amber-200"
-          }`}>
+          <div
+            className={`flex items-center gap-2 text-xs px-3 py-2 mx-4 mt-4 rounded-xl ${
+              isDark
+                ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                : "bg-amber-50 text-amber-600 border border-amber-200"
+            }`}
+          >
             <AlertTriangle className="w-3.5 h-3.5" />
             Un job è già in esecuzione. Attendi il completamento.
           </div>
@@ -252,16 +285,21 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
   return (
     <div className="h-full flex flex-col gap-3 p-4 overflow-y-auto">
       {/* Extension status */}
-      <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl ${isAvailable
-        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-        : "bg-destructive/10 text-destructive border border-destructive/20"
-      }`}>
+      <div
+        className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl ${
+          isAvailable
+            ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+            : "bg-destructive/10 text-destructive border border-destructive/20"
+        }`}
+      >
         <Plug className="w-3.5 h-3.5" />
         {isAvailable ? "Estensione RA connessa" : "Estensione RA non rilevata — installala e ricarica la pagina"}
       </div>
 
       {jobBlocked && (
-        <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-primary/10 text-primary border border-primary/20`}>
+        <div
+          className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-primary/10 text-primary border border-primary/20`}
+        >
           <AlertTriangle className="w-3.5 h-3.5" />
           Un job è già in esecuzione. Attendi il completamento.
         </div>
@@ -277,17 +315,26 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-xs font-mono ${th.dim}`}>
-                {Math.floor(searchElapsed / 60).toString().padStart(2, "0")}:{(searchElapsed % 60).toString().padStart(2, "0")}
+                {Math.floor(searchElapsed / 60)
+                  .toString()
+                  .padStart(2, "0")}
+                :{(searchElapsed % 60).toString().padStart(2, "0")}
               </span>
               <button
-                onClick={() => { stopScraping(); setPhase("idle"); }}
+                onClick={() => {
+                  stopScraping();
+                  setPhase("idle");
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive/30`}
               >
-                <Square className="w-3 h-3" />Annulla
+                <Square className="w-3 h-3" />
+                Annulla
               </button>
             </div>
           </div>
-          <p className={`text-xs ${th.sub}`}>L'estensione sta cercando le aziende su Report Aziende. I log appariranno sotto.</p>
+          <p className={`text-xs ${th.sub}`}>
+            L'estensione sta cercando le aziende su Report Aziende. I log appariranno sotto.
+          </p>
         </div>
       )}
 
@@ -296,15 +343,17 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
         <>
           <div className={`rounded-xl border p-3 space-y-2 bg-card/40 border-border`}>
             <div className="flex items-center justify-between">
-              <h3 className={`text-sm font-semibold text-foreground`}>
-                Fase 2: Seleziona e Scarica
-              </h3>
+              <h3 className={`text-sm font-semibold text-foreground`}>Fase 2: Seleziona e Scarica</h3>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className={`text-[10px]`}>
                   {searchResults.length} trovate
                 </Badge>
-                <button onClick={handleReset} className={`text-[10px] px-2 py-1 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80`}>
-                  <RotateCcw className="w-3 h-3 inline mr-1" />Nuova ricerca
+                <button
+                  onClick={handleReset}
+                  className={`text-[10px] px-2 py-1 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80`}
+                >
+                  <RotateCcw className="w-3 h-3 inline mr-1" />
+                  Nuova ricerca
                 </button>
               </div>
             </div>
@@ -343,20 +392,26 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
           <div className="flex items-center justify-between">
             <div>
               <h3 className={`text-sm font-semibold text-foreground`}>
-                {status.active ? `Scaricamento profilo ${status.processed + 1} di ${status.total}...` : "Scraping completato"}
+                {status.active
+                  ? `Scaricamento profilo ${status.processed + 1} di ${status.total}...`
+                  : "Scraping completato"}
               </h3>
               {status.currentCompany && status.active && (
-                <p className={`text-xs mt-0.5 truncate text-primary`}>
-                  ➜ {status.currentCompany}
-                </p>
+                <p className={`text-xs mt-0.5 truncate text-primary`}>➜ {status.currentCompany}</p>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className={`text-[10px] bg-emerald-500/15 text-emerald-500 border-emerald-500/20`}>
+              <Badge
+                variant="secondary"
+                className={`text-[10px] bg-emerald-500/15 text-emerald-500 border-emerald-500/20`}
+              >
                 ✅ {status.saved} salvati
               </Badge>
               {status.errors > 0 && (
-                <Badge variant="secondary" className={`text-[10px] bg-destructive/15 text-destructive border-destructive/20`}>
+                <Badge
+                  variant="secondary"
+                  className={`text-[10px] bg-destructive/15 text-destructive border-destructive/20`}
+                >
                   ❌ {status.errors} errori
                 </Badge>
               )}
@@ -373,11 +428,16 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
                 onClick={() => stopScraping()}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive/30`}
               >
-                <Square className="w-3.5 h-3.5" />Ferma
+                <Square className="w-3.5 h-3.5" />
+                Ferma
               </button>
             ) : (
-              <button onClick={handleReset} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80`}>
-                <RotateCcw className="w-3.5 h-3.5" />Nuova ricerca
+              <button
+                onClick={handleReset}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80`}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Nuova ricerca
               </button>
             )}
           </div>
@@ -393,16 +453,12 @@ export function ProspectImporter({ isDark, atecoCodes, regions, provinces, filte
           <div ref={logRef} className="flex-1 overflow-y-auto p-3 space-y-0.5 font-mono text-[11px]">
             {logs.map((l, i) => (
               <div key={i} className="text-muted-foreground">
-                <span className="text-muted-foreground">
-                  {new Date(l.time).toLocaleTimeString()}
-                </span>{" "}
-                {l.msg}
+                <span className="text-muted-foreground">{new Date(l.time).toLocaleTimeString()}</span> {l.msg}
               </div>
             ))}
           </div>
         </div>
       )}
-
     </div>
   );
 }

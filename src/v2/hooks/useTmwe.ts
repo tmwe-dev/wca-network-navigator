@@ -34,12 +34,14 @@ export function useTmwePartnerLink(partnerId: string | null | undefined) {
 
 /** Candidati di matching VAT/VIES/nome (on-demand). */
 export function useTmweMatchCandidates(partnerId: string | null | undefined, enabled = false) {
-  return useQuery<{ candidates: TmweCandidate[]; partner: { vat: string | null; denomination: string; city: string } }>({
-    queryKey: tmweQueryKeys.matchCandidates(partnerId ?? ""),
-    queryFn: () => findTmweCandidates(partnerId as string),
-    enabled: Boolean(partnerId) && enabled,
-    staleTime: 30_000,
-  });
+  return useQuery<{ candidates: TmweCandidate[]; partner: { vat: string | null; denomination: string; city: string } }>(
+    {
+      queryKey: tmweQueryKeys.matchCandidates(partnerId ?? ""),
+      queryFn: () => findTmweCandidates(partnerId as string),
+      enabled: Boolean(partnerId) && enabled,
+      staleTime: 30_000,
+    },
+  );
 }
 
 /** Snapshot anagrafica TMWE per cliente collegato. */

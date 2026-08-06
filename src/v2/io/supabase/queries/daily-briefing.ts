@@ -11,9 +11,5 @@ export async function fetchDailyBriefingsRaw(): Promise<{
   data: AiSessionBriefingRow[] | null;
   error: PostgrestError | null;
 }> {
-  return supabase
-    .from("ai_session_briefings")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(5);
+  return supabase.from("ai_session_briefings").select("*").order("created_at", { ascending: false }).limit(5);
 }

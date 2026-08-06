@@ -23,6 +23,7 @@ Lovable (come v0, Bolt, e simili) genera codice che "funziona subito" ma è stru
 **Il difetto:** Non implementa mai feature flags, event bus, retry pattern, logging strutturato, health check, o state management immutabile — perché nessuno glielo chiede e aggiungerli rallenterebbe il "wow effect" iniziale.
 
 **Regola v2.0:** Tutti questi pattern sono requisiti di fondazione (Vol. II, Cap. IV). Devono esistere PRIMA della prima feature di prodotto:
+
 - Event bus centralizzato (Vol. IV, Sez. 11.2)
 - Logging strutturato JSON con campi obbligatori (Vol. IV, Sez. 8.1)
 - Circuit breaker con fallback (Vol. IV, Sez. 5.2)
@@ -44,6 +45,7 @@ Lovable (come v0, Bolt, e simili) genera codice che "funziona subito" ma è stru
 **Il difetto:** `.catch(() => {})` è il pattern standard — errori inghiottiti, nessun logging, nessun recovery. L'app sembra funzionare finché non si rompe in silenzio.
 
 **Regola v2.0:** Nessun `try-catch` generico (Vol. III, §3.3 — vincolo inviolabile). Ogni errore è:
+
 - Tipizzato con codice applicativo e messaggio leggibile (Vol. II, Cap. V, §5.3)
 - Registrato nel log strutturato con contesto completo (Vol. I, Cap. III, §3.3)
 - Gestito con strategia esplicita: retry, fallback, escalation, o notifica (Vol. IV, Sez. 5.3)
@@ -57,6 +59,7 @@ Lovable (come v0, Bolt, e simili) genera codice che "funziona subito" ma è stru
 **Il difetto:** Componenti da 500+ righe, logica di business mischiata con UI, nessun test, nessuna documentazione inline. Il codice nasce già come debito tecnico.
 
 **Regola v2.0:**
+
 - Massimo 300 LOC per file, 15-20 righe per funzione (Vol. III, §3.1)
 - Separazione rigorosa: interfaccia, stato, dominio, dati (Vol. I, Legge 5)
 - Test preventivi: schema validation, contract testing, smoke testing (Vol. IV, Sez. 9.2)
@@ -69,6 +72,7 @@ Lovable (come v0, Bolt, e simili) genera codice che "funziona subito" ma è stru
 **Il difetto:** Lovable risolve il problema sbagliato. Costruisce il primo 20% (prototipo visivo) bene, ma quel 20% è il lavoro facile. L'80% che conta — stabilità, sicurezza, scalabilità, monitoring — non esiste.
 
 **Regola v2.0:** La v2.0 inverte la priorità. Le fondazioni (Vol. II, Cap. IV) vengono costruite PRIMA di qualunque schermata:
+
 1. Autenticazione e autorizzazione granulare
 2. Design system con componenti tipizzati
 3. Gestione errori standardizzata
@@ -82,16 +86,16 @@ Solo DOPO queste fondazioni si costruisce la prima feature di prodotto.
 
 ## Riferimento: v1.0 vs standard
 
-| Metrica | v1.0 (Lovable puro) | Target v2.0 | Benchmark (Brumm) |
-|---------|---------------------|-------------|-------------------|
-| Score qualità | 65-68/100 | 95+/100 | 100/100 |
-| `any` nel codice | 1489 | 0 | 0 |
-| God components (>500 LOC) | 12 | 0 | 0 |
-| Error handling | Cosmetico | Tipizzato + logged | Completo |
-| Test coverage | Guardrails minimi | Contract + regression | Completo |
-| Logging strutturato | Parziale | JSON obbligatorio | Completo |
-| Feature flags | Assenti | Obbligatori | Presenti |
-| Documentazione | Assente | Auto-generata + ADR | Completa |
+| Metrica                   | v1.0 (Lovable puro) | Target v2.0           | Benchmark (Brumm) |
+| ------------------------- | ------------------- | --------------------- | ----------------- |
+| Score qualità             | 65-68/100           | 95+/100               | 100/100           |
+| `any` nel codice          | 1489                | 0                     | 0                 |
+| God components (>500 LOC) | 12                  | 0                     | 0                 |
+| Error handling            | Cosmetico           | Tipizzato + logged    | Completo          |
+| Test coverage             | Guardrails minimi   | Contract + regression | Completo          |
+| Logging strutturato       | Parziale            | JSON obbligatorio     | Completo          |
+| Feature flags             | Assenti             | Obbligatori           | Presenti          |
+| Documentazione            | Assente             | Auto-generata + ADR   | Completa          |
 
 ---
 

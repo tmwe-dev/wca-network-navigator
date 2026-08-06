@@ -30,10 +30,10 @@ Deno.serve(async (req: Request) => {
   const expectedSecret = Deno.env.get("CRON_SECRET");
   if (!cronSecret || cronSecret !== expectedSecret) {
     log.warn("auth_failed", { reason: "invalid_cron_secret" });
-    return new Response(
-      JSON.stringify({ error: "UNAUTHORIZED", message: "Invalid cron secret" }),
-      { status: 401, headers: { ...cors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "UNAUTHORIZED", message: "Invalid cron secret" }), {
+      status: 401,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 
   const supabase = createServiceClient();
@@ -49,10 +49,10 @@ Deno.serve(async (req: Request) => {
 
   if (execErr) {
     log.error("query_executed_failed", execErr);
-    return new Response(
-      JSON.stringify({ error: "QUERY_FAILED", message: execErr.message }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "QUERY_FAILED", message: execErr.message }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 
   const actions = executed ?? [];
@@ -124,9 +124,7 @@ Deno.serve(async (req: Request) => {
     details,
   };
 
-  const { error: insertErr } = await supabase
-    .from("dispatch_integrity_report")
-    .insert(report);
+  const { error: insertErr } = await supabase.from("dispatch_integrity_report").insert(report);
 
   if (insertErr) {
     log.error("insert_report_failed", insertErr);

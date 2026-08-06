@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WCA Network Navigator - CRM & Email Intelligence Platform</title>
-    <meta name="description" content="WCA Network Navigator - Intelligent CRM and Email Management Platform for logistics partners across 17 global networks." />
+    <meta
+      name="description"
+      content="WCA Network Navigator - Intelligent CRM and Email Management Platform for logistics partners across 17 global networks."
+    />
     <meta name="author" content="WCA Network Navigator" />
 
     <meta property="og:title" content="WCA Network Navigator" />
@@ -36,7 +39,7 @@
       // Anti-flash: applica intensità testo prima del primo render
       try {
         var v = localStorage.getItem("text-intensity") || "normal";
-        if (["soft","normal","strong","max"].indexOf(v) === -1) v = "normal";
+        if (["soft", "normal", "strong", "max"].indexOf(v) === -1) v = "normal";
         document.documentElement.setAttribute("data-text-intensity", v);
       } catch (e) {
         document.documentElement.setAttribute("data-text-intensity", "normal");

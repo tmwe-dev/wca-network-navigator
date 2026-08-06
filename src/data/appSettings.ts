@@ -27,7 +27,6 @@ export async function getAppSettingByKey(key: string) {
   return data?.value ?? null;
 }
 
-
 export async function insertAppSetting(setting: { key: string; value: string; user_id: string }) {
   const { error } = await supabase.from("app_settings").insert(setting);
   if (error) throw error;
@@ -54,22 +53,17 @@ export async function setAiAutomationsPaused(userId: string, paused: boolean, re
  * stessa select/eq/maybeSingle e stesso ritorno `{ data, error }` non-throw.
  */
 export async function getAppSettingValueByKey(key: string) {
-  return await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
+  return await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
 }
 
 /** Tutte le impostazioni di un utente come mappa chiave→valore. */
 export async function findAppSettingsMapForUser(userId: string): Promise<Record<string, string>> {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("key, value")
-    .eq("user_id", userId);
+  const { data, error } = await supabase.from("app_settings").select("key, value").eq("user_id", userId);
   if (error) throw error;
   const map: Record<string, string> = {};
-  (data ?? []).forEach((row) => { map[row.key] = row.value ?? ""; });
+  (data ?? []).forEach((row) => {
+    map[row.key] = row.value ?? "";
+  });
   return map;
 }
 
@@ -82,11 +76,7 @@ export async function saveAppSettingForUser(userId: string, key: string, value: 
     .eq("user_id", userId)
     .maybeSingle();
   if (existing) {
-    const { error } = await supabase
-      .from("app_settings")
-      .update({ value })
-      .eq("key", key)
-      .eq("user_id", userId);
+    const { error } = await supabase.from("app_settings").update({ value }).eq("key", key).eq("user_id", userId);
     if (error) throw error;
   } else {
     const { error } = await supabase.from("app_settings").insert({ key, value, user_id: userId });
@@ -94,7 +84,10 @@ export async function saveAppSettingForUser(userId: string, key: string, value: 
   }
 }
 
-export interface PauseSettingsRow { key: string; value: string | null }
+export interface PauseSettingsRow {
+  key: string;
+  value: string | null;
+}
 
 /** Righe app_settings correlate alla pausa globale automazioni AI. */
 export async function findAiAutomationPauseSettings(userId: string): Promise<PauseSettingsRow[]> {
@@ -150,11 +143,7 @@ export async function upsertAiAutomationPauseSettings(
 
 /** Legge un app_setting per chiave, errore propagato (single, non maybeSingle). Ritorna null se assente/errore. */
 export async function getAppSettingSingleByKey(key: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", key)
-    .single();
+  const { data, error } = await supabase.from("app_settings").select("value").eq("key", key).single();
   if (error || !data) return null;
   return data.value ?? null;
 }
@@ -169,13 +158,11 @@ export async function upsertAppSettingByKey(params: { key: string; value: string
 
 /** Impostazioni `ai_*` di un utente (Email Forge Sender Profile). */
 export async function findAiSettingsForUser(userId: string): Promise<Record<string, string>> {
-  const { data } = await supabase
-    .from("app_settings")
-    .select("key, value")
-    .eq("user_id", userId)
-    .like("key", "ai_%");
+  const { data } = await supabase.from("app_settings").select("key, value").eq("user_id", userId).like("key", "ai_%");
   const map: Record<string, string> = {};
-  (data ?? []).forEach((r) => { if (r.value != null) map[r.key] = r.value; });
+  (data ?? []).forEach((r) => {
+    if (r.value != null) map[r.key] = r.value;
+  });
   return map;
 }
 
@@ -210,12 +197,10 @@ export async function getScheduledImproveConfigValue(): Promise<{ value: string 
 
 /** Upsert della configurazione "Migliora tutto" schedulata (senza onConflict esplicito). */
 export async function saveScheduledImproveConfig(userId: string, value: string): Promise<void> {
-  const { error } = await supabase
-    .from("app_settings")
-    .upsert({
-      key: "prompt_lab_scheduled_improve",
-      value,
-      user_id: userId,
-    });
+  const { error } = await supabase.from("app_settings").upsert({
+    key: "prompt_lab_scheduled_improve",
+    value,
+    user_id: userId,
+  });
   if (error) throw error;
 }

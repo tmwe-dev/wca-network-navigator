@@ -5,16 +5,29 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { listCronJobStatus } from "@/data/cronJobs";
-import { findUsageDailyBudgetRows, findAgentActionToolNames, findAgentActionMissionRows } from "@/data/observabilityQueries";
+import {
+  findUsageDailyBudgetRows,
+  findAgentActionToolNames,
+  findAgentActionMissionRows,
+} from "@/data/observabilityQueries";
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, BarChart3, Activity, Zap, AlertTriangle, Clock, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Download,
+  BarChart3,
+  Activity,
+  Zap,
+  AlertTriangle,
+  Clock,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -129,7 +142,13 @@ function CronTab() {
   const formatDate = (d: string | null) => {
     if (!d) return "—";
     const date = new Date(d);
-    return date.toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return date.toLocaleString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   };
 
   if (isLoading) {
@@ -146,7 +165,8 @@ function CronTab() {
         <CardContent className="py-8 text-center">
           <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">
-            Nessun job cron configurato. La funzione RPC <code>cron_job_status</code> potrebbe non essere ancora disponibile.
+            Nessun job cron configurato. La funzione RPC <code>cron_job_status</code> potrebbe non essere ancora
+            disponibile.
           </p>
         </CardContent>
       </Card>
@@ -186,10 +206,12 @@ function CronTab() {
                       ) : (
                         <XCircle className="w-3.5 h-3.5 text-destructive" />
                       )}
-                      <span className={cn(
-                        "text-xs font-medium",
-                        job.last_status === "succeeded" ? "text-success" : "text-destructive"
-                      )}>
+                      <span
+                        className={cn(
+                          "text-xs font-medium",
+                          job.last_status === "succeeded" ? "text-success" : "text-destructive",
+                        )}
+                      >
                         {job.last_status}
                       </span>
                     </div>
@@ -272,7 +294,9 @@ export function ObservabilityPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{(usage?.totalAiTokens ?? 0).toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Cap giornaliero: {(usage?.aiTokenCap ?? 500000).toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">
+                  Cap giornaliero: {(usage?.aiTokenCap ?? 500000).toLocaleString()}
+                </p>
               </CardContent>
             </Card>
 
@@ -284,7 +308,9 @@ export function ObservabilityPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{(usage?.totalTtsChars ?? 0).toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Cap giornaliero: {(usage?.ttsCharCap ?? 50000).toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">
+                  Cap giornaliero: {(usage?.ttsCharCap ?? 50000).toLocaleString()}
+                </p>
               </CardContent>
             </Card>
 

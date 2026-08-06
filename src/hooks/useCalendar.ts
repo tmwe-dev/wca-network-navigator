@@ -6,18 +6,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "./use-toast";
 import * as calendarData from "@/data/calendar";
-import type {
-  EventType,
-  RecurrenceType,
-  EventStatus,
-} from "@/data/calendar";
+import type { EventType, RecurrenceType, EventStatus } from "@/data/calendar";
 
 // ─── useCalendarEvents Hook ──────────────────────────────
 
-export function useCalendarEvents(
-  from: string,
-  to: string,
-) {
+export function useCalendarEvents(from: string, to: string) {
   const { user } = useAuth();
 
   return useQuery({

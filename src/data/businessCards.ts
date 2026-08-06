@@ -16,7 +16,9 @@ export const businessCardKeys = {
 export async function findBusinessCards(filters?: { event_name?: string; match_status?: string }) {
   let q = supabase
     .from("business_cards")
-    .select("*, partner:matched_partner_id(id, company_name, logo_url, website, company_alias, enrichment_data, country_code, lead_status)")
+    .select(
+      "*, partner:matched_partner_id(id, company_name, logo_url, website, company_alias, enrichment_data, country_code, lead_status)",
+    )
     .order("created_at", { ascending: false });
   if (filters?.event_name) q = q.ilike("event_name", `%${filters.event_name}%`);
   if (filters?.match_status) q = q.eq("match_status", filters.match_status);
@@ -43,11 +45,7 @@ export async function findMatchedPartnerIds(): Promise<Set<string>> {
     .not("matched_partner_id", "is", null);
   if (error) throw error;
   // Il filtro `.not(... is null)` è lato server: qui si stringe il tipo senza cast.
-  return new Set(
-    (data ?? [])
-      .map((r) => r.matched_partner_id)
-      .filter((id): id is string => typeof id === "string"),
-  );
+  return new Set((data ?? []).map((r) => r.matched_partner_id).filter((id): id is string => typeof id === "string"));
 }
 
 export async function findMatchedContactIds(): Promise<Set<string>> {
@@ -56,13 +54,8 @@ export async function findMatchedContactIds(): Promise<Set<string>> {
     .select("matched_contact_id")
     .not("matched_contact_id", "is", null);
   if (error) throw error;
-  return new Set(
-    (data ?? [])
-      .map((r) => r.matched_contact_id)
-      .filter((id): id is string => typeof id === "string"),
-  );
+  return new Set((data ?? []).map((r) => r.matched_contact_id).filter((id): id is string => typeof id === "string"));
 }
-
 
 export async function createBusinessCard(card: BCInsert) {
   const { error } = await supabase.from("business_cards").insert(card);
@@ -116,7 +109,9 @@ export async function findBusinessCardsByPartnerIds(partnerIds: string[]): Promi
 export async function findBusinessCardsForUser(userId: string, limit = 100) {
   const { data, error } = await supabase
     .from("business_cards")
-    .select("id, company_name, contact_name, email, phone, match_status, match_confidence, lead_status, event_name, created_at")
+    .select(
+      "id, company_name, contact_name, email, phone, match_status, match_confidence, lead_status, event_name, created_at",
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);

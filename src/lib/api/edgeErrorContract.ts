@@ -54,12 +54,7 @@ export function parseEdgeErrorBody(body: unknown): ParsedEdgeError | null {
   const b = body as Record<string, unknown>;
 
   const rawCode = typeof b.code === "string" ? b.code : null;
-  const message =
-    typeof b.error === "string"
-      ? b.error
-      : typeof b.message === "string"
-        ? b.message
-        : null;
+  const message = typeof b.error === "string" ? b.error : typeof b.message === "string" ? b.message : null;
   const details = typeof b.details === "string" ? b.details : null;
 
   if (rawCode === null && message === null) return null;

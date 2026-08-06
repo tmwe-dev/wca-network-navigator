@@ -9,11 +9,7 @@ import { useBcaFilters } from "./BcaFiltersContext";
 export function BCAFiltersRailContent() {
   const g = useBcaFilters();
   if (!g) {
-    return (
-      <p className="text-[11px] text-muted-foreground">
-        I filtri si attivano dentro la sezione Biglietti.
-      </p>
-    );
+    return <p className="text-[11px] text-muted-foreground">I filtri si attivano dentro la sezione Biglietti.</p>;
   }
   return (
     <BcaCountrySidebar

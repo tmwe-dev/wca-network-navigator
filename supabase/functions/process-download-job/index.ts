@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { assertJobOwned } from "../_shared/ownership.ts";
@@ -18,61 +18,57 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const _dynCors = getCorsHeaders(origin);
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const supabase = createClient(supabaseUrl, supabaseKey)
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     // ── Auth check ──
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return respond({ success: false, error: 'Unauthorized' }, 401)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return respond({ success: false, error: "Unauthorized" }, 401);
     }
-    const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    const authClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
-    })
-    const { data: userData, error: userError } = await authClient.auth.getUser()
+    });
+    const { data: userData, error: userError } = await authClient.auth.getUser();
     if (userError || !userData?.user?.id) {
-      return respond({ success: false, error: 'Unauthorized' }, 401)
+      return respond({ success: false, error: "Unauthorized" }, 401);
     }
-    const userId = userData.user.id
+    const userId = userData.user.id;
 
-    const { jobId, action } = await req.json()
+    const { jobId, action } = await req.json();
 
     if (!jobId) {
-      return respond({ success: false, error: 'jobId is required' }, 400)
+      return respond({ success: false, error: "jobId is required" }, 400);
     }
 
     // ── Ownership guard: job MUST belong to the authenticated user ──
-    const ownErr = await assertJobOwned(supabase, jobId, userId, getCorsHeaders(origin))
-    if (ownErr) return ownErr
+    const ownErr = await assertJobOwned(supabase, jobId, userId, getCorsHeaders(origin));
+    if (ownErr) return ownErr;
 
     // Fetch the job
-    const { data: job, error: jobError } = await supabase
-      .from('download_jobs')
-      .select('*')
-      .eq('id', jobId)
-      .single()
+    const { data: job, error: jobError } = await supabase.from("download_jobs").select("*").eq("id", jobId).single();
 
     if (jobError || !job) {
-      return respond({ success: false, error: `Job not found: ${jobError?.message}` })
+      return respond({ success: false, error: `Job not found: ${jobError?.message}` });
     }
 
     // Action: mark job as completed
-    if (action === 'complete') {
+    if (action === "complete") {
       await supabase
-        .from('download_jobs')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', jobId)
+        .from("download_jobs")
+        .update({ status: "completed", completed_at: new Date().toISOString() })
+        .eq("id", jobId);
 
-      await verifyDownloadCompleteness(supabase, job.country_code, job.network_name)
-      await updateNetworkConfigsFromData(supabase, job.network_name)
+      await verifyDownloadCompleteness(supabase, job.country_code, job.network_name);
+      await updateNetworkConfigsFromData(supabase, job.network_name);
 
-      return respond({ success: true, message: 'Job completed' })
+      return respond({ success: true, message: "Job completed" });
     }
 
     // Action: get job status (for frontend polling)
-    if (action === 'status') {
+    if (action === "status") {
       return respond({
         success: true,
         status: job.status,
@@ -80,7 +76,7 @@ Deno.serve(async (req) => {
         total_count: job.total_count,
         contacts_found_count: job.contacts_found_count,
         contacts_missing_count: job.contacts_missing_count,
-      })
+      });
     }
 
     // Default: return job info
@@ -90,22 +86,18 @@ Deno.serve(async (req) => {
       status: job.status,
       current_index: job.current_index,
       total_count: job.total_count,
-    })
-
+    });
   } catch (error) {
-    console.error('process-download-job error:', error)
-    return respond(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
-      500
-    )
+    console.error("process-download-job error:", error);
+    return respond({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
-})
+});
 
 function respond(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' },
-  })
+    headers: { ...getCorsHeaders(null), "Content-Type": "application/json" },
+  });
 }
 
 /**
@@ -115,42 +107,37 @@ function respond(data: unknown, status = 200) {
 async function verifyDownloadCompleteness(supabase: SupabaseClient, countryCode: string, networkName: string) {
   try {
     const { data: cacheRows } = await supabase
-      .from('directory_cache')
-      .select('id, members')
-      .eq('country_code', countryCode)
-      .eq('network_name', networkName)
+      .from("directory_cache")
+      .select("id, members")
+      .eq("country_code", countryCode)
+      .eq("network_name", networkName);
 
-    if (!cacheRows || cacheRows.length === 0) return
+    if (!cacheRows || cacheRows.length === 0) return;
 
     for (const cache of cacheRows) {
-      const members = cache.members as Array<{ id: number }> | number[]
-      if (!members || !Array.isArray(members) || members.length === 0) continue
+      const members = cache.members as Array<{ id: number }> | number[];
+      if (!members || !Array.isArray(members) || members.length === 0) continue;
 
       const wcaIds = (members as Array<{ id: number } | number>)
-        .map((member) => typeof member === "object" ? member.id : member)
-        .filter((id): id is number => Number.isFinite(id))
-      if (wcaIds.length === 0) continue
+        .map((member) => (typeof member === "object" ? member.id : member))
+        .filter((id): id is number => Number.isFinite(id));
+      if (wcaIds.length === 0) continue;
 
-      const { data: partners } = await supabase
-        .from('partners')
-        .select('wca_id')
-        .in('wca_id', wcaIds)
+      const { data: partners } = await supabase.from("partners").select("wca_id").in("wca_id", wcaIds);
 
-      const foundIds = new Set((partners || []).map((p: Record<string, unknown>) => p.wca_id))
-      const allPresent = wcaIds.every(id => foundIds.has(id))
+      const foundIds = new Set((partners || []).map((p: Record<string, unknown>) => p.wca_id));
+      const allPresent = wcaIds.every((id) => foundIds.has(id));
 
       await supabase
-        .from('directory_cache')
+        .from("directory_cache")
         .update({
           download_verified: allPresent,
           verified_at: allPresent ? new Date().toISOString() : null,
         })
-        .eq('id', cache.id)
-
-      
+        .eq("id", cache.id);
     }
   } catch (err) {
-    console.error('Verification error:', err)
+    console.error("Verification error:", err);
   }
 }
 
@@ -159,43 +146,43 @@ async function verifyDownloadCompleteness(supabase: SupabaseClient, countryCode:
  */
 async function updateNetworkConfigsFromData(supabase: SupabaseClient, networkName: string) {
   try {
-    if (!networkName || networkName === 'Tutti' || networkName === '') return
+    if (!networkName || networkName === "Tutti" || networkName === "") return;
 
-    const netNames = networkName.includes(',') ? networkName.split(',').map(n => n.trim()) : [networkName]
+    const netNames = networkName.includes(",") ? networkName.split(",").map((n) => n.trim()) : [networkName];
 
     for (const net of netNames) {
       const { data: networkPartners } = await supabase
-        .from('partner_networks')
-        .select('partner_id')
-        .eq('network_name', net)
-        .limit(500)
+        .from("partner_networks")
+        .select("partner_id")
+        .eq("network_name", net)
+        .limit(500);
 
-      if (!networkPartners || networkPartners.length === 0) continue
+      if (!networkPartners || networkPartners.length === 0) continue;
 
-      const partnerIds = networkPartners.map((p: Record<string, unknown>) => p.partner_id)
+      const partnerIds = networkPartners.map((p: Record<string, unknown>) => p.partner_id);
 
       const { data: contacts } = await supabase
-        .from('partner_contacts')
-        .select('email, direct_phone, mobile, name')
-        .in('partner_id', partnerIds)
+        .from("partner_contacts")
+        .select("email, direct_phone, mobile, name")
+        .in("partner_id", partnerIds);
 
-      const hasEmails = (contacts || []).some((c: Record<string, unknown>) => c.email)
-      const hasPhones = (contacts || []).some((c: Record<string, unknown>) => c.direct_phone || c.mobile)
-      const hasNames = (contacts || []).some((c: Record<string, unknown>) => c.name && !/Members\s*only/i.test(c.name as string))
+      const hasEmails = (contacts || []).some((c: Record<string, unknown>) => c.email);
+      const hasPhones = (contacts || []).some((c: Record<string, unknown>) => c.direct_phone || c.mobile);
+      const hasNames = (contacts || []).some(
+        (c: Record<string, unknown>) => c.name && !/Members\s*only/i.test(c.name as string),
+      );
 
       await supabase
-        .from('network_configs')
+        .from("network_configs")
         .update({
           has_contact_emails: hasEmails,
           has_contact_phones: hasPhones,
           has_contact_names: hasNames,
           sample_tested_at: new Date().toISOString(),
         })
-        .eq('network_name', net)
-
-      
+        .eq("network_name", net);
     }
   } catch (err) {
-    console.error('updateNetworkConfigsFromData error:', err)
+    console.error("updateNetworkConfigsFromData error:", err);
   }
 }

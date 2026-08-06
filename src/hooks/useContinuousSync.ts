@@ -5,7 +5,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import {
-  bgSyncSubscribe, bgSyncStart, bgSyncStop, bgSyncIsRunning, bgSyncReset,
+  bgSyncSubscribe,
+  bgSyncStart,
+  bgSyncStop,
+  bgSyncIsRunning,
+  bgSyncReset,
   type BgSyncProgress,
 } from "@/lib/backgroundSync";
 import { useActiveMailbox } from "@/contexts/ActiveMailboxContext";
@@ -17,10 +21,15 @@ const COUNT_THROTTLE_MS = 30_000;
 export function useContinuousSync() {
   const queryClient = useQueryClient();
   const { activeMailbox } = useActiveMailbox();
-  const mailboxId =
-    activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
+  const mailboxId = activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
   const [progress, setProgress] = useState<BgSyncProgress>(() => ({
-    downloaded: 0, skipped: 0, remaining: 0, batch: 0, lastSubject: "", status: "idle", elapsedSeconds: 0,
+    downloaded: 0,
+    skipped: 0,
+    remaining: 0,
+    batch: 0,
+    lastSubject: "",
+    status: "idle",
+    elapsedSeconds: 0,
   }));
   const [isSyncing, setIsSyncing] = useState(bgSyncIsRunning);
   const lastCountInvalidation = useRef(0);
@@ -49,8 +58,12 @@ export function useContinuousSync() {
     });
   }, [queryClient]);
 
-  const startSync = useCallback(() => { bgSyncStart(mailboxId); }, [mailboxId]);
-  const stopSync = useCallback(() => { bgSyncStop(); }, []);
+  const startSync = useCallback(() => {
+    bgSyncStart(mailboxId);
+  }, [mailboxId]);
+  const stopSync = useCallback(() => {
+    bgSyncStop();
+  }, []);
 
   return { startSync, stopSync, isSyncing, progress };
 }

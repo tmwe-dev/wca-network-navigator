@@ -51,8 +51,7 @@ const FRAMEWORKS: Record<DebateLanguage, DebateFramework> = {
       "BUILD ON: when a previous contribution is valid, extend it with data, examples or implications others didn't see.",
     disagree:
       "DISAGREE: if you disagree, say it clearly following your debateRule. Never criticize without proposing a testable alternative.",
-    conclude:
-      "CLOSING: end your turn with a clear actionable contribution, not with a summary of the debate.",
+    conclude: "CLOSING: end your turn with a clear actionable contribution, not with a summary of the debate.",
   },
   es: {
     intro:
@@ -65,8 +64,7 @@ const FRAMEWORKS: Record<DebateLanguage, DebateFramework> = {
       "CONSTRUYE: cuando una contribución previa sea válida, extiéndela con datos, ejemplos o implicaciones que los otros no vieron.",
     disagree:
       "DISIENTE: si no estás de acuerdo, dilo claramente siguiendo tu debateRule. Nunca critiques sin proponer una alternativa comprobable.",
-    conclude:
-      "CIERRE: termina tu turno con una contribución clara y accionable, no con un resumen del debate.",
+    conclude: "CIERRE: termina tu turno con una contribución clara y accionable, no con un resumen del debate.",
   },
   fr: {
     intro:
@@ -79,8 +77,7 @@ const FRAMEWORKS: Record<DebateLanguage, DebateFramework> = {
       "CONSTRUIS : quand une contribution précédente est valide, étends-la avec des données, exemples ou implications que les autres n'ont pas vues.",
     disagree:
       "DÉSAPPROUVE : si tu n'es pas d'accord, dis-le clairement en suivant ta debateRule. Ne critique jamais sans proposer une alternative testable.",
-    conclude:
-      "CLÔTURE : termine ton tour avec une contribution claire et actionnable, pas avec un résumé du débat.",
+    conclude: "CLÔTURE : termine ton tour avec une contribution claire et actionnable, pas avec un résumé du débat.",
   },
   de: {
     intro:
@@ -107,8 +104,7 @@ const FRAMEWORKS: Record<DebateLanguage, DebateFramework> = {
       "CONSTRUA: quando uma contribuição anterior for válida, estenda-a com dados, exemplos ou implicações que os outros não viram.",
     disagree:
       "DISCORDE: se não concorda, diga claramente seguindo sua debateRule. Nunca critique sem propor uma alternativa testável.",
-    conclude:
-      "FECHAMENTO: termine seu turno com uma contribuição clara e acionável, não com um resumo do debate.",
+    conclude: "FECHAMENTO: termine seu turno com uma contribuição clara e acionável, não com um resumo do debate.",
   },
 };
 

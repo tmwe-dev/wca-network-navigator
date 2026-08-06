@@ -45,15 +45,15 @@ describe("computeDowngrade (9-state)", () => {
   });
 
   it("not_interested + 0.70 + first_touch_sent → null (below threshold)", () => {
-    expect(computeDowngrade("not_interested", 0.70, "first_touch_sent")).toBeNull();
+    expect(computeDowngrade("not_interested", 0.7, "first_touch_sent")).toBeNull();
   });
 
   it("not_interested + 0.90 + new → null (new not eligible)", () => {
-    expect(computeDowngrade("not_interested", 0.90, "new")).toBeNull();
+    expect(computeDowngrade("not_interested", 0.9, "new")).toBeNull();
   });
 
   it("not_interested + 0.80 + holding → archived (exactly at threshold)", () => {
-    expect(computeDowngrade("not_interested", 0.80, "holding")).toBe("archived");
+    expect(computeDowngrade("not_interested", 0.8, "holding")).toBe("archived");
   });
 
   it("interested + 0.95 + first_touch_sent → null (wrong category)", () => {
@@ -61,6 +61,6 @@ describe("computeDowngrade (9-state)", () => {
   });
 
   it("not_interested + 0.90 + engaged → null (engaged not eligible)", () => {
-    expect(computeDowngrade("not_interested", 0.90, "engaged")).toBeNull();
+    expect(computeDowngrade("not_interested", 0.9, "engaged")).toBeNull();
   });
 });

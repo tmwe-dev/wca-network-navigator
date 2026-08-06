@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-
 Deno.serve(async (req: Request) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -19,7 +18,10 @@ Deno.serve(async (req: Request) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader || "" } },
     });
-    const { data: { user }, error: authErr } = await userClient.auth.getUser();
+    const {
+      data: { user },
+      error: authErr,
+    } = await userClient.auth.getUser();
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: "Non autenticato" }), {
         status: 401,
@@ -28,7 +30,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const admin = createClient(supabaseUrl, serviceKey);
-    const body = await req.json().catch((e) => { console.warn("[deduplicate-contacts] Invalid JSON body:", e.message); return {}; });
+    const body = await req.json().catch((e) => {
+      console.warn("[deduplicate-contacts] Invalid JSON body:", e.message);
+      return {};
+    });
     const contactIds: string[] = body.contactIds || [];
 
     if (contactIds.length < 2) {
@@ -39,10 +44,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Fetch selected contacts
-    const { data: contacts, error: fetchErr } = await admin
-      .from("imported_contacts")
-      .select("*")
-      .in("id", contactIds);
+    const { data: contacts, error: fetchErr } = await admin.from("imported_contacts").select("*").in("id", contactIds);
 
     if (fetchErr) throw fetchErr;
     if (!contacts || contacts.length < 2) {
@@ -68,7 +70,7 @@ Deno.serve(async (req: Request) => {
       if (group.length < 2) continue;
 
       // Score each contact for completeness
-      const scored = group.map(c => {
+      const scored = group.map((c) => {
         let score = 0;
         if (c.email) score += 20;
         if (c.phone || c.mobile) score += 15;
@@ -87,21 +89,38 @@ Deno.serve(async (req: Request) => {
       // Keep the richest
       scored.sort((a, b) => b.score - a.score);
       const keeper = scored[0].contact;
-      const dupes = scored.slice(1).map(s => s.contact);
+      const dupes = scored.slice(1).map((s) => s.contact);
 
       // Merge missing fields from dupes into keeper
       const updates: Record<string, unknown> = {};
       const mergeField = (field: string) => {
         if (!keeper[field]) {
           for (const d of dupes) {
-            if (d[field]) { updates[field] = d[field]; break; }
+            if (d[field]) {
+              updates[field] = d[field];
+              break;
+            }
           }
         }
       };
 
-      for (const f of ["email", "phone", "mobile", "name", "position", "city", "country",
-        "address", "zip_code", "company_alias", "contact_alias", "note", "origin",
-        "wca_partner_id", "wca_match_confidence"]) {
+      for (const f of [
+        "email",
+        "phone",
+        "mobile",
+        "name",
+        "position",
+        "city",
+        "country",
+        "address",
+        "zip_code",
+        "company_alias",
+        "contact_alias",
+        "note",
+        "origin",
+        "wca_partner_id",
+        "wca_match_confidence",
+      ]) {
         mergeField(f);
       }
 
@@ -117,17 +136,11 @@ Deno.serve(async (req: Request) => {
       }
 
       // Move interactions from dupes to keeper
-      const dupeIds = dupes.map(d => d.id);
-      await admin
-        .from("contact_interactions")
-        .update({ contact_id: keeper.id })
-        .in("contact_id", dupeIds);
+      const dupeIds = dupes.map((d) => d.id);
+      await admin.from("contact_interactions").update({ contact_id: keeper.id }).in("contact_id", dupeIds);
 
       // Delete dupes
-      const { error: delErr } = await admin
-        .from("imported_contacts")
-        .delete()
-        .in("id", dupeIds);
+      const { error: delErr } = await admin.from("imported_contacts").delete().in("id", dupeIds);
 
       if (!delErr) {
         deletedCount += dupeIds.length;
@@ -144,7 +157,7 @@ Deno.serve(async (req: Request) => {
       }),
       {
         headers: { ...dynCors, "Content-Type": "application/json" },
-      }
+      },
     );
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);

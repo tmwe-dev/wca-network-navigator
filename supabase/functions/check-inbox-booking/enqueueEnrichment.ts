@@ -22,9 +22,22 @@ function extractDomain(email: string): string {
 }
 
 const FREE_DOMAINS = new Set([
-  "gmail.com", "googlemail.com", "yahoo.com", "yahoo.it", "outlook.com",
-  "hotmail.com", "hotmail.it", "live.com", "libero.it", "tin.it", "alice.it",
-  "icloud.com", "me.com", "aol.com", "protonmail.com", "pec.it",
+  "gmail.com",
+  "googlemail.com",
+  "yahoo.com",
+  "yahoo.it",
+  "outlook.com",
+  "hotmail.com",
+  "hotmail.it",
+  "live.com",
+  "libero.it",
+  "tin.it",
+  "alice.it",
+  "icloud.com",
+  "me.com",
+  "aol.com",
+  "protonmail.com",
+  "pec.it",
 ]);
 
 export async function enqueueInboundEnrichment(
@@ -51,7 +64,10 @@ export async function enqueueInboundEnrichment(
     const email = extractEmail(from);
     if (!email) continue;
     const domain = extractDomain(email);
-    if (!domain || FREE_DOMAINS.has(domain)) { skipped++; continue; }
+    if (!domain || FREE_DOMAINS.has(domain)) {
+      skipped++;
+      continue;
+    }
     if (!candidates.has(domain)) candidates.set(domain, { messageId: id, email, domain });
   }
 
@@ -62,19 +78,20 @@ export async function enqueueInboundEnrichment(
   // Skip se dominio già noto in CRM (partners.email LIKE @domain)
   try {
     const orFilter = domains.map((d) => `email.ilike.%@${d}`).join(",");
-    const { data: knownPartners } = await supabaseAdmin
-      .from("partners")
-      .select("email")
-      .or(orFilter)
-      .limit(500);
+    const { data: knownPartners } = await supabaseAdmin.from("partners").select("email").or(orFilter).limit(500);
     if (Array.isArray(knownPartners)) {
       for (const p of knownPartners) {
         const e = (p as { email?: string }).email?.toLowerCase() ?? "";
         const d = extractDomain(e);
-        if (d && candidates.has(d)) { candidates.delete(d); skipped++; }
+        if (d && candidates.has(d)) {
+          candidates.delete(d);
+          skipped++;
+        }
       }
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   if (candidates.size === 0) return { enqueued, skipped };
 
@@ -90,10 +107,15 @@ export async function enqueueInboundEnrichment(
       for (const c of knownContacts) {
         const e = (c as { email?: string }).email?.toLowerCase() ?? "";
         const d = extractDomain(e);
-        if (d && candidates.has(d)) { candidates.delete(d); skipped++; }
+        if (d && candidates.has(d)) {
+          candidates.delete(d);
+          skipped++;
+        }
       }
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   if (candidates.size === 0) return { enqueued, skipped };
 

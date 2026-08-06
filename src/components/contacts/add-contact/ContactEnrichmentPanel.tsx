@@ -24,9 +24,18 @@ interface ContactEnrichmentPanelProps {
 }
 
 export function ContactEnrichmentPanel({
-  logoUrl, linkedinUrl, website, savedId,
-  logoLoading, linkedinLoading, deepSearchRunning, fsBridgeAvailable,
-  onLogoSearch, onLinkedInSearch, onDeepSearch, onLogoError,
+  logoUrl,
+  linkedinUrl,
+  website,
+  savedId,
+  logoLoading,
+  linkedinLoading,
+  deepSearchRunning,
+  fsBridgeAvailable,
+  onLogoSearch,
+  onLinkedInSearch,
+  onDeepSearch,
+  onLogoError,
 }: ContactEnrichmentPanelProps): React.ReactElement {
   return (
     <>
@@ -56,12 +65,23 @@ export function ContactEnrichmentPanel({
             <div className="flex items-center gap-2 text-xs font-medium">
               <Linkedin className="w-4 h-4 text-muted-foreground" /> LinkedIn
             </div>
-            <Button size="sm" variant="outline" onClick={onLinkedInSearch} disabled={linkedinLoading} className="h-7 text-xs">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onLinkedInSearch}
+              disabled={linkedinLoading}
+              className="h-7 text-xs"
+            >
               {linkedinLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Cerca"}
             </Button>
           </div>
           {linkedinUrl && (
-            <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline truncate block">
+            <a
+              href={linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-primary hover:underline truncate block"
+            >
               {linkedinUrl.replace("https://www.", "").replace("https://", "")}
             </a>
           )}
@@ -74,8 +94,13 @@ export function ContactEnrichmentPanel({
           <div className="flex items-center gap-2 text-xs font-medium">
             <Radar className="w-4 h-4 text-primary" /> Deep Search
           </div>
-          <Button size="sm" variant="outline" onClick={onDeepSearch}
-            disabled={!savedId || deepSearchRunning} className="h-7 text-xs">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onDeepSearch}
+            disabled={!savedId || deepSearchRunning}
+            className="h-7 text-xs"
+          >
             {deepSearchRunning ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
             {savedId ? "Avvia" : "Salva prima"}
           </Button>

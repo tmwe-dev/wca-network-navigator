@@ -11,7 +11,7 @@ test.describe("ai-assistant", () => {
     page.on("pageerror", (err) => errors.push(err.message));
     await page.goto("/agent-chat");
     await page.waitForTimeout(1500);
-    expect(errors.filter(e => !e.includes("net::ERR"))).toHaveLength(0);
+    expect(errors.filter((e) => !e.includes("net::ERR"))).toHaveLength(0);
   });
 
   test("ai chat page has no ErrorBoundary", async ({ page }) => {

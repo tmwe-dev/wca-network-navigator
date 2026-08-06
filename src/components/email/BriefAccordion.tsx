@@ -221,8 +221,8 @@ export default function BriefAccordion({ brief, onChange }: Props) {
           <div className="rounded-md border border-border/30 bg-background/40 px-3 py-2.5">
             <label className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase text-muted-foreground mb-2.5">
               <span className="inline-flex items-center gap-1.5">
-              <Ruler className="w-3 h-3" />
-              Lunghezza
+                <Ruler className="w-3 h-3" />
+                Lunghezza
               </span>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
                 {LENGTH_UI_LABEL[brief.maxLength]}

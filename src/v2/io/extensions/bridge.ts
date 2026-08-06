@@ -25,13 +25,13 @@ export type ExtensionTarget = "firescrape" | "whatsapp" | "linkedin";
 
 interface DirectionPair {
   out: string; // direction usata dalla webapp per inviare
-  in: string;  // direction attesa nella risposta dall'estensione
+  in: string; // direction attesa nella risposta dall'estensione
 }
 
 const DIRECTIONS: Record<ExtensionTarget, DirectionPair> = {
   firescrape: { out: "from-webapp-fs", in: "from-extension-fs" },
-  whatsapp:   { out: "from-webapp-wa", in: "from-extension-wa" },
-  linkedin:   { out: "from-webapp-li", in: "from-extension-li" },
+  whatsapp: { out: "from-webapp-wa", in: "from-extension-wa" },
+  linkedin: { out: "from-webapp-li", in: "from-extension-li" },
 };
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -43,9 +43,7 @@ export interface ExtensionResponse {
   [key: string]: unknown;
 }
 
-export type CallResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+export type CallResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
 /** Invia un comando a un canale dell'estensione e attende la risposta tipizzata. */
 export async function callExtension<T = ExtensionResponse>(
@@ -125,8 +123,7 @@ export const fs = {
     callExtension("firescrape", "agent-sequence", { steps }, { timeoutMs: 120_000 }),
   pipelineExecute: (pipelineId: string, vars: Record<string, unknown> = {}) =>
     callExtension("firescrape", "pipeline-execute", { pipelineId, vars }, { timeoutMs: 180_000 }),
-  pipelineSave: (pipeline: Record<string, unknown>) =>
-    callExtension("firescrape", "pipeline-save", { pipeline }),
+  pipelineSave: (pipeline: Record<string, unknown>) => callExtension("firescrape", "pipeline-save", { pipeline }),
   pipelineList: () => callExtension("firescrape", "pipeline-list", {}),
   brainAnalyze: (topic: string) => callExtension("firescrape", "brain-analyze", { topic }),
   brainThink: (prompt: string) => callExtension("firescrape", "brain-think", { prompt }),
@@ -137,9 +134,14 @@ export const fs = {
    * Equivalente a `agent-action { action:"navigate", background:true, reuseTab:true }`.
    */
   navigateBackground: (url: string, timeoutMs = 30_000) =>
-    callExtension("firescrape", "agent-action", {
-      step: { action: "navigate", url, background: true, reuseTab: true },
-    }, { timeoutMs }),
+    callExtension(
+      "firescrape",
+      "agent-action",
+      {
+        step: { action: "navigate", url, background: true, reuseTab: true },
+      },
+      { timeoutMs },
+    ),
 
   /**
    * Esegue navigate(BackgroundTab) → delay → scrape, restituendo il risultato
@@ -160,7 +162,14 @@ export const fs = {
     // Attesa client-side, interrompibile
     await new Promise<void>((resolve) => {
       const t = setTimeout(resolve, settleMs);
-      signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+      signal?.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(t);
+          resolve();
+        },
+        { once: true },
+      );
     });
     if (signal?.aborted) return { ok: false, error: "Interrotto" };
 
@@ -180,13 +189,21 @@ export const fs = {
     for (let i = 0; i < urls.length; i++) {
       if (options.signal?.aborted) {
         const aborted: CallResult<ExtensionResponse> = { ok: false, error: "Interrotto dall'utente" };
-        try { onProgress(i, urls.length, urls[i], aborted); } catch { /* swallow */ }
+        try {
+          onProgress(i, urls.length, urls[i], aborted);
+        } catch {
+          /* swallow */
+        }
         results.push(aborted);
         break;
       }
       const res = await this.readUrl(urls[i], { settleMs: options.settleMs, signal: options.signal });
       results.push(res);
-      try { onProgress(i, urls.length, urls[i], res); } catch { /* swallow */ }
+      try {
+        onProgress(i, urls.length, urls[i], res);
+      } catch {
+        /* swallow */
+      }
     }
     return results;
   },
@@ -204,16 +221,27 @@ export const fs = {
     for (let i = 0; i < steps.length; i++) {
       if (options.signal?.aborted) {
         const aborted: CallResult<ExtensionResponse> = { ok: false, error: "Interrotto dall'utente" };
-        try { onStep(i, steps.length, steps[i], aborted); } catch { /* swallow */ }
+        try {
+          onStep(i, steps.length, steps[i], aborted);
+        } catch {
+          /* swallow */
+        }
         results.push(aborted);
         break;
       }
       const step = steps[i];
       const res = await callExtension<ExtensionResponse>(
-        "firescrape", "agent-action", { step }, { timeoutMs: stepTimeoutMs },
+        "firescrape",
+        "agent-action",
+        { step },
+        { timeoutMs: stepTimeoutMs },
       );
       results.push(res);
-      try { onStep(i, steps.length, step, res); } catch { /* swallow */ }
+      try {
+        onStep(i, steps.length, step, res);
+      } catch {
+        /* swallow */
+      }
       if (!res.ok) break; // interrompi al primo errore
     }
     return results;

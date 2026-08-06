@@ -12,11 +12,7 @@ import { Sparkles, Check, X, ChevronDown, ChevronUp, Loader2 } from "lucide-reac
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { queryKeys } from "@/lib/queryKeys";
-import {
-  listClassificationInsights,
-  rejectInsight,
-  type ClassificationInsight,
-} from "@/data/aiClassificationInsights";
+import { listClassificationInsights, rejectInsight, type ClassificationInsight } from "@/data/aiClassificationInsights";
 
 export function ClassificationInsightsPanel() {
   const qc = useQueryClient();

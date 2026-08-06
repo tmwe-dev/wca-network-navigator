@@ -64,5 +64,5 @@ export function detectRecipientLanguage(countryCode: string): { language: string
   };
   const match = map[countryCode?.toUpperCase()];
   if (match) return { language: match.lang, confidence: 0.95, label: match.label };
-  return { language: "English", confidence: 0.60, label: "Inglese (default)" };
+  return { language: "English", confidence: 0.6, label: "Inglese (default)" };
 }

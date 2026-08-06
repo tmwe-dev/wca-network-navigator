@@ -17,8 +17,12 @@ import { queryKeys } from "@/lib/queryKeys";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
 
 const Contacts = lazy(() => import("./ContactsPage").then((m) => ({ default: m.ContactsPage })));
-const ContactPipelineView = lazy(() => import("@/components/contacts/ContactPipelineView").then((m) => ({ default: m.ContactPipelineView })));
-const DuplicateDetector = lazy(() => import("@/components/contacts/DuplicateDetector").then((m) => ({ default: m.DuplicateDetector })));
+const ContactPipelineView = lazy(() =>
+  import("@/components/contacts/ContactPipelineView").then((m) => ({ default: m.ContactPipelineView })),
+);
+const DuplicateDetector = lazy(() =>
+  import("@/components/contacts/DuplicateDetector").then((m) => ({ default: m.DuplicateDetector })),
+);
 
 function TabFallback() {
   return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
@@ -58,7 +62,9 @@ export function CRMPage(): React.ReactElement {
     },
     "crm-linkedin-lookup": () => {
       window.dispatchEvent(new CustomEvent("crm-trigger-linkedin"));
-      toast.info("LinkedIn lookup", { description: "Avviato sui contatti selezionati con account LinkedIn collegato." });
+      toast.info("LinkedIn lookup", {
+        description: "Avviato sui contatti selezionati con account LinkedIn collegato.",
+      });
     },
     "crm-send-cockpit": () => {
       toast.success("Apertura Cockpit Outreach…");
@@ -96,7 +102,7 @@ export function CRMPage(): React.ReactElement {
                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                 active
                   ? "bg-primary/15 text-primary border border-primary/30 shadow-sm"
-                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent"
+                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent",
               )}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -110,7 +116,11 @@ export function CRMPage(): React.ReactElement {
           disabled={scoreMutation.isPending}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent disabled:opacity-50"
         >
-          {scoreMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
+          {scoreMutation.isPending ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Calculator className="w-3.5 h-3.5" />
+          )}
           Ricalcola Score
         </button>
         <button

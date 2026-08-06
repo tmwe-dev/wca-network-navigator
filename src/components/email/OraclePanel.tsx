@@ -1,13 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import {
-  Search,
-  SlidersHorizontal,
-  FileText,
-  ImageIcon,
-  BookOpen,
-} from "lucide-react";
+import { Search, SlidersHorizontal, FileText, ImageIcon, BookOpen } from "lucide-react";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/constants/defaultEmailTypes";
 import { checkOracleCoherence } from "@/lib/oracleCoherence";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
@@ -74,7 +68,7 @@ export default function OraclePanel({
 
   const coherence = useMemo(
     () => checkOracleCoherence(selectedType?.id ?? null, customGoal),
-    [selectedType?.id, customGoal]
+    [selectedType?.id, customGoal],
   );
 
   const onVoiceText = useCallback((text: string) => {
@@ -97,10 +91,7 @@ export default function OraclePanel({
     }
   }, [settings?.email_oracle_types]);
 
-  const allTypes = useMemo(
-    () => [...DEFAULT_EMAIL_TYPES, ...customTypes],
-    [customTypes]
-  );
+  const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);
 
   const mergedGoal = useMemo(() => {
     const base = customGoal.trim();
@@ -202,7 +193,7 @@ export default function OraclePanel({
                   "p-1.5 rounded-md border transition-all",
                   useKB
                     ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                    : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
                 )}
               >
                 <BookOpen className="w-4 h-4" />
@@ -221,17 +212,12 @@ export default function OraclePanel({
                 className={cn(
                   "p-1.5 rounded-md border transition-all relative",
                   !deepSearch.canRun && "opacity-40 cursor-not-allowed",
-                  deepSearch.status === "running" &&
-                    "border-primary/30 bg-primary/10 text-primary",
-                  deepSearch.status === "fresh" &&
-                    "border-success/30 bg-success/10 text-success",
-                  deepSearch.status === "stale" &&
-                    "border-warning/30 bg-warning/10 text-warning",
-                  (deepSearch.status === "missing" ||
-                    deepSearch.status === "idle") &&
+                  deepSearch.status === "running" && "border-primary/30 bg-primary/10 text-primary",
+                  deepSearch.status === "fresh" && "border-success/30 bg-success/10 text-success",
+                  deepSearch.status === "stale" && "border-warning/30 bg-warning/10 text-warning",
+                  (deepSearch.status === "missing" || deepSearch.status === "idle") &&
                     "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
-                  deepSearch.status === "failed" &&
-                    "border-destructive/30 bg-destructive/10 text-destructive"
+                  deepSearch.status === "failed" && "border-destructive/30 bg-destructive/10 text-destructive",
                 )}
               >
                 {deepSearch.status === "running" ? (
@@ -275,7 +261,7 @@ export default function OraclePanel({
                     "p-1.5 rounded-md border transition-all",
                     showTemplates
                       ? "border-primary/30 bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
                   )}
                 >
                   <FileText className="w-4 h-4" />
@@ -296,7 +282,7 @@ export default function OraclePanel({
                     "p-1.5 rounded-md border transition-all",
                     showImages
                       ? "border-primary/30 bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
                   )}
                 >
                   <ImageIcon className="w-4 h-4" />
@@ -311,9 +297,7 @@ export default function OraclePanel({
           {showTemplates && (
             <div className="max-h-[200px] overflow-y-auto rounded-md border border-border/30 bg-muted/20">
               {templates.length === 0 ? (
-                <p className="text-xs text-foreground px-2 py-4 text-center">
-                  Nessun template
-                </p>
+                <p className="text-xs text-foreground px-2 py-4 text-center">Nessun template</p>
               ) : (
                 <div className="p-1 space-y-0.5">
                   {templates.map((t) => (

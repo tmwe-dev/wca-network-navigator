@@ -79,10 +79,7 @@ export async function updateLeadStatus(
           });
           if (res.applied) statusUpdated = true;
         } else {
-          await supabase
-            .from("imported_contacts")
-            .update({ last_interaction_at: now })
-            .eq("id", cid);
+          await supabase.from("imported_contacts").update({ last_interaction_at: now }).eq("id", cid);
         }
       }
     } catch (e) {
@@ -91,11 +88,7 @@ export async function updateLeadStatus(
   } else if (resolvedSourceType === "business_card" && (input.businessCardId || input.sourceId)) {
     const bcid = input.businessCardId || input.sourceId!;
     try {
-      const { data: bc } = await supabase
-        .from("business_cards")
-        .select("lead_status")
-        .eq("id", bcid)
-        .maybeSingle();
+      const { data: bc } = await supabase.from("business_cards").select("lead_status").eq("id", bcid).maybeSingle();
 
       if (bc) {
         const currentStatus = bc.lead_status || "new";

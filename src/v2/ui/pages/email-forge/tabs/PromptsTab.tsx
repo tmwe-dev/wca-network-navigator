@@ -36,9 +36,7 @@ export function PromptsTab() {
 
   const all = promptsQuery.data ?? [];
   // Filtra prompt rilevanti per email (per nome o tag); se nessuno, mostra tutti
-  const emailRelated = all.filter((p) =>
-    EMAIL_TAG_RE.test(p.name) || (p.tags ?? []).some((t) => EMAIL_TAG_RE.test(t))
-  );
+  const emailRelated = all.filter((p) => EMAIL_TAG_RE.test(p.name) || (p.tags ?? []).some((t) => EMAIL_TAG_RE.test(t)));
   const list = emailRelated.length > 0 ? emailRelated : all;
 
   if (!userId) return <div className="text-[11px] text-muted-foreground py-4 text-center">Non autenticato</div>;
@@ -126,22 +124,20 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
   return (
     <div className="rounded border border-border/60 bg-card p-2">
       <div className="flex items-start gap-2">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="flex-1 min-w-0 text-left"
-        >
+        <button type="button" onClick={() => setOpen((v) => !v)} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-medium text-xs truncate">{prompt.name}</span>
-            <Badge variant="outline" className="text-[9px]">P{priority}</Badge>
+            <Badge variant="outline" className="text-[9px]">
+              P{priority}
+            </Badge>
             <span className="text-xs text-foreground">{totalChars} char</span>
             {(prompt.tags ?? []).slice(0, 3).map((t) => (
-              <Badge key={t} variant="outline" className="text-[9px]">{t}</Badge>
+              <Badge key={t} variant="outline" className="text-[9px]">
+                {t}
+              </Badge>
             ))}
           </div>
-          {!open && objective && (
-            <div className="text-xs text-foreground line-clamp-2 mt-0.5">{objective}</div>
-          )}
+          {!open && objective && <div className="text-xs text-foreground line-clamp-2 mt-0.5">{objective}</div>}
         </button>
         <div className="flex items-center gap-1.5 shrink-0">
           <Switch checked={active} onCheckedChange={handleToggle} />
@@ -178,7 +174,17 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
   );
 }
 
-function Field({ label, value, onChange, rows }: { label: string; value: string; onChange: (v: string) => void; rows: number }) {
+function Field({
+  label,
+  value,
+  onChange,
+  rows,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  rows: number;
+}) {
   return (
     <div>
       <div className="flex items-center justify-between text-[10px] mb-0.5">

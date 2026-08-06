@@ -9,9 +9,16 @@ import { type KbEntry, kbEntryId, userId } from "../domain/entities";
 export function mapKbEntryRow(row: unknown): Result<KbEntry, AppError> {
   const parsed = KbEntryRowSchema.safeParse(row);
   if (!parsed.success) {
-    return err(ioError("SCHEMA_MISMATCH", `KbEntry row validation failed: ${parsed.error.message}`, {
-      issues: parsed.error.issues,
-    }, "kb-entry-mapper"));
+    return err(
+      ioError(
+        "SCHEMA_MISMATCH",
+        `KbEntry row validation failed: ${parsed.error.message}`,
+        {
+          issues: parsed.error.issues,
+        },
+        "kb-entry-mapper",
+      ),
+    );
   }
   const r = parsed.data;
   return ok({

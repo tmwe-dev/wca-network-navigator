@@ -20,21 +20,27 @@ beforeEach(() => {
 describe("Event Bus", () => {
   it("delivers event to subscriber", async () => {
     let received = false;
-    subscribe("partner.created", () => { received = true; });
+    subscribe("partner.created", () => {
+      received = true;
+    });
     await publish(createEvent("partner.created", { partnerId: "p1" }, "test"));
     expect(received).toBe(true);
   });
 
   it("does not deliver to wrong event type", async () => {
     let received = false;
-    subscribe("partner.created", () => { received = true; });
+    subscribe("partner.created", () => {
+      received = true;
+    });
     await publish(createEvent("contact.created", { contactId: "c1" }, "test"));
     expect(received).toBe(false);
   });
 
   it("unsubscribe removes handler", async () => {
     let count = 0;
-    const id = subscribe("partner.created", () => { count++; });
+    const id = subscribe("partner.created", () => {
+      count++;
+    });
     await publish(createEvent("partner.created", { partnerId: "p1" }, "test"));
     expect(count).toBe(1);
 
@@ -52,7 +58,9 @@ describe("Event Bus", () => {
   });
 
   it("sends failed events to DLQ after 3 retries", async () => {
-    subscribe("partner.created", () => { throw new Error("handler fail"); });
+    subscribe("partner.created", () => {
+      throw new Error("handler fail");
+    });
 
     const evt = createEvent("partner.created", { partnerId: "p1" }, "test");
     // Publish 3 times to exhaust retries
@@ -67,7 +75,9 @@ describe("Event Bus", () => {
   });
 
   it("clearDeadLetterQueue empties DLQ", async () => {
-    subscribe("partner.created", () => { throw new Error("fail"); });
+    subscribe("partner.created", () => {
+      throw new Error("fail");
+    });
     const evt = createEvent("partner.created", { partnerId: "p1" }, "test");
     await publish(evt);
     await publish(evt);

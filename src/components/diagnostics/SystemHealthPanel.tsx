@@ -4,7 +4,12 @@
  * Auto-refreshes every 30s.
  */
 import { useState, useEffect, useCallback } from "react";
-import { invokeHealthCheck, countSupervisorErrorsSince, findRecentDecisionLatencies, countEmailClassificationsSince } from "@/data/systemHealthMetrics";
+import {
+  invokeHealthCheck,
+  countSupervisorErrorsSince,
+  findRecentDecisionLatencies,
+  countEmailClassificationsSince,
+} from "@/data/systemHealthMetrics";
 import { Activity, Database, Brain, Mail, RefreshCw } from "lucide-react";
 
 interface HealthData {
@@ -24,12 +29,16 @@ interface Metrics {
 
 export function SystemHealthPanel() {
   const [metrics, setMetrics] = useState<Metrics>({
-    health: null, recentErrors: 0, avgAiLatency: null, emailsToday: 0,
-    loading: false, lastRefresh: null,
+    health: null,
+    recentErrors: 0,
+    avgAiLatency: null,
+    emailsToday: 0,
+    loading: false,
+    lastRefresh: null,
   });
 
   const refresh = useCallback(async () => {
-    setMetrics(prev => ({ ...prev, loading: true }));
+    setMetrics((prev) => ({ ...prev, loading: true }));
 
     const results: Partial<Metrics> = {};
 
@@ -37,13 +46,17 @@ export function SystemHealthPanel() {
     try {
       const data = await invokeHealthCheck();
       if (data) results.health = data as HealthData;
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
 
     // 2. Recent errors (last 24h from supervisor_audit_log)
     try {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       results.recentErrors = await countSupervisorErrorsSince(since);
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
 
     // 3. Avg AI latency (last 10 calls)
     try {
@@ -52,17 +65,23 @@ export function SystemHealthPanel() {
         const sum = data.reduce((a, r) => a + (r.execution_time_ms ?? 0), 0);
         results.avgAiLatency = Math.round(sum / data.length);
       }
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
 
     // 4. Emails classified today
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       results.emailsToday = await countEmailClassificationsSince(today.toISOString());
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
 
-    setMetrics(prev => ({
-      ...prev, ...results, loading: false,
+    setMetrics((prev) => ({
+      ...prev,
+      ...results,
+      loading: false,
       lastRefresh: new Date().toLocaleTimeString("it-IT"),
     }));
   }, []);
@@ -73,8 +92,7 @@ export function SystemHealthPanel() {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  const statusColor = (v: string) =>
-    v === "ok" || v === "healthy" ? "text-emerald-400" : "text-red-400";
+  const statusColor = (v: string) => (v === "ok" || v === "healthy" ? "text-emerald-400" : "text-red-400");
 
   const dot = (ok: boolean) => (
     <span className={`inline-block w-2 h-2 rounded-full ${ok ? "bg-emerald-400" : "bg-red-400"}`} />
@@ -130,28 +148,19 @@ export function SystemHealthPanel() {
           value={metrics.avgAiLatency != null ? `${metrics.avgAiLatency}ms` : "—"}
           ok={metrics.avgAiLatency != null && metrics.avgAiLatency < 5000}
         />
-        <MetricCard
-          icon={<Mail className="w-4 h-4" />}
-          label="Email oggi"
-          value={String(metrics.emailsToday)}
-          ok
-        />
+        <MetricCard icon={<Mail className="w-4 h-4" />} label="Email oggi" value={String(metrics.emailsToday)} ok />
       </div>
     </div>
   );
 }
 
-function MetricCard({ icon, label, value, ok }: {
-  icon: React.ReactNode; label: string; value: string; ok: boolean;
-}) {
+function MetricCard({ icon, label, value, ok }: { icon: React.ReactNode; label: string; value: string; ok: boolean }) {
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
       <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
         {icon} {label}
       </div>
-      <div className={`text-sm font-mono font-semibold ${ok ? "text-foreground" : "text-red-400"}`}>
-        {value}
-      </div>
+      <div className={`text-sm font-mono font-semibold ${ok ? "text-foreground" : "text-red-400"}`}>{value}</div>
     </div>
   );
 }

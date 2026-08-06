@@ -107,7 +107,11 @@ export function useApproveAndDispatch() {
         } catch (revErr) {
           const msg = revErr instanceof Error ? revErr.message : String(revErr);
           log.error("review.failed", { error: msg, actionType });
-          toast({ title: "Review non disponibile", description: "Invio annullato per sicurezza.", variant: "destructive" });
+          toast({
+            title: "Review non disponibile",
+            description: "Invio annullato per sicurezza.",
+            variant: "destructive",
+          });
           await markAction(pendingActionId, "failed", `review_error: ${msg}`);
           return { success: false, detail: "review_error" };
         }
@@ -211,7 +215,9 @@ async function dispatchWhatsApp(
   finalText: string,
   waBridge: ReturnType<typeof useWhatsAppExtensionBridge>,
 ): Promise<DispatchResult> {
-  const phone = pick(payload, ["recipient", "phone", "to"]).replace(/[^0-9+]/g, "").replace(/^\+/, "");
+  const phone = pick(payload, ["recipient", "phone", "to"])
+    .replace(/[^0-9+]/g, "")
+    .replace(/^\+/, "");
   if (!phone) return { success: false, detail: "Numero WhatsApp mancante" };
   if (!waBridge.isAvailable) return { success: false, detail: "Estensione WhatsApp non rilevata" };
   if (!waBridge.isAuthenticated) return { success: false, detail: "WhatsApp Web non autenticato" };
@@ -238,7 +244,10 @@ async function dispatchLinkedIn(
   if (!profileUrl) return { success: false, detail: "URL LinkedIn mancante" };
   if (!liBridge.isAvailable) return { success: false, detail: "Estensione LinkedIn non rilevata" };
 
-  const text = (finalText || "").replace(/<[^>]+>/g, "").trim().slice(0, 300);
+  const text = (finalText || "")
+    .replace(/<[^>]+>/g, "")
+    .trim()
+    .slice(0, 300);
   if (!text && !isConnect) return { success: false, detail: "Messaggio vuoto" };
 
   try {
@@ -248,7 +257,8 @@ async function dispatchLinkedIn(
     const res = isConnect
       ? await liBridge.sendConnectionRequest(profileUrl, text)
       : await liBridge.sendDirectMessage(profileUrl, text);
-    if (res.success) return { success: true, detail: isConnect ? "Richiesta di collegamento inviata" : "DM LinkedIn inviato" };
+    if (res.success)
+      return { success: true, detail: isConnect ? "Richiesta di collegamento inviata" : "DM LinkedIn inviato" };
     return { success: false, detail: res.error || "Bridge LI ha rifiutato l'invio" };
   } catch (err) {
     return { success: false, detail: err instanceof Error ? err.message : String(err) };

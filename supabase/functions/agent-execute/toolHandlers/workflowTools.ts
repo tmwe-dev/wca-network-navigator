@@ -30,16 +30,14 @@ interface AbTestConfig {
 export async function handleCreateWorkPlan(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
-  const steps = (args.steps as WorkPlanStep[] || []).map(
-    (s: WorkPlanStep, i: number) => ({
-      index: i,
-      title: s.title || `Step ${i + 1}`,
-      description: s.description || "",
-      status: "pending",
-    })
-  );
+  const steps = ((args.steps as WorkPlanStep[]) || []).map((s: WorkPlanStep, i: number) => ({
+    index: i,
+    title: s.title || `Step ${i + 1}`,
+    description: s.description || "",
+    status: "pending",
+  }));
 
   const { data, error } = await supabase
     .from("ai_work_plans")
@@ -74,13 +72,11 @@ export async function handleCreateWorkPlan(
 export async function handleListWorkPlans(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   let query = supabase
     .from("ai_work_plans")
-    .select(
-      "id, title, description, status, current_step, steps, tags, created_at, completed_at"
-    )
+    .select("id, title, description, status, current_step, steps, tags, created_at, completed_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(Number(args.limit) || 20);
@@ -98,19 +94,13 @@ export async function handleListWorkPlans(
   const plans = ((data || []) as WorkPlanRow[]).map((p) => ({
     ...p,
     total_steps: Array.isArray(p.steps) ? p.steps.length : 0,
-    completed_steps: Array.isArray(p.steps)
-      ? p.steps.filter((s: WorkPlanStep) => s.status === "completed").length
-      : 0,
+    completed_steps: Array.isArray(p.steps) ? p.steps.filter((s: WorkPlanStep) => s.status === "completed").length : 0,
   }));
 
   if (args.tag) {
     return {
-      count: plans.filter((p) =>
-        (p.tags as string[] | undefined)?.includes(String(args.tag))
-      ).length,
-      plans: plans.filter((p) =>
-        (p.tags as string[] | undefined)?.includes(String(args.tag))
-      ),
+      count: plans.filter((p) => (p.tags as string[] | undefined)?.includes(String(args.tag))).length,
+      plans: plans.filter((p) => (p.tags as string[] | undefined)?.includes(String(args.tag))),
     };
   }
 
@@ -120,7 +110,7 @@ export async function handleListWorkPlans(
 export async function handleUpdateWorkPlan(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const { data: plan, error: fetchErr } = await supabase
     .from("ai_work_plans")
@@ -162,10 +152,7 @@ export async function handleUpdateWorkPlan(
     updates.metadata = meta;
   }
 
-  const { error } = await supabase
-    .from("ai_work_plans")
-    .update(updates)
-    .eq("id", args.plan_id);
+  const { error } = await supabase.from("ai_work_plans").update(updates).eq("id", args.plan_id);
 
   if (error) {
     return { error: error.message };
@@ -181,7 +168,7 @@ export async function handleUpdateWorkPlan(
 export async function handleCreateCampaign(
   supabase: AnySupabaseClient,
   userId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<unknown> {
   const steps: WorkPlanStep[] = [];
   const contactType = String(args.contact_type || "all");
@@ -211,10 +198,7 @@ export async function handleCreateCampaign(
       index: steps.length,
       title: "Configurazione A/B Test",
       description: `Varianti: ${variants
-        .map(
-          (v: AbTestVariant) =>
-            `${v.agent_name}(${v.tone}/${v.percentage}%)`
-        )
+        .map((v: AbTestVariant) => `${v.agent_name}(${v.tone}/${v.percentage}%)`)
         .join(" vs ")}`,
       status: "pending",
     });
@@ -242,11 +226,7 @@ export async function handleCreateCampaign(
       description: String(args.objective || ""),
       steps: steps as unknown as Record<string, unknown>,
       status: "active",
-      tags: [
-        "campaign",
-        contactType,
-        ...countryCodes.map((c) => `country:${c}`),
-      ],
+      tags: ["campaign", contactType, ...countryCodes.map((c) => `country:${c}`)],
       metadata: {
         campaign: true,
         contact_type: contactType,

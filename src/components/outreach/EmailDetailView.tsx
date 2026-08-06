@@ -5,7 +5,27 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { AlertCircle, Building2, Calendar, Check, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, RefreshCw, Shield, Sparkles, Star, Tag, User, Users } from "lucide-react";
+import {
+  AlertCircle,
+  Building2,
+  Calendar,
+  Check,
+  Eye,
+  Image,
+  ImageOff,
+  Loader2,
+  Paperclip,
+  Reply,
+  ReplyAll,
+  Forward,
+  RefreshCw,
+  Shield,
+  Sparkles,
+  Star,
+  Tag,
+  User,
+  Users,
+} from "lucide-react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -77,21 +97,28 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
   const hasDeepSearch = !!message.partner_id; // partner agganciato → enrichment già avvenuto
   const urgency = decision?.urgency ?? "normal";
   const urgencyClass =
-    urgency === "critical" ? "bg-destructive/15 text-destructive border-destructive/30"
-    : urgency === "high" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-    : "bg-muted text-muted-foreground border-border";
-  const { bodyHtml, bodyText, isLoading: isContentLoading, isError: isContentError } = useEmailMessageContent(message.id, {
+    urgency === "critical"
+      ? "bg-destructive/15 text-destructive border-destructive/30"
+      : urgency === "high"
+        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+        : "bg-muted text-muted-foreground border-border";
+  const {
+    bodyHtml,
+    bodyText,
+    isLoading: isContentLoading,
+    isError: isContentError,
+  } = useEmailMessageContent(message.id, {
     bodyHtml: message.body_html,
     bodyText: message.body_text,
   });
 
   const decodedSubject = useMemo(() => decodeRfc2047(message.subject || "(nessun oggetto)"), [message.subject]);
   const cleanSubject = useMemo(() => stripReplyPrefixes(decodedSubject) || "(nessun oggetto)", [decodedSubject]);
-  const { brand, detail: senderDetail } = useMemo(() => extractSenderBrand(message.from_address || ""), [message.from_address]);
-  const normalizedContent = useMemo(
-    () => normalizeEmailContent({ bodyHtml, bodyText }),
-    [bodyHtml, bodyText],
+  const { brand, detail: senderDetail } = useMemo(
+    () => extractSenderBrand(message.from_address || ""),
+    [message.from_address],
   );
+  const normalizedContent = useMemo(() => normalizeEmailContent({ bodyHtml, bodyText }), [bodyHtml, bodyText]);
   const hasContent = Boolean(normalizedContent.bodyHtml || normalizedContent.bodyText);
 
   const sanitizedHtml = useMemo(() => {
@@ -101,14 +128,30 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
     return DOMPurify.sanitize(normalizedContent.bodyHtml, {
       USE_PROFILES: { html: true },
       ADD_TAGS: ["style", "center"],
-      ADD_ATTR: ["target", "style", "class", "bgcolor", "background", "align", "valign", "width", "height", "cellpadding", "cellspacing", "border", "color", "face", "size"],
+      ADD_ATTR: [
+        "target",
+        "style",
+        "class",
+        "bgcolor",
+        "background",
+        "align",
+        "valign",
+        "width",
+        "height",
+        "cellpadding",
+        "cellspacing",
+        "border",
+        "color",
+        "face",
+        "size",
+      ],
       ALLOW_DATA_ATTR: true,
       FORBID_TAGS: ["script", "form", "input", "textarea", "select", "button"],
       FORBID_ATTR: ["onload", "onerror", "onclick", "onmouseover", "onfocus", "onblur"],
     });
   }, [normalizedContent.bodyHtml, viewMode]);
 
-  const handleDownload = async (attachment: typeof attachments[0]) => {
+  const handleDownload = async (attachment: (typeof attachments)[0]) => {
     if (attachment.storage_path.startsWith("data:")) {
       const win = window.open();
       if (win) win.document.write(`<img src="${attachment.storage_path}" />`);
@@ -127,107 +170,121 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
       <div className="flex-shrink-0 border-b border-border px-3 py-2 lg:px-4 lg:py-3">
         {/* Riga azioni: full width, wrap su viewport stretti */}
         <div className="mb-2 flex w-full flex-wrap items-center justify-end gap-1">
-              {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1.5 text-xs border border-border/40"
-                onClick={() => {
-                  if (!message.read_at) markAsRead.mutate(message.id);
-                  onClose();
-                }}
-                title="Marca come letta e nascondi dalla lista"
-              >
-                <Check className="h-3 w-3" /> Letto, nascondi
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1.5 text-xs border border-border/40"
-                onClick={() => {
-                  const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
-                  navigate("/v2/email-composer", {
-                    state: {
-                      prefilledRecipient: {
-                        email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
-                        name: brand,
-                        company: brand,
-                      },
-                      prefilledSubject: replySubject,
+          {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 text-xs border border-border/40"
+            onClick={() => {
+              if (!message.read_at) markAsRead.mutate(message.id);
+              onClose();
+            }}
+            title="Marca come letta e nascondi dalla lista"
+          >
+            <Check className="h-3 w-3" /> Letto, nascondi
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 text-xs border border-border/40"
+            onClick={() => {
+              const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+              navigate("/v2/email-composer", {
+                state: {
+                  prefilledRecipient: {
+                    email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                    name: brand,
+                    company: brand,
+                  },
+                  prefilledSubject: replySubject,
+                },
+              });
+            }}
+          >
+            <Reply className="h-3 w-3" /> Rispondi
+          </Button>
+          {message.cc_addresses && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              title="Rispondi a tutti"
+              onClick={() => {
+                const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+                navigate("/v2/email-composer", {
+                  state: {
+                    prefilledRecipient: {
+                      email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                      name: brand,
+                      company: brand,
                     },
-                  });
-                }}
-              >
-                <Reply className="h-3 w-3" /> Rispondi
-              </Button>
-              {message.cc_addresses && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs"
-                  title="Rispondi a tutti"
-                  onClick={() => {
-                    const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
-                    navigate("/v2/email-composer", {
-                      state: {
-                        prefilledRecipient: {
-                          email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
-                          name: brand,
-                          company: brand,
-                        },
-                        prefilledSubject: replySubject,
-                      },
-                    });
-                  }}
-                >
-                  <ReplyAll className="h-3 w-3" />
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1.5 text-xs"
-                onClick={() => {
-                  const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
-                  navigate("/v2/email-composer", {
-                    state: {
-                      prefilledSubject: fwdSubject,
-                      prefilledBody: normalizedContent.bodyText
-                        ? `\n\n--- Forwarded ---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\nOggetto: ${decodedSubject}\n\n${normalizedContent.bodyText}`
-                        : "",
-                    },
-                  });
-                }}
-              >
-                <Forward className="h-3 w-3" /> Inoltra
-              </Button>
-              <DeepSearchEmailButton
-                email={message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || ""}
-                source={{
-                  displayName: brand,
-                  partnerId: message.partner_id ?? null,
-                }}
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1 px-2 text-xs"
-              />
-              <Button
-                size="sm"
-                variant={blockRemote ? "secondary" : "ghost"}
-                onClick={() => setBlockRemote((prev) => !prev)}
-                className="h-7 px-1.5 text-xs"
-                title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}
-              >
-                <ImageOff className="h-3 w-3" />
-              </Button>
-              <Button size="sm" variant={viewMode === "safe" ? "secondary" : "ghost"} onClick={() => setViewMode("safe")} className="h-7 px-1.5 text-xs" title="Vista sicura (normalizzata)">
-                <Shield className="h-3 w-3" />
-              </Button>
-              <Button size="sm" variant={viewMode === "faithful" ? "secondary" : "ghost"} onClick={() => setViewMode("faithful")} className="h-7 px-1.5 text-xs" title="Vista fedele (originale)">
-                <Eye className="h-3 w-3" />
-              </Button>
-              <EmailMessageActions message={message} />
-              <Button size="sm" variant="ghost" onClick={onClose} className="h-7 px-2 text-[11px]">Chiudi</Button>
+                    prefilledSubject: replySubject,
+                  },
+                });
+              }}
+            >
+              <ReplyAll className="h-3 w-3" />
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => {
+              const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
+              navigate("/v2/email-composer", {
+                state: {
+                  prefilledSubject: fwdSubject,
+                  prefilledBody: normalizedContent.bodyText
+                    ? `\n\n--- Forwarded ---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\nOggetto: ${decodedSubject}\n\n${normalizedContent.bodyText}`
+                    : "",
+                },
+              });
+            }}
+          >
+            <Forward className="h-3 w-3" /> Inoltra
+          </Button>
+          <DeepSearchEmailButton
+            email={message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || ""}
+            source={{
+              displayName: brand,
+              partnerId: message.partner_id ?? null,
+            }}
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1 px-2 text-xs"
+          />
+          <Button
+            size="sm"
+            variant={blockRemote ? "secondary" : "ghost"}
+            onClick={() => setBlockRemote((prev) => !prev)}
+            className="h-7 px-1.5 text-xs"
+            title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}
+          >
+            <ImageOff className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === "safe" ? "secondary" : "ghost"}
+            onClick={() => setViewMode("safe")}
+            className="h-7 px-1.5 text-xs"
+            title="Vista sicura (normalizzata)"
+          >
+            <Shield className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === "faithful" ? "secondary" : "ghost"}
+            onClick={() => setViewMode("faithful")}
+            className="h-7 px-1.5 text-xs"
+            title="Vista fedele (originale)"
+          >
+            <Eye className="h-3 w-3" />
+          </Button>
+          <EmailMessageActions message={message} />
+          <Button size="sm" variant="ghost" onClick={onClose} className="h-7 px-2 text-[11px]">
+            Chiudi
+          </Button>
         </div>
 
         {/* Riga identità mittente: full width, subject ha tutto lo spazio */}
@@ -254,9 +311,7 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
                 {formatDisplayDate(displayDate)}
               </span>
             </div>
-            <h3 className="mt-1 break-words text-base font-semibold leading-snug text-foreground">
-              {cleanSubject}
-            </h3>
+            <h3 className="mt-1 break-words text-base font-semibold leading-snug text-foreground">{cleanSubject}</h3>
           </div>
         </div>
 
@@ -277,22 +332,27 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
                 {group.groupName}
               </span>
             ) : null}
-            <InlineGroupAssigner
-              fromAddress={message.from_address}
-              currentGroupName={group?.groupName ?? null}
-            />
+            <InlineGroupAssigner fromAddress={message.from_address} currentGroupName={group?.groupName ?? null} />
           </div>
 
           {/* Col 2: Classificazione + Riclassifica */}
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {folderLabel ? (
-              <Badge variant="outline" className="gap-1 text-[10px]" title={decision?.reasoning ?? "Cartella Funnemail attuale"}>
+              <Badge
+                variant="outline"
+                className="gap-1 text-[10px]"
+                title={decision?.reasoning ?? "Cartella Funnemail attuale"}
+              >
                 <Tag className="h-3 w-3" />
                 {folderIcon && <span>{folderIcon}</span>}
                 {folderLabel}
               </Badge>
             ) : aiSuggestion ? (
-              <Badge variant="outline" className="gap-1 border-dashed text-[10px] text-muted-foreground" title="Categoria suggerita dall'AI">
+              <Badge
+                variant="outline"
+                className="gap-1 border-dashed text-[10px] text-muted-foreground"
+                title="Categoria suggerita dall'AI"
+              >
                 <Sparkles className="h-3 w-3" />
                 Suggerita: {aiSuggestion}
               </Badge>
@@ -330,9 +390,7 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
             )}
             {message.source_type && message.source_type !== "unknown" && (
               <Badge variant="secondary" className="gap-1 text-[10px]" title={message.source_type.replace("_", " ")}>
-                {message.source_type === "partner"
-                  ? <Building2 className="h-3 w-3" />
-                  : <User className="h-3 w-3" />}
+                {message.source_type === "partner" ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
                 {message.source_type.replace("_", " ")}
               </Badge>
             )}
@@ -390,7 +448,11 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
               </div>
               <div className="flex flex-wrap gap-2">
                 {regularAttachments.map((attachment) => (
-                  <AttachmentThumbnail key={attachment.id} att={attachment} onDownload={() => handleDownload(attachment)} />
+                  <AttachmentThumbnail
+                    key={attachment.id}
+                    att={attachment}
+                    onDownload={() => handleDownload(attachment)}
+                  />
                 ))}
               </div>
             </div>

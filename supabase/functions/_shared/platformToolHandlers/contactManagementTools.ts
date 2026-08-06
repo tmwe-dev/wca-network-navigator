@@ -39,9 +39,7 @@ export async function executeContactManagementToolHandler(
           title: args.title ? String(args.title) : null,
           email: args.email ? String(args.email) : null,
         });
-        return error
-          ? { error: error.message }
-          : { success: true, message: `Contatto "${args.name}" aggiunto.` };
+        return error ? { error: error.message } : { success: true, message: `Contatto "${args.name}" aggiunto.` };
       }
       return { error: "Azione non valida" };
     }

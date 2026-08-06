@@ -10,8 +10,11 @@ import { deepSearchEntry } from "./entries/deepSearch";
 import { downloadEntry } from "./entries/download";
 import { inboundEnrichEntry } from "./entries/inboundEnrich";
 import {
-  updateOriginEntry, updateLeadStatusEntry, updateEmailRulesEntry,
-  updateBackfillEntry, updateAnalyzeAiEntry,
+  updateOriginEntry,
+  updateLeadStatusEntry,
+  updateEmailRulesEntry,
+  updateBackfillEntry,
+  updateAnalyzeAiEntry,
 } from "./entries/update";
 
 const REGISTRY: Record<BulkScope, BulkEntry> = {

@@ -96,7 +96,8 @@ const CATEGORY_TO_TABLE: Record<string, string> = {
 };
 
 /** Patterns che indicano che il gap richiede un contratto backend. */
-const CONTRACT_KEYWORDS = /\b(EmailBrief|VoiceBrief|ContactLifecycleBrief|OutreachBrief|contract|payload runtime|input strutturato)\b/i;
+const CONTRACT_KEYWORDS =
+  /\b(EmailBrief|VoiceBrief|ContactLifecycleBrief|OutreachBrief|contract|payload runtime|input strutturato)\b/i;
 
 /** Patterns che indicano una policy hard nel codice. */
 const POLICY_KEYWORDS = /\b(blacklist|guard|hard rule|never allow|forbidden|VIETATO|cap di sicurezza|safety cap)\b/i;
@@ -107,10 +108,7 @@ function stripFrontmatter(text: string): string {
 
 function readMeta(section: string, label: string): string | undefined {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const patterns = [
-    new RegExp(`^\\*\\*${escaped}:\\*\\*\\s*(.+)$`, "im"),
-    new RegExp(`^${escaped}:\\s*(.+)$`, "im"),
-  ];
+  const patterns = [new RegExp(`^\\*\\*${escaped}:\\*\\*\\s*(.+)$`, "im"), new RegExp(`^${escaped}:\\s*(.+)$`, "im")];
   for (const pattern of patterns) {
     const match = section.match(pattern);
     if (match?.[1]?.trim()) return match[1].trim();
@@ -224,58 +222,83 @@ export async function collectRealInventory(userId: string): Promise<InventoryIte
     const all = await findKbEntries();
     for (const e of all) {
       out.push({
-        table: "kb_entries", id: e.id, category: e.category, chapter: e.chapter,
-        title: e.title, content: e.content ?? "", priority: e.priority,
+        table: "kb_entries",
+        id: e.id,
+        category: e.category,
+        chapter: e.chapter,
+        title: e.title,
+        content: e.content ?? "",
+        priority: e.priority,
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   try {
     const ops = await findOperativePromptsFull(userId);
     for (const p of ops) {
       out.push({
-        table: "operative_prompts", id: p.id, title: p.name,
+        table: "operative_prompts",
+        id: p.id,
+        title: p.name,
         content: [p.objective, p.procedure, p.criteria].filter(Boolean).join("\n\n"),
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   try {
     const list = await findEmailPromptsByScope(userId, "global");
     for (const p of list) {
       out.push({ table: "email_prompts", id: p.id, title: p.title, content: p.instructions ?? "" });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   try {
     const rules = await findEmailAddressRules(userId);
     for (const r of rules) {
       out.push({
-        table: "email_address_rules", id: r.id, title: r.email_address,
+        table: "email_address_rules",
+        id: r.id,
+        title: r.email_address,
         content: [r.custom_prompt, r.notes].filter(Boolean).join("\n\n"),
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   try {
     const pbs = await findCommercialPlaybooks(userId);
     for (const p of pbs) {
       out.push({
-        table: "commercial_playbooks", id: p.id, title: p.name,
+        table: "commercial_playbooks",
+        id: p.id,
+        title: p.name,
         content: [p.description, p.prompt_template].filter(Boolean).join("\n\n"),
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   try {
     const personas = await findAgentPersonas(userId);
     for (const p of personas) {
       out.push({
-        table: "agent_personas", id: p.id, title: `Persona ${p.agent_id.slice(0, 8)}`,
+        table: "agent_personas",
+        id: p.id,
+        title: `Persona ${p.agent_id.slice(0, 8)}`,
         content: [p.custom_tone_prompt, p.signature_template].filter(Boolean).join("\n\n"),
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   return out;
 }
@@ -318,10 +341,7 @@ export function parseDesiredInventoryDetailed(
     mergedDiagnostics.placeholder_detected ||= parsed.diagnostics.placeholder_detected;
     if (parsed.diagnostics.parse_mode === "structured") {
       mergedDiagnostics.parse_mode = "structured";
-    } else if (
-      parsed.diagnostics.parse_mode === "fallback" &&
-      mergedDiagnostics.parse_mode !== "structured"
-    ) {
+    } else if (parsed.diagnostics.parse_mode === "fallback" && mergedDiagnostics.parse_mode !== "structured") {
       mergedDiagnostics.parse_mode = "fallback";
     }
   }
@@ -337,9 +357,7 @@ function findMatch(desired: InventoryItem, real: InventoryItem[]): InventoryItem
   if (exact) return exact;
   // 2. match parziale (titolo desired contenuto in titolo reale o viceversa)
   const partial = real.find(
-    (r) => r.table === desired.table && (
-      r.title.toLowerCase().includes(dt) || dt.includes(r.title.toLowerCase())
-    ),
+    (r) => r.table === desired.table && (r.title.toLowerCase().includes(dt) || dt.includes(r.title.toLowerCase())),
   );
   return partial;
 }
@@ -347,7 +365,10 @@ function findMatch(desired: InventoryItem, real: InventoryItem[]): InventoryItem
 /** Classifica i gap in 4 bucket. */
 export function classifyGaps(real: InventoryItem[], desired: InventoryItem[]): CollectorOutput["gaps"] {
   const gaps: CollectorOutput["gaps"] = {
-    text_only: [], needs_contract: [], needs_code_policy: [], needs_kb_governance: [],
+    text_only: [],
+    needs_contract: [],
+    needs_code_policy: [],
+    needs_kb_governance: [],
   };
 
   for (const d of desired) {

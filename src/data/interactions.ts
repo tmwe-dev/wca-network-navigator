@@ -21,7 +21,10 @@ export interface PartnerInteractionRow {
 }
 
 /** Interazioni partner per il drawer contatto (Circuito di Attesa). */
-export async function findInteractionsForPartnerRecord(partnerId: string, limit = 20): Promise<PartnerInteractionRow[]> {
+export async function findInteractionsForPartnerRecord(
+  partnerId: string,
+  limit = 20,
+): Promise<PartnerInteractionRow[]> {
   const { data } = await supabase
     .from("interactions")
     .select("*")

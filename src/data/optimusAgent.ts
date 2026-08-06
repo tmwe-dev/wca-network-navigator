@@ -39,10 +39,7 @@ export interface OptimusLogEntry {
 }
 
 /** Memoria per (channel, page_type). Ritorna null su errore o assenza (parità col chiamante). */
-export async function findOptimusMemory(
-  channel: string,
-  pageType: string,
-): Promise<OptimusMemoryRow | null> {
+export async function findOptimusMemory(channel: string, pageType: string): Promise<OptimusMemoryRow | null> {
   const { data, error } = await supabase
     .from("scraper_agent_memory")
     .select(MEMORY_SELECT)

@@ -25,16 +25,18 @@ export interface SenderMatch {
    * - 'exact': match per email esatta (partner / contact / prospect)
    * - 'none': nessun match — mittente = solo l'address
    */
-  match_confidence: 'exact' | 'none';
+  match_confidence: "exact" | "none";
 }
 
-export async function matchSender(
-  supabase: SupabaseClient,
-  email: string,
-  userId?: string,
-): Promise<SenderMatch> {
+export async function matchSender(supabase: SupabaseClient, email: string, userId?: string): Promise<SenderMatch> {
   if (!email || email === "@" || !email.includes("@"))
-    return { source_type: "unknown", source_id: null, partner_id: null, name: email || "sconosciuto", match_confidence: 'none' };
+    return {
+      source_type: "unknown",
+      source_id: null,
+      partner_id: null,
+      name: email || "sconosciuto",
+      match_confidence: "none",
+    };
 
   const emailLower = email.toLowerCase();
   const domain = emailLower.split("@")[1];
@@ -64,7 +66,7 @@ export async function matchSender(
             source_id: r.source_id,
             partner_id: r.partner_id,
             name: r.display_name || r.company_name || email,
-            match_confidence: 'exact',
+            match_confidence: "exact",
           };
         }
       }
@@ -77,17 +79,65 @@ export async function matchSender(
   }
 
   // Legacy fallback EXACT-ONLY (RPC unavailable o userId mancante)
-  const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (partner) return { source_type: "partner", source_id: partner.id as string, partner_id: partner.id as string, name: partner.company_name as string, match_confidence: 'exact' };
-  const { data: pc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (pc) return { source_type: "partner_contact", source_id: pc.id as string, partner_id: pc.partner_id as string, name: pc.name as string, match_confidence: 'exact' };
-  const { data: ic } = await supabase.from("imported_contacts").select("id, company_name, name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (ic) return { source_type: "imported_contact", source_id: ic.id as string, partner_id: null, name: (ic.name || ic.company_name) as string, match_confidence: 'exact' };
-  const { data: prospect } = await supabase.from("prospects").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (prospect) return { source_type: "prospect", source_id: prospect.id as string, partner_id: null, name: prospect.company_name as string, match_confidence: 'exact' };
+  const { data: partner } = await supabase
+    .from("partners")
+    .select("id, company_name")
+    .ilike("email", emailLower)
+    .limit(1)
+    .maybeSingle();
+  if (partner)
+    return {
+      source_type: "partner",
+      source_id: partner.id as string,
+      partner_id: partner.id as string,
+      name: partner.company_name as string,
+      match_confidence: "exact",
+    };
+  const { data: pc } = await supabase
+    .from("partner_contacts")
+    .select("id, partner_id, name")
+    .ilike("email", emailLower)
+    .limit(1)
+    .maybeSingle();
+  if (pc)
+    return {
+      source_type: "partner_contact",
+      source_id: pc.id as string,
+      partner_id: pc.partner_id as string,
+      name: pc.name as string,
+      match_confidence: "exact",
+    };
+  const { data: ic } = await supabase
+    .from("imported_contacts")
+    .select("id, company_name, name")
+    .ilike("email", emailLower)
+    .limit(1)
+    .maybeSingle();
+  if (ic)
+    return {
+      source_type: "imported_contact",
+      source_id: ic.id as string,
+      partner_id: null,
+      name: (ic.name || ic.company_name) as string,
+      match_confidence: "exact",
+    };
+  const { data: prospect } = await supabase
+    .from("prospects")
+    .select("id, company_name")
+    .ilike("email", emailLower)
+    .limit(1)
+    .maybeSingle();
+  if (prospect)
+    return {
+      source_type: "prospect",
+      source_id: prospect.id as string,
+      partner_id: null,
+      name: prospect.company_name as string,
+      match_confidence: "exact",
+    };
 
   // Nessun match esatto: mittente = l'email stessa, niente partner_id.
-  return { source_type: "unknown", source_id: null, partner_id: null, name: email, match_confidence: 'none' };
+  return { source_type: "unknown", source_id: null, partner_id: null, name: email, match_confidence: "none" };
 }
 
 // ━━━ Attachment record shape ━━━
@@ -141,16 +191,15 @@ export interface SaveResult {
   error: string | null;
 }
 
-export async function saveMessageToDb(
-  supabase: SupabaseClient,
-  params: SaveMessageParams,
-): Promise<SaveResult> {
+export async function saveMessageToDb(supabase: SupabaseClient, params: SaveMessageParams): Promise<SaveResult> {
   let emailDate: string | null = null;
   if (params.date) {
     try {
       const parsed = new Date(params.date);
       if (!isNaN(parsed.getTime())) emailDate = parsed.toISOString();
-    } catch { /* date parse failed — use null */ }
+    } catch {
+      /* date parse failed — use null */
+    }
   }
 
   const parseStatus = params.parseWarnings.length > 0 ? "warning" : "ok";
@@ -159,15 +208,11 @@ export async function saveMessageToDb(
   // Se source_type è "unknown", forziamo source_id=null perché non c'è entità corrispondente.
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const safeSourceId =
-    params.match.source_type !== "unknown" &&
-    params.match.source_id &&
-    UUID_RE.test(String(params.match.source_id))
+    params.match.source_type !== "unknown" && params.match.source_id && UUID_RE.test(String(params.match.source_id))
       ? params.match.source_id
       : null;
   const safePartnerId =
-    params.match.partner_id && UUID_RE.test(String(params.match.partner_id))
-      ? params.match.partner_id
-      : null;
+    params.match.partner_id && UUID_RE.test(String(params.match.partner_id)) ? params.match.partner_id : null;
 
   // LOVABLE-93: auto-categorizzazione inbox per sender group
   // Lookup sender in email_address_rules to assign category
@@ -238,8 +283,8 @@ export async function saveMessageToDb(
   // Save attachments
   if (savedMsg?.id && params.attachmentRecords.length > 0) {
     const attRows = params.attachmentRecords
-      .filter(a => !a.skipped)
-      .map(a => ({
+      .filter((a) => !a.skipped)
+      .map((a) => ({
         message_id: savedMsg.id,
         user_id: params.userId,
         filename: a.filename,
@@ -261,7 +306,8 @@ export async function saveMessageToDb(
   }
 
   // Checkpoint
-  await supabase.from("email_sync_state")
+  await supabase
+    .from("email_sync_state")
     .update({ last_uid: params.uid, last_sync_at: new Date().toISOString() })
     .eq("user_id", params.userId);
 
@@ -279,19 +325,20 @@ export async function saveMessageToDb(
       if (!existingRule) {
         // Create new rule with basic info (display_name from senderName)
         // Leave category and group_id null so it gets picked up for AI suggestion
-        const { error: ruleErr } = await supabase
-          .from("email_address_rules")
-          .insert({
-            user_id: params.userId,
-            email_address: params.fromAddr,
-            display_name: params.senderName || params.match.name || null,
-            category: null,
-            group_id: null,
-            notes: "Auto-created from inbound email",
-          });
+        const { error: ruleErr } = await supabase.from("email_address_rules").insert({
+          user_id: params.userId,
+          email_address: params.fromAddr,
+          display_name: params.senderName || params.match.name || null,
+          category: null,
+          group_id: null,
+          notes: "Auto-created from inbound email",
+        });
 
         if (ruleErr) {
-          console.warn(`[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`, ruleErr.message);
+          console.warn(
+            `[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`,
+            ruleErr.message,
+          );
         }
       }
     } catch (e) {
@@ -300,7 +347,11 @@ export async function saveMessageToDb(
   }
 
   // Auto-escalation (tassonomia 9 stati: new → first_touch_sent al primo inbound match)
-  if (params.match.source_type === "imported_contact" && params.match.source_id && UUID_RE.test(String(params.match.source_id))) {
+  if (
+    params.match.source_type === "imported_contact" &&
+    params.match.source_id &&
+    UUID_RE.test(String(params.match.source_id))
+  ) {
     await supabase.rpc("increment_contact_interaction", { p_contact_id: params.match.source_id });
     await applyLeadStatusChange(supabase, {
       table: "imported_contacts",
@@ -312,8 +363,13 @@ export async function saveMessageToDb(
       trigger: "inbound_email_match",
     });
   }
-  if ((params.match.source_type === "partner" || params.match.source_type === "partner_contact") && params.match.partner_id && UUID_RE.test(String(params.match.partner_id))) {
-    const { data: partnerData } = await supabase.from("partners")
+  if (
+    (params.match.source_type === "partner" || params.match.source_type === "partner_contact") &&
+    params.match.partner_id &&
+    UUID_RE.test(String(params.match.partner_id))
+  ) {
+    const { data: partnerData } = await supabase
+      .from("partners")
       .select("interaction_count, lead_status")
       .eq("id", params.match.partner_id)
       .single();
@@ -322,9 +378,7 @@ export async function saveMessageToDb(
         interaction_count: ((partnerData.interaction_count as number) || 0) + 1,
         last_interaction_at: new Date().toISOString(),
       };
-      await supabase.from("partners")
-        .update(updates)
-        .eq("id", params.match.partner_id);
+      await supabase.from("partners").update(updates).eq("id", params.match.partner_id);
       if (partnerData.lead_status === "new") {
         await applyLeadStatusChange(supabase, {
           table: "partners",

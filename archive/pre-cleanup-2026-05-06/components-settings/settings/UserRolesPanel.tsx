@@ -44,10 +44,7 @@ export default function UserRolesPanel() {
   const { data: allUsers = [], isLoading: usersLoading } = useQuery({
     queryKey: ["authorized-users"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("authorized_users")
-        .select("id, email, display_name")
-        .order("email");
+      const { data, error } = await supabase.from("authorized_users").select("id, email, display_name").order("email");
       if (error) throw error;
       return data || [];
     },
@@ -68,7 +65,7 @@ export default function UserRolesPanel() {
       if (error) throw error;
 
       const map: Record<string, { id: string; name: string }[]> = {};
-      (data as UserRoleJoin[] || []).forEach((ur) => {
+      ((data as UserRoleJoin[]) || []).forEach((ur) => {
         if (!map[ur.user_id]) map[ur.user_id] = [];
         if (ur.roles) map[ur.user_id].push(ur.roles);
       });
@@ -81,7 +78,7 @@ export default function UserRolesPanel() {
   const filteredUsers = allUsers.filter(
     (u) =>
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+      (u.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false),
   );
 
   const usersWithRoles: UserWithRoles[] = filteredUsers.map((u) => ({

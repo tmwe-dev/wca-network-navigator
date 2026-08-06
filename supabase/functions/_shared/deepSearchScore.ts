@@ -49,9 +49,7 @@ export interface ScoreContext {
 /**
  * Calcola lo score di qualità Deep Search per un partner.
  */
-export function calculateDeepSearchScore(
-  ctx: ScoreContext,
-): DeepSearchScoreResult {
+export function calculateDeepSearchScore(ctx: ScoreContext): DeepSearchScoreResult {
   const breakdown = {
     base: 0,
     deep: 0,
@@ -142,8 +140,7 @@ export function calculateDeepSearchScore(
   if (deepAge !== null && deepAge > 30) {
     const penalty = Math.min(10, Math.floor((deepAge - 30) / 15));
     breakdown.freshness_penalty -= penalty;
-    if (deepAge > 60)
-      suggestions.push(`Deep Search obsoleto (${deepAge}gg fa) — riesegui`);
+    if (deepAge > 60) suggestions.push(`Deep Search obsoleto (${deepAge}gg fa) — riesegui`);
   }
   if (sherlockAge !== null && sherlockAge > 60) {
     const penalty = Math.min(10, Math.floor((sherlockAge - 60) / 30));
@@ -162,15 +159,7 @@ export function calculateDeepSearchScore(
   const score = Math.max(0, Math.min(100, rawScore));
 
   const level: DeepSearchScoreResult["level"] =
-    score >= 80
-      ? "excellent"
-      : score >= 60
-      ? "good"
-      : score >= 40
-      ? "fair"
-      : score >= 20
-      ? "poor"
-      : "minimal";
+    score >= 80 ? "excellent" : score >= 60 ? "good" : score >= 40 ? "fair" : score >= 20 ? "poor" : "minimal";
 
   const autoEnrichSuggested = score < 40;
   if (autoEnrichSuggested && suggestions.length === 0) {
@@ -236,26 +225,14 @@ export async function getPartnerDeepSearchScore(
  */
 export function formatScoreForPrompt(result: DeepSearchScoreResult): string {
   const emoji =
-    result.level === "excellent"
-      ? "🟢"
-      : result.level === "good"
-      ? "🟡"
-      : result.level === "fair"
-      ? "🟠"
-      : "🔴";
+    result.level === "excellent" ? "🟢" : result.level === "good" ? "🟡" : result.level === "fair" ? "🟠" : "🔴";
 
   return [
     `DEEP SEARCH SCORE: ${result.score}/100 ${emoji} (${result.level})`,
     `Base: ${result.breakdown.base}/15 | Deep: ${result.breakdown.deep}/30 | Sherlock: ${result.breakdown.sherlock}/20 | History: ${result.breakdown.history}/15 | KB: ${result.breakdown.kb}/10`,
-    result.missing_areas.length > 0
-      ? `MANCANTE: ${result.missing_areas.join(", ")}`
-      : "",
-    result.auto_enrich_suggested
-      ? "⚠️ Score basso — arricchimento consigliato prima di generare comunicazioni"
-      : "",
-    result.suggestions.length > 0
-      ? `SUGGERIMENTI: ${result.suggestions.join("; ")}`
-      : "",
+    result.missing_areas.length > 0 ? `MANCANTE: ${result.missing_areas.join(", ")}` : "",
+    result.auto_enrich_suggested ? "⚠️ Score basso — arricchimento consigliato prima di generare comunicazioni" : "",
+    result.suggestions.length > 0 ? `SUGGERIMENTI: ${result.suggestions.join("; ")}` : "",
   ]
     .filter(Boolean)
     .join("\n");

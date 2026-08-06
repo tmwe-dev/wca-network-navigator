@@ -8,12 +8,12 @@ export function MiniAgenda({ className }: { className?: string }) {
   const { data: activities = [] } = useAllActivities();
 
   const upcoming = activities
-    .filter(a => !["completed", "cancelled"].includes(a.status) && a.due_date)
+    .filter((a) => !["completed", "cancelled"].includes(a.status) && a.due_date)
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
     .slice(0, 5);
 
-  const todayCount = upcoming.filter(a => a.due_date && isToday(new Date(a.due_date))).length;
-  const tomorrowCount = upcoming.filter(a => a.due_date && isTomorrow(new Date(a.due_date))).length;
+  const todayCount = upcoming.filter((a) => a.due_date && isToday(new Date(a.due_date))).length;
+  const tomorrowCount = upcoming.filter((a) => a.due_date && isTomorrow(new Date(a.due_date))).length;
 
   return (
     <div className={cn("rounded-xl border border-border/60 bg-card p-4", className)}>
@@ -34,9 +34,13 @@ export function MiniAgenda({ className }: { className?: string }) {
         </div>
       </div>
       <div className="space-y-1.5">
-        {upcoming.map(a => {
+        {upcoming.map((a) => {
           const date = new Date(a.due_date!);
-          const dateLabel = isToday(date) ? "Oggi" : isTomorrow(date) ? "Domani" : format(date, "dd MMM", { locale: it });
+          const dateLabel = isToday(date)
+            ? "Oggi"
+            : isTomorrow(date)
+              ? "Domani"
+              : format(date, "dd MMM", { locale: it });
           return (
             <div key={a.id} className="flex items-center gap-2 text-xs">
               <Clock className="h-3 w-3 text-muted-foreground shrink-0" />

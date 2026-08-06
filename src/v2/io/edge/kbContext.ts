@@ -16,10 +16,7 @@ export type KbContextEntry = {
  * 1. Full-text search italiano su content
  * 2. Fallback: fuzzy match su title (prima parola significativa)
  */
-export async function loadKbContext(
-  prompt: string,
-  limit = 5,
-): Promise<readonly KbContextEntry[]> {
+export async function loadKbContext(prompt: string, limit = 5): Promise<readonly KbContextEntry[]> {
   const cleaned = prompt.replace(/[^\p{L}\p{N}\s]/gu, " ").trim();
   if (!cleaned) return [];
 

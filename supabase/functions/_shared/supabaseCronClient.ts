@@ -24,12 +24,7 @@ export interface SupabaseCronClient {
 }
 
 function isCronTableBuilder(value: unknown): value is CronTableBuilder {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "select" in value &&
-    "insert" in value
-  );
+  return typeof value === "object" && value !== null && "select" in value && "insert" in value;
 }
 
 /** Restituisce il query builder della tabella o lancia (i caller sono fail-open). */

@@ -42,15 +42,33 @@ function loadCachedStatus(): ChannelStatus {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+  } catch (e) {
+    log.debug("best-effort operation failed", {
+      error: e instanceof Error ? e.message : String(e),
+    }); /* intentionally ignored: best-effort cleanup */
+  }
   return { li: false, wa: false, fs: false, ai: true };
 }
 
 function saveCachedStatus(s: ChannelStatus) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  } catch (e) {
+    log.debug("best-effort operation failed", {
+      error: e instanceof Error ? e.message : String(e),
+    }); /* intentionally ignored: best-effort cleanup */
+  }
 }
 
-export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nightPause, isNightTime: isNight, manualOverride: _manualOverride, onToggleNightPause, resumeMinutes = 0 }: Props) {
+export function ConnectionStatusBar({
+  onAiClick: _onAiClick,
+  outreachQueue,
+  nightPause,
+  isNightTime: isNight,
+  manualOverride: _manualOverride,
+  onToggleNightPause,
+  resumeMinutes = 0,
+}: Props) {
   const navigate = useAppNavigate();
   const li = useLinkedInExtensionBridge();
   const wa = useWhatsAppExtensionBridge();
@@ -63,7 +81,7 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
   const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
-    setStatus(p => ({ ...p, fs: fsExt.isAvailable }));
+    setStatus((p) => ({ ...p, fs: fsExt.isAvailable }));
   }, [fsExt.isAvailable]);
 
   const downloadPartnerConnectExtension = useCallback(() => {
@@ -71,7 +89,8 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
       .then(() => {
         toast({
           title: "🔌 Partner Connect scaricato",
-          description: "1) Estrai lo ZIP  2) chrome://extensions → Modalità sviluppatore  3) Carica non pacchettizzata  4) Ricarica questa pagina",
+          description:
+            "1) Estrai lo ZIP  2) chrome://extensions → Modalità sviluppatore  3) Carica non pacchettizzata  4) Ricarica questa pagina",
         });
       })
       .catch(() => toast({ title: "Errore download", description: "Impossibile scaricare Partner Connect" }));
@@ -113,7 +132,11 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
         try {
           const data = await getAppSettingByKey("whatsapp_sender");
           if (data?.value) waOk = true;
-        } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+        } catch (e) {
+          log.debug("best-effort operation failed", {
+            error: e instanceof Error ? e.message : String(e),
+          }); /* intentionally ignored: best-effort cleanup */
+        }
       }
       if (!waOk) problems.push("WhatsApp: né estensione né API configurata");
     }
@@ -129,7 +152,11 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
     try {
       await updateSetting.mutateAsync({ key: "linkedin_connected", value: String(liOk) });
       await updateSetting.mutateAsync({ key: "whatsapp_connected", value: String(waOk) });
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) {
+      log.debug("best-effort operation failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }); /* intentionally ignored: best-effort cleanup */
+    }
 
     setConnecting(false);
 
@@ -142,7 +169,6 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
       toast({ title: `⚠️ ${activeCount}/4 attivi`, description: problems.slice(0, 3).join("\n"), duration: 6000 });
     }
   }, [li, wa, fsExt, settings, updateSetting, downloadPartnerConnectExtension]);
-
 
   const activeCount = [status.li, status.wa, status.fs, status.ai].filter(Boolean).length;
   const allActive = activeCount === 4;
@@ -192,126 +218,142 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
 
   return (
     <PageErrorBoundary>
-    <TooltipProvider delayDuration={300}>
-      <div className="hidden sm:flex items-center gap-1">
-        {/* Connection status */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={activateAll}
-              disabled={connecting}
-              className={cn(
-                "relative h-7 px-2 flex items-center gap-1 rounded-lg transition-all text-[10px] font-semibold",
-                allActive
-                  ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-                  : "bg-primary/10 text-primary hover:bg-primary/20"
-              )}
-            >
-              {connecting ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : allActive ? (
-                <CheckCircle2 className="w-3 h-3" />
-              ) : (
-                <Zap className="w-3 h-3" />
-              )}
-              <span>{connecting ? "..." : `${activeCount}/4`}</span>
-              <div className="flex items-center gap-0.5 ml-0.5">
-                {[status.li, status.wa, status.fs, status.ai].map((on, i) => (
-                  <span key={i} className={`w-1.5 h-1.5 rounded-full ${on ? "bg-emerald-500" : "bg-destructive"}`} />
-                ))}
-              </div>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs space-y-0.5">
-            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.li ? "bg-emerald-500" : "bg-destructive"}`} /> LinkedIn</div>
-            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.wa ? "bg-emerald-500" : "bg-destructive"}`} /> WhatsApp</div>
-            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.fs ? "bg-emerald-500" : "bg-destructive"}`} /> Partner Connect</div>
-            <div className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${status.ai ? "bg-emerald-500" : "bg-destructive"}`} /> AI Agent</div>
-            <div className="text-muted-foreground pt-1">Clicca per verificare</div>
-          </TooltipContent>
-        </Tooltip>
-
-        {/* Night pause badge */}
-        {isNight && (
+      <TooltipProvider delayDuration={300}>
+        <div className="hidden sm:flex items-center gap-1">
+          {/* Connection status */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={onToggleNightPause}
+                onClick={activateAll}
+                disabled={connecting}
                 className={cn(
-                  "h-7 px-2 flex items-center gap-1 rounded-lg text-[10px] font-semibold transition-all",
-                nightPause
-                    ? "bg-muted text-muted-foreground hover:bg-muted/80"
-                    : "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                  "relative h-7 px-2 flex items-center gap-1 rounded-lg transition-all text-[10px] font-semibold",
+                  allActive
+                    ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                    : "bg-primary/10 text-primary hover:bg-primary/20",
                 )}
               >
-                {nightPause ? "🌙" : "☀️"}
-                {nightPause && (
-                  <span className="tabular-nums">
-                    {resumeMinutes >= 60
-                      ? `${Math.floor(resumeMinutes / 60)}h${String(resumeMinutes % 60).padStart(2, "0")}m`
-                      : `${resumeMinutes}m`}
-                  </span>
+                {connecting ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : allActive ? (
+                  <CheckCircle2 className="w-3 h-3" />
+                ) : (
+                  <Zap className="w-3 h-3" />
                 )}
+                <span>{connecting ? "..." : `${activeCount}/4`}</span>
+                <div className="flex items-center gap-0.5 ml-0.5">
+                  {[status.li, status.wa, status.fs, status.ai].map((on, i) => (
+                    <span key={i} className={`w-1.5 h-1.5 rounded-full ${on ? "bg-emerald-500" : "bg-destructive"}`} />
+                  ))}
+                </div>
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">
-              {nightPause
-                ? `Pausa notturna — riattivazione tra ${resumeMinutes >= 60 ? `${Math.floor(resumeMinutes / 60)}h ${resumeMinutes % 60}m` : `${resumeMinutes}m`}. Clicca per riattivare ora.`
-                : "Pausa notturna disattivata manualmente. Clicca per riattivare."}
+            <TooltipContent side="bottom" className="text-xs space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${status.li ? "bg-emerald-500" : "bg-destructive"}`} />{" "}
+                LinkedIn
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${status.wa ? "bg-emerald-500" : "bg-destructive"}`} />{" "}
+                WhatsApp
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${status.fs ? "bg-emerald-500" : "bg-destructive"}`} />{" "}
+                Partner Connect
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${status.ai ? "bg-emerald-500" : "bg-destructive"}`} /> AI
+                Agent
+              </div>
+              <div className="text-muted-foreground pt-1">Clicca per verificare</div>
             </TooltipContent>
           </Tooltip>
-        )}
 
-        {/* Divider */}
-        <div className="w-px h-5 bg-border/50 mx-0.5" />
-
-        {/* Indicator badges */}
-        {indicators.map((ind, i) => {
-          const Icon = ind.icon;
-          const hasItems = ind.count > 0;
-          return (
-            <Tooltip key={i}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={ind.onClick}
-                  className={cn(
-                    "h-7 px-1.5 flex items-center gap-1 rounded-lg transition-all text-[10px] font-semibold",
-                    hasItems ? `${ind.bg} ${ind.color}` : "text-muted-foreground hover:bg-muted/40"
-                  )}
-                >
-                  <Icon className="w-3 h-3" />
-                  {hasItems && <span className="tabular-nums">{ind.count > 99 ? "99+" : ind.count}</span>}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">{ind.label}: {ind.count}</TooltipContent>
-            </Tooltip>
-          );
-        })}
-
-        {/* Outreach queue */}
-        {outreachQueue && outreachQueue.pendingCount > 0 && (
-          <>
-            <div className="w-px h-5 bg-border/50 mx-0.5" />
+          {/* Night pause badge */}
+          {isNight && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => outreachQueue.setPaused(!outreachQueue.paused)}
-                  className="relative h-7 flex items-center gap-1 px-1.5 rounded-lg hover:bg-muted/60 transition-colors"
+                  onClick={onToggleNightPause}
+                  className={cn(
+                    "h-7 px-2 flex items-center gap-1 rounded-lg text-[10px] font-semibold transition-all",
+                    nightPause
+                      ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25",
+                  )}
                 >
-                  <span className="text-[10px] font-semibold tabular-nums text-foreground">{outreachQueue.pendingCount} coda</span>
-                  {outreachQueue.processing && !outreachQueue.paused && (
-                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  {nightPause ? "🌙" : "☀️"}
+                  {nightPause && (
+                    <span className="tabular-nums">
+                      {resumeMinutes >= 60
+                        ? `${Math.floor(resumeMinutes / 60)}h${String(resumeMinutes % 60).padStart(2, "0")}m`
+                        : `${resumeMinutes}m`}
+                    </span>
                   )}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
-                {outreachQueue.paused ? "Coda in pausa — clicca per riprendere" : "Clicca per mettere in pausa"}
+                {nightPause
+                  ? `Pausa notturna — riattivazione tra ${resumeMinutes >= 60 ? `${Math.floor(resumeMinutes / 60)}h ${resumeMinutes % 60}m` : `${resumeMinutes}m`}. Clicca per riattivare ora.`
+                  : "Pausa notturna disattivata manualmente. Clicca per riattivare."}
               </TooltipContent>
             </Tooltip>
-          </>
-        )}
-      </div>
-    </TooltipProvider>
+          )}
+
+          {/* Divider */}
+          <div className="w-px h-5 bg-border/50 mx-0.5" />
+
+          {/* Indicator badges */}
+          {indicators.map((ind, i) => {
+            const Icon = ind.icon;
+            const hasItems = ind.count > 0;
+            return (
+              <Tooltip key={i}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={ind.onClick}
+                    className={cn(
+                      "h-7 px-1.5 flex items-center gap-1 rounded-lg transition-all text-[10px] font-semibold",
+                      hasItems ? `${ind.bg} ${ind.color}` : "text-muted-foreground hover:bg-muted/40",
+                    )}
+                  >
+                    <Icon className="w-3 h-3" />
+                    {hasItems && <span className="tabular-nums">{ind.count > 99 ? "99+" : ind.count}</span>}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  {ind.label}: {ind.count}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+
+          {/* Outreach queue */}
+          {outreachQueue && outreachQueue.pendingCount > 0 && (
+            <>
+              <div className="w-px h-5 bg-border/50 mx-0.5" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => outreachQueue.setPaused(!outreachQueue.paused)}
+                    className="relative h-7 flex items-center gap-1 px-1.5 rounded-lg hover:bg-muted/60 transition-colors"
+                  >
+                    <span className="text-[10px] font-semibold tabular-nums text-foreground">
+                      {outreachQueue.pendingCount} coda
+                    </span>
+                    {outreachQueue.processing && !outreachQueue.paused && (
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  {outreachQueue.paused ? "Coda in pausa — clicca per riprendere" : "Clicca per mettere in pausa"}
+                </TooltipContent>
+              </Tooltip>
+            </>
+          )}
+        </div>
+      </TooltipProvider>
     </PageErrorBoundary>
   );
 }

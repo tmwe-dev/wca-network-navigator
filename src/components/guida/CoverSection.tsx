@@ -8,7 +8,7 @@ const CoverSection = () => (
       <div className="flex flex-col items-center justify-center text-center min-h-[80vh] relative">
         {/* Glow effect */}
         <div className="absolute w-[600px] h-[600px] rounded-full bg-primary/10 blur-[150px] pointer-events-none" />
-        
+
         <div className="relative z-10 space-y-8">
           <div className="flex items-center justify-center gap-4 mb-6">
             <Globe className="w-16 h-16 text-primary animate-[spin_20s_linear_infinite]" />
@@ -61,8 +61,8 @@ const CoverSection = () => (
             <span className="text-white/40">Un team di 3 persone.</span>
           </h2>
           <p className="text-lg text-white/50 leading-relaxed">
-            Migliaia di potenziali partner in 190+ paesi. Directory da scansionare, profili da scaricare,
-            email da personalizzare, follow-up da tracciare. Un lavoro impossibile con metodi tradizionali.
+            Migliaia di potenziali partner in 190+ paesi. Directory da scansionare, profili da scaricare, email da
+            personalizzare, follow-up da tracciare. Un lavoro impossibile con metodi tradizionali.
           </p>
         </div>
         <div className="space-y-4">

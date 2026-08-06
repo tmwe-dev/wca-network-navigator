@@ -27,9 +27,7 @@ interface Props {
 }
 
 export function JournalistBadge({ review, compact = false }: Props): React.ReactElement {
-  const VerdictIcon =
-    review.verdict === "block" ? XCircle :
-    review.verdict === "warn" ? AlertTriangle : CheckCircle2;
+  const VerdictIcon = review.verdict === "block" ? XCircle : review.verdict === "warn" ? AlertTriangle : CheckCircle2;
 
   return (
     <div className="space-y-2">
@@ -42,14 +40,14 @@ export function JournalistBadge({ review, compact = false }: Props): React.React
           <span className="ml-auto font-mono text-[10px] opacity-70">{review.quality_score}/100</span>
         )}
       </div>
-      {!compact && review.reasoning && (
-        <p className="text-[11px] italic text-foreground px-1">{review.reasoning}</p>
-      )}
+      {!compact && review.reasoning && <p className="text-[11px] italic text-foreground px-1">{review.reasoning}</p>}
       {!compact && (review.verdict === "warn" || review.verdict === "block") && review.warnings.length > 0 && (
-        <div className={cn(
-          "p-2 rounded border text-[11px] space-y-1",
-          review.verdict === "block" ? "border-destructive/30 bg-destructive/5" : "border-warning/30 bg-warning/5",
-        )}>
+        <div
+          className={cn(
+            "p-2 rounded border text-[11px] space-y-1",
+            review.verdict === "block" ? "border-destructive/30 bg-destructive/5" : "border-warning/30 bg-warning/5",
+          )}
+        >
           {review.warnings.map((w, i) => (
             <div key={i} className="text-foreground">
               <span className="font-mono opacity-50">[{w.type}]</span> {w.description}

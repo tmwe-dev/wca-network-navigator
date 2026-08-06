@@ -26,7 +26,8 @@ export interface FunnemailBrainRow {
 }
 
 export async function listFunnemailBrain(limit = 100): Promise<FunnemailBrainRow[]> {
-  const { data, error } = await supabase.from("funnemail_brain_v")
+  const { data, error } = await supabase
+    .from("funnemail_brain_v")
     .select("*")
     .order("received_at", { ascending: false })
     .limit(limit);

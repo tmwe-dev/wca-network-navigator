@@ -4,8 +4,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
-export async function insertCockpitQueueItems(items: Array<{ user_id: string; source_type: string; source_id: string; partner_id?: string | null }>) {
-  const { error } = await supabase.from("cockpit_queue").upsert(items, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
+export async function insertCockpitQueueItems(
+  items: Array<{ user_id: string; source_type: string; source_id: string; partner_id?: string | null }>,
+) {
+  const { error } = await supabase
+    .from("cockpit_queue")
+    .upsert(items, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
   if (error) throw error;
   emitBusyPartnersChanged();
 }

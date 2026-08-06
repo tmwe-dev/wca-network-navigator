@@ -18,7 +18,9 @@ export function validateEmail(email: string): Result<string, AppError> {
     return err(domainError("VALIDATION_FAILED", "Email is required", { field: "email" }));
   }
   if (!EMAIL_REGEX.test(trimmed)) {
-    return err(domainError("VALIDATION_FAILED", `Invalid email format: ${trimmed}`, { field: "email", value: trimmed }));
+    return err(
+      domainError("VALIDATION_FAILED", `Invalid email format: ${trimmed}`, { field: "email", value: trimmed }),
+    );
   }
   return ok(trimmed);
 }
@@ -29,7 +31,9 @@ export function validateEmail(email: string): Result<string, AppError> {
 export function validateCountryCode(code: string): Result<string, AppError> {
   const upper = code.trim().toUpperCase();
   if (!COUNTRY_CODE_REGEX.test(upper)) {
-    return err(domainError("VALIDATION_FAILED", `Invalid country code: ${upper}`, { field: "countryCode", value: upper }));
+    return err(
+      domainError("VALIDATION_FAILED", `Invalid country code: ${upper}`, { field: "countryCode", value: upper }),
+    );
   }
   return ok(upper);
 }
@@ -40,7 +44,9 @@ export function validateCountryCode(code: string): Result<string, AppError> {
 export function validateCompanyName(name: string): Result<string, AppError> {
   const trimmed = name.trim();
   if (!trimmed || trimmed.length < 2) {
-    return err(domainError("VALIDATION_FAILED", "Company name must be at least 2 characters", { field: "companyName" }));
+    return err(
+      domainError("VALIDATION_FAILED", "Company name must be at least 2 characters", { field: "companyName" }),
+    );
   }
   return ok(trimmed);
 }
@@ -53,10 +59,7 @@ export interface DateRange {
   readonly end: string;
 }
 
-export function validateDateRange(
-  start: string,
-  end: string,
-): Result<DateRange, AppError> {
+export function validateDateRange(start: string, end: string): Result<DateRange, AppError> {
   const startDate = new Date(start);
   const endDate = new Date(end);
 
@@ -67,9 +70,12 @@ export function validateDateRange(
     return err(domainError("VALIDATION_FAILED", "Invalid end date", { field: "end", value: end }));
   }
   if (startDate >= endDate) {
-    return err(domainError("BUSINESS_RULE_VIOLATED", "Start date must be before end date", {
-      start, end,
-    }));
+    return err(
+      domainError("BUSINESS_RULE_VIOLATED", "Start date must be before end date", {
+        start,
+        end,
+      }),
+    );
   }
   return ok({ start, end });
 }

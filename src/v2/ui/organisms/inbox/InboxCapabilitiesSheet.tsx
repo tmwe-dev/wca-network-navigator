@@ -10,14 +10,7 @@
  */
 import { Link } from "react-router-dom";
 import { Sparkles } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
 type Capability = {
@@ -111,23 +104,17 @@ export function InboxCapabilitiesSheet({ trigger }: InboxCapabilitiesSheetProps)
             Cosa può fare l'AI qui
           </SheetTitle>
           <SheetDescription>
-            Mappa delle attività che il sistema sa già svolgere intorno alle email,
-            in autonomia o su tua approvazione.
+            Mappa delle attività che il sistema sa già svolgere intorno alle email, in autonomia o su tua approvazione.
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
           {SECTIONS.map((section) => (
             <section key={section.title} className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                {section.title}
-              </h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">{section.title}</h3>
               <ul className="space-y-2">
                 {section.items.map((item) => (
-                  <li
-                    key={item.title}
-                    className="rounded-md border border-border/60 bg-muted/30 px-2.5 py-2"
-                  >
+                  <li key={item.title} className="rounded-md border border-border/60 bg-muted/30 px-2.5 py-2">
                     <div className="text-xs font-semibold text-foreground">{item.title}</div>
                     <div className="text-[11px] leading-snug text-foreground">{item.detail}</div>
                   </li>

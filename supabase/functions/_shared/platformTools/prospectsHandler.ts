@@ -8,14 +8,11 @@
 
 import { supabase, escapeLike } from "./supabaseClient.ts";
 
-export async function handleSearchProspects(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleSearchProspects(args: Record<string, unknown>): Promise<unknown> {
   let query = supabase
     .from("prospects")
     .select("id, company_name, city, province, codice_ateco, fatturato, email, lead_status");
-  if (args.company_name)
-    query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
+  if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
   if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
   if (args.province) query = query.ilike("province", `%${escapeLike(String(args.province))}%`);
   if (args.lead_status) query = query.eq("lead_status", args.lead_status);
@@ -26,9 +23,7 @@ export async function handleSearchProspects(
   return { count: data?.length || 0, prospects: data || [] };
 }
 
-export async function handleGetProspectDetail(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGetProspectDetail(args: Record<string, unknown>): Promise<unknown> {
   let prospect: Record<string, unknown> | null = null;
   if (args.prospect_id) {
     const { data } = await supabase

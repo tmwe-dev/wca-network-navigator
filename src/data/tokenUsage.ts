@@ -136,16 +136,10 @@ export async function updateTokenSetting(userId: string, key: string, value: str
     .maybeSingle();
 
   if (existing) {
-    const { error } = await supabase
-      .from("app_settings")
-      .update({ value })
-      .eq("key", key)
-      .eq("user_id", userId);
+    const { error } = await supabase.from("app_settings").update({ value }).eq("key", key).eq("user_id", userId);
     if (error) throw error;
   } else {
-    const { error } = await supabase
-      .from("app_settings")
-      .insert({ key, value, user_id: userId });
+    const { error } = await supabase.from("app_settings").insert({ key, value, user_id: userId });
     if (error) throw error;
   }
 }

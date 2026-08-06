@@ -65,11 +65,7 @@ export async function listNavigationIntents(opts?: {
 }
 
 export async function findIntentByKey(intentKey: string): Promise<UiNavigationIntent | null> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("*")
-    .eq("intent_key", intentKey)
-    .maybeSingle();
+  const { data, error } = await supabase.from(TABLE).select("*").eq("intent_key", intentKey).maybeSingle();
   if (error) throw error;
   return data ? toIntent(data) : null;
 }
@@ -90,10 +86,7 @@ export async function deleteIntent(id: string): Promise<void> {
  * Match euristico locale: cerca per intent_key esatto, poi fuzzy su label/description/examples.
  * Restituisce il match migliore o null.
  */
-export function matchIntentLocally(
-  query: string,
-  intents: UiNavigationIntent[],
-): UiNavigationIntent | null {
+export function matchIntentLocally(query: string, intents: UiNavigationIntent[]): UiNavigationIntent | null {
   if (!query) return null;
   const q = query.toLowerCase().trim();
 

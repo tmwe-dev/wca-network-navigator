@@ -7,10 +7,7 @@ import type { Message, FlowPhase } from "../constants";
 import type { ToolResult } from "../tools/types";
 import type { PlanExecutionState } from "../planRunner";
 import type { CanvasType } from "../constants";
-import {
-  executePlan,
-  executeApprovedStep,
-} from "../planRunner";
+import { executePlan, executeApprovedStep } from "../planRunner";
 import type { TraceBuilder } from "../lib/toolTrace";
 
 interface PlanExecutionDeps {
@@ -26,9 +23,7 @@ interface PlanExecutionDeps {
 }
 
 export function usePlanExecution(deps: PlanExecutionDeps) {
-  const {
-    addMessage, ts, setFlowPhase, setExecProgress, setPlanState, buildHistory,
-  } = deps;
+  const { addMessage, ts, setFlowPhase, setExecProgress, setPlanState, buildHistory } = deps;
 
   /** Run a plan to completion (or pause for per-step approval) */
   const runPlan = useCallback(

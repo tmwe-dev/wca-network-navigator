@@ -55,7 +55,13 @@ function toScenario(row: ScenarioRow): AiTestScenario {
 }
 
 export interface AiTestAssertion {
-  type: "status_ok" | "response_min_length" | "response_contains" | "response_not_contains" | "response_contains_key" | "json_path_equals";
+  type:
+    | "status_ok"
+    | "response_min_length"
+    | "response_contains"
+    | "response_not_contains"
+    | "response_contains_key"
+    | "json_path_equals";
   value?: string | number;
   path?: string;
 }
@@ -101,7 +107,9 @@ export async function listScenarios(): Promise<AiTestScenario[]> {
 }
 
 export async function upsertScenario(input: Partial<AiTestScenario>): Promise<AiTestScenario> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   if (!userId) throw new Error("Auth richiesta");
   const row: Database["public"]["Tables"]["ai_test_scenarios"]["Insert"] = {
@@ -112,11 +120,7 @@ export async function upsertScenario(input: Partial<AiTestScenario>): Promise<Ai
     payload: input.payload === undefined ? undefined : toJsonValue(input.payload),
     assertions: input.assertions === undefined ? undefined : toJsonValue(input.assertions),
   };
-  const { data, error } = await supabase
-    .from("ai_test_scenarios")
-    .upsert(row)
-    .select("*")
-    .maybeSingle();
+  const { data, error } = await supabase.from("ai_test_scenarios").upsert(row).select("*").maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("Upsert scenario: nessuna riga restituita");
   return toScenario(data);
@@ -127,7 +131,9 @@ export async function deleteScenario(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function runScenarios(scenarioIds: string[]): Promise<{ results: AiTestRunResult[]; total: number; passed: number }> {
+export async function runScenarios(
+  scenarioIds: string[],
+): Promise<{ results: AiTestRunResult[]; total: number; passed: number }> {
   return await invokeAi<{ results: AiTestRunResult[]; total: number; passed: number }>("ai-test-runner", {
     scope: "lab",
     context: { source: "AiTestHubPage", route: "/v2/ai-test-hub", mode: "run-scenarios" },

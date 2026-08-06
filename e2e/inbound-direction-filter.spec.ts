@@ -25,7 +25,10 @@ test.describe("P0 inbound direction filter", () => {
   test("trace inbound mostra step classify_inbound quando presente", async ({ page }) => {
     await page.goto("/v2/pipeline-traces");
     await page.waitForTimeout(2000);
-    const body = await page.locator("body").innerText().catch(() => "");
+    const body = await page
+      .locator("body")
+      .innerText()
+      .catch(() => "");
     // Se ci sono trace, deve apparire almeno uno step di classificazione inbound.
     // Se la lista è vuota (ambiente test pulito), il test passa silenziosamente.
     const hasTraces = /trace|inbound|classify/i.test(body);

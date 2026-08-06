@@ -28,7 +28,6 @@ import {
   type HarmonizeActionType,
 } from "@/data/harmonizeRuns";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("agentOrchestrator");
 async function persistBestEffort(label: string, operation: () => Promise<void>): Promise<void> {
@@ -158,14 +157,16 @@ export async function runAgenticHarmonizer(input: {
 
   // Crea run + sessione (agentic_mode = true via campo; per ora usa colonna esistente).
   const run = resume?.runId ? { id: resume.runId } : await createHarmonizeRun(userId, goal, "library_agentic_v2");
-  const session = resume?.sessionId ? { id: resume.sessionId } : await createHarmonizerSession({
-    userId,
-    sourceFile: sourceFileName,
-    sourceKind: "library",
-    totalChunks: entities.length,
-    harmonizeRunId: run.id,
-    bootstrapEntities: indexToBootstrapEntities(index).slice(0, 200) as EntityCreatedEntry[],
-  });
+  const session = resume?.sessionId
+    ? { id: resume.sessionId }
+    : await createHarmonizerSession({
+        userId,
+        sourceFile: sourceFileName,
+        sourceKind: "library",
+        totalChunks: entities.length,
+        harmonizeRunId: run.id,
+        bootstrapEntities: indexToBootstrapEntities(index).slice(0, 200) as EntityCreatedEntry[],
+      });
   await persistBestEffort("mark analyzing", () => updateHarmonizeRun(run.id, { status: "analyzing" }));
 
   // 2. Loop processing
@@ -173,12 +174,15 @@ export async function runAgenticHarmonizer(input: {
   const cache = createRetrieverCache(userId);
   const previousById = new Map((resume?.previousEntities ?? []).map((e) => [e.id, e]));
   const skipIds = new Set(resume?.skipEntityIds ?? []);
-  const progress: EntityProgress[] = entities.map((e) => previousById.get(e.id) ?? ({
-    id: e.id,
-    title: e.title,
-    inferredTable: e.inferredTable,
-    status: "pending",
-  }));
+  const progress: EntityProgress[] = entities.map(
+    (e) =>
+      previousById.get(e.id) ?? {
+        id: e.id,
+        title: e.title,
+        inferredTable: e.inferredTable,
+        status: "pending",
+      },
+  );
 
   const recentDecisions: { entityTitle: string; decision: string }[] = [];
   const recentFacts: FactEntry[] = [];
@@ -201,9 +205,13 @@ export async function runAgenticHarmonizer(input: {
 
     try {
       const candidates = findCandidates(entity, index, 3);
-      const candidateContents = candidates.length > 0
-        ? await retrieveContents(cache, candidates.map((c) => ({ id: c.entry.id, table: c.entry.table })))
-        : [];
+      const candidateContents =
+        candidates.length > 0
+          ? await retrieveContents(
+              cache,
+              candidates.map((c) => ({ id: c.entry.id, table: c.entry.table })),
+            )
+          : [];
 
       const result = await reasonAboutEntity({
         entity,
@@ -235,9 +243,12 @@ export async function runAgenticHarmonizer(input: {
           action,
           target: {
             table: (d.proposal.table || entity.inferredTable) as HarmonizeProposal["target"]["table"],
-            id: action === "UPDATE" ? d.matched_candidate_id ?? undefined : undefined,
+            id: action === "UPDATE" ? (d.matched_candidate_id ?? undefined) : undefined,
           },
-          before: action === "UPDATE" ? candidateContents.find((c) => c.id === d.matched_candidate_id)?.content ?? null : null,
+          before:
+            action === "UPDATE"
+              ? (candidateContents.find((c) => c.id === d.matched_candidate_id)?.content ?? null)
+              : null,
           after: d.proposal.content,
           evidence: {
             source: "library",
@@ -272,11 +283,15 @@ export async function runAgenticHarmonizer(input: {
       // Append to session.entities_created se INSERT.
       if (d.decision === "INSERT" && d.proposal) {
         const createdProposal = d.proposal;
-        await persistBestEffort("append entities", () => appendEntities(session.id, [{
-          table: createdProposal.table,
-          title: createdProposal.title,
-          created_in_chunk: i,
-        }]));
+        await persistBestEffort("append entities", () =>
+          appendEntities(session.id, [
+            {
+              table: createdProposal.table,
+              title: createdProposal.title,
+              created_in_chunk: i,
+            },
+          ]),
+        );
       }
 
       recentDecisions.push({ entityTitle: entity.title, decision: d.decision });

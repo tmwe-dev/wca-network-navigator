@@ -162,17 +162,20 @@ export function useContactDetail({ contact, onContactUpdated }: UseContactDetail
     }
   }, [state.aliasLoading, state.contact.id, onContactUpdated, queryClient]);
 
-  const handleStatusChange = useCallback((s: LeadStatus) => {
-    updateStatus.mutate(
-      { ids: [state.contact.id], status: s },
-      {
-        onSuccess: () => {
-          toast({ title: "Status aggiornato" });
-          dispatch({ type: "SET_CONTACT", contact: { ...state.contact, lead_status: s } });
+  const handleStatusChange = useCallback(
+    (s: LeadStatus) => {
+      updateStatus.mutate(
+        { ids: [state.contact.id], status: s },
+        {
+          onSuccess: () => {
+            toast({ title: "Status aggiornato" });
+            dispatch({ type: "SET_CONTACT", contact: { ...state.contact, lead_status: s } });
+          },
         },
-      },
-    );
-  }, [state.contact, updateStatus]);
+      );
+    },
+    [state.contact, updateStatus],
+  );
 
   const handleAddInteraction = useCallback(() => {
     if (!state.newTitle.trim()) return;

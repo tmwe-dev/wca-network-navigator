@@ -9,14 +9,14 @@ type: reference
 Partendo dallo score 97.000/100k dell'audit 2026-05-13, abbiamo
 chiuso 6 azioni residue atomiche e reversibili.
 
-| # | Item | Esito | File |
-|---|------|-------|------|
-| R1 | Playwright timeout/retry stabilizzazione flaky | ✅ | `playwright.config.ts` (timeout 30→45s, expect 5→10s, retries 2→3, action/nav timeout env) |
-| R2 | LinkedIn dispatch queue orfana documentata | ✅ | `docs/debt/linkedin-dispatch-queue-orphan.md` (misurato: 0 record orfani, debito concettuale) |
-| R3 | Lighthouse CI assertions | ✅ già esistente | `lighthouserc.json` (perf/a11y/best-practices/seo già con soglie) |
-| R4 | Bundle size guard in CI (warn-only baseline 3500 KB) | ✅ | `scripts/bundle-size-guard.mjs` + `npm run bundle:check` + step CI |
-| R5 | a11y axe-core su route pubbliche in E2E smoke | ✅ | `e2e/a11y-axe.spec.ts` + `@axe-core/playwright` + step smoke workflow |
-| R6 | i18n coverage report + parità chiavi | ✅ | `scripts/i18n-coverage.mjs` + `npm run i18n:check` + step CI bloccante. EN/IT a 241/241 (100%) |
+| #   | Item                                                 | Esito            | File                                                                                           |
+| --- | ---------------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| R1  | Playwright timeout/retry stabilizzazione flaky       | ✅               | `playwright.config.ts` (timeout 30→45s, expect 5→10s, retries 2→3, action/nav timeout env)     |
+| R2  | LinkedIn dispatch queue orfana documentata           | ✅               | `docs/debt/linkedin-dispatch-queue-orphan.md` (misurato: 0 record orfani, debito concettuale)  |
+| R3  | Lighthouse CI assertions                             | ✅ già esistente | `lighthouserc.json` (perf/a11y/best-practices/seo già con soglie)                              |
+| R4  | Bundle size guard in CI (warn-only baseline 3500 KB) | ✅               | `scripts/bundle-size-guard.mjs` + `npm run bundle:check` + step CI                             |
+| R5  | a11y axe-core su route pubbliche in E2E smoke        | ✅               | `e2e/a11y-axe.spec.ts` + `@axe-core/playwright` + step smoke workflow                          |
+| R6  | i18n coverage report + parità chiavi                 | ✅               | `scripts/i18n-coverage.mjs` + `npm run i18n:check` + step CI bloccante. EN/IT a 241/241 (100%) |
 
 ## Modifiche file
 

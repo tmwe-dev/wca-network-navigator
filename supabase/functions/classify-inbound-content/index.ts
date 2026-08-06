@@ -38,29 +38,33 @@ interface RequestBody {
   emit_pending_actions?: boolean;
 }
 
-const SuggestedActionSchema = z.object({
-  type: z.string().min(1).max(40),
-  label: z.string().max(120).optional(),
-  color: z.string().max(20).optional(),
-  title: z.string().max(200).optional(),
-  due_in_hours: z.number().min(0).max(720).optional(),
-  assignee_role: z.string().max(40).optional(),
-  next: z.string().max(60).optional(),
-  reason: z.string().max(400).optional(),
-  template_hint: z.string().max(80).optional(),
-}).passthrough();
+const SuggestedActionSchema = z
+  .object({
+    type: z.string().min(1).max(40),
+    label: z.string().max(120).optional(),
+    color: z.string().max(20).optional(),
+    title: z.string().max(200).optional(),
+    due_in_hours: z.number().min(0).max(720).optional(),
+    assignee_role: z.string().max(40).optional(),
+    next: z.string().max(60).optional(),
+    reason: z.string().max(400).optional(),
+    template_hint: z.string().max(80).optional(),
+  })
+  .passthrough();
 
-const NextStepSchema = z.object({
-  action_type: z.string().min(1).max(40),
-  owner_role: z.string().max(40).default("operator"),
-  urgency: z.string().max(20).default("medium"),
-  due_in_hours: z.number().min(0).max(720).default(24),
-  reason: z.string().max(400).default(""),
-  status: z.string().max(20).default("open"),
-  // R3 (audit Funnemail): true se questo step deve sostituire un job già pianificato
-  // per il contatto (es. quando arriva una risposta in anticipo).
-  replaces_existing: z.boolean().optional().default(false),
-}).passthrough();
+const NextStepSchema = z
+  .object({
+    action_type: z.string().min(1).max(40),
+    owner_role: z.string().max(40).default("operator"),
+    urgency: z.string().max(20).default("medium"),
+    due_in_hours: z.number().min(0).max(720).default(24),
+    reason: z.string().max(400).default(""),
+    status: z.string().max(20).default("open"),
+    // R3 (audit Funnemail): true se questo step deve sostituire un job già pianificato
+    // per il contatto (es. quando arriva una risposta in anticipo).
+    replaces_existing: z.boolean().optional().default(false),
+  })
+  .passthrough();
 
 const ResultSchema = z.object({
   content_label: z.string().min(1).max(160),
@@ -68,10 +72,13 @@ const ResultSchema = z.object({
   business_value: z.string().max(20).default("none"),
   urgency: z.string().max(20).default("normal"),
   target_role: z.string().max(40).default("none"),
-  continuity: z.object({
-    campaign_id: z.string().nullable().optional(),
-    thread_with_partner: z.boolean().optional(),
-  }).passthrough().default({}),
+  continuity: z
+    .object({
+      campaign_id: z.string().nullable().optional(),
+      thread_with_partner: z.boolean().optional(),
+    })
+    .passthrough()
+    .default({}),
   reasoning: z.string().max(600).default(""),
   confidence: z.number().min(0).max(1).default(0),
   suggested_actions: z.array(SuggestedActionSchema).max(8).default([]),
@@ -114,10 +121,13 @@ async function buildContextSummary(
         .eq("user_id", userId)
         .limit(3);
       if (doctrine?.length) {
-        out.our_profile = doctrine.map((d: { title: string; body: string }) =>
-          `${d.title}: ${(d.body ?? "").slice(0, 200)}`).join("\n");
+        out.our_profile = doctrine
+          .map((d: { title: string; body: string }) => `${d.title}: ${(d.body ?? "").slice(0, 200)}`)
+          .join("\n");
       }
-    } catch { /* fail-safe */ }
+    } catch {
+      /* fail-safe */
+    }
   }
 
   // Partner (passaporto)
@@ -131,7 +141,9 @@ async function buildContextSummary(
         .limit(1)
         .maybeSingle();
       if (partner?.id) pid = partner.id;
-    } catch { /* fail-safe */ }
+    } catch {
+      /* fail-safe */
+    }
   }
   if (pid) {
     try {
@@ -141,7 +153,9 @@ async function buildContextSummary(
         .eq("id", pid)
         .maybeSingle();
       if (partner) out.partner = partner;
-    } catch { /* fail-safe */ }
+    } catch {
+      /* fail-safe */
+    }
 
     // Holding pattern
     try {
@@ -151,7 +165,9 @@ async function buildContextSummary(
         .eq("partner_id", pid)
         .maybeSingle();
       if (holding) out.holding_pattern = holding;
-    } catch { /* tabella opzionale */ }
+    } catch {
+      /* tabella opzionale */
+    }
 
     // Riassunto relazione (summary persistente o fallback 5 msg).
     // NON leggiamo più 30 mail raw: il summary è la guida.
@@ -165,7 +181,9 @@ async function buildContextSummary(
         out.relationship_summary = sum.block;
         out.relationship_source = sum.source;
       }
-    } catch { /* fail-safe */ }
+    } catch {
+      /* fail-safe */
+    }
   }
 
   return { context: out, partner_id: pid };
@@ -196,17 +214,12 @@ Deno.serve(async (req) => {
     const body: RequestBody = (caller.bodyJson ?? {}) as RequestBody;
     if (!body.message_id || !body.from_address) {
       endMetrics(metrics, false, 400);
-      return new Response(
-        JSON.stringify({ error: "message_id+from_address required" }),
-        { status: 400, headers },
-      );
+      return new Response(JSON.stringify({ error: "message_id+from_address required" }), { status: 400, headers });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } },
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // For user-JWT callers: force user_id = JWT sub + verify message ownership.
     // Service-role: trust body.user_id (trigger context).
@@ -227,15 +240,15 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (existing && !body.force) {
       endMetrics(metrics, true, 200);
-      return new Response(
-        JSON.stringify({ ok: true, intelligence: existing, cached: true }),
-        { status: 200, headers },
-      );
+      return new Response(JSON.stringify({ ok: true, intelligence: existing, cached: true }), { status: 200, headers });
     }
 
     // Contesto
     const { context, partner_id } = await buildContextSummary(
-      supabase, body.user_id ?? null, body.partner_id ?? null, body.from_address,
+      supabase,
+      body.user_id ?? null,
+      body.partner_id ?? null,
+      body.from_address,
     );
     const contextBlock = renderContext(context);
 
@@ -251,14 +264,17 @@ Deno.serve(async (req) => {
           limit: 4,
         });
         if (op.block) operativeBlock = op.block;
-      } catch { /* fail-safe */ }
+      } catch {
+        /* fail-safe */
+      }
     }
 
     // Normalizza + sanitizza contenuto inbound
     const subjNorm = normalizeContent(body.subject ?? "", { source: "email-inbound", maxChars: 300 }).text;
     const bodyNorm = normalizeContent(body.body_text ?? "", { source: "email-inbound", maxChars: 4000 });
     const wrappedBody = safeWrap(bodyNorm.text, "INBOUND BODY", {
-      source: "email-inbound", policy: "redact",
+      source: "email-inbound",
+      policy: "redact",
     }).block;
 
     const systemPrompt = [
@@ -266,7 +282,9 @@ Deno.serve(async (req) => {
       "Leggi il CONTENUTO di una mail in arrivo con il contesto fornito e produci una proposta di lettura + azioni.",
       "NON eseguire nulla. NON inventare partner. Sii sobrio: meglio confidence bassa che claim falsi.",
       operativeBlock || "",
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const userPrompt = [
       `${contextBlock}`,
@@ -277,19 +295,21 @@ Deno.serve(async (req) => {
       `\nUsa lo strumento classify_content per restituire la lettura.`,
     ].join("\n\n");
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     const model = "google/gemini-3-flash-preview";
     let result: Result = emptyResult("AI key missing");
 
     if (LOVABLE_API_KEY) {
       try {
         const resp = await aiFetch({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            tools: [{
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
               type: "function",
               function: {
                 name: "classify_content",
@@ -297,7 +317,11 @@ Deno.serve(async (req) => {
                 parameters: {
                   type: "object",
                   properties: {
-                    content_label: { type: "string", maxLength: 160, description: "Etichetta libera che descrive di cosa parla la mail" },
+                    content_label: {
+                      type: "string",
+                      maxLength: 160,
+                      description: "Etichetta libera che descrive di cosa parla la mail",
+                    },
                     intent_summary: { type: "string", maxLength: 400 },
                     business_value: { type: "string", description: "high|medium|low|none" },
                     urgency: { type: "string", description: "critical|high|normal|low" },
@@ -332,7 +356,8 @@ Deno.serve(async (req) => {
                     },
                     next_step: {
                       type: ["object", "null"],
-                      description: "Obbligatorio se la mail richiede azione; altrimenti null e popolare closure_reason.",
+                      description:
+                        "Obbligatorio se la mail richiede azione; altrimenti null e popolare closure_reason.",
                       properties: {
                         action_type: { type: "string" },
                         owner_role: { type: "string", description: "commercial|operations|admin|legal|operator" },
@@ -352,9 +377,10 @@ Deno.serve(async (req) => {
                   additionalProperties: false,
                 },
               },
-            }],
-            tool_choice: { type: "function", function: { name: "classify_content" } },
-          });
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "classify_content" } },
+        });
         if (resp.ok) {
           const data = await resp.json();
           const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
@@ -401,7 +427,8 @@ Deno.serve(async (req) => {
       const cap = URGENCY_CAPS[result.next_step.urgency?.toLowerCase?.() ?? "medium"];
       if (typeof cap === "number" && result.next_step.due_in_hours > cap) {
         result.next_step.due_in_hours = cap;
-        result.next_step.reason = `${result.next_step.reason || ""} [auto-cap: due_in_hours allineato a urgency=${result.next_step.urgency}]`.trim();
+        result.next_step.reason =
+          `${result.next_step.reason || ""} [auto-cap: due_in_hours allineato a urgency=${result.next_step.urgency}]`.trim();
       }
       // owner_role obbligatorio non-vuoto
       if (!result.next_step.owner_role || result.next_step.owner_role === "operator") {
@@ -443,23 +470,34 @@ Deno.serve(async (req) => {
       for (const action of result.suggested_actions) {
         if (action.type === "badge") continue;
         try {
-          const { data: ins } = await supabase.from("ai_pending_actions").insert({
-            user_id: body.user_id,
-            partner_id,
-            email_address: body.from_address,
-            action_type: `content_intel:${action.type}`,
-            action_payload: action,
-            suggested_content: action.title ?? action.label ?? null,
-            reasoning: result.reasoning,
-            confidence: result.confidence,
-            source: "content_intelligence",
-            risk_level: action.type === "draft_reply" ? "PREPARE" :
-                        action.type === "lead_status" ? "WRITE" :
-                        action.type === "agenda" ? "WRITE" : "READ",
-            autonomy_level: "suggest",
-          }).select("id").maybeSingle();
+          const { data: ins } = await supabase
+            .from("ai_pending_actions")
+            .insert({
+              user_id: body.user_id,
+              partner_id,
+              email_address: body.from_address,
+              action_type: `content_intel:${action.type}`,
+              action_payload: action,
+              suggested_content: action.title ?? action.label ?? null,
+              reasoning: result.reasoning,
+              confidence: result.confidence,
+              source: "content_intelligence",
+              risk_level:
+                action.type === "draft_reply"
+                  ? "PREPARE"
+                  : action.type === "lead_status"
+                    ? "WRITE"
+                    : action.type === "agenda"
+                      ? "WRITE"
+                      : "READ",
+              autonomy_level: "suggest",
+            })
+            .select("id")
+            .maybeSingle();
           if (ins?.id) pendingIds.push(ins.id);
-        } catch { /* fail-safe */ }
+        } catch {
+          /* fail-safe */
+        }
       }
       row.pending_action_ids = pendingIds;
     }
@@ -471,16 +509,16 @@ Deno.serve(async (req) => {
     }
 
     endMetrics(metrics, true, 200);
-    return new Response(
-      JSON.stringify({ ok: true, intelligence: row, pending_action_ids: pendingIds }),
-      { status: 200, headers },
-    );
+    return new Response(JSON.stringify({ ok: true, intelligence: row, pending_action_ids: pendingIds }), {
+      status: 200,
+      headers,
+    });
   } catch (error: unknown) {
     logEdgeError("classify-inbound-content", error);
     endMetrics(metrics, false, 500);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers },
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+      status: 500,
+      headers,
+    });
   }
 });

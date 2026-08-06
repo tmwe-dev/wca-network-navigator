@@ -36,10 +36,10 @@ function readPersisted<K extends string>(storageKey: string, fallback: ListSortS
 export function useListSort<K extends string = string>(
   storageKey: string,
   defaultKey: K,
-  defaultDir: SortDir = "asc"
+  defaultDir: SortDir = "asc",
 ): UseListSortResult<K> {
   const [state, setState] = useState<ListSortState<K>>(() =>
-    readPersisted<K>(storageKey, { sortKey: defaultKey, sortDir: defaultDir })
+    readPersisted<K>(storageKey, { sortKey: defaultKey, sortDir: defaultDir }),
   );
 
   useEffect(() => {
@@ -52,18 +52,13 @@ export function useListSort<K extends string = string>(
   }, [storageKey, state]);
 
   const setSortKey = useCallback((key: K) => setState((s) => ({ ...s, sortKey: key })), []);
-  const toggleDir = useCallback(
-    () => setState((s) => ({ ...s, sortDir: s.sortDir === "asc" ? "desc" : "asc" })),
-    []
-  );
+  const toggleDir = useCallback(() => setState((s) => ({ ...s, sortDir: s.sortDir === "asc" ? "desc" : "asc" })), []);
   const cycle = useCallback(
     (key: K) =>
       setState((s) =>
-        s.sortKey === key
-          ? { ...s, sortDir: s.sortDir === "asc" ? "desc" : "asc" }
-          : { sortKey: key, sortDir: "asc" }
+        s.sortKey === key ? { ...s, sortDir: s.sortDir === "asc" ? "desc" : "asc" } : { sortKey: key, sortDir: "asc" },
       ),
-    []
+    [],
   );
 
   return { ...state, setSortKey, toggleDir, cycle };

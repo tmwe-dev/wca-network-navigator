@@ -28,12 +28,20 @@ import type { ParsedFile } from "../utils/fileParser";
 import { collectAllBlocks, loadFullDoctrine } from "./useBlockCollector";
 import { buildSystemMap, buildSystemMapByAgent, toRunProposals, type GlobalProposal } from "./useProposalProcessing";
 import { saveProposal, auditSaveProposal } from "./useProposalSaver";
-import { buildExtraContext, filterDoctrineForBlock, filterSystemMapForBlock, filterReferenceForBlock } from "./useContextBuilder";
-import { listApprovedForArchitect, markSuggestionsApplied, type SuggestedImprovement } from "@/data/suggestedImprovements";
+import {
+  buildExtraContext,
+  filterDoctrineForBlock,
+  filterSystemMapForBlock,
+  filterReferenceForBlock,
+} from "./useContextBuilder";
+import {
+  listApprovedForArchitect,
+  markSuggestionsApplied,
+  type SuggestedImprovement,
+} from "@/data/suggestedImprovements";
 import { trackImprovementMetrics } from "@/data/promptLabMetrics";
 import { getAppSetting } from "@/data/appSettings";
 import { computeChangeRatio, MINOR_CHANGE_THRESHOLD } from "./changeRatio";
-
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("useGlobalPromptImprover");
@@ -116,15 +124,19 @@ export function useGlobalPromptImprover(
   // ── Check per run ripresabile all'avvio ──
   useEffect(() => {
     if (!userId) return;
-    findActiveRun(userId).then((run) => {
-      if (run) {
-        setState((s) => ({
-          ...s,
-          hasResumableRun: true,
-          resumableRun: run,
-        }));
-      }
-    }).catch(() => { /* ignore */ });
+    findActiveRun(userId)
+      .then((run) => {
+        if (run) {
+          setState((s) => ({
+            ...s,
+            hasResumableRun: true,
+            resumableRun: run,
+          }));
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      });
   }, [userId]);
 
   const reset = useCallback(() => {
@@ -225,23 +237,26 @@ export function useGlobalPromptImprover(
         // Fix A1: delta threshold per evitare salvataggi cosmetici inutili.
         const isSame = parsed.text.trim() === p.before.trim();
         const ratio = isSame ? 0 : computeChangeRatio(p.before, parsed.text);
-        const newStatus: GlobalProposal["status"] = (isSame || parsed.outcomeType === "no_change")
-          ? "skipped"
-          : ratio < MINOR_CHANGE_THRESHOLD
-            ? "minor_change"
-            : "ready";
+        const newStatus: GlobalProposal["status"] =
+          isSame || parsed.outcomeType === "no_change"
+            ? "skipped"
+            : ratio < MINOR_CHANGE_THRESHOLD
+              ? "minor_change"
+              : "ready";
 
         setState((s) => ({
           ...s,
           proposals: s.proposals.map((x, idx) =>
-            idx === i ? {
-              ...x,
-              after: parsed.text,
-              status: newStatus,
-              outcomeType: parsed.outcomeType,
-              architecturalNote: parsed.architecturalNote,
-              changeRatio: ratio,
-            } : x,
+            idx === i
+              ? {
+                  ...x,
+                  after: parsed.text,
+                  status: newStatus,
+                  outcomeType: parsed.outcomeType,
+                  architecturalNote: parsed.architecturalNote,
+                  changeRatio: ratio,
+                }
+              : x,
           ),
         }));
 
@@ -254,9 +269,7 @@ export function useGlobalPromptImprover(
         const errMsg = e instanceof Error ? e.message : String(e);
         setState((s) => ({
           ...s,
-          proposals: s.proposals.map((x, idx) =>
-            idx === i ? { ...x, status: "error", error: errMsg } : x,
-          ),
+          proposals: s.proposals.map((x, idx) => (idx === i ? { ...x, status: "error", error: errMsg } : x)),
         }));
         await appendProposal(run.id, i, { status: "error", error: errMsg }, i + 1).catch(() => {});
       }
@@ -286,7 +299,15 @@ export function useGlobalPromptImprover(
   /** Step 1+2: raccoglie e migliora tutti i blocchi con persistenza incrementale. */
   const startImprovement = useCallback(async () => {
     if (!userId) return;
-    setState((s) => ({ ...s, loading: true, phase: "collecting", proposals: [], progress: { current: 0, total: 0 }, error: undefined, dbSaveCount: 0 }));
+    setState((s) => ({
+      ...s,
+      loading: true,
+      phase: "collecting",
+      proposals: [],
+      progress: { current: 0, total: 0 },
+      error: undefined,
+      dbSaveCount: 0,
+    }));
 
     let collected: Array<{ tabLabel: string; block: Block }> = [];
     let doctrineFull = "";
@@ -297,9 +318,7 @@ export function useGlobalPromptImprover(
     try {
       collected = await collectAllBlocks(userId);
       doctrineFull = await loadFullDoctrine();
-      systemMap = contextGrouping === "agent"
-        ? buildSystemMapByAgent(collected)
-        : buildSystemMap(collected);
+      systemMap = contextGrouping === "agent" ? buildSystemMapByAgent(collected) : buildSystemMap(collected);
       extraContext = await buildExtraContext(userId, referenceMaterial, uploadedFiles);
       // ── Carica suggerimenti approvati dall'admin ──
       approvedSuggestions = await listApprovedForArchitect().catch(() => []);
@@ -313,9 +332,12 @@ export function useGlobalPromptImprover(
 
     // ── Inietta suggerimenti approvati come contesto aggiuntivo ──
     if (approvedSuggestions.length > 0) {
-      const suggestionsBlock = approvedSuggestions.map((s) =>
-        `- [${s.suggestion_type}] ${s.title}: ${s.content}${s.target_block_id ? ` (target: ${s.target_block_id})` : ""}${s.target_category ? ` (categoria: ${s.target_category})` : ""}`
-      ).join("\n");
+      const suggestionsBlock = approvedSuggestions
+        .map(
+          (s) =>
+            `- [${s.suggestion_type}] ${s.title}: ${s.content}${s.target_block_id ? ` (target: ${s.target_block_id})` : ""}${s.target_category ? ` (categoria: ${s.target_category})` : ""}`,
+        )
+        .join("\n");
       fullContext += `\n\n## SUGGERIMENTI APPROVATI DALL'ADMIN (da integrare nei blocchi pertinenti)\n${suggestionsBlock}`;
     }
 
@@ -391,23 +413,26 @@ export function useGlobalPromptImprover(
         // Fix A1: delta threshold per distinguere riscritture sostanziali da cosmetiche.
         const isSame = parsed.text.trim() === p.before.trim();
         const ratio = isSame ? 0 : computeChangeRatio(p.before, parsed.text);
-        const newStatus: GlobalProposal["status"] = (isSame || parsed.outcomeType === "no_change")
-          ? "skipped"
-          : ratio < MINOR_CHANGE_THRESHOLD
-            ? "minor_change"
-            : "ready";
+        const newStatus: GlobalProposal["status"] =
+          isSame || parsed.outcomeType === "no_change"
+            ? "skipped"
+            : ratio < MINOR_CHANGE_THRESHOLD
+              ? "minor_change"
+              : "ready";
 
         setState((s) => ({
           ...s,
           proposals: s.proposals.map((x, idx) =>
-            idx === i ? {
-              ...x,
-              after: parsed.text,
-              status: newStatus,
-              outcomeType: parsed.outcomeType,
-              architecturalNote: parsed.architecturalNote,
-              changeRatio: ratio,
-            } : x,
+            idx === i
+              ? {
+                  ...x,
+                  after: parsed.text,
+                  status: newStatus,
+                  outcomeType: parsed.outcomeType,
+                  architecturalNote: parsed.architecturalNote,
+                  changeRatio: ratio,
+                }
+              : x,
           ),
         }));
 
@@ -426,9 +451,7 @@ export function useGlobalPromptImprover(
         const errMsg = e instanceof Error ? e.message : String(e);
         setState((s) => ({
           ...s,
-          proposals: s.proposals.map((x, idx) =>
-            idx === i ? { ...x, status: "error", error: errMsg } : x,
-          ),
+          proposals: s.proposals.map((x, idx) => (idx === i ? { ...x, status: "error", error: errMsg } : x)),
         }));
         // Flush errore immediatamente
         if (runId) {
@@ -457,53 +480,58 @@ export function useGlobalPromptImprover(
   }, [lab, userId, goal, referenceMaterial, uploadedFiles]);
 
   /** Step 3: salva tutti i blocchi marcati "ready" + accettati (saveOnlyIds) sul DB. */
-  const saveAccepted = useCallback(async (acceptedIds: ReadonlySet<string>) => {
-    setState((s) => ({ ...s, loading: true, phase: "saving" }));
-    const toSave = state.proposals.filter((p) => p.status === "ready" && acceptedIds.has(p.block.id));
+  const saveAccepted = useCallback(
+    async (acceptedIds: ReadonlySet<string>) => {
+      setState((s) => ({ ...s, loading: true, phase: "saving" }));
+      const toSave = state.proposals.filter((p) => p.status === "ready" && acceptedIds.has(p.block.id));
 
-    for (let i = 0; i < toSave.length; i++) {
-      const p = toSave[i];
-      try {
-        const meta = await saveProposal(userId, p);
-        await auditSaveProposal(meta, p);
-        setState((s) => ({
-          ...s,
-          proposals: s.proposals.map((x) => (x.block.id === p.block.id ? { ...x, status: "saved" } : x)),
-        }));
-        // Marca come saved nel run DB
-        if (state.runId) {
-          await markProposalSaved(state.runId, p.block.id).catch(() => {});
+      for (let i = 0; i < toSave.length; i++) {
+        const p = toSave[i];
+        try {
+          const meta = await saveProposal(userId, p);
+          await auditSaveProposal(meta, p);
+          setState((s) => ({
+            ...s,
+            proposals: s.proposals.map((x) => (x.block.id === p.block.id ? { ...x, status: "saved" } : x)),
+          }));
+          // Marca come saved nel run DB
+          if (state.runId) {
+            await markProposalSaved(state.runId, p.block.id).catch(() => {});
+          }
+        } catch (e) {
+          setState((s) => ({
+            ...s,
+            proposals: s.proposals.map((x) =>
+              x.block.id === p.block.id
+                ? { ...x, status: "error", error: e instanceof Error ? e.message : String(e) }
+                : x,
+            ),
+          }));
         }
-      } catch (e) {
-        setState((s) => ({
-          ...s,
-          proposals: s.proposals.map((x) =>
-            x.block.id === p.block.id ? { ...x, status: "error", error: e instanceof Error ? e.message : String(e) } : x,
-          ),
-        }));
-      }
-    }
-
-    // Marca run come "done"
-    if (state.runId) {
-      await updateRun(state.runId, { status: "done", completed_at: new Date().toISOString() }).catch(() => {});
-      // ── Marca suggerimenti consumati come "applied" ──
-      if (consumedSuggestionIds.current.length > 0) {
-        await markSuggestionsApplied(consumedSuggestionIds.current, state.runId).catch(() => {});
-        consumedSuggestionIds.current = [];
       }
 
-      // ── Traccia metriche per il run ──
-      try {
-        await trackImprovementMetrics(state.runId, userId, state.proposals);
-      } catch (e) {
-        log.error("[useGlobalPromptImprover] Errore tracking metriche:", { error: e });
-        // Non interrompiamo il flusso se il tracking fallisce
-      }
-    }
+      // Marca run come "done"
+      if (state.runId) {
+        await updateRun(state.runId, { status: "done", completed_at: new Date().toISOString() }).catch(() => {});
+        // ── Marca suggerimenti consumati come "applied" ──
+        if (consumedSuggestionIds.current.length > 0) {
+          await markSuggestionsApplied(consumedSuggestionIds.current, state.runId).catch(() => {});
+          consumedSuggestionIds.current = [];
+        }
 
-    setState((s) => ({ ...s, loading: false, phase: "done" }));
-  }, [state.proposals, state.runId, userId]);
+        // ── Traccia metriche per il run ──
+        try {
+          await trackImprovementMetrics(state.runId, userId, state.proposals);
+        } catch (e) {
+          log.error("[useGlobalPromptImprover] Errore tracking metriche:", { error: e });
+          // Non interrompiamo il flusso se il tracking fallisce
+        }
+      }
+
+      setState((s) => ({ ...s, loading: false, phase: "done" }));
+    },
+    [state.proposals, state.runId, userId],
+  );
 
   return { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable };
 }

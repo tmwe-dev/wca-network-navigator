@@ -51,9 +51,7 @@ const rows = (data ?? []) as TraceRow[];
 const bySource = new Map<string, { received: Set<string>; dedup: number }>();
 
 for (const r of rows) {
-  const src = String(
-    (r.output_summary as Record<string, unknown> | null)?.source_hint ?? "unknown",
-  );
+  const src = String((r.output_summary as Record<string, unknown> | null)?.source_hint ?? "unknown");
   const bucket = bySource.get(src) ?? { received: new Set<string>(), dedup: 0 };
   if (r.step_name === "classify_inbound:received") bucket.received.add(r.trace_id);
   if (r.step_name === "classify_inbound:dedup_hit") bucket.dedup += 1;
@@ -67,9 +65,7 @@ console.log("source_hint            | invocations | dedup_hits | unique_messages
 console.log("-----------------------|-------------|------------|-----------------");
 for (const [src, b] of bySource.entries()) {
   const pad = (s: string | number, n: number) => String(s).padEnd(n, " ");
-  console.log(
-    `${pad(src, 22)} | ${pad(b.received.size, 11)} | ${pad(b.dedup, 10)} | ${pad(b.received.size, 15)}`,
-  );
+  console.log(`${pad(src, 22)} | ${pad(b.received.size, 11)} | ${pad(b.dedup, 10)} | ${pad(b.received.size, 15)}`);
 }
 console.log("");
 console.log("Legenda source_hint:");

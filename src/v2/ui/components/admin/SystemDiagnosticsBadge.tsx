@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
-
 type Diagnostics = DiagnosticsPayload;
 
 function formatRelative(ts: string | null): string {
@@ -112,25 +111,10 @@ export function SystemDiagnosticsBadge() {
       data.extension_pending > 100 ||
       isSyncStale(data.last_email_sync));
 
-  const StatRow = ({
-    label,
-    value,
-    danger,
-  }: {
-    label: string;
-    value: string | number;
-    danger?: boolean;
-  }) => (
+  const StatRow = ({ label, value, danger }: { label: string; value: string | number; danger?: boolean }) => (
     <div className="flex items-center justify-between text-xs">
       <span className="text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          "font-mono font-medium",
-          danger ? "text-destructive" : "text-foreground"
-        )}
-      >
-        {value}
-      </span>
+      <span className={cn("font-mono font-medium", danger ? "text-destructive" : "text-foreground")}>{value}</span>
     </div>
   );
 
@@ -154,23 +138,13 @@ export function SystemDiagnosticsBadge() {
           <Activity className="h-3.5 w-3.5 text-emerald-500" />
         )}
         <span>Diagnostica</span>
-        {paused && (
-          <span className="font-mono text-[10px] uppercase font-bold text-amber-500">PAUSA</span>
-        )}
+        {paused && <span className="font-mono text-[10px] uppercase font-bold text-amber-500">PAUSA</span>}
         {data && (
           <span className="font-mono text-[10px] opacity-70">
-            {data.agent_tasks_pending +
-              data.email_queue_pending +
-              data.extension_pending}{" "}
-            pending
+            {data.agent_tasks_pending + data.email_queue_pending + data.extension_pending} pending
           </span>
         )}
-        <ChevronDown
-          className={cn(
-            "ml-auto h-3 w-3 transition-transform",
-            open && "rotate-180"
-          )}
-        />
+        <ChevronDown className={cn("ml-auto h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
         <div className="space-y-1.5 border-t border-border/60 p-2.5">
@@ -206,14 +180,8 @@ export function SystemDiagnosticsBadge() {
             </div>
           </div>
 
-          {isLoading && !data && (
-            <div className="text-xs text-muted-foreground">Caricamento…</div>
-          )}
-          {!isLoading && !data && (
-            <div className="text-xs text-destructive">
-              RPC non disponibile.
-            </div>
-          )}
+          {isLoading && !data && <div className="text-xs text-muted-foreground">Caricamento…</div>}
+          {!isLoading && !data && <div className="text-xs text-destructive">RPC non disponibile.</div>}
           {data && (
             <>
               <StatRow
@@ -255,14 +223,18 @@ export function SystemDiagnosticsBadge() {
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                Verranno fermati: i due cron di sync IMAP (ogni 3 e 5 min) e il trigger che crea
-                attività di follow-up dalle email in arrivo.
+                Verranno fermati: i due cron di sync IMAP (ogni 3 e 5 min) e il trigger che crea attività di follow-up
+                dalle email in arrivo.
               </span>
               {inboundCounts && inboundCounts.total > 0 && (
                 <span className="block rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-foreground">
                   Hai <strong>{inboundCounts.total}</strong> attività "Reply received" in coda
                   {inboundCounts.orphans > 0 && (
-                    <> di cui <strong>{inboundCounts.orphans}</strong> senza partner reale collegato (probabile spam/newsletter)</>
+                    <>
+                      {" "}
+                      di cui <strong>{inboundCounts.orphans}</strong> senza partner reale collegato (probabile
+                      spam/newsletter)
+                    </>
                   )}
                   . Vuoi azzerarle ora?
                 </span>

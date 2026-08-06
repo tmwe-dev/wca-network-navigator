@@ -19,8 +19,11 @@ global.fetch = mockFetch;
 // Clear localStorage cookie cache
 beforeEach(() => {
   vi.clearAllMocks();
-  // eslint-disable-next-line no-empty
-  try { localStorage.removeItem("wca_session_cookie"); } catch {}
+  try {
+    localStorage.removeItem("wca_session_cookie");
+  } catch {
+    /* ignore */
+  }
   resetCheckpoint();
 });
 
@@ -41,7 +44,7 @@ describe("wcaScrape", () => {
     const result = await wcaScrape([12345]);
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/scrape"),
-      expect.objectContaining({ method: "POST" })
+      expect.objectContaining({ method: "POST" }),
     );
     expect(result.success).toBe(true);
     expect(result.results).toHaveLength(1);
@@ -60,9 +63,16 @@ describe("wcaScrape", () => {
 
 describe("wcaCheckIds", () => {
   it("sends ids and returns missing array", async () => {
-    mockFetch.mockResolvedValueOnce(okJson({
-      success: true, total_in_db: 3, checked: 5, found: 3, missing: [4, 5], elapsed_ms: 100,
-    }));
+    mockFetch.mockResolvedValueOnce(
+      okJson({
+        success: true,
+        total_in_db: 3,
+        checked: 5,
+        found: 3,
+        missing: [4, 5],
+        elapsed_ms: 100,
+      }),
+    );
     const result = await wcaCheckIds([1, 2, 3, 4, 5]);
     expect(result.missing).toEqual([4, 5]);
     expect(result.found).toBe(3);

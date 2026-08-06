@@ -16,12 +16,7 @@ import {
 export interface UseFunnemailRemindersResult {
   remindersByMessageId: Map<string, FunnemailReminderRow>;
   isLoading: boolean;
-  create: (args: {
-    messageId: string;
-    groupId?: string | null;
-    remindAt: Date;
-    note?: string | null;
-  }) => Promise<void>;
+  create: (args: { messageId: string; groupId?: string | null; remindAt: Date; note?: string | null }) => Promise<void>;
   dismiss: (id: string) => Promise<void>;
 }
 
@@ -38,10 +33,8 @@ export function useFunnemailReminders(groupId?: string | null): UseFunnemailRemi
   React.useEffect(() => {
     const channel = supabase
       .channel(`funnemail-reminders-${groupId ?? "all"}-${Math.random().toString(36).slice(2, 10)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "funnemail_message_reminders" },
-        () => qc.invalidateQueries({ queryKey }),
+      .on("postgres_changes", { event: "*", schema: "public", table: "funnemail_message_reminders" }, () =>
+        qc.invalidateQueries({ queryKey }),
       )
       .subscribe();
     return () => {

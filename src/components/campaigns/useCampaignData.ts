@@ -3,7 +3,11 @@
  */
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePartnersByCountryForGlobe, useBusinessCardsForCampaign, useBcaCountryCounts } from "@/hooks/usePartnersForGlobe";
+import {
+  usePartnersByCountryForGlobe,
+  useBusinessCardsForCampaign,
+  useBcaCountryCounts,
+} from "@/hooks/usePartnersForGlobe";
 import { useCountryPartnerCounts } from "@/hooks/useCountryPartnerCounts";
 import { useBusinessCardPartnerMatches } from "@/hooks/useBusinessCards";
 import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
@@ -65,12 +69,10 @@ export function useCampaignData() {
   const { data: bcaCountryCounts = {} } = useBcaCountryCounts();
 
   const countries = countryData?.countries || [];
-  const totalPartners = source === "bca"
-    ? Object.values(bcaCountryCounts).reduce((a, b) => a + b, 0)
-    : (countryData?.totalPartners || 0);
-  const countriesWithPartners = source === "bca"
-    ? Object.keys(bcaCountryCounts).length
-    : (countryData?.activeCountries || 0);
+  const totalPartners =
+    source === "bca" ? Object.values(bcaCountryCounts).reduce((a, b) => a + b, 0) : countryData?.totalPartners || 0;
+  const countriesWithPartners =
+    source === "bca" ? Object.keys(bcaCountryCounts).length : countryData?.activeCountries || 0;
 
   const countryPartners = useMemo((): CountryPartnerRaw[] => {
     if (source === "bca") {
@@ -95,9 +97,7 @@ export function useCampaignData() {
     }));
   }, [countryPartnersData, bcaCountryData, source]);
 
-  const countryName = selectedCountry
-    ? WCA_COUNTRIES_MAP[selectedCountry]?.name || ""
-    : "";
+  const countryName = selectedCountry ? WCA_COUNTRIES_MAP[selectedCountry]?.name || "" : "";
 
   const handleTogglePartner = useCallback((partnerId: string) => {
     setSelectedPartnerIds((prev) => {
@@ -165,8 +165,14 @@ export function useCampaignData() {
 
   const handleGenerateJobs = useCallback(async () => {
     const goalLabel = CAMPAIGN_GOALS.find((g) => g.value === selectedGoal)?.label || selectedGoal;
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-    if (!user) { toast.error("Non autenticato"); return; }
+    const {
+      data: { session: __s },
+    } = await supabase.auth.getSession();
+    const user = __s?.user ?? null;
+    if (!user) {
+      toast.error("Non autenticato");
+      return;
+    }
 
     const rows = campaignPartners.map((p) => ({
       source_type: "campaign" as const,

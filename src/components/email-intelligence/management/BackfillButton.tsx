@@ -8,9 +8,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Inbox, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -50,7 +56,10 @@ export function BackfillButton({
   const run = async () => {
     try {
       setRunning(true);
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) {
         toast.error("Sessione scaduta");
         return;
@@ -59,16 +68,17 @@ export function BackfillButton({
       // Restringiamo se disponibile, altrimenti filtriamo solo per user.
       const operatorId = (await fetchOperatorIdForUser(user.id)) ?? undefined;
 
-      const report = scope === "address"
-        ? await backfillForAddress(user.id, target, false, operatorId)
-        : await backfillForGroup(user.id, target, false, operatorId);
+      const report =
+        scope === "address"
+          ? await backfillForAddress(user.id, target, false, operatorId)
+          : await backfillForGroup(user.id, target, false, operatorId);
 
       const errCount = report.errors.length;
       const truncatedNote = report.truncated ? " (lista troncata: rilancia per processare i restanti)" : "";
       if (report.messages_applied > 0) {
         toast.success(
           `Backfill: ${report.messages_applied} messaggi processati su ${report.addresses_processed} address${truncatedNote}` +
-          (errCount > 0 ? ` — ${errCount} errori` : ""),
+            (errCount > 0 ? ` — ${errCount} errori` : ""),
         );
       } else if (report.messages_matched > 0) {
         toast.info(`Backfill: ${report.messages_matched} messaggi trovati ma 0 applicati${truncatedNote}`);
@@ -84,9 +94,10 @@ export function BackfillButton({
     }
   };
 
-  const description = scope === "address"
-    ? `Verranno cercati nella inbox IMAP tutti i messaggi storici di "${target}" e applicate le regole IMAP configurate. L'operazione può richiedere alcuni minuti. Continuare?`
-    : `Verranno processati ${addressCount ?? "N"} address del gruppo "${target}". Per ogni address con regola IMAP attiva, tutti i messaggi storici nella inbox verranno trattati. L'operazione può richiedere alcuni minuti. Continuare?`;
+  const description =
+    scope === "address"
+      ? `Verranno cercati nella inbox IMAP tutti i messaggi storici di "${target}" e applicate le regole IMAP configurate. L'operazione può richiedere alcuni minuti. Continuare?`
+      : `Verranno processati ${addressCount ?? "N"} address del gruppo "${target}". Per ogni address con regola IMAP attiva, tutti i messaggi storici nella inbox verranno trattati. L'operazione può richiedere alcuni minuti. Continuare?`;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -102,12 +113,7 @@ export function BackfillButton({
             {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Inbox className="h-4 w-4" />}
           </Button>
         ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            className={`gap-1.5 ${className ?? ""}`}
-            disabled={running}
-          >
+          <Button size="sm" variant="outline" className={`gap-1.5 ${className ?? ""}`} disabled={running}>
             {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Inbox className="h-3.5 w-3.5" />}
             {label ?? "Applica allo storico"}
           </Button>
@@ -120,7 +126,13 @@ export function BackfillButton({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={running}>Annulla</AlertDialogCancel>
-          <AlertDialogAction onClick={(e) => { e.preventDefault(); run(); }} disabled={running}>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              run();
+            }}
+            disabled={running}
+          >
             {running ? "In corso…" : "Esegui"}
           </AlertDialogAction>
         </AlertDialogFooter>

@@ -61,7 +61,9 @@ function renderValue(v: unknown): React.ReactNode {
     return (
       <ul className="list-disc list-inside space-y-0.5">
         {v.map((item, i) => (
-          <li key={i} className="text-[11px]">{renderValue(item)}</li>
+          <li key={i} className="text-[11px]">
+            {renderValue(item)}
+          </li>
         ))}
       </ul>
     );
@@ -125,10 +127,7 @@ export function FindingsView({ findings, suggestedNextUrl, onInvestigateUrl }: P
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {entries.map(([k, v]) => (
-            <div
-              key={k}
-              className="rounded-md border border-border/60 bg-card p-2.5 flex items-start gap-2"
-            >
+            <div key={k} className="rounded-md border border-border/60 bg-card p-2.5 flex items-start gap-2">
               <div className="text-muted-foreground mt-0.5 shrink-0">{iconFor(k)}</div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold uppercase tracking-wider text-foreground mb-0.5">
@@ -142,12 +141,7 @@ export function FindingsView({ findings, suggestedNextUrl, onInvestigateUrl }: P
       )}
 
       <div className="pt-1">
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 text-[10px] gap-1"
-          onClick={() => setShowJson((v) => !v)}
-        >
+        <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1" onClick={() => setShowJson((v) => !v)}>
           {showJson ? <Eye className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
           {showJson ? "Nascondi JSON" : "Vedi JSON grezzo"}
         </Button>

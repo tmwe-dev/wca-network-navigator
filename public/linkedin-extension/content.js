@@ -8,14 +8,26 @@
 (function () {
   // ── Cleanup from previous injection ──
   if (globalThis.__LI_MSG_LISTENER__) {
-    try { window.removeEventListener("message", globalThis.__LI_MSG_LISTENER__); } catch (err) { console.debug("[LI Content] cleanup listener:", err?.message); }
+    try {
+      window.removeEventListener("message", globalThis.__LI_MSG_LISTENER__);
+    } catch (err) {
+      console.debug("[LI Content] cleanup listener:", err?.message);
+    }
   }
   if (globalThis.__LI_HEARTBEAT_TIMER__) {
-    try { clearTimeout(globalThis.__LI_HEARTBEAT_TIMER__); } catch (err) { console.debug("[LI Content] cleanup timer:", err?.message); }
+    try {
+      clearTimeout(globalThis.__LI_HEARTBEAT_TIMER__);
+    } catch (err) {
+      console.debug("[LI Content] cleanup timer:", err?.message);
+    }
     globalThis.__LI_HEARTBEAT_TIMER__ = null;
   }
   if (globalThis.__LI_OPTIMUS_REQUEST_LISTENER__) {
-    try { chrome.runtime.onMessage.removeListener(globalThis.__LI_OPTIMUS_REQUEST_LISTENER__); } catch (err) { console.debug("[LI Content] cleanup optimus:", err?.message); }
+    try {
+      chrome.runtime.onMessage.removeListener(globalThis.__LI_OPTIMUS_REQUEST_LISTENER__);
+    } catch (err) {
+      console.debug("[LI Content] cleanup optimus:", err?.message);
+    }
   }
 
   const BASE_HEARTBEAT_MS = 8000;
@@ -25,11 +37,23 @@
 
   // Allowed actions whitelist
   const ALLOWED_ACTIONS = [
-    "ping", "verifySession", "syncCookie", "autoLogin",
-    "extractProfile", "sendMessage", "sendMessageWithMethod", "sendConnectionRequest",
-    "searchProfile", "readLinkedInInbox", "readLinkedInThread",
+    "ping",
+    "verifySession",
+    "syncCookie",
+    "autoLogin",
+    "extractProfile",
+    "sendMessage",
+    "sendMessageWithMethod",
+    "sendConnectionRequest",
+    "searchProfile",
+    "readLinkedInInbox",
+    "readLinkedInThread",
     "backfillLinkedInThread",
-    "diagnosticLinkedInDom", "learnDom", "remapSendDom", "getSendPlan", "setConfig",
+    "diagnosticLinkedInDom",
+    "learnDom",
+    "remapSendDom",
+    "getSendPlan",
+    "setConfig",
     "ensureWorkerTab",
   ];
 
@@ -58,8 +82,12 @@
   }
 
   function post(payload) {
-    try { window.postMessage(payload, window.location.origin); }
-    catch (err) { console.debug("[LI Content] origin post failed:", err?.message); window.postMessage(payload, "*"); }
+    try {
+      window.postMessage(payload, window.location.origin);
+    } catch (err) {
+      console.debug("[LI Content] origin post failed:", err?.message);
+      window.postMessage(payload, "*");
+    }
   }
 
   function failResponse(data, error, errorCode) {
@@ -189,7 +217,9 @@
           requestId: data.requestId,
           payload: data.payload,
         });
-      } catch (err) { console.debug("[LI Content] relay:", err?.message); /* extension dead */ }
+      } catch (err) {
+        console.debug("[LI Content] relay:", err?.message); /* extension dead */
+      }
       return;
     }
 
@@ -205,11 +235,14 @@
       const reqId = msg.requestId;
       const responseDirection = msg.responseDirection;
 
-      window.postMessage({
-        direction: msg.direction,
-        requestId: reqId,
-        payload: msg.payload || {},
-      }, "*");
+      window.postMessage(
+        {
+          direction: msg.direction,
+          requestId: reqId,
+          payload: msg.payload || {},
+        },
+        "*",
+      );
 
       var finishedAi = false;
       var timerAi = setTimeout(function () {
@@ -222,7 +255,9 @@
             requestId: reqId,
             payload: { success: false, error: "WEBAPP_TIMEOUT" },
           });
-        } catch (err) { console.debug("[LI Content] listener cleanup:", err?.message); }
+        } catch (err) {
+          console.debug("[LI Content] listener cleanup:", err?.message);
+        }
         sendResponse({ ok: true });
       }, 14000);
 
@@ -242,7 +277,9 @@
             requestId: reqId,
             payload: d.payload || { success: false, error: "EMPTY" },
           });
-        } catch (err) { console.debug("[LI Content] listener cleanup:", err?.message); }
+        } catch (err) {
+          console.debug("[LI Content] listener cleanup:", err?.message);
+        }
         sendResponse({ ok: true });
       }
 
@@ -252,10 +289,13 @@
 
     if (!msg || msg.action !== "optimusRequest") return false;
 
-    window.postMessage({
-      direction: "from-extension-optimus-request",
-      payload: msg.payload,
-    }, "*");
+    window.postMessage(
+      {
+        direction: "from-extension-optimus-request",
+        payload: msg.payload,
+      },
+      "*",
+    );
 
     var finished = false;
     var timer = setTimeout(function () {

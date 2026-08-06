@@ -17,8 +17,32 @@ export interface ParsedBusinessCard {
 
 /** Field synonyms for business card columns */
 const FIELD_MAP: Record<keyof Omit<ParsedBusinessCard, "raw_data">, string[]> = {
-  company_name: ["company", "azienda", "company_name", "company name", "ditta", "ragione sociale", "società", "organizzazione", "organization", "org"],
-  contact_name: ["name", "nome", "contact_name", "contact name", "nome contatto", "nominativo", "full name", "fullname", "nome e cognome", "contact", "referente", "fn"],
+  company_name: [
+    "company",
+    "azienda",
+    "company_name",
+    "company name",
+    "ditta",
+    "ragione sociale",
+    "società",
+    "organizzazione",
+    "organization",
+    "org",
+  ],
+  contact_name: [
+    "name",
+    "nome",
+    "contact_name",
+    "contact name",
+    "nome contatto",
+    "nominativo",
+    "full name",
+    "fullname",
+    "nome e cognome",
+    "contact",
+    "referente",
+    "fn",
+  ],
   email: ["email", "e-mail", "mail", "posta elettronica", "email address"],
   phone: ["phone", "telefono", "tel", "telephone", "phone number", "fisso", "landline"],
   mobile: ["mobile", "cellulare", "cell", "cel", "smartphone", "mobile phone", "whatsapp"],
@@ -27,9 +51,12 @@ const FIELD_MAP: Record<keyof Omit<ParsedBusinessCard, "raw_data">, string[]> = 
 };
 
 function matchField(header: string): keyof Omit<ParsedBusinessCard, "raw_data"> | null {
-  const h = header.trim().toLowerCase().replace(/[_\-./]/g, " ");
+  const h = header
+    .trim()
+    .toLowerCase()
+    .replace(/[_\-./]/g, " ");
   for (const [field, synonyms] of Object.entries(FIELD_MAP)) {
-    if (synonyms.some(s => h === s || h.includes(s))) {
+    if (synonyms.some((s) => h === s || h.includes(s))) {
       return field as keyof Omit<ParsedBusinessCard, "raw_data">;
     }
   }
@@ -40,7 +67,7 @@ function matchField(header: string): keyof Omit<ParsedBusinessCard, "raw_data"> 
 async function parseVcf(file: File): Promise<ParsedBusinessCard[]> {
   const text = await file.text();
   const cards: ParsedBusinessCard[] = [];
-  const vcardBlocks = text.split(/(?=BEGIN:VCARD)/i).filter(b => b.trim());
+  const vcardBlocks = text.split(/(?=BEGIN:VCARD)/i).filter((b) => b.trim());
 
   for (const block of vcardBlocks) {
     if (!block.toUpperCase().includes("BEGIN:VCARD")) continue;
@@ -118,13 +145,17 @@ export async function parseBusinessCardFile(file: File): Promise<ParsedBusinessC
   const { headers, rows } = parsed;
 
   // Map headers to business card fields
-  const fieldMapping: Array<{ idx: number; field: keyof Omit<ParsedBusinessCard, "raw_data"> } | null> =
-    headers.map((h, idx) => {
+  const fieldMapping: Array<{ idx: number; field: keyof Omit<ParsedBusinessCard, "raw_data"> } | null> = headers.map(
+    (h, idx) => {
       const field = matchField(h);
       return field ? { idx, field } : null;
-    });
+    },
+  );
 
-  const mappings = fieldMapping.filter(Boolean) as Array<{ idx: number; field: keyof Omit<ParsedBusinessCard, "raw_data"> }>;
+  const mappings = fieldMapping.filter(Boolean) as Array<{
+    idx: number;
+    field: keyof Omit<ParsedBusinessCard, "raw_data">;
+  }>;
 
   if (mappings.length === 0) {
     throw new Error("Nessuna colonna riconosciuta. Serve almeno una colonna tra: nome, azienda, email, telefono.");

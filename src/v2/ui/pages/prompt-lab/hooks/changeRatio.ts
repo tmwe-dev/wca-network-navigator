@@ -16,7 +16,11 @@ function normalize(s: string): string {
 }
 
 function tokenize(s: string): Set<string> {
-  return new Set(normalize(s).split(/[\s.,;:!?()[\]{}"'`]+/).filter((t) => t.length > 1));
+  return new Set(
+    normalize(s)
+      .split(/[\s.,;:!?()[\]{}"'`]+/)
+      .filter((t) => t.length > 1),
+  );
 }
 
 /**

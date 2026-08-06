@@ -22,9 +22,7 @@ export interface GlobalRunProposal {
   error?: string;
 }
 
-const PROPOSAL_STATUSES: ReadonlySet<string> = new Set([
-  "pending", "improving", "ready", "skipped", "error", "saved",
-]);
+const PROPOSAL_STATUSES: ReadonlySet<string> = new Set(["pending", "improving", "ready", "skipped", "error", "saved"]);
 
 /**
  * Validatore runtime delle proposte salvate su colonna Json.
@@ -38,9 +36,10 @@ export function parseProposals(value: unknown): GlobalRunProposal[] {
     if (!r) continue;
     if (typeof r.block_id !== "string" || typeof r.label !== "string") continue;
     if (typeof r.before !== "string") continue;
-    const status = typeof r.status === "string" && PROPOSAL_STATUSES.has(r.status)
-      ? (r.status as GlobalRunProposal["status"])
-      : "pending";
+    const status =
+      typeof r.status === "string" && PROPOSAL_STATUSES.has(r.status)
+        ? (r.status as GlobalRunProposal["status"])
+        : "pending";
     out.push({
       block_id: r.block_id,
       tab_label: typeof r.tab_label === "string" ? r.tab_label : "",
@@ -129,10 +128,7 @@ export async function updateRun(
   if (updates.proposals !== undefined) payload.proposals = JSON.stringify(updates.proposals);
   if (updates.completed_at !== undefined) payload.completed_at = updates.completed_at;
 
-  const { error } = await supabase
-    .from("prompt_lab_global_runs")
-    .update(payload)
-    .eq("id", runId);
+  const { error } = await supabase.from("prompt_lab_global_runs").update(payload).eq("id", runId);
 
   if (error) throw new Error(`updateRun failed: ${error.message}`);
 }
@@ -262,11 +258,7 @@ const ROLLBACK_TARGETS: Readonly<Record<string, { table: string; fields: Readonl
 
 export async function rollbackSavedProposals(runId: string): Promise<number> {
   // Carica il run
-  const { data, error } = await supabase
-    .from("prompt_lab_global_runs")
-    .select("proposals")
-    .eq("id", runId)
-    .single();
+  const { data, error } = await supabase.from("prompt_lab_global_runs").select("proposals").eq("id", runId).single();
 
   if (error || !data) throw new Error(`rollbackSavedProposals: run non trovato`);
 
@@ -286,7 +278,10 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
           .eq("key", String(src.key));
         restored++;
       } else if (kind === "kb_entry") {
-        await supabase.from("kb_entries").update({ content: p.before as string }).eq("id", src.id as string);
+        await supabase
+          .from("kb_entries")
+          .update({ content: p.before as string })
+          .eq("id", src.id as string);
         restored++;
       } else {
         const target = ROLLBACK_TARGETS[kind];
@@ -304,10 +299,7 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
   }
 
   // Aggiorna status run a "rolled_back"
-  await supabase
-    .from("prompt_lab_global_runs")
-    .update({ status: "rolled_back" })
-    .eq("id", runId);
+  await supabase.from("prompt_lab_global_runs").update({ status: "rolled_back" }).eq("id", runId);
 
   return restored;
 }

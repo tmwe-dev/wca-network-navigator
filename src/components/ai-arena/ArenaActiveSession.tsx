@@ -11,12 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Check, SkipForward, Ban, Edit3, Settings2, Timer,
-  Target, Loader2, Inbox, Globe,
-} from "lucide-react";
+import { Check, SkipForward, Ban, Edit3, Settings2, Timer, Target, Loader2, Inbox, Globe } from "lucide-react";
 
-const ContactCard3D = React.lazy(() => import("@/components/ai-arena/ContactCard3D").then(m => ({ default: m.ContactCard3D })));
+const ContactCard3D = React.lazy(() =>
+  import("@/components/ai-arena/ContactCard3D").then((m) => ({ default: m.ContactCard3D })),
+);
 import { ConfirmationEffects } from "@/components/ai-arena/ConfirmationEffects";
 import { SessionSummary } from "@/components/ai-arena/SessionSummary";
 import { TypewriterText } from "@/components/ai-arena/TypewriterText";
@@ -68,12 +67,32 @@ interface Props {
 }
 
 export function ArenaActiveSession({
-  minutes, seconds, proposed, confirmed, skipped,
-  focus, setFocus, batchSize, setBatchSize, channel,
-  current, loadingSuggestions, animState, effectTrigger,
-  editing, editSubject, setEditSubject, editBody, setEditBody,
-  handleConfirm, handleSkip, handleBlacklist, handleEdit,
-  endSession, sessionEnded, sessionStats,
+  minutes,
+  seconds,
+  proposed,
+  confirmed,
+  skipped,
+  focus,
+  setFocus,
+  batchSize,
+  setBatchSize,
+  channel,
+  current,
+  loadingSuggestions,
+  animState,
+  effectTrigger,
+  editing,
+  editSubject,
+  setEditSubject,
+  editBody,
+  setEditBody,
+  handleConfirm,
+  handleSkip,
+  handleBlacklist,
+  handleEdit,
+  endSession,
+  sessionEnded,
+  sessionStats,
 }: Props): React.ReactElement {
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
@@ -86,9 +105,13 @@ export function ArenaActiveSession({
         <div className="flex items-center gap-3">
           <Timer className="h-5 w-5 text-muted-foreground" />
           <div className="flex items-baseline gap-0.5 font-mono text-2xl font-bold text-foreground">
-            <motion.span key={minutes} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{minutes}</motion.span>
+            <motion.span key={minutes} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+              {minutes}
+            </motion.span>
             <span className="text-muted-foreground animate-pulse">:</span>
-            <motion.span key={seconds} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{seconds}</motion.span>
+            <motion.span key={seconds} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+              {seconds}
+            </motion.span>
           </div>
         </div>
 
@@ -99,7 +122,13 @@ export function ArenaActiveSession({
             { label: "Saltati", value: skipped, color: "text-muted-foreground" },
           ].map(({ label, value, color }) => (
             <div key={label} className="text-center">
-              <motion.div key={value} initial={{ scale: 1.3 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 10 }} className={`text-2xl font-bold ${color}`}>
+              <motion.div
+                key={value}
+                initial={{ scale: 1.3 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                className={`text-2xl font-bold ${color}`}
+              >
                 {value}
               </motion.div>
               <p className="text-[10px] text-muted-foreground">{label}</p>
@@ -110,13 +139,17 @@ export function ArenaActiveSession({
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm"><Settings2 className="h-4 w-4" /></Button>
+              <Button variant="outline" size="sm">
+                <Settings2 className="h-4 w-4" />
+              </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64 space-y-3">
               <div className="space-y-1">
                 <Label className="text-xs">Focus</Label>
                 <Select value={focus} onValueChange={setFocus}>
-                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tutti">Tutti</SelectItem>
                     <SelectItem value="estero">Estero</SelectItem>
@@ -130,7 +163,9 @@ export function ArenaActiveSession({
               </div>
             </PopoverContent>
           </Popover>
-          <Button variant="destructive" size="sm" onClick={endSession}>Fine Sessione</Button>
+          <Button variant="destructive" size="sm" onClick={endSession}>
+            Fine Sessione
+          </Button>
         </div>
       </div>
 
@@ -152,21 +187,27 @@ export function ArenaActiveSession({
 
         {current && (
           <div className="w-full max-w-3xl space-y-4">
-            <React.Suspense fallback={<div className="h-[300px] flex items-center justify-center"><Loader2 className="animate-spin" /></div>}>
-            <ContactCard3D
-              contact={{
-                company_name: current.company_name,
-                contact_name: current.contact_name,
-                contact_position: current.contact_position,
-                country_code: current.country_code,
-                country_name: current.country_name,
-                city: current.city,
-                email: current.email,
-                partner_match: current.partner_match,
-                rating: current.rating,
-              }}
-              animState={animState}
-            />
+            <React.Suspense
+              fallback={
+                <div className="h-[300px] flex items-center justify-center">
+                  <Loader2 className="animate-spin" />
+                </div>
+              }
+            >
+              <ContactCard3D
+                contact={{
+                  company_name: current.company_name,
+                  contact_name: current.contact_name,
+                  contact_position: current.contact_position,
+                  country_code: current.country_code,
+                  country_name: current.country_name,
+                  city: current.city,
+                  email: current.email,
+                  partner_match: current.partner_match,
+                  rating: current.rating,
+                }}
+                animState={animState}
+              />
             </React.Suspense>
 
             <AnimatePresence mode="wait">
@@ -184,10 +225,13 @@ export function ArenaActiveSession({
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className="bg-primary/10 text-primary border-0 text-xs">
-                    {LANG_FLAGS[current.target_language] || "🌍"} {channel === "linkedin" ? "LinkedIn" : "Email"} in {current.language_label}
+                    {LANG_FLAGS[current.target_language] || "🌍"} {channel === "linkedin" ? "LinkedIn" : "Email"} in{" "}
+                    {current.language_label}
                   </Badge>
                   {channel === "linkedin" && (
-                    <Badge variant="outline" className="text-[10px] border-[#0A66C2]/30 text-[#0A66C2]">Max 300 char</Badge>
+                    <Badge variant="outline" className="text-[10px] border-[#0A66C2]/30 text-[#0A66C2]">
+                      Max 300 char
+                    </Badge>
                   )}
                 </div>
 
@@ -208,7 +252,12 @@ export function ArenaActiveSession({
                 ) : (
                   <div className="space-y-2">
                     {channel !== "linkedin" && (
-                      <Input value={editSubject} onChange={(e) => setEditSubject(e.target.value)} placeholder="Subject" className="text-sm" />
+                      <Input
+                        value={editSubject}
+                        onChange={(e) => setEditSubject(e.target.value)}
+                        placeholder="Subject"
+                        className="text-sm"
+                      />
                     )}
                     <Textarea
                       value={editBody}
@@ -228,12 +277,21 @@ export function ArenaActiveSession({
             {/* Action Buttons */}
             <div className="flex items-center justify-center gap-3">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white h-12 px-6" onClick={handleConfirm}>
+                <Button
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white h-12 px-6"
+                  onClick={handleConfirm}
+                >
                   <Check className="h-5 w-5 mr-2" /> Conferma e Invia
                 </Button>
               </motion.div>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="lg" variant="outline" className="h-12 px-6 border-blue-500/30 text-blue-400 hover:bg-blue-500/10" onClick={handleEdit}>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 px-6 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                  onClick={handleEdit}
+                >
                   <Edit3 className="h-5 w-5 mr-2" /> {editing ? "Anteprima" : "Modifica"}
                 </Button>
               </motion.div>
@@ -243,7 +301,12 @@ export function ArenaActiveSession({
                 </Button>
               </motion.div>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={handleBlacklist}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  onClick={handleBlacklist}
+                >
                   <Ban className="h-4 w-4 mr-1" /> Mai
                 </Button>
               </motion.div>

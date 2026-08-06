@@ -9,20 +9,13 @@ type OperatorInsert = Database["public"]["Tables"]["operators"]["Insert"];
 type OperatorUpdate = Database["public"]["Tables"]["operators"]["Update"];
 
 export async function findAllOperators(): Promise<OperatorRow[]> {
-  const { data, error } = await supabase
-    .from("operators")
-    .select("*")
-    .order("created_at", { ascending: true });
+  const { data, error } = await supabase.from("operators").select("*").order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
 
 export async function findOperatorByUserId(userId: string): Promise<OperatorRow | null> {
-  const { data, error } = await supabase
-    .from("operators")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data, error } = await supabase.from("operators").select("*").eq("user_id", userId).maybeSingle();
   if (error) throw error;
   return data ?? null;
 }
@@ -51,11 +44,7 @@ export async function deleteOperator(id: string): Promise<void> {
  * Supabase ignorato, `null` quando non esiste un record operatore.
  */
 export async function findOperatorAdminFlag(userId: string): Promise<{ is_admin: boolean } | null> {
-  const { data } = await supabase
-    .from("operators")
-    .select("is_admin")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data } = await supabase.from("operators").select("is_admin").eq("user_id", userId).maybeSingle();
   return data ?? null;
 }
 

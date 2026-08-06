@@ -4,7 +4,7 @@ const log = createLogger("localDirectory");
 /**
  * Local Directory — Sistema di confronto locale zero-query
  * 🤖 Creato da Claude · Diario di bordo #1
- * 
+ *
  * Mantiene in localStorage lo stato di ogni ID per paese:
  * pending / done / failed. Permette ripresa istantanea senza query server.
  */
@@ -49,7 +49,7 @@ export function createDirectory(
   countryCode: string,
   countryName: string,
   memberIds: number[],
-  networkMap?: Record<number, string[]>
+  networkMap?: Record<number, string[]>,
 ): Directory {
   const existing = getDirectory(countryCode);
   const ids: Record<string, IdStatus> = {};
@@ -119,10 +119,7 @@ export function isCountryCompleted(countryCode: string): boolean {
 }
 
 /** Confronto locale istantaneo — restituisce gli ID mancanti */
-export function checkMissingIdsLocal(
-  discoverIds: number[],
-  countryCode: string
-): { missing: number[]; found: number } {
+export function checkMissingIdsLocal(discoverIds: number[], countryCode: string): { missing: number[]; found: number } {
   const dir = getDirectory(countryCode);
   if (!dir) return { missing: discoverIds, found: 0 };
   const missing = discoverIds.filter((id) => dir.ids[String(id)] !== "done");
@@ -171,7 +168,7 @@ export function getMemberNetworkDomain(countryCode: string, memberId: number): s
   const nets = dir.memberNetworks[String(memberId)];
   if (!nets || nets.length === 0) return null;
   // Priorità: domini con sito proprio (non wca-first/wca-advanced che sono su wcaworld.com)
-  const ownDomain = nets.find(n => !n.startsWith("wca-") && n !== "wcaworld.com");
+  const ownDomain = nets.find((n) => !n.startsWith("wca-") && n !== "wcaworld.com");
   return ownDomain || nets[0];
 }
 
@@ -183,7 +180,11 @@ export function getAllDirectories(): Directory[] {
     if (key?.startsWith(DIR_PREFIX)) {
       try {
         dirs.push(JSON.parse(localStorage.getItem(key)!));
-      } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+      } catch (e) {
+        log.debug("best-effort operation failed", {
+          error: e instanceof Error ? e.message : String(e),
+        }); /* intentionally ignored: best-effort cleanup */
+      }
     }
   }
   return dirs;

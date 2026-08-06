@@ -12,9 +12,7 @@ export interface PartnerNetworkWithWcaRow {
 
 /** Associazioni network→partner con il `wca_id` del partner (inner join). */
 export async function findPartnerNetworksWithWcaId(): Promise<PartnerNetworkWithWcaRow[]> {
-  const { data } = await supabase
-    .from("partner_networks")
-    .select("network_name, partner_id, partners!inner(wca_id)");
+  const { data } = await supabase.from("partner_networks").select("network_name, partner_id, partners!inner(wca_id)");
   return (data ?? []) as unknown as PartnerNetworkWithWcaRow[];
 }
 
@@ -26,19 +24,12 @@ export async function findPartnerContactEmails(): Promise<Array<{ partner_id: st
 
 /** Contatti che hanno un'email valorizzata. */
 export async function findPartnerContactsWithEmail(): Promise<Array<{ partner_id: string; email: string | null }>> {
-  const { data } = await supabase
-    .from("partner_contacts")
-    .select("partner_id, email")
-    .not("email", "is", null);
+  const { data } = await supabase.from("partner_contacts").select("partner_id, email").not("email", "is", null);
   return (data ?? []) as Array<{ partner_id: string; email: string | null }>;
 }
 
 /** Partner (id + wca_id) per un elenco di wca_id. */
 export async function findPartnersByWcaIds(wcaIds: number[]): Promise<Array<{ id: string; wca_id: number | null }>> {
-  const { data } = await supabase
-    .from("partners")
-    .select("id, wca_id")
-    .in("wca_id", wcaIds)
-    .not("wca_id", "is", null);
+  const { data } = await supabase.from("partners").select("id, wca_id").in("wca_id", wcaIds).not("wca_id", "is", null);
   return (data ?? []) as Array<{ id: string; wca_id: number | null }>;
 }

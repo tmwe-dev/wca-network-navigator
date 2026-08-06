@@ -9,15 +9,24 @@ export type { WizardState } from "./wizard/useImportWizard";
 export interface ImportWizardProps {
   isDark: boolean;
   isExtAvailable: boolean;
-  onStart: (state: { atecoCodes: string[]; regions: string[]; provinces: string[]; filters: import("./ProspectAdvancedFilters").ProspectFilters }) => void;
+  onStart: (state: {
+    atecoCodes: string[];
+    regions: string[];
+    provinces: string[];
+    filters: import("./ProspectAdvancedFilters").ProspectFilters;
+  }) => void;
   initialAtecoCodes?: string[];
   initialRegions?: string[];
   initialProvinces?: string[];
 }
 
 export function ImportWizard({
-  isDark, isExtAvailable, onStart,
-  initialAtecoCodes = [], initialRegions = [], initialProvinces = [],
+  isDark,
+  isExtAvailable,
+  onStart,
+  initialAtecoCodes = [],
+  initialRegions = [],
+  initialProvinces = [],
 }: ImportWizardProps) {
   const w = useImportWizard({
     initialAtecoCodes,

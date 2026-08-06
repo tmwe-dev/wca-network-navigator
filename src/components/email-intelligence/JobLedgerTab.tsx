@@ -48,22 +48,30 @@ function stageColor(stage: EmailProcessingStage): string {
 
 function stageIcon(stage: EmailProcessingStage) {
   switch (stage) {
-    case "completed": return <CheckCircle2 className="h-3.5 w-3.5" />;
+    case "completed":
+      return <CheckCircle2 className="h-3.5 w-3.5" />;
     case "failed":
-    case "dlq": return <XCircle className="h-3.5 w-3.5" />;
-    default: return <Clock className="h-3.5 w-3.5" />;
+    case "dlq":
+      return <XCircle className="h-3.5 w-3.5" />;
+    default:
+      return <Clock className="h-3.5 w-3.5" />;
   }
 }
 
 export default function JobLedgerTab() {
   const [stageFilter, setStageFilter] = useState<EmailProcessingStage | "all">("all");
 
-  const { data: jobs, isLoading, error } = useQuery({
+  const {
+    data: jobs,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["email-processing-jobs", stageFilter],
-    queryFn: () => listEmailProcessingJobs({
-      stage: stageFilter === "all" ? null : stageFilter,
-      limit: 100,
-    }),
+    queryFn: () =>
+      listEmailProcessingJobs({
+        stage: stageFilter === "all" ? null : stageFilter,
+        limit: 100,
+      }),
     refetchInterval: 15_000,
   });
 
@@ -84,7 +92,9 @@ export default function JobLedgerTab() {
               </SelectTrigger>
               <SelectContent>
                 {STAGES.map((s) => (
-                  <SelectItem key={s} value={s} className="text-xs">{s === "all" ? "Tutti gli stage" : s}</SelectItem>
+                  <SelectItem key={s} value={s} className="text-xs">
+                    {s === "all" ? "Tutti gli stage" : s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -111,7 +121,9 @@ export default function JobLedgerTab() {
           </div>
         )}
         <div className="space-y-2 pr-1">
-          {jobs?.map((j) => <JobRow key={j.id} job={j} />)}
+          {jobs?.map((j) => (
+            <JobRow key={j.id} job={j} />
+          ))}
         </div>
       </div>
     </div>

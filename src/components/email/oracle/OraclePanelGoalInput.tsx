@@ -36,18 +36,19 @@ export function OraclePanelGoalInput({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
-        Obiettivo della mail
-      </label>
+      <label className="text-[10px] font-semibold uppercase tracking-wide text-foreground">Obiettivo della mail</label>
       <div className="relative">
         <Textarea
           value={displayText}
           onChange={(e) => onGoalChange(e.target.value)}
-          placeholder={getCustomGoalPlaceholder(selectedType?.id ?? null) ?? "Scrivi qui cosa vuoi ottenere con questa mail (l'AI userà questo come istruzione principale)…"}
+          placeholder={
+            getCustomGoalPlaceholder(selectedType?.id ?? null) ??
+            "Scrivi qui cosa vuoi ottenere con questa mail (l'AI userà questo come istruzione principale)…"
+          }
           className={cn(
             "text-xs resize-none pr-8 border-primary/20 focus-visible:ring-primary/40",
             priority ? "min-h-[300px] lg:min-h-[360px]" : "min-h-[180px] max-h-[280px]",
-            speech.listening && "ring-1 ring-destructive/40"
+            speech.listening && "ring-1 ring-destructive/40",
           )}
           rows={priority ? 14 : 6}
         />
@@ -59,17 +60,11 @@ export function OraclePanelGoalInput({
               "absolute right-1.5 top-1.5 p-1 rounded-full transition-colors",
               speech.listening
                 ? "bg-destructive/10 text-destructive animate-pulse"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
             )}
-            title={
-              speech.listening ? "Ferma registrazione" : "Dettatura vocale"
-            }
+            title={speech.listening ? "Ferma registrazione" : "Dettatura vocale"}
           >
-            {speech.listening ? (
-              <MicOff className="w-3.5 h-3.5" />
-            ) : (
-              <Mic className="w-3.5 h-3.5" />
-            )}
+            {speech.listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
           </button>
         )}
       </div>
@@ -79,11 +74,7 @@ export function OraclePanelGoalInput({
           <Info className="w-3 h-3 shrink-0 mt-[1px] text-warning" />
           <div className="flex-1">
             <div className="text-foreground">{coherence.warning}</div>
-            {coherence.suggestion && (
-              <div className="text-muted-foreground mt-0.5">
-                {coherence.suggestion}
-              </div>
-            )}
+            {coherence.suggestion && <div className="text-muted-foreground mt-0.5">{coherence.suggestion}</div>}
           </div>
         </div>
       )}

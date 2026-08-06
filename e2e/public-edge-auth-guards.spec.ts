@@ -5,9 +5,8 @@
  */
 import { test, expect } from "@playwright/test";
 
-const SUPABASE_URL = process.env.SUPABASE_URL
-  ?? process.env.VITE_SUPABASE_URL
-  ?? "https://zrbditqddhjkutzjycgi.supabase.co";
+const SUPABASE_URL =
+  process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "https://zrbditqddhjkutzjycgi.supabase.co";
 
 const PROTECTED_FUNCTIONS = [
   { name: "get-wca-credentials", method: "POST" },

@@ -19,15 +19,17 @@ export function useWcaSync() {
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error("Sessione scaduta, effettua il login");
 
       const response = await fetch(`${supabaseUrl}/functions/v1/sync-wca-partners`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({}),
       });
@@ -59,21 +61,25 @@ export function useWcaSync() {
               const bar = "█".repeat(Math.floor(pct / 5)) + "░".repeat(20 - Math.floor(pct / 5));
               toast.loading(
                 `${bar} ${pct}%\n` +
-                `👥 ${evt.synced}/${evt.total} partner · 📇 ${evt.contacts} contatti · 🌐 ${evt.networks} network` +
-                (evt.totalPages > 1 ? `\n📦 Pagina ${evt.page}/${evt.totalPages}` : ""),
-                { id: toastId }
+                  `👥 ${evt.synced}/${evt.total} partner · 📇 ${evt.contacts} contatti · 🌐 ${evt.networks} network` +
+                  (evt.totalPages > 1 ? `\n📦 Pagina ${evt.page}/${evt.totalPages}` : ""),
+                { id: toastId },
               );
             } else if (evt.type === "complete") {
               toast.success(
                 `✅ Sincronizzazione completata!\n` +
-                `👥 ${evt.synced} partner · 📇 ${evt.contacts} contatti · 🌐 ${evt.networks} network`,
-                { id: toastId, duration: 8000 }
+                  `👥 ${evt.synced} partner · 📇 ${evt.contacts} contatti · 🌐 ${evt.networks} network`,
+                { id: toastId, duration: 8000 },
               );
             } else if (evt.type === "error") {
               log.error("sse error", { message: evt.message });
               toast.loading(`⚠️ ${evt.message}`, { id: toastId });
             }
-          } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+          } catch (e) {
+            log.debug("best-effort operation failed", {
+              error: e instanceof Error ? e.message : String(e),
+            }); /* intentionally ignored: best-effort cleanup */
+          }
         }
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });

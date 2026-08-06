@@ -9,7 +9,6 @@
 import { upsertAppSetting } from "./appSettings";
 import type { GlobalProposal } from "@/v2/ui/pages/prompt-lab/hooks/useProposalProcessing";
 
-
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 const log = createLogger("promptLabMetrics");
@@ -99,10 +98,7 @@ export async function trackImprovementMetrics(
   const error_count = proposals.filter((p) => p.status === "error").length;
 
   // Tasso di accettazione
-  const acceptance_rate =
-    accepted_count + rejected_count > 0
-      ? accepted_count / (accepted_count + rejected_count)
-      : 0;
+  const acceptance_rate = accepted_count + rejected_count > 0 ? accepted_count / (accepted_count + rejected_count) : 0;
 
   // Distribuzione esiti
   const outcome_distribution: Record<OutcomeType, number> = {
@@ -151,7 +147,7 @@ export async function trackImprovementMetrics(
   try {
     await upsertAppSetting(userId, key, JSON.stringify(metrics));
   } catch (e) {
-    log.error(`[trackImprovementMetrics] Errore salvataggio metriche ${runId}:`, { error: e, });
+    log.error(`[trackImprovementMetrics] Errore salvataggio metriche ${runId}:`, { error: e });
     // Non lanciamo errore — continuiamo comunque
   }
 
@@ -171,7 +167,8 @@ async function loadRunMetrics(userId: string): Promise<PromptLabMetrics[]> {
   // NB: Supabase non ha una query "like", quindi facciamo un'app_settings
   // select senza filtro key, poi filterizziamo in memory.
   // Alternatively, potremmo iterare una lista di runId noti, ma qui facciamo semplice.
-  const { data, error } = await supabase.from("app_settings")
+  const { data, error } = await supabase
+    .from("app_settings")
     .select("key,value")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
@@ -233,10 +230,7 @@ export async function getAggregateMetrics(userId: string): Promise<AggregateMetr
 
   // Accettazione pesata (sum(accepted) / sum(accepted+rejected))
   const totalAccepted = metrics.reduce((sum, m) => sum + m.accepted_count, 0);
-  const totalProcessed = metrics.reduce(
-    (sum, m) => sum + m.accepted_count + m.rejected_count,
-    0,
-  );
+  const totalProcessed = metrics.reduce((sum, m) => sum + m.accepted_count + m.rejected_count, 0);
   const overall_acceptance_rate = totalProcessed > 0 ? totalAccepted / totalProcessed : 0;
 
   // Blocchi totali migliorati

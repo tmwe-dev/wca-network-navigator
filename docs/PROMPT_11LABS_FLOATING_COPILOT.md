@@ -20,12 +20,16 @@
 ## Client tools (registrare in dashboard ElevenLabs)
 
 ### `ask_brain`
+
 Domanda al Brain per ottenere informazioni di business.
+
 - Parametri: `question` (string)
 - Già usato da Command. Riusato qui invariato.
 
 ### `navigate_to`
+
 Naviga a una sezione della piattaforma.
+
 - Parametri (uno tra):
   - `intent_key` (string) — chiave precisa dalla mappa `ui_navigation_map`
     (es. `network.italy.hot`, `crm.contacts`, `outreach.queue`)
@@ -34,23 +38,31 @@ Naviga a una sezione della piattaforma.
 - Esempio: `navigate_to({ intent_key: "network.italy.hot" })`
 
 ### `apply_filter`
+
 Applica filtri alla pagina corrente.
+
 - Parametri: `scope` (string), `filters` (object)
 - Esempio: `apply_filter({ scope: "partners", filters: { country: "IT", leadStatus: "hot" } })`
 
 ### `open_modal`
+
 Apre una modale registrata dalla pagina corrente.
+
 - Parametri: `name` (string), `params` (object)
 - Esempio: `open_modal({ name: "contact_detail", params: { id: "uuid" } })`
 
 ### `highlight_element`
+
 Evidenzia un elemento sullo schermo con un alone pulsante.
+
 - Parametri: `selector` (CSS) **oppure** `text` (testo visibile), `hint`
   (string opzionale), `duration_ms` (number opzionale, default 4000)
 - Esempio: `highlight_element({ text: "Invia email", hint: "Premi qui per inviare" })`
 
 ### `request_confirmation`
+
 Mostra un dialog di conferma e attende OK/Annulla dell'utente.
+
 - Parametri: `action_label` (string)
 - Ritorno: `"Confermato."` o `"Annullato dall'utente."`
 - USARE SEMPRE prima di azioni distruttive.
@@ -58,20 +70,26 @@ Mostra un dialog di conferma e attende OK/Annulla dell'utente.
 ## Pattern conversazionali
 
 ### Esempio 1 — Navigazione con filtro
+
 Utente: "portami sui partner italiani caldi"
 Agente:
+
 1. `navigate_to({ intent_key: "network.italy.hot" })`
 2. Voce: "Ecco i partner italiani caldi."
 
 ### Esempio 2 — Guida visiva
+
 Utente: "dove clicco per aggiungere un contatto?"
 Agente:
+
 1. `highlight_element({ text: "Aggiungi contatto", hint: "Clicca qui" })`
 2. Voce: "Premi questo bottone in alto a destra."
 
 ### Esempio 3 — Conferma azione
+
 Utente: "manda l'email a Mario"
 Agente:
+
 1. `request_confirmation({ action_label: "Invio email a Mario Rossi" })`
 2. Se "Confermato.": esegue azione di invio (tramite `ask_brain` o tool dedicato)
 3. Se "Annullato.": "Ok, ho annullato."

@@ -4,7 +4,8 @@ export const EMAIL_OUTREACH_AGENTS: Record<string, AgentRegistryEntry> = {
   "generate-email": {
     id: "generate-email",
     displayName: "Email Generator",
-    description: "Generatore email B2B con ricerca partner e knowledge base. Crea email personalizzate basate sul profilo del destinatario.",
+    description:
+      "Generatore email B2B con ricerca partner e knowledge base. Crea email personalizzate basate sul profilo del destinatario.",
     coreFile: "",
     avatarIcon: "Mail",
     avatarColor: "primary",
@@ -94,7 +95,8 @@ export const EMAIL_OUTREACH_AGENTS: Record<string, AgentRegistryEntry> = {
   "journalists-ai": {
     id: "journalists-ai",
     displayName: "Giornalista AI",
-    description: "Giornalista AI per contenuti di marca e articoli editoriali. Genera contenuti professionali con brand voice.",
+    description:
+      "Giornalista AI per contenuti di marca e articoli editoriali. Genera contenuti professionali con brand voice.",
     coreFile: "",
     avatarIcon: "PenTool",
     avatarColor: "accent",

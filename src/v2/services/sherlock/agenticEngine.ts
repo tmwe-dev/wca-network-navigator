@@ -11,15 +11,11 @@ import { bootstrapHome, bootstrapGoogleSearch } from "./bootstrapSteps";
 import { runAgenticLoop } from "./agenticLoop";
 import { buildFinalSummary } from "./scrapeOperations";
 import { persistSherlockFindings } from "@/data/partners";
-import type {
-  SherlockLevel,
-  SherlockStepResult,
-  SherlockProgressEvent,
-} from "./sherlockTypes";
+import type { SherlockLevel, SherlockStepResult, SherlockProgressEvent } from "./sherlockTypes";
 
 const BUDGET_BY_LEVEL: Record<SherlockLevel, number> = {
-  1: 3,  // Scout — fast
-  2: 6,  // Detective — standard
+  1: 3, // Scout — fast
+  2: 6, // Detective — standard
   3: 10, // Sherlock — deep
 };
 
@@ -171,9 +167,7 @@ export async function runAgenticSherlock(opts: RunAgenticOptions): Promise<Agent
     Object.assign(consolidated, bootGoogle.consolidated);
     lastSummary = bootGoogle.lastSummary;
 
-    const q = encodeURIComponent(
-      `"${companyName}"${city ? ` ${city}` : ""}${country ? ` ${country}` : ""}`,
-    );
+    const q = encodeURIComponent(`"${companyName}"${city ? ` ${city}` : ""}${country ? ` ${country}` : ""}`);
     const gUrl = `https://www.google.com/search?q=${q}`;
     visited.add(gUrl);
 

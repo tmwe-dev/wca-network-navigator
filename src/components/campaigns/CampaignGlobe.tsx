@@ -5,7 +5,12 @@ import * as THREE from "three";
 import { TexturedEarth, SimpleEarth } from "./TexturedEarth";
 import { AuroraBorealis } from "./AuroraBorealis";
 import { Loader2 } from "lucide-react";
-import { usePartnersForGlobe, usePartnersByCountryForGlobe, type GlobePartner, type CountryWithPartners } from "@/hooks/usePartnersForGlobe";
+import {
+  usePartnersForGlobe,
+  usePartnersByCountryForGlobe,
+  type GlobePartner,
+  type CountryWithPartners,
+} from "@/hooks/usePartnersForGlobe";
 import { WCA_COUNTRIES_MAP } from "@/catalogs/wcaCountries";
 
 // Optimized components
@@ -19,17 +24,17 @@ import { CountryToast } from "./globe/CountryToast";
 import { easeInOutCubic } from "./globe/utils";
 
 // Earth component with smooth zoom and rotation to selected country
-function Earth({ 
-  selectedCountry, 
+function Earth({
+  selectedCountry,
   onCountrySelect,
   targetZoom,
   targetRotation,
   countries,
   countryPartners,
   userInteracting,
-  isResetting
-}: { 
-  selectedCountry: string | null; 
+  isResetting,
+}: {
+  selectedCountry: string | null;
   onCountrySelect: (code: string) => void;
   targetZoom: React.MutableRefObject<number>;
   targetRotation: React.MutableRefObject<{ x: number; y: number }>;
@@ -48,23 +53,26 @@ function Earth({
   useFrame((state, delta) => {
     if (earthRef.current) {
       const time = state.clock.elapsedTime;
-      
+
       // Handle reset animation
       if (isResetting.current) {
         const resetDuration = 1.5; // 1.5 second smooth reset
         const elapsed = time - resetStartTimeRef.current;
         const progress = Math.min(elapsed / resetDuration, 1);
         const eased = easeInOutCubic(progress);
-        
+
         // Interpolate rotation back to origin
         currentRotation.current.x = resetStartRotationRef.current.x * (1 - eased);
-        currentRotation.current.y = resetStartRotationRef.current.y + (targetRotation.current.y - resetStartRotationRef.current.y) * eased + delta * 0.08 * eased;
-        
+        currentRotation.current.y =
+          resetStartRotationRef.current.y +
+          (targetRotation.current.y - resetStartRotationRef.current.y) * eased +
+          delta * 0.08 * eased;
+
         // Smooth zoom out
         const _currentZ = camera.position.z;
         const targetZ = resetStartZoomRef.current + (targetZoom.current - resetStartZoomRef.current) * eased;
         camera.position.z = targetZ;
-        
+
         if (progress >= 1) {
           isResetting.current = false;
           userInteracting.current = false;
@@ -73,30 +81,22 @@ function Earth({
       // Only auto-rotate if user hasn't interacted and not resetting
       else if (!selectedCountry && !userInteracting.current) {
         currentRotation.current.y += delta * 0.08;
-        
+
         // Smooth zoom interpolation
         const currentZ = camera.position.z;
         const diff = targetZoom.current - currentZ;
         camera.position.z = currentZ + diff * 0.04;
       } else if (selectedCountry && !userInteracting.current) {
         // Smooth interpolation to target rotation (looking at the country)
-        currentRotation.current.x = THREE.MathUtils.lerp(
-          currentRotation.current.x,
-          targetRotation.current.x,
-          0.03
-        );
-        currentRotation.current.y = THREE.MathUtils.lerp(
-          currentRotation.current.y,
-          targetRotation.current.y,
-          0.03
-        );
-        
+        currentRotation.current.x = THREE.MathUtils.lerp(currentRotation.current.x, targetRotation.current.x, 0.03);
+        currentRotation.current.y = THREE.MathUtils.lerp(currentRotation.current.y, targetRotation.current.y, 0.03);
+
         // Smooth zoom interpolation
         const currentZ = camera.position.z;
         const diff = targetZoom.current - currentZ;
         camera.position.z = currentZ + diff * 0.04;
       }
-      
+
       earthRef.current.rotation.x = currentRotation.current.x;
       earthRef.current.rotation.y = currentRotation.current.y;
     }
@@ -106,7 +106,7 @@ function Earth({
     if (selectedCountry) {
       // Reset user interaction to allow smooth movement to target
       userInteracting.current = false;
-      
+
       const country = WCA_COUNTRIES_MAP[selectedCountry];
       if (country) {
         // Rotate globe so the selected country faces the camera.
@@ -114,7 +114,7 @@ function Earth({
         // Pitch is simply +lat (keeps the selected point centered vertically without flipping hemispheres).
         const lngRad = THREE.MathUtils.degToRad(-(country.lng + 90));
         const latRad = THREE.MathUtils.degToRad(country.lat);
-        
+
         targetRotation.current.y = lngRad;
         targetRotation.current.x = latRad;
         targetZoom.current = 1.6; // 20% more zoom than before
@@ -128,7 +128,7 @@ function Earth({
   // Get selected country data for highlight
   const selectedCountryData = useMemo(() => {
     if (!selectedCountry) return null;
-    return countries.find(c => c.code === selectedCountry) || null;
+    return countries.find((c) => c.code === selectedCountry) || null;
   }, [selectedCountry, countries]);
 
   return (
@@ -141,47 +141,33 @@ function Earth({
       <NetworkConnections countries={countries} />
 
       {/* Flying airplanes when globe is free */}
-      <FlyingAirplanes 
-        countries={countries} 
-        isActive={!selectedCountry && !userInteracting.current}
-      />
+      <FlyingAirplanes countries={countries} isActive={!selectedCountry && !userInteracting.current} />
 
       {/* Single instanced mesh for all 249 country markers */}
-      <InstancedCountryMarkers
-        countries={countries}
-        selectedCountry={selectedCountry}
-        onSelect={onCountrySelect}
-      />
+      <InstancedCountryMarkers countries={countries} selectedCountry={selectedCountry} onSelect={onCountrySelect} />
 
       {/* Single highlight for selected country */}
       {selectedCountryData && (
-        <SelectionHighlight
-          lat={selectedCountryData.lat}
-          lng={selectedCountryData.lng}
-          isVisible={true}
-        />
+        <SelectionHighlight lat={selectedCountryData.lat} lng={selectedCountryData.lng} isVisible={true} />
       )}
 
       {/* City markers for selected country's partners */}
-      <CityMarkers
-        partners={countryPartners}
-        isVisible={!!selectedCountry}
-      />
+      <CityMarkers partners={countryPartners} isVisible={!!selectedCountry} />
     </group>
   );
 }
 
 // Scene setup
-function GlobeScene({ 
-  selectedCountry, 
+function GlobeScene({
+  selectedCountry,
   onCountrySelect,
   countries,
   countryPartners,
   userInteracting,
   isResetting,
-  onStartReset: _onStartReset
-}: { 
-  selectedCountry: string | null; 
+  onStartReset: _onStartReset,
+}: {
+  selectedCountry: string | null;
   onCountrySelect: (code: string) => void;
   countries: CountryWithPartners[];
   countryPartners: GlobePartner[];
@@ -206,8 +192,8 @@ function GlobeScene({
 
       <Stars radius={100} depth={50} count={5000} factor={4} saturation={0.5} fade speed={0.5} />
 
-      <Earth 
-        selectedCountry={selectedCountry} 
+      <Earth
+        selectedCountry={selectedCountry}
         onCountrySelect={onCountrySelect}
         targetZoom={targetZoom}
         targetRotation={targetRotation}
@@ -241,14 +227,17 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
   // Fetch real data from Supabase
   const { data: globeData, isLoading } = usePartnersForGlobe();
   const { data: countryPartners = [] } = usePartnersByCountryForGlobe(selectedCountry);
-  
+
   const countries = globeData?.countries || [];
   const userInteracting = useRef(false);
   const isResetting = useRef(false);
 
-  const handleGlobeCountrySelect = useCallback((code: string) => {
-    onCountrySelect(code === selectedCountry ? null : code);
-  }, [selectedCountry, onCountrySelect]);
+  const handleGlobeCountrySelect = useCallback(
+    (code: string) => {
+      onCountrySelect(code === selectedCountry ? null : code);
+    },
+    [selectedCountry, onCountrySelect],
+  );
 
   // Handle reset - trigger smooth animation back to original state
   const handleStartReset = useCallback(() => {
@@ -265,12 +254,12 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
 
   if (isLoading) {
     return (
-       <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-background via-background to-muted/20">
-         <div className="flex flex-col items-center gap-4">
-           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-           <p className="text-muted-foreground text-sm">Caricamento globo...</p>
-         </div>
-       </div>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-background via-background to-muted/20">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground text-sm">Caricamento globo...</p>
+        </div>
+      </div>
     );
   }
 
@@ -286,8 +275,8 @@ export function CampaignGlobe({ selectedCountry, onCountrySelect }: CampaignGlob
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       >
-        <GlobeScene 
-          selectedCountry={selectedCountry} 
+        <GlobeScene
+          selectedCountry={selectedCountry}
           onCountrySelect={handleGlobeCountrySelect}
           countries={countries}
           countryPartners={countryPartners}

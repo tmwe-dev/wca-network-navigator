@@ -39,8 +39,8 @@ describe("Email Draft Counter Consistency (logic)", () => {
     // sent_count must match actual sent items
     expect(sentCount).toBe(2);
     expect(failedCount).toBe(1);
-    expect(finalStatuses.filter(s => s === "sent").length).toBe(sentCount);
-    expect(finalStatuses.filter(s => s === "failed").length).toBe(failedCount);
+    expect(finalStatuses.filter((s) => s === "sent").length).toBe(sentCount);
+    expect(finalStatuses.filter((s) => s === "failed").length).toBe(failedCount);
   });
 
   it("should not increment sent_count when all items fail", () => {

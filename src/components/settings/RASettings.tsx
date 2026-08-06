@@ -35,8 +35,12 @@ export function RASettings({ settings, updateSetting }: RASettingsProps) {
       await updateSetting.mutateAsync({ key: "ra_username", value: raUser.trim() });
       await updateSetting.mutateAsync({ key: "ra_password", value: raPass.trim() });
       toast.success("Credenziali Report Aziende salvate!");
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore nel salvataggio"); }
-    finally { setSaving(false); }
+    } catch (e) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const hasCredentials = !!(settings?.["ra_username"] && settings?.["ra_password"]);
@@ -48,8 +52,17 @@ export function RASettings({ settings, updateSetting }: RASettingsProps) {
           <FileText className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">Report Aziende</h2>
         </div>
-        <Badge variant={hasCredentials ? "default" : "secondary"} className={hasCredentials ? "bg-primary text-primary-foreground" : ""}>
-          {hasCredentials ? <><CheckCircle2 className="w-3 h-3 mr-1" /> Configurato</> : "Non configurato"}
+        <Badge
+          variant={hasCredentials ? "default" : "secondary"}
+          className={hasCredentials ? "bg-primary text-primary-foreground" : ""}
+        >
+          {hasCredentials ? (
+            <>
+              <CheckCircle2 className="w-3 h-3 mr-1" /> Configurato
+            </>
+          ) : (
+            "Non configurato"
+          )}
         </Badge>
       </div>
 
@@ -76,7 +89,12 @@ export function RASettings({ settings, updateSetting }: RASettingsProps) {
               </div>
               <div className="space-y-2">
                 <Label>Password</Label>
-                <Input type="password" value={raPass} onChange={(e) => setRaPass(e.target.value)} placeholder="••••••••" />
+                <Input
+                  type="password"
+                  value={raPass}
+                  onChange={(e) => setRaPass(e.target.value)}
+                  placeholder="••••••••"
+                />
               </div>
               <Button onClick={handleSave} disabled={saving || !raUser.trim() || !raPass.trim()}>
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -94,11 +112,15 @@ export function RASettings({ settings, updateSetting }: RASettingsProps) {
                   Scarica l'estensione Chrome per ReportAziende, installala e clicca <strong>"🚀 Connetti"</strong>.
                 </p>
               </div>
-              <Button className="w-full" size="lg" onClick={() => {
-                void downloadRaExtensionZip()
-                  .then(() => toast.success("Estensione ReportAziende scaricata!"))
-                  .catch(() => toast.error("File non disponibile"));
-              }}>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => {
+                  void downloadRaExtensionZip()
+                    .then(() => toast.success("Estensione ReportAziende scaricata!"))
+                    .catch(() => toast.error("File non disponibile"));
+                }}
+              >
                 <Download className="w-4 h-4 mr-2" /> Scarica Estensione RA
               </Button>
               <p className="text-[11px] text-muted-foreground text-center">

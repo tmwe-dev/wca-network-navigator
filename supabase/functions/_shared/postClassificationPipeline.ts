@@ -16,7 +16,12 @@
 import { loadEmailAddressRules, type EmailAddressRule } from "./classificationRules.ts";
 import { handleInterested, handleNotInterested, handleFollowUp, type RouterInput } from "./emailRouter.ts";
 import { handleBounce, handleUnsubscribe, type BounceHandlerInput } from "./bounceAndUnsubscribeHandler.ts";
-import { handleQuestion, handleComplaint, handleOutOfOffice, type QuestionComplaintInput } from "./questionAndComplaintHandler.ts";
+import {
+  handleQuestion,
+  handleComplaint,
+  handleOutOfOffice,
+  type QuestionComplaintInput,
+} from "./questionAndComplaintHandler.ts";
 import {
   handleQuoteOrBooking,
   handleShipmentOps,
@@ -69,12 +74,7 @@ export type ClassificationCategory =
   | "system_notification"
   | "internal_communication";
 
-export type ClassificationDomain =
-  | "commercial"
-  | "operative"
-  | "administrative"
-  | "support"
-  | "internal";
+export type ClassificationDomain = "commercial" | "operative" | "administrative" | "support" | "internal";
 
 export interface ClassificationInput {
   userId: string;
@@ -146,15 +146,11 @@ export async function runPostClassificationPipeline(
     };
 
     // Suggest group for sender if applicable
-    await suggestGroupForSender(
-      supabase,
-      input.userId,
-      input.senderEmail,
-      input.category,
-      input.confidence,
-    ).catch((e) => {
-      console.warn("[postClassification] Group suggestion error (non-blocking):", e);
-    });
+    await suggestGroupForSender(supabase, input.userId, input.senderEmail, input.category, input.confidence).catch(
+      (e) => {
+        console.warn("[postClassification] Group suggestion error (non-blocking):", e);
+      },
+    );
 
     // Route by domain first (operative/admin/support/internal)
     const domain = enrichedInput.domain || "commercial";
@@ -182,7 +178,7 @@ export async function runPostClassificationPipeline(
           break;
         case "support":
           await handleSupportRequest(supabase, domainInput, result, (s, i, r) =>
-            handleComplaint(s, i as QuestionComplaintInput, r)
+            handleComplaint(s, i as QuestionComplaintInput, r),
           );
           break;
         case "internal":

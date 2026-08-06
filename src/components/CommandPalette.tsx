@@ -34,15 +34,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // SSOT navigazione: stesse 7 macro-aree del menu principale (navConfig).
   const labelOf = (item: NavItemDef): string => {
     const translated = t(item.labelKey);
-    return translated === item.labelKey
-      ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
-      : translated;
+    return translated === item.labelKey ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ") : translated;
   };
 
   useEffect(() => {
     if (open && search.length >= 2) {
       searchPartners(search, 5).then((data) => {
-        setPartners(data.map(d => ({ ...d, city: (d as Record<string, string>).city ?? "" })) as Partner[]);
+        setPartners(data.map((d) => ({ ...d, city: (d as Record<string, string>).city ?? "" })) as Partner[]);
       });
     } else {
       setPartners([]);
@@ -57,26 +55,20 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput 
-        placeholder="Cerca partner, pagine, azioni..." 
-        value={search}
-        onValueChange={setSearch}
-      />
+      <CommandInput placeholder="Cerca partner, pagine, azioni..." value={search} onValueChange={setSearch} />
       <CommandList>
         <CommandEmpty>Nessun risultato trovato.</CommandEmpty>
-        
+
         {partners.length > 0 && (
           <CommandGroup heading="Partner">
             {partners.map((partner) => (
-              <CommandItem
-                key={partner.id}
-                onSelect={() => runCommand(() => navigate("/v2/network"))}
-              >
+              <CommandItem key={partner.id} onSelect={() => runCommand(() => navigate("/v2/network"))}>
                 <Building2 className="mr-2 h-4 w-4" />
                 <div className="flex flex-col">
                   <span>{partner.company_name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {partner.city}{partner.country_name ? `, ${partner.country_name}` : ""}
+                    {partner.city}
+                    {partner.country_name ? `, ${partner.country_name}` : ""}
                   </span>
                 </div>
               </CommandItem>

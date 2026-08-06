@@ -26,23 +26,51 @@ export type MessageId = Brand<string, "MessageId">;
 
 // ── ID constructors (runtime casting) ────────────────────────────────
 
-export function partnerId(raw: string): PartnerId { return raw as PartnerId; }
-export function contactId(raw: string): ContactId { return raw as ContactId; }
-export function agentId(raw: string): AgentId { return raw as AgentId; }
-export function activityId(raw: string): ActivityId { return raw as ActivityId; }
-export function campaignId(raw: string): CampaignId { return raw as CampaignId; }
-export function campaignJobId(raw: string): CampaignJobId { return raw as CampaignJobId; }
-export function kbEntryId(raw: string): KbEntryId { return raw as KbEntryId; }
-export function downloadJobId(raw: string): DownloadJobId { return raw as DownloadJobId; }
-export function userId(raw: string): UserId { return raw as UserId; }
-export function importLogId(raw: string): ImportLogId { return raw as ImportLogId; }
-export function messageId(raw: string): MessageId { return raw as MessageId; }
+export function partnerId(raw: string): PartnerId {
+  return raw as PartnerId;
+}
+export function contactId(raw: string): ContactId {
+  return raw as ContactId;
+}
+export function agentId(raw: string): AgentId {
+  return raw as AgentId;
+}
+export function activityId(raw: string): ActivityId {
+  return raw as ActivityId;
+}
+export function campaignId(raw: string): CampaignId {
+  return raw as CampaignId;
+}
+export function campaignJobId(raw: string): CampaignJobId {
+  return raw as CampaignJobId;
+}
+export function kbEntryId(raw: string): KbEntryId {
+  return raw as KbEntryId;
+}
+export function downloadJobId(raw: string): DownloadJobId {
+  return raw as DownloadJobId;
+}
+export function userId(raw: string): UserId {
+  return raw as UserId;
+}
+export function importLogId(raw: string): ImportLogId {
+  return raw as ImportLogId;
+}
+export function messageId(raw: string): MessageId {
+  return raw as MessageId;
+}
 
 // ── Activity enums ───────────────────────────────────────────────────
 
 export type ActivityType =
-  | "send_email" | "phone_call" | "add_to_campaign" | "meeting"
-  | "follow_up" | "other" | "whatsapp_message" | "linkedin_message";
+  | "send_email"
+  | "phone_call"
+  | "add_to_campaign"
+  | "meeting"
+  | "follow_up"
+  | "other"
+  | "whatsapp_message"
+  | "linkedin_message";
 
 export type ActivityStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
@@ -247,13 +275,27 @@ export type CreditTransactionId = Brand<string, "CreditTransactionId">;
 export type OutreachQueueId = Brand<string, "OutreachQueueId">;
 export type ProspectId = Brand<string, "ProspectId">;
 
-export function businessCardId(raw: string): BusinessCardId { return raw as BusinessCardId; }
-export function sortingRuleId(raw: string): SortingRuleId { return raw as SortingRuleId; }
-export function operatorId(raw: string): OperatorId { return raw as OperatorId; }
-export function workspaceDocId(raw: string): WorkspaceDocId { return raw as WorkspaceDocId; }
-export function creditTransactionId(raw: string): CreditTransactionId { return raw as CreditTransactionId; }
-export function outreachQueueId(raw: string): OutreachQueueId { return raw as OutreachQueueId; }
-export function prospectId(raw: string): ProspectId { return raw as ProspectId; }
+export function businessCardId(raw: string): BusinessCardId {
+  return raw as BusinessCardId;
+}
+export function sortingRuleId(raw: string): SortingRuleId {
+  return raw as SortingRuleId;
+}
+export function operatorId(raw: string): OperatorId {
+  return raw as OperatorId;
+}
+export function workspaceDocId(raw: string): WorkspaceDocId {
+  return raw as WorkspaceDocId;
+}
+export function creditTransactionId(raw: string): CreditTransactionId {
+  return raw as CreditTransactionId;
+}
+export function outreachQueueId(raw: string): OutreachQueueId {
+  return raw as OutreachQueueId;
+}
+export function prospectId(raw: string): ProspectId {
+  return raw as ProspectId;
+}
 
 // ── BusinessCard ────────────────────────────────────────────────────
 

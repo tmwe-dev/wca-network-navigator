@@ -12,15 +12,15 @@ describe("shouldCreateSenderPattern", () => {
   });
 
   it("4 classifications → false", () => {
-    expect(shouldCreateSenderPattern(4, 0.80)).toBe(false);
+    expect(shouldCreateSenderPattern(4, 0.8)).toBe(false);
   });
 
   it("5 classifications but confidence < 0.75 → false", () => {
-    expect(shouldCreateSenderPattern(5, 0.70)).toBe(false);
+    expect(shouldCreateSenderPattern(5, 0.7)).toBe(false);
   });
 
   it("10 classifications + high confidence → true", () => {
-    expect(shouldCreateSenderPattern(10, 0.90)).toBe(true);
+    expect(shouldCreateSenderPattern(10, 0.9)).toBe(true);
   });
 });
 

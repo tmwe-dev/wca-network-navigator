@@ -34,15 +34,15 @@ export function useAgendaDayActivities(day: Date | null) {
 
       // Check which partners have responded
       const partnerIds = (acts || [])
-        .filter(a => a.partner_id && ["send_email", "follow_up"].includes(a.activity_type as string))
-        .map(a => a.partner_id as string);
+        .filter((a) => a.partner_id && ["send_email", "follow_up"].includes(a.activity_type as string))
+        .map((a) => a.partner_id as string);
 
       const uniquePartnerIds = [...new Set(partnerIds)];
       const respondedPartnerIds = new Set<string>();
 
       if (uniquePartnerIds.length > 0) {
         const responded = await findRespondedPartnerIds(uniquePartnerIds.slice(0, 100), dayStart);
-        responded.forEach(id => respondedPartnerIds.add(id));
+        responded.forEach((id) => respondedPartnerIds.add(id));
       }
 
       return {

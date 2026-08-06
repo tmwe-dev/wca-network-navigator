@@ -53,7 +53,12 @@ interface NetworkPerformanceBarProps {
   regressions?: NetworkRegression[];
 }
 
-function NetworkIcon({ name, s, isExcluded, isFailed }: {
+function NetworkIcon({
+  name,
+  s,
+  isExcluded,
+  isFailed,
+}: {
   name: string;
   s: NetworkStats;
   isExcluded: boolean;
@@ -79,7 +84,7 @@ function NetworkIcon({ name, s, isExcluded, isFailed }: {
         <div
           className={cn(
             "relative w-7 h-7 rounded-md border-2 flex items-center justify-center overflow-hidden bg-card/80 transition-all",
-            borderColor
+            borderColor,
           )}
         >
           {logo ? (
@@ -98,7 +103,9 @@ function NetworkIcon({ name, s, isExcluded, isFailed }: {
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs">
         <p className="font-semibold">{name}</p>
-        <p>{s.success}/{total} con contatti ({rate}%)</p>
+        <p>
+          {s.success}/{total} con contatti ({rate}%)
+        </p>
         {isExcluded && <p className="text-destructive">Auto-escluso</p>}
         {isFailed && !isExcluded && <p className="text-destructive">0% successo</p>}
       </TooltipContent>
@@ -115,9 +122,9 @@ export function NetworkPerformanceBar({ stats, excludedNetworks, regressions }: 
   const activeEntries = entries
     .filter(([name, s]) => {
       const total = s.success + s.empty;
-      return s.success > 0 || total < FAILED_THRESHOLD || excludedNetworks.has(name) === false && s.success > 0;
+      return s.success > 0 || total < FAILED_THRESHOLD || (excludedNetworks.has(name) === false && s.success > 0);
     })
-    .filter(([, s]) => s.success > 0 || (s.success + s.empty) < FAILED_THRESHOLD)
+    .filter(([, s]) => s.success > 0 || s.success + s.empty < FAILED_THRESHOLD)
     .sort((a, b) => {
       const rA = a[1].success / (a[1].success + a[1].empty);
       const rB = b[1].success / (b[1].success + b[1].empty);
@@ -125,8 +132,8 @@ export function NetworkPerformanceBar({ stats, excludedNetworks, regressions }: 
     });
 
   const failedEntries = entries
-    .filter(([, s]) => s.success === 0 && (s.success + s.empty) >= FAILED_THRESHOLD)
-    .sort((a, b) => (b[1].empty) - (a[1].empty));
+    .filter(([, s]) => s.success === 0 && s.success + s.empty >= FAILED_THRESHOLD)
+    .sort((a, b) => b[1].empty - a[1].empty);
 
   const activeCount = activeEntries.length;
   const failedCount = failedEntries.length;
@@ -135,13 +142,7 @@ export function NetworkPerformanceBar({ stats, excludedNetworks, regressions }: 
     <div className="flex items-center gap-1.5">
       {/* Active networks */}
       {activeEntries.map(([name, s]) => (
-        <NetworkIcon
-          key={name}
-          name={name}
-          s={s}
-          isExcluded={excludedNetworks.has(name)}
-          isFailed={false}
-        />
+        <NetworkIcon key={name} name={name} s={s} isExcluded={excludedNetworks.has(name)} isFailed={false} />
       ))}
 
       {/* Separator between active and failed */}
@@ -151,13 +152,7 @@ export function NetworkPerformanceBar({ stats, excludedNetworks, regressions }: 
 
       {/* Failed networks */}
       {failedEntries.map(([name, s]) => (
-        <NetworkIcon
-          key={name}
-          name={name}
-          s={s}
-          isExcluded={excludedNetworks.has(name)}
-          isFailed={true}
-        />
+        <NetworkIcon key={name} name={name} s={s} isExcluded={excludedNetworks.has(name)} isFailed={true} />
       ))}
 
       {/* Counters */}
@@ -173,8 +168,8 @@ export function NetworkPerformanceBar({ stats, excludedNetworks, regressions }: 
       {regressions && regressions.length > 0 && (
         <Tooltip delayDuration={200}>
           <TooltipTrigger asChild>
-             <div className="flex items-center gap-0.5 ml-1 text-primary animate-pulse">
-               <AlertTriangle className="w-4 h-4" />
+            <div className="flex items-center gap-0.5 ml-1 text-primary animate-pulse">
+              <AlertTriangle className="w-4 h-4" />
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs max-w-64">

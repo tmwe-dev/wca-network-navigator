@@ -18,9 +18,7 @@ export interface BusyPartnerRow {
   since: string;
 }
 
-export async function findBusyPartnerIds(
-  partnerIds?: string[]
-): Promise<Set<string>> {
+export async function findBusyPartnerIds(partnerIds?: string[]): Promise<Set<string>> {
   let q = supabase.from("v_partner_busy").select("partner_id");
   if (partnerIds && partnerIds.length > 0) {
     q = q.in("partner_id", partnerIds);
@@ -34,9 +32,7 @@ export async function findBusyPartnerIds(
   return out;
 }
 
-export async function findBusyPartnerRows(
-  partnerIds?: string[]
-): Promise<BusyPartnerRow[]> {
+export async function findBusyPartnerRows(partnerIds?: string[]): Promise<BusyPartnerRow[]> {
   let q = supabase.from("v_partner_busy").select("partner_id, source, since");
   if (partnerIds && partnerIds.length > 0) {
     q = q.in("partner_id", partnerIds);

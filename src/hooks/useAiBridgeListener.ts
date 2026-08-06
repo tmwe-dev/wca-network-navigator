@@ -10,9 +10,12 @@ export function useAiBridgeListener() {
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (event.source !== window) return;
-      const data = event.data as
-        | { direction?: string; requestId?: string; functionName?: string; payload?: unknown }
-        | null;
+      const data = event.data as {
+        direction?: string;
+        requestId?: string;
+        functionName?: string;
+        payload?: unknown;
+      } | null;
       if (!data || data.direction !== "from-extension-ai-bridge-request") return;
 
       const { requestId, functionName, payload } = data;
@@ -28,7 +31,7 @@ export function useAiBridgeListener() {
               result: error ? null : result,
               error: error ? error.message : null,
             },
-            window.location.origin
+            window.location.origin,
           );
         })
         .catch((err) => {
@@ -39,22 +42,20 @@ export function useAiBridgeListener() {
               result: null,
               error: err instanceof Error ? err.message : String(err),
             },
-            window.location.origin
+            window.location.origin,
           );
         });
     }
 
     function handleOptimusRequest(event: MessageEvent) {
       if (event.source !== window) return;
-      const data = event.data as
-        | {
-            direction?: string;
-            requestId?: string;
-            domSnapshot?: string;
-            pageType?: string;
-            channel?: string;
-          }
-        | null;
+      const data = event.data as {
+        direction?: string;
+        requestId?: string;
+        domSnapshot?: string;
+        pageType?: string;
+        channel?: string;
+      } | null;
       if (!data || data.direction !== "from-extension-optimus-request") return;
 
       const { requestId, domSnapshot, pageType, channel } = data;
@@ -76,7 +77,7 @@ export function useAiBridgeListener() {
               result: error ? null : result,
               error: error ? error.message : null,
             },
-            window.location.origin
+            window.location.origin,
           );
         })
         .catch((err) => {
@@ -87,7 +88,7 @@ export function useAiBridgeListener() {
               result: null,
               error: err instanceof Error ? err.message : String(err),
             },
-            window.location.origin
+            window.location.origin,
           );
         });
     }

@@ -4,7 +4,10 @@ import { cn } from "@/lib/utils";
 import { CATEGORY_ORDER, CATEGORY_LABEL } from "./constants";
 
 export function Sidebar({
-  open, grouped, selectedId, onSelect,
+  open,
+  grouped,
+  selectedId,
+  onSelect,
 }: {
   open: boolean;
   grouped: Map<AgentCategory, AgentRegistryEntry[]>;

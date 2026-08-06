@@ -16,9 +16,10 @@ export function useAIDraftActions(draft: DraftState, onDraftChange: (d: DraftSta
   const sending = wa.sending || li.sending || email.sending;
 
   const handleCopy = () => {
-    const text = draft.channel === "email"
-      ? `Subject: ${draft.subject}\n\n${draft.body.replace(/<br\s*\/?>/gi, "\n").replace(/<\/?[^>]+(>|$)/g, "")}`
-      : draft.body;
+    const text =
+      draft.channel === "email"
+        ? `Subject: ${draft.subject}\n\n${draft.body.replace(/<br\s*\/?>/gi, "\n").replace(/<\/?[^>]+(>|$)/g, "")}`
+        : draft.body;
     navigator.clipboard.writeText(text);
     toast({ title: "Copiato negli appunti" });
   };

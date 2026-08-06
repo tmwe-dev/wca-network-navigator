@@ -51,7 +51,9 @@ test.describe("Calendar Flow - E2E Tests", () => {
     const monthText = page.locator("h2").first();
     await expect(monthText).toBeVisible({ timeout: 10000 });
     const text = await monthText.textContent();
-    expect(text).toMatch(/Gennaio|Febbraio|Marzo|Aprile|Maggio|Giugno|Luglio|Agosto|Settembre|Ottobre|Novembre|Dicembre/);
+    expect(text).toMatch(
+      /Gennaio|Febbraio|Marzo|Aprile|Maggio|Giugno|Luglio|Agosto|Settembre|Ottobre|Novembre|Dicembre/,
+    );
   });
 
   test("calendar cells are clickable and have date numbers", async ({ page }) => {
@@ -76,13 +78,16 @@ test.describe("Calendar Flow - E2E Tests", () => {
     const initialMonth = await monthDisplay.textContent();
 
     // Click previous month button
-    const prevButton = page.locator("button").filter({ has: page.locator('svg[class*="w-4"][class*="h-4"]').first() }).first();
+    const prevButton = page
+      .locator("button")
+      .filter({ has: page.locator('svg[class*="w-4"][class*="h-4"]').first() })
+      .first();
     // More reliable: find button by icon presence and position
     const buttons = page.getByRole("button");
     let prevButton2: any = null;
 
     // Get all buttons and find the one with ChevronLeft (first navigation button)
-    for (let i = 0; i < await buttons.count(); i++) {
+    for (let i = 0; i < (await buttons.count()); i++) {
       const btn = buttons.nth(i);
       const html = await btn.innerHTML();
       if (html.includes("chevron") || html.includes("ChevronLeft")) {
@@ -136,7 +141,7 @@ test.describe("Calendar Flow - E2E Tests", () => {
     const buttons = page.getByRole("button");
     let prevButton: any = null;
 
-    for (let i = 0; i < await buttons.count(); i++) {
+    for (let i = 0; i < (await buttons.count()); i++) {
       const btn = buttons.nth(i);
       const html = await btn.innerHTML();
       if (html.includes("chevron") || html.includes("ChevronLeft")) {
@@ -182,8 +187,7 @@ test.describe("Calendar Flow - E2E Tests", () => {
 
     // Either a dialog or dialog content should be visible
     const isDialogVisible =
-      (await dialog.isVisible().catch(() => false)) ||
-      (await dialogContent.isVisible().catch(() => false));
+      (await dialog.isVisible().catch(() => false)) || (await dialogContent.isVisible().catch(() => false));
 
     expect(isDialogVisible).toBe(true);
   });
@@ -205,7 +209,10 @@ test.describe("Calendar Flow - E2E Tests", () => {
       const dialog = page.locator("[role='dialog']").first();
       const isDialogOpen =
         (await dialog.isVisible().catch(() => false)) ||
-        (await page.locator("text=/Crea|Nuovo/i").isVisible().catch(() => false));
+        (await page
+          .locator("text=/Crea|Nuovo/i")
+          .isVisible()
+          .catch(() => false));
 
       expect(isDialogOpen).toBe(true);
     }
@@ -280,10 +287,7 @@ test.describe("Calendar Flow - E2E Tests", () => {
       // Verify no critical errors occurred
       const criticalErrors = errors.filter(
         (e) =>
-          !e.includes("favicon") &&
-          !e.includes("404") &&
-          !e.includes("ERR_") &&
-          !e.includes("Network request failed")
+          !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("Network request failed"),
       );
       expect(criticalErrors.length).toBeLessThan(3);
     }
@@ -304,10 +308,12 @@ test.describe("Calendar Flow - E2E Tests", () => {
         await page.waitForTimeout(300);
 
         // Verify button is now active
-        await expect(tuttiButton).toBeFocused().catch(() => {
-          // If focus check fails, at least verify it exists and is clickable
-          expect(tuttiButton).toBeTruthy();
-        });
+        await expect(tuttiButton)
+          .toBeFocused()
+          .catch(() => {
+            // If focus check fails, at least verify it exists and is clickable
+            expect(tuttiButton).toBeTruthy();
+          });
       }
     }
   });
@@ -423,7 +429,7 @@ test.describe("Calendar Flow - E2E Tests", () => {
         !e.includes("404") &&
         !e.includes("ERR_") &&
         !e.includes("ResizeObserver") &&
-        !e.includes("Network request")
+        !e.includes("Network request"),
     );
 
     expect(criticalErrors.length).toBeLessThan(3);
@@ -463,10 +469,7 @@ test.describe("Calendar Flow - E2E Tests", () => {
     // Filter errors
     const corsErrors = errors.filter((e) => e.toLowerCase().includes("cors"));
     const networkErrors = errors.filter(
-      (e) =>
-        e.includes("Network") &&
-        !e.includes("Network request failed") &&
-        !e.includes("ERR_")
+      (e) => e.includes("Network") && !e.includes("Network request failed") && !e.includes("ERR_"),
     );
 
     expect(corsErrors.length).toBe(0);
@@ -495,9 +498,9 @@ test.describe("Calendar Flow - E2E Tests", () => {
       await firstButton.focus();
 
       // Verify button is focused
-      const isFocused = await firstButton.evaluate((el) =>
-        (el as HTMLElement).style.outline !== "none"
-      ).catch(() => true);
+      const isFocused = await firstButton
+        .evaluate((el) => (el as HTMLElement).style.outline !== "none")
+        .catch(() => true);
 
       // Should be focusable
       expect(firstButton).toBeTruthy();
@@ -516,9 +519,9 @@ test.describe("Calendar Flow - E2E Tests", () => {
     await expect(firstCell).toBeVisible();
 
     // Should have cursor pointer class (from Tailwind)
-    const hasPointerCursor = await firstCell.evaluate((el) =>
-      window.getComputedStyle(el as HTMLElement).cursor === "pointer"
-    ).catch(() => true);
+    const hasPointerCursor = await firstCell
+      .evaluate((el) => window.getComputedStyle(el as HTMLElement).cursor === "pointer")
+      .catch(() => true);
 
     expect(hasPointerCursor).toBe(true);
   });
@@ -548,9 +551,13 @@ test.describe("Calendar Flow - E2E Tests", () => {
 
   test("event cards are displayed in calendar cells", async ({ page }) => {
     // Look for event cards (CalendarEventCard components)
-    const eventCards = page.locator("[class*='bg-blue-'], [class*='bg-green-'], [class*='bg-yellow-'], [class*='bg-purple-'], [class*='bg-orange-']").filter({
-      has: page.locator("[class*='border']"),
-    });
+    const eventCards = page
+      .locator(
+        "[class*='bg-blue-'], [class*='bg-green-'], [class*='bg-yellow-'], [class*='bg-purple-'], [class*='bg-orange-']",
+      )
+      .filter({
+        has: page.locator("[class*='border']"),
+      });
 
     // Events may or may not be present, but if they are, they should be visible
     const eventCount = await eventCards.count();
@@ -570,9 +577,12 @@ test.describe("Calendar Flow - E2E Tests", () => {
     await expect(pageTitle).toBeVisible();
 
     // 2. Navigate to previous month
-    const prevButton = page.getByRole("button").filter({
-      has: page.locator("svg"),
-    }).nth(0);
+    const prevButton = page
+      .getByRole("button")
+      .filter({
+        has: page.locator("svg"),
+      })
+      .nth(0);
 
     const monthDisplay = page.locator("h2").first();
     const initialMonth = await monthDisplay.textContent();
@@ -598,17 +608,15 @@ test.describe("Calendar Flow - E2E Tests", () => {
     const dialogContent = page.locator("[role='dialog']").first();
     const isDialogOpen =
       (await dialogContent.isVisible().catch(() => false)) ||
-      (await page.locator("text=/Nuovo|Crea/i").isVisible().catch(() => false));
+      (await page
+        .locator("text=/Nuovo|Crea/i")
+        .isVisible()
+        .catch(() => false));
 
     expect(isDialogOpen).toBe(true);
 
     // 6. Check for errors
-    const criticalErrors = errors.filter(
-      (e) =>
-        !e.includes("favicon") &&
-        !e.includes("404") &&
-        !e.includes("ERR_")
-    );
+    const criticalErrors = errors.filter((e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_"));
     expect(criticalErrors.length).toBeLessThan(3);
   });
 });

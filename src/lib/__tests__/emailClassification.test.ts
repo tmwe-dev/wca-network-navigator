@@ -75,8 +75,17 @@ describe("parseClassificationResponse", () => {
   });
 
   it("parses all 9 valid categories", () => {
-    const cats = ["interested", "not_interested", "request_info", "meeting_request",
-      "complaint", "follow_up", "auto_reply", "spam", "uncategorized"];
+    const cats = [
+      "interested",
+      "not_interested",
+      "request_info",
+      "meeting_request",
+      "complaint",
+      "follow_up",
+      "auto_reply",
+      "spam",
+      "uncategorized",
+    ];
     for (const cat of cats) {
       const r = parseClassificationResponse(JSON.stringify({ category: cat }));
       expect(r.category).toBe(cat);

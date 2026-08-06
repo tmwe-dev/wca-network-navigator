@@ -47,8 +47,7 @@ export async function assembleEnrichmentContext(
   const deepSearchAgeDays = unified.freshness.deep_age_days ?? unified.freshness.base_age_days;
 
   let cachedEnrichmentContext = "";
-  let deepSearchStatus: "fresh" | "cached" | "stale" | "missing" | "skipped" | "failed" =
-    "missing";
+  let deepSearchStatus: "fresh" | "cached" | "stale" | "missing" | "skipped" | "failed" = "missing";
   let dsScore: DeepSearchScoreResult | null = null;
   let sherlockLevel = 0;
 

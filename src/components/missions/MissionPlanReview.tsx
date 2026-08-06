@@ -16,8 +16,20 @@ interface MissionPlanReviewProps {
 
 const dangerConfig = {
   safe: { color: "text-success", bg: "bg-success/10", border: "border-success/20", icon: Shield, label: "Sicuro" },
-  moderate: { color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20", icon: AlertTriangle, label: "Moderato" },
-  critical: { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20", icon: AlertTriangle, label: "Critico" },
+  moderate: {
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+    border: "border-amber-500/20",
+    icon: AlertTriangle,
+    label: "Moderato",
+  },
+  critical: {
+    color: "text-destructive",
+    bg: "bg-destructive/10",
+    border: "border-destructive/20",
+    icon: AlertTriangle,
+    label: "Critico",
+  },
 };
 
 export default function MissionPlanReview({ plan, visible, isApproving, onApprove, onCancel }: MissionPlanReviewProps) {
@@ -67,9 +79,7 @@ export default function MissionPlanReview({ plan, visible, isApproving, onApprov
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-foreground">{action.label}</p>
-                  {action.details && (
-                    <p className="text-[10px] text-muted-foreground truncate">{action.details}</p>
-                  )}
+                  {action.details && <p className="text-[10px] text-muted-foreground truncate">{action.details}</p>}
                 </div>
                 <Zap className="w-3 h-3 text-muted-foreground shrink-0" />
               </motion.div>
@@ -90,21 +100,11 @@ export default function MissionPlanReview({ plan, visible, isApproving, onApprov
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 pt-1">
-            <Button
-              size="sm"
-              onClick={onApprove}
-              disabled={isApproving}
-              className="gap-1.5 flex-1"
-            >
+            <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5 flex-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               {isApproving ? "Approvazione..." : "Approva ed Esegui"}
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onCancel}
-              disabled={isApproving}
-            >
+            <Button size="sm" variant="ghost" onClick={onCancel} disabled={isApproving}>
               <X className="w-3.5 h-3.5" />
             </Button>
           </div>

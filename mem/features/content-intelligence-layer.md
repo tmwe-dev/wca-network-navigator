@@ -3,6 +3,7 @@ name: Content Intelligence Layer (Strato 2 inbound)
 description: classify-inbound-content legge il CONTENUTO mail con contesto pieno (mittente+history+holding+doctrine) e propone azioni senza eseguirle. Tabella email_content_intelligence + prompt operativo content-intelligence editabile da Prompt Lab.
 type: feature
 ---
+
 Step 1 attivo (lettura passiva, fail-safe). Step 2 (emit_pending_actions) opt-in, default OFF.
 
 - Tabella `email_content_intelligence` (uniq message_id), RLS user-scoped.
@@ -15,6 +16,7 @@ Step 1 attivo (lettura passiva, fail-safe). Step 2 (emit_pending_actions) opt-in
 - Sanitizer + contentNormalizer + injection guard riusati.
 
 AGGIORNAMENTO 2026-05-05: NO PIÙ "ULTIME 30 MAIL" NEL PROMPT.
+
 - `classify-inbound-content` ora usa `_shared/conversationSummaryLoader.ts` (SSOT).
 - Loader: legge `contact_conversation_context.conversation_summary` + `last_exchanges` (≤5) + metriche. Fallback max 5 messaggi recenti SOLO se summary assente (bootstrap).
 - Builder: edge `refresh-conversation-context` (debounced 5min, idempotente per `interaction_count`). Legge fino a 30 `channel_messages` cross-canale e produce summary narrativo via Gemini Flash + tool `build_summary` (Zod-validated).

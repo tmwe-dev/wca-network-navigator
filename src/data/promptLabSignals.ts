@@ -24,7 +24,13 @@ export const ERROR_ACTION_FILTER =
 
 export interface PromptLabSignal {
   id: string;
-  type: "error_pattern" | "low_acceptance" | "doctrine_violation" | "performance_drop" | "user_feedback" | "domain_misclassification"; // LOVABLE-93
+  type:
+    | "error_pattern"
+    | "low_acceptance"
+    | "doctrine_violation"
+    | "performance_drop"
+    | "user_feedback"
+    | "domain_misclassification"; // LOVABLE-93
   severity: "info" | "warning" | "critical";
   title: string;
   description: string;
@@ -82,7 +88,9 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
         }
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 2) Tasso di accettazione email basso (molte email generate ma poche inviate)
   try {
@@ -112,13 +120,16 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
           description: `Solo ${Math.round(ratio * 100)}% delle email generate sono state inviate (${sent}/${generated} negli ultimi 7gg). L'operatore scarta o riscrive la maggior parte.`,
           affected_blocks: ["Email Forge", "Email Types"],
           evidence: { generated, sent, ratio: Math.round(ratio * 100), period: "7d" },
-          suggested_action: "Migliora i prompt Email Forge e Email Types. Considera di aggiungere materiale di riferimento con esempi di email approvate.",
+          suggested_action:
+            "Migliora i prompt Email Forge e Email Types. Considera di aggiungere materiale di riferimento con esempi di email approvate.",
           status: "new",
           created_at: now.toISOString(),
         });
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 3) Decision Engine: molte azioni rifiutate (rejected)
   try {
@@ -153,7 +164,9 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
         }
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 4) Memorie di apprendimento (feedback dall'utente salvati come memory)
   try {
@@ -175,12 +188,15 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
         description: `Trovati ${rows.length} feedback salvati come memoria negli ultimi 7 giorni. Questi indicano correzioni o preferenze dell'operatore che dovrebbero riflettersi nei prompt.`,
         affected_blocks: [],
         evidence: { count: rows.length, samples: rows.slice(0, 5).map((r) => (r.content ?? "").slice(0, 200)) },
-        suggested_action: "Copia i feedback nel campo 'Materiale di riferimento' del Migliora tutto per incorporarli nei prompt.",
+        suggested_action:
+          "Copia i feedback nel campo 'Materiale di riferimento' del Migliora tutto per incorporarli nei prompt.",
         status: "new",
         created_at: now.toISOString(),
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 5) Performance drop: confronta volumi email inviate/generate vs periodo precedente
   try {
@@ -215,12 +231,15 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
         description: `Le email generate sono calate del ${dropPct}% rispetto alla settimana precedente (da ${previous} a ${recent}). Potrebbe indicare problemi nei prompt, bassa qualità percepita o cambio di strategia operativa.`,
         affected_blocks: ["Email Forge", "Email Types", "System Prompt"],
         evidence: { recentCount: recent, previousCount: previous, dropPercent: dropPct, period: "7d vs 7d" },
-        suggested_action: "Verifica se i prompt email sono stati modificati di recente. Controlla il tasso di accettazione e i feedback utente.",
+        suggested_action:
+          "Verifica se i prompt email sono stati modificati di recente. Controlla il tasso di accettazione e i feedback utente.",
         status: "new",
         created_at: now.toISOString(),
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // LOVABLE-93: coerenza Prompt Lab multi-dominio — detect domain misclassification patterns
   try {
@@ -242,7 +261,10 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
         if (domainTag) {
           const domain = domainTag.replace("domain:", "");
           // Conta se c'è una correzione nel dominio
-          const hasDomainCorrection = tags.some((t) => /da_.*(operative|administrative|support)/i.test(t) || /a_.*(operative|administrative|support)/i.test(t));
+          const hasDomainCorrection = tags.some(
+            (t) =>
+              /da_.*(operative|administrative|support)/i.test(t) || /a_.*(operative|administrative|support)/i.test(t),
+          );
           if (hasDomainCorrection) {
             domainChanges.set(domain, (domainChanges.get(domain) ?? 0) + 1);
           }
@@ -265,7 +287,9 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
         }
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   return signals;
 }
@@ -293,8 +317,8 @@ export async function getRecentSignalCount(_userId: string): Promise<number> {
     const total = (errorCount ?? 0) + (rejectedCount ?? 0);
     // Ritorna un contatore proporzionale (non il numero grezzo)
     if (total >= 10) return 3; // critico
-    if (total >= 5) return 2;  // warning
-    if (total >= 1) return 1;  // info
+    if (total >= 5) return 2; // warning
+    if (total >= 1) return 1; // info
     return 0;
   } catch {
     return 0;

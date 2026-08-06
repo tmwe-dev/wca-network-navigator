@@ -49,7 +49,9 @@ Deno.serve(async (req) => {
     let userId: string;
 
     if (isServiceRoleCall) {
-      supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+      supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
       supabase = supabaseAdmin;
       userId = syncUserId;
     } else {
@@ -146,7 +148,13 @@ Deno.serve(async (req) => {
     const { uidvalidity } = await selectInbox(client);
 
     // Handle UIDVALIDITY change
-    const uidvalidityReset = await handleUidvalidityChange(supabase, userId, storedUidvalidity, uidvalidity, activeMailboxId);
+    const uidvalidityReset = await handleUidvalidityChange(
+      supabase,
+      userId,
+      storedUidvalidity,
+      uidvalidity,
+      activeMailboxId,
+    );
     if (uidvalidityReset === 0 && storedUidvalidity !== null && storedUidvalidity !== uidvalidity) {
       lastUid = 0;
       storedUidvalidity = uidvalidity;
@@ -164,13 +172,11 @@ Deno.serve(async (req) => {
     const batch = await fetchUidBatch(imapExec, lastUid, unreadOnly);
     const { uids, remainingCount, hasMore } = batch;
 
-
     const messages: Record<string, unknown>[] = [];
     let maxUid = lastUid;
 
     // ── Process each UID ──
     for (const uid of uids) {
-
       // Skip if already in DB
       if (await skipDuplicateUid(supabase, userId, uid, activeMailboxId)) {
         maxUid = uid;
@@ -240,24 +246,36 @@ Deno.serve(async (req) => {
     // EdgeRuntime.waitUntil per non bruciare il budget CPU della request.
     // La response torna subito; il lavoro continua in background.
     const postSync = (async () => {
-      try { await applyEmailRules(supabase, supabaseUrl, serviceRoleKey, userId, messages); } catch { /* intentionally empty */ }
-      try { await classifyInboundEmails(supabaseUrl, serviceRoleKey, userId, messages); } catch { /* intentionally empty */ }
+      try {
+        await applyEmailRules(supabase, supabaseUrl, serviceRoleKey, userId, messages);
+      } catch {
+        /* intentionally empty */
+      }
+      try {
+        await classifyInboundEmails(supabaseUrl, serviceRoleKey, userId, messages);
+      } catch {
+        /* intentionally empty */
+      }
       try {
         const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
         if (enq.enqueued > 0) {
-          console.log(JSON.stringify({
-            fn: "check-inbox",
-            step: "enrichment_enqueue",
-            enqueued: enq.enqueued,
-            skipped: enq.skipped,
-          }));
+          console.log(
+            JSON.stringify({
+              fn: "check-inbox",
+              step: "enrichment_enqueue",
+              enqueued: enq.enqueued,
+              skipped: enq.skipped,
+            }),
+          );
         }
       } catch (enqErr: unknown) {
         console.warn("enrichment_enqueue skipped:", extractErrorMessage(enqErr));
       }
     })();
     // deno-lint-ignore no-explicit-any
-    const edgeRt = (globalThis as typeof globalThis & { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime;
+    const edgeRt = (
+      globalThis as typeof globalThis & { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }
+    ).EdgeRuntime;
     if (edgeRt && typeof edgeRt.waitUntil === "function") {
       edgeRt.waitUntil(postSync);
     }

@@ -25,11 +25,13 @@ export function useWorkspaceDocuments() {
 
       const signedUrl = await createWorkspaceDocSignedUrl(path, 60 * 60 * 24 * 365);
 
-      const data = await toRecordOrNull(createWorkspaceDoc({
+      const data = await toRecordOrNull(
+        createWorkspaceDoc({
           file_name: file.name,
           file_url: signedUrl || path,
           file_size: file.size,
-        }));
+        }),
+      );
 
       const doc: WorkspaceDoc = {
         id: String(data?.id ?? ""),
@@ -41,7 +43,11 @@ export function useWorkspaceDocuments() {
       toast({ title: "Documento caricato", description: file.name });
       return doc;
     } catch (err: unknown) {
-      toast({ title: "Errore upload", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+      toast({
+        title: "Errore upload",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
       return null;
     } finally {
       setUploading(false);

@@ -17,9 +17,7 @@ const ClosingSection = () => (
         <p className="text-xl text-white/40 max-w-xl mx-auto">
           WCA Network Navigator — dove l'intelligenza artificiale incontra il commercio internazionale.
         </p>
-        <div className="pt-8 text-white/20 text-sm">
-          Built with ❤️ and AI · 2026
-        </div>
+        <div className="pt-8 text-white/20 text-sm">Built with ❤️ and AI · 2026</div>
       </div>
     </div>
   </SectionWrapper>

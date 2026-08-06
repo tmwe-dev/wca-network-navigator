@@ -20,8 +20,8 @@ throw new Error(err.error || `HTTP ${res.status}`);
 
 I chiamanti dovevano fare regex su `err.message` per capire se si
 trattava di 401, 429 o errore di rete. Vol. II §5.3 vieta esplicitamente
-questo pattern: *"Il client non deve mai dover analizzare stringhe per
-capire cosa sia successo: deve poter agire in base al codice di errore."*
+questo pattern: _"Il client non deve mai dover analizzare stringhe per
+capire cosa sia successo: deve poter agire in base al codice di errore."_
 
 Vol. II §4.4 categorizza ogni errore in tre classi (errore utente,
 errore sistema, errore imprevisto) ma senza un tipo concreto questa
@@ -84,8 +84,8 @@ stati migrati per lanciare `ApiError`. Il helper privato `assertOk` di
 
 ## Stato di adozione
 
-| Modulo | Migrato a ApiError |
-|---|---|
-| `src/lib/api/wcaAppApi.ts` | ✅ (14 endpoint via `assertOk`) |
-| `src/lib/checkInbox.ts` | ✅ |
-| `src/lib/api/wcaScraper.ts` | facade — indiretto |
+| Modulo                      | Migrato a ApiError              |
+| --------------------------- | ------------------------------- |
+| `src/lib/api/wcaAppApi.ts`  | ✅ (14 endpoint via `assertOk`) |
+| `src/lib/checkInbox.ts`     | ✅                              |
+| `src/lib/api/wcaScraper.ts` | facade — indiretto              |

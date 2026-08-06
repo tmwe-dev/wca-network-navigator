@@ -39,7 +39,10 @@ export function useCurrentOperator() {
     // Scoped per user.id (vedi useOperators).
     queryKey: [...queryKeys.operators.current, userId],
     queryFn: async () => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return null;
       return findOperatorByUserId(user.id);
     },

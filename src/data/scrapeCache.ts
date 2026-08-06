@@ -10,10 +10,7 @@ export interface ScrapeCacheEntry {
 }
 
 export async function getScrapeCacheEntry(url: string): Promise<ScrapeCacheEntry | null> {
-  const { data } = await supabase.from("scrape_cache")
-    .select("payload, scraped_at")
-    .eq("url", url)
-    .maybeSingle();
+  const { data } = await supabase.from("scrape_cache").select("payload, scraped_at").eq("url", url).maybeSingle();
   if (!data) return null;
   return { payload: asJsonObject(data.payload), scraped_at: data.scraped_at };
 }

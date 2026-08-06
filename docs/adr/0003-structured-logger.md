@@ -6,9 +6,9 @@
 
 ## Contesto
 
-Vol. II §4.5 prescrive: *"Ogni operazione significativa del sistema deve
+Vol. II §4.5 prescrive: _"Ogni operazione significativa del sistema deve
 produrre un record nel log. Il log deve essere strutturato, correlabile,
-e inviato a un sistema centralizzato."*
+e inviato a un sistema centralizzato."_
 
 Prima di questa decisione il codebase usava `console.log/warn/error`
 sparso in dozzine di file, con messaggi testuali non ricercabili e

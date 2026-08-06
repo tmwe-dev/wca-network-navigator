@@ -10,18 +10,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Layers, LogOut, Search, X } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FULL_NAV_ITEMS, macroAreaGroups } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
-import {
-  SECONDARY_NAV,
-  findSecondaryNavGroup,
-} from "@/v2/navigation/registry";
+import { SECONDARY_NAV, findSecondaryNavGroup } from "@/v2/navigation/registry";
 import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 import { EXPANDABLE_MAIN_NAV, sectionRoot } from "./navMenuConfig";
 
@@ -38,10 +31,12 @@ const MAIN_PATHS = new Set(FULL_NAV_ITEMS.map((i) => i.path));
 const DEV_PAGE_GROUPS = SECONDARY_NAV.map((g) => ({
   ...g,
   items: (g.items ?? []).filter((it) => !MAIN_PATHS.has(it.path)),
-  subGroups: (g.subGroups ?? []).map((sg) => ({
-    ...sg,
-    items: sg.items.filter((it) => !MAIN_PATHS.has(it.path)),
-  })).filter((sg) => sg.items.length > 0),
+  subGroups: (g.subGroups ?? [])
+    .map((sg) => ({
+      ...sg,
+      items: sg.items.filter((it) => !MAIN_PATHS.has(it.path)),
+    }))
+    .filter((sg) => sg.items.length > 0),
 })).filter((g) => (g.items?.length ?? 0) > 0 || (g.subGroups?.length ?? 0) > 0);
 
 interface NavMenuPopoverProps {
@@ -84,10 +79,7 @@ export function NavMenuPopover({
   };
 
   const activeRoot = currentPath ? sectionRoot(currentPath) : null;
-  const activeGroupTitle = React.useMemo(
-    () => findSecondaryNavGroup(currentPath ?? null),
-    [currentPath],
-  );
+  const activeGroupTitle = React.useMemo(() => findSecondaryNavGroup(currentPath ?? null), [currentPath]);
   const isInDev = activeGroupTitle != null;
   const [openGroup, setOpenGroup] = React.useState<string | null>(activeGroupTitle);
   const [expandedMain, setExpandedMain] = React.useState<Record<string, boolean>>({});
@@ -117,9 +109,7 @@ export function NavMenuPopover({
     const out: SearchEntry[] = [];
     for (const item of FULL_NAV_ITEMS) {
       const translated = t(item.labelKey);
-      const label = translated === item.labelKey
-        ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
-        : translated;
+      const label = translated === item.labelKey ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ") : translated;
       out.push({ label, path: item.path, trail: label });
       const sub = EXPANDABLE_MAIN_NAV[item.path];
       if (sub) {
@@ -231,235 +221,243 @@ export function NavMenuPopover({
             </div>
           )}
           {!q && (
-          <>
-          {macroAreaGroups.map((group) => (
-            <div key={group.key} className="flex flex-col">
-              <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {group.label}
-              </div>
-              {group.items.map((item) => {
-              const isActive = sectionRoot(item.path) === activeRoot;
-              const translated = t(item.labelKey);
-              const label =
-                translated === item.labelKey
-                  ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
-                  : translated;
-              const count = badgeForPath(badgeCounts, item.path);
-              const expandable = EXPANDABLE_MAIN_NAV[item.path];
-              if (expandable && expandable.length > 0) {
-                const isOpen = expandedMain[item.path] ?? false;
-                const subOpen = openSubInMain[item.path] ?? null;
-                return (
-                  <div key={item.path}>
-                     <button
-                       type="button"
-                       aria-expanded={isOpen}
-                       onClick={() =>
-                         setExpandedMain((prev) => ({ ...prev, [item.path]: !isOpen }))
-                       }
-                       className={
-                         "flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left capitalize border-l-2 " +
-                         (isActive || isOpen
-                           ? "bg-primary/15 text-primary border-primary"
-                           : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
-                       }
-                     >
-                       <span className={isActive || isOpen ? "text-primary" : "text-primary"}>{item.icon}</span>
-                      <span className="flex-1">{label}</span>
-                      {isOpen ? (
-                        <ChevronDown className="h-4 w-4 opacity-60" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 opacity-60" />
-                      )}
-                    </button>
-                    {isOpen && (
-                      <div className="mt-1 space-y-0.5 pb-1 pl-2 ml-3 border-l border-primary/20">
-                        <button
-                          type="button"
-                          onClick={() => handleSelect(item.path)}
-                          className="flex w-full items-center px-3 py-1.5 rounded-md text-xs text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground"
-                        >
-                          ↳ Apri pagina
-                        </button>
-                        {expandable.map((group) => {
-                          const isGroupOpen = subOpen === group.title;
-                          return (
-                            <div key={group.title}>
+            <>
+              {macroAreaGroups.map((group) => (
+                <div key={group.key} className="flex flex-col">
+                  <div className="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {group.label}
+                  </div>
+                  {group.items.map((item) => {
+                    const isActive = sectionRoot(item.path) === activeRoot;
+                    const translated = t(item.labelKey);
+                    const label =
+                      translated === item.labelKey
+                        ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
+                        : translated;
+                    const count = badgeForPath(badgeCounts, item.path);
+                    const expandable = EXPANDABLE_MAIN_NAV[item.path];
+                    if (expandable && expandable.length > 0) {
+                      const isOpen = expandedMain[item.path] ?? false;
+                      const subOpen = openSubInMain[item.path] ?? null;
+                      return (
+                        <div key={item.path}>
+                          <button
+                            type="button"
+                            aria-expanded={isOpen}
+                            onClick={() => setExpandedMain((prev) => ({ ...prev, [item.path]: !isOpen }))}
+                            className={
+                              "flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left capitalize border-l-2 " +
+                              (isActive || isOpen
+                                ? "bg-primary/15 text-primary border-primary"
+                                : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
+                            }
+                          >
+                            <span className={isActive || isOpen ? "text-primary" : "text-primary"}>{item.icon}</span>
+                            <span className="flex-1">{label}</span>
+                            {isOpen ? (
+                              <ChevronDown className="h-4 w-4 opacity-60" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 opacity-60" />
+                            )}
+                          </button>
+                          {isOpen && (
+                            <div className="mt-1 space-y-0.5 pb-1 pl-2 ml-3 border-l border-primary/20">
                               <button
                                 type="button"
-                                aria-expanded={isGroupOpen}
-                                onClick={() =>
-                                  setOpenSubInMain((prev) => ({
-                                    ...prev,
-                                    [item.path]: isGroupOpen ? null : group.title,
-                                  }))
-                                }
-                                className={
-                                  "flex w-full items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-left transition-colors " +
-                                  (isGroupOpen
-                                    ? "bg-accent/15 text-accent-foreground"
-                                    : "text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground")
-                                }
+                                onClick={() => handleSelect(item.path)}
+                                className="flex w-full items-center px-3 py-1.5 rounded-md text-xs text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground"
                               >
-                                {isGroupOpen ? (
-                                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                                ) : (
-                                  <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-                                )}
-                                <span className="flex-1">{group.title}</span>
+                                ↳ Apri pagina
                               </button>
-                              {isGroupOpen && (
-                                <div className="ml-5 mt-0.5 mb-1 flex flex-col border-l border-accent/30 pl-2">
-                                  {(group.items ?? []).map((sub) => (
-                                    <button
-                                      key={sub.path}
-                                      type="button"
-                                      onClick={() => handleSelect(sub.path)}
-                                      className="flex items-center px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground text-left"
-                                    >
-                                      {sub.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-              return (
-                <button
-                  key={item.path}
-                  role="menuitem"
-                  aria-current={isActive ? "page" : undefined}
-                  onClick={() => handleSelect(item.path)}
-                  className={
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left capitalize border-l-2 " +
-                    (isActive
-                      ? "bg-primary/15 text-primary border-primary"
-                      : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
-                  }
-                >
-                  <span className={isActive ? "text-primary" : "text-primary"}>{item.icon}</span>
-                  <span className="flex-1">{label}</span>
-                  {count > 0 && (
-                    <span
-                      className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-primary/20 text-primary border border-primary/30"
-                      title={`${count} da gestire`}
-                      aria-label={`${count} elementi da gestire`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-              })}
-            </div>
-          ))}
-          <div className="my-1 border-t border-white/10" />
-          <button
-            type="button"
-            onClick={() => setDevOpen((v) => !v)}
-            aria-expanded={devOpen}
-            className={
-              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left border-l-2 " +
-              (isInDev || devOpen
-                ? "bg-primary/15 text-primary border-primary"
-                : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
-            }
-          >
-            <span className={isInDev || devOpen ? "text-primary" : "text-primary"}><Layers className="h-4 w-4" /></span>
-            <span className="flex-1">Development</span>
-            {devOpen ? <ChevronDown className="h-4 w-4 opacity-60" /> : <ChevronRight className="h-4 w-4 opacity-60" />}
-          </button>
-          {devOpen && (
-            <div className="mt-1 space-y-0.5 pb-1 pl-2 ml-3 border-l border-primary/20">
-              <button
-                type="button"
-                onClick={() => handleSelect("/v2/settings?tab=development")}
-                className="flex w-full items-center px-3 py-1.5 rounded-md text-xs text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground"
-              >
-                ↳ Apri pagina
-              </button>
-              {DEV_PAGE_GROUPS.map((group) => {
-                const isGroupOpen = openGroup === group.title;
-                const isGroupActive = activeGroupTitle === group.title;
-                return (
-                  <div key={group.title}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenGroup(isGroupOpen ? null : group.title)}
-                      aria-expanded={isGroupOpen}
-                      className={
-                        "flex w-full items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-left " +
-                        (isGroupActive || isGroupOpen
-                          ? "bg-accent/15 text-accent-foreground"
-                          : "text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground")
-                      }
-                    >
-                      {isGroupOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-60" /> : <ChevronRight className="h-3.5 w-3.5 opacity-60" />}
-                      <span className="flex-1">{group.title}</span>
-                    </button>
-                    {isGroupOpen && (
-                      <div className="ml-5 mt-0.5 mb-1 flex flex-col border-l border-accent/30 pl-2">
-                        {(group.items ?? []).map((item) => {
-                          const isActive = currentPath === item.path;
-                          return (
-                            <button
-                              key={item.path}
-                              type="button"
-                              onClick={() => handleSelect(item.path)}
-                              aria-current={isActive ? "page" : undefined}
-                              className={
-                                "flex items-center px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
-                                (isActive
-                                  ? "bg-primary/15 text-primary font-semibold"
-                                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground")
-                              }
-                            >
-                              {item.label}
-                            </button>
-                          );
-                        })}
-                        {(group.subGroups ?? []).map((sg) => (
-                          <div key={sg.title} className="mt-1">
-                            <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              {sg.title}
-                            </div>
-                            <div className="ml-2 flex flex-col border-l border-white/10 pl-2">
-                              {sg.items.map((item) => {
-                                const isActive = currentPath === item.path;
+                              {expandable.map((group) => {
+                                const isGroupOpen = subOpen === group.title;
                                 return (
-                                  <button
-                                    key={item.path}
-                                    type="button"
-                                    onClick={() => handleSelect(item.path)}
-                                    aria-current={isActive ? "page" : undefined}
-                                    className={
-                                      "flex items-center px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
-                                      (isActive
-                                        ? "bg-primary/15 text-primary font-semibold"
-                                        : "text-foreground hover:bg-white/5 hover:text-foreground")
-                                    }
-                                  >
-                                    {item.label}
-                                  </button>
+                                  <div key={group.title}>
+                                    <button
+                                      type="button"
+                                      aria-expanded={isGroupOpen}
+                                      onClick={() =>
+                                        setOpenSubInMain((prev) => ({
+                                          ...prev,
+                                          [item.path]: isGroupOpen ? null : group.title,
+                                        }))
+                                      }
+                                      className={
+                                        "flex w-full items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-left transition-colors " +
+                                        (isGroupOpen
+                                          ? "bg-accent/15 text-accent-foreground"
+                                          : "text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground")
+                                      }
+                                    >
+                                      {isGroupOpen ? (
+                                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                                      ) : (
+                                        <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+                                      )}
+                                      <span className="flex-1">{group.title}</span>
+                                    </button>
+                                    {isGroupOpen && (
+                                      <div className="ml-5 mt-0.5 mb-1 flex flex-col border-l border-accent/30 pl-2">
+                                        {(group.items ?? []).map((sub) => (
+                                          <button
+                                            key={sub.path}
+                                            type="button"
+                                            onClick={() => handleSelect(sub.path)}
+                                            className="flex items-center px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground text-left"
+                                          >
+                                            {sub.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 );
                               })}
                             </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return (
+                      <button
+                        key={item.path}
+                        role="menuitem"
+                        aria-current={isActive ? "page" : undefined}
+                        onClick={() => handleSelect(item.path)}
+                        className={
+                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left capitalize border-l-2 " +
+                          (isActive
+                            ? "bg-primary/15 text-primary border-primary"
+                            : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
+                        }
+                      >
+                        <span className={isActive ? "text-primary" : "text-primary"}>{item.icon}</span>
+                        <span className="flex-1">{label}</span>
+                        {count > 0 && (
+                          <span
+                            className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-primary/20 text-primary border border-primary/30"
+                            title={`${count} da gestire`}
+                            aria-label={`${count} elementi da gestire`}
+                          >
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+              <div className="my-1 border-t border-white/10" />
+              <button
+                type="button"
+                onClick={() => setDevOpen((v) => !v)}
+                aria-expanded={devOpen}
+                className={
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left border-l-2 " +
+                  (isInDev || devOpen
+                    ? "bg-primary/15 text-primary border-primary"
+                    : "border-transparent text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/60")
+                }
+              >
+                <span className={isInDev || devOpen ? "text-primary" : "text-primary"}>
+                  <Layers className="h-4 w-4" />
+                </span>
+                <span className="flex-1">Development</span>
+                {devOpen ? (
+                  <ChevronDown className="h-4 w-4 opacity-60" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 opacity-60" />
+                )}
+              </button>
+              {devOpen && (
+                <div className="mt-1 space-y-0.5 pb-1 pl-2 ml-3 border-l border-primary/20">
+                  <button
+                    type="button"
+                    onClick={() => handleSelect("/v2/settings?tab=development")}
+                    className="flex w-full items-center px-3 py-1.5 rounded-md text-xs text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground"
+                  >
+                    ↳ Apri pagina
+                  </button>
+                  {DEV_PAGE_GROUPS.map((group) => {
+                    const isGroupOpen = openGroup === group.title;
+                    const isGroupActive = activeGroupTitle === group.title;
+                    return (
+                      <div key={group.title}>
+                        <button
+                          type="button"
+                          onClick={() => setOpenGroup(isGroupOpen ? null : group.title)}
+                          aria-expanded={isGroupOpen}
+                          className={
+                            "flex w-full items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-left " +
+                            (isGroupActive || isGroupOpen
+                              ? "bg-accent/15 text-accent-foreground"
+                              : "text-accent-foreground hover:bg-accent/10 hover:text-accent-foreground")
+                          }
+                        >
+                          {isGroupOpen ? (
+                            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                          ) : (
+                            <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+                          )}
+                          <span className="flex-1">{group.title}</span>
+                        </button>
+                        {isGroupOpen && (
+                          <div className="ml-5 mt-0.5 mb-1 flex flex-col border-l border-accent/30 pl-2">
+                            {(group.items ?? []).map((item) => {
+                              const isActive = currentPath === item.path;
+                              return (
+                                <button
+                                  key={item.path}
+                                  type="button"
+                                  onClick={() => handleSelect(item.path)}
+                                  aria-current={isActive ? "page" : undefined}
+                                  className={
+                                    "flex items-center px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
+                                    (isActive
+                                      ? "bg-primary/15 text-primary font-semibold"
+                                      : "text-muted-foreground hover:bg-muted/40 hover:text-foreground")
+                                  }
+                                >
+                                  {item.label}
+                                </button>
+                              );
+                            })}
+                            {(group.subGroups ?? []).map((sg) => (
+                              <div key={sg.title} className="mt-1">
+                                <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  {sg.title}
+                                </div>
+                                <div className="ml-2 flex flex-col border-l border-white/10 pl-2">
+                                  {sg.items.map((item) => {
+                                    const isActive = currentPath === item.path;
+                                    return (
+                                      <button
+                                        key={item.path}
+                                        type="button"
+                                        onClick={() => handleSelect(item.path)}
+                                        aria-current={isActive ? "page" : undefined}
+                                        className={
+                                          "flex items-center px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
+                                          (isActive
+                                            ? "bg-primary/15 text-primary font-semibold"
+                                            : "text-foreground hover:bg-white/5 hover:text-foreground")
+                                        }
+                                      >
+                                        {item.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          </>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
           <div className="my-1 border-t border-white/10" />
           <div className="px-1">
@@ -475,7 +473,9 @@ export function NavMenuPopover({
             }}
             className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left text-destructive hover:bg-destructive/10"
           >
-            <span><LogOut className="h-4 w-4" /></span>
+            <span>
+              <LogOut className="h-4 w-4" />
+            </span>
             <span>Logout</span>
           </button>
         </div>

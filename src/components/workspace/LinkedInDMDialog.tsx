@@ -28,7 +28,15 @@ interface LinkedInDMDialogProps {
 }
 
 export default function LinkedInDMDialog({
-  open, onOpenChange, profileUrl, contactName, companyName, contactId, partnerId, contactEmail, initialMessage,
+  open,
+  onOpenChange,
+  profileUrl,
+  contactName,
+  companyName,
+  contactId,
+  partnerId,
+  contactEmail,
+  initialMessage,
 }: LinkedInDMDialogProps) {
   const [message, setMessage] = useState(initialMessage || "");
   const [url, setUrl] = useState(profileUrl || "");
@@ -54,12 +62,17 @@ export default function LinkedInDMDialog({
     try {
       if (partnerId && contactId) {
         const existing = await findSocialLinksByPartnerIds([partnerId], "linkedin");
-        if (!existing.some(l => l.contact_id === contactId && l.url === newUrl)) {
-          await insertPartnerSocialLink({ partner_id: partnerId, contact_id: contactId, platform: "linkedin", url: newUrl });
+        if (!existing.some((l) => l.contact_id === contactId && l.url === newUrl)) {
+          await insertPartnerSocialLink({
+            partner_id: partnerId,
+            contact_id: contactId,
+            platform: "linkedin",
+            url: newUrl,
+          });
         }
       } else if (partnerId) {
         const existing = await findSocialLinksByPartnerIds([partnerId], "linkedin");
-        if (!existing.some(l => l.url === newUrl)) {
+        if (!existing.some((l) => l.url === newUrl)) {
           await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: newUrl });
         }
       } else if (contactId) {
@@ -100,7 +113,11 @@ export default function LinkedInDMDialog({
   const handleSend = async () => {
     if (!message.trim()) return;
     if (!urlValid) {
-      toast({ title: "URL profilo LinkedIn non valido", description: "Formato richiesto: linkedin.com/in/...", variant: "destructive" });
+      toast({
+        title: "URL profilo LinkedIn non valido",
+        description: "Formato richiesto: linkedin.com/in/...",
+        variant: "destructive",
+      });
       return;
     }
     // P6 — Auth check obbligatorio: se l'utente non è loggato su LinkedIn,
@@ -166,7 +183,7 @@ export default function LinkedInDMDialog({
         <div className="space-y-3">
           <div className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{contactName || companyName}</span>
-            {contactName && companyName && (<span> · {companyName}</span>)}
+            {contactName && companyName && <span> · {companyName}</span>}
           </div>
 
           {!isAvailable && (
@@ -190,7 +207,10 @@ export default function LinkedInDMDialog({
                 )}
                 {!hadInitialUrl && (
                   <Button
-                    type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px] gap-1"
                     onClick={handleLiveSearch}
                     disabled={lookup.isSearching}
                     title="Cerca profilo su Google/LinkedIn"
@@ -201,7 +221,10 @@ export default function LinkedInDMDialog({
                 )}
                 {urlValid && (
                   <Button
-                    type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px] gap-1"
                     onClick={() => window.open(normalized!, "_blank")}
                     title="Apri profilo in nuova scheda"
                   >
@@ -241,7 +264,9 @@ export default function LinkedInDMDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">
+            Annulla
+          </Button>
           <Button
             onClick={handleSend}
             disabled={!message.trim() || sending || !isAvailable || !urlValid}

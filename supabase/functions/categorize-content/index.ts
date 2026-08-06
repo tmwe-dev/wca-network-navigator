@@ -4,7 +4,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -20,48 +19,50 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ category: "altro" }), {
         headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const categories = type === "proposal"
-      ? ["proposta_servizi", "partnership", "altro"]
-      : ["primo_contatto", "follow_up", "richiesta", "partnership", "altro"];
+    const categories =
+      type === "proposal"
+        ? ["proposta_servizi", "partnership", "altro"]
+        : ["primo_contatto", "follow_up", "richiesta", "partnership", "altro"];
 
     const response = await aiFetch({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `Sei un classificatore. Dato un elemento con nome e descrizione, rispondi SOLO con una delle seguenti categorie: ${categories.join(", ")}. Nient'altro.`,
-          },
-          {
-            role: "user",
-            content: `Nome: ${name}\nDescrizione: ${text}`,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "classify",
-              description: "Classifica l'elemento nella categoria corretta",
-              parameters: {
-                type: "object",
-                properties: {
-                  category: { type: "string", enum: categories },
-                },
-                required: ["category"],
-                additionalProperties: false,
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        {
+          role: "system",
+          content: `Sei un classificatore. Dato un elemento con nome e descrizione, rispondi SOLO con una delle seguenti categorie: ${categories.join(", ")}. Nient'altro.`,
+        },
+        {
+          role: "user",
+          content: `Nome: ${name}\nDescrizione: ${text}`,
+        },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "classify",
+            description: "Classifica l'elemento nella categoria corretta",
+            parameters: {
+              type: "object",
+              properties: {
+                category: { type: "string", enum: categories },
               },
+              required: ["category"],
+              additionalProperties: false,
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "classify" } },
-      });
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "classify" } },
+    });
 
     if (!response.ok) {
       console.error("AI gateway error:", response.status);

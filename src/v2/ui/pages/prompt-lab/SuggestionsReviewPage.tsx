@@ -102,9 +102,7 @@ function SuggestionCard({
             </span>
           </div>
           <h3 className="text-sm font-semibold mt-1">{item.title}</h3>
-          {item.reasoning && (
-            <p className="text-[11px] text-muted-foreground mt-0.5 italic">{item.reasoning}</p>
-          )}
+          {item.reasoning && <p className="text-[11px] text-muted-foreground mt-0.5 italic">{item.reasoning}</p>}
           {item.target_block_id && (
             <p className="text-[10px] mt-0.5">
               Target: <code className="bg-muted rounded px-1">{item.target_block_id}</code>
@@ -132,9 +130,7 @@ function SuggestionCard({
             onChange={(e) => setEditContent(e.target.value)}
             className="text-[11px] font-mono min-h-[100px]"
           />
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Modifica il contenuto, poi clicca "Salva e approva".
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">Modifica il contenuto, poi clicca "Salva e approva".</p>
         </div>
       )}
 
@@ -153,21 +149,11 @@ function SuggestionCard({
       <div className="flex items-center gap-2">
         {mode === "view" && (
           <>
-            <Button
-              size="sm"
-              className="h-8 gap-1.5 px-3"
-              disabled={busy}
-              onClick={handleApprove}
-            >
+            <Button size="sm" className="h-8 gap-1.5 px-3" disabled={busy} onClick={handleApprove}>
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
               Approva
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 px-3"
-              onClick={() => setMode("edit")}
-            >
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3" onClick={() => setMode("edit")}>
               <Edit3 className="h-3 w-3" />
               Modifica
             </Button>
@@ -189,7 +175,15 @@ function SuggestionCard({
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
               Salva e approva
             </Button>
-            <Button size="sm" variant="ghost" className="h-8" onClick={() => { setMode("view"); setEditContent(item.content); }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8"
+              onClick={() => {
+                setMode("view");
+                setEditContent(item.content);
+              }}
+            >
               Annulla
             </Button>
           </>
@@ -214,8 +208,10 @@ function SuggestionCard({
 export default function SuggestionsReviewPage() {
   const { user } = useAuth();
   const userId = user?.id ?? "";
-  const { pending, approved, counts, loading, approve, reject, editApprove, refresh } =
-    useSuggestedImprovements(userId, true);
+  const { pending, approved, counts, loading, approve, reject, editApprove, refresh } = useSuggestedImprovements(
+    userId,
+    true,
+  );
   const {
     state: harmonizeState,
     loadRunForReview,
@@ -245,7 +241,9 @@ export default function SuggestionsReviewPage() {
       const data = await findActiveAgentVoiceByName("Gordon");
       if (!cancelled && data) setGordon({ id: data.id, voiceId: data.voiceId });
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const refreshRuns = useCallback(async () => {
@@ -301,13 +299,23 @@ export default function SuggestionsReviewPage() {
             </Badge>
           )}
           {counts.applied > 0 && (
-            <Badge variant="outline" className="ml-1 bg-success/10 text-success border-success/30" title="Già applicati al sistema">
+            <Badge
+              variant="outline"
+              className="ml-1 bg-success/10 text-success border-success/30"
+              title="Già applicati al sistema"
+            >
               {counts.applied} applicati
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-7 gap-1" onClick={handleRefreshAll} disabled={loading || runsLoading}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1"
+            onClick={handleRefreshAll}
+            disabled={loading || runsLoading}
+          >
             {loading || runsLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
             Aggiorna
           </Button>
@@ -329,20 +337,27 @@ export default function SuggestionsReviewPage() {
                 <div>
                   <h2 className="text-sm font-semibold">Proposte di miglioramento generate dall'AI</h2>
                   <p className="text-xs text-muted-foreground">
-                    Sessione del {harmonizeState.runId ? new Date(runs.find((r) => r.id === harmonizeState.runId)?.created_at ?? Date.now()).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "—"}
-                    {" · "}{harmonizeState.proposals.length} proposte totali
+                    Sessione del{" "}
+                    {harmonizeState.runId
+                      ? new Date(
+                          runs.find((r) => r.id === harmonizeState.runId)?.created_at ?? Date.now(),
+                        ).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })
+                      : "—"}
+                    {" · "}
+                    {harmonizeState.proposals.length} proposte totali
                   </p>
                   {/* Barra di progresso live: gestite vs totali */}
                   <div className="mt-2 flex items-center gap-2 max-w-md">
                     <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
                       <div
                         className="h-full bg-primary transition-all duration-300"
-                        style={{ width: `${Math.min(100, Math.round((harmonizeState.executedCount / Math.max(1, harmonizeState.proposals.length)) * 100))}%` }}
+                        style={{
+                          width: `${Math.min(100, Math.round((harmonizeState.executedCount / Math.max(1, harmonizeState.proposals.length)) * 100))}%`,
+                        }}
                       />
                     </div>
                     <span className="text-[11px] font-medium text-foreground whitespace-nowrap">
-                      {harmonizeState.executedCount} di {harmonizeState.proposals.length} gestite
-                      {" "}
+                      {harmonizeState.executedCount} di {harmonizeState.proposals.length} gestite{" "}
                       <span className="text-muted-foreground">
                         ({harmonizeState.proposals.length - harmonizeState.executedCount} rimanenti)
                       </span>
@@ -389,11 +404,26 @@ export default function SuggestionsReviewPage() {
                   Come leggere questa pagina
                 </div>
                 <ul className="space-y-1 text-muted-foreground leading-snug pl-5 list-disc">
-                  <li><span className="font-medium text-foreground">Proposta</span>: una modifica suggerita dall'AI a un prompt, una regola o una scheda KB.</li>
-                  <li><span className="font-medium text-success">Sicura ✓</span> = modifica di solo testo, basso impatto, reversibile. Si può approvare in massa.</li>
-                  <li><span className="font-medium text-warning">Da rivedere</span> = inserimenti nuovi, eliminazioni, agenti, o impatto alto. Vanno lette una a una.</li>
-                  <li><span className="font-medium text-foreground">"Approva tutte le sicure"</span>: spunta solo le proposte verdi. Quelle gialle restano da approvare a mano.</li>
-                  <li>Per applicare davvero le modifiche selezionate al database, premi <span className="font-medium text-foreground">"Salva nel DB"</span> in basso.</li>
+                  <li>
+                    <span className="font-medium text-foreground">Proposta</span>: una modifica suggerita dall'AI a un
+                    prompt, una regola o una scheda KB.
+                  </li>
+                  <li>
+                    <span className="font-medium text-success">Sicura ✓</span> = modifica di solo testo, basso impatto,
+                    reversibile. Si può approvare in massa.
+                  </li>
+                  <li>
+                    <span className="font-medium text-warning">Da rivedere</span> = inserimenti nuovi, eliminazioni,
+                    agenti, o impatto alto. Vanno lette una a una.
+                  </li>
+                  <li>
+                    <span className="font-medium text-foreground">"Approva tutte le sicure"</span>: spunta solo le
+                    proposte verdi. Quelle gialle restano da approvare a mano.
+                  </li>
+                  <li>
+                    Per applicare davvero le modifiche selezionate al database, premi{" "}
+                    <span className="font-medium text-foreground">"Salva nel DB"</span> in basso.
+                  </li>
                 </ul>
               </div>
 
@@ -407,7 +437,10 @@ export default function SuggestionsReviewPage() {
                   <div className="px-3 py-2 space-y-1">
                     {runs.map((run) => {
                       const isCurrent = run.id === harmonizeState.runId;
-                      const when = new Date(run.created_at).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
+                      const when = new Date(run.created_at).toLocaleString("it-IT", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      });
                       return (
                         <button
                           key={run.id}
@@ -455,9 +488,15 @@ export default function SuggestionsReviewPage() {
                 />
               )}
               <div className="flex items-center justify-between border-t pt-3">
-                <span className="text-xs text-muted-foreground">{harmonizeState.approvedIds.size} proposte selezionate</span>
+                <span className="text-xs text-muted-foreground">
+                  {harmonizeState.approvedIds.size} proposte selezionate
+                </span>
                 <Button onClick={execute} disabled={harmonizeState.approvedIds.size === 0 || harmonizeState.loading}>
-                  {harmonizeState.loading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Check className="mr-1 h-3 w-3" />}
+                  {harmonizeState.loading ? (
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Check className="mr-1 h-3 w-3" />
+                  )}
                   Salva nel DB
                 </Button>
               </div>
@@ -465,16 +504,20 @@ export default function SuggestionsReviewPage() {
           )}
 
           {/* Info box */}
-          {pending.length === 0 && approved.length === 0 && harmonizeState.proposals.length === 0 && !loading && !runsLoading && (
-            <div className="rounded-lg border bg-muted/20 p-6 text-center">
-              <BookmarkPlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm font-medium">Nessun suggerimento in attesa</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                I suggerimenti arrivano quando gli utenti interagiscono con gli agenti AI
-                e confermano proposte di nuove regole o modifiche.
-              </p>
-            </div>
-          )}
+          {pending.length === 0 &&
+            approved.length === 0 &&
+            harmonizeState.proposals.length === 0 &&
+            !loading &&
+            !runsLoading && (
+              <div className="rounded-lg border bg-muted/20 p-6 text-center">
+                <BookmarkPlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm font-medium">Nessun suggerimento in attesa</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  I suggerimenti arrivano quando gli utenti interagiscono con gli agenti AI e confermano proposte di
+                  nuove regole o modifiche.
+                </p>
+              </div>
+            )}
 
           {/* Approved but not consumed */}
           {approved.length > 0 && (
@@ -486,8 +529,8 @@ export default function SuggestionsReviewPage() {
                 </h2>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Questi suggerimenti sono approvati ma non ancora consumati.
-                Verranno iniettati nel contesto al prossimo "Migliora tutto".
+                Questi suggerimenti sono approvati ma non ancora consumati. Verranno iniettati nel contesto al prossimo
+                "Migliora tutto".
               </p>
               {approved.map((item) => (
                 <div key={item.id} className="rounded border bg-success/5 border-success/30 p-3">
@@ -498,9 +541,7 @@ export default function SuggestionsReviewPage() {
                     </Badge>
                     <span className="text-xs font-medium">{item.title}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
-                    {item.content.slice(0, 200)}...
-                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{item.content.slice(0, 200)}...</p>
                 </div>
               ))}
             </div>

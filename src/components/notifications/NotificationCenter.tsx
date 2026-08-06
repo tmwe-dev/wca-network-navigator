@@ -4,15 +4,17 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useNotifications, useUnreadCount, useMarkAllAsRead, useDismissNotification, useMarkAsRead } from "@/hooks/useNotifications";
+import {
+  useNotifications,
+  useUnreadCount,
+  useMarkAllAsRead,
+  useDismissNotification,
+  useMarkAsRead,
+} from "@/hooks/useNotifications";
 import { NotificationItem } from "./NotificationItem";
 import type { Notification } from "@/hooks/useNotifications";
 

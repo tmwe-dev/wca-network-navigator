@@ -56,7 +56,9 @@ export function AlertConfigPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <Label htmlFor="alert-enabled" className="text-sm">Alerting attivo</Label>
+          <Label htmlFor="alert-enabled" className="text-sm">
+            Alerting attivo
+          </Label>
           <Switch id="alert-enabled" checked={enabled} onCheckedChange={setEnabled} />
         </div>
 

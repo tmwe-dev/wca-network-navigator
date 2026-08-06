@@ -33,15 +33,9 @@ export async function loadPartnerMetadata(
     isPartnerSource && quality !== "fast"
       ? supabase.from("partner_services").select("service_category").eq("partner_id", partner.id!)
       : Promise.resolve({ data: [] }),
-    supabase
-      .from("app_settings")
-      .select("key, value")
-      .like("key", "ai_%"),
+    supabase.from("app_settings").select("key, value").like("key", "ai_%"),
     isPartnerSource && quality === "premium"
-      ? supabase
-          .from("partner_social_links")
-          .select("platform, url, contact_id")
-          .eq("partner_id", partner.id!)
+      ? supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id!)
       : Promise.resolve({ data: [] }),
   ]);
 

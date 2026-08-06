@@ -8,9 +8,7 @@ const OUT = "docs/edge-functions-catalog.md";
 
 const cfgPath = "supabase/config.toml";
 const cfg = readFileSync(cfgPath, "utf8");
-const jwtOff = new Set(
-  [...cfg.matchAll(/\[functions\.([^\]]+)\][^[]*verify_jwt\s*=\s*false/g)].map((m) => m[1]),
-);
+const jwtOff = new Set([...cfg.matchAll(/\[functions\.([^\]]+)\][^[]*verify_jwt\s*=\s*false/g)].map((m) => m[1]));
 
 const entries = [];
 for (const name of readdirSync(ROOT)) {
@@ -22,12 +20,20 @@ for (const name of readdirSync(ROOT)) {
   try {
     const src = readFileSync(idx, "utf8");
     const m = src.match(/\/\*\*([\s\S]*?)\*\//);
-    if (m) firstDoc = m[1].replace(/^\s*\*\s?/gm, "").trim().split("\n").slice(0, 3).join(" ");
+    if (m)
+      firstDoc = m[1]
+        .replace(/^\s*\*\s?/gm, "")
+        .trim()
+        .split("\n")
+        .slice(0, 3)
+        .join(" ");
     if (!firstDoc) {
       const line = src.match(/\/\/\s*(.+)/);
       if (line) firstDoc = line[1];
     }
-  } catch { firstDoc = "(no index.ts)"; }
+  } catch {
+    firstDoc = "(no index.ts)";
+  }
   entries.push({ name, jwtOff: jwtOff.has(name), doc: firstDoc.slice(0, 140) });
 }
 entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -38,7 +44,7 @@ const lines = [
   `Generato automaticamente — ${new Date().toISOString().slice(0, 10)} — do NOT edit a mano.`,
   `Esegui \`node scripts/gen-edge-catalog.mjs\` per rigenerare.`,
   "",
-  `**Totale: ${entries.length} funzioni** — ${entries.filter(e => e.jwtOff).length} con \`verify_jwt=false\`.`,
+  `**Totale: ${entries.length} funzioni** — ${entries.filter((e) => e.jwtOff).length} con \`verify_jwt=false\`.`,
   "",
   "| # | Funzione | JWT | Descrizione |",
   "|---|----------|-----|-------------|",

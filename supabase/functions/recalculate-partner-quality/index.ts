@@ -30,10 +30,10 @@ Deno.serve(async (req) => {
 
   try {
     if (req.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method not allowed" }),
-        { status: 405, headers: { ...dynCors, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -80,16 +80,13 @@ Deno.serve(async (req) => {
       }
     } else {
       // Batch mode: fetch all partners
-      const { data: partners, error: listErr } = await supabase
-        .from("partners")
-        .select("id")
-        .limit(batchSize);
+      const { data: partners, error: listErr } = await supabase.from("partners").select("id").limit(batchSize);
 
       if (listErr || !partners) {
-        return new Response(
-          JSON.stringify({ error: "Failed to fetch partners" }),
-          { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Failed to fetch partners" }), {
+          status: 500,
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        });
       }
 
       const { loadAndCalculateQuality, savePartnerQuality } = await import("../_shared/partnerQualityScore.ts");
@@ -129,7 +126,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
 });

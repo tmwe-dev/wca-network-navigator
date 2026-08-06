@@ -23,7 +23,14 @@ type Props = {
 
 const ROW_HEIGHT = 64;
 
-export function DownloadedEmailList({ emails, selectedEmailId, onSelect, isRunning, isLoading = false, emailCount }: Props) {
+export function DownloadedEmailList({
+  emails,
+  selectedEmailId,
+  onSelect,
+  isRunning,
+  isLoading = false,
+  emailCount,
+}: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({

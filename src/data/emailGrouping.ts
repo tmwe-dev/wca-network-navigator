@@ -17,9 +17,7 @@ import type { Database } from "@/integrations/supabase/types";
  *  - shared   → `mailbox_id = <mailboxId>`
  * `null` (nessun filtro) quando la mailbox attiva non è ancora risolta.
  */
-export type MailboxFilter =
-  | { kind: "personal" }
-  | { kind: "shared"; mailboxId: string };
+export type MailboxFilter = { kind: "personal" } | { kind: "shared"; mailboxId: string };
 
 /** Riga "regola assegnata a un gruppo" così come letta dal DB. */
 export interface AssignedAddressRuleRow {
@@ -81,10 +79,7 @@ async function fetchAllRows<T>(
  * (il hook originale ignorava `error` e usava `data || []`).
  */
 export async function fetchSenderGroupsOrdered(): Promise<EmailSenderGroup[]> {
-  const { data } = await supabase
-    .from("email_sender_groups")
-    .select("*")
-    .order("sort_order", { ascending: true });
+  const { data } = await supabase.from("email_sender_groups").select("*").order("sort_order", { ascending: true });
   return (data || []) as EmailSenderGroup[];
 }
 
@@ -110,9 +105,7 @@ export async function fetchSenderGroupsBrief(): Promise<SenderGroupBrief[]> {
 
 /** Legge nome/colore/icona di tutti i gruppi mittente (nessun ordinamento). */
 export async function fetchSenderGroupsColorIcon(): Promise<SenderGroupBrief[]> {
-  const { data, error } = await supabase
-    .from("email_sender_groups")
-    .select("nome_gruppo, colore, icon");
+  const { data, error } = await supabase.from("email_sender_groups").select("nome_gruppo, colore, icon");
   if (error) return [];
   return (data ?? []) as SenderGroupBrief[];
 }
@@ -137,7 +130,9 @@ export async function fetchUncategorizedAddressRules(): Promise<UncategorizedAdd
   return fetchAllRows<UncategorizedAddressRuleRow>((from, to) =>
     supabase
       .from("email_address_rules")
-      .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked")
+      .select(
+        "id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked",
+      )
       .is("group_id", null)
       .is("group_name", null)
       .order("email_count", { ascending: false })
@@ -153,7 +148,9 @@ export async function fetchClassifiedAddressRules(): Promise<ClassifiedAddressRu
   return fetchAllRows<ClassifiedAddressRuleRow>((from, to) =>
     supabase
       .from("email_address_rules")
-      .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked, group_id, group_name")
+      .select(
+        "id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked, group_id, group_name",
+      )
       .or("group_id.not.is.null,group_name.not.is.null")
       .order("email_count", { ascending: false })
       .range(from, to),
@@ -198,10 +195,7 @@ export async function fetchInboundEmailSenderAddresses(params: {
  * Batching (20) e `Promise.all` restano nel hook.
  */
 export async function updateAddressRuleEmailCount(id: string, count: number): Promise<void> {
-  const { error } = await supabase
-    .from("email_address_rules")
-    .update({ email_count: count })
-    .eq("id", id);
+  const { error } = await supabase.from("email_address_rules").update({ email_count: count }).eq("id", id);
   if (error) throw error;
 }
 
@@ -249,9 +243,7 @@ export interface NewAddressRuleRow {
  * semantica errori (throw). Chunking (100) e await sequenziale restano nel hook.
  */
 export async function upsertAddressRules(rows: NewAddressRuleRow[]): Promise<void> {
-  const { error } = await supabase
-    .from("email_address_rules")
-    .upsert(rows, { onConflict: "user_id,email_address" });
+  const { error } = await supabase.from("email_address_rules").upsert(rows, { onConflict: "user_id,email_address" });
   if (error) throw error;
 }
 
@@ -287,9 +279,7 @@ export type SeedSenderGroupsResult =
  * stesso fallback re-read ordinato via `fetchSenderGroupsOrdered`.
  * Toast e set di stato restano nel hook.
  */
-export async function seedDefaultSenderGroups(
-  rows: NewSenderGroupRow[],
-): Promise<SeedSenderGroupsResult> {
+export async function seedDefaultSenderGroups(rows: NewSenderGroupRow[]): Promise<SeedSenderGroupsResult> {
   const { data: created } = await supabase
     .from("email_sender_groups")
     .upsert(rows, { onConflict: "nome_gruppo", ignoreDuplicates: true })
@@ -331,10 +321,7 @@ export async function fetchOperatorIdForUser(userId: string): Promise<string | n
 }
 
 /** Aggiorna il gruppo di una regola indirizzo esistente. */
-export async function updateAddressRuleGroupAssignment(
-  ruleId: string,
-  patch: GroupAssignmentPatch,
-): Promise<void> {
+export async function updateAddressRuleGroupAssignment(ruleId: string, patch: GroupAssignmentPatch): Promise<void> {
   await supabase.from("email_address_rules").update(patch).eq("id", ruleId);
 }
 
@@ -390,11 +377,7 @@ type SenderGroupInsert = Database["public"]["Tables"]["email_sender_groups"]["In
 
 /** Crea un nuovo gruppo mittente e ritorna la riga creata. */
 export async function createSenderGroup(row: SenderGroupInsert): Promise<EmailSenderGroup> {
-  const { data, error } = await supabase
-    .from("email_sender_groups")
-    .insert(row)
-    .select()
-    .single();
+  const { data, error } = await supabase.from("email_sender_groups").insert(row).select().single();
   if (error) throw error;
   return data as unknown as EmailSenderGroup;
 }

@@ -3,7 +3,18 @@
  * Always visible (closed by default), powered by _context_summary returned by edges.
  */
 import { useState } from "react";
-import { ChevronDown, BookOpen, History, Thermometer, Search, Users, Briefcase, Settings as SettingsIcon, CircleAlert, CircleCheck } from "lucide-react";
+import {
+  ChevronDown,
+  BookOpen,
+  History,
+  Thermometer,
+  Search,
+  Users,
+  Briefcase,
+  Settings as SettingsIcon,
+  CircleAlert,
+  CircleCheck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface OracleContextSummary {
@@ -39,15 +50,25 @@ function formatWarmth(score: number | null | undefined): string {
   return `${score}/100 · Caldo`;
 }
 
-function formatDeepSearch(status: string | undefined, ageDays: number | null | undefined): { text: string; tone: "ok" | "warn" | "muted" } {
+function formatDeepSearch(
+  status: string | undefined,
+  ageDays: number | null | undefined,
+): { text: string; tone: "ok" | "warn" | "muted" } {
   switch (status) {
-    case "fresh": return { text: ageDays != null ? `Aggiornata (${ageDays}gg fa)` : "Aggiornata", tone: "ok" };
-    case "cached": return { text: ageDays != null ? `In cache (${ageDays}gg)` : "In cache", tone: "ok" };
-    case "stale": return { text: ageDays != null ? `Vecchia (${ageDays}gg) — ricompila` : "Vecchia", tone: "warn" };
-    case "missing": return { text: "Non disponibile — clicca 🔍 per cercare", tone: "muted" };
-    case "failed": return { text: "Errore durante lo scrape", tone: "warn" };
-    case "skipped": return { text: "Non richiesta", tone: "muted" };
-    default: return { text: "—", tone: "muted" };
+    case "fresh":
+      return { text: ageDays != null ? `Aggiornata (${ageDays}gg fa)` : "Aggiornata", tone: "ok" };
+    case "cached":
+      return { text: ageDays != null ? `In cache (${ageDays}gg)` : "In cache", tone: "ok" };
+    case "stale":
+      return { text: ageDays != null ? `Vecchia (${ageDays}gg) — ricompila` : "Vecchia", tone: "warn" };
+    case "missing":
+      return { text: "Non disponibile — clicca 🔍 per cercare", tone: "muted" };
+    case "failed":
+      return { text: "Errore durante lo scrape", tone: "warn" };
+    case "skipped":
+      return { text: "Non richiesta", tone: "muted" };
+    default:
+      return { text: "—", tone: "muted" };
   }
 }
 
@@ -103,16 +124,28 @@ export default function OracleContextPanel({ summary, hasRecipient }: Props) {
                 {ds.text}
               </Row>
               {summary.met_in_person && (
-                <Row icon={<Users className="w-3 h-3" />} label="Incontri">Met in person ✓</Row>
+                <Row icon={<Users className="w-3 h-3" />} label="Incontri">
+                  Met in person ✓
+                </Row>
               )}
               {summary.playbook_active && (
-                <Row icon={<Briefcase className="w-3 h-3" />} label="Playbook" tone="ok">Attivo</Row>
+                <Row icon={<Briefcase className="w-3 h-3" />} label="Playbook" tone="ok">
+                  Attivo
+                </Row>
               )}
-              <Row icon={summary.sender_settings_ok ? <CircleCheck className="w-3 h-3" /> : <CircleAlert className="w-3 h-3" />} label="Mittente" tone={summary.sender_settings_ok ? "ok" : "warn"}>
+              <Row
+                icon={
+                  summary.sender_settings_ok ? <CircleCheck className="w-3 h-3" /> : <CircleAlert className="w-3 h-3" />
+                }
+                label="Mittente"
+                tone={summary.sender_settings_ok ? "ok" : "warn"}
+              >
                 {summary.sender_settings_ok ? "Configurato" : "Manca alias/azienda"}
               </Row>
               {summary.oracle_type && (
-                <Row icon={<SettingsIcon className="w-3 h-3" />} label="Tipo">{summary.oracle_type}</Row>
+                <Row icon={<SettingsIcon className="w-3 h-3" />} label="Tipo">
+                  {summary.oracle_type}
+                </Row>
               )}
             </>
           )}
@@ -122,20 +155,31 @@ export default function OracleContextPanel({ summary, hasRecipient }: Props) {
   );
 }
 
-function Row({ icon, label, children, tone = "muted" }: { icon: React.ReactNode; label: string; children: React.ReactNode; tone?: "ok" | "warn" | "muted" }) {
+function Row({
+  icon,
+  label,
+  children,
+  tone = "muted",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+  tone?: "ok" | "warn" | "muted";
+}) {
   return (
     <div className="flex items-start gap-1.5">
-      <span className={cn(
-        "shrink-0 mt-[1px]",
-        tone === "ok" && "text-success",
-        tone === "warn" && "text-warning",
-        tone === "muted" && "text-muted-foreground",
-      )}>{icon}</span>
+      <span
+        className={cn(
+          "shrink-0 mt-[1px]",
+          tone === "ok" && "text-success",
+          tone === "warn" && "text-warning",
+          tone === "muted" && "text-muted-foreground",
+        )}
+      >
+        {icon}
+      </span>
       <span className="text-muted-foreground shrink-0">{label}:</span>
-      <span className={cn(
-        "text-foreground",
-        tone === "warn" && "text-warning",
-      )}>{children}</span>
+      <span className={cn("text-foreground", tone === "warn" && "text-warning")}>{children}</span>
     </div>
   );
 }

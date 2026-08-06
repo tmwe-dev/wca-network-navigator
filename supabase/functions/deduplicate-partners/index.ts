@@ -13,7 +13,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -31,15 +30,14 @@ Deno.serve(async (req) => {
     const rl = checkRateLimit(`dedup:${userId}`, { maxTokens: 5, refillRate: 0.1 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Find duplicates by company_name + country_code
     const { data: allPartners, error: fetchErr } = await supabase
       .from("partners")
-      .select("id, company_name, country_code, city, wca_id, logo_url, enrichment_data, raw_profile_html, member_since, rating, email, phone, website, created_at")
+      .select(
+        "id, company_name, country_code, city, wca_id, logo_url, enrichment_data, raw_profile_html, member_since, rating, email, phone, website, created_at",
+      )
       .eq("is_active", true)
       .order("created_at", { ascending: true });
 
@@ -58,7 +56,12 @@ Deno.serve(async (req) => {
     let totalMerged = 0;
     let totalDeleted = 0;
 
-    type ScoredPartner = Record<string, unknown> & { score: number; id: string; company_name: string; country_code: string };
+    type ScoredPartner = Record<string, unknown> & {
+      score: number;
+      id: string;
+      company_name: string;
+      country_code: string;
+    };
     for (const [key, members] of duplicateGroups) {
       // Score each member: higher = more complete
       const scored: ScoredPartner[] = members.map((m: Record<string, unknown>) => {
@@ -103,10 +106,7 @@ Deno.serve(async (req) => {
       }
 
       // Update campaign_jobs
-      await supabase
-        .from("campaign_jobs")
-        .update({ partner_id: keeper.id })
-        .in("partner_id", deleteIds);
+      await supabase.from("campaign_jobs").update({ partner_id: keeper.id }).in("partner_id", deleteIds);
 
       // Update blacklist entries
       await supabase
@@ -115,23 +115,19 @@ Deno.serve(async (req) => {
         .in("matched_partner_id", deleteIds);
 
       // Update email campaign queue
-      await supabase
-        .from("email_campaign_queue")
-        .update({ partner_id: keeper.id })
-        .in("partner_id", deleteIds);
+      await supabase.from("email_campaign_queue").update({ partner_id: keeper.id }).in("partner_id", deleteIds);
 
       // Now soft-delete duplicates
-      const { error: delErr } = await supabase
-        .from("partners")
-        .update({ is_active: false })
-        .in("id", deleteIds);
+      const { error: delErr } = await supabase.from("partners").update({ is_active: false }).in("id", deleteIds);
 
       if (delErr) {
         log.push(`ERROR: delete failed for ${key}: ${delErr.message}`);
       } else {
         totalMerged++;
         totalDeleted += deleteIds.length;
-        log.push(`MERGED: "${scored[0].company_name}" (${scored[0].country_code}) — kept ${keeper.id}, deactivated ${deleteIds.length} dupes`);
+        log.push(
+          `MERGED: "${scored[0].company_name}" (${scored[0].country_code}) — kept ${keeper.id}, deactivated ${deleteIds.length} dupes`,
+        );
       }
     }
 
@@ -146,9 +142,9 @@ Deno.serve(async (req) => {
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (err: unknown) {
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 });

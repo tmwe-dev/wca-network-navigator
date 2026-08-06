@@ -11,7 +11,8 @@ test.describe("Outreach Flow", () => {
   });
 
   test("outreach shows campaign list or queue", async ({ page }) => {
-    const content = page.locator("table, [role='grid'], [role='tablist']")
+    const content = page
+      .locator("table, [role='grid'], [role='tablist']")
       .or(page.getByText(/outreach|campagn|invio|send|queue/i));
     await expect(content.first()).toBeVisible({ timeout: 15000 });
   });
@@ -29,11 +30,15 @@ test.describe("Outreach Flow", () => {
 
   test("outreach no critical console errors", async ({ page }) => {
     const errors: string[] = [];
-    page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
     await page.goto("/v2/outreach");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
-    const critical = errors.filter((e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"));
+    const critical = errors.filter(
+      (e) => !e.includes("favicon") && !e.includes("404") && !e.includes("ERR_") && !e.includes("ResizeObserver"),
+    );
     expect(critical.length).toBeLessThan(5);
   });
 });
@@ -65,7 +70,10 @@ deepTest.describe("Deep invariants: /v2/outreach", () => {
     deepExpect(res?.status() ?? 0).toBeLessThan(500);
     await page.waitForLoadState("networkidle").catch(() => {});
     const url = new URL(page.url());
-    const isAuthOr = url.pathname.includes("/auth") || url.pathname.includes("/v2/login") || url.pathname.startsWith("/v2/outreach".split("/").slice(0, 3).join("/"));
+    const isAuthOr =
+      url.pathname.includes("/auth") ||
+      url.pathname.includes("/v2/login") ||
+      url.pathname.startsWith("/v2/outreach".split("/").slice(0, 3).join("/"));
     deepExpect(isAuthOr, `URL atteso /auth o sotto ramo, got ${url.pathname}`).toBeTruthy();
   });
 
@@ -86,9 +94,7 @@ deepTest.describe("Deep invariants: /v2/outreach", () => {
     await page.goto(DEEP_ROUTE);
     await page.waitForLoadState("networkidle").catch(() => {});
     await page.waitForTimeout(2000);
-    deepExpect(inv.forbiddenAiCalls,
-      `AI provider diretto: ${inv.forbiddenAiCalls.join(" | ")}`
-    ).toHaveLength(0);
+    deepExpect(inv.forbiddenAiCalls, `AI provider diretto: ${inv.forbiddenAiCalls.join(" | ")}`).toHaveLength(0);
   });
 
   deepTest("network: nessuna 5xx ne body con service_role", async ({ page }) => {
@@ -96,9 +102,7 @@ deepTest.describe("Deep invariants: /v2/outreach", () => {
     await page.goto(DEEP_ROUTE);
     await page.waitForLoadState("networkidle").catch(() => {});
     await page.waitForTimeout(1500);
-    deepExpect(inv.serverErrors,
-      `5xx: ${inv.serverErrors.map(e => e.url).join(" | ")}`
-    ).toHaveLength(0);
+    deepExpect(inv.serverErrors, `5xx: ${inv.serverErrors.map((e) => e.url).join(" | ")}`).toHaveLength(0);
     deepExpect(inv.secretLeaks).toHaveLength(0);
   });
 

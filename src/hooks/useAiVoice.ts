@@ -26,43 +26,71 @@ export function useAiVoice(messages: Msg[], isLoading: boolean, surface?: string
 
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const hasSpeechAPI = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+  const hasSpeechAPI =
+    typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
   const stopSpeaking = useCallback(() => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     setIsSpeaking(false);
   }, []);
 
-  const playTTS = useCallback(async (text: string) => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    setIsSpeaking(true);
-    const startedAt = Date.now();
-    try {
-      const response = await fetch(TTS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ text: text.slice(0, 2000), voiceId: selectedVoice }),
-      });
-      if (!response.ok) { setIsSpeaking(false); return; }
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
-      audio.onerror = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
-      await audio.play();
-      // Best-effort logging of the spoken AI response
-      void logAiInteraction({
-        interaction_type: "voice_tts",
-        role: "assistant",
-        content: text,
-        voice_id: selectedVoice,
-        surface: surface ?? "useAiVoice",
-        duration_ms: Date.now() - startedAt,
-        metadata: { text_length: text.length, audio_bytes: audioBlob.size },
-      });
-    } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setIsSpeaking(false); }
-  }, [selectedVoice, surface]);
+  const playTTS = useCallback(
+    async (text: string) => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setIsSpeaking(true);
+      const startedAt = Date.now();
+      try {
+        const response = await fetch(TTS_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text: text.slice(0, 2000), voiceId: selectedVoice }),
+        });
+        if (!response.ok) {
+          setIsSpeaking(false);
+          return;
+        }
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+        };
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+        };
+        await audio.play();
+        // Best-effort logging of the spoken AI response
+        void logAiInteraction({
+          interaction_type: "voice_tts",
+          role: "assistant",
+          content: text,
+          voice_id: selectedVoice,
+          surface: surface ?? "useAiVoice",
+          duration_ms: Date.now() - startedAt,
+          metadata: { text_length: text.length, audio_bytes: audioBlob.size },
+        });
+      } catch (e) {
+        log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) });
+        setIsSpeaking(false);
+      }
+    },
+    [selectedVoice, surface],
+  );
 
   useEffect(() => {
     if (!voiceEnabled || isLoading || messages.length === 0) return;
@@ -72,48 +100,66 @@ export function useAiVoice(messages: Msg[], isLoading: boolean, surface?: string
     lastSpokenIdxRef.current = lastIdx;
     const { text } = parseStructuredMessage(last.content);
     if (!text || text.startsWith("⚠️")) return;
-    const cleanText = text.replace(/[#*_`~[\]()>|]/g, "").replace(/\n{2,}/g, ". ").replace(/\n/g, " ").trim();
+    const cleanText = text
+      .replace(/[#*_`~[\]()>|]/g, "")
+      .replace(/\n{2,}/g, ". ")
+      .replace(/\n/g, " ")
+      .trim();
     if (cleanText.length < 5) return;
     playTTS(cleanText);
   }, [messages, isLoading, voiceEnabled, playTTS]);
 
-  const toggleListening = useCallback((onTranscript: (text: string) => void) => {
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-    const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = "it-IT";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      if (transcript) {
-        // Log the user's spoken input (STT)
-        void logAiInteraction({
-          interaction_type: "voice_stt",
-          role: "user",
-          content: transcript,
-          surface: surface ?? "useAiVoice",
-          language: "it-IT",
-          metadata: { engine: "webspeech" },
-        });
-        onTranscript(transcript);
+  const toggleListening = useCallback(
+    (onTranscript: (text: string) => void) => {
+      if (isListening) {
+        recognitionRef.current?.stop();
+        setIsListening(false);
+        return;
       }
-    };
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-  }, [isListening, surface]);
+      const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
+      if (!SR) return;
+      const recognition = new SR();
+      recognition.lang = "it-IT";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          // Log the user's spoken input (STT)
+          void logAiInteraction({
+            interaction_type: "voice_stt",
+            role: "user",
+            content: transcript,
+            surface: surface ?? "useAiVoice",
+            language: "it-IT",
+            metadata: { engine: "webspeech" },
+          });
+          onTranscript(transcript);
+        }
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognitionRef.current = recognition;
+      recognition.start();
+      setIsListening(true);
+    },
+    [isListening, surface],
+  );
 
-  const resetSpoken = useCallback(() => { lastSpokenIdxRef.current = -1; }, []);
+  const resetSpoken = useCallback(() => {
+    lastSpokenIdxRef.current = -1;
+  }, []);
 
   return {
-    voiceEnabled, setVoiceEnabled,
-    selectedVoice, setSelectedVoice,
-    isSpeaking, stopSpeaking,
-    isListening, toggleListening,
-    hasSpeechAPI, resetSpoken,
+    voiceEnabled,
+    setVoiceEnabled,
+    selectedVoice,
+    setSelectedVoice,
+    isSpeaking,
+    stopSpeaking,
+    isListening,
+    toggleListening,
+    hasSpeechAPI,
+    resetSpoken,
   };
 }

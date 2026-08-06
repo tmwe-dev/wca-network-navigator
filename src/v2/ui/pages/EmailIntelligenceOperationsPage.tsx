@@ -9,8 +9,16 @@ const QK_BRAIN = ["funnemail", "brain"] as const;
 const QK_JOBS = ["funnemail", "ops-jobs"] as const;
 
 export default function EmailIntelligenceOperationsPage() {
-  const { data: brain = [] } = useQuery({ queryKey: QK_BRAIN, queryFn: () => listFunnemailBrain(50), refetchInterval: 15000 });
-  const { data: jobs = [] } = useQuery({ queryKey: QK_JOBS, queryFn: () => listEmailProcessingJobs({ limit: 200 }), refetchInterval: 15000 });
+  const { data: brain = [] } = useQuery({
+    queryKey: QK_BRAIN,
+    queryFn: () => listFunnemailBrain(50),
+    refetchInterval: 15000,
+  });
+  const { data: jobs = [] } = useQuery({
+    queryKey: QK_JOBS,
+    queryFn: () => listEmailProcessingJobs({ limit: 200 }),
+    refetchInterval: 15000,
+  });
 
   const stats = useMemo(() => {
     const counts: Record<string, number> = { received: 0, classified: 0, routed: 0, completed: 0, failed: 0, dlq: 0 };
@@ -60,7 +68,9 @@ export default function EmailIntelligenceOperationsPage() {
         <Card>
           <CardContent className="py-3">
             <div className="text-xs text-muted-foreground uppercase">Queue depth</div>
-            <div className={`text-2xl font-semibold ${kpis.queueDepth > 50 ? "text-warning" : ""}`}>{kpis.queueDepth}</div>
+            <div className={`text-2xl font-semibold ${kpis.queueDepth > 50 ? "text-warning" : ""}`}>
+              {kpis.queueDepth}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -77,17 +87,36 @@ export default function EmailIntelligenceOperationsPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Brain (ultimi 50 messaggi)</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Brain (ultimi 50 messaggi)</CardTitle>
+        </CardHeader>
         <CardContent className="grid gap-2">
           {brain.map((b: FunnemailBrainRow) => (
             <div key={b.message_id} className="flex items-center gap-3 text-sm border-b pb-2">
-              <Badge variant={b.job_stage === "completed" ? "secondary" : b.job_stage === "failed" || b.job_stage === "dlq" ? "destructive" : "outline"}>
+              <Badge
+                variant={
+                  b.job_stage === "completed"
+                    ? "secondary"
+                    : b.job_stage === "failed" || b.job_stage === "dlq"
+                      ? "destructive"
+                      : "outline"
+                }
+              >
                 {b.job_stage ?? "n/a"}
               </Badge>
-              <span className="truncate flex-1">{b.from_address ?? "?"} — {b.subject ?? "(no subject)"}</span>
-              {b.decision_action && <Badge variant="outline">{b.decision_action} {b.decision_confidence != null ? `(${Math.round(b.decision_confidence * 100)}%)` : ""}</Badge>}
+              <span className="truncate flex-1">
+                {b.from_address ?? "?"} — {b.subject ?? "(no subject)"}
+              </span>
+              {b.decision_action && (
+                <Badge variant="outline">
+                  {b.decision_action}{" "}
+                  {b.decision_confidence != null ? `(${Math.round(b.decision_confidence * 100)}%)` : ""}
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground">{new Date(b.received_at).toLocaleString()}</span>
-              <span className="text-xs text-muted-foreground">{b.actions_ok_count}/{b.actions_count} azioni</span>
+              <span className="text-xs text-muted-foreground">
+                {b.actions_ok_count}/{b.actions_count} azioni
+              </span>
             </div>
           ))}
           {brain.length === 0 && <p className="text-sm text-muted-foreground">Nessun messaggio.</p>}

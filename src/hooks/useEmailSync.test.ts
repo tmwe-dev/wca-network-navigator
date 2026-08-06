@@ -40,13 +40,13 @@ describe("useCheckInbox", () => {
     const spy = vi.spyOn(window, "dispatchEvent");
 
     const { result } = renderHookWithProviders(() => useCheckInbox());
-    await act(async () => { result.current.mutate(); });
+    await act(async () => {
+      result.current.mutate();
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockCallCheckInbox).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "channel-sync-done" })
-    );
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ type: "channel-sync-done" }));
     spy.mockRestore();
   });
 
@@ -55,7 +55,9 @@ describe("useCheckInbox", () => {
     const { toast } = await import("sonner");
 
     const { result } = renderHookWithProviders(() => useCheckInbox());
-    await act(async () => { result.current.mutate(); });
+    await act(async () => {
+      result.current.mutate();
+    });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("IMAP timeout"));
   });
@@ -63,14 +65,18 @@ describe("useCheckInbox", () => {
   it("handles zero new emails", async () => {
     mockCallCheckInbox.mockResolvedValue({ total: 0, matched: 0 });
     const { result } = renderHookWithProviders(() => useCheckInbox());
-    await act(async () => { result.current.mutate(); });
+    await act(async () => {
+      result.current.mutate();
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
   it("handles non-standard response shape", async () => {
     mockCallCheckInbox.mockResolvedValue({ status: "ok" });
     const { result } = renderHookWithProviders(() => useCheckInbox());
-    await act(async () => { result.current.mutate(); });
+    await act(async () => {
+      result.current.mutate();
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 });
@@ -78,7 +84,9 @@ describe("useCheckInbox", () => {
 describe("useResetSync", () => {
   it("resets last_uid to 0", async () => {
     const { result } = renderHookWithProviders(() => useResetSync());
-    await act(async () => { result.current.mutate(); });
+    await act(async () => {
+      result.current.mutate();
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockUpdate).toHaveBeenCalledWith({ last_uid: 0, stored_uidvalidity: null });
   });
@@ -86,7 +94,9 @@ describe("useResetSync", () => {
   it("shows error toast on failure", async () => {
     mockUpdateEq.mockReturnValueOnce({ error: { message: "RLS denied" } });
     const { result } = renderHookWithProviders(() => useResetSync());
-    await act(async () => { result.current.mutate(); });
+    await act(async () => {
+      result.current.mutate();
+    });
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });

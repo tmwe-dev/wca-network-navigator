@@ -14,7 +14,6 @@
 import { invokeAi } from "@/lib/ai/invokeAi";
 import type { ToolResult } from "./tools/types";
 
-
 import { createLogger } from "@/lib/log";
 const log = createLogger("aiBridge");
 export interface AiCommentRequest {
@@ -91,15 +90,16 @@ export function serializeResultForAI(result: ToolResult): string {
         to: result.initialTo,
         subject: result.initialSubject,
         bodyPreview: result.initialBody.slice(0, 300),
-        batch: result.drafts && result.drafts.length > 1
-          ? {
-              count: result.drafts.length,
-              ok: result.drafts.filter((d) => d.status === "ok").length,
-              tone: result.detectedTone ?? "professionale",
-              countryCode: result.countryCode,
-              partners: result.drafts.slice(0, 5).map((d) => d.partnerName),
-            }
-          : undefined,
+        batch:
+          result.drafts && result.drafts.length > 1
+            ? {
+                count: result.drafts.length,
+                ok: result.drafts.filter((d) => d.status === "ok").length,
+                tone: result.detectedTone ?? "professionale",
+                countryCode: result.countryCode,
+                partners: result.drafts.slice(0, 5).map((d) => d.partnerName),
+              }
+            : undefined,
         tone: result.detectedTone,
       });
     case "approval":
@@ -148,9 +148,7 @@ export function serializeResultForAI(result: ToolResult): string {
  * commercial doctrine, golden rules, KB tagged "command_scope" + "system_doctrine",
  * and user memory).
  */
-export async function getAiComment(
-  req: AiCommentRequest,
-): Promise<AiCommentResponse> {
+export async function getAiComment(req: AiCommentRequest): Promise<AiCommentResponse> {
   const { userPrompt, toolLabel, resultSummary, history = [] } = req;
 
   const userTurn = `L'utente ti ha chiesto:
@@ -218,19 +216,15 @@ Rispondi SOLO con questo JSON valido, niente altro testo:
     // If the commentary hop is rate-limited, never surface that as the business
     // answer: the DB/tool result is already valid, so degrade to a local recap.
     const dataObj = typeof data === "object" && data != null ? (data as Record<string, unknown>) : null;
-    if (
-      dataObj?.ok === false ||
-      dataObj?.code === "AI_RATE_LIMITED" ||
-      dataObj?.code === "AI_CREDITS_EXHAUSTED"
-    ) {
+    if (dataObj?.ok === false || dataObj?.code === "AI_RATE_LIMITED" || dataObj?.code === "AI_CREDITS_EXHAUSTED") {
       return fallbackComment(toolLabel);
     }
 
     const raw =
       (dataObj
-        ? (dataObj.reply as string | undefined) ??
+        ? ((dataObj.reply as string | undefined) ??
           (dataObj.message as string | undefined) ??
-          (dataObj.content as string | undefined)
+          (dataObj.content as string | undefined))
         : undefined) ?? "";
 
     if (/troppe richieste ai|rate limit|crediti ai esauriti/i.test(raw)) {
@@ -258,8 +252,7 @@ Rispondi SOLO con questo JSON valido, niente altro testo:
         spokenSummary: parsed.spokenSummary,
         suggestedActions: Array.isArray(parsed.suggestedActions)
           ? parsed.suggestedActions.filter(
-              (a): a is SuggestedAction =>
-                !!a && typeof a.label === "string" && typeof a.prompt === "string",
+              (a): a is SuggestedAction => !!a && typeof a.label === "string" && typeof a.prompt === "string",
             )
           : [],
       };

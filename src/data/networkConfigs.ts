@@ -17,24 +17,17 @@ export interface NetworkConfigRow {
 }
 
 export async function findNetworkConfigs(): Promise<NetworkConfigRow[]> {
-  const { data, error } = await supabase
-    .from("network_configs")
-    .select("*")
-    .order("network_name");
+  const { data, error } = await supabase.from("network_configs").select("*").order("network_name");
   if (error) throw error;
   return (data ?? []) as NetworkConfigRow[];
 }
 
-export async function updateNetworkConfig(
-  config: Partial<NetworkConfigRow> & { id: string },
-): Promise<void> {
+export async function updateNetworkConfig(config: Partial<NetworkConfigRow> & { id: string }): Promise<void> {
   const { error } = await supabase.from("network_configs").update(config).eq("id", config.id);
   if (error) throw error;
 }
 
 export async function insertNetworkConfig(networkName: string): Promise<void> {
-  const { error } = await supabase
-    .from("network_configs")
-    .insert({ network_name: networkName, is_member: true });
+  const { error } = await supabase.from("network_configs").insert({ network_name: networkName, is_member: true });
   if (error) throw error;
 }

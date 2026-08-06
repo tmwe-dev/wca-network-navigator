@@ -3,10 +3,12 @@ name: Drawer Overlay Pattern
 description: Tutte le sidebar/drawer/pannelli laterali devono aprirsi in OVERLAY (fixed + backdrop scuro) sopra il contenuto, mai come flex item che spinge il layout
 type: design
 ---
+
 **Regola globale UI**: ogni drawer/sidebar a scomparsa (filtri, mission, command, ecc.)
 deve aprirsi SOPRA il contenuto della pagina, NON spostarlo.
 
 Pattern obbligatorio:
+
 - Pannello: `fixed`, slide-in con `translate-x`, z-index alto (≥60).
 - Backdrop: `fixed inset-0 bg-black/40 backdrop-blur-[1px]` con `z-[55]`, click-to-close.
 - Linguetta/trigger: `fixed`, sempre visibile, z-index sopra il backdrop.

@@ -11,9 +11,5 @@ export async function fetchCockpitQueueRaw(): Promise<{
   data: CockpitQueueRow[] | null;
   error: PostgrestError | null;
 }> {
-  return supabase
-    .from("cockpit_queue")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(100);
+  return supabase.from("cockpit_queue").select("*").order("created_at", { ascending: false }).limit(100);
 }

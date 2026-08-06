@@ -5,13 +5,26 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  Mail, MessageCircle, Linkedin, Phone, StickyNote, MoreVertical, CheckCircle2,
-  Calendar as CalendarIcon, ArrowUpRight,
-  Check, Clock, Archive, Plane,
+  Mail,
+  MessageCircle,
+  Linkedin,
+  Phone,
+  StickyNote,
+  MoreVertical,
+  CheckCircle2,
+  Calendar as CalendarIcon,
+  ArrowUpRight,
+  Check,
+  Clock,
+  Archive,
+  Plane,
 } from "lucide-react";
 import { useAgendaDayActivities } from "@/hooks/useAgendaDayActivities";
 import { useUpdateActivity } from "@/hooks/useActivities";
@@ -22,12 +35,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { ActivityTypeFilter, ResponseFilter } from "./AgendaCalendarPage";
 import type { AllActivity } from "@/hooks/useActivities";
-import {
-  ACTION_GROUPS,
-  classifyAction,
-  type ActionGroupDef,
-  type ActionGroupKey,
-} from "./agendaActionGroups";
+import { ACTION_GROUPS, classifyAction, type ActionGroupDef, type ActionGroupKey } from "./agendaActionGroups";
 export { ACTION_GROUPS, classifyAction, verbForActivity } from "./agendaActionGroups";
 
 interface AgendaDayDetailProps {
@@ -68,24 +76,24 @@ function urgencyFromAge(createdAt: string): Urgency {
   const now = Date.now();
   const hoursAgo = (now - created) / 3_600_000;
   if (hoursAgo > 24) return "overdue";
-  if (hoursAgo > 4)  return "today";
+  if (hoursAgo > 4) return "today";
   return "normal";
 }
 
 const URGENCY_BORDER: Record<Urgency, string> = {
   overdue: "border-l-rose-500",
-  today:   "border-l-amber-500",
-  normal:  "border-l-emerald-500/60",
+  today: "border-l-amber-500",
+  normal: "border-l-emerald-500/60",
 };
 
 /** Es: "2g fa" / "5h fa" / "appena ora". Italiano, brevissimo. */
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const min = Math.floor(ms / 60_000);
-  if (min < 1)  return "appena ora";
+  if (min < 1) return "appena ora";
   if (min < 60) return `${min}m fa`;
   const h = Math.floor(min / 60);
-  if (h < 24)   return `${h}h fa`;
+  if (h < 24) return `${h}h fa`;
   const d = Math.floor(h / 24);
   return `${d}g fa`;
 }
@@ -93,12 +101,14 @@ function relativeAge(iso: string): string {
 /** Pulisce il titolo dai prefissi tecnici tipo "Reply received (email):". */
 function cleanTitle(title: string | null): string {
   if (!title) return "—";
-  return title
-    .replace(/^reply received\s*\([^)]+\)\s*:?\s*/i, "")
-    .replace(/^risposta\s+(email|whatsapp|linkedin|sms)\s*:?\s*/i, "")
-    .replace(/^re:\s*/i, "")
-    .replace(/^fwd:\s*/i, "")
-    .trim() || "—";
+  return (
+    title
+      .replace(/^reply received\s*\([^)]+\)\s*:?\s*/i, "")
+      .replace(/^risposta\s+(email|whatsapp|linkedin|sms)\s*:?\s*/i, "")
+      .replace(/^re:\s*/i, "")
+      .replace(/^fwd:\s*/i, "")
+      .trim() || "—"
+  );
 }
 
 /** Estrae un nome leggibile dal mittente in description (es. "leo@aerolog.net" → "aerolog.net"). */
@@ -135,16 +145,16 @@ export default function AgendaDayDetail({
   const filteredActivities = useMemo(() => {
     let list = activities;
     if (filters.activityType !== "all") {
-      list = list.filter(a => a.activity_type === filters.activityType);
+      list = list.filter((a) => a.activity_type === filters.activityType);
     }
     if (filters.responseStatus === "responded") {
-      list = list.filter(a => a.partner_id && respondedIds.has(a.partner_id));
+      list = list.filter((a) => a.partner_id && respondedIds.has(a.partner_id));
     } else if (filters.responseStatus === "no_response") {
-      list = list.filter(a => a.partner_id && !respondedIds.has(a.partner_id));
+      list = list.filter((a) => a.partner_id && !respondedIds.has(a.partner_id));
     }
     const q = search.trim().toLowerCase();
     if (q) {
-      list = list.filter(a => {
+      list = list.filter((a) => {
         const company = (a.partners?.company_name || "").toLowerCase();
         const alias = (a.partners?.company_alias || "").toLowerCase();
         const contact = (a.selected_contact?.name || "").toLowerCase();
@@ -158,7 +168,10 @@ export default function AgendaDayDetail({
   // Raggruppa per tipo di azione
   const grouped = useMemo(() => {
     const buckets: Record<ActionGroupKey, AllActivity[]> = {
-      reply: [], send: [], call: [], decide: [],
+      reply: [],
+      send: [],
+      call: [],
+      decide: [],
     };
     for (const a of filteredActivities) {
       const responded = a.partner_id ? respondedIds.has(a.partner_id) : false;
@@ -188,9 +201,7 @@ export default function AgendaDayDetail({
       <div className="shrink-0 px-4 py-3 border-b border-border/30">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold capitalize">
-              {format(selectedDay, "EEEE d MMMM yyyy", { locale: it })}
-            </h2>
+            <h2 className="text-sm font-bold capitalize">{format(selectedDay, "EEEE d MMMM yyyy", { locale: it })}</h2>
             <p className="text-[10px] text-muted-foreground">
               {filteredActivities.length} {filteredActivities.length === 1 ? "azione" : "azioni"} oggi
               {reminders.length > 0 && ` · ${reminders.length} reminder`}
@@ -198,9 +209,18 @@ export default function AgendaDayDetail({
           </div>
           {/* Legenda priorità — 3 puntini colorati senza testo, leggera */}
           <div className="flex items-center gap-3 text-[9px] text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500" />in ritardo</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />oggi</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />ok</span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              in ritardo
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              oggi
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
+              ok
+            </span>
           </div>
         </div>
       </div>
@@ -208,7 +228,7 @@ export default function AgendaDayDetail({
       {/* Lista raggruppata per tipo di azione */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-5">
-          {ACTION_GROUPS.map(group => {
+          {ACTION_GROUPS.map((group) => {
             const items = grouped[group.key];
             if (items.length === 0) return null;
             return (
@@ -256,13 +276,11 @@ function ActionGroup({
     <section>
       <header className="flex items-center gap-2 mb-2 px-1">
         <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
-          {def.label}
-        </h3>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground">{def.label}</h3>
         <span className="text-[10px] text-muted-foreground">· {activities.length}</span>
       </header>
       <div className="space-y-1">
-        {activities.map(a => (
+        {activities.map((a) => (
           <ActivityRow
             key={a.id}
             activity={a}
@@ -296,16 +314,10 @@ function ActivityRow({
   const updateActivity = useUpdateActivity();
 
   const partnerName =
-    activity.partners?.company_name ||
-    senderFromDescription(activity.description) ||
-    "Mittente sconosciuto";
+    activity.partners?.company_name || senderFromDescription(activity.description) || "Mittente sconosciuto";
   const senderEmail = senderEmailFromDescription(activity.description);
-  const flag = activity.partners?.country_code
-    ? getCountryFlag(activity.partners.country_code)
-    : null;
-  const inHolding = isInHoldingPattern(
-    (activity.partners as { lead_status?: string } | undefined)?.lead_status
-  );
+  const flag = activity.partners?.country_code ? getCountryFlag(activity.partners.country_code) : null;
+  const inHolding = isInHoldingPattern((activity.partners as { lead_status?: string } | undefined)?.lead_status);
 
   const handleStatus = (status: "completed" | "cancelled") => {
     updateActivity.mutate({
@@ -320,12 +332,16 @@ function ActivityRow({
       role={onSelect ? "button" : undefined}
       tabIndex={onSelect ? 0 : undefined}
       onClick={onSelect ? () => onSelect(activity) : undefined}
-      onKeyDown={onSelect ? (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect(activity);
-        }
-      } : undefined}
+      onKeyDown={
+        onSelect
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect(activity);
+              }
+            }
+          : undefined
+      }
       className={cn(
         "group flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-xl border border-border/30",
         "bg-card/40 hover:bg-card/60 transition-all border-l-2",
@@ -370,7 +386,9 @@ function ActivityRow({
       {/* CTA azione primaria — quando la riga è selezionabile, l'azione vive nel
           pannello destro: qui mostriamo solo un badge con il verbo per chiarezza. */}
       {onSelect ? (
-        <Badge variant="outline" className="text-[9px] shrink-0 opacity-70">{verb}</Badge>
+        <Badge variant="outline" className="text-[9px] shrink-0 opacity-70">
+          {verb}
+        </Badge>
       ) : activity.partner_id ? (
         <Button asChild size="sm" variant="ghost" className="h-7 px-2.5 text-[10px] shrink-0">
           <Link to={`/v2/network?partnerId=${activity.partner_id}`}>
@@ -378,7 +396,9 @@ function ActivityRow({
           </Link>
         </Button>
       ) : (
-        <Badge variant="outline" className="text-[9px] shrink-0">{verb}</Badge>
+        <Badge variant="outline" className="text-[9px] shrink-0">
+          {verb}
+        </Badge>
       )}
 
       {/* Menu rapido: Fatto / Rimanda / Delega / Archivia */}
@@ -442,9 +462,7 @@ function ReminderList({ reminders }: { reminders: ReminderListItem[] }) {
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl border bg-card/40 border-border/30 hover:bg-card/60 transition-all"
           >
             <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
-            {r.partners && (
-              <span className="text-sm shrink-0">{getCountryFlag(r.partners.country_code ?? "")}</span>
-            )}
+            {r.partners && <span className="text-sm shrink-0">{getCountryFlag(r.partners.country_code ?? "")}</span>}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{r.title}</p>
               <p className="text-[10px] text-muted-foreground truncate">{r.partners?.company_name}</p>
@@ -453,7 +471,9 @@ function ReminderList({ reminders }: { reminders: ReminderListItem[] }) {
               variant="outline"
               className={cn(
                 "text-[8px] shrink-0",
-                r.status === "completed" ? "border-emerald-500/20 text-emerald-500" : "border-amber-500/20 text-amber-500"
+                r.status === "completed"
+                  ? "border-emerald-500/20 text-emerald-500"
+                  : "border-amber-500/20 text-amber-500",
               )}
             >
               {r.status === "completed" ? "Completato" : "In attesa"}

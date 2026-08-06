@@ -4,11 +4,7 @@
  * Unico punto di accesso ai dati: il DAL canonico `src/data/kbEntries.ts`.
  * Qui restano solo mapping di dominio e conversione errori → Result.
  */
-import {
-  insertKbEntryReturningRow,
-  updateKbEntryRow,
-  deleteKbEntry as deleteKbEntryRow,
-} from "@/data/kbEntries";
+import { insertKbEntryReturningRow, updateKbEntryRow, deleteKbEntry as deleteKbEntryRow } from "@/data/kbEntries";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { fromUnknown, type AppError } from "../../../core/domain/errors";
 import { type KbEntry } from "../../../core/domain/entities";

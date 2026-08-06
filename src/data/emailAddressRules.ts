@@ -109,7 +109,9 @@ export interface EmailAddressRule {
 export async function findEmailAddressRules(_userId: string): Promise<EmailAddressRule[]> {
   const { data, error } = await supabase
     .from("email_address_rules")
-    .select("id, user_id, email_address, display_name, category, group_name, custom_prompt, notes, is_active, priority, auto_action, auto_action_params, applied_count, last_applied_at")
+    .select(
+      "id, user_id, email_address, display_name, category, group_name, custom_prompt, notes, is_active, priority, auto_action, auto_action_params, applied_count, last_applied_at",
+    )
     .order("priority", { ascending: false });
   if (error) throw error;
   return (data ?? []) as EmailAddressRule[];
@@ -121,10 +123,7 @@ export interface AutoActionRuleRow {
 }
 
 /** Legge auto_action/auto_action_params per un utente e un set di indirizzi. */
-export async function findAutoActionRulesForEmails(
-  userId: string,
-  emails: string[],
-): Promise<AutoActionRuleRow[]> {
+export async function findAutoActionRulesForEmails(userId: string, emails: string[]): Promise<AutoActionRuleRow[]> {
   const { data, error } = await supabase
     .from("email_address_rules")
     .select("auto_action, auto_action_params")
@@ -140,9 +139,7 @@ export interface AiSuggestedGroupRow {
 }
 
 /** Legge il gruppo suggerito dall'AI per una lista di indirizzi email. */
-export async function findAiSuggestedGroupsForEmails(
-  emails: string[],
-): Promise<AiSuggestedGroupRow[]> {
+export async function findAiSuggestedGroupsForEmails(emails: string[]): Promise<AiSuggestedGroupRow[]> {
   const { data, error } = await supabase
     .from("email_address_rules")
     .select("email_address,ai_suggested_group")
@@ -152,10 +149,7 @@ export async function findAiSuggestedGroupsForEmails(
 }
 
 export async function updateEmailAddressRule(id: string, patch: Partial<EmailAddressRule>): Promise<void> {
-  const { error } = await supabase
-    .from("email_address_rules")
-    .update(toRuleUpdate(patch))
-    .eq("id", id);
+  const { error } = await supabase.from("email_address_rules").update(toRuleUpdate(patch)).eq("id", id);
   if (error) throw error;
 }
 
@@ -187,19 +181,12 @@ export async function bulkUpdateAutoAction(
  * Quando blocked=true: imposta spam IMAP + flag user-blocked.
  * Quando blocked=false: rimuove solo il flag (non tocca auto_action).
  */
-export async function bulkSetBlocked(
-  userId: string,
-  emails: string[],
-  blocked: boolean,
-): Promise<void> {
+export async function bulkSetBlocked(userId: string, emails: string[], blocked: boolean): Promise<void> {
   if (emails.length === 0) return;
   const patch: RuleUpdate = blocked
     ? { is_blocked: true, auto_action: "spam", auto_execute: true }
     : { is_blocked: false };
-  const { error } = await supabase
-    .from("email_address_rules")
-    .update(patch)
-    .in("email_address", emails);
+  const { error } = await supabase.from("email_address_rules").update(patch).in("email_address", emails);
   if (error) throw error;
 }
 
@@ -225,10 +212,7 @@ export async function upsertEmailAddressRule(
   if (selErr) throw selErr;
   const existingId = existing?.[0]?.id;
   if (existingId) {
-    const { error } = await supabase
-      .from("email_address_rules")
-      .update(patch)
-      .eq("id", existingId);
+    const { error } = await supabase.from("email_address_rules").update(patch).eq("id", existingId);
     if (error) throw error;
   } else {
     const { error } = await supabase
@@ -247,13 +231,11 @@ export type AddressRuleRow = Database["public"]["Tables"]["email_address_rules"]
 export type AddressRuleOrder = "email_address" | "email_count_desc";
 
 /** Lista completa regole con ricerca opzionale su email_address (ilike). */
-export async function findAddressRulesForUi(
-  search: string,
-  order: AddressRuleOrder,
-): Promise<AddressRuleRow[]> {
-  let q = order === "email_address"
-    ? supabase.from("email_address_rules").select("*").order("email_address")
-    : supabase.from("email_address_rules").select("*").order("email_count", { ascending: false });
+export async function findAddressRulesForUi(search: string, order: AddressRuleOrder): Promise<AddressRuleRow[]> {
+  let q =
+    order === "email_address"
+      ? supabase.from("email_address_rules").select("*").order("email_address")
+      : supabase.from("email_address_rules").select("*").order("email_count", { ascending: false });
   const term = search.trim();
   if (term) q = q.ilike("email_address", `%${term}%`);
   const { data, error } = await q;
@@ -262,10 +244,7 @@ export async function findAddressRulesForUi(
 }
 
 /** Update by id (semantica AddressRulesManager). */
-export async function updateAddressRuleById(
-  id: string,
-  payload: Partial<AddressRuleUpsertInput>,
-): Promise<void> {
+export async function updateAddressRuleById(id: string, payload: Partial<AddressRuleUpsertInput>): Promise<void> {
   const { error } = await supabase.from("email_address_rules").update(toRuleWrite(payload)).eq("id", id);
   if (error) throw error;
 }
@@ -281,9 +260,7 @@ export async function insertAddressRule(
     user_id: userId,
   };
   if (payload.exclusive_agent_id !== undefined) row.exclusive_agent_id = payload.exclusive_agent_id;
-  const { error } = await supabase
-    .from("email_address_rules")
-    .insert(row);
+  const { error } = await supabase.from("email_address_rules").insert(row);
   if (error) throw error;
 }
 
@@ -325,14 +302,8 @@ export async function findAddressRuleIdByAddressAndOperator(
 }
 
 /** Insert regola completa restituendo l'id creato. */
-export async function insertAddressRuleReturningId(
-  payload: RuleInsert,
-): Promise<string> {
-  const { data, error } = await supabase
-    .from("email_address_rules")
-    .insert(payload)
-    .select("id")
-    .single();
+export async function insertAddressRuleReturningId(payload: RuleInsert): Promise<string> {
+  const { data, error } = await supabase.from("email_address_rules").insert(payload).select("id").single();
   if (error) throw error;
   return data.id;
 }
@@ -345,9 +316,7 @@ export interface AddressRuleMatchTargets {
 }
 
 /** Campi di matching (address/domain) di una regola. */
-export async function getAddressRuleMatchTargets(
-  ruleId: string,
-): Promise<AddressRuleMatchTargets | null> {
+export async function getAddressRuleMatchTargets(ruleId: string): Promise<AddressRuleMatchTargets | null> {
   const { data } = await supabase
     .from("email_address_rules")
     .select("email_address, domain, address, domain_pattern")
@@ -357,10 +326,7 @@ export async function getAddressRuleMatchTargets(
 }
 
 /** Agente esclusivo eventualmente bloccato su un indirizzo. */
-export async function findExclusiveAgentForAddress(
-  emailAddress: string,
-  userId: string,
-): Promise<string | null> {
+export async function findExclusiveAgentForAddress(emailAddress: string, userId: string): Promise<string | null> {
   const { data } = await supabase
     .from("email_address_rules")
     .select("exclusive_agent_id")
@@ -387,10 +353,7 @@ export async function findAddressRuleForUser(
 
 /** Imposta l'agente esclusivo su una regola esistente. */
 export async function setAddressRuleExclusiveAgent(ruleId: string, agentId: string): Promise<void> {
-  const { error } = await supabase
-    .from("email_address_rules")
-    .update({ exclusive_agent_id: agentId })
-    .eq("id", ruleId);
+  const { error } = await supabase.from("email_address_rules").update({ exclusive_agent_id: agentId }).eq("id", ruleId);
   if (error) throw error;
 }
 
@@ -408,7 +371,9 @@ export interface AddressRuleSummary {
 export async function findAddressRuleSummaries(): Promise<AddressRuleSummary[]> {
   const { data, error } = await supabase
     .from("email_address_rules")
-    .select("email_address, auto_action, preferred_channel, ai_confidence_threshold, success_rate, display_name, is_active");
+    .select(
+      "email_address, auto_action, preferred_channel, ai_confidence_threshold, success_rate, display_name, is_active",
+    );
   if (error) throw error;
   return data ?? [];
 }
@@ -432,22 +397,23 @@ export interface EmailRuleWithStats {
 export async function findEmailAddressRulesWithStats(): Promise<EmailRuleWithStats[]> {
   const { data, error } = await supabase
     .from("email_address_rules")
-    .select("id, email_address, display_name, category, is_active, auto_action, auto_execute, ai_confidence_threshold, interaction_count, success_rate, last_interaction_at, created_at")
+    .select(
+      "id, email_address, display_name, category, is_active, auto_action, auto_execute, ai_confidence_threshold, interaction_count, success_rate, last_interaction_at, created_at",
+    )
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []) as EmailRuleWithStats[];
 }
 
 export async function setEmailAddressRuleActive(ruleId: string, isActive: boolean): Promise<void> {
-  const { error } = await supabase
-    .from("email_address_rules")
-    .update({ is_active: isActive })
-    .eq("id", ruleId);
+  const { error } = await supabase.from("email_address_rules").update({ is_active: isActive }).eq("id", ruleId);
   if (error) throw error;
 }
 
 /** Regole di archiviazione automatica (bounce hard) per un set di indirizzi. */
-export async function findArchiveBounceRulesForEmails(emails: string[]): Promise<Array<{ email_address: string; notes: string | null }>> {
+export async function findArchiveBounceRulesForEmails(
+  emails: string[],
+): Promise<Array<{ email_address: string; notes: string | null }>> {
   if (emails.length === 0) return [];
   const { data, error } = await supabase
     .from("email_address_rules")
@@ -464,10 +430,7 @@ export async function findArchiveBounceRulesForEmails(emails: string[]): Promise
  */
 
 /** Id regola esistente per (email_address, user_id). */
-export async function findAddressRuleIdForUserEmail(
-  emailAddress: string,
-  userId: string,
-): Promise<string | null> {
+export async function findAddressRuleIdForUserEmail(emailAddress: string, userId: string): Promise<string | null> {
   const { data } = await supabase
     .from("email_address_rules")
     .select("id")

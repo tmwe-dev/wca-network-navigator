@@ -10,19 +10,9 @@
  * passare sempre da qui (vedi ESLint rule `no-direct-bulk-op`).
  */
 import { supabase } from "@/integrations/supabase/client";
-import {
-  createBulkJob,
-  updateBulkJob,
-  appendBulkJobEvent,
-} from "@/data/bulkJobs";
+import { createBulkJob, updateBulkJob, appendBulkJobEvent } from "@/data/bulkJobs";
 import { getEntry } from "./registry";
-import type {
-  BulkScope,
-  BulkRunOptions,
-  BulkRunResult,
-  BulkItemResult,
-  BulkEntry,
-} from "./types";
+import type { BulkScope, BulkRunOptions, BulkRunResult, BulkItemResult, BulkEntry } from "./types";
 
 const DEFAULT_CONCURRENCY = 4;
 
@@ -101,7 +91,7 @@ export async function runBulkOp<I, R>(
     }
   });
 
-  const finalStatus = errorCount === 0 ? "completed" : (successCount === 0 ? "failed" : "completed_with_errors");
+  const finalStatus = errorCount === 0 ? "completed" : successCount === 0 ? "failed" : "completed_with_errors";
   await updateBulkJob(job.id, {
     status: finalStatus,
     processed,

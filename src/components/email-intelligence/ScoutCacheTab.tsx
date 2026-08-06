@@ -4,7 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { listFunnemailScoutCache, invalidateFunnemailScoutCache, type FunnemailScoutCacheRow } from "@/data/funnemailScoutCache";
+import {
+  listFunnemailScoutCache,
+  invalidateFunnemailScoutCache,
+  type FunnemailScoutCacheRow,
+} from "@/data/funnemailScoutCache";
 
 const QK = ["funnemail", "scout-cache"] as const;
 
@@ -30,11 +34,13 @@ export default function ScoutCacheTab() {
                   {expired && <Badge variant="destructive">expired</Badge>}
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  source: {r.scout_source ?? "?"} · cached {new Date(r.cached_at).toLocaleString()} · expires {new Date(r.expires_at).toLocaleDateString()}
+                  source: {r.scout_source ?? "?"} · cached {new Date(r.cached_at).toLocaleString()} · expires{" "}
+                  {new Date(r.expires_at).toLocaleDateString()}
                 </span>
               </div>
               <Button
-                variant="ghost" size="icon"
+                variant="ghost"
+                size="icon"
                 onClick={async () => {
                   await invalidateFunnemailScoutCache(r.id);
                   toast.success("Cache invalidata");

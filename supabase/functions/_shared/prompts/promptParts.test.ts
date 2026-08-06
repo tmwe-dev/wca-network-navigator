@@ -1,9 +1,5 @@
 import { assertEquals, assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import {
-  isHoldingPatternCategory,
-  buildAddressPriorityBlock,
-  buildCommercialStateBlock,
-} from "./promptParts.ts";
+import { isHoldingPatternCategory, buildAddressPriorityBlock, buildCommercialStateBlock } from "./promptParts.ts";
 
 Deno.test("isHoldingPatternCategory: detects keywords (case-insensitive)", () => {
   assert(isHoldingPatternCategory("In Attesa"));

@@ -22,7 +22,8 @@ export default function EnrichmentSettings() {
   const d = useEnrichmentData();
 
   const getTargets = useCallback((): BaseEnrichTarget[] => {
-    return d.getSelectedRows()
+    return d
+      .getSelectedRows()
       .filter((r) => r.source === "wca" || r.source === "contacts" || r.source === "bca")
       .map((r) => {
         // BCA → trattato come azienda (logo + sito + LinkedIn azienda); persiste su business_cards.raw_data.enrichment
@@ -50,75 +51,71 @@ export default function EnrichmentSettings() {
 
   return (
     <PageErrorBoundary>
-    <div className="flex-1 min-w-0 space-y-3">
-      <EnrichmentStatusHeader
-        totalCount={d.stats.total}
-        completeCount={d.stats.completeCount}
-        partialCount={d.stats.partialCount}
-        missingCount={d.stats.missingCount}
-        isRunning={progress.status === "running"}
-        progressDone={progress.done}
-        progressTotal={progress.total}
-        selectedCount={d.selectedCount}
-        onStart={handleStart}
-        onStop={stop}
-      />
-
-      <SourceTabBar
-        activeTab={d.sourceTab}
-        counts={d.sourceCounts}
-        onTabChange={d.changeSourceTab}
-      />
-
-      <EnrichmentToolbar
-        search={d.search}
-        enrichFilter={d.enrichFilter}
-        stats={d.stats}
-        onSearchChange={d.setSearch}
-        onFilterChange={d.setEnrichFilter}
-        baseEnrichment={{
-          progress,
-          selectedCount: d.selectedCount,
-          onStart: handleStart,
-          onStop: stop,
-        }}
-      />
-
-      {d.someSelected && (
-        <BulkActionBar
+      <div className="flex-1 min-w-0 space-y-3">
+        <EnrichmentStatusHeader
+          totalCount={d.stats.total}
+          completeCount={d.stats.completeCount}
+          partialCount={d.stats.partialCount}
+          missingCount={d.stats.missingCount}
+          isRunning={progress.status === "running"}
+          progressDone={progress.done}
+          progressTotal={progress.total}
           selectedCount={d.selectedCount}
-          onLinkedInBatch={d.handleLinkedInBatch}
-          onBulkLogoSearch={d.handleBulkLogoSearch}
-          onDeepSearch={d.openDeepSearchDialog}
-          getSelectedRows={d.getSelectedRows}
+          onStart={handleStart}
+          onStop={stop}
         />
-      )}
 
-      <EnrichmentRowList
-        rows={d.allRows}
-        selected={d.selected}
-        allSelected={d.allSelected}
-        sortField={d.sortField}
-        sortDir={d.sortDir}
-        rowStates={progress.rowStates}
-        onToggleAll={d.toggleAll}
-        onToggleOne={d.toggleOne}
-        onToggleSort={d.toggleSort}
-        onDeepSearch={d.openDeepSearchDialog}
-      />
+        <SourceTabBar activeTab={d.sourceTab} counts={d.sourceCounts} onTabChange={d.changeSourceTab} />
 
-      <p className="text-xs text-foreground/60">
-        Loghi via Clearbit/Google Favicon · LinkedIn via Partner Connect · Deep Search configurabile per record
-      </p>
+        <EnrichmentToolbar
+          search={d.search}
+          enrichFilter={d.enrichFilter}
+          stats={d.stats}
+          onSearchChange={d.setSearch}
+          onFilterChange={d.setEnrichFilter}
+          baseEnrichment={{
+            progress,
+            selectedCount: d.selectedCount,
+            onStart: handleStart,
+            onStop: stop,
+          }}
+        />
 
-      <DeepSearchOptionsDialog
-        open={d.dsDialogOpen}
-        onOpenChange={d.setDsDialogOpen}
-        count={d.dsTargetIds.length}
-        onConfirm={d.handleDeepSearchConfirm}
-        loading={d.deepSearch.running}
-      />
-    </div>
+        {d.someSelected && (
+          <BulkActionBar
+            selectedCount={d.selectedCount}
+            onLinkedInBatch={d.handleLinkedInBatch}
+            onBulkLogoSearch={d.handleBulkLogoSearch}
+            onDeepSearch={d.openDeepSearchDialog}
+            getSelectedRows={d.getSelectedRows}
+          />
+        )}
+
+        <EnrichmentRowList
+          rows={d.allRows}
+          selected={d.selected}
+          allSelected={d.allSelected}
+          sortField={d.sortField}
+          sortDir={d.sortDir}
+          rowStates={progress.rowStates}
+          onToggleAll={d.toggleAll}
+          onToggleOne={d.toggleOne}
+          onToggleSort={d.toggleSort}
+          onDeepSearch={d.openDeepSearchDialog}
+        />
+
+        <p className="text-xs text-foreground/60">
+          Loghi via Clearbit/Google Favicon · LinkedIn via Partner Connect · Deep Search configurabile per record
+        </p>
+
+        <DeepSearchOptionsDialog
+          open={d.dsDialogOpen}
+          onOpenChange={d.setDsDialogOpen}
+          count={d.dsTargetIds.length}
+          onConfirm={d.handleDeepSearchConfirm}
+          loading={d.deepSearch.running}
+        />
+      </div>
     </PageErrorBoundary>
   );
 }

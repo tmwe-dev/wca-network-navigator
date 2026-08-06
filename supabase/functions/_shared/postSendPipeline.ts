@@ -45,7 +45,7 @@ function calculateSimilarity(text1: string, text2: string): number {
     if (n1[i] !== n2[i]) diff++;
   }
   diff += Math.abs(n1.length - n2.length);
-  return 1.0 - (diff / longer);
+  return 1.0 - diff / longer;
 }
 
 async function detectAndLogEmailEdit(
@@ -157,21 +157,22 @@ export async function runPostSendPipeline(
   const now = new Date().toISOString();
 
   // LOVABLE-93: Resolve source type (retrocompat: default = partner if partnerId present)
-  const resolvedSourceType: SourceType = input.sourceType
-    || (input.partnerId ? "partner" : input.contactId ? "imported_contact" : "partner");
-  const resolvedSourceId = input.sourceId
-    || input.partnerId || input.contactId || input.businessCardId || crypto.randomUUID();
+  const resolvedSourceType: SourceType =
+    input.sourceType || (input.partnerId ? "partner" : input.contactId ? "imported_contact" : "partner");
+  const resolvedSourceId =
+    input.sourceId || input.partnerId || input.contactId || input.businessCardId || crypto.randomUUID();
 
   // === IDEMPOTENCY CHECK ===
   if (input.partnerId) {
     const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
-    const activityType = input.channel === "email"
-      ? "send_email"
-      : input.channel === "whatsapp"
-      ? "whatsapp_message"
-      : input.channel === "linkedin"
-      ? "linkedin_message"
-      : "sms_message";
+    const activityType =
+      input.channel === "email"
+        ? "send_email"
+        : input.channel === "whatsapp"
+          ? "whatsapp_message"
+          : input.channel === "linkedin"
+            ? "linkedin_message"
+            : "sms_message";
     const { count } = await supabase
       .from("activities")
       .select("id", { count: "exact", head: true })
@@ -200,8 +201,13 @@ export async function runPostSendPipeline(
   const leadPM = initLeadProcessManager(supabase);
   if (resolvedSourceType === "partner" && input.partnerId) {
     // Pubblica EmailSent → il PM reagisce con new→first_touch_sent se necessario
-    const emailSentEvent = createEvent("email.sent", input.userId,
-      { type: (input.actorType || "system") as "user" | "system" | "cron" | "ai_agent", name: `postSendPipeline/${input.source}` },
+    const emailSentEvent = createEvent(
+      "email.sent",
+      input.userId,
+      {
+        type: (input.actorType || "system") as "user" | "system" | "cron" | "ai_agent",
+        name: `postSendPipeline/${input.source}`,
+      },
       {
         partnerId: input.partnerId,
         contactId: input.contactId || undefined,

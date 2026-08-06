@@ -5,12 +5,17 @@
 
 import { decodeAttachment } from "jsr:@workingdevshero/deno-imap";
 import {
-  decodeMimePart, collectMimeLeafParts, sanitizeFilename,
-  parseMultipartFallback, type MimeLeafPart,
+  decodeMimePart,
+  collectMimeLeafParts,
+  sanitizeFilename,
+  parseMultipartFallback,
+  type MimeLeafPart,
 } from "./mimeDecoder.ts";
 import {
-  extractLiteralBytesFromResponse, extractLiteralTextFromResponse,
-  MAX_ATTACHMENT_BYTES, INLINE_DATA_URI_THRESHOLD,
+  extractLiteralBytesFromResponse,
+  extractLiteralTextFromResponse,
+  MAX_ATTACHMENT_BYTES,
+  INLINE_DATA_URI_THRESHOLD,
 } from "./imapParser.ts";
 import { type AttachmentRecord } from "./dbOperations.ts";
 
@@ -47,8 +52,7 @@ export async function extractBodyAndAttachments(
 
   // ─── Oversized message: estrai SOLO le parti di testo (leggere), salta allegati ───
   if (isOversized) {
-    const banner =
-      `<div style="padding:12px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif;margin-bottom:12px"><strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/><span>Allegati non scaricati per evitare errori. Di seguito il testo del messaggio.</span></div>`;
+    const banner = `<div style="padding:12px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif;margin-bottom:12px"><strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/><span>Allegati non scaricati per evitare errori. Di seguito il testo del messaggio.</span></div>`;
 
     let textParts: MimeLeafPart[] = [];
     if (bodyStructure) {
@@ -79,7 +83,9 @@ export async function extractBodyAndAttachments(
     if (result.bodyHtml) {
       result.bodyHtml = banner + result.bodyHtml;
     } else if (result.bodyText) {
-      result.bodyHtml = banner + `<pre style="white-space:pre-wrap;font-family:sans-serif">${result.bodyText.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c))}</pre>`;
+      result.bodyHtml =
+        banner +
+        `<pre style="white-space:pre-wrap;font-family:sans-serif">${result.bodyText.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c] || c)}</pre>`;
     } else {
       result.bodyText = `⚠️ Messaggio troppo grande per il download completo (${sizeMB} MB). Salvati solo oggetto e dati principali.`;
       result.bodyHtml = `<div style="padding:16px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif"><strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/><p>Non è stato possibile estrarre il testo. Salvati solo: oggetto, mittente, destinatari e data.</p></div>`;
@@ -137,7 +143,8 @@ export async function extractBodyAndAttachments(
               if (retry.text) result.bodyText = retry.text.slice(0, MAX_TEXT_LENGTH);
             }
             if (!result.bodyHtml && !result.bodyText) {
-              result.bodyText = "⚠️ Contenuto MIME complesso — parsing parziale non riuscito. Consultare il messaggio originale.";
+              result.bodyText =
+                "⚠️ Contenuto MIME complesso — parsing parziale non riuscito. Consultare il messaggio originale.";
               result.parseWarnings.push("raw MIME detected but could not extract body parts");
             }
           } else {
@@ -227,14 +234,14 @@ export async function extractBodyAndAttachments(
             });
           } else {
             const storagePath = `emails/${userId}/${messageId}/${filename}`;
-            const { error: uploadErr } = await supabaseAdmin
-              .storage.from("import-files")
+            const { error: uploadErr } = await supabaseAdmin.storage
+              .from("import-files")
               .upload(storagePath, decoded, { contentType, upsert: true });
             if (!uploadErr) {
               const { data: urlData } = supabaseAdmin.storage.from("import-files").getPublicUrl(storagePath);
               result.attachmentRecords.push({
                 cid: part.contentId,
-                publicUrl: (urlData as Record<string, unknown>)?.publicUrl as string || "",
+                publicUrl: ((urlData as Record<string, unknown>)?.publicUrl as string) || "",
                 filename,
                 storagePath,
                 contentType,
@@ -274,8 +281,8 @@ export async function extractBodyAndAttachments(
           const contentType = `${part.type}/${part.subtype}`;
           const filename = sanitizeFilename(part.filename);
           const storagePath = `emails/${userId}/${messageId}/${filename}`;
-          const { error: uploadErr } = await supabaseAdmin
-            .storage.from("import-files")
+          const { error: uploadErr } = await supabaseAdmin.storage
+            .from("import-files")
             .upload(storagePath, decoded, { contentType, upsert: true });
           if (!uploadErr) {
             result.attachmentRecords.push({

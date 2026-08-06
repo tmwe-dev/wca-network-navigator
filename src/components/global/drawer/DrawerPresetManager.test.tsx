@@ -12,8 +12,28 @@ vi.mock("@/components/workspace/QualitySelector", () => ({
 import { DrawerPresetManager } from "./DrawerPresetManager";
 
 const PRESETS = [
-  { id: "p1", name: "Default", base_proposal: null, created_at: null, document_ids: [], goal: null, reference_links: [], updated_at: null, user_id: "u1" },
-  { id: "p2", name: "Enterprise", base_proposal: null, created_at: null, document_ids: [], goal: null, reference_links: [], updated_at: null, user_id: "u1" },
+  {
+    id: "p1",
+    name: "Default",
+    base_proposal: null,
+    created_at: null,
+    document_ids: [],
+    goal: null,
+    reference_links: [],
+    updated_at: null,
+    user_id: "u1",
+  },
+  {
+    id: "p2",
+    name: "Enterprise",
+    base_proposal: null,
+    created_at: null,
+    document_ids: [],
+    goal: null,
+    reference_links: [],
+    updated_at: null,
+    user_id: "u1",
+  },
 ] as any;
 
 describe("DrawerPresetManager", () => {

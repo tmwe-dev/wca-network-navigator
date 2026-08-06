@@ -87,7 +87,19 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: SendEmailBody = await req.json();
-    const { to, subject, html, from, partner_id, contact_id, agent_id, reply_to, operator_id, idempotency_key, journalist_reviewed } = body;
+    const {
+      to,
+      subject,
+      html,
+      from,
+      partner_id,
+      contact_id,
+      agent_id,
+      reply_to,
+      operator_id,
+      idempotency_key,
+      journalist_reviewed,
+    } = body;
 
     if (!to || !subject || !html) {
       return edgeError("VALIDATION_ERROR", "Missing required fields: to, subject, html");
@@ -172,11 +184,7 @@ Deno.serve(async (req) => {
     // ── HARD GUARD: blacklist commerciale prima di qualsiasi invio ───────────
     const recipientEmail = to.toLowerCase().trim();
     const recipientDomain = recipientEmail.includes("@") ? recipientEmail.split("@")[1] : null;
-    const blacklistQuery = supabase
-      .from("blacklist")
-      .select("id, reason")
-      .eq("user_id", userIdEarly)
-      .limit(1);
+    const blacklistQuery = supabase.from("blacklist").select("id, reason").eq("user_id", userIdEarly).limit(1);
     const { data: blacklisted } = recipientDomain
       ? await blacklistQuery.or(`email.eq.${recipientEmail},domain.eq.${recipientDomain}`).maybeSingle()
       : await blacklistQuery.eq("email", recipientEmail).maybeSingle();
@@ -201,7 +209,12 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (partner?.lead_status === "blacklisted") {
         return new Response(
-          JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Partner con lead_status = blacklisted", retriable: false }),
+          JSON.stringify({
+            success: false,
+            error: "BLACKLISTED",
+            reason: "Partner con lead_status = blacklisted",
+            retriable: false,
+          }),
           { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
@@ -215,7 +228,12 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (contact?.lead_status === "blacklisted") {
         return new Response(
-          JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Contatto con lead_status = blacklisted", retriable: false }),
+          JSON.stringify({
+            success: false,
+            error: "BLACKLISTED",
+            reason: "Contatto con lead_status = blacklisted",
+            retriable: false,
+          }),
           { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
@@ -228,9 +246,9 @@ Deno.serve(async (req) => {
       supabase.from("partners").select("email_status").ilike("email", to).limit(1).maybeSingle(),
     ]);
     const blockedStatus =
-      (contactCheck.data?.email_status && contactCheck.data.email_status !== "valid")
+      contactCheck.data?.email_status && contactCheck.data.email_status !== "valid"
         ? contactCheck.data.email_status
-        : (partnerCheck.data?.email_status && partnerCheck.data.email_status !== "valid")
+        : partnerCheck.data?.email_status && partnerCheck.data.email_status !== "valid"
           ? partnerCheck.data.email_status
           : null;
     if (blockedStatus) {
@@ -248,13 +266,20 @@ Deno.serve(async (req) => {
       .select("key, value")
       .eq("user_id", claimsData.claims.sub as string)
       .in("key", [
-        "smtp_host", "smtp_port", "smtp_user", "smtp_password",
-        "default_sender_email", "default_sender_name",
-        "ai_signature_image_url", "ai_footer_image_url",
+        "smtp_host",
+        "smtp_port",
+        "smtp_user",
+        "smtp_password",
+        "default_sender_email",
+        "default_sender_name",
+        "ai_signature_image_url",
+        "ai_footer_image_url",
       ]);
 
     const s: Record<string, string> = {};
-    (settingsRows as AppSettingRow[] | null)?.forEach((row) => { if (row.value) s[row.key] = row.value; });
+    (settingsRows as AppSettingRow[] | null)?.forEach((row) => {
+      if (row.value) s[row.key] = row.value;
+    });
 
     // Step F — opt-in shared mailbox: header x-mailbox-id sovrascrive le credenziali SMTP
     // (e il sender) con quelle della casella condivisa. Senza header → flusso personale invariato.
@@ -286,7 +311,10 @@ Deno.serve(async (req) => {
         if (e instanceof MailboxAccessDenied) {
           return edgeError("AUTH_INVALID", `Non sei autorizzato a usare questa casella aziendale (${mailboxId}).`);
         }
-        return edgeError("VALIDATION_ERROR", `Casella aziendale non disponibile: ${e instanceof Error ? e.message : String(e)}`);
+        return edgeError(
+          "VALIDATION_ERROR",
+          `Casella aziendale non disponibile: ${e instanceof Error ? e.message : String(e)}`,
+        );
       }
     } else {
       smtpHost = s["smtp_host"];
@@ -362,16 +390,22 @@ Deno.serve(async (req) => {
       }
       const footerImg = s["ai_footer_image_url"];
       if (isValidHttpsUrl(footerImg)) {
-        finalHtml += sanitizeHtml(`<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`);
+        finalHtml += sanitizeHtml(
+          `<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`,
+        );
       }
     } else {
       const sigImg = s["ai_signature_image_url"];
       const footerImg = s["ai_footer_image_url"];
       if (isValidHttpsUrl(sigImg)) {
-        finalHtml += sanitizeHtml(`<div style="margin-top:16px"><img src="${sigImg}" alt="Signature" style="max-width:300px;height:auto" /></div>`);
+        finalHtml += sanitizeHtml(
+          `<div style="margin-top:16px"><img src="${sigImg}" alt="Signature" style="max-width:300px;height:auto" /></div>`,
+        );
       }
       if (isValidHttpsUrl(footerImg)) {
-        finalHtml += sanitizeHtml(`<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`);
+        finalHtml += sanitizeHtml(
+          `<div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px"><img src="${footerImg}" alt="Footer" style="max-width:600px;width:100%;height:auto" /></div>`,
+        );
       }
     }
 
@@ -381,11 +415,7 @@ Deno.serve(async (req) => {
       resolvedReplyTo = sharedReplyTo;
     }
     if (!resolvedReplyTo && operator_id) {
-      const { data: opRow } = await supabase
-        .from("operators")
-        .select("reply_to_email")
-        .eq("id", operator_id)
-        .single();
+      const { data: opRow } = await supabase.from("operators").select("reply_to_email").eq("id", operator_id).single();
       if (opRow?.reply_to_email) resolvedReplyTo = opRow.reply_to_email;
     }
     if (!resolvedReplyTo) {
@@ -399,18 +429,10 @@ Deno.serve(async (req) => {
       // Fetch partner & contact data for journalist review context
       const [partnerData, contactData] = await Promise.all([
         partner_id
-          ? supabase
-              .from("partners")
-              .select("company_name, country")
-              .eq("id", partner_id)
-              .maybeSingle()
+          ? supabase.from("partners").select("company_name, country").eq("id", partner_id).maybeSingle()
           : Promise.resolve({ data: null }),
         contact_id
-          ? supabase
-              .from("imported_contacts")
-              .select("name, role")
-              .eq("id", contact_id)
-              .maybeSingle()
+          ? supabase.from("imported_contacts").select("name, role").eq("id", contact_id).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
 
@@ -480,8 +502,7 @@ Deno.serve(async (req) => {
       let total = 0;
       for (const att of body.attachments) {
         if (!att?.path || !att?.filename) continue;
-        const { data: file, error: dlErr } = await supabase.storage
-          .from("cockpit-attachments").download(att.path);
+        const { data: file, error: dlErr } = await supabase.storage.from("cockpit-attachments").download(att.path);
         if (dlErr || !file) {
           console.warn(`[send-email] attachment download failed: ${att.path}`, dlErr);
           return edgeError("ATTACHMENT_ERROR", `Allegato non disponibile: ${att.filename}`);
@@ -510,7 +531,11 @@ Deno.serve(async (req) => {
       await client.send(sendOptions);
       await client.close();
     } catch (smtpErr) {
-      try { await client.close(); } catch { /* ignore */ }
+      try {
+        await client.close();
+      } catch {
+        /* ignore */
+      }
       const errMsg = extractErrorMessage(smtpErr);
       const lower = errMsg.toLowerCase();
       const retriable =
@@ -524,7 +549,8 @@ Deno.serve(async (req) => {
 
       // Mark idempotency row as failed (UPDATE della row "sending" creata pre-send)
       if (idempotencyRowId) {
-        await supabase.from("email_campaign_queue")
+        await supabase
+          .from("email_campaign_queue")
           .update({
             status: "failed",
             error_message: errMsg.slice(0, 1000),
@@ -534,44 +560,47 @@ Deno.serve(async (req) => {
       }
 
       // ── Audit log (fire-and-forget) ──
-      supabase.from("email_send_log").insert({
+      supabase
+        .from("email_send_log")
+        .insert({
+          user_id: userIdEarly,
+          idempotency_key: idempotency_key ?? null,
+          recipient_email: to,
+          subject,
+          partner_id: partner_id ?? null,
+          channel: "email",
+          send_method: agent_id ? "agent" : "direct",
+          status: "failed",
+          error_message: errMsg.slice(0, 1000),
+        })
+        .then(({ error }) => {
+          if (error) console.error("[send-email] esl insert (fail) failed:", error.message);
+        });
+
+      console.error(`[send-email] SMTP failure (retriable=${retriable}):`, errMsg);
+      return new Response(JSON.stringify({ success: false, retriable, error: errMsg }), {
+        status: retriable ? 503 : 502,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Audit log (fire-and-forget): SMTP success ──
+    supabase
+      .from("email_send_log")
+      .insert({
         user_id: userIdEarly,
+        message_id: messageIdExternal,
         idempotency_key: idempotency_key ?? null,
         recipient_email: to,
         subject,
         partner_id: partner_id ?? null,
         channel: "email",
         send_method: agent_id ? "agent" : "direct",
-        status: "failed",
-        error_message: errMsg.slice(0, 1000),
-      }).then(({ error }) => {
-        if (error) console.error("[send-email] esl insert (fail) failed:", error.message);
+        status: "sent",
+      })
+      .then(({ error }) => {
+        if (error) console.error("[send-email] esl insert failed:", error.message);
       });
-
-      console.error(`[send-email] SMTP failure (retriable=${retriable}):`, errMsg);
-      return new Response(
-        JSON.stringify({ success: false, retriable, error: errMsg }),
-        {
-          status: retriable ? 503 : 502,
-          headers: { ...dynCors, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // ── Audit log (fire-and-forget): SMTP success ──
-    supabase.from("email_send_log").insert({
-      user_id: userIdEarly,
-      message_id: messageIdExternal,
-      idempotency_key: idempotency_key ?? null,
-      recipient_email: to,
-      subject,
-      partner_id: partner_id ?? null,
-      channel: "email",
-      send_method: agent_id ? "agent" : "direct",
-      status: "sent",
-    }).then(({ error }) => {
-      if (error) console.error("[send-email] esl insert failed:", error.message);
-    });
 
     // Log side effects ONLY after confirmed SMTP success — via pipeline unificata
     // LOVABLE-93: sourceType esplicito per multi-source support
@@ -589,11 +618,11 @@ Deno.serve(async (req) => {
       messageIdExternal,
       threadId,
     });
-    
 
     // Mark idempotency row as sent (UPDATE della row "sending" creata pre-send)
     if (idempotencyRowId) {
-      await supabase.from("email_campaign_queue")
+      await supabase
+        .from("email_campaign_queue")
         .update({
           status: "sent",
           message_id: messageIdExternal,
@@ -604,10 +633,10 @@ Deno.serve(async (req) => {
 
     // LOVABLE-93: supervisor audit è ora integrato in postSendPipeline
 
-    return new Response(
-      JSON.stringify({ success: true, message_id: messageIdExternal, retriable: false }),
-      { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, message_id: messageIdExternal, retriable: false }), {
+      status: 200,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   } catch (e: unknown) {
     createLogger("send-email").error("send-email error", e);
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e));

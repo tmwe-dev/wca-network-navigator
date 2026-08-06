@@ -4,9 +4,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  findAgents, createAgent as dalCreateAgent, updateAgent as dalUpdateAgent,
-  deleteAgent as dalDeleteAgent, invalidateAgents,
-  type Agent, type AgentInsert, type AgentUpdate,
+  findAgents,
+  createAgent as dalCreateAgent,
+  updateAgent as dalUpdateAgent,
+  deleteAgent as dalDeleteAgent,
+  invalidateAgents,
+  type Agent,
+  type AgentInsert,
+  type AgentUpdate,
 } from "@/data/agents";
 
 export type { Agent, AgentInsert, AgentUpdate };
@@ -26,7 +31,10 @@ export function useAgents() {
 
   const createAgent = useMutation({
     mutationFn: async (agent: Partial<AgentInsert>) => {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       return dalCreateAgent({ ...agent, user_id: user.id, name: agent.name ?? "New Agent" } as AgentInsert);
     },

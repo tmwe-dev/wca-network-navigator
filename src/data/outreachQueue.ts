@@ -10,7 +10,9 @@ import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 export async function findPendingOutreachItems(limit = 5) {
   const { data, error } = await supabase
     .from("outreach_queue")
-    .select("id, channel, recipient_name, recipient_email, recipient_phone, recipient_linkedin_url, subject, body, status, attempts, max_attempts, priority, created_by")
+    .select(
+      "id, channel, recipient_name, recipient_email, recipient_phone, recipient_linkedin_url, subject, body, status, attempts, max_attempts, priority, created_by",
+    )
     .eq("status", "pending")
     .order("priority", { ascending: false })
     .order("created_at", { ascending: true })
@@ -70,14 +72,14 @@ export interface OutreachQueueRow {
 export async function findPendingOutreachItemsFromView(
   status?: string,
   limit = 100,
-  offset = 0
+  offset = 0,
 ): Promise<OutreachQueueRow[]> {
   // P3.7: v_outreach_today view non esiste. Query diretta a outreach_queue
   // mappata sulla shape OutreachQueueRow. Campi denormalizzati a null.
   let q = supabase
     .from("outreach_queue")
     .select(
-      "id, user_id, channel, recipient_name, recipient_email, subject, status, attempts, max_attempts, priority, created_at, partner_id, contact_id"
+      "id, user_id, channel, recipient_name, recipient_email, subject, status, attempts, max_attempts, priority, created_at, partner_id, contact_id",
     );
   q = q.eq("status", status ?? "pending");
   const { data, error } = await q
@@ -100,27 +102,29 @@ export async function findPendingOutreachItemsFromView(
     partner_id: string | null;
     contact_id: string | null;
   };
-  return ((data ?? []) as Row[]).map((r): OutreachQueueRow => ({
-    queue_id: r.id,
-    user_id: r.user_id ?? "",
-    channel: r.channel ?? "",
-    recipient_name: r.recipient_name ?? "",
-    recipient_email: r.recipient_email ?? "",
-    subject: r.subject,
-    status: r.status ?? "",
-    attempts: r.attempts ?? 0,
-    max_attempts: r.max_attempts ?? 0,
-    priority: String(r.priority ?? ""),
-    created_at: r.created_at ?? "",
-    scheduled_for: null,
-    partner_id: r.partner_id,
-    contact_id: r.contact_id,
-    partner_name: null,
-    partner_lead_status: null,
-    partner_country: null,
-    mission_id: null,
-    mission_name: null,
-    last_outbound_at: null,
-    last_channel: null,
-  }));
+  return ((data ?? []) as Row[]).map(
+    (r): OutreachQueueRow => ({
+      queue_id: r.id,
+      user_id: r.user_id ?? "",
+      channel: r.channel ?? "",
+      recipient_name: r.recipient_name ?? "",
+      recipient_email: r.recipient_email ?? "",
+      subject: r.subject,
+      status: r.status ?? "",
+      attempts: r.attempts ?? 0,
+      max_attempts: r.max_attempts ?? 0,
+      priority: String(r.priority ?? ""),
+      created_at: r.created_at ?? "",
+      scheduled_for: null,
+      partner_id: r.partner_id,
+      contact_id: r.contact_id,
+      partner_name: null,
+      partner_lead_status: null,
+      partner_country: null,
+      mission_id: null,
+      mission_name: null,
+      last_outbound_at: null,
+      last_channel: null,
+    }),
+  );
 }

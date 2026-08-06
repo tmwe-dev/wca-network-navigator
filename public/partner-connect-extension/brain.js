@@ -4,20 +4,19 @@
 // Nessuna API key esterna richiesta
 
 const Brain = {
-
   // ============================================================
   // CONFIG
   // ============================================================
   // Edge Function URL for Lovable AI proxy
-  EDGE_FUNCTION_URL: 'https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/extension-brain',
+  EDGE_FUNCTION_URL: "https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/extension-brain",
 
   config: {
     // AI via Lovable AI (no API key needed)
     claudeMaxTokens: 1024,
 
     // Supabase (knowledge base)
-    supabaseUrl: '',
-    supabaseKey: '',
+    supabaseUrl: "",
+    supabaseKey: "",
 
     // Token budget
     dailyTokenBudget: 50000,
@@ -68,7 +67,7 @@ OUTPUT FORMAT:
   },
 
   async _doInit() {
-    const stored = await chrome.storage.local.get('brain_config');
+    const stored = await chrome.storage.local.get("brain_config");
     if (stored.brain_config) {
       const cfg = stored.brain_config;
       // Legacy: remove old encrypted keys if present
@@ -77,7 +76,7 @@ OUTPUT FORMAT:
       delete cfg.claudeModel;
       // Decifra Supabase key se presente
       if (cfg._encSupaKey) {
-        cfg.supabaseKey = await CryptoUtils.decrypt(cfg._encSupaKey) || '';
+        cfg.supabaseKey = (await CryptoUtils.decrypt(cfg._encSupaKey)) || "";
         delete cfg._encSupaKey;
       }
       Object.assign(this.config, cfg);
@@ -91,7 +90,7 @@ OUTPUT FORMAT:
     }
 
     // Init Hydra Memory client (cervello condiviso)
-    if (typeof HydraClient !== 'undefined') {
+    if (typeof HydraClient !== "undefined") {
       await HydraClient.init();
     }
   },
@@ -112,11 +111,11 @@ OUTPUT FORMAT:
     for (const key in partial) {
       const value = partial[key];
       // Skip empty string values for sensitive keys
-      if (key === 'supabaseKey') {
-        if (value === '') continue;
+      if (key === "supabaseKey") {
+        if (value === "") continue;
       }
       // Ignore legacy Claude keys
-      if (key === 'claudeApiKey' || key === 'claudeModel') continue;
+      if (key === "claudeApiKey" || key === "claudeModel") continue;
       merged[key] = value;
     }
     Object.assign(this.config, merged);
@@ -137,13 +136,15 @@ OUTPUT FORMAT:
     if (context.domain) {
       domain = context.domain;
     } else if (context.url) {
-      try { domain = new URL(context.url).hostname; } catch {}
+      try {
+        domain = new URL(context.url).hostname;
+      } catch {}
     }
 
     if (domain && context.type) {
       const existing = await Library.search({ domain, category: context.type });
       if (existing.length > 0) {
-        const recent = existing.find(e => (Date.now() - e.created_at) < 30 * 24 * 60 * 60 * 1000);
+        const recent = existing.find((e) => Date.now() - e.created_at < 30 * 24 * 60 * 60 * 1000);
         if (recent) {
           return {
             ...recent.data,
@@ -157,19 +158,19 @@ OUTPUT FORMAT:
 
     // Arricchisci prompt con memoria Hydra (cervello condiviso)
     let enrichedPrompt = userPrompt;
-    if (typeof HydraClient !== 'undefined' && HydraClient.isConfigured()) {
+    if (typeof HydraClient !== "undefined" && HydraClient.isConfigured()) {
       try {
         enrichedPrompt = await HydraClient.enrichPrompt(userPrompt, {
           carrier: context.carrier,
           domain,
         });
       } catch (e) {
-        console.warn('[Brain] Hydra context enrichment failed:', e.message);
+        console.warn("[Brain] Hydra context enrichment failed:", e.message);
       }
     }
 
     // Costruisci messaggi
-    const messages = [{ role: 'user', content: this._buildPrompt(enrichedPrompt, context) }];
+    const messages = [{ role: "user", content: this._buildPrompt(enrichedPrompt, context) }];
 
     // Calcola max tokens in base al budget rimasto
     const budgetLeft = this.config.dailyTokenBudget - this.config.tokensUsedToday;
@@ -177,9 +178,9 @@ OUTPUT FORMAT:
 
     // Chiama Lovable AI via Edge Function
     const response = await fetch(this.EDGE_FUNCTION_URL, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         messages,
@@ -201,7 +202,7 @@ OUTPUT FORMAT:
     await this.saveConfig();
 
     // Parse risposta
-    const text = data.content || '';
+    const text = data.content || "";
     let parsed;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -215,7 +216,7 @@ OUTPUT FORMAT:
       await Library.add({
         domain,
         url: context.url,
-        category: parsed.category || 'analysis',
+        category: parsed.category || "analysis",
         tags: parsed.tags || [],
         data: parsed,
         confidence: parsed.confidence || 50,
@@ -227,9 +228,9 @@ OUTPUT FORMAT:
       }
 
       // Salva anche in Hydra Memory (cervello condiviso)
-      if (typeof HydraClient !== 'undefined' && HydraClient.isConfigured()) {
-        HydraClient.learnFromAnalysis(domain, parsed).catch(e =>
-          console.warn('[Brain] Hydra learn failed:', e.message)
+      if (typeof HydraClient !== "undefined" && HydraClient.isConfigured()) {
+        HydraClient.learnFromAnalysis(domain, parsed).catch((e) =>
+          console.warn("[Brain] Hydra learn failed:", e.message),
         );
       }
     }
@@ -249,14 +250,16 @@ OUTPUT FORMAT:
     const context = {
       url: scrapeData?.metadata?.url || snapshotData?.url,
       domain: null,
-      type: 'company',
+      type: "company",
     };
-    try { context.domain = new URL(context.url).hostname; } catch {}
+    try {
+      context.domain = new URL(context.url).hostname;
+    } catch {}
 
     const prompt = `Analizza questa pagina web per intelligence logistica.
 
 CONTENUTO PAGINA (Markdown):
-${(scrapeData?.markdown || '').slice(0, 3000)}
+${(scrapeData?.markdown || "").slice(0, 3000)}
 
 ELEMENTI INTERATTIVI:
 - Bottoni: ${JSON.stringify(snapshotData?.buttons?.slice(0, 10) || [])}
@@ -285,12 +288,12 @@ STATO:
 - URL: ${currentState.url}
 - Titolo: ${currentState.title}
 - Elementi visibili: ${currentState.buttonsCount} bottoni, ${currentState.inputsCount} input, ${currentState.linksCount} link
-- Obiettivo: ${currentState.goal || 'raccogliere informazioni logistiche'}
+- Obiettivo: ${currentState.goal || "raccogliere informazioni logistiche"}
 
 Rispondi con un JSON contenente "next_actions": un array di azioni Agent da eseguire.
 Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "...", "text": "...", "reason": "..." }`;
 
-    return await this.think(prompt, { url: currentState.url, type: 'decision' });
+    return await this.think(prompt, { url: currentState.url, type: "decision" });
   },
 
   // ============================================================
@@ -302,22 +305,22 @@ Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "..
     try {
       // Validazione URL Supabase
       const url = new URL(this.config.supabaseUrl);
-      if (!url.hostname.endsWith('.supabase.co') && !url.hostname.endsWith('.supabase.in')) {
-        console.warn('[Brain] URL Supabase non valido');
+      if (!url.hostname.endsWith(".supabase.co") && !url.hostname.endsWith(".supabase.in")) {
+        console.warn("[Brain] URL Supabase non valido");
         return;
       }
 
       await fetch(`${this.config.supabaseUrl}/rest/v1/knowledge_base`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'apikey': this.config.supabaseKey,
-          'Authorization': `Bearer ${this.config.supabaseKey}`,
-          'Prefer': 'resolution=merge-duplicates',
+          "Content-Type": "application/json",
+          apikey: this.config.supabaseKey,
+          Authorization: `Bearer ${this.config.supabaseKey}`,
+          Prefer: "resolution=merge-duplicates",
         },
         body: JSON.stringify({
           domain,
-          category: data.category || 'analysis',
+          category: data.category || "analysis",
           tags: data.tags || [],
           data: data,
           confidence: data.confidence || 50,
@@ -325,7 +328,7 @@ Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "..
         }),
       });
     } catch (e) {
-      console.warn('[Brain] Supabase sync error:', e.message);
+      console.warn("[Brain] Supabase sync error:", e.message);
     }
   },
 
@@ -334,16 +337,16 @@ Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "..
 
     try {
       const params = new URLSearchParams();
-      if (query.domain) params.set('domain', `eq.${query.domain}`);
-      if (query.category) params.set('category', `eq.${query.category}`);
-      if (query.tag) params.set('tags', `cs.{${query.tag}}`);
-      params.set('order', 'updated_at.desc');
-      params.set('limit', '20');
+      if (query.domain) params.set("domain", `eq.${query.domain}`);
+      if (query.category) params.set("category", `eq.${query.category}`);
+      if (query.tag) params.set("tags", `cs.{${query.tag}}`);
+      params.set("order", "updated_at.desc");
+      params.set("limit", "20");
 
       const resp = await fetch(`${this.config.supabaseUrl}/rest/v1/knowledge_base?${params}`, {
         headers: {
-          'apikey': this.config.supabaseKey,
-          'Authorization': `Bearer ${this.config.supabaseKey}`,
+          apikey: this.config.supabaseKey,
+          Authorization: `Bearer ${this.config.supabaseKey}`,
         },
       });
       return await resp.json();
@@ -359,7 +362,7 @@ Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "..
     const parts = [userPrompt];
     if (context.url) parts.push(`\nURL: ${context.url}`);
     if (context.domain) parts.push(`Dominio: ${context.domain}`);
-    return parts.join('\n');
+    return parts.join("\n");
   },
 
   // ============================================================
@@ -371,8 +374,10 @@ Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "..
       tokensUsedToday: this.config.tokensUsedToday,
       dailyBudget: this.config.dailyTokenBudget,
       budgetRemaining: this.config.dailyTokenBudget - this.config.tokensUsedToday,
-      budgetPercent: Math.round(((this.config.dailyTokenBudget - this.config.tokensUsedToday) / this.config.dailyTokenBudget) * 100),
-      model: 'Lovable AI (Gemini Flash)',
+      budgetPercent: Math.round(
+        ((this.config.dailyTokenBudget - this.config.tokensUsedToday) / this.config.dailyTokenBudget) * 100,
+      ),
+      model: "Lovable AI (Gemini Flash)",
       supabaseConnected: !!(this.config.supabaseUrl && this.config.supabaseKey),
       aiConfigured: true, // Always true — no external key needed
       library: libraryStats,
@@ -384,10 +389,9 @@ Ogni azione: { "action": "click|type|scroll|navigate|wait|read", "selector": "..
 // LIBRARY — IndexedDB-backed per performance
 // ============================================================
 const Library = {
-
-  _dbName: 'FireScrapeLibrary',
-  _dbVersion: 2,  // FIX 7: Bump version to trigger onupgradeneeded for new tags index
-  _storeName: 'entries',
+  _dbName: "FireScrapeLibrary",
+  _dbVersion: 2, // FIX 7: Bump version to trigger onupgradeneeded for new tags index
+  _storeName: "entries",
   _db: null,
 
   // Apri/crea database
@@ -396,7 +400,7 @@ const Library = {
     if (this._db) {
       try {
         // Test connection by attempting a readonly transaction
-        const tx = this._db.transaction(this._storeName, 'readonly');
+        const tx = this._db.transaction(this._storeName, "readonly");
         tx.abort();
         return this._db;
       } catch (e) {
@@ -410,19 +414,19 @@ const Library = {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains(this._storeName)) {
-          const store = db.createObjectStore(this._storeName, { keyPath: 'id' });
-          store.createIndex('domain', 'domain', { unique: false });
-          store.createIndex('category', 'category', { unique: false });
-          store.createIndex('created_at', 'created_at', { unique: false });
+          const store = db.createObjectStore(this._storeName, { keyPath: "id" });
+          store.createIndex("domain", "domain", { unique: false });
+          store.createIndex("category", "category", { unique: false });
+          store.createIndex("created_at", "created_at", { unique: false });
           // Indice composto per ricerche domain+category
-          store.createIndex('domain_category', ['domain', 'category'], { unique: false });
+          store.createIndex("domain_category", ["domain", "category"], { unique: false });
           // FIX 5: Add tags multiEntry index for efficient tag queries
-          store.createIndex('tags', 'tags', { unique: false, multiEntry: true });
+          store.createIndex("tags", "tags", { unique: false, multiEntry: true });
         } else {
           // FIX 7: Check if tags index exists before creating (for version upgrades)
           const store = event.target.transaction.objectStore(this._storeName);
-          if (!store.indexNames.contains('tags')) {
-            store.createIndex('tags', 'tags', { unique: false, multiEntry: true });
+          if (!store.indexNames.contains("tags")) {
+            store.createIndex("tags", "tags", { unique: false, multiEntry: true });
           }
         }
       };
@@ -441,12 +445,12 @@ const Library = {
   // Aggiungi entry
   async add(entry) {
     const db = await this._getDb();
-    const id = 'fs_lib_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const id = "fs_lib_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
     const record = {
       id,
-      domain: entry.domain || '',
-      url: entry.url || '',
-      category: entry.category || 'unknown',
+      domain: entry.domain || "",
+      url: entry.url || "",
+      category: entry.category || "unknown",
       tags: entry.tags || [],
       data: entry.data,
       confidence: entry.confidence || 50,
@@ -455,7 +459,7 @@ const Library = {
     };
 
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this._storeName, 'readwrite');
+      const tx = db.transaction(this._storeName, "readwrite");
       tx.objectStore(this._storeName).put(record);
       tx.oncomplete = () => resolve(record);
       tx.onerror = () => reject(tx.error);
@@ -466,18 +470,18 @@ const Library = {
   async search(query = {}) {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this._storeName, 'readonly');
+      const tx = db.transaction(this._storeName, "readonly");
       const store = tx.objectStore(this._storeName);
       let results = [];
       let request;
 
       // Usa indice composto se possibile
       if (query.domain && query.category) {
-        request = store.index('domain_category').getAll([query.domain, query.category]);
+        request = store.index("domain_category").getAll([query.domain, query.category]);
       } else if (query.domain) {
-        request = store.index('domain').getAll(query.domain);
+        request = store.index("domain").getAll(query.domain);
       } else if (query.category) {
-        request = store.index('category').getAll(query.category);
+        request = store.index("category").getAll(query.category);
       } else {
         request = store.getAll();
       }
@@ -487,15 +491,15 @@ const Library = {
 
         // Filtra per tag
         if (query.tag) {
-          results = results.filter(r => (r.tags || []).includes(query.tag));
+          results = results.filter((r) => (r.tags || []).includes(query.tag));
         }
 
         // Filtra per testo libero
         // FIX 6: Add size guard to prevent O(n) JSON.stringify on large datasets
         if (query.text) {
           const lower = query.text.toLowerCase();
-          const maxScanned = 10000;  // Scan max 10000 entries
-          results = results.slice(0, maxScanned).filter(r => {
+          const maxScanned = 10000; // Scan max 10000 entries
+          results = results.slice(0, maxScanned).filter((r) => {
             const json = JSON.stringify(r.data || {}).toLowerCase();
             return json.includes(lower);
           });
@@ -522,11 +526,11 @@ const Library = {
   async getAllTags() {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this._storeName, 'readonly');
+      const tx = db.transaction(this._storeName, "readonly");
       const request = tx.objectStore(this._storeName).getAll();
       request.onsuccess = () => {
         const tagSet = new Set();
-        (request.result || []).forEach(r => (r.tags || []).forEach(t => tagSet.add(t)));
+        (request.result || []).forEach((r) => (r.tags || []).forEach((t) => tagSet.add(t)));
         resolve([...tagSet].sort());
       };
       request.onerror = () => reject(request.error);
@@ -537,12 +541,12 @@ const Library = {
   async getCategories() {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this._storeName, 'readonly');
+      const tx = db.transaction(this._storeName, "readonly");
       const request = tx.objectStore(this._storeName).getAll();
       request.onsuccess = () => {
         const cats = {};
-        (request.result || []).forEach(r => {
-          const c = r.category || 'unknown';
+        (request.result || []).forEach((r) => {
+          const c = r.category || "unknown";
           cats[c] = (cats[c] || 0) + 1;
         });
         resolve(cats);
@@ -555,17 +559,17 @@ const Library = {
   async getStats() {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this._storeName, 'readonly');
+      const tx = db.transaction(this._storeName, "readonly");
       const request = tx.objectStore(this._storeName).getAll();
       request.onsuccess = () => {
         const all = request.result || [];
         const domains = new Set();
         const tags = new Set();
         const categories = {};
-        all.forEach(r => {
+        all.forEach((r) => {
           if (r.domain) domains.add(r.domain);
-          (r.tags || []).forEach(t => tags.add(t));
-          const c = r.category || 'unknown';
+          (r.tags || []).forEach((t) => tags.add(t));
+          const c = r.category || "unknown";
           categories[c] = (categories[c] || 0) + 1;
         });
         resolve({ total: all.length, domains: domains.size, tags: tags.size, categories });
@@ -578,7 +582,7 @@ const Library = {
   async remove(id) {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this._storeName, 'readwrite');
+      const tx = db.transaction(this._storeName, "readwrite");
       tx.objectStore(this._storeName).delete(id);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
@@ -589,7 +593,7 @@ const Library = {
   async clear() {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this._storeName, 'readwrite');
+      const tx = db.transaction(this._storeName, "readwrite");
       const req = tx.objectStore(this._storeName).clear();
       req.onsuccess = () => resolve({ cleared: true });
       req.onerror = () => reject(req.error);
@@ -600,11 +604,13 @@ const Library = {
   async exportAll() {
     const db = await this._getDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this._storeName, 'readonly');
+      const tx = db.transaction(this._storeName, "readonly");
       const request = tx.objectStore(this._storeName).getAll();
       request.onsuccess = () => {
         const entries = {};
-        (request.result || []).forEach(r => { entries[r.id] = r; });
+        (request.result || []).forEach((r) => {
+          entries[r.id] = r;
+        });
         resolve(entries);
       };
       request.onerror = () => reject(request.error);
@@ -612,7 +618,7 @@ const Library = {
   },
 };
 
-if (typeof globalThis !== 'undefined') {
+if (typeof globalThis !== "undefined") {
   globalThis.Brain = Brain;
   globalThis.Library = Library;
 }

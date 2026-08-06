@@ -4,7 +4,8 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
   luca: {
     id: "luca",
     displayName: "Luca AI",
-    description: "Director strategico, segretario operativo dell'Operations Center. Coordina tutti gli agenti e gestisce le richieste dell'utente.",
+    description:
+      "Director strategico, segretario operativo dell'Operations Center. Coordina tutti gli agenti e gestisce le richieste dell'utente.",
     coreFile: "core/luca",
     avatarIcon: "Brain",
     avatarColor: "primary",
@@ -20,7 +21,12 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
     ],
     requiredVars: ["user_alias", "user_company", "user_sector"],
     promptSources: [
-      { label: "System prompt principale", source: "core/luca", promptLabTab: "system", hint: "Prompt base con ruolo e personalità" },
+      {
+        label: "System prompt principale",
+        source: "core/luca",
+        promptLabTab: "system",
+        hint: "Prompt base con ruolo e personalità",
+      },
       { label: "Dottrina sicurezza", source: "doctrine/safety-guardrails", promptLabTab: "doctrine" },
       { label: "Anti-allucinazione", source: "doctrine/anti-hallucination", promptLabTab: "doctrine" },
     ],
@@ -41,7 +47,8 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
   "super-assistant": {
     id: "super-assistant",
     displayName: "Super Consulente",
-    description: "Super Consulente Strategico per pianificazione e Daily Plan. Gestisce strategie commerciali e roadmap operativa.",
+    description:
+      "Super Consulente Strategico per pianificazione e Daily Plan. Gestisce strategie commerciali e roadmap operativa.",
     coreFile: "core/super-assistant",
     avatarIcon: "Lightbulb",
     avatarColor: "accent",
@@ -78,7 +85,8 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
   "contacts-assistant": {
     id: "contacts-assistant",
     displayName: "Assistente Contatti",
-    description: "Assistente maschera contatti, opera su imported_contacts. Risponde a domande sui dati CRM con query sicure.",
+    description:
+      "Assistente maschera contatti, opera su imported_contacts. Risponde a domande sui dati CRM con query sicure.",
     coreFile: "core/contacts-assistant",
     avatarIcon: "Users",
     avatarColor: "secondary",
@@ -113,7 +121,8 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
   "cockpit-assistant": {
     id: "cockpit-assistant",
     displayName: "Cockpit Command",
-    description: "Command Bar del Cockpit outreach, output JSON strutturato. Gestisce invio email, WhatsApp e sequenze multicanale.",
+    description:
+      "Command Bar del Cockpit outreach, output JSON strutturato. Gestisce invio email, WhatsApp e sequenze multicanale.",
     coreFile: "core/cockpit-assistant",
     avatarIcon: "Terminal",
     avatarColor: "primary",
@@ -152,7 +161,8 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
   "email-improver": {
     id: "email-improver",
     displayName: "Email Improver",
-    description: "Copywriter B2B che migliora email mantenendo voce dell'autore. Applica tecniche di persuasione e ottimizza il tono.",
+    description:
+      "Copywriter B2B che migliora email mantenendo voce dell'autore. Applica tecniche di persuasione e ottimizza il tono.",
     coreFile: "core/email-improver",
     avatarIcon: "Sparkles",
     avatarColor: "accent",
@@ -168,7 +178,11 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
     requiredVars: ["user_alias", "user_company", "user_tone"],
     promptSources: [
       { label: "System prompt improver", source: "core/email-improver", promptLabTab: "system" },
-      { label: "Tecniche miglioramento", source: "procedures/email-improvement-techniques", promptLabTab: "procedures" },
+      {
+        label: "Tecniche miglioramento",
+        source: "procedures/email-improvement-techniques",
+        promptLabTab: "procedures",
+      },
       { label: "Filosofia vendita", source: "§1 Filosofia di vendita", promptLabTab: "doctrine" },
     ],
     runtime: {
@@ -188,17 +202,15 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
   "daily-briefing": {
     id: "daily-briefing",
     displayName: "Daily Briefing",
-    description: "Direttore operativo che genera briefing mattutino JSON. Riassume attività, priorità e azioni del giorno.",
+    description:
+      "Direttore operativo che genera briefing mattutino JSON. Riassume attività, priorità e azioni del giorno.",
     coreFile: "core/daily-briefing",
     avatarIcon: "Newspaper",
     avatarColor: "secondary",
     category: "analysis",
     roleInModel: "worker",
     kbCategories: ["doctrine", "system_doctrine", "sales_doctrine", "procedures"],
-    criticalProcedures: [
-      "LEGGE FONDAMENTALE — Holding Pattern",
-      "Dottrina Workflow Gate",
-    ],
+    criticalProcedures: ["LEGGE FONDAMENTALE — Holding Pattern", "Dottrina Workflow Gate"],
     requiredVars: [],
     promptSources: [
       { label: "System prompt briefing", source: "core/daily-briefing", promptLabTab: "system" },
@@ -222,18 +234,15 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
   "email-classifier": {
     id: "email-classifier",
     displayName: "Email Classifier",
-    description: "Classificatore risposte inbound multicanale con domain routing. Analizza email in arrivo e le assegna al flusso corretto.",
+    description:
+      "Classificatore risposte inbound multicanale con domain routing. Analizza email in arrivo e le assegna al flusso corretto.",
     coreFile: "core/email-classifier",
     avatarIcon: "Filter",
     avatarColor: "muted",
     category: "classifier",
     roleInModel: "classifier",
     kbCategories: ["doctrine", "system_doctrine", "sales_doctrine", "procedures", "domain_routing"],
-    criticalProcedures: [
-      "procedures/lead-qualification-v2",
-      "Dottrina Uscite",
-      "Regole smistamento per dominio",
-    ],
+    criticalProcedures: ["procedures/lead-qualification-v2", "Dottrina Uscite", "Regole smistamento per dominio"],
     requiredVars: [],
     promptSources: [
       { label: "System prompt classifier", source: "core/email-classifier", promptLabTab: "system" },
@@ -257,7 +266,8 @@ export const CORE_AGENTS: Record<string, AgentRegistryEntry> = {
   "query-planner": {
     id: "query-planner",
     displayName: "Query Planner",
-    description: "Pianificatore query SELECT sicure, mai esegue. Traduce domande in linguaggio naturale in query SQL sicure.",
+    description:
+      "Pianificatore query SELECT sicure, mai esegue. Traduce domande in linguaggio naturale in query SQL sicure.",
     coreFile: "core/query-planner",
     avatarIcon: "Database",
     avatarColor: "muted",

@@ -44,11 +44,20 @@ export async function executeSearchToolHandler(
       // L'agente AI server-side non può lanciarlo: restituisce snapshot + indirizzo UI.
       let pid = args.partner_id as string;
       if (!pid && args.company_name) {
-        const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${args.company_name}%`).limit(1).maybeSingle();
+        const { data } = await supabase
+          .from("partners")
+          .select("id, company_name")
+          .ilike("company_name", `%${args.company_name}%`)
+          .limit(1)
+          .maybeSingle();
         if (data) pid = data.id;
       }
       if (!pid) return { error: "Partner non trovato" };
-      const { data: p } = await supabase.from("partners").select("company_name, enrichment_data").eq("id", pid).maybeSingle();
+      const { data: p } = await supabase
+        .from("partners")
+        .select("company_name, enrichment_data")
+        .eq("id", pid)
+        .maybeSingle();
       const ed = (p?.enrichment_data as Record<string, unknown>) || {};
       return {
         success: true,
@@ -62,11 +71,20 @@ export async function executeSearchToolHandler(
     case "deep_search_contact": {
       let cid = args.contact_id as string;
       if (!cid && args.contact_name) {
-        const { data } = await supabase.from("imported_contacts").select("id, name").ilike("name", `%${args.contact_name}%`).limit(1).maybeSingle();
+        const { data } = await supabase
+          .from("imported_contacts")
+          .select("id, name")
+          .ilike("name", `%${args.contact_name}%`)
+          .limit(1)
+          .maybeSingle();
         if (data) cid = data.id;
       }
       if (!cid) return { error: "Contatto non trovato" };
-      const { data: c } = await supabase.from("imported_contacts").select("id, name, deep_search_at").eq("id", cid).maybeSingle();
+      const { data: c } = await supabase
+        .from("imported_contacts")
+        .select("id, name, deep_search_at")
+        .eq("id", cid)
+        .maybeSingle();
       return {
         success: true,
         contact_id: cid,

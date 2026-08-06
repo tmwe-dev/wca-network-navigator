@@ -21,11 +21,52 @@ import type { CompactIndex, IndexEntry } from "./compactIndex";
 import type { EntityToParse } from "./entityParser";
 
 const STOPWORDS = new Set([
-  "il", "lo", "la", "i", "gli", "le", "un", "una", "uno", "del", "della", "dei",
-  "delle", "degli", "dal", "dalla", "in", "con", "per", "tra", "fra", "che", "chi",
-  "non", "più", "meno", "come", "dove", "quando", "quale", "the", "and", "for",
-  "with", "from", "this", "that", "into", "onto", "such", "your", "their", "have",
-  "will", "shall", "must",
+  "il",
+  "lo",
+  "la",
+  "i",
+  "gli",
+  "le",
+  "un",
+  "una",
+  "uno",
+  "del",
+  "della",
+  "dei",
+  "delle",
+  "degli",
+  "dal",
+  "dalla",
+  "in",
+  "con",
+  "per",
+  "tra",
+  "fra",
+  "che",
+  "chi",
+  "non",
+  "più",
+  "meno",
+  "come",
+  "dove",
+  "quando",
+  "quale",
+  "the",
+  "and",
+  "for",
+  "with",
+  "from",
+  "this",
+  "that",
+  "into",
+  "onto",
+  "such",
+  "your",
+  "their",
+  "have",
+  "will",
+  "shall",
+  "must",
 ]);
 
 export interface MatchCandidate {
@@ -60,11 +101,7 @@ function intersectionSize(a: Set<string>, b: Set<string>): number {
  * @param index snapshot DB
  * @param limit max candidati restituiti (default 3)
  */
-export function findCandidates(
-  entity: EntityToParse,
-  index: CompactIndex,
-  limit = 3,
-): MatchCandidate[] {
+export function findCandidates(entity: EntityToParse, index: CompactIndex, limit = 3): MatchCandidate[] {
   const eTitle = normalize(entity.title);
   const eTokens = tokens(`${entity.title} ${entity.content.slice(0, 500)}`);
   const candidates = new Map<string, MatchCandidate>();
@@ -77,9 +114,7 @@ export function findCandidates(
       candidates.set(r.id, {
         entry: r,
         score: sameTable ? 100 : 60,
-        reason: sameTable
-          ? "Titolo identico, stessa tabella"
-          : `Titolo identico, tabella diversa (${r.table})`,
+        reason: sameTable ? "Titolo identico, stessa tabella" : `Titolo identico, tabella diversa (${r.table})`,
       });
     }
   }
@@ -103,9 +138,7 @@ export function findCandidates(
         candidates.set(r.id, {
           entry: r,
           score: sameTable ? 70 : 40,
-          reason: sameTable
-            ? "Titolo contenuto/contenente, stessa tabella"
-            : `Titolo simile, tabella ${r.table}`,
+          reason: sameTable ? "Titolo contenuto/contenente, stessa tabella" : `Titolo simile, tabella ${r.table}`,
         });
         continue;
       }
@@ -124,7 +157,5 @@ export function findCandidates(
     }
   }
 
-  return [...candidates.values()]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+  return [...candidates.values()].sort((a, b) => b.score - a.score).slice(0, limit);
 }

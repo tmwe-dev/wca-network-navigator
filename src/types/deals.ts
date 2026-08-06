@@ -5,13 +5,7 @@
  * No DB calls are performed.
  */
 
-export type DealStage =
-  | "lead"
-  | "qualified"
-  | "proposal"
-  | "negotiation"
-  | "won"
-  | "lost";
+export type DealStage = "lead" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
 
 export interface Deal {
   readonly id: string;
@@ -30,12 +24,7 @@ export interface DealActivity {
   readonly id: string;
   readonly deal_id: string;
   readonly user_id: string;
-  readonly activity_type:
-    | "stage_change"
-    | "amount_change"
-    | "note"
-    | "created"
-    | "deleted";
+  readonly activity_type: "stage_change" | "amount_change" | "note" | "created" | "deleted";
   readonly description?: string | null;
   readonly old_value?: string | null;
   readonly new_value?: string | null;

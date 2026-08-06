@@ -13,8 +13,7 @@ export async function executeAgentToolHandler(
   switch (name) {
     case "create_agent_task": {
       let agentQuery = supabase.from("agents").select("id, name").eq("user_id", userId);
-      if (args.agent_name)
-        agentQuery = agentQuery.ilike("name", `%${escapeLike(String(args.agent_name))}%`);
+      if (args.agent_name) agentQuery = agentQuery.ilike("name", `%${escapeLike(String(args.agent_name))}%`);
       else if (args.agent_role) agentQuery = agentQuery.eq("role", args.agent_role);
       const { data: agents } = await agentQuery.limit(1);
       if (!agents || agents.length === 0) return { error: `Agente non trovato.` };
@@ -31,7 +30,12 @@ export async function executeAgentToolHandler(
         .select("id")
         .single();
       if (error) return { error: error.message };
-      return { success: true, task_id: data.id, agent_name: targetAgent.name, message: `Task creato per ${targetAgent.name}.` };
+      return {
+        success: true,
+        task_id: data.id,
+        agent_name: targetAgent.name,
+        message: `Task creato per ${targetAgent.name}.`,
+      };
     }
 
     case "list_agent_tasks": {
@@ -53,9 +57,7 @@ export async function executeAgentToolHandler(
         agent_name: nameMap[t.agent_id] || "?",
       }));
       if (args.agent_name)
-        results = results.filter((t) =>
-          t.agent_name.toLowerCase().includes(String(args.agent_name).toLowerCase()),
-        );
+        results = results.filter((t) => t.agent_name.toLowerCase().includes(String(args.agent_name).toLowerCase()));
       return { count: results.length, tasks: results };
     }
 
@@ -70,10 +72,9 @@ export async function executeAgentToolHandler(
       const { data: tasks } = await supabase.from("agent_tasks").select("agent_id, status").in("agent_id", agentIds);
       const taskStats: Record<string, { pending: number; running: number; completed: number; failed: number }> = {};
       for (const t of (tasks || []) as { agent_id: string; status: string }[]) {
-        if (!taskStats[t.agent_id])
-          taskStats[t.agent_id] = { pending: 0, running: 0, completed: 0, failed: 0 };
-        if (taskStats[t.agent_id][t.status as keyof typeof taskStats[string]] !== undefined)
-          taskStats[t.agent_id][t.status as keyof typeof taskStats[string]]++;
+        if (!taskStats[t.agent_id]) taskStats[t.agent_id] = { pending: 0, running: 0, completed: 0, failed: 0 };
+        if (taskStats[t.agent_id][t.status as keyof (typeof taskStats)[string]] !== undefined)
+          taskStats[t.agent_id][t.status as keyof (typeof taskStats)[string]]++;
       }
       return {
         team_size: agents.length,
@@ -170,7 +171,11 @@ export async function executeAgentToolHandler(
       const ids = args.ids as string[];
       const valid = ["partners", "prospects", "activities", "reminders"];
       if (!valid.includes(table)) return { error: `Tabella non valida: ${table}` };
-      const { error } = await supabase.from(table as "partners").delete().eq("user_id", userId).in("id", ids);
+      const { error } = await supabase
+        .from(table as "partners")
+        .delete()
+        .eq("user_id", userId)
+        .in("id", ids);
       return error ? { error: error.message } : { success: true, deleted: ids.length };
     }
 

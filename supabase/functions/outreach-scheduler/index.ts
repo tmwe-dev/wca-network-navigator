@@ -20,11 +20,9 @@ serve(async (req) => {
 
   try {
     // Service role client for cron invocations
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // ━━━ Cron Guard: toggle on/off + throttle utente ━━━
     const guard = await cronGuardCheck(supabase, {
@@ -36,8 +34,12 @@ serve(async (req) => {
     if (guard.skip) {
       endMetrics(metrics, true, 200);
       return new Response(
-      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
-        { headers: { ...dynCors, "Content-Type": "application/json" } }
+        JSON.stringify({
+          skipped: true,
+          reason: guard.reason,
+          next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined,
+        }),
+        { headers: { ...dynCors, "Content-Type": "application/json" } },
       );
     }
 
@@ -49,7 +51,8 @@ serve(async (req) => {
     if (batchErr) {
       endMetrics(metrics, false, 500);
       return new Response(JSON.stringify({ error: batchErr.message }), {
-        status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
@@ -61,7 +64,6 @@ serve(async (req) => {
       });
     }
 
-
     let processed = 0;
     let failed = 0;
     let skipped = 0;
@@ -72,10 +74,13 @@ serve(async (req) => {
         // Release remaining items back to pending
         const remaining = batch.slice(batch.indexOf(schedule));
         for (const r of remaining) {
-          await supabase.from("outreach_schedules").update({
-            status: "pending",
-            attempt: r.attempt, // keep the incremented attempt
-          }).eq("id", r.id);
+          await supabase
+            .from("outreach_schedules")
+            .update({
+              status: "pending",
+              attempt: r.attempt, // keep the incremented attempt
+            })
+            .eq("id", r.id);
           skipped++;
         }
         break;
@@ -85,22 +90,29 @@ serve(async (req) => {
         const result = await processSchedule(supabase, schedule);
 
         if (result.skipped) {
-          await supabase.from("outreach_schedules").update({
-            status: "skipped",
-            result: result as unknown as Record<string, unknown>,
-            updated_at: new Date().toISOString(),
-          }).eq("id", schedule.id);
+          await supabase
+            .from("outreach_schedules")
+            .update({
+              status: "skipped",
+              result: result as unknown as Record<string, unknown>,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", schedule.id);
           skipped++;
         } else {
           // Estrai mission preloaded prima di persistere (non sporcare il
           // record DB con il payload della mission)
-          const { _mission: preloadedMission, ...resultToPersist } = result as
-            { _mission?: Record<string, unknown> } & Record<string, unknown>;
-          await supabase.from("outreach_schedules").update({
-            status: "done",
-            result: resultToPersist as Record<string, unknown>,
-            updated_at: new Date().toISOString(),
-          }).eq("id", schedule.id);
+          const { _mission: preloadedMission, ...resultToPersist } = result as {
+            _mission?: Record<string, unknown>;
+          } & Record<string, unknown>;
+          await supabase
+            .from("outreach_schedules")
+            .update({
+              status: "done",
+              result: resultToPersist as Record<string, unknown>,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", schedule.id);
           processed++;
 
           // Schedule followups if applicable (reuse mission already loaded
@@ -112,22 +124,28 @@ serve(async (req) => {
 
         if (schedule.attempt >= schedule.max_attempts) {
           // Max retries exceeded
-          await supabase.from("outreach_schedules").update({
-            status: "error",
-            last_error: errorMsg,
-            updated_at: new Date().toISOString(),
-          }).eq("id", schedule.id);
+          await supabase
+            .from("outreach_schedules")
+            .update({
+              status: "error",
+              last_error: errorMsg,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", schedule.id);
           failed++;
         } else {
           // Exponential backoff: 5min * 2^attempt
           const backoffMs = 5 * 60 * 1000 * Math.pow(2, schedule.attempt);
           const nextRun = new Date(Date.now() + backoffMs).toISOString();
-          await supabase.from("outreach_schedules").update({
-            status: "pending",
-            last_error: errorMsg,
-            run_at: nextRun,
-            updated_at: new Date().toISOString(),
-          }).eq("id", schedule.id);
+          await supabase
+            .from("outreach_schedules")
+            .update({
+              status: "pending",
+              last_error: errorMsg,
+              run_at: nextRun,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", schedule.id);
           failed++;
         }
       }
@@ -136,9 +154,7 @@ serve(async (req) => {
     // Update mission progress in parallel (best-effort, allSettled swallows
     // individual failures preserving existing semantics)
     const missionIds = [...new Set(batch.map((s: { mission_id: string }) => s.mission_id))];
-    await Promise.allSettled(
-      missionIds.map((mId) => supabase.rpc("update_mission_progress", { p_mission_id: mId })),
-    );
+    await Promise.allSettled(missionIds.map((mId) => supabase.rpc("update_mission_progress", { p_mission_id: mId })));
 
     const summary = { processed, failed, skipped, batch_size: batch.length };
     endMetrics(metrics, true, 200);
@@ -148,20 +164,20 @@ serve(async (req) => {
     return new Response(JSON.stringify(summary), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
-
   } catch (err) {
     logEdgeError("outreach-scheduler", err);
     endMetrics(metrics, false, 500);
     try {
-      const sb = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-        { auth: { persistSession: false } }
-      );
+      const sb = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+        auth: { persistSession: false },
+      });
       await cronGuardLogRun(sb, "outreach_scheduler", {}, err instanceof Error ? err.message : String(err));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }), {
-      status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...dynCors, "Content-Type": "application/json" },
     });
   }
 });
@@ -180,7 +196,7 @@ interface ScheduleRow {
 
 async function processSchedule(
   supabase: ReturnType<typeof createClient>,
-  schedule: ScheduleRow
+  schedule: ScheduleRow,
 ): Promise<Record<string, unknown>> {
   // Load mission
   const { data: mission } = await supabase
@@ -212,7 +228,7 @@ async function processSchedule(
 async function executeSendAction(
   supabase: ReturnType<typeof createClient>,
   schedule: ScheduleRow,
-  mission: Record<string, unknown>
+  mission: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   if (!schedule.contact_id) {
     return { skipped: true, reason: "No contact_id" };
@@ -233,22 +249,20 @@ async function executeSendAction(
   }
 
   // Create mission_action in 'approved' status for the slot system to pick up
-  const { error: actionErr } = await supabase
-    .from("mission_actions")
-    .insert({
-      mission_id: schedule.mission_id,
-      user_id: schedule.user_id,
-      contact_id: schedule.contact_id,
-      action_type: mission.channel as string,
-      status: "approved",
-      payload: {
-        template_id: mission.template_id,
-        ai_prompt: mission.ai_prompt,
-        followup_step: 0,
-        scheduled_by: "outreach-scheduler",
-      },
-      position: 0,
-    });
+  const { error: actionErr } = await supabase.from("mission_actions").insert({
+    mission_id: schedule.mission_id,
+    user_id: schedule.user_id,
+    contact_id: schedule.contact_id,
+    action_type: mission.channel as string,
+    status: "approved",
+    payload: {
+      template_id: mission.template_id,
+      ai_prompt: mission.ai_prompt,
+      followup_step: 0,
+      scheduled_by: "outreach-scheduler",
+    },
+    position: 0,
+  });
 
   if (actionErr) throw new Error(`Failed to create mission_action: ${actionErr.message}`);
 
@@ -258,7 +272,7 @@ async function executeSendAction(
 async function executeFollowupAction(
   supabase: ReturnType<typeof createClient>,
   schedule: ScheduleRow,
-  mission: Record<string, unknown>
+  mission: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   if (!schedule.contact_id) {
     return { skipped: true, reason: "No contact_id for followup" };
@@ -277,23 +291,21 @@ async function executeFollowupAction(
   }
 
   // Create followup action
-  const { error: actionErr } = await supabase
-    .from("mission_actions")
-    .insert({
-      mission_id: schedule.mission_id,
-      user_id: schedule.user_id,
-      contact_id: schedule.contact_id,
-      action_type: mission.channel as string,
-      status: "approved",
-      payload: {
-        template_id: mission.template_id,
-        ai_prompt: mission.ai_prompt,
-        followup_step: schedule.scheduled_for_followup_step ?? 1,
-        is_followup: true,
-        scheduled_by: "outreach-scheduler",
-      },
-      position: 0,
-    });
+  const { error: actionErr } = await supabase.from("mission_actions").insert({
+    mission_id: schedule.mission_id,
+    user_id: schedule.user_id,
+    contact_id: schedule.contact_id,
+    action_type: mission.channel as string,
+    status: "approved",
+    payload: {
+      template_id: mission.template_id,
+      ai_prompt: mission.ai_prompt,
+      followup_step: schedule.scheduled_for_followup_step ?? 1,
+      is_followup: true,
+      scheduled_by: "outreach-scheduler",
+    },
+    position: 0,
+  });
 
   if (actionErr) throw new Error(`Failed to create followup action: ${actionErr.message}`);
 
@@ -303,7 +315,7 @@ async function executeFollowupAction(
 async function executeCheckReplyAction(
   supabase: ReturnType<typeof createClient>,
   schedule: ScheduleRow,
-  _mission: Record<string, unknown>
+  _mission: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   if (!schedule.contact_id) {
     return { skipped: true, reason: "No contact_id for check_reply" };

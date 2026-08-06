@@ -13,11 +13,12 @@ export async function buildClassificationPrompt(
 ): Promise<{ systemPrompt: string; userPrompt: string }> {
   const { channel, body_text, from_address, subject } = body;
 
-  const channelHint = channel === "whatsapp"
-    ? "This is a WhatsApp message (short, informal)."
-    : channel === "linkedin"
-    ? "This is a LinkedIn message (professional networking)."
-    : "This is an email reply (business communication).";
+  const channelHint =
+    channel === "whatsapp"
+      ? "This is a WhatsApp message (short, informal)."
+      : channel === "linkedin"
+        ? "This is a LinkedIn message (professional networking)."
+        : "This is an email reply (business communication).";
 
   const fallbackSystemPrompt = `You are a B2B inbound message classifier for a logistics CRM.
 ${channelHint}
@@ -51,9 +52,7 @@ Consider the channel context when evaluating tone and intent.`;
   const { normalizeContent } = await import("../../_shared/contentNormalizer.ts");
   const { safeWrap } = await import("../../_shared/promptSanitizer.ts");
   const channelSource: "email-inbound" | "whatsapp-message" | "linkedin-message" =
-    channel === "whatsapp" ? "whatsapp-message"
-    : channel === "linkedin" ? "linkedin-message"
-    : "email-inbound";
+    channel === "whatsapp" ? "whatsapp-message" : channel === "linkedin" ? "linkedin-message" : "email-inbound";
   const subjNorm = normalizeContent(subject || "", { source: channelSource, maxChars: 300 }).text;
   const bodyNorm = normalizeContent(body_text || "", { source: channelSource, maxChars: 3000 });
   const { block: bodyBlock } = safeWrap(bodyNorm.text, "INBOUND BODY", {

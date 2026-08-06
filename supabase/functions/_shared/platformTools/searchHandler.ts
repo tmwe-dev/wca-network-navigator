@@ -15,9 +15,7 @@ interface CountryStatRow {
   total_partners: number;
 }
 
-async function resolvePartnerId(
-  args: Record<string, unknown>
-): Promise<{ id: string; name: string } | null> {
+async function resolvePartnerId(args: Record<string, unknown>): Promise<{ id: string; name: string } | null> {
   if (args.partner_id) {
     const { data } = await supabase
       .from("partners")
@@ -38,9 +36,7 @@ async function resolvePartnerId(
   return null;
 }
 
-export async function handleGetDirectoryStatus(
-  args: Record<string, unknown>
-): Promise<unknown> {
+export async function handleGetDirectoryStatus(args: Record<string, unknown>): Promise<unknown> {
   const { data: dirData } = await supabase.rpc("get_directory_counts");
   const { data: statsData } = await supabase.rpc("get_country_stats");
   const dirMap: Record<string, number> = {};
@@ -73,10 +69,7 @@ export async function handleGetDirectoryStatus(
  * Sherlock è il motore unico di Deep Search (client-side, 3 livelli Scout/Detective/Sherlock).
  * L'agente AI server-side non può lanciarlo: restituisce snapshot DB + indirizzo UI.
  */
-export async function handleDeepSearchPartner(
-  args: Record<string, unknown>,
-  _authHeader: string
-): Promise<unknown> {
+export async function handleDeepSearchPartner(args: Record<string, unknown>, _authHeader: string): Promise<unknown> {
   let pid = args.partner_id as string;
   if (!pid && args.company_name) {
     const r = await resolvePartnerId(args);
@@ -98,10 +91,7 @@ export async function handleDeepSearchPartner(
   };
 }
 
-export async function handleDeepSearchContact(
-  args: Record<string, unknown>,
-  _authHeader: string
-): Promise<unknown> {
+export async function handleDeepSearchContact(args: Record<string, unknown>, _authHeader: string): Promise<unknown> {
   let cid = args.contact_id as string;
   if (!cid && args.contact_name) {
     const { data } = await supabase

@@ -19,22 +19,22 @@ export function SelectionHighlight({ lat, lng, isVisible }: Props) {
   const ringRef = useRef<THREE.Mesh>(null);
   const opacityRef = useRef(0);
   const entryTimeRef = useRef(0);
-  
+
   const position = useMemo(() => latLngToVector3(lat, lng, 1.006), [lat, lng]);
 
   useFrame((state) => {
     const time = state.clock.elapsedTime;
-    
+
     // Track entry time for intro animation
     if (isVisible && opacityRef.current < 0.1) {
       entryTimeRef.current = time;
     }
-    
+
     // Smooth opacity transition
     const targetOpacity = isVisible ? 1 : 0;
     const opacityDiff = targetOpacity - opacityRef.current;
     opacityRef.current += opacityDiff * (isVisible ? 0.08 : 0.15);
-    
+
     if (opacityRef.current < 0.01) return;
 
     if (groupRef.current) {
@@ -45,7 +45,7 @@ export function SelectionHighlight({ lat, lng, isVisible }: Props) {
     const timeSinceEntry = time - entryTimeRef.current;
     const introProgress = Math.min(timeSinceEntry / 0.8, 1);
     const introEased = easeOutQuart(introProgress);
-    
+
     // Center dot - slow pulsing
     if (dotRef.current) {
       const dotPulse = easeInOutSine((time * 0.167) % 1);
@@ -54,7 +54,7 @@ export function SelectionHighlight({ lat, lng, isVisible }: Props) {
       dotRef.current.scale.setScalar(dotScale);
       (dotRef.current.material as THREE.MeshBasicMaterial).opacity = opacity * dotOpacity;
     }
-    
+
     // Single pulse ring - expanding wave
     if (ringRef.current) {
       const pulsePhase = (time * 0.2) % 1;
@@ -73,7 +73,7 @@ export function SelectionHighlight({ lat, lng, isVisible }: Props) {
       <mesh ref={dotRef} geometry={DOT_GEOMETRY}>
         <meshBasicMaterial color="#fef3c7" transparent opacity={1} side={THREE.DoubleSide} />
       </mesh>
-      
+
       {/* Single expanding pulse ring */}
       <mesh ref={ringRef} geometry={RING_GEOMETRY}>
         <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} side={THREE.DoubleSide} />

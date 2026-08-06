@@ -3,7 +3,10 @@ import { useLiveAnnounce } from "@/hooks/useLiveAnnounce";
 
 describe("useLiveAnnounce", () => {
   beforeEach(() => {
-    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => { cb(0); return 0; });
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
   });
 
   afterEach(() => {
@@ -17,15 +20,21 @@ describe("useLiveAnnounce", () => {
 
   it("sets message after announce", () => {
     const { result } = renderHook(() => useLiveAnnounce());
-    act(() => { result.current.announce("Test message"); });
+    act(() => {
+      result.current.announce("Test message");
+    });
     expect(result.current.message).toBe("Test message");
   });
 
   it("updates message on successive calls", () => {
     const { result } = renderHook(() => useLiveAnnounce());
-    act(() => { result.current.announce("First"); });
+    act(() => {
+      result.current.announce("First");
+    });
     expect(result.current.message).toBe("First");
-    act(() => { result.current.announce("Second"); });
+    act(() => {
+      result.current.announce("Second");
+    });
     expect(result.current.message).toBe("Second");
   });
 

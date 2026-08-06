@@ -64,7 +64,7 @@ function TokenCockpitContent() {
         <StatCard
           icon={TrendingUp}
           label="Utilizzo medio"
-          value={stats && stats.today > 0 ? (stats.today / (stats.dailyLimit || 1) * 100).toFixed(1) + "%" : "0%"}
+          value={stats && stats.today > 0 ? ((stats.today / (stats.dailyLimit || 1)) * 100).toFixed(1) + "%" : "0%"}
           subtext="del budget giornaliero"
         />
       </div>
@@ -99,16 +99,25 @@ function TokenCockpitContent() {
 
 export function TokenCockpitPage() {
   return (
-    <PermissionGate permission="analytics.view" fallback={
-      <div data-testid="page-token-cockpit" className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
-        <ScrollArea className="h-full">
-          <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-            <p className="text-muted-foreground">Non hai il permesso per visualizzare il cockpit dei token.</p>
-          </div>
-        </ScrollArea>
-      </div>
-    }>
-      <div data-testid="page-token-cockpit" className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
+    <PermissionGate
+      permission="analytics.view"
+      fallback={
+        <div
+          data-testid="page-token-cockpit"
+          className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground"
+        >
+          <ScrollArea className="h-full">
+            <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
+              <p className="text-muted-foreground">Non hai il permesso per visualizzare il cockpit dei token.</p>
+            </div>
+          </ScrollArea>
+        </div>
+      }
+    >
+      <div
+        data-testid="page-token-cockpit"
+        className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground"
+      >
         <ScrollArea className="h-full">
           <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
             <header className="space-y-1">

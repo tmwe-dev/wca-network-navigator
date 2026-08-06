@@ -7,35 +7,88 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Globe, Users, Brain, Mail, Shield, Zap,
-  CheckCircle2, ArrowRight, Play, Building2, Network
+  Globe,
+  Users,
+  Brain,
+  Mail,
+  Shield,
+  Zap,
+  CheckCircle2,
+  ArrowRight,
+  Play,
+  Building2,
+  Network,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const FEATURES = [
-  { icon: Globe, title: "17 Network WCA", desc: "Gestisci partner in tutti i network World Cargo Alliance da un'unica piattaforma." },
-  { icon: Brain, title: "AI Agent Autonomo", desc: "Missioni multi-step: scrape, analizza, componi email, tutto supervisionato." },
-  { icon: Mail, title: "Outreach Multicanale", desc: "Email, WhatsApp, LinkedIn. Campagne A/B con scheduling intelligente." },
-  { icon: Users, title: "CRM Logistics-Native", desc: "Scoring automatico, deduplicazione, enrichment dati da fonti multiple." },
+  {
+    icon: Globe,
+    title: "17 Network WCA",
+    desc: "Gestisci partner in tutti i network World Cargo Alliance da un'unica piattaforma.",
+  },
+  {
+    icon: Brain,
+    title: "AI Agent Autonomo",
+    desc: "Missioni multi-step: scrape, analizza, componi email, tutto supervisionato.",
+  },
+  {
+    icon: Mail,
+    title: "Outreach Multicanale",
+    desc: "Email, WhatsApp, LinkedIn. Campagne A/B con scheduling intelligente.",
+  },
+  {
+    icon: Users,
+    title: "CRM Logistics-Native",
+    desc: "Scoring automatico, deduplicazione, enrichment dati da fonti multiple.",
+  },
   { icon: Shield, title: "Enterprise-Ready", desc: "Multi-tenant, RBAC, audit trail, GDPR compliance, SOC2 starter." },
   { icon: Zap, title: "Automazione Totale", desc: "Dal primo import CSV al report finale, tutto automatizzabile." },
 ];
 
 const PLANS = [
   {
-    name: "Free", price: "€0", period: "/mese", popular: false,
+    name: "Free",
+    price: "€0",
+    period: "/mese",
+    popular: false,
     features: ["100 partner", "Ricerca manuale", "100 crediti AI", "3 template email"],
-    cta: "Inizia Gratis", tier: "free",
+    cta: "Inizia Gratis",
+    tier: "free",
   },
   {
-    name: "Pro", price: "€49", period: "/mese", popular: true,
-    features: ["Partner illimitati", "Campagne CRM", "500 crediti AI/mese", "20 template", "Download automatizzato", "Supporto prioritario"],
-    cta: "Prova Pro", tier: "pro",
+    name: "Pro",
+    price: "€49",
+    period: "/mese",
+    popular: true,
+    features: [
+      "Partner illimitati",
+      "Campagne CRM",
+      "500 crediti AI/mese",
+      "20 template",
+      "Download automatizzato",
+      "Supporto prioritario",
+    ],
+    cta: "Prova Pro",
+    tier: "pro",
   },
   {
-    name: "Enterprise", price: "€199", period: "/mese", popular: false,
-    features: ["Tutto di Pro", "Multi-workspace", "Dominio custom", "Branding personalizzato", "2000+ crediti AI/mese", "SSO & RBAC avanzato", "SLA dedicato", "DPA GDPR incluso"],
-    cta: "Contattaci", tier: "enterprise",
+    name: "Enterprise",
+    price: "€199",
+    period: "/mese",
+    popular: false,
+    features: [
+      "Tutto di Pro",
+      "Multi-workspace",
+      "Dominio custom",
+      "Branding personalizzato",
+      "2000+ crediti AI/mese",
+      "SSO & RBAC avanzato",
+      "SLA dedicato",
+      "DPA GDPR incluso",
+    ],
+    cta: "Contattaci",
+    tier: "enterprise",
   },
 ];
 
@@ -50,13 +103,21 @@ export function LandingPage(): React.ReactElement {
             <span className="text-lg font-bold">WCA Network Navigator</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Funzionalità</a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Prezzi</a>
-            <a href="#demo" className="text-muted-foreground hover:text-foreground transition-colors">Demo</a>
+            <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+              Funzionalità
+            </a>
+            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+              Prezzi
+            </a>
+            <a href="#demo" className="text-muted-foreground hover:text-foreground transition-colors">
+              Demo
+            </a>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/auth">
-              <Button variant="ghost" size="sm">Accedi</Button>
+              <Button variant="ghost" size="sm">
+                Accedi
+              </Button>
             </Link>
             <Link to="/auth">
               <Button size="sm">Inizia Gratis</Button>
@@ -73,12 +134,11 @@ export function LandingPage(): React.ReactElement {
             <Zap className="h-3 w-3 mr-1" /> Powered by AI Agent
           </Badge>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight max-w-4xl mx-auto leading-tight">
-            La piattaforma AI per i{" "}
-            <span className="text-primary">freight forwarder</span>{" "}
-            che vogliono crescere
+            La piattaforma AI per i <span className="text-primary">freight forwarder</span> che vogliono crescere
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Gestisci 12.000+ partner WCA, automatizza l'outreach multicanale e lascia che l'AI faccia il lavoro operativo. Dalla ricerca al contratto.
+            Gestisci 12.000+ partner WCA, automatizza l'outreach multicanale e lascia che l'AI faccia il lavoro
+            operativo. Dalla ricerca al contratto.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/auth">
@@ -93,9 +153,15 @@ export function LandingPage(): React.ReactElement {
             </a>
           </div>
           <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> 17 network globali</div>
-            <div className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> 12.000+ partner</div>
-            <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-primary" /> 190+ paesi</div>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-primary" /> 17 network globali
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" /> 12.000+ partner
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-primary" /> 190+ paesi
+            </div>
           </div>
         </div>
       </section>
@@ -105,7 +171,9 @@ export function LandingPage(): React.ReactElement {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold">Tutto ciò che serve al tuo team</h2>
-            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">Una piattaforma completa per la gestione dei partner logistici.</p>
+            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+              Una piattaforma completa per la gestione dei partner logistici.
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
@@ -127,7 +195,9 @@ export function LandingPage(): React.ReactElement {
       <section id="demo" className="py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold mb-4">Guarda come funziona</h2>
-          <p className="text-muted-foreground mb-8">2 minuti per scoprire come WCA Network Navigator trasforma il tuo workflow.</p>
+          <p className="text-muted-foreground mb-8">
+            2 minuti per scoprire come WCA Network Navigator trasforma il tuo workflow.
+          </p>
           <div className="aspect-video bg-muted rounded-2xl border border-border/50 flex items-center justify-center">
             <div className="text-center space-y-3">
               <Play className="h-16 w-16 text-primary mx-auto" />
@@ -146,13 +216,11 @@ export function LandingPage(): React.ReactElement {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {PLANS.map((plan) => (
-              <Card key={plan.name} className={cn(
-                "relative flex flex-col",
-                plan.popular && "border-primary ring-2 ring-primary/20"
-              )}>
-                {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Più popolare</Badge>
-                )}
+              <Card
+                key={plan.name}
+                className={cn("relative flex flex-col", plan.popular && "border-primary ring-2 ring-primary/20")}
+              >
+                {plan.popular && <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Più popolare</Badge>}
                 <CardHeader>
                   <CardTitle>{plan.name}</CardTitle>
                   <CardDescription>
@@ -197,24 +265,56 @@ export function LandingPage(): React.ReactElement {
             <div>
               <h4 className="font-semibold mb-3 text-sm">Prodotto</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#features" className="hover:text-foreground">Funzionalità</a></li>
-                <li><a href="#pricing" className="hover:text-foreground">Prezzi</a></li>
-                <li><a href="#demo" className="hover:text-foreground">Demo</a></li>
+                <li>
+                  <a href="#features" className="hover:text-foreground">
+                    Funzionalità
+                  </a>
+                </li>
+                <li>
+                  <a href="#pricing" className="hover:text-foreground">
+                    Prezzi
+                  </a>
+                </li>
+                <li>
+                  <a href="#demo" className="hover:text-foreground">
+                    Demo
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-3 text-sm">Legale</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link></li>
-                <li><Link to="/terms" className="hover:text-foreground">Termini di Servizio</Link></li>
-                <li><Link to="/dpa" className="hover:text-foreground">DPA GDPR</Link></li>
+                <li>
+                  <Link to="/privacy" className="hover:text-foreground">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/terms" className="hover:text-foreground">
+                    Termini di Servizio
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dpa" className="hover:text-foreground">
+                    DPA GDPR
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-3 text-sm">Risorse</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/docs" className="hover:text-foreground">Documentazione</Link></li>
-                <li><Link to="/v2" className="hover:text-foreground">Dashboard</Link></li>
+                <li>
+                  <Link to="/docs" className="hover:text-foreground">
+                    Documentazione
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/v2" className="hover:text-foreground">
+                    Dashboard
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>

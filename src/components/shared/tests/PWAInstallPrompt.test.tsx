@@ -21,29 +21,39 @@ describe("PWAInstallPrompt", () => {
 
   it("shows prompt after beforeinstallprompt + delay", async () => {
     const { container } = render(<PWAInstallPrompt />);
-    
+
     const event = new Event("beforeinstallprompt");
     Object.defineProperty(event, "preventDefault", { value: vi.fn() });
-    
-    act(() => { window.dispatchEvent(event); });
-    
-    act(() => { vi.advanceTimersByTime(31000); });
-    
+
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(31000);
+    });
+
     expect(container.innerHTML).toContain("Installa");
   });
 
   it("hides on dismiss click", async () => {
     const { container } = render(<PWAInstallPrompt />);
-    
+
     const event = new Event("beforeinstallprompt");
     Object.defineProperty(event, "preventDefault", { value: vi.fn() });
-    
-    act(() => { window.dispatchEvent(event); });
-    act(() => { vi.advanceTimersByTime(31000); });
-    
+
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    act(() => {
+      vi.advanceTimersByTime(31000);
+    });
+
     const dismissBtn = screen.getByText("Non ora");
-    act(() => { dismissBtn.click(); });
-    
+    act(() => {
+      dismissBtn.click();
+    });
+
     expect(container.innerHTML).toBe("");
   });
 });

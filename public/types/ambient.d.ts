@@ -9,17 +9,19 @@ declare function importScripts(...urls: string[]): void;
 // ── Window augmentations (WhatsApp/Partner-Connect extensions) ──
 interface Window {
   /** WhatsApp helper object injected by content script */
-  __waH: {
-    qsDeep(selector: string): Element | null;
-    qsaDeep(selector: string): Element[];
-    qsWithin(root: Element | Document, selector: string): Element | null;
-    qsaWithin(root: Element | Document, selector: string): Element[];
-    filterVisible(elements: Element[]): Element[];
-    modernClearAndType(el: Element, text: string): void;
-    modernInsertText(el: Element, text: string): void;
-    invalidateCache(): void;
-    [key: string]: ((...args: unknown[]) => unknown) | unknown;
-  } | undefined;
+  __waH:
+    | {
+        qsDeep(selector: string): Element | null;
+        qsaDeep(selector: string): Element[];
+        qsWithin(root: Element | Document, selector: string): Element | null;
+        qsaWithin(root: Element | Document, selector: string): Element[];
+        filterVisible(elements: Element[]): Element[];
+        modernClearAndType(el: Element, text: string): void;
+        modernInsertText(el: Element, text: string): void;
+        invalidateCache(): void;
+        [key: string]: ((...args: unknown[]) => unknown) | unknown;
+      }
+    | undefined;
   loadTemplate: ((name: string) => Promise<void>) | undefined;
   pauseTask: (() => void) | undefined;
   resumeTask: (() => void) | undefined;

@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  wcaDiscover,
-  wcaScrape,
-  wcaCheckIds,
-  wcaJobStart,
-  wcaJobPause,
-  WCA_NETWORKS,
-} from "@/lib/api/wcaAppApi";
+import { wcaDiscover, wcaScrape, wcaCheckIds, wcaJobStart, wcaJobPause, WCA_NETWORKS } from "@/lib/api/wcaAppApi";
 import { resetCheckpoint } from "@/lib/wcaCheckpoint";
 import { clearWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 
@@ -29,10 +22,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
     setWcaCookie("fake-cookie=abc");
     // stub localStorage con cookie valido per evitare login
     const store = new Map<string, string>();
-    store.set(
-      "wca_session_cookie",
-      JSON.stringify({ cookie: "fake-cookie=abc", savedAt: Date.now() })
-    );
+    store.set("wca_session_cookie", JSON.stringify({ cookie: "fake-cookie=abc", savedAt: Date.now() }));
     vi.stubGlobal("localStorage", {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => store.set(k, v),
@@ -154,10 +144,7 @@ describe("wcaAppApi — contract tests (mocked fetch)", () => {
       const fakeFetch = mockFetch({ success: true, jobId: "job-1", status: "running" });
       global.fetch = fakeFetch as any;
 
-      const result = await wcaJobStart(
-        [{ code: "IT", name: "Italy" }],
-        { networks: ["WCA First"] }
-      );
+      const result = await wcaJobStart([{ code: "IT", name: "Italy" }], { networks: ["WCA First"] });
       expect(result.jobId).toBe("job-1");
 
       const body = JSON.parse(fakeFetch.mock.calls[0][1].body);

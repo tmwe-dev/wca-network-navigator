@@ -24,7 +24,11 @@ const TOOL_DEFINITIONS = [
     function: {
       name: "navigate",
       description: "Navigate to a route within the app.",
-      parameters: { type: "object", properties: { path: { type: "string", description: "Route path" } }, required: ["path"] },
+      parameters: {
+        type: "object",
+        properties: { path: { type: "string", description: "Route path" } },
+        required: ["path"],
+      },
     },
   },
   {
@@ -130,7 +134,9 @@ serve(async (req: Request) => {
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
       );
-      const { data: { user } } = await sb.auth.getUser(token);
+      const {
+        data: { user },
+      } = await sb.auth.getUser(token);
       if (user) userId = user.id;
     }
 
@@ -151,7 +157,8 @@ serve(async (req: Request) => {
       });
     }
 
-    const LOVABLE_API_KEY = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const LOVABLE_API_KEY =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
         status: 500,
@@ -166,10 +173,7 @@ serve(async (req: Request) => {
     let promptLabBlock = "";
     if (userId && userId !== "anonymous") {
       try {
-        const supabaseSrv = createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-        );
+        const supabaseSrv = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         const lab = await loadOperativePrompts(supabaseSrv, userId, {
           scope: "agent-loop",
           includeUniversal: true,
@@ -186,12 +190,13 @@ serve(async (req: Request) => {
     let personaBlock = "";
     if (agentId) {
       try {
-        const supabaseSrv = createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-        );
+        const supabaseSrv = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         capabilities = await loadAgentCapabilities(supabaseSrv, String(agentId));
-        const persona = await loadAgentPersona(supabaseSrv, String(agentId), userId !== "anonymous" ? userId : undefined);
+        const persona = await loadAgentPersona(
+          supabaseSrv,
+          String(agentId),
+          userId !== "anonymous" ? userId : undefined,
+        );
         const rendered = renderPersonaBlock(persona);
         if (rendered) personaBlock = `\n\n${rendered}`;
       } catch (e) {
@@ -202,9 +207,7 @@ serve(async (req: Request) => {
     const effectiveTools = filterToolsByCapabilities(TOOL_DEFINITIONS, capabilities);
     const effectiveModel = capabilities.preferredModel ?? "google/gemini-2.5-flash";
     const effectiveMaxTokens = capabilities.maxTokensPerCall ?? 500;
-    const effectiveTemperature = typeof capabilities.temperature === "number"
-      ? capabilities.temperature
-      : 0.2;
+    const effectiveTemperature = typeof capabilities.temperature === "number" ? capabilities.temperature : 0.2;
 
     const systemPrompt = `Sei LUCA, direttore del CRM WCA Network Navigator. Italiano, asciutto, operativo.
 
@@ -213,35 +216,35 @@ ${sessionContext ? `CONTESTO PAGINA: ${JSON.stringify(sessionContext).slice(0, 1
 
 Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pagina se ti serve capire dove sei, esplora la KB se ti serve contesto, chiedi all'utente se sei bloccato, chiama \`finish\` quando hai concluso. Se una ricerca torna vuota, prova varianti prima di rinunciare. Le regole inviolabili sono nei PROMPT OPERATIVI sopra; i blocchi tecnici (azioni distruttive, bulk, tabelle vietate) sono già imposti dal sistema.`;
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...(Array.isArray(history) ? history.slice(-30) : []),
-    ];
+    const messages = [{ role: "system", content: systemPrompt }, ...(Array.isArray(history) ? history.slice(-30) : [])];
 
     const response = await aiFetch({
-        model: effectiveModel,
-        messages,
-        tools: effectiveTools,
-        temperature: effectiveTemperature,
-        max_tokens: effectiveMaxTokens,
-      });
+      model: effectiveModel,
+      messages,
+      tools: effectiveTools,
+      temperature: effectiveTemperature,
+      max_tokens: effectiveMaxTokens,
+    });
 
     if (!response.ok) {
       const errText = await response.text();
       const status = response.status;
       if (status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit superato, riprova tra poco." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (status === 402) {
         return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       console.error("AI gateway error:", status, errText);
       return new Response(JSON.stringify({ error: "Errore AI gateway" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -256,16 +259,21 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
     }
 
     // Parse tool calls
-    const toolCalls = (msg.tool_calls ?? []).map((tc: Record<string, unknown>) => {
-      const fn = tc.function as Record<string, unknown>;
-      let args: Record<string, unknown> = {};
-      try {
-        args = typeof fn.arguments === "string" ? JSON.parse(fn.arguments) : (fn.arguments as Record<string, unknown>) ?? {};
-      } catch {
-        args = {};
-      }
-      return { name: fn.name as string, arguments: args, id: tc.id as string };
-    }).filter(Boolean);
+    const toolCalls = (msg.tool_calls ?? [])
+      .map((tc: Record<string, unknown>) => {
+        const fn = tc.function as Record<string, unknown>;
+        let args: Record<string, unknown> = {};
+        try {
+          args =
+            typeof fn.arguments === "string"
+              ? JSON.parse(fn.arguments)
+              : ((fn.arguments as Record<string, unknown>) ?? {});
+        } catch {
+          args = {};
+        }
+        return { name: fn.name as string, arguments: args, id: tc.id as string };
+      })
+      .filter(Boolean);
 
     // Record usage
     const responseTokens = estimateTokens(msg.content ?? "") + toolCalls.length * 50;
@@ -288,9 +296,9 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
     );
   } catch (e) {
     console.error("agent-loop error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

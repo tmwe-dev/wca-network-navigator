@@ -23,9 +23,9 @@ const phaseLabel: Record<MessageAudit["phase"], string> = {
 const refKindLabel: Record<NonNullable<MessageAudit["references"]>[number]["kind"], string> = {
   "operative-prompt": "Prompt Lab",
   "kb-section": "KB",
-  "model": "Model",
-  "playbook": "Playbook",
-  "context": "Contesto",
+  model: "Model",
+  playbook: "Playbook",
+  context: "Contesto",
 };
 
 export default function MessageAuditPanel({ audit }: Props) {
@@ -87,9 +87,7 @@ export default function MessageAuditPanel({ audit }: Props) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono text-[11px] text-foreground">{s.label}</span>
-                            <span className="text-[9px] text-muted-foreground font-mono">
-                              [{s.toolId}]
-                            </span>
+                            <span className="text-[9px] text-muted-foreground font-mono">[{s.toolId}]</span>
                             {s.durationMs !== undefined && s.durationMs > 0 && (
                               <span className="text-[9px] text-muted-foreground font-mono">
                                 · {(s.durationMs / 1000).toFixed(2)}s
@@ -100,17 +98,15 @@ export default function MessageAuditPanel({ audit }: Props) {
                                 s.status === "ok"
                                   ? "bg-success/10 text-success"
                                   : s.status === "failed"
-                                  ? "bg-destructive/10 text-destructive"
-                                  : "bg-muted/40 text-muted-foreground"
+                                    ? "bg-destructive/10 text-destructive"
+                                    : "bg-muted/40 text-muted-foreground"
                               }`}
                             >
                               {s.status}
                             </span>
                           </div>
                           {s.reasoning && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
-                              {s.reasoning}
-                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{s.reasoning}</div>
                           )}
                         </div>
                       </li>

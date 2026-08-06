@@ -1,9 +1,7 @@
 import type { PartnerViewModel } from "@/types/partner-views";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  Star, StarOff, Phone, Mail, Globe,
-} from "lucide-react";
+import { Star, StarOff, Phone, Mail, Globe } from "lucide-react";
 import { Plane } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { getCountryFlag, formatPartnerType } from "@/lib/countries";
@@ -20,7 +18,6 @@ import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
 import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
 import { EnrichmentInsightStrip } from "@/components/partners/EnrichmentInsightStrip";
 
- 
 interface PartnerDetailHeaderProps {
   partner: PartnerViewModel;
   enrichment: Record<string, unknown> | null;
@@ -35,7 +32,16 @@ interface PartnerDetailHeaderProps {
 }
 
 export function PartnerDetailHeader({
-  partner, enrichment, networks, services, branchCountries, years, expiryDate, isExpiringSoon, isExpired, onToggleFavorite,
+  partner,
+  enrichment,
+  networks,
+  services,
+  branchCountries,
+  years,
+  expiryDate,
+  isExpiringSoon,
+  isExpired,
+  onToggleFavorite,
 }: PartnerDetailHeaderProps) {
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[String(partner.partner_type || "")] || Box;
   const sherlockLevel = useSherlockLevel("partner", partner.id);
@@ -52,7 +58,9 @@ export function PartnerDetailHeader({
               src={effectiveLogo}
               alt={String(partner.company_name)}
               className="w-12 h-12 rounded-xl object-contain bg-muted/30 border border-border/30"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           ) : (
             <div className="w-12 h-12 rounded-xl bg-muted/30 border border-border/30 flex items-center justify-center">
@@ -67,12 +75,16 @@ export function PartnerDetailHeader({
               <div className="flex items-center gap-2 flex-wrap min-w-0">
                 <h2 className="text-lg font-bold text-foreground truncate">{String(partner.company_name)}</h2>
                 <EnrichmentBadge partner={partner} variant="pill" />
-                <span className={cn(
-                  "text-[10px] px-1.5 py-0.5 rounded-full border font-medium",
-                  isExpired ? "border-destructive/30 text-destructive" :
-                  isExpiringSoon ? "border-primary/30 text-primary" :
-                  "border-emerald-500/20 text-emerald-400"
-                )}>
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded-full border font-medium",
+                    isExpired
+                      ? "border-destructive/30 text-destructive"
+                      : isExpiringSoon
+                        ? "border-primary/30 text-primary"
+                        : "border-emerald-500/20 text-emerald-400",
+                  )}
+                >
                   {expiryDate ? `Scade ${format(expiryDate, "MM/yyyy")}` : "N/A"}
                 </span>
                 {inHolding && (
@@ -114,9 +126,17 @@ export function PartnerDetailHeader({
                 {years > 0 && <TrophyRow years={years} />}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={onToggleFavorite}
-                      className={cn("h-7 w-7 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}>
-                      {partner.is_favorite ? <Star className="w-4 h-4 fill-primary text-primary" /> : <StarOff className="w-4 h-4 text-muted-foreground" />}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onToggleFavorite}
+                      className={cn("h-7 w-7 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}
+                    >
+                      {partner.is_favorite ? (
+                        <Star className="w-4 h-4 fill-primary text-primary" />
+                      ) : (
+                        <StarOff className="w-4 h-4 text-muted-foreground" />
+                      )}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
@@ -136,19 +156,32 @@ export function PartnerDetailHeader({
           {/* Riga 3 — contatti sempre a sinistra */}
           <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
             {partner.phone && (
-              <a href={`tel:${String(partner.phone)}`} className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors">
+              <a
+                href={`tel:${String(partner.phone)}`}
+                className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
+              >
                 <Phone className="w-3 h-3" strokeWidth={1.5} /> {String(partner.phone)}
               </a>
             )}
             {partner.email && (
-              <a href={`mailto:${String(partner.email)}`} className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors">
+              <a
+                href={`mailto:${String(partner.email)}`}
+                className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
+              >
                 <Mail className="w-3 h-3" strokeWidth={1.5} /> {String(partner.email)}
               </a>
             )}
             {partner.website && (
-              <a href={String(partner.website).startsWith("http") ? String(partner.website) : `https://${String(partner.website)}`}
-                target="_blank" rel="noopener"
-                className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors">
+              <a
+                href={
+                  String(partner.website).startsWith("http")
+                    ? String(partner.website)
+                    : `https://${String(partner.website)}`
+                }
+                target="_blank"
+                rel="noopener"
+                className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
+              >
                 <Globe className="w-3 h-3" strokeWidth={1.5} /> {String(partner.website)}
               </a>
             )}

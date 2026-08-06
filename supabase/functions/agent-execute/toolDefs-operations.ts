@@ -12,7 +12,10 @@ export const OPERATIONS_TOOLS: Record<string, unknown> = {
         type: "object",
         properties: {
           action: { type: "string", enum: ["navigate", "toast", "filter"], description: "Type of UI action" },
-          target: { type: "string", description: "For navigate: route path. For toast: message text. For filter: filter expression." },
+          target: {
+            type: "string",
+            description: "For navigate: route path. For toast: message text. For filter: filter expression.",
+          },
           params: { type: "object", description: "Additional parameters" },
         },
         required: ["action", "target"],
@@ -40,7 +43,10 @@ export const OPERATIONS_TOOLS: Record<string, unknown> = {
     function: {
       name: "check_job_status",
       description: "Check download job status.",
-      parameters: { type: "object", properties: { job_id: { type: "string" }, include_email_queue: { type: "boolean" } } },
+      parameters: {
+        type: "object",
+        properties: { job_id: { type: "string" }, include_email_queue: { type: "boolean" } },
+      },
     },
   },
 };

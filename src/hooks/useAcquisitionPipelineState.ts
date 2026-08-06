@@ -24,7 +24,14 @@ export interface ScanStats {
   missing: number;
 }
 
-export const EMPTY_STATS: LiveStats = { processed: 0, withEmail: 0, withPhone: 0, complete: 0, empty: 0, failedLoads: 0 };
+export const EMPTY_STATS: LiveStats = {
+  processed: 0,
+  withEmail: 0,
+  withPhone: 0,
+  complete: 0,
+  empty: 0,
+  failedLoads: 0,
+};
 
 export function useAcquisitionPipelineState() {
   // Toolbar state
@@ -69,38 +76,66 @@ export function useAcquisitionPipelineState() {
 
   return {
     // Toolbar
-    selectedCountries, setSelectedCountries,
-    selectedNetworks, setSelectedNetworks,
-    delaySeconds, setDelaySeconds,
-    includeEnrich, setIncludeEnrich,
-    includeDeepSearch, setIncludeDeepSearch,
+    selectedCountries,
+    setSelectedCountries,
+    selectedNetworks,
+    setSelectedNetworks,
+    delaySeconds,
+    setDelaySeconds,
+    includeEnrich,
+    setIncludeEnrich,
+    includeDeepSearch,
+    setIncludeDeepSearch,
     // Pipeline
-    pipelineStatus, setPipelineStatus,
-    queue, setQueue,
-    activeIndex, setActiveIndex,
-    canvasData, setCanvasData,
-    canvasPhase, setCanvasPhase,
-    isAnimatingOut, setIsAnimatingOut,
-    completedCount, setCompletedCount,
-    qualityComplete, setQualityComplete,
-    qualityIncomplete, setQualityIncomplete,
-    showComet, setShowComet,
-    showSessionAlert, setShowSessionAlert,
-    selectedIds, setSelectedIds,
-    activeJobId, setActiveJobId,
-    resumeLoading, setResumeLoading,
-    liveStats, setLiveStats,
+    pipelineStatus,
+    setPipelineStatus,
+    queue,
+    setQueue,
+    activeIndex,
+    setActiveIndex,
+    canvasData,
+    setCanvasData,
+    canvasPhase,
+    setCanvasPhase,
+    isAnimatingOut,
+    setIsAnimatingOut,
+    completedCount,
+    setCompletedCount,
+    qualityComplete,
+    setQualityComplete,
+    qualityIncomplete,
+    setQualityIncomplete,
+    showComet,
+    setShowComet,
+    showSessionAlert,
+    setShowSessionAlert,
+    selectedIds,
+    setSelectedIds,
+    activeJobId,
+    setActiveJobId,
+    resumeLoading,
+    setResumeLoading,
+    liveStats,
+    setLiveStats,
     // Network
-    networkStats, setNetworkStats,
-    excludedNetworks, setExcludedNetworks,
+    networkStats,
+    setNetworkStats,
+    excludedNetworks,
+    setExcludedNetworks,
     excludedNetworksRef,
-    networkRegressions, setNetworkRegressions,
+    networkRegressions,
+    setNetworkRegressions,
     networkBaselineRef,
     // Scan
-    scanStats, setScanStats,
+    scanStats,
+    setScanStats,
     // Session
-    sessionHealth, setSessionHealth,
+    sessionHealth,
+    setSessionHealth,
     // Refs
-    pauseRef, cancelRef, pollingAbortRef, extensionWarningShown,
+    pauseRef,
+    cancelRef,
+    pollingAbortRef,
+    extensionWarningShown,
   };
 }

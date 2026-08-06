@@ -9,10 +9,25 @@ export function CodaAIFiltersSection() {
   return (
     <>
       <FilterSection icon={Search} label="Cerca">
-        <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca azioni AI..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        <Input
+          value={g.filters.search}
+          onChange={(e) => g.setSearch(e.target.value)}
+          placeholder="Cerca azioni AI..."
+          className="h-8 text-xs bg-muted/30 border-border/40"
+        />
       </FilterSection>
       <FilterSection icon={Zap} label="Priorità">
-        <ChipGroup>{ATTIVITA_PRIORITY.map(o => <Chip key={o.value} active={g.filters.attivitaPriority === o.value} onClick={() => g.setAttivitaPriority(o.value)}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>
+          {ATTIVITA_PRIORITY.map((o) => (
+            <Chip
+              key={o.value}
+              active={g.filters.attivitaPriority === o.value}
+              onClick={() => g.setAttivitaPriority(o.value)}
+            >
+              {o.label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
     </>
   );

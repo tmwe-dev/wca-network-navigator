@@ -11,10 +11,7 @@ const PRODUCTION_ORIGINS: readonly string[] = [
   "https://c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovableproject.com",
 ];
 
-const DEV_ONLY_ORIGINS: readonly string[] = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
+const DEV_ONLY_ORIGINS: readonly string[] = ["http://localhost:5173", "http://localhost:3000"];
 
 /**
  * In production we exclude localhost to prevent dev clients from hitting prod functions.
@@ -33,9 +30,7 @@ const ALLOWED_ORIGINS: readonly string[] = IS_PRODUCTION
  * Falls back to the primary production origin if the request origin is unknown.
  */
 export function getCorsHeaders(requestOrigin?: string | null): Record<string, string> {
-  const origin = ALLOWED_ORIGINS.includes(requestOrigin || "")
-    ? requestOrigin!
-    : ALLOWED_ORIGINS[0];
+  const origin = ALLOWED_ORIGINS.includes(requestOrigin || "") ? requestOrigin! : ALLOWED_ORIGINS[0];
 
   return {
     "Access-Control-Allow-Origin": origin,

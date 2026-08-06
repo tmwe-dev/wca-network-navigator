@@ -22,7 +22,7 @@ SISTEMA: check_blacklist | get_global_summary | save_memory | search_memory | de
 
 MANAGEMENT (solo Director): create_agent_task | list_agent_tasks | get_team_status | update_agent_prompt | add_agent_kb_entry | assign_contacts_to_agent | create_campaign (con A/B test)
 
-STRATEGIA (solo Director): create_work_plan | list_work_plans | update_work_plan | manage_workspace_preset | get_system_analytics`
+STRATEGIA (solo Director): create_work_plan | list_work_plans | update_work_plan | manage_workspace_preset | get_system_analytics`,
     },
     {
       title: "Campi Database Principali",
@@ -46,7 +46,7 @@ email_campaign_queue: recipient_email, subject, html_body, status (pending/sent/
 
 client_assignments: agent_id, source_type (partner/contact), source_id, manager_id
 
-agent_tasks: agent_id, task_type, description, status (pending/running/completed/failed), target_filters, result_summary`
+agent_tasks: agent_id, task_type, description, status (pending/running/completed/failed), target_filters, result_summary`,
     },
     {
       title: "Workflow Circuito di Attesa",
@@ -80,7 +80,7 @@ ANALISI RISPOSTE:
 - Neutrale (richiesta info) → rispondi + follow-up a 5gg
 - Negativa (rifiuto) → marca come lost, salva motivo in memoria
 - OOO/Auto-reply → riprogramma follow-up alla data di rientro
-- Spam → ignora, marca come letto`
+- Spam → ignora, marca come letto`,
     },
   ],
   outreach: [
@@ -110,8 +110,8 @@ POST-INVIO:
 REGOLE:
 - Verifica SEMPRE blacklist prima di contattare
 - Personalizza OGNI messaggio — no template generici
-- Traccia ogni interazione nel sistema`
-    }
+- Traccia ogni interazione nel sistema`,
+    },
   ],
   sales: [
     {
@@ -134,8 +134,8 @@ TECNICHE DI VENDITA:
 
 REGOLE:
 - Personalizza in base a profilo, servizi, certificazioni del partner
-- Registra ogni interazione per tracking conversione`
-    }
+- Registra ogni interazione per tracking conversione`,
+    },
   ],
   download: [
     {
@@ -152,8 +152,8 @@ FLUSSO:
 REGOLE:
 - Non proporre mai download, scansioni o accesso operativo alla directory WCA
 - Prioritizza paesi con più partner ma minore qualità dati
-- L'obiettivo è arricchire e qualificare, non scaricare`
-    }
+- L'obiettivo è arricchire e qualificare, non scaricare`,
+    },
   ],
   research: [
     {
@@ -172,8 +172,8 @@ FONTI:
 - Database partner interno
 - Deep Search (Google + profili web)
 - LinkedIn URL discovery
-- Enrichment siti web (enrich_partner_website)`
-    }
+- Enrichment siti web (enrich_partner_website)`,
+    },
   ],
   account: [
     {
@@ -191,8 +191,8 @@ KPI:
 - Email inviate / giorno per agente
 - Tasso di risposta (>15% obiettivo)
 - Follow-up programmati vs effettuati
-- Lead avanzati di status`
-    }
+- Lead avanzati di status`,
+    },
   ],
   strategy: [
     {
@@ -210,8 +210,8 @@ FLUSSO:
 REGOLE:
 - Decisioni basate SOLO su dati reali
 - Rapporto costo/beneficio sempre considerato
-- Salva analisi strategiche in memoria`
-    }
+- Salva analisi strategiche in memoria`,
+    },
   ],
 };
 

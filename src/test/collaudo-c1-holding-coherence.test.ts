@@ -15,9 +15,7 @@ import { describe, it, expect } from "vitest";
 // Definizioni canoniche (dalla tassonomia del sistema)
 // ══════════════════════════════════════════════════════════
 
-const CANONICAL_LEAD_STATUSES = [
-  "new", "contacted", "in_progress", "negotiation", "converted", "lost",
-];
+const CANONICAL_LEAD_STATUSES = ["new", "contacted", "in_progress", "negotiation", "converted", "lost"];
 
 // Definizioni usate nei diversi moduli (stato ATTUALE del codice)
 const MODULE_DEFINITIONS = {
@@ -32,7 +30,6 @@ const MODULE_DEFINITIONS = {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C5 — Holding Pattern Coherence", () => {
-
   it("C5.1 — canonical lead statuses must be exactly 6", () => {
     expect(CANONICAL_LEAD_STATUSES).toHaveLength(6);
     expect(CANONICAL_LEAD_STATUSES).toContain("new");
@@ -85,7 +82,6 @@ describe("Collaudo C5 — Holding Pattern Coherence", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C5 — State Transition Gates", () => {
-
   const TRANSITION_GATES = [
     { from: "new", to: "contacted", trigger: "Primo messaggio inviato", autoApply: true },
     { from: "contacted", to: "in_progress", trigger: "Il contatto ha risposto", autoApply: true },
@@ -100,7 +96,7 @@ describe("Collaudo C5 — State Transition Gates", () => {
   });
 
   it("C5.8 — auto-apply only for low-risk transitions", () => {
-    const autoGates = TRANSITION_GATES.filter(g => g.autoApply);
+    const autoGates = TRANSITION_GATES.filter((g) => g.autoApply);
     expect(autoGates).toHaveLength(2);
     // Only new→contacted and contacted→in_progress should be auto
     expect(autoGates[0].from).toBe("new");
@@ -110,11 +106,11 @@ describe("Collaudo C5 — State Transition Gates", () => {
   });
 
   it("C5.9 — conversion and loss require manual approval", () => {
-    const conversionGate = TRANSITION_GATES.find(g => g.to === "converted");
+    const conversionGate = TRANSITION_GATES.find((g) => g.to === "converted");
     expect(conversionGate).toBeDefined();
     expect(conversionGate!.autoApply).toBe(false);
 
-    const lossGates = TRANSITION_GATES.filter(g => g.to === "lost");
+    const lossGates = TRANSITION_GATES.filter((g) => g.to === "lost");
     for (const g of lossGates) {
       expect(g.autoApply).toBe(false);
     }
@@ -122,7 +118,12 @@ describe("Collaudo C5 — State Transition Gates", () => {
 
   it("C5.10 — no backward transitions allowed (except to lost)", () => {
     const statusOrder: Record<string, number> = {
-      new: 0, contacted: 1, in_progress: 2, negotiation: 3, converted: 4, lost: -1,
+      new: 0,
+      contacted: 1,
+      in_progress: 2,
+      negotiation: 3,
+      converted: 4,
+      lost: -1,
     };
     for (const gate of TRANSITION_GATES) {
       if (gate.to === "lost" || gate.from === "*") continue;
@@ -135,9 +136,7 @@ describe("Collaudo C5 — State Transition Gates", () => {
   it("C5.11 — every status has at least one outgoing transition", () => {
     const activeStatuses = ["new", "contacted", "in_progress", "negotiation"];
     for (const status of activeStatuses) {
-      const hasGate = TRANSITION_GATES.some(
-        g => g.from === status || g.from === "*"
-      );
+      const hasGate = TRANSITION_GATES.some((g) => g.from === status || g.from === "*");
       expect(hasGate).toBe(true);
     }
   });
@@ -148,7 +147,6 @@ describe("Collaudo C5 — State Transition Gates", () => {
 // ══════════════════════════════════════════════════════════
 
 describe("Collaudo C5 — useTrackActivity State Protection", () => {
-
   // Simulate the CURRENT logic of useTrackActivity
   // Line 49: await updatePartner(params.partnerId, { lead_status: "contacted", last_interaction_at: now })
   function simulateCurrentTrackActivity(_currentStatus: string): string {

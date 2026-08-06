@@ -28,7 +28,7 @@ export async function handleStateTransition(
   taskId: string,
   agentId: string,
   agentName: string,
-  userId: string
+  userId: string,
 ): Promise<{ success: boolean; action: string; partner_id: string; from_state: string; new_state: string }> {
   const filters = (task.target_filters || {}) as Record<string, unknown>;
   const partnerId = filters.partner_id as string | undefined;
@@ -37,11 +37,14 @@ export async function handleStateTransition(
   const trigger = (filters.trigger as string) || "Transizione manuale approvata";
 
   if (!partnerId || !toState) {
-    await supabase.from("agent_tasks").update({
-      status: "failed",
-      completed_at: new Date().toISOString(),
-      result_summary: "target_filters incompleti (partner_id/to_state mancanti)",
-    }).eq("id", taskId);
+    await supabase
+      .from("agent_tasks")
+      .update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+        result_summary: "target_filters incompleti (partner_id/to_state mancanti)",
+      })
+      .eq("id", taskId);
     throw new Error("task_invalid: partner_id/to_state mancanti");
   }
 
@@ -55,13 +58,16 @@ export async function handleStateTransition(
   });
   const applied = result.applied;
 
-  await supabase.from("agent_tasks").update({
-    status: applied ? "completed" : "failed",
-    completed_at: new Date().toISOString(),
-    result_summary: applied
-      ? `Stato partner ${partnerId}: ${fromState} → ${toState}. Trigger: ${trigger}`
-      : `Transizione fallita per partner ${partnerId}`,
-  }).eq("id", taskId);
+  await supabase
+    .from("agent_tasks")
+    .update({
+      status: applied ? "completed" : "failed",
+      completed_at: new Date().toISOString(),
+      result_summary: applied
+        ? `Stato partner ${partnerId}: ${fromState} → ${toState}. Trigger: ${trigger}`
+        : `Transizione fallita per partner ${partnerId}`,
+    })
+    .eq("id", taskId);
 
   await logSupervisorAudit(supabase, {
     user_id: userId,
@@ -98,7 +104,7 @@ export async function handleGeneralTask(
   agentName: string,
   userId: string,
   authHeader: string,
-  _apiKey: string
+  _apiKey: string,
 ): Promise<{ success: boolean; result: string }> {
   const fallbackModels = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "openai/gpt-5-mini"];
 
@@ -177,15 +183,18 @@ export async function handleGeneralTask(
   }
 
   const currentLog = (task.execution_log as Array<Record<string, unknown>>) || [];
-  await supabase.from("agent_tasks").update({
-    status: taskStatus,
-    result_summary: resultSummary.slice(0, 5000),
-    execution_log: [
-      ...currentLog,
-      { ts: new Date().toISOString(), result: resultSummary.slice(0, 2000) },
-    ] as unknown as Record<string, unknown>,
-    completed_at: new Date().toISOString(),
-  }).eq("id", taskId);
+  await supabase
+    .from("agent_tasks")
+    .update({
+      status: taskStatus,
+      result_summary: resultSummary.slice(0, 5000),
+      execution_log: [
+        ...currentLog,
+        { ts: new Date().toISOString(), result: resultSummary.slice(0, 2000) },
+      ] as unknown as Record<string, unknown>,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", taskId);
 
   await logSupervisorAudit(supabase, {
     user_id: userId,

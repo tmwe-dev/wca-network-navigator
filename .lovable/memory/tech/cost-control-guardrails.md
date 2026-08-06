@@ -35,6 +35,7 @@ Per riattivare in scenario commerciale: settare entrambe a `"true"`.
 ## Riattivazione futura
 
 Quando si decide di commercializzare:
+
 1. Settare `AI_USAGE_LIMITS_ENABLED=true` come secret edge function.
 2. Settare `VITE_AI_USAGE_LIMITS_ENABLED=true` nel build env.
 3. Tutto il codice di gate è preservato e torna operativo immediatamente.

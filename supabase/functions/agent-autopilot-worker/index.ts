@@ -42,11 +42,9 @@ Deno.serve(async (req) => {
   const metrics = startMetrics("agent-autopilot-worker");
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+      auth: { persistSession: false },
+    });
 
     // ━━━ Cron Guard ━━━
     const guard = await cronGuardCheck(supabase, {
@@ -58,8 +56,12 @@ Deno.serve(async (req) => {
     if (guard.skip) {
       endMetrics(metrics, true, 200);
       return new Response(
-        JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
-        { status: 200, headers }
+        JSON.stringify({
+          skipped: true,
+          reason: guard.reason,
+          next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined,
+        }),
+        { status: 200, headers },
       );
     }
 
@@ -97,31 +99,30 @@ Deno.serve(async (req) => {
 
     endMetrics(metrics, true, 200);
     await cronGuardLogRun(supabase, "autopilot_worker", { processed: results.length });
-    return new Response(JSON.stringify({
-      processed: results.length,
-      results,
-    }), { status: 200, headers });
-
+    return new Response(
+      JSON.stringify({
+        processed: results.length,
+        results,
+      }),
+      { status: 200, headers },
+    );
   } catch (error: unknown) {
     logEdgeError("agent-autopilot-worker", error);
     endMetrics(metrics, false, 500);
     const message = error instanceof Error ? error.message : String(error);
     try {
-      const sb = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-        { auth: { persistSession: false } }
-      );
+      const sb = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
+        auth: { persistSession: false },
+      });
       await cronGuardLogRun(sb, "autopilot_worker", {}, message);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return new Response(JSON.stringify({ error: message }), { status: 500, headers });
   }
 });
 
-async function processMission(
-  supabase: ReturnType<typeof createClient>,
-  mission: MissionRow
-): Promise<ProcessResult> {
+async function processMission(supabase: ReturnType<typeof createClient>, mission: MissionRow): Promise<ProcessResult> {
   const { id, kpi_target, kpi_current, budget, budget_consumed } = mission;
 
   // ── Check deadline ──
@@ -203,9 +204,7 @@ async function processMission(
     max_emails_sent: (budget_consumed.max_emails_sent ?? 0) + emailsSent,
   };
 
-  await supabase.from("agent_missions")
-    .update({ budget_consumed: newConsumed })
-    .eq("id", id);
+  await supabase.from("agent_missions").update({ budget_consumed: newConsumed }).eq("id", id);
 
   await logMissionEvent(supabase, id, "tick_completed", {
     actions_executed: actionsUsed,
@@ -217,10 +216,7 @@ async function processMission(
   return { mission_id: id, outcome: "advanced", detail: `${actionsUsed} actions` };
 }
 
-function checkKpiMet(
-  target: Record<string, number | string>,
-  current: Record<string, number>
-): boolean {
+function checkKpiMet(target: Record<string, number | string>, current: Record<string, number>): boolean {
   for (const [key, val] of Object.entries(target)) {
     if (key === "deadline") continue;
     const numTarget = typeof val === "number" ? val : Number(val);
@@ -230,21 +226,14 @@ function checkKpiMet(
   return true;
 }
 
-function checkBudgetExhausted(
-  budget: Record<string, number>,
-  consumed: Record<string, number>
-): boolean {
+function checkBudgetExhausted(budget: Record<string, number>, consumed: Record<string, number>): boolean {
   for (const [key, limit] of Object.entries(budget)) {
     if ((consumed[key] ?? 0) >= limit) return true;
   }
   return false;
 }
 
-async function updateMissionStatus(
-  supabase: ReturnType<typeof createClient>,
-  missionId: string,
-  status: string
-) {
+async function updateMissionStatus(supabase: ReturnType<typeof createClient>, missionId: string, status: string) {
   const updates: Record<string, unknown> = { status };
   if (status === "completed" || status === "failed" || status === "budget_exhausted") {
     updates.completed_at = new Date().toISOString();
@@ -256,7 +245,7 @@ async function logMissionEvent(
   supabase: ReturnType<typeof createClient>,
   missionId: string,
   eventType: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ) {
   await supabase.from("agent_mission_events").insert({
     mission_id: missionId,

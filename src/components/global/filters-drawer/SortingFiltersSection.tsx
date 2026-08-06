@@ -9,10 +9,21 @@ export function SortingFiltersSection() {
   return (
     <>
       <FilterSection icon={Search} label="Cerca">
-        <Input value={g.filters.sortingSearch} onChange={e => g.setSortingSearch(e.target.value)} placeholder="Cerca approvazioni..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        <Input
+          value={g.filters.sortingSearch}
+          onChange={(e) => g.setSortingSearch(e.target.value)}
+          placeholder="Cerca approvazioni..."
+          className="h-8 text-xs bg-muted/30 border-border/40"
+        />
       </FilterSection>
       <FilterSection icon={ListTodo} label="Stato">
-        <ChipGroup>{SORTING_FILTERS.map(o => <Chip key={o.key} active={g.filters.sortingFilter === o.key} onClick={() => g.setSortingFilter(o.key)}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>
+          {SORTING_FILTERS.map((o) => (
+            <Chip key={o.key} active={g.filters.sortingFilter === o.key} onClick={() => g.setSortingFilter(o.key)}>
+              {o.label}
+            </Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
     </>
   );

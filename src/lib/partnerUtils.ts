@@ -84,7 +84,8 @@ export function getEnrichmentSnippet(partner: PartnerLike): string | null {
 
 /** Check if partner has LinkedIn social link */
 export function hasLinkedIn(partner: PartnerLike): boolean {
-  if (partner.partner_social_links?.some?.((l) => l.platform === "linkedin" || l.platform === "linkedin_company")) return true;
+  if (partner.partner_social_links?.some?.((l) => l.platform === "linkedin" || l.platform === "linkedin_company"))
+    return true;
   const enrich = asEnrichment(partner.enrichment_data);
   if (enrich?.social_links?.some?.((l) => l.platform?.includes?.("linkedin"))) return true;
   return false;
@@ -120,22 +121,38 @@ export function getBranchCountries(partner: PartnerLike): { code: string; name: 
 }
 
 function cleanAddressPart(value: string): string {
-  return value.replace(/\s+/g, " ").replace(/^[,\s]+|[,\s]+$/g, "").trim();
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/^[,\s]+|[,\s]+$/g, "")
+    .trim();
 }
 
 function normalizeLocation(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function extractCityFromAddress(address: string | null | undefined, countryName?: string): string | null {
   if (!address) return null;
-  const countryTokens = new Set([
-    normalizeLocation(countryName || ""),
-    "australia", "canada", "new zealand", "south africa", "united states", "united states of america", "usa",
-  ].filter(Boolean));
+  const countryTokens = new Set(
+    [
+      normalizeLocation(countryName || ""),
+      "australia",
+      "canada",
+      "new zealand",
+      "south africa",
+      "united states",
+      "united states of america",
+      "usa",
+    ].filter(Boolean),
+  );
   const parts = address.split(",").map(cleanAddressPart).filter(Boolean);
   for (const part of [...parts].reverse()) {
-    const withoutCountry = cleanAddressPart(part.replace(/\b(United States of America|United States|USA|Australia|Canada|New Zealand|South Africa)\b/gi, ""));
+    const withoutCountry = cleanAddressPart(
+      part.replace(/\b(United States of America|United States|USA|Australia|Canada|New Zealand|South Africa)\b/gi, ""),
+    );
     const normalized = normalizeLocation(withoutCountry || part);
     if (!withoutCountry || countryTokens.has(normalized)) continue;
     if (/company\s+number|gst\s+number/i.test(withoutCountry)) continue;
@@ -144,7 +161,9 @@ function extractCityFromAddress(address: string | null | undefined, countryName?
     if (/^[A-Z]{1,3}\s*\d[\dA-Z\s-]*$/i.test(withoutCountry)) continue;
     if (/^\d[\dA-Z\s-]*$/i.test(withoutCountry)) continue;
     if (/\b(level|floor|suite|unit|road|street|avenue|drive|bvd|blvd|place|way|lane)\b/i.test(withoutCountry)) continue;
-    const city = cleanAddressPart(withoutCountry.replace(/\b[A-Z]{2,3}\s*\d[\dA-Z\s-]*$/i, "").replace(/\b\d{4,6}\b.*$/i, ""));
+    const city = cleanAddressPart(
+      withoutCountry.replace(/\b[A-Z]{2,3}\s*\d[\dA-Z\s-]*$/i, "").replace(/\b\d{4,6}\b.*$/i, ""),
+    );
     return city || null;
   }
   return null;
@@ -168,22 +187,30 @@ export function getPartnerDisplayCity(partner: PartnerLike): string {
 export function sortPartners(partners: PartnerLike[], sortBy: SortOption): PartnerLike[] {
   const sorted = [...partners];
   switch (sortBy) {
-    case "name_asc": return sorted.sort((a, b) => (a.company_name ?? "").localeCompare(b.company_name ?? ""));
-    case "name_desc": return sorted.sort((a, b) => (b.company_name ?? "").localeCompare(a.company_name ?? ""));
-    case "rating_desc": return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    case "years_desc": return sorted.sort((a, b) => getYearsMember(b.member_since ?? null) - getYearsMember(a.member_since ?? null));
-    case "country_asc": return sorted.sort((a, b) => (a.country_name ?? "").localeCompare(b.country_name ?? ""));
-    case "branches_desc": return sorted.sort((a, b) => {
-      const ba = Array.isArray(b.branch_cities) ? b.branch_cities.length : 0;
-      const aa = Array.isArray(a.branch_cities) ? a.branch_cities.length : 0;
-      return ba - aa;
-    });
-    case "contacts_desc": return sorted.sort((a, b) => {
-      const qa = getPartnerContactQuality(a.partner_contacts);
-      const qb = getPartnerContactQuality(b.partner_contacts);
-      const order: Record<string, number> = { complete: 0, partial: 1, missing: 2 };
-      return (order[qa] || 2) - (order[qb] || 2);
-    });
-    default: return sorted;
+    case "name_asc":
+      return sorted.sort((a, b) => (a.company_name ?? "").localeCompare(b.company_name ?? ""));
+    case "name_desc":
+      return sorted.sort((a, b) => (b.company_name ?? "").localeCompare(a.company_name ?? ""));
+    case "rating_desc":
+      return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    case "years_desc":
+      return sorted.sort((a, b) => getYearsMember(b.member_since ?? null) - getYearsMember(a.member_since ?? null));
+    case "country_asc":
+      return sorted.sort((a, b) => (a.country_name ?? "").localeCompare(b.country_name ?? ""));
+    case "branches_desc":
+      return sorted.sort((a, b) => {
+        const ba = Array.isArray(b.branch_cities) ? b.branch_cities.length : 0;
+        const aa = Array.isArray(a.branch_cities) ? a.branch_cities.length : 0;
+        return ba - aa;
+      });
+    case "contacts_desc":
+      return sorted.sort((a, b) => {
+        const qa = getPartnerContactQuality(a.partner_contacts);
+        const qb = getPartnerContactQuality(b.partner_contacts);
+        const order: Record<string, number> = { complete: 0, partial: 1, missing: 2 };
+        return (order[qa] || 2) - (order[qb] || 2);
+      });
+    default:
+      return sorted;
   }
 }

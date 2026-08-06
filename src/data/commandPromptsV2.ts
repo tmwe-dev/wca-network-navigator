@@ -4,11 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function findUserConversationIds(userId: string, limit = 200): Promise<string[] | null> {
-  const { data, error } = await supabase
-    .from("command_conversations")
-    .select("id")
-    .eq("user_id", userId)
-    .limit(limit);
+  const { data, error } = await supabase.from("command_conversations").select("id").eq("user_id", userId).limit(limit);
   if (error || !data) return null;
   return data.map((c) => c.id);
 }

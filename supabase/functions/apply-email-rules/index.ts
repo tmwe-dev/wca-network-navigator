@@ -79,10 +79,14 @@ class ImapConn {
       response += this.decoder.decode(buf.subarray(0, n));
       // Match della completion line per tag: deve essere a inizio riga
       if (
-        response.includes(`\n${tag} OK`) || response.startsWith(`${tag} OK`) ||
-        response.includes(`\n${tag} NO`) || response.startsWith(`${tag} NO`) ||
-        response.includes(`\n${tag} BAD`) || response.startsWith(`${tag} BAD`)
-      ) break;
+        response.includes(`\n${tag} OK`) ||
+        response.startsWith(`${tag} OK`) ||
+        response.includes(`\n${tag} NO`) ||
+        response.startsWith(`${tag} NO`) ||
+        response.includes(`\n${tag} BAD`) ||
+        response.startsWith(`${tag} BAD`)
+      )
+        break;
     }
     return response;
   }
@@ -115,7 +119,10 @@ class ImapConn {
     const folders = await this.listFolders();
     const candidates = ["Trash", "INBOX.Trash", "[Gmail]/Trash", "Deleted Items", "Deleted Messages"];
     for (const c of candidates) {
-      if (folders.includes(c)) { this.trashFolder = c; return c; }
+      if (folders.includes(c)) {
+        this.trashFolder = c;
+        return c;
+      }
     }
     // Fallback: crea Trash
     await this.send('CREATE "Trash"');
@@ -155,8 +162,16 @@ class ImapConn {
   }
 
   async logout(): Promise<void> {
-    try { await this.send("LOGOUT"); } catch { /* ignore */ }
-    try { this.conn.close(); } catch { /* ignore */ }
+    try {
+      await this.send("LOGOUT");
+    } catch {
+      /* ignore */
+    }
+    try {
+      this.conn.close();
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -191,7 +206,8 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401, headers: { ...cors, "Content-Type": "application/json" },
+        status: 401,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -211,10 +227,13 @@ Deno.serve(async (req) => {
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data: { user } } = await userClient.auth.getUser();
+      const {
+        data: { user },
+      } = await userClient.auth.getUser();
       if (!user) {
         return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-          status: 401, headers: { ...cors, "Content-Type": "application/json" },
+          status: 401,
+          headers: { ...cors, "Content-Type": "application/json" },
         });
       }
       callerUserId = user.id;
@@ -258,7 +277,9 @@ Deno.serve(async (req) => {
     // LOVABLE-93: Includi custom_prompt, tone_override, topics_to_emphasize, topics_to_avoid per draft generation
     const { data: rulesData, error: rulesErr } = await supabase
       .from("email_address_rules")
-      .select("id, operator_id, email_address, address, domain, domain_pattern, auto_action, auto_action_params, auto_execute, is_active, priority, custom_prompt, tone_override, topics_to_emphasize, topics_to_avoid")
+      .select(
+        "id, operator_id, email_address, address, domain, domain_pattern, auto_action, auto_action_params, auto_execute, is_active, priority, custom_prompt, tone_override, topics_to_emphasize, topics_to_avoid",
+      )
       .eq("operator_id", operatorId)
       .eq("is_active", true)
       .eq("auto_execute", true);
@@ -287,8 +308,8 @@ Deno.serve(async (req) => {
     }
 
     // Determina se serve IMAP (mark_read / archive / move_to_folder sì; hide no)
-    const needsImap = plan.some(p =>
-      ["mark_read", "archive", "move_to_folder", "spam", "delete"].includes(p.rule.auto_action ?? "")
+    const needsImap = plan.some((p) =>
+      ["mark_read", "archive", "move_to_folder", "spam", "delete"].includes(p.rule.auto_action ?? ""),
     );
 
     let imap: ImapConn | null = null;
@@ -321,15 +342,9 @@ Deno.serve(async (req) => {
               const ok = await imap.markSeen(msg.imap_uid);
               if (!ok) errors.push({ message_id: msg.id, error: "IMAP STORE failed" });
             }
-            await supabase.from("channel_messages")
-              .update({ read_at: new Date().toISOString() })
-              .eq("id", msg.id);
-
+            await supabase.from("channel_messages").update({ read_at: new Date().toISOString() }).eq("id", msg.id);
           } else if (action === "hide") {
-            await supabase.from("channel_messages")
-              .update({ hidden_by_rule: true })
-              .eq("id", msg.id);
-
+            await supabase.from("channel_messages").update({ hidden_by_rule: true }).eq("id", msg.id);
           } else if (action === "delete") {
             // Cestino (move su Trash + expunge). NON è hard delete:
             // il server applicherà la sua retention policy.
@@ -340,13 +355,10 @@ Deno.serve(async (req) => {
                 continue;
               }
             }
-            await supabase.from("channel_messages")
-              .update({ folder: "Trash", hidden_by_rule: true })
-              .eq("id", msg.id);
-
+            await supabase.from("channel_messages").update({ folder: "Trash", hidden_by_rule: true }).eq("id", msg.id);
           } else if (action === "archive" || action === "spam" || action === "move_to_folder") {
-            const target = (params.target_folder as string)
-              || (action === "archive" ? "Archive" : action === "spam" ? "Junk" : "");
+            const target =
+              (params.target_folder as string) || (action === "archive" ? "Archive" : action === "spam" ? "Junk" : "");
             if (!target) {
               errors.push({ message_id: msg.id, error: "missing target_folder" });
               continue;
@@ -359,9 +371,7 @@ Deno.serve(async (req) => {
                 continue;
               }
             }
-            await supabase.from("channel_messages")
-              .update({ folder: target })
-              .eq("id", msg.id);
+            await supabase.from("channel_messages").update({ folder: target }).eq("id", msg.id);
           } else {
             // azione sconosciuta — skip silenzioso
             continue;
@@ -388,23 +398,28 @@ Deno.serve(async (req) => {
         .eq("id", ruleId)
         .maybeSingle();
       const prev = (cur?.applied_count as number) ?? 0;
-      await supabase.from("email_address_rules").update({
-        last_applied_at: new Date().toISOString(),
-        applied_count: prev + count,
-      }).eq("id", ruleId);
+      await supabase
+        .from("email_address_rules")
+        .update({
+          last_applied_at: new Date().toISOString(),
+          applied_count: prev + count,
+        })
+        .eq("id", ruleId);
     }
 
-    return new Response(JSON.stringify({
-      processed: messages.length,
-      applied,
-      errors,
-    }), { headers: { ...cors, "Content-Type": "application/json" } });
-
+    return new Response(
+      JSON.stringify({
+        processed: messages.length,
+        applied,
+        errors,
+      }),
+      { headers: { ...cors, "Content-Type": "application/json" } },
+    );
   } catch (e: unknown) {
     console.error("[apply-email-rules] error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 });

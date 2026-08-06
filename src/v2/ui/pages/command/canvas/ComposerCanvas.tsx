@@ -83,10 +83,9 @@ export default function ComposerCanvas({
       for (const r of composer.recipients) composer.removeRecipient(r.email);
       composer.addRecipient({
         email: initialTo,
-        name: recipientName ?? (initialTo.split("@")[0] ?? initialTo),
+        name: recipientName ?? initialTo.split("@")[0] ?? initialTo,
       });
     }
-     
   }, [initialSubject, initialBody, initialTo, isBatch]);
 
   // ── Sync nuova lista di drafts (es. dopo "rigenera tutte") ──
@@ -118,7 +117,6 @@ export default function ComposerCanvas({
         partnerId: d.partnerId,
       });
     }
-     
   }, [currentIndex, batchDrafts, isBatch]);
 
   const handleAddRecipient = useCallback(() => {
@@ -182,12 +180,12 @@ export default function ComposerCanvas({
             }
           }),
         );
-        const next: ComposerDraft[] = settled.map((r, i) =>
-          r.status === "fulfilled" ? r.value : batchDrafts[i],
-        );
+        const next: ComposerDraft[] = settled.map((r, i) => (r.status === "fulfilled" ? r.value : batchDrafts[i]));
         setBatchDrafts(next);
         setTone(newTone);
-        toast.success(`${next.filter((d) => d.status === "ok").length}/${next.length} bozze rigenerate (${toneLabel(newTone)})`);
+        toast.success(
+          `${next.filter((d) => d.status === "ok").length}/${next.length} bozze rigenerate (${toneLabel(newTone)})`,
+        );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Errore rigenerazione batch");
       } finally {
@@ -236,8 +234,7 @@ export default function ComposerCanvas({
     commitPendingRecipient();
     const pendingEmail = toField.trim();
     const willHaveRecipients =
-      composer.recipients.length > 0 ||
-      (pendingEmail.length > 0 && /^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(pendingEmail));
+      composer.recipients.length > 0 || (pendingEmail.length > 0 && /^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(pendingEmail));
     if (!willHaveRecipients) {
       toast.error("Aggiungi almeno un destinatario");
       return;
@@ -279,7 +276,9 @@ export default function ComposerCanvas({
     // ai_pending_actions (editorial review hard a valle in useApproveAndDispatch).
     let okCount = 0;
     let failCount = 0;
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     const userId = session?.user?.id;
     if (!userId) {
       setBatchSending(false);
@@ -302,10 +301,12 @@ export default function ComposerCanvas({
         source: "composer:send-batch",
         status: "pending",
       });
-      if (error) failCount++; else okCount++;
+      if (error) failCount++;
+      else okCount++;
     }
     setBatchSending(false);
-    if (okCount > 0) toast.success(`${okCount} email in coda di approvazione${failCount > 0 ? ` · ${failCount} fallite` : ""}`);
+    if (okCount > 0)
+      toast.success(`${okCount} email in coda di approvazione${failCount > 0 ? ` · ${failCount} fallite` : ""}`);
     if (okCount === sendable.length) onClose();
   }, [isBatch, batchDrafts, onClose]);
 
@@ -335,10 +336,7 @@ export default function ComposerCanvas({
             tono: {toneLabel(tone)}
           </span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-muted-foreground hover:text-foreground text-[10px] transition-colors"
-        >
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-[10px] transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -398,11 +396,10 @@ export default function ComposerCanvas({
 
       {/* Recipients */}
       <div className="space-y-1">
-        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
-          Destinatari
-        </label>
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">Destinatari</label>
         <div className="flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-1.5 flex-wrap rounded-xl px-3 py-2 min-h-[40px]"
+          <div
+            className="flex-1 flex items-center gap-1.5 flex-wrap rounded-xl px-3 py-2 min-h-[40px]"
             style={{ background: "hsl(var(--glass-surface) / 0.5)", border: "1px solid hsl(var(--glass-edge) / 0.12)" }}
           >
             {composer.recipients.map((r) => (
@@ -446,9 +443,7 @@ export default function ComposerCanvas({
 
       {/* Subject */}
       <div className="space-y-1">
-        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
-          Oggetto
-        </label>
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">Oggetto</label>
         <input
           value={composer.subject}
           onChange={(e) => composer.setSubject(e.target.value)}
@@ -460,9 +455,7 @@ export default function ComposerCanvas({
 
       {/* Body */}
       <div className="space-y-1 flex-1">
-        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">
-          Corpo
-        </label>
+        <label className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase">Corpo</label>
         <div className="relative">
           <HtmlEmailEditor
             value={composer.body}
@@ -490,7 +483,8 @@ export default function ComposerCanvas({
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between pt-2"
+      <div
+        className="flex items-center justify-between pt-2"
         style={{ borderTop: "1px solid hsl(var(--glass-edge) / 0.12)" }}
       >
         <motion.button
@@ -536,11 +530,7 @@ export default function ComposerCanvas({
                 color: "hsl(152 60% 60%)",
               }}
             >
-              {isSending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Send className="w-3.5 h-3.5" />
-              )}
+              {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               Invia tutte ({batchDrafts.filter((d) => d.status === "ok").length})
             </motion.button>
           )}
@@ -553,11 +543,7 @@ export default function ComposerCanvas({
             className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[11px] font-light bg-success/10 text-success hover:bg-success/15 transition-all duration-300 disabled:opacity-50"
             style={{ border: "1px solid hsl(152 60% 45% / 0.15)" }}
           >
-            {isSending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Send className="w-3.5 h-3.5" />
-            )}
+            {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             {isBatch ? "Invia questa" : "Invia"}
           </motion.button>
         </div>
@@ -567,7 +553,7 @@ export default function ComposerCanvas({
       <ApprovalPanel
         visible={showApproval}
         title="Conferma invio email"
-        description={`Stai per inviare un'email a ${composer.recipients.map(r => r.email).join(", ")}. Questa azione non è reversibile.`}
+        description={`Stai per inviare un'email a ${composer.recipients.map((r) => r.email).join(", ")}. Questa azione non è reversibile.`}
         details={[
           { label: "Destinatari", value: String(composer.recipients.length) },
           { label: "Oggetto", value: composer.subject || "—" },

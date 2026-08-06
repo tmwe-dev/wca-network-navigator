@@ -46,14 +46,13 @@ Deno.serve(async (req) => {
   try {
     const body = (await req.json()) as Body;
     if (!body.raw_content || body.raw_content.trim().length < 10) {
-      return new Response(JSON.stringify({ error: "raw_content troppo breve" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "raw_content troppo breve" }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Carica un campione di KB esistente (limite per token budget)
     let q = supabase
@@ -66,9 +65,12 @@ Deno.serve(async (req) => {
     const { data: kb, error } = await q;
     if (error) throw error;
 
-    const kbBlock = (kb ?? []).map((e) =>
-      `- id:${(e as { id: string }).id} [${(e as { category: string }).category}/${(e as { chapter: string | null }).chapter ?? "-"}] ${(e as { title: string }).title}: ${((e as { content: string }).content || "").slice(0, 200)}`
-    ).join("\n");
+    const kbBlock = (kb ?? [])
+      .map(
+        (e) =>
+          `- id:${(e as { id: string }).id} [${(e as { category: string }).category}/${(e as { chapter: string | null }).chapter ?? "-"}] ${(e as { title: string }).title}: ${((e as { content: string }).content || "").slice(0, 200)}`,
+      )
+      .join("\n");
 
     const userMsg = [
       "MATERIALE NUOVO:",
@@ -80,40 +82,51 @@ Deno.serve(async (req) => {
       kbBlock || "(vuota)",
     ].join("\n");
 
-    const aiKey = (Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
+    const aiKey =
+      Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!aiKey) throw new Error("LOVABLE_API_KEY non configurata");
 
     const aiResp = await aiFetch({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM },
-          { role: "user", content: userMsg },
-        ],
-        response_format: { type: "json_object" },
-      });
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: userMsg },
+      ],
+      response_format: { type: "json_object" },
+    });
 
     if (!aiResp.ok) {
       const status = aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 500;
-      const msg = aiResp.status === 429 ? "Rate limit" : aiResp.status === 402 ? "Crediti esauriti" : "AI gateway error";
-      return new Response(JSON.stringify({ error: msg }),
-        { status, headers: { ...cors, "Content-Type": "application/json" } });
+      const msg =
+        aiResp.status === 429 ? "Rate limit" : aiResp.status === 402 ? "Crediti esauriti" : "AI gateway error";
+      return new Response(JSON.stringify({ error: msg }), {
+        status,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
 
     const aiJson = await aiResp.json();
     const content = aiJson?.choices?.[0]?.message?.content ?? "{}";
     let parsed: Record<string, unknown> = {};
-    try { parsed = JSON.parse(content); } catch { parsed = { rationale: content }; }
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = { rationale: content };
+    }
 
-    return new Response(JSON.stringify({
-      proposal: parsed,
-      kb_sample_size: (kb ?? []).length,
-      source: body.source ?? "paste",
-      source_url: body.source_url ?? null,
-    }), { headers: { ...cors, "Content-Type": "application/json" } });
-  } catch (err) {
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
+      JSON.stringify({
+        proposal: parsed,
+        kb_sample_size: (kb ?? []).length,
+        source: body.source ?? "paste",
+        source_url: body.source_url ?? null,
+      }),
+      { headers: { ...cors, "Content-Type": "application/json" } },
     );
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 });

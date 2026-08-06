@@ -66,7 +66,8 @@ export default function TemplateManager() {
         await supabase.storage.from("templates").remove([decodeURIComponent(path)]);
       }
       // Delete from db
-      await deleteEmailTemplate(template.id); const error = null;
+      await deleteEmailTemplate(template.id);
+      const error = null;
       if (error) throw error;
     },
     onSuccess: () => {
@@ -84,12 +85,12 @@ export default function TemplateManager() {
     try {
       for (const file of Array.from(files)) {
         const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        const { error: uploadError } = await supabase.storage
-          .from("templates")
-          .upload(safeName, file);
+        const { error: uploadError } = await supabase.storage.from("templates").upload(safeName, file);
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = await supabase.storage.from("templates").createSignedUrl(safeName, 60 * 60 * 24 * 365);
+        const { data: urlData } = await supabase.storage
+          .from("templates")
+          .createSignedUrl(safeName, 60 * 60 * 24 * 365);
 
         await createEmailTemplate({
           name: file.name.replace(/\.[^/.]+$/, ""),
@@ -137,20 +138,19 @@ export default function TemplateManager() {
           />
           <div className="flex gap-2 mb-3">
             <Select value={uploadCategory} onValueChange={setUploadCategory}>
-              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
               <SelectContent>
                 {TEMPLATE_CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="w-full gap-2"
-            size="lg"
-          >
+          <Button onClick={() => fileRef.current?.click()} disabled={uploading} className="w-full gap-2" size="lg">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {uploading ? "Caricamento..." : "Seleziona file da caricare"}
           </Button>
@@ -173,7 +173,7 @@ export default function TemplateManager() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {templates.map(t => (
+          {templates.map((t) => (
             <Card key={t.id}>
               <CardContent className="py-3 px-4 flex items-center gap-4">
                 {getIcon(t.file_name)}
@@ -181,7 +181,7 @@ export default function TemplateManager() {
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-sm truncate text-foreground">{t.name}</p>
                     <Badge variant="outline" className="text-xs shrink-0">
-                      {TEMPLATE_CATEGORIES.find(c => c.value === t.category)?.label || t.category}
+                      {TEMPLATE_CATEGORIES.find((c) => c.value === t.category)?.label || t.category}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">

@@ -41,12 +41,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import {
-  upsertAppSetting,
-  getAppSetting,
-  getAppSettingByKey,
-  insertAppSetting,
-} from "@/data/appSettings";
+import { upsertAppSetting, getAppSetting, getAppSettingByKey, insertAppSetting } from "@/data/appSettings";
 
 describe("DAL — appSettings", () => {
   beforeEach(() => {
@@ -59,7 +54,7 @@ describe("DAL — appSettings", () => {
       await upsertAppSetting("user-1", "theme", "dark");
       expect(mockUpsert).toHaveBeenCalledWith(
         { user_id: "user-1", key: "theme", value: "dark" },
-        { onConflict: "user_id,key" }
+        { onConflict: "user_id,key" },
       );
     });
 

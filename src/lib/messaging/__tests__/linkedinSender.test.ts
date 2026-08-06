@@ -6,8 +6,7 @@ vi.mock("@/lib/inbox/sendMessage", () => ({
 }));
 
 vi.mock("@/lib/linkedinSearch", () => ({
-  isLinkedInProfileUrl: (url?: string | null) =>
-    !!url && /linkedin\.com\/in\//.test(url),
+  isLinkedInProfileUrl: (url?: string | null) => !!url && /linkedin\.com\/in\//.test(url),
   normalizeLinkedInProfileUrl: (url?: string | null) => {
     if (!url) return null;
     const match = url.match(/(https:\/\/www\.linkedin\.com\/in\/[^/?\s]+)/);
@@ -139,9 +138,7 @@ describe("queueLinkedInForApproval", () => {
 
   it("queues valid targets into ai_pending_actions", async () => {
     const result = await queueLinkedInForApproval({
-      targets: [
-        { profileUrl: VALID_URL, contactId: "c-1", partnerId: "p-1" },
-      ],
+      targets: [{ profileUrl: VALID_URL, contactId: "c-1", partnerId: "p-1" }],
       messageOrTemplate: "Hello there",
       source: "bulk-li-dialog",
     });
@@ -160,10 +157,7 @@ describe("queueLinkedInForApproval", () => {
 
   it("skips targets with invalid LinkedIn URL", async () => {
     const result = await queueLinkedInForApproval({
-      targets: [
-        { profileUrl: "not-a-url" },
-        { profileUrl: VALID_URL },
-      ],
+      targets: [{ profileUrl: "not-a-url" }, { profileUrl: VALID_URL }],
       messageOrTemplate: "Hi",
       source: "test",
     });
@@ -174,9 +168,7 @@ describe("queueLinkedInForApproval", () => {
 
   it("personalizes template with contact name and company", async () => {
     await queueLinkedInForApproval({
-      targets: [
-        { profileUrl: VALID_URL, contactName: "Marco", companyName: "Acme" },
-      ],
+      targets: [{ profileUrl: VALID_URL, contactName: "Marco", companyName: "Acme" }],
       messageOrTemplate: "Hi {{name}} from {{company}}!",
       source: "cadence",
     });
@@ -187,9 +179,7 @@ describe("queueLinkedInForApproval", () => {
 
   it("truncates personalized message to 300 characters", async () => {
     await queueLinkedInForApproval({
-      targets: [
-        { profileUrl: VALID_URL, contactName: "Marco" },
-      ],
+      targets: [{ profileUrl: VALID_URL, contactName: "Marco" }],
       messageOrTemplate: "A".repeat(500),
       source: "test",
     });

@@ -32,11 +32,7 @@ interface FeatureFlag {
 
 const flags = new Map<FeatureFlagName, FeatureFlag>();
 
-function register(
-  name: FeatureFlagName,
-  enabled: boolean,
-  description: string,
-): void {
+function register(name: FeatureFlagName, enabled: boolean, description: string): void {
   flags.set(name, { name, enabled, description });
 }
 

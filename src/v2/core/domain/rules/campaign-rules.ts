@@ -6,9 +6,7 @@
 import type { CampaignJob, CampaignJobStatus } from "../entities";
 
 /** Counts jobs by status */
-export function jobStatusCounts(
-  jobs: readonly CampaignJob[],
-): Readonly<Record<CampaignJobStatus, number>> {
+export function jobStatusCounts(jobs: readonly CampaignJob[]): Readonly<Record<CampaignJobStatus, number>> {
   const counts: Record<CampaignJobStatus, number> = {
     pending: 0,
     in_progress: 0,

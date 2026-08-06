@@ -29,7 +29,8 @@ function normalizeVat(v: string | null | undefined): string | null {
 }
 
 function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
+  const m = a.length,
+    n = b.length;
   if (!m) return n;
   if (!n) return m;
   const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
@@ -80,18 +81,22 @@ Deno.serve(async (req) => {
     const parsed = InputSchema.safeParse(body);
     if (!parsed.success) {
       return new Response(JSON.stringify({ error: "VALIDATION_ERROR", details: parsed.error.flatten() }), {
-        status: 400, headers: { ...headers, "Content-Type": "application/json" },
+        status: 400,
+        headers: { ...headers, "Content-Type": "application/json" },
       });
     }
     const { partner_id } = parsed.data;
 
-    const { data: partner } = await svc.from("partners")
+    const { data: partner } = await svc
+      .from("partners")
       .select("id, denomination, vat_number, city")
-      .eq("id", partner_id).maybeSingle();
+      .eq("id", partner_id)
+      .maybeSingle();
 
     if (!partner) {
       return new Response(JSON.stringify({ error: "PARTNER_NOT_FOUND" }), {
-        status: 404, headers: { ...headers, "Content-Type": "application/json" },
+        status: 404,
+        headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
@@ -105,7 +110,10 @@ Deno.serve(async (req) => {
 
     // 1) Match esatto P.IVA
     if (partnerVat) {
-      const r = await callTmwe(TMWE_OPS["anagrafica.searchByVat"], userTok.access_token, { vat: partnerVat, limit: 10 });
+      const r = await callTmwe(TMWE_OPS["anagrafica.searchByVat"], userTok.access_token, {
+        vat: partnerVat,
+        limit: 10,
+      });
       for (const row of extractRows(r.data)) {
         const id = pick(row, ["id", "client_id", "code", "codice"]);
         const v = normalizeVat(pick(row, ["vat", "vat_number", "piva", "partita_iva"]));
@@ -144,24 +152,42 @@ Deno.serve(async (req) => {
       }
     }
 
-    const result = Array.from(candidates.values()).sort((a, b) => b.score - a.score).slice(0, 10);
+    const result = Array.from(candidates.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
     const latency = Math.round(performance.now() - t0);
     await logTmweAudit(svc, {
-      op_name: "partner-match", identity: "user", caller_user_id: auth.userId,
-      partner_id, status: 200, latency_ms: latency,
+      op_name: "partner-match",
+      identity: "user",
+      caller_user_id: auth.userId,
+      partner_id,
+      status: 200,
+      latency_ms: latency,
     });
 
-    return new Response(JSON.stringify({ candidates: result, partner: { vat: partnerVat, denomination: partnerName, city: partnerCity } }), {
-      status: 200, headers: { ...headers, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        candidates: result,
+        partner: { vat: partnerVat, denomination: partnerName, city: partnerCity },
+      }),
+      {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     await logTmweAudit(svc, {
-      op_name: "partner-match", identity: "user", caller_user_id: auth.userId,
-      status: 500, latency_ms: Math.round(performance.now() - t0), error_message: message,
+      op_name: "partner-match",
+      identity: "user",
+      caller_user_id: auth.userId,
+      status: 500,
+      latency_ms: Math.round(performance.now() - t0),
+      error_message: message,
     });
     return new Response(JSON.stringify({ error: "INTERNAL", message }), {
-      status: 500, headers: { ...headers, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...headers, "Content-Type": "application/json" },
     });
   }
 });

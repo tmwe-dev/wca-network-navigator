@@ -127,10 +127,13 @@ export function useTokenGauge(userId: string | undefined) {
       const dailyUsed = (dailyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
       const monthlyUsed = (monthlyData || []).reduce((sum, row) => sum + (row.tokens_total || 0), 0);
 
-      const settings = (settingsData || []).reduce((acc, row) => {
-        acc[row.key] = row.value ?? "";
-        return acc;
-      }, {} as Record<string, string>);
+      const settings = (settingsData || []).reduce(
+        (acc, row) => {
+          acc[row.key] = row.value ?? "";
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
 
       const dailyLimit = parseInt(settings["ai_daily_token_limit"] || "500000", 10);
       const monthlyLimit = parseInt(settings["ai_monthly_token_limit"] || "10000000", 10);

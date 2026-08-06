@@ -18,14 +18,19 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const stats = { kb_entries: 0, memories: 0, operative_prompts: 0, app_settings: 0, agent_personas: 0, users: 0, size_bytes: 0 };
+    const stats = {
+      kb_entries: 0,
+      memories: 0,
+      operative_prompts: 0,
+      app_settings: 0,
+      agent_personas: 0,
+      users: 0,
+      size_bytes: 0,
+    };
     const timestamp = new Date().toISOString().split("T")[0];
 
     // Get all users with profiles
-    const { data: users } = await supabase
-      .from("profiles")
-      .select("id")
-      .limit(100);
+    const { data: users } = await supabase.from("profiles").select("id").limit(100);
 
     for (const user of users || []) {
       const userId = user.id;
@@ -44,10 +49,7 @@ serve(async (req) => {
       stats.kb_entries += (kbEntries || []).length;
 
       // Export AI memories (all levels)
-      const { data: memories } = await supabase
-        .from("ai_memory")
-        .select("*")
-        .eq("user_id", userId);
+      const { data: memories } = await supabase.from("ai_memory").select("*").eq("user_id", userId);
       backup.memories = memories || [];
       stats.memories += (memories || []).length;
 
@@ -61,18 +63,12 @@ serve(async (req) => {
       stats.operative_prompts += (prompts || []).length;
 
       // Export app settings (profilo AI, tone, prompt email, ecc.)
-      const { data: settings } = await supabase
-        .from("app_settings")
-        .select("*")
-        .eq("user_id", userId);
+      const { data: settings } = await supabase.from("app_settings").select("*").eq("user_id", userId);
       backup.app_settings = settings || [];
       stats.app_settings += (settings || []).length;
 
       // Export agent personas (voce/stile per agente)
-      const { data: personas } = await supabase
-        .from("agent_personas")
-        .select("*")
-        .eq("user_id", userId);
+      const { data: personas } = await supabase.from("agent_personas").select("*").eq("user_id", userId);
       backup.agent_personas = personas || [];
       stats.agent_personas += (personas || []).length;
 
@@ -82,12 +78,10 @@ serve(async (req) => {
       stats.size_bytes += bytes.length;
 
       const path = `${userId}/backup-${timestamp}.json`;
-      const { error: uploadError } = await supabase.storage
-        .from("ai-backups")
-        .upload(path, bytes, {
-          contentType: "application/json",
-          upsert: true,
-        });
+      const { error: uploadError } = await supabase.storage.from("ai-backups").upload(path, bytes, {
+        contentType: "application/json",
+        upsert: true,
+      });
 
       if (uploadError) {
         console.error(`Backup upload failed for ${userId}:`, uploadError.message);
@@ -108,7 +102,6 @@ serve(async (req) => {
       }
     }
 
-    
     return json({ success: true, stats });
   } catch (e: unknown) {
     console.error("ai-backup error:", e);

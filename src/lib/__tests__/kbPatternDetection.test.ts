@@ -9,10 +9,10 @@ import {
 describe("kbPatternDetection", () => {
   describe("shouldCreateSenderPattern", () => {
     it("returns true for 5+ classifications with high confidence", () => {
-      expect(shouldCreateSenderPattern(5, 0.80)).toBe(true);
+      expect(shouldCreateSenderPattern(5, 0.8)).toBe(true);
     });
     it("returns false for less than 5 classifications", () => {
-      expect(shouldCreateSenderPattern(4, 0.90)).toBe(false);
+      expect(shouldCreateSenderPattern(4, 0.9)).toBe(false);
     });
     it("returns false for low confidence", () => {
       expect(shouldCreateSenderPattern(10, 0.74)).toBe(false);

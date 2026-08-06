@@ -5,16 +5,12 @@
  * la funzione di logging delle interazioni AI per l'uso lato UI.
  */
 import { useMemo } from "react";
-import {
-  logAiInteraction,
-  type AiInteractionLogInput,
-} from "@/data/aiInteractionLog";
+import { logAiInteraction, type AiInteractionLogInput } from "@/data/aiInteractionLog";
 
 export function useAiInteractionLogger() {
   return useMemo(
     () => ({
-      logAiInteraction: (input: AiInteractionLogInput): Promise<string | null> =>
-        logAiInteraction(input),
+      logAiInteraction: (input: AiInteractionLogInput): Promise<string | null> => logAiInteraction(input),
     }),
     [],
   );

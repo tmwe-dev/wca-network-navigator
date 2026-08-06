@@ -33,7 +33,11 @@ type BlockType = "kb_entry" | "operative_prompt" | "email_prompt" | "playbook";
 
 const BLOCK_TYPES: Array<{ value: BlockType; label: string; description: string }> = [
   { value: "kb_entry", label: "KB Doctrine", description: "Nuova voce knowledge base (dottrina, procedura, regola)" },
-  { value: "operative_prompt", label: "Prompt Operativo", description: "Nuovo prompt con objective/procedure/criteria" },
+  {
+    value: "operative_prompt",
+    label: "Prompt Operativo",
+    description: "Nuovo prompt con objective/procedure/criteria",
+  },
   { value: "email_prompt", label: "Prompt Email", description: "Nuove istruzioni per un tipo email" },
   { value: "playbook", label: "Playbook", description: "Nuovo playbook commerciale con trigger e template" },
 ];
@@ -70,10 +74,13 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
     setDone(false);
   }, []);
 
-  const handleClose = useCallback((nextOpen: boolean) => {
-    if (!nextOpen) resetForm();
-    onOpenChange(nextOpen);
-  }, [onOpenChange, resetForm]);
+  const handleClose = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) resetForm();
+      onOpenChange(nextOpen);
+    },
+    [onOpenChange, resetForm],
+  );
 
   const handleSave = useCallback(async () => {
     if (!title.trim() || !content.trim()) {
@@ -165,7 +172,9 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
                 </SelectTrigger>
                 <SelectContent>
                   {KB_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -178,7 +187,9 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={blockType === "kb_entry" ? "Es: Procedura onboarding partner EU" : "Es: Follow-up post-meeting"}
+              placeholder={
+                blockType === "kb_entry" ? "Es: Procedura onboarding partner EU" : "Es: Follow-up post-meeting"
+              }
               className="mt-1"
             />
           </div>

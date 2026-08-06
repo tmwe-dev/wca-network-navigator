@@ -61,11 +61,11 @@ describe("Guard DAL — ratchet bypass", () => {
    * query DAL e restano legittimi nei layer applicativi.
    */
   const ALLOW = [
-    "src/data/",              // DAL v1 canonico
-    "src/v2/io/supabase/",    // DAL v2 (queries/ + mutations/): È il layer dati, non un bypass
+    "src/data/", // DAL v1 canonico
+    "src/v2/io/supabase/", // DAL v2 (queries/ + mutations/): È il layer dati, non un bypass
     "src/integrations/supabase/", // client generato (bootstrap)
     "src/test/",
-    "src/lib/typedSupabase",   // unico confine non tipizzato sanzionato
+    "src/lib/typedSupabase", // unico confine non tipizzato sanzionato
   ];
   /**
    * Baseline REALE al commit c262919, misurata con censimento MULTILINEA

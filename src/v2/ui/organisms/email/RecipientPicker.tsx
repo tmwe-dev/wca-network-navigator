@@ -57,7 +57,10 @@ export function RecipientPicker({ recipients, onAdd, onRemove }: RecipientPicker
       {recipients.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {recipients.map((r) => (
-            <span key={r.email} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
+            <span
+              key={r.email}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs"
+            >
               <span className="truncate max-w-[120px]">{r.name}</span>
               <button onClick={() => onRemove(r.email)} className="hover:text-destructive">
                 <X className="h-3 w-3" />
@@ -73,7 +76,10 @@ export function RecipientPicker({ recipients, onAdd, onRemove }: RecipientPicker
         <input
           ref={inputRef}
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setShowDropdown(true);
+          }}
           onFocus={() => setShowDropdown(true)}
           onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
           placeholder="Cerca contatto..."
@@ -106,7 +112,9 @@ export function RecipientPicker({ recipients, onAdd, onRemove }: RecipientPicker
             placeholder="email@example.com"
             className="flex-1 px-2 py-1 text-xs rounded border bg-background text-foreground"
           />
-          <button onClick={handleManualAdd} className="text-xs text-primary hover:underline px-1">Aggiungi</button>
+          <button onClick={handleManualAdd} className="text-xs text-primary hover:underline px-1">
+            Aggiungi
+          </button>
         </div>
       ) : (
         <button

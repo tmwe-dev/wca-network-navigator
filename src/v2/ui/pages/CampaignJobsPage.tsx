@@ -12,8 +12,14 @@ import { useContactsForPartners } from "@/hooks/useActivities";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 const log = createLogger("CampaignJobs");
@@ -33,7 +39,7 @@ export function CampaignJobsPage() {
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
 
   // Collect unique partner IDs for contacts query
-  const partnerIds = useMemo(() => [...new Set(jobs.map(j => j.partner_id))], [jobs]);
+  const partnerIds = useMemo(() => [...new Set(jobs.map((j) => j.partner_id))], [jobs]);
   const { data: contactsByPartner = {} } = useContactsForPartners(partnerIds);
 
   // All contacts flat
@@ -41,22 +47,20 @@ export function CampaignJobsPage() {
 
   // Find the job for a focused contact
   const focusedContact = useMemo(
-    () => allContacts.find(c => c.id === focusedContactId) || null,
-    [allContacts, focusedContactId]
+    () => allContacts.find((c) => c.id === focusedContactId) || null,
+    [allContacts, focusedContactId],
   );
   const focusedJob = useMemo(
-    () => (focusedContact ? jobs.find(j => j.partner_id === focusedContact.partner_id) : null) || null,
-    [focusedContact, jobs]
+    () => (focusedContact ? jobs.find((j) => j.partner_id === focusedContact.partner_id) : null) || null,
+    [focusedContact, jobs],
   );
-  const focusedJobContacts = focusedJob
-    ? (contactsByPartner[focusedJob.partner_id] || [])
-    : [];
+  const focusedJobContacts = focusedJob ? contactsByPartner[focusedJob.partner_id] || [] : [];
 
-  const pendingCount = jobs.filter(j => j.status === "pending" || j.status === "in_progress").length;
+  const pendingCount = jobs.filter((j) => j.status === "pending" || j.status === "in_progress").length;
 
   // Selection handlers
   const toggleContact = useCallback((contactId: string) => {
-    setSelectedContactIds(prev => {
+    setSelectedContactIds((prev) => {
       const next = new Set(prev);
       if (next.has(contactId)) next.delete(contactId);
       else next.add(contactId);
@@ -65,15 +69,15 @@ export function CampaignJobsPage() {
   }, []);
 
   const selectAll = useCallback(() => {
-    setSelectedContactIds(new Set(allContacts.map(c => c.id)));
+    setSelectedContactIds(new Set(allContacts.map((c) => c.id)));
   }, [allContacts]);
 
   const selectAllWithEmail = useCallback(() => {
-    setSelectedContactIds(new Set(allContacts.filter(c => c.email).map(c => c.id)));
+    setSelectedContactIds(new Set(allContacts.filter((c) => c.email).map((c) => c.id)));
   }, [allContacts]);
 
   const selectAllWithPhone = useCallback(() => {
-    setSelectedContactIds(new Set(allContacts.filter(c => c.direct_phone || c.mobile).map(c => c.id)));
+    setSelectedContactIds(new Set(allContacts.filter((c) => c.direct_phone || c.mobile).map((c) => c.id)));
   }, [allContacts]);
 
   const deselectAll = useCallback(() => {
@@ -83,31 +87,36 @@ export function CampaignJobsPage() {
   // Bulk actions: find jobs for selected contacts
   const getJobsForSelectedContacts = useCallback(() => {
     const partnerIdsFromContacts = new Set(
-      allContacts.filter(c => selectedContactIds.has(c.id)).map(c => c.partner_id)
+      allContacts.filter((c) => selectedContactIds.has(c.id)).map((c) => c.partner_id),
     );
-    return jobs.filter(j => partnerIdsFromContacts.has(j.partner_id));
+    return jobs.filter((j) => partnerIdsFromContacts.has(j.partner_id));
   }, [allContacts, selectedContactIds, jobs]);
 
-  const handleBulkSetType = useCallback(async (type: "email" | "call") => {
-    const targetJobs = getJobsForSelectedContacts();
-    await Promise.all(
-      targetJobs.map(j => updateJob.mutateAsync({ id: j.id, job_type: type }))
-    );
-    toast.success(`${targetJobs.length} job impostati come ${type}`);
-  }, [getJobsForSelectedContacts, updateJob]);
+  const handleBulkSetType = useCallback(
+    async (type: "email" | "call") => {
+      const targetJobs = getJobsForSelectedContacts();
+      await Promise.all(targetJobs.map((j) => updateJob.mutateAsync({ id: j.id, job_type: type })));
+      toast.success(`${targetJobs.length} job impostati come ${type}`);
+    },
+    [getJobsForSelectedContacts, updateJob],
+  );
 
   const handleBulkComplete = useCallback(async () => {
-    const targetJobs = getJobsForSelectedContacts().filter(j => j.status !== "completed" && j.status !== "skipped");
+    const targetJobs = getJobsForSelectedContacts().filter((j) => j.status !== "completed" && j.status !== "skipped");
     await Promise.all(
-      targetJobs.map(j => updateJob.mutateAsync({ id: j.id, status: "completed", completed_at: new Date().toISOString() }))
+      targetJobs.map((j) =>
+        updateJob.mutateAsync({ id: j.id, status: "completed", completed_at: new Date().toISOString() }),
+      ),
     );
     toast.success(`${targetJobs.length} job completati`);
   }, [getJobsForSelectedContacts, updateJob]);
 
   const handleCompleteAll = () => {
-    const pending = jobs.filter(j => j.status !== "completed" && j.status !== "skipped");
+    const pending = jobs.filter((j) => j.status !== "completed" && j.status !== "skipped");
     Promise.all(
-      pending.map(j => updateJob.mutateAsync({ id: j.id, status: "completed", completed_at: new Date().toISOString() }))
+      pending.map((j) =>
+        updateJob.mutateAsync({ id: j.id, status: "completed", completed_at: new Date().toISOString() }),
+      ),
     ).then(() => toast.success(`${pending.length} job completati`));
   };
 
@@ -173,7 +182,8 @@ export function CampaignJobsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminare i job selezionati?</AlertDialogTitle>
             <AlertDialogDescription>
-              Verranno eliminati i campaign job associati ai {selectedContactIds.size} contatti selezionati. Questa azione è irreversibile.
+              Verranno eliminati i campaign job associati ai {selectedContactIds.size} contatti selezionati. Questa
+              azione è irreversibile.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -183,10 +193,13 @@ export function CampaignJobsPage() {
               onClick={async () => {
                 const targetJobs = getJobsForSelectedContacts();
                 try {
-                  await deleteCampaignJobs.mutateAsync(targetJobs.map(j => j.id));
+                  await deleteCampaignJobs.mutateAsync(targetJobs.map((j) => j.id));
                   setSelectedContactIds(new Set());
                   toast.success(`${targetJobs.length} job eliminati`);
-                } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante l'eliminazione"); }
+                } catch (e) {
+                  log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+                  toast.error("Errore durante l'eliminazione");
+                }
                 setShowDeleteConfirm(false);
               }}
             >

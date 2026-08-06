@@ -1,4 +1,5 @@
-import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts"; loadSync({ export: true, examplePath: null });
+import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
+loadSync({ export: true, examplePath: null });
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL")!;
@@ -8,7 +9,7 @@ const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/agent-execute`;
 Deno.test("CORS preflight returns 200", async () => {
   const res = await fetch(FUNCTION_URL, {
     method: "OPTIONS",
-    headers: { "Origin": "http://localhost:3000" },
+    headers: { Origin: "http://localhost:3000" },
   });
   assertEquals(res.status, 200);
   await res.text();
@@ -19,7 +20,7 @@ Deno.test("Returns 401 without auth", async () => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
+      apikey: SUPABASE_ANON_KEY,
     },
     body: JSON.stringify({ agent_id: "test" }),
   });

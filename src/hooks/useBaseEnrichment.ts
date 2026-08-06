@@ -45,20 +45,31 @@ function loadPersisted(): PersistedState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as PersistedState) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function savePersisted(s: PersistedState | null): void {
   try {
     if (s) localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
     else localStorage.removeItem(STORAGE_KEY);
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 }
 
 export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
   const fsBridge = useFireScrapeExtensionBridge();
   const [progress, setProgress] = useState<BaseEnrichmentProgress>({
-    status: "idle", total: 0, done: 0, slugFound: 0, logoFound: 0, siteScraped: 0, errors: 0, rowStates: {},
+    status: "idle",
+    total: 0,
+    done: 0,
+    slugFound: 0,
+    logoFound: 0,
+    siteScraped: 0,
+    errors: 0,
+    rowStates: {},
   });
   const abortRef = useRef(false);
   const runningRef = useRef(false);
@@ -101,8 +112,8 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
     const allTargets = getTargets();
     // Filtra: aziende (WCA+BCA) → arricchisci se manca LinkedIn O logo O sito; contatti → solo se manca LinkedIn
     const isCompanyLike = (s: string): boolean => s === "wca" || s === "bca";
-    const targets = allTargets.filter((t) =>
-      !t.hasLinkedin || (isCompanyLike(t.source) && (!t.hasLogo || !t.hasWebsiteExcerpt))
+    const targets = allTargets.filter(
+      (t) => !t.hasLinkedin || (isCompanyLike(t.source) && (!t.hasLogo || !t.hasWebsiteExcerpt)),
     );
     if (targets.length === 0) {
       toast({
@@ -116,8 +127,15 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
     const persisted = loadPersisted();
     const targetIds = targets.map((t) => t.id);
     let doneIds = new Set<string>();
-    let slugFound = 0, logoFound = 0, siteScraped = 0, errors = 0;
-    if (persisted && persisted.queueIds.length === targetIds.length && persisted.queueIds.every((id, i) => id === targetIds[i])) {
+    let slugFound = 0,
+      logoFound = 0,
+      siteScraped = 0,
+      errors = 0;
+    if (
+      persisted &&
+      persisted.queueIds.length === targetIds.length &&
+      persisted.queueIds.every((id, i) => id === targetIds[i])
+    ) {
       doneIds = new Set(persisted.doneIds);
       slugFound = persisted.slugFound;
       logoFound = persisted.logoFound;
@@ -130,13 +148,18 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
     // Inizializza rowStates: tutti pending tranne quelli già done
     const initialRowStates: Record<string, RowEnrichmentState> = {};
     for (const t of targets) {
-      initialRowStates[t.id] = doneIds.has(t.id) ? { status: "done", slug: false, logo: false, site: false, errors: 0 } : { status: "pending" };
+      initialRowStates[t.id] = doneIds.has(t.id)
+        ? { status: "done", slug: false, logo: false, site: false, errors: 0 }
+        : { status: "pending" };
     }
     setProgress({
       status: "running",
       total: targets.length,
       done: doneIds.size,
-      slugFound, logoFound, siteScraped, errors,
+      slugFound,
+      logoFound,
+      siteScraped,
+      errors,
       rowStates: initialRowStates,
     });
 
@@ -146,7 +169,10 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
       savePersisted({
         queueIds: targetIds,
         doneIds: Array.from(doneIds),
-        slugFound, logoFound, siteScraped, errors,
+        slugFound,
+        logoFound,
+        siteScraped,
+        errors,
       });
     };
 
@@ -159,10 +185,16 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
           currentName: t.name,
           rowStates: { ...p.rowStates, [t.id]: { status: "running" } },
         }));
-        let rSlug = false, rLogo = false, rSite = false, rErr = 0;
+        let rSlug = false,
+          rLogo = false,
+          rSite = false,
+          rErr = 0;
         try {
           const r = await enrichBaseTarget(fsBridge, t);
-          rSlug = r.slugFound; rLogo = r.logoFound; rSite = r.siteScraped; rErr = r.errors.length;
+          rSlug = r.slugFound;
+          rLogo = r.logoFound;
+          rSite = r.siteScraped;
+          rErr = r.errors.length;
           if (r.slugFound) slugFound++;
           if (r.logoFound) logoFound++;
           if (r.siteScraped) siteScraped++;
@@ -176,8 +208,14 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
         setProgress((p) => ({
           ...p,
           done: doneIds.size,
-          slugFound, logoFound, siteScraped, errors,
-          rowStates: { ...p.rowStates, [t.id]: { status: "done", slug: rSlug, logo: rLogo, site: rSite, errors: rErr } },
+          slugFound,
+          logoFound,
+          siteScraped,
+          errors,
+          rowStates: {
+            ...p.rowStates,
+            [t.id]: { status: "done", slug: rSlug, logo: rLogo, site: rSite, errors: rErr },
+          },
         }));
       }
     };

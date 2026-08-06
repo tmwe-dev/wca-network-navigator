@@ -15,11 +15,7 @@ export type ChannelMessage = ChannelMessageRow;
 
 const PAGE_SIZE = 50;
 
-export type MailboxFilter =
-  | { kind: "personal" }
-  | { kind: "shared"; id: string }
-  | null
-  | undefined;
+export type MailboxFilter = { kind: "personal" } | { kind: "shared"; id: string } | null | undefined;
 
 function mailboxKeyOf(mb: MailboxFilter): string | undefined {
   if (!mb) return undefined;
@@ -56,38 +52,42 @@ export function useChannelMessages(
     const filterStr = channel && channel !== "all" ? `channel=eq.${channel}` : undefined;
     const sub = supabase
       .channel(`channel_messages_rt_${channel || "all"}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "channel_messages",
-        ...(filterStr ? { filter: filterStr } : {}),
-      }, (payload) => {
-        const newRow = payload.new as ChannelMessage;
-        // Vol. II §10.1: dedup per id E per message_id_external (UID race-safe)
-        const baseKey = queryKeys.channelMessages.list(channel, searchQuery, 0, undefined);
-        queryClient.setQueryData<ChannelMessage[]>([...baseKey], (old) => {
-          if (!old) return old;
-          // dedup by id
-          if (old.some(m => m.id === newRow.id)) return old;
-          // dedup by external id (sync race possibile)
-          if (newRow.message_id_external) {
-            const existingIdx = old.findIndex(
-              m => m.message_id_external === newRow.message_id_external
-            );
-            if (existingIdx >= 0) {
-              const next = old.slice();
-              next[existingIdx] = newRow;
-              return next;
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "channel_messages",
+          ...(filterStr ? { filter: filterStr } : {}),
+        },
+        (payload) => {
+          const newRow = payload.new as ChannelMessage;
+          // Vol. II §10.1: dedup per id E per message_id_external (UID race-safe)
+          const baseKey = queryKeys.channelMessages.list(channel, searchQuery, 0, undefined);
+          queryClient.setQueryData<ChannelMessage[]>([...baseKey], (old) => {
+            if (!old) return old;
+            // dedup by id
+            if (old.some((m) => m.id === newRow.id)) return old;
+            // dedup by external id (sync race possibile)
+            if (newRow.message_id_external) {
+              const existingIdx = old.findIndex((m) => m.message_id_external === newRow.message_id_external);
+              if (existingIdx >= 0) {
+                const next = old.slice();
+                next[existingIdx] = newRow;
+                return next;
+              }
             }
-          }
-          log.debug("realtime.prepend", { channel, id: newRow.id });
-          return [newRow, ...old].slice(0, PAGE_SIZE);
-        });
-        queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
-      })
+            log.debug("realtime.prepend", { channel, id: newRow.id });
+            return [newRow, ...old].slice(0, PAGE_SIZE);
+          });
+          queryClient.invalidateQueries({ queryKey: queryKeys.email.count });
+        },
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(sub); };
+    return () => {
+      supabase.removeChannel(sub);
+    };
   }, [queryClient, channel, searchQuery]);
 
   return {

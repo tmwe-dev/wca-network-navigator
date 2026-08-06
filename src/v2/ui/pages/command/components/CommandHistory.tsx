@@ -88,9 +88,7 @@ export function CommandHistory({
                       }}
                     />
                   ))}
-                  <span className="text-[11px] text-muted-foreground ml-2 font-light">
-                    Attivo tool operativi...
-                  </span>
+                  <span className="text-[11px] text-muted-foreground ml-2 font-light">Attivo tool operativi...</span>
                 </div>
               </motion.div>
             ) : (
@@ -98,9 +96,7 @@ export function CommandHistory({
                 initial={{ opacity: 0, y: 20, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.6, ease }}
-                className={`flex items-start gap-3 ${
-                  msg.role === "user" ? "justify-end" : ""
-                }`}
+                className={`flex items-start gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
               >
                 {msg.role === "assistant" && (
                   <div className="flex-shrink-0 mt-1">
@@ -109,18 +105,12 @@ export function CommandHistory({
                 )}
                 <motion.div
                   className={`max-w-[85%] relative ${
-                    msg.role === "user"
-                      ? "px-5 py-4 rounded-2xl rounded-br-lg"
-                      : "px-5 py-4 rounded-2xl rounded-bl-lg"
+                    msg.role === "user" ? "px-5 py-4 rounded-2xl rounded-br-lg" : "px-5 py-4 rounded-2xl rounded-bl-lg"
                   }`}
                   style={{
                     background:
-                      msg.role === "assistant"
-                        ? "hsl(var(--glass-surface) / 0.7)"
-                        : "hsl(var(--glass-surface) / 0.65)",
-                    border: `1px solid hsl(0 0% 100% / ${
-                      msg.role === "assistant" ? "0.16" : "0.12"
-                    })`,
+                      msg.role === "assistant" ? "hsl(var(--glass-surface) / 0.7)" : "hsl(var(--glass-surface) / 0.65)",
+                    border: `1px solid hsl(0 0% 100% / ${msg.role === "assistant" ? "0.16" : "0.12"})`,
                     backdropFilter: "blur(40px)",
                     boxShadow:
                       msg.role === "assistant"
@@ -141,15 +131,12 @@ export function CommandHistory({
                   <div className="text-[14px] leading-[1.7] whitespace-pre-line font-light text-foreground">
                     {msg.content.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
                       part.startsWith("**") && part.endsWith("**") ? (
-                        <span
-                          key={i}
-                          className="text-primary font-mono text-[12px]"
-                        >
+                        <span key={i} className="text-primary font-mono text-[12px]">
                           {part.slice(2, -2)}
                         </span>
                       ) : (
                         <span key={i}>{part}</span>
-                      )
+                      ),
                     )}
                   </div>
                   {msg.meta && (
@@ -160,9 +147,7 @@ export function CommandHistory({
                       className="flex items-center gap-2 mt-3 pt-2 border-t border-border/[0.16]"
                     >
                       <Wand2 className="w-2.5 h-2.5 text-primary" />
-                      <span className="text-[10px] text-muted-foreground font-light font-mono">
-                        {msg.meta}
-                      </span>
+                      <span className="text-[10px] text-muted-foreground font-light font-mono">{msg.meta}</span>
                     </motion.div>
                   )}
                   {msg.governance && (
@@ -173,9 +158,7 @@ export function CommandHistory({
                       className="flex items-center gap-2 mt-1.5"
                     >
                       <div className="w-1 h-1 rounded-full bg-success/90" />
-                      <span className="text-[9px] text-muted-foreground font-mono">
-                        {msg.governance}
-                      </span>
+                      <span className="text-[9px] text-muted-foreground font-mono">{msg.governance}</span>
                     </motion.div>
                   )}
                   {msg.role === "assistant" && msg.suggestedActions && msg.suggestedActions.length > 0 && (
@@ -196,9 +179,7 @@ export function CommandHistory({
                       ))}
                     </motion.div>
                   )}
-                  <span className="text-[10px] text-muted-foreground mt-2 block">
-                    {msg.timestamp}
-                  </span>
+                  <span className="text-[10px] text-muted-foreground mt-2 block">{msg.timestamp}</span>
                 </motion.div>
               </motion.div>
             )}

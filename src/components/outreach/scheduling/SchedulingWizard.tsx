@@ -42,9 +42,7 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
   const [excludeWeekends, setExcludeWeekends] = useState(true);
   const [launching, setLaunching] = useState(false);
 
-  const filteredTemplates = templates.filter(
-    (t) => t.source_type === source || t.source_type === "mixed"
-  );
+  const filteredTemplates = templates.filter((t) => t.source_type === source || t.source_type === "mixed");
 
   const estimatedContacts = 0; // placeholder — actual count would come from a query
   const _estimatedDays = selectedTemplate
@@ -85,12 +83,23 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
           <div className="flex items-center gap-2 mt-2">
             {STEP_LABELS.map((label, i) => (
               <div key={i} className="flex items-center gap-1">
-                <div className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium",
-                  i === step ? "bg-primary text-primary-foreground" :
-                  i < step ? "bg-emerald-500/20 text-emerald-500" : "bg-muted text-muted-foreground"
-                )}>{i + 1}</div>
-                <span className={cn("text-[10px]", i === step ? "text-foreground font-medium" : "text-muted-foreground")}>{label}</span>
+                <div
+                  className={cn(
+                    "w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium",
+                    i === step
+                      ? "bg-primary text-primary-foreground"
+                      : i < step
+                        ? "bg-emerald-500/20 text-emerald-500"
+                        : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {i + 1}
+                </div>
+                <span
+                  className={cn("text-[10px]", i === step ? "text-foreground font-medium" : "text-muted-foreground")}
+                >
+                  {label}
+                </span>
                 {i < 3 && <div className="w-4 h-px bg-border/50" />}
               </div>
             ))}
@@ -105,8 +114,14 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
                 <Label className="text-xs font-medium">Seleziona Sorgente Contatti</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {(["wca_partners", "contacts", "business_cards"] as Source[]).map((s) => (
-                    <button key={s} onClick={() => setSource(s)}
-                      className={cn("p-3 rounded-lg border text-center transition-all", source === s ? "border-primary bg-primary/5" : "border-border/30 hover:bg-muted/30")}>
+                    <button
+                      key={s}
+                      onClick={() => setSource(s)}
+                      className={cn(
+                        "p-3 rounded-lg border text-center transition-all",
+                        source === s ? "border-primary bg-primary/5" : "border-border/30 hover:bg-muted/30",
+                      )}
+                    >
                       <Users className="w-5 h-5 mx-auto mb-1.5 text-muted-foreground" />
                       <span className="text-xs font-medium block">
                         {s === "wca_partners" ? "Partner WCA" : s === "contacts" ? "Contatti CRM" : "Biglietti Visita"}
@@ -133,14 +148,21 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
                 <Label className="text-xs font-medium">Seleziona Template</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {filteredTemplates.map((tpl) => (
-                    <button key={tpl.id} onClick={() => setSelectedTemplate(tpl)}
+                    <button
+                      key={tpl.id}
+                      onClick={() => setSelectedTemplate(tpl)}
                       className={cn(
                         "p-3 rounded-lg border text-left transition-all",
-                        selectedTemplate?.id === tpl.id ? "border-primary bg-primary/5" : "border-border/30 hover:bg-muted/30"
-                      )}>
+                        selectedTemplate?.id === tpl.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border/30 hover:bg-muted/30",
+                      )}
+                    >
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <span className="text-xs font-medium truncate">{tpl.template_name}</span>
-                        {tpl.is_system && <Badge className="text-[7px] h-3.5 px-1 bg-muted text-muted-foreground">Sistema</Badge>}
+                        {tpl.is_system && (
+                          <Badge className="text-[7px] h-3.5 px-1 bg-muted text-muted-foreground">Sistema</Badge>
+                        )}
                       </div>
                       <SequenceVisualizer steps={tpl.sequence} compact />
                       <p className="text-[10px] text-muted-foreground mt-1.5">
@@ -158,7 +180,9 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
                 <div>
                   <Label className="text-xs font-medium">Lingua</Label>
                   <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="auto">Auto (lingua destinatario)</SelectItem>
                       <SelectItem value="en">Inglese per tutti</SelectItem>
@@ -177,10 +201,13 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={startDate}
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
                         onSelect={(d) => d && setStartDate(d)}
                         disabled={(d) => d < new Date()}
-                        className="p-3 pointer-events-auto" />
+                        className="p-3 pointer-events-auto"
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -188,7 +215,9 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
                 <div>
                   <Label className="text-xs font-medium">Contatti per Giorno: {batchSize[0]}</Label>
                   <Slider value={batchSize} onValueChange={setBatchSize} min={5} max={50} step={5} className="mt-2" />
-                  <p className="text-[10px] text-muted-foreground mt-1">Quanti contatti iniziano la sequenza ogni giorno</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Quanti contatti iniziano la sequenza ogni giorno
+                  </p>
                 </div>
 
                 <label className="flex items-center gap-2 text-xs">
@@ -204,7 +233,9 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
                 <div className="p-3 rounded-lg bg-muted/20 border border-border/30 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium">{selectedTemplate.template_name}</span>
-                    <Badge variant="outline" className="text-[10px]">{selectedTemplate.goal}</Badge>
+                    <Badge variant="outline" className="text-[10px]">
+                      {selectedTemplate.goal}
+                    </Badge>
                   </div>
                   <SequenceVisualizer steps={selectedTemplate.sequence} />
                 </div>
@@ -212,11 +243,19 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-2.5 rounded-lg bg-card/50 border border-border/20">
                     <p className="text-[10px] text-muted-foreground">Sorgente</p>
-                    <p className="text-xs font-medium">{source === "wca_partners" ? "Partner WCA" : source === "contacts" ? "Contatti CRM" : "Biglietti Visita"}</p>
+                    <p className="text-xs font-medium">
+                      {source === "wca_partners"
+                        ? "Partner WCA"
+                        : source === "contacts"
+                          ? "Contatti CRM"
+                          : "Biglietti Visita"}
+                    </p>
                   </div>
                   <div className="p-2.5 rounded-lg bg-card/50 border border-border/20">
                     <p className="text-[10px] text-muted-foreground">Lingua</p>
-                    <p className="text-xs font-medium">{language === "auto" ? "Auto" : language === "en" ? "Inglese" : "Italiano"}</p>
+                    <p className="text-xs font-medium">
+                      {language === "auto" ? "Auto" : language === "en" ? "Inglese" : "Italiano"}
+                    </p>
                   </div>
                   <div className="p-2.5 rounded-lg bg-card/50 border border-border/20">
                     <p className="text-[10px] text-muted-foreground">Inizio</p>
@@ -231,8 +270,13 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
                 <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
                   <Clock className="w-4 h-4 text-primary" />
                   <div>
-                    <p className="text-xs font-medium">Durata sequenza: {selectedTemplate.total_duration_days} giorni</p>
-                    <p className="text-[10px] text-muted-foreground">{selectedTemplate.sequence.length} touchpoint · {excludeWeekends ? "esclusi weekend" : "inclusi weekend"}</p>
+                    <p className="text-xs font-medium">
+                      Durata sequenza: {selectedTemplate.total_duration_days} giorni
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {selectedTemplate.sequence.length} touchpoint ·{" "}
+                      {excludeWeekends ? "esclusi weekend" : "inclusi weekend"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -249,7 +293,9 @@ export function SchedulingWizard({ open, onOpenChange, templates }: Props) {
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>Annulla</Button>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Annulla
+            </Button>
             {step < 3 ? (
               <Button size="sm" onClick={() => setStep((s) => s + 1)} disabled={!canNext()} className="gap-1">
                 Avanti <ChevronRight className="w-3.5 h-3.5" />

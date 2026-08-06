@@ -66,7 +66,10 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
   const loadEmails = async () => {
     setIsLoading(true);
     try {
-      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
+      const {
+        data: { session: __s },
+      } = await supabase.auth.getSession();
+      const user = __s?.user ?? null;
       if (!user) return;
       const data = await fetchAllSenderEmails();
       setEmails(data);
@@ -88,10 +91,7 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
     bodyText: current?.body_text,
   });
 
-  const normalizedContent = useMemo(
-    () => normalizeEmailContent({ bodyHtml, bodyText }),
-    [bodyHtml, bodyText],
-  );
+  const normalizedContent = useMemo(() => normalizeEmailContent({ bodyHtml, bodyText }), [bodyHtml, bodyText]);
 
   const sanitizedHtml = useMemo(() => {
     if (!normalizedContent.bodyHtml) return null;
@@ -131,7 +131,9 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
             Email di {companyName}
-            <Badge variant="secondary" className="ml-2">{emailAddress}</Badge>
+            <Badge variant="secondary" className="ml-2">
+              {emailAddress}
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
@@ -153,7 +155,7 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
                       "w-full text-left px-2.5 py-2 rounded-md text-xs transition-colors",
                       idx === selectedIdx
                         ? "bg-primary/15 text-primary border border-primary/20"
-                        : "hover:bg-muted/50 text-muted-foreground"
+                        : "hover:bg-muted/50 text-muted-foreground",
                     )}
                   >
                     <div className="flex items-center gap-1.5 mb-0.5">
@@ -162,14 +164,14 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
                       ) : (
                         <ArrowRight className="h-3 w-3 text-primary shrink-0" />
                       )}
-                      <span className="truncate font-medium leading-tight">
-                        {em.subject || "(senza oggetto)"}
-                      </span>
+                      <span className="truncate font-medium leading-tight">{em.subject || "(senza oggetto)"}</span>
                     </div>
                     {em.email_date && (
                       <span className="text-[10px] text-muted-foreground pl-[18px]">
                         {new Date(em.email_date).toLocaleDateString("it-IT", {
-                          day: "2-digit", month: "short", year: "2-digit"
+                          day: "2-digit",
+                          month: "short",
+                          year: "2-digit",
                         })}
                       </span>
                     )}
@@ -183,15 +185,22 @@ export function SenderEmailsDialog({ open, onOpenChange, emailAddress, companyNa
                 <div className="px-4 py-3 border-b bg-muted/20 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="outline" className="text-[10px] gap-1 text-primary border-primary/20">
-                      {current.direction === "inbound" ? <ArrowLeft className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
+                      {current.direction === "inbound" ? (
+                        <ArrowLeft className="h-3 w-3" />
+                      ) : (
+                        <ArrowRight className="h-3 w-3" />
+                      )}
                       {current.direction === "inbound" ? "Ricevuta" : "Inviata"}
                     </Badge>
                     {current.email_date && (
                       <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         {new Date(current.email_date).toLocaleString("it-IT", {
-                          day: "2-digit", month: "long", year: "numeric",
-                          hour: "2-digit", minute: "2-digit",
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </span>
                     )}

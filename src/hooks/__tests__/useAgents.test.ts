@@ -28,7 +28,9 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 const mockUser = { id: "user-1", email: "test@test.com" };
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("useAgents", () => {
   it("returns agents list on success", async () => {

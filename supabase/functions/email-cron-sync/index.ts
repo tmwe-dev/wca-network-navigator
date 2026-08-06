@@ -3,7 +3,6 @@ import { isOutsideWorkHours, loadWorkHourSettings } from "../_shared/timeUtils.t
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 
-
 /**
  * Email Cron Sync — runs every 10 minutes via pg_cron.
  *
@@ -38,8 +37,12 @@ Deno.serve(async (req: Request) => {
   });
   if (guard.skip) {
     return new Response(
-      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined }),
-      { headers: { ...dynCors, "Content-Type": "application/json" } }
+      JSON.stringify({
+        skipped: true,
+        reason: guard.reason,
+        next_in_min: "nextInMin" in guard ? guard.nextInMin : undefined,
+      }),
+      { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   }
 
@@ -97,11 +100,7 @@ Deno.serve(async (req: Request) => {
           ownerUserId = admin?.user_id as string | undefined;
         }
         if (!ownerUserId) {
-          const { data: anyOp } = await supabase
-            .from("profiles")
-            .select("user_id")
-            .limit(1)
-            .maybeSingle();
+          const { data: anyOp } = await supabase.from("profiles").select("user_id").limit(1).maybeSingle();
           ownerUserId = anyOp?.user_id as string | undefined;
         }
         if (!ownerUserId) continue;

@@ -60,10 +60,7 @@ function mapEmailDraftRow(r: DraftDbRow): EmailDraftRow {
 }
 
 export async function findEmailDrafts(): Promise<EmailDraftRow[]> {
-  const { data, error } = await supabase
-    .from("email_drafts")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("email_drafts").select("*").order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapEmailDraftRow);
 }

@@ -24,7 +24,15 @@ import { DEFAULT_EMAIL_TYPES } from "@/constants/defaultEmailTypes";
 
 const TYPES_KEY = "email_oracle_types";
 const SYSTEM_PROMPT_KEY = "system_prompt_blocks";
-const DOCTRINE_CATEGORIES = ["system_doctrine", "system_core", "memory_protocol", "learning_protocol", "workflow_gate", "doctrine", "sales_doctrine"];
+const DOCTRINE_CATEGORIES = [
+  "system_doctrine",
+  "system_core",
+  "memory_protocol",
+  "learning_protocol",
+  "workflow_gate",
+  "doctrine",
+  "sales_doctrine",
+];
 
 /** Carica TUTTA la KB doctrine come riferimento. */
 export async function loadFullDoctrine(): Promise<string> {
@@ -34,9 +42,7 @@ export async function loadFullDoctrine(): Promise<string> {
       .filter((e) => DOCTRINE_CATEGORIES.includes(e.category))
       .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
     if (doctrine.length === 0) return "(KB doctrine vuota)";
-    return doctrine
-      .map((d) => `### [${d.category}] ${d.title}\n${d.content ?? ""}`)
-      .join("\n\n");
+    return doctrine.map((d) => `### [${d.category}] ${d.title}\n${d.content ?? ""}`).join("\n\n");
   } catch {
     return "(impossibile caricare KB doctrine)";
   }
@@ -50,7 +56,13 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
   try {
     const raw = await getAppSetting(SYSTEM_PROMPT_KEY, userId);
     let stored: Array<{ id: string; label?: string; content?: string }> = [];
-    if (raw) { try { stored = JSON.parse(raw); } catch { /* noop */ } }
+    if (raw) {
+      try {
+        stored = JSON.parse(raw);
+      } catch {
+        /* noop */
+      }
+    }
     for (const d of DEFAULT_SYSTEM_PROMPT_BLOCKS) {
       const hit = stored.find((s) => s.id === d.id);
       out.push({
@@ -64,7 +76,9 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
         },
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 2) KB Doctrine
   try {
@@ -82,7 +96,9 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
         },
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 3) Operative prompts
   try {
@@ -104,13 +120,21 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
         });
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 4) Email types
   try {
     const raw = await getAppSetting(TYPES_KEY, userId);
     let stored: Array<{ id: string; name?: string; prompt?: string }> = [];
-    if (raw) { try { stored = JSON.parse(raw); } catch { /* noop */ } }
+    if (raw) {
+      try {
+        stored = JSON.parse(raw);
+      } catch {
+        /* noop */
+      }
+    }
     const merged = DEFAULT_EMAIL_TYPES.map((t) => {
       const hit = stored.find((s) => s.id === t.id);
       return { id: t.id, name: hit?.name ?? t.name, prompt: hit?.prompt ?? t.prompt };
@@ -128,7 +152,9 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
         },
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 5) Email prompts
   try {
@@ -146,7 +172,9 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
         },
       });
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 6) Email address rules
   try {
@@ -177,7 +205,9 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
         });
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 7) Playbooks
   try {
@@ -208,7 +238,9 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
         });
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   // 8) Agent personas
   try {
@@ -239,7 +271,9 @@ export async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel
         });
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
 
   return out;
 }
