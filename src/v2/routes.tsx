@@ -317,7 +317,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="communicate/approve" element={<Navigate to="/v2/cestinone" replace />} />
           <Route path="communicate/*" element={<Navigate to="/v2/cockpit" replace />} />
           <Route path="agenda/*" element={guardedPage(AgendaSection, "Agenda")} />
-          <Route path="pipeline/agenda" element={<Navigate to="/v2/agenda" replace />} />
 
           <Route path="inreach" element={<Navigate to="/v2/inbox" replace />} />
 
