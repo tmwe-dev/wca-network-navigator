@@ -24,3 +24,19 @@ in lotti successivi, non rimossi in blocco.
 ## Altre azioni della stessa sessione
 - Libreria fogli di calcolo unificata su **ExcelJS**; dipendenza `xlsx` (SheetJS) rimossa.
 - `scripts/bundle-size-guard.mjs`: budget reso reale (10.000 KB, misura 9.814 KB) da abbassare a ratchet.
+
+## Secondo passaggio (cascata) — stessa data
+Rieseguito il grafo dopo la prima rimozione: i non raggiungibili scendono da 484 a 197,
+tutti citati testualmente altrove tranne 2, rimossi in cascata:
+`src/components/outreach/scheduling/SequenceVisualizer.tsx`, `src/data/downloadViews.ts`.
+Punto fisso raggiunto: nessun altro file ha zero riferimenti. I 195 residui restano
+in osservazione (usi dinamici o riferimenti incrociati), non rimovibili senza prova.
+
+## Ratchet dei budget consolidati
+- `scripts/debt-budget.js`: any 17→**5**, eslint-disable 41→**26**, console 10→**9**.
+- `scripts/lint-ratchet.mjs`: import diretti dal DAL 381→**362**.
+- `scripts/bundle-size-guard.mjs`: 10.000→**9.900 KB** (misura 9.805 KB).
+
+## Verifiche finali
+typecheck 0 errori · lint-ratchet 0 errori / 362 warning entro budget ·
+395 file di test, 3.154 test verdi · build di produzione OK · bundle 9.805 KB entro 9.900.
