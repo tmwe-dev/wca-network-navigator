@@ -76,7 +76,9 @@ function measureValue(src, i) {
   skipWs();
 
   if (src[j] === "[") {
-    // array di righe: somma tutte le stringhe fino alla parentesi di chiusura
+    // array/lista: conta solo se contiene almeno UNA stringa lunga (un vero prompt).
+    // Liste di etichette UI brevi non sono prompt e non devono essere segnalate.
+    let maxLen = 0;
     let depth = 0;
     while (j < src.length && guard++ < 200000) {
       const c = src[j];
@@ -93,13 +95,13 @@ function measureValue(src, i) {
       }
       if (c === '"' || c === "'" || c === "`") {
         const [body, end] = readString(src, j);
-        len += body.length;
+        if (body.length > maxLen) maxLen = body.length;
         j = end;
         continue;
       }
       j++;
     }
-    return len;
+    return maxLen;
   }
 
   while (j < src.length && guard++ < 200000) {
