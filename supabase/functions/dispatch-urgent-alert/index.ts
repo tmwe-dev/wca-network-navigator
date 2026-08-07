@@ -77,6 +77,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "method_not_allowed" }), { status: 405, headers });
   }
 
+  const auth = await requireInternalOrUser(req, null, headers);
+  if (auth.kind === "error") return auth.response;
+
   let body: Body;
   try {
     body = await req.json();
