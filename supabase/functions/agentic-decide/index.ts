@@ -30,6 +30,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 const DecideSchema = z.object({
   stop: z.boolean().default(false),
@@ -107,6 +108,10 @@ const SCHEMA = {
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, corsHeaders);
+  if (auth.kind === "error") return auth.response;
+
 
   try {
     const body = (await req.json()) as ReqBody;

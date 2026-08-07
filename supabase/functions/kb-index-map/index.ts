@@ -12,6 +12,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 const FAMILY_MAP: Record<string, string> = {
   // doctrine
@@ -66,6 +67,10 @@ const INTENT_ROUTING: Record<string, string[]> = {
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, cors);
+  if (auth.kind === "error") return auth.response;
+
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
