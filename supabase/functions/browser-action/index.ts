@@ -6,6 +6,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("browser-action");
 
 const MAX_ACTIONS = 20;
 const TOTAL_TIMEOUT_MS = 60_000;
@@ -267,7 +270,7 @@ serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("browser-action error:", e);
+    log.error("browser-action error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

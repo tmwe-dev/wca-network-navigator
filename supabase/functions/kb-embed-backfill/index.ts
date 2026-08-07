@@ -18,6 +18,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { embedBatch, DEFAULT_EMBEDDING_MODEL } from "../_shared/embeddings.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("kb-embed-backfill");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -94,7 +97,7 @@ serve(async (req) => {
     try {
       vectors = await embedBatch(texts, { timeoutMs: 60000 });
     } catch (e) {
-      console.error("embedBatch failed:", e);
+      log.error("embedBatch failed:", e);
       throw e;
     }
 
@@ -113,7 +116,7 @@ serve(async (req) => {
         .eq("id", rows[i].id);
       if (upErr) {
         failed++;
-        console.error(`update kb ${rows[i].id} failed:`, upErr.message);
+        log.error(`update kb ${rows[i].id} failed:`, upErr.message);
       } else {
         processed++;
       }
@@ -138,7 +141,7 @@ serve(async (req) => {
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error("kb-embed-backfill error:", err);
+    log.error("kb-embed-backfill error:", err);
     return new Response(
       JSON.stringify({
         error: err instanceof Error ? err.message : "Unknown error",

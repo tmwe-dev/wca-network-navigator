@@ -14,6 +14,9 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("ai-monitor");
 
 function jsonResponse(data: unknown, corsHeaders: Record<string, string>, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -97,7 +100,7 @@ Deno.serve(async (req) => {
       if (res?.error) errors[k as string] = res.error.message;
     });
     if (Object.keys(errors).length) {
-      console.error("[ai-monitor] partial errors", errors);
+      log.error("[ai-monitor] partial errors", errors);
     }
 
     const monthlyBudget = (budgetRes.data?.monthly_budget_usd as number) ?? 25;
@@ -127,7 +130,7 @@ Deno.serve(async (req) => {
       corsHeaders,
     );
   } catch (err) {
-    console.error("[ai-monitor] fatal", err);
+    log.error("[ai-monitor] fatal", err);
     const msg = err instanceof Error ? err.message : String(err);
     return jsonResponse({ error: "internal", message: msg }, corsHeaders, 500);
   }

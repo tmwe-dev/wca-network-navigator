@@ -17,6 +17,9 @@ import {
 import { loadAgentPersona, renderPersonaBlock } from "../_shared/agentPersonaLoader.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("agent-loop");
 
 const TOOL_DEFINITIONS = [
   {
@@ -295,7 +298,7 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    console.error("agent-loop error:", e);
+    log.error("agent-loop error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

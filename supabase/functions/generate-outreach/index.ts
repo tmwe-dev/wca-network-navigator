@@ -20,6 +20,9 @@ import { checkCadence } from "../_shared/cadenceEngine.ts";
 import { loadOperativePrompts, type PromptScope } from "../_shared/operativePromptsLoader.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("generate-outreach");
 
 async function checkWhatsAppConsent(
   supabase: ReturnType<typeof createClient>,
@@ -437,7 +440,7 @@ DECISION ENGINE (raccomandazione automatica):
     } catch (jerr) {
       // Fail-soft sul generatore (bozza): la review HARD fail-closed resta
       // garantita a valle in send-email/whatsapp/linkedin prima dell'invio.
-      console.error("[generate-outreach] journalistReview failed:", jerr);
+      log.error("[generate-outreach] journalistReview failed:", jerr);
     }
 
     const kbSource = ctx.salesKBSlice
@@ -504,7 +507,7 @@ DECISION ENGINE (raccomandazione automatica):
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    console.error("generate-outreach error:", e);
+    log.error("generate-outreach error:", e);
     return mapErrorToResponse(e, dynCors);
   }
 });
