@@ -110,6 +110,9 @@ Deno.serve(async (req: Request) => {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${anonKey}`, // no user JWT → bypassa BYOK/credit check
+            // Chiamata server-to-server: il guard condiviso di enrich-partner-website
+            // riconosce questo header e non richiede un JWT utente.
+            ...buildInternalAuthHeaders(),
           },
           body: JSON.stringify({ partnerId: partner.id }),
         });
