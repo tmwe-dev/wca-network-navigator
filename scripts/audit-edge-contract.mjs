@@ -19,7 +19,7 @@ const DIR = path.resolve("supabase/functions");
 
 // Baseline misurato il 2026-08-06. Abbassare SOLO dopo aver uniformato funzioni.
 const BASELINE = {
-  cors: 1,
+  cors: 0,
   auth: 95,
   error: 132,
   logging: 139,
@@ -27,7 +27,7 @@ const BASELINE = {
 
 // Funzioni server-to-server / redirect OAuth: non servite al browser,
 // quindi l'assenza di CORS è corretta e non conta come violazione.
-const NO_CORS_NEEDED = new Set(["mcp", "replay-domain-events", "tmwe-oauth-callback"]);
+const NO_CORS_NEEDED = new Set(["mcp", "replay-domain-events", "tmwe-oauth-callback", "record-e2e-run"]);
 
 function readFn(name) {
   const entry = path.join(DIR, name, "index.ts");
