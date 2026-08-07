@@ -5,14 +5,14 @@
  *
  * Auth: header `x-e2e-secret` deve corrispondere alla env E2E_WEBHOOK_SECRET.
  * Nessun JWT: il workflow non ha sessione utente.
+ *
+ * Superficie: server-to-server. Nessun browser la chiama, quindi NON espone
+ * header CORS e non gestisce preflight (vedi NO_CORS_NEEDED in
+ * scripts/audit-edge-contract.mjs).
  */
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-e2e-secret",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const jsonHeaders = { "Content-Type": "application/json" };
 
 interface SpecResult {
   file: string;
@@ -40,11 +40,10 @@ interface Payload {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: jsonHeaders,
     });
   }
 
@@ -52,14 +51,14 @@ Deno.serve(async (req) => {
   if (!expected) {
     return new Response(JSON.stringify({ error: "webhook secret not configured" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: jsonHeaders,
     });
   }
   const provided = req.headers.get("x-e2e-secret");
   if (provided !== expected) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: jsonHeaders,
     });
   }
 
@@ -69,14 +68,14 @@ Deno.serve(async (req) => {
   } catch {
     return new Response(JSON.stringify({ error: "invalid json" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: jsonHeaders,
     });
   }
 
   if (!body.run_id || typeof body.total_tests !== "number") {
     return new Response(JSON.stringify({ error: "missing required fields: run_id, total_tests" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: jsonHeaders,
     });
   }
 
@@ -106,12 +105,12 @@ Deno.serve(async (req) => {
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: jsonHeaders,
     });
   }
 
   return new Response(JSON.stringify({ ok: true, id: data?.id }), {
     status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: jsonHeaders,
   });
 });
