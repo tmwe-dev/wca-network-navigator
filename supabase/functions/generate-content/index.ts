@@ -6,6 +6,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { forwardToFunction } from "../_shared/proxyUtils.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("generate-content");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -47,7 +50,7 @@ serve(async (req) => {
         });
     }
   } catch (e: unknown) {
-    console.error("generate-content error:", e);
+    log.error("generate-content error:", e);
     const message = e instanceof Error ? e.message : String(e);
     return new Response(JSON.stringify({ error: message || "Unknown error" }), {
       status: 500,

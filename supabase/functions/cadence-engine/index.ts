@@ -8,6 +8,9 @@ import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { createPauseChecker } from "./pauseChecker.ts";
 import { hardGate } from "../_shared/aiActionRiskGate.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("cadence-engine");
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -97,7 +100,7 @@ Deno.serve(async (req) => {
           cancelled: () => cancelled++,
         });
       } catch (e) {
-        console.error(`[cadence-engine] Error processing action ${action.id}:`, extractErrorMessage(e));
+        log.error(`[cadence-engine] Error processing action ${action.id}:`, extractErrorMessage(e));
       }
     }
 
@@ -112,7 +115,7 @@ Deno.serve(async (req) => {
     );
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : JSON.stringify(e);
-    console.error("[cadence-engine] Fatal:", msg);
+    log.error("[cadence-engine] Fatal:", msg);
     return edgeError("INTERNAL_ERROR", msg, undefined, headers);
   }
 });

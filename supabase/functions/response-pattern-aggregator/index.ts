@@ -6,6 +6,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("response-pattern-aggregator");
 
 interface PatternKey {
   user_id: string;
@@ -49,7 +52,7 @@ Deno.serve(async (req) => {
       .limit(1000);
 
     if (actErr) {
-      console.error("Failed to fetch activities:", actErr.message);
+      log.error("Failed to fetch activities:", actErr.message);
       return new Response(JSON.stringify({ error: actErr.message }), {
         status: 500,
         headers: { ...dynCors, "Content-Type": "application/json" },
@@ -245,7 +248,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (e: unknown) {
-    console.error("response-pattern-aggregator error:", e);
+    log.error("response-pattern-aggregator error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

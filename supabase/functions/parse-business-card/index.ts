@@ -4,6 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseAiJson, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("parse-business-card");
 
 const BusinessCardSchema = z
   .object({
@@ -211,7 +214,7 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
       },
     );
   } catch (e) {
-    console.error("parse-business-card error:", e);
+    log.error("parse-business-card error:", e);
     return new Response(JSON.stringify({ error: e.message || "Errore interno" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

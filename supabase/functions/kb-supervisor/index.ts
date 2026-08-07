@@ -7,6 +7,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("kb-supervisor");
 
 interface AuditResult {
   level: "structural" | "coherence" | "strategic";
@@ -317,7 +320,7 @@ serve(async (req: Request) => {
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
-    console.error("[kb-supervisor] error:", error);
+    log.error("[kb-supervisor] error:", error);
     const msg = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,

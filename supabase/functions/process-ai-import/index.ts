@@ -15,6 +15,9 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("process-ai-import");
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;
@@ -142,7 +145,7 @@ serve(async (req) => {
           }
         } catch (aiError) {
           // AI call failed — mark all batch records as errors
-          console.error("AI batch error:", aiError);
+          log.error("AI batch error:", aiError);
           for (const contact of batch) {
             errorCount++;
             await logImportError(
@@ -190,7 +193,7 @@ serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("process-ai-import error:", error);
+    log.error("process-ai-import error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

@@ -4,6 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("parse-profile-ai");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -197,7 +200,7 @@ ${truncated}`;
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
 
     if (!toolCall?.function?.arguments) {
-      console.error("No tool call in AI response:", JSON.stringify(aiData));
+      log.error("No tool call in AI response:", JSON.stringify(aiData));
       return new Response(JSON.stringify({ success: false, error: "AI returned no data" }), {
         status: 500,
         headers: { ...dynCors, "Content-Type": "application/json" },
@@ -324,7 +327,7 @@ ${truncated}`;
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    console.error("Error:", error);
+    log.error("Error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },

@@ -1,5 +1,8 @@
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("linkedin-profile-api");
 
 const PROXYCURL_API_KEY = Deno.env.get("PROXYCURL_API_KEY");
 
@@ -105,7 +108,7 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("linkedin-profile-api error:", err);
+    log.error("linkedin-profile-api error:", err);
     return new Response(JSON.stringify({ error: err.message, fallback: true }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

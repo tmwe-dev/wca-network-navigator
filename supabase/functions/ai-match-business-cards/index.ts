@@ -3,6 +3,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("ai-match-business-cards");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -256,7 +259,7 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
       },
     );
   } catch (e) {
-    console.error("ai-match error:", e);
+    log.error("ai-match error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

@@ -8,6 +8,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("send-whatsapp");
 
 Deno.serve(async (req) => {
   const preflight = corsPreflight(req);
@@ -175,7 +178,7 @@ Deno.serve(async (req) => {
 
       // Block send if journalist review verdict is "block"
       if (reviewResult.verdict === "block") {
-        console.warn(`[send-whatsapp] BLOCKED by journalist review: ${reviewResult.reasoning_summary}`);
+        log.warn(`[send-whatsapp] BLOCKED by journalist review: ${reviewResult.reasoning_summary}`);
         return new Response(
           JSON.stringify({
             success: false,
@@ -212,7 +215,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertErr) {
-      console.error("Queue insert error:", insertErr);
+      log.error("Queue insert error:", insertErr);
       return new Response(JSON.stringify({ error: "queue_failed", detail: insertErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -292,7 +295,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (err: unknown) {
-    console.error("[send-whatsapp] Error:", err);
+    log.error("[send-whatsapp] Error:", err);
     return new Response(JSON.stringify({ error: "internal_error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

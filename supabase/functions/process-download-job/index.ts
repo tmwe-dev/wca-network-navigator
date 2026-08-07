@@ -2,6 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { assertJobOwned } from "../_shared/ownership.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("process-download-job");
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;
@@ -88,7 +91,7 @@ Deno.serve(async (req) => {
       total_count: job.total_count,
     });
   } catch (error) {
-    console.error("process-download-job error:", error);
+    log.error("process-download-job error:", error);
     return respond({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });
@@ -137,7 +140,7 @@ async function verifyDownloadCompleteness(supabase: SupabaseClient, countryCode:
         .eq("id", cache.id);
     }
   } catch (err) {
-    console.error("Verification error:", err);
+    log.error("Verification error:", err);
   }
 }
 
@@ -183,6 +186,6 @@ async function updateNetworkConfigsFromData(supabase: SupabaseClient, networkNam
         .eq("network_name", net);
     }
   } catch (err) {
-    console.error("updateNetworkConfigsFromData error:", err);
+    log.error("updateNetworkConfigsFromData error:", err);
   }
 }

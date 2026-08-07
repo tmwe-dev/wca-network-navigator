@@ -2,6 +2,9 @@ import "../_shared/llmFetchInterceptor.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("linkedin-ai-extract");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -134,7 +137,7 @@ ${Object.entries(snapshot.htmlSamples || {})
         schema = JSON.parse(jsonMatch[0]);
       }
     } catch {
-      console.error("Failed to parse AI response:", content);
+      log.error("Failed to parse AI response:", content);
       return new Response(JSON.stringify({ error: "Failed to parse AI selectors", raw: content }), {
         status: 500,
         headers: { ...dynCors, "Content-Type": "application/json" },
@@ -145,7 +148,7 @@ ${Object.entries(snapshot.htmlSamples || {})
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("linkedin-ai-extract error:", err);
+    log.error("linkedin-ai-extract error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

@@ -14,6 +14,9 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("agent-task-drainer");
 
 const BATCH_SIZE = 25;
 const MAX_CONCURRENT = 5;
@@ -68,11 +71,11 @@ Deno.serve(async (req) => {
       .select("id");
 
     if (stuckErr) {
-      console.error("stuck reset error:", stuckErr);
+      log.error("stuck reset error:", stuckErr);
     }
     const stuckResetCount = stuckRows?.length ?? 0;
     if (stuckResetCount > 0) {
-      console.log(`[drainer] stuck_reset=${stuckResetCount}`);
+      log.info(`[drainer] stuck_reset=${stuckResetCount}`);
     }
 
     // ─── 2. Load paused users ───
@@ -155,13 +158,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[drainer] claimed=${tasks.length} stuck_reset=${stuckResetCount}`);
+    log.info(`[drainer] claimed=${tasks.length} stuck_reset=${stuckResetCount}`);
 
     // ─── 4. Execute concurrently (chunks of MAX_CONCURRENT) ───
     const results: ExecResult[] = [];
     for (let i = 0; i < tasks.length; i += MAX_CONCURRENT) {
       if (Date.now() - startTime > MAX_WALL_CLOCK_MS) {
-        console.log("[drainer] wall-clock cap hit, breaking");
+        log.info("[drainer] wall-clock cap hit, breaking");
         break;
       }
       const chunk = tasks.slice(i, i + MAX_CONCURRENT);

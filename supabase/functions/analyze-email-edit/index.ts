@@ -4,6 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("analyze-email-edit");
 
 function stripHtml(html: string): string {
   return html
@@ -144,7 +147,7 @@ Analizza e rispondi SOLO con JSON valido:
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (e: unknown) {
-    console.error("analyze-email-edit error:", e);
+    log.error("analyze-email-edit error:", e);
     return mapErrorToResponse(e, dynCors);
   }
 });

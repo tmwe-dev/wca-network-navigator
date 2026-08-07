@@ -3,6 +3,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("whatsapp-ai-extract");
 
 const jsonHeaders = (headers: Record<string, string>) => ({
   ...headers,
@@ -348,7 +351,7 @@ REGOLE:
           items = parsed.items || [];
         }
       } catch {
-        console.error("Failed to parse tool call arguments");
+        log.error("Failed to parse tool call arguments", null);
       }
     }
 
@@ -364,7 +367,7 @@ REGOLE:
             items = Array.isArray(parsed) ? parsed : parsed.items || [];
           }
         } catch {
-          console.error("Failed to parse AI content as JSON");
+          log.error("Failed to parse AI content as JSON", null);
         }
       }
     }
@@ -383,7 +386,7 @@ REGOLE:
       },
     );
   } catch (e) {
-    console.error("whatsapp-ai-extract error:", e);
+    log.error("whatsapp-ai-extract error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

@@ -20,6 +20,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("email-delivery-webhook");
 
 const EventSchema = z.object({
   event_type: z.enum([
@@ -66,7 +69,7 @@ Deno.serve(async (req) => {
 
   const expected = Deno.env.get("EMAIL_WEBHOOK_SECRET");
   if (!expected) {
-    console.error("[email-delivery-webhook] EMAIL_WEBHOOK_SECRET not configured");
+    log.error("[email-delivery-webhook] EMAIL_WEBHOOK_SECRET not configured", null);
     return json(503, { error: "Webhook not configured" });
   }
   const provided = req.headers.get("x-webhook-secret") ?? "";
@@ -105,7 +108,7 @@ Deno.serve(async (req) => {
 
   const { error } = await supabase.from("email_delivery_events").insert(rows);
   if (error) {
-    console.error("[email-delivery-webhook] insert failed:", error.message);
+    log.error("[email-delivery-webhook] insert failed:", error.message);
     return json(500, { error: "Insert failed" });
   }
 

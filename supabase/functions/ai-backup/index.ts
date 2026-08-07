@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("ai-backup");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -88,7 +91,7 @@ serve(async (req) => {
       });
 
       if (uploadError) {
-        console.error(`Backup upload failed for ${userId}:`, uploadError.message);
+        log.error(`Backup upload failed for ${userId}:`, uploadError.message);
       } else {
         stats.users++;
       }
@@ -108,7 +111,7 @@ serve(async (req) => {
 
     return json({ success: true, stats });
   } catch (e: unknown) {
-    console.error("ai-backup error:", e);
+    log.error("ai-backup error:", e);
     return json({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
   }
 });

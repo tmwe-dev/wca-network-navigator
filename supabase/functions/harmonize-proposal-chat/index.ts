@@ -11,6 +11,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("harmonize-proposal-chat");
 
 interface ChatRow {
   role: "user" | "assistant";
@@ -280,7 +283,7 @@ Deno.serve(async (req) => {
       { status: 200, headers },
     );
   } catch (error: unknown) {
-    console.error("harmonize-proposal-chat error:", error);
+    log.error("harmonize-proposal-chat error:", error);
     const msg = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: "INTERNAL_ERROR", message: msg }), { status: 500, headers });
   }

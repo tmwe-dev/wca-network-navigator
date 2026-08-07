@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("elevenlabs-tts");
 
 interface SettingRow {
   key: string;
@@ -130,7 +133,7 @@ serve(async (req) => {
       },
     });
   } catch (error) {
-    console.error("TTS error:", error);
+    log.error("TTS error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

@@ -17,6 +17,9 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("sherlock-extract");
 
 interface ReqBody {
   markdown: string;
@@ -207,7 +210,7 @@ serve(async (req) => {
     const toolCall = aiJson?.choices?.[0]?.message?.tool_calls?.[0];
     const argsStr = toolCall?.function?.arguments;
     if (!argsStr) {
-      console.error("No tool call in AI response", JSON.stringify(aiJson).slice(0, 500));
+      log.error("No tool call in AI response", JSON.stringify(aiJson).slice(0, 500));
       return new Response(JSON.stringify({ error: "AI non ha restituito findings strutturati", raw: aiJson }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -246,7 +249,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("sherlock-extract error", e);
+    log.error("sherlock-extract error", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

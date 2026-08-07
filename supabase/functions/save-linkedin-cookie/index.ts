@@ -2,6 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 import { encryptValue } from "../_shared/linkedinCrypto.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("save-linkedin-cookie");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -51,7 +54,7 @@ Deno.serve(async (req) => {
 
     return respond({ success: true, message: "✅ Cookie li_at salvato!" }, 200, dynCors);
   } catch (error) {
-    console.error("save-linkedin-cookie error:", error);
+    log.error("save-linkedin-cookie error:", error);
     return respond(
       { success: false, message: "Errore: " + (error instanceof Error ? error.message : "Sconosciuto") },
       500,

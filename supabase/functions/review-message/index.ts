@@ -12,6 +12,9 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import type { JournalistReviewInput, ReviewChannel } from "../_shared/journalistTypes.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("review-message");
 
 const ALLOWED_CHANNELS: ReviewChannel[] = ["whatsapp", "linkedin"];
 
@@ -116,7 +119,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error("[review-message] error:", err);
+    log.error("[review-message] error:", err);
     return new Response(
       JSON.stringify({ error: "internal_error", detail: err instanceof Error ? err.message : String(err) }),
       {

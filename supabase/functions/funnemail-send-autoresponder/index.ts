@@ -21,6 +21,9 @@ import { z } from "https://esm.sh/zod@3.23.8";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("funnemail-send-autoresponder");
 
 const BodySchema = z.object({
   source_message_id: z.string().uuid(),
@@ -147,7 +150,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (logErr) {
-      console.error("[autoresponder] log insert failed", logErr);
+      log.error("[autoresponder] log insert failed", logErr);
     }
 
     return new Response(

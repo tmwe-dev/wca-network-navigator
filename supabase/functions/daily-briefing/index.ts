@@ -5,6 +5,9 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { assemblePrompt } from "../_shared/prompts/assembler.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("daily-briefing");
 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -204,7 +207,7 @@ serve(async (req) => {
       });
       content = r.content || "{}";
     } catch (err) {
-      console.error("daily-briefing LLM error:", err instanceof AiGatewayError ? err.kind : err);
+      log.error("daily-briefing LLM error:", err instanceof AiGatewayError ? err.kind : err);
       return new Response(
         JSON.stringify({
           completed: `• **${completedJobs.length}** download completati\n• **${sentEmails}** email inviate`,
@@ -248,7 +251,7 @@ serve(async (req) => {
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    console.error("daily-briefing error:", e);
+    log.error("daily-briefing error:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

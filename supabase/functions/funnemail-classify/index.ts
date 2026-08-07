@@ -18,6 +18,9 @@ import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("funnemail-classify");
 
 interface RequestBody {
   message_id: string;
@@ -286,10 +289,10 @@ Deno.serve(async (req) => {
         .from("funnemail_decisions")
         .update(decisionRow)
         .eq("message_id", body.message_id);
-      if (updErr) console.error("[funnemail-classify] update error", updErr);
+      if (updErr) log.error("[funnemail-classify] update error", updErr);
     } else {
       const { error: insErr } = await supabase.from("funnemail_decisions").insert(decisionRow);
-      if (insErr) console.error("[funnemail-classify] insert error", JSON.stringify(insErr));
+      if (insErr) log.error("[funnemail-classify] insert error", JSON.stringify(insErr));
     }
 
     endMetrics(metrics, true, 200);

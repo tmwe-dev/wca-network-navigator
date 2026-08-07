@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("get-wca-credentials");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -55,7 +58,7 @@ Deno.serve(async (req) => {
 
     return edgeError("NOT_FOUND", "No WCA credentials configured for this user");
   } catch (e: unknown) {
-    console.error("get-wca-credentials error:", e);
+    log.error("get-wca-credentials error:", e);
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }
 });

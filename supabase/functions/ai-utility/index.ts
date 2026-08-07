@@ -6,6 +6,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { forwardToFunction } from "../_shared/proxyUtils.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("ai-utility");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -44,7 +47,7 @@ serve(async (req) => {
         });
     }
   } catch (e: Record<string, unknown>) {
-    console.error("ai-utility error:", e);
+    log.error("ai-utility error:", e);
     return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

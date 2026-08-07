@@ -7,6 +7,9 @@
  */
 import { serviceClient, tmweBaseUrl, tmweOAuthRedirectUri } from "../_shared/tmweClient.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("tmwe-oauth-callback");
 
 function htmlRedirect(url: string): Response {
   return new Response(null, {
@@ -145,7 +148,7 @@ Deno.serve(async (req) => {
       nestedData.username,
     );
     if (!tmweUserIdentifier) {
-      console.error("[tmwe-oauth-callback] no_tmwe_user_id, profile=", JSON.stringify(profile).slice(0, 500));
+      log.error("[tmwe-oauth-callback] no_tmwe_user_id, profile=", JSON.stringify(profile).slice(0, 500));
       return back("error", "no_tmwe_user_id", intent);
     }
     const tmweUserId = /^\d+$/.test(tmweUserIdentifier)
@@ -194,7 +197,7 @@ Deno.serve(async (req) => {
       // l'alias per username quando l'utente non ha email su TMWE).
       const { data: isAuthorized, error: wlErr } = await svc.rpc("is_email_authorized", { p_email: normalizedEmail });
       if (wlErr) {
-        console.error("[tmwe-oauth-callback] whitelist check failed:", wlErr.message);
+        log.error("[tmwe-oauth-callback] whitelist check failed:", wlErr.message);
         return back("error", "whitelist_check_failed", "login");
       }
       if (!isAuthorized) {
@@ -362,7 +365,7 @@ Deno.serve(async (req) => {
     return back("ok", undefined, intent);
   } catch (error: unknown) {
     const reason = error instanceof Error ? error.message : "unknown";
-    console.error("[tmwe-oauth-callback]", reason);
+    log.error("[tmwe-oauth-callback]", reason);
     return back("error", reason.slice(0, 80), currentIntent);
   }
 });

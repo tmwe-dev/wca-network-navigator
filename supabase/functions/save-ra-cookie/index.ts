@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("save-ra-cookie");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -52,7 +55,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error("save-ra-cookie error:", error);
+    log.error("save-ra-cookie error:", error);
     return new Response(
       JSON.stringify({
         success: false,

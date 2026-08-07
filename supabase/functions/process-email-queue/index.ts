@@ -6,6 +6,9 @@ import { checkSmtpRateLimit } from "../_shared/smtpRateLimit.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 import { assertDraftOwned } from "../_shared/ownership.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("process-email-queue");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -196,9 +199,7 @@ Deno.serve(async (req) => {
       // ── P3.3: SMTP rate limit per-utente (no-op se kill-switch off) ──
       const rl = await checkSmtpRateLimit(supabase, userId);
       if (!rl.allowed) {
-        console.log(
-          `[pq] rate limit hit user=${userId} sent_last_hour=${rl.sentLastHour} cap=${rl.cap} — pausing batch`,
-        );
+        log.info(`[pq] rate limit hit user=${userId} sent_last_hour=${rl.sentLastHour} cap=${rl.cap} — pausing batch`);
         // Lascia gli item in 'pending' per il prossimo invocation;
         // marca il draft come paused così il dispatcher lo riprenderà.
         await supabase.from("email_drafts").update({ queue_status: "paused" }).eq("id", draft_id);
@@ -261,7 +262,7 @@ Deno.serve(async (req) => {
           };
           const review = await journalistReview(supabase, userId, reviewInput);
           if (review.verdict === "block") {
-            console.warn(`[pq] BLOCKED by journalist for item=${item.id}: ${review.reasoning_summary}`);
+            log.warn(`[pq] BLOCKED by journalist for item=${item.id}: ${review.reasoning_summary}`);
             await supabase
               .from("email_campaign_queue")
               .update({
@@ -286,7 +287,7 @@ Deno.serve(async (req) => {
                 error_message: `JOURNALIST_BLOCK: ${review.reasoning_summary}`.slice(0, 1000),
               })
               .then(({ error }) => {
-                if (error) console.error("[pq] esl insert (block) failed:", error.message);
+                if (error) log.error("[pq] esl insert (block) failed:", error.message);
               });
             failedCount++;
             continue;
@@ -296,7 +297,7 @@ Deno.serve(async (req) => {
           }
         } catch (revErr) {
           // Fail-open: stessa policy di send-email — log e procedi col draft originale
-          console.error("[pq] journalist review error (fail-open):", revErr);
+          log.error("[pq] journalist review error (fail-open):", revErr);
         }
 
         await client.send({
@@ -335,7 +336,7 @@ Deno.serve(async (req) => {
             status: "sent",
           })
           .then(({ error }) => {
-            if (error) console.error("[pq] esl insert failed:", error.message);
+            if (error) log.error("[pq] esl insert failed:", error.message);
           });
 
         // ── Post-send: pipeline unificata (LOVABLE-85) ──
@@ -392,7 +393,7 @@ Deno.serve(async (req) => {
             error_message: errorMsg.slice(0, 1000),
           })
           .then(({ error }) => {
-            if (error) console.error("[pq] esl insert (fail) failed:", error.message);
+            if (error) log.error("[pq] esl insert (fail) failed:", error.message);
           });
 
         failedCount++;
@@ -454,7 +455,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error("process-email-queue error:", error);
+    log.error("process-email-queue error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

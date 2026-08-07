@@ -2,6 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { resolveMailbox } from "../_shared/resolveMailbox.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("mark-imap-seen");
 
 /* ── CA Certificates (same as check-inbox) ── */
 
@@ -251,7 +254,7 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err: Record<string, unknown>) {
-    console.error(`[mark-imap-seen] Error: ${err.message}`);
+    log.error(`[mark-imap-seen] Error: ${err.message}`, null);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

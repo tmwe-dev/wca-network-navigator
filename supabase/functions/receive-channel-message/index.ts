@@ -6,6 +6,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("receive-channel-message");
 
 Deno.serve(async (req) => {
   const preflight = corsPreflight(req);
@@ -71,7 +74,7 @@ Deno.serve(async (req) => {
     const { data: opRow } = await supabase.from("operators").select("id").eq("user_id", user.id).maybeSingle();
     const operator_id = opRow?.id ?? null;
     if (!operator_id) {
-      console.warn(`[receive-channel-message] No operator found for user ${user.id}, skipping insert`);
+      log.warn(`[receive-channel-message] No operator found for user ${user.id}, skipping insert`);
       return new Response(JSON.stringify({ error: "no_operator", detail: "User has no active operator" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -96,9 +99,7 @@ Deno.serve(async (req) => {
     if (to_name) row.to_name = to_name;
 
     if (!message_id_external) {
-      console.warn(
-        `[receive-channel-message] Missing message_id_external for ${direction} ${channel} (legacy fallback)`,
-      );
+      log.warn(`[receive-channel-message] Missing message_id_external for ${direction} ${channel} (legacy fallback)`);
     }
 
     const { data: msgRows, error: insertErr } = message_id_external
@@ -109,7 +110,7 @@ Deno.serve(async (req) => {
       : await supabase.from("channel_messages").insert(row).select("id");
 
     if (insertErr) {
-      console.error("[receive-channel-message] Insert error:", insertErr);
+      log.error("[receive-channel-message] Insert error:", insertErr);
       return new Response(JSON.stringify({ error: "insert_failed", detail: insertErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -180,7 +181,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (err: unknown) {
-    console.error("[receive-channel-message] Error:", err);
+    log.error("[receive-channel-message] Error:", err);
     return new Response(JSON.stringify({ error: "internal_error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

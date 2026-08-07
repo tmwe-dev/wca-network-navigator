@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("save-wca-contacts");
 
 // Valid enum values for matching
 const SERVICE_MAP: Record<string, string> = {
@@ -397,7 +400,7 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("save-wca-contacts error:", error);
+    log.error("save-wca-contacts error:", error);
     return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

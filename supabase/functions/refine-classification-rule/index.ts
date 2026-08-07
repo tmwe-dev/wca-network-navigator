@@ -4,6 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("refine-classification-rule");
 
 /**
  * Refiner: quando l'utente sceglie un gruppo diverso dal suggerimento AI,
@@ -261,7 +264,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (insErr) {
-      console.error("[refine] insert error", insErr);
+      log.error("[refine] insert error", insErr);
       return new Response(JSON.stringify({ error: "INSERT_FAILED" }), {
         status: 500,
         headers: { ...dynCors, "Content-Type": "application/json" },
@@ -272,7 +275,7 @@ serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("[refine-classification-rule] fatal", e);
+    log.error("[refine-classification-rule] fatal", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

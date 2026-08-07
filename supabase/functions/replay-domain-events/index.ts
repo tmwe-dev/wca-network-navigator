@@ -29,6 +29,9 @@ import { eventBus } from "../_shared/domainEvents.ts";
 import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
 import type { WCADomainEvent } from "../_shared/domainEvents.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("replay-domain-events");
 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -93,7 +96,7 @@ async function replayDomainEvents(): Promise<ReplayResult> {
       return result;
     }
 
-    console.log(`[replay-domain-events] Found ${events.length} unprocessed events`);
+    log.info(`[replay-domain-events] Found ${events.length} unprocessed events`);
 
     // Initialize process managers for this session
     const leadPM = initLeadProcessManager(supabase);
@@ -115,7 +118,7 @@ async function replayDomainEvents(): Promise<ReplayResult> {
           .eq("id", row.id);
 
         result.processed++;
-        console.log(`[replay-domain-events] ✓ Processed event ${row.event_id} (${row.event_type})`);
+        log.info(`[replay-domain-events] ✓ Processed event ${row.event_id} (${row.event_type})`);
       } catch (err) {
         result.failed++;
         const errorMsg = err instanceof Error ? err.message : String(err);
@@ -125,7 +128,7 @@ async function replayDomainEvents(): Promise<ReplayResult> {
           error: errorMsg,
         });
 
-        console.error(`[replay-domain-events] ✗ Failed to process event ${row.event_id}: ${errorMsg}`);
+        log.error(`[replay-domain-events] ✗ Failed to process event ${row.event_id}: ${errorMsg}`, null);
 
         // Do NOT mark as processed — let it retry on next run
         // Optionally log to error tracking
@@ -133,7 +136,7 @@ async function replayDomainEvents(): Promise<ReplayResult> {
     }
 
     result.summary = `Processed: ${result.processed}, Failed: ${result.failed}, Skipped: ${result.skipped}`;
-    console.log(`[replay-domain-events] Summary: ${result.summary}`);
+    log.info(`[replay-domain-events] Summary: ${result.summary}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     result.summary = `[FATAL] ${msg}`;
@@ -234,7 +237,7 @@ async function dispatchEvent(
 
     default:
       // Unknown event type — log but don't fail
-      console.warn(`[replay-domain-events] Unknown event type: ${eventType}`);
+      log.warn(`[replay-domain-events] Unknown event type: ${eventType}`);
       await eventBus.publish(event);
   }
 }
