@@ -71,17 +71,15 @@ Deno.serve(async (req) => {
     } else {
       rateData = { count: 1, window_start: now };
     }
-    await supabase
-      .from("app_settings")
-      .upsert(
-        {
-          user_id: user.id,
-          key: "linkedin_creds_rate",
-          value: JSON.stringify(rateData),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,key" },
-      );
+    await supabase.from("app_settings").upsert(
+      {
+        user_id: user.id,
+        key: "linkedin_creds_rate",
+        value: JSON.stringify(rateData),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,key" },
+    );
 
     // Fetch credentials scoped to authenticated user
     const { data, error } = await supabase

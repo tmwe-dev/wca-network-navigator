@@ -207,9 +207,9 @@ Deno.serve(async (req) => {
 
   try {
     const cors = getCorsHeaders(req.headers.get("origin"));
-  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
-  const auth = await requireInternalOrUser(req, null, cors);
-  if (auth.kind === "error") return auth.response;
+    // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+    const auth = await requireInternalOrUser(req, null, cors);
+    if (auth.kind === "error") return auth.response;
     const caller = await resolveCaller(req, cors);
     if (caller instanceof Response) {
       endMetrics(metrics, false, caller.status);

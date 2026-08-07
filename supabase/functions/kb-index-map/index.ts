@@ -71,7 +71,6 @@ Deno.serve(async (req) => {
   const auth = await requireInternalOrUser(req, null, cors);
   if (auth.kind === "error") return auth.response;
 
-
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 

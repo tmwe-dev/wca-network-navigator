@@ -82,7 +82,6 @@ Deno.serve(async (req) => {
   const auth = await requireInternalOrUser(req, null, dynCors);
   if (auth.kind === "error") return auth.response;
 
-
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {

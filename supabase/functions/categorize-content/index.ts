@@ -18,7 +18,6 @@ serve(async (req) => {
   const auth = await requireInternalOrUser(req, null, dynCors);
   if (auth.kind === "error") return auth.response;
 
-
   try {
     const { name, text, type } = await req.json();
     if (!name && !text) {

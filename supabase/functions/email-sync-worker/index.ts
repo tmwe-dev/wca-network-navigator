@@ -162,7 +162,9 @@ Deno.serve(async (req: Request) => {
           consecutiveErrors++;
           errorCount++;
           lastError = err.message;
-          log.warn(`[sync-worker] Job ${job.id} batch error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${err.message}`);
+          log.warn(
+            `[sync-worker] Job ${job.id} batch error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${err.message}`,
+          );
 
           if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
             await supabase

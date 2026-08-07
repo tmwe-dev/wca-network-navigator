@@ -115,7 +115,6 @@ serve(async (req) => {
   const auth = await requireInternalOrUser(req, null, corsHeaders);
   if (auth.kind === "error") return auth.response;
 
-
   try {
     const body = (await req.json()) as ReqBody;
     if (!body.company_name) {

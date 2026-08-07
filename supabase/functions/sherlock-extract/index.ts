@@ -101,9 +101,9 @@ async function buildCacheKey(body: ReqBody): Promise<string> {
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
-  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
-  const auth = await requireInternalOrUser(req, null, corsHeaders);
-  if (auth.kind === "error") return auth.response;
+    // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+    const auth = await requireInternalOrUser(req, null, corsHeaders);
+    if (auth.kind === "error") return auth.response;
     return new Response(null, { headers: corsHeaders });
   }
 

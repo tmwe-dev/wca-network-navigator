@@ -149,9 +149,9 @@ function openAiLimitMessage(error: AiGatewayError): string {
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
-  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
-  const auth = await requireInternalOrUser(req, null, corsHeaders);
-  if (auth.kind === "error") return auth.response;
+    // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+    const auth = await requireInternalOrUser(req, null, corsHeaders);
+    if (auth.kind === "error") return auth.response;
     return new Response("ok", { headers: corsHeaders });
   }
 
