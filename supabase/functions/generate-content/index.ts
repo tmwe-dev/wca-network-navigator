@@ -5,6 +5,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { forwardToFunction } from "../_shared/proxyUtils.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -12,6 +13,9 @@ serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, dynCors);
+  if (auth.kind === "error") return auth.response;
 
   // Auth check before forwarding
   const authHeader = req.headers.get("Authorization");

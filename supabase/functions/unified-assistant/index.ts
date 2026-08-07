@@ -9,6 +9,7 @@ import { forwardToFunction } from "../_shared/proxyUtils.ts";
 // jsonrepair: recupera JSON troncati o malformati nel content del modello
 // (causa tipica: cap max_tokens raggiunto durante l'ingestion Harmonizer).
 import { jsonrepair } from "https://esm.sh/jsonrepair@3.12.0";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 const VALID_SCOPES = new Set([
   "partner_hub",
@@ -29,6 +30,9 @@ serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, dynCors);
+  if (auth.kind === "error") return auth.response;
 
   // Auth check before forwarding
   const authHeader = req.headers.get("Authorization");

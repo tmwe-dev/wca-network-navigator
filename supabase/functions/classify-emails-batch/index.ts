@@ -13,6 +13,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 const BATCH_SIZE = 50;
 const LOOKBACK_HOURS = 24;
@@ -22,6 +23,9 @@ Deno.serve(async (req) => {
   if (pre) return pre;
 
   const corsH = getCorsHeaders(req.headers.get("origin"));
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, corsH);
+  if (auth.kind === "error") return auth.response;
   const headers = getSecurityHeaders(corsH);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";

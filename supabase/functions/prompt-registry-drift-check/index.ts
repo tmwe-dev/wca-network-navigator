@@ -15,6 +15,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { EDGE_FN_REGISTRY } from "../_shared/edgeFnPromptRegistry.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 interface DriftItem {
   edge_function: string;
@@ -29,6 +30,9 @@ Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
   const cors = getCorsHeaders(req.headers.get("origin"));
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, cors);
+  if (auth.kind === "error") return auth.response;
   const headers = getSecurityHeaders(cors);
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
