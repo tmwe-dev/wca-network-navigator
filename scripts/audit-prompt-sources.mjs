@@ -8,6 +8,10 @@
  * il marcatore `@fallback-of <tabella/riga>` nel commento IMMEDIATAMENTE
  * PRECEDENTE alla singola dichiarazione (non basta averlo altrove nel file).
  *
+ * Marcatori ammessi (sempre sulla singola dichiarazione):
+ *   @fallback-of <tabella/riga>   copia di emergenza di un prompt del DB
+ *   @runtime-prompt <motivo>      prompt composto a runtime, non archiviabile in DB
+ *
  * Riconosce prompt scritti come:
  *   const X_PROMPT = `...`            (template literal)
  *   const X_PROMPT = "..." + "..."    (stringa/concatenazione)
@@ -21,7 +25,7 @@ import path from "node:path";
 
 const ROOTS = ["src", "supabase/functions"];
 const BASELINE_FILE = path.resolve("scripts/.prompt-sources-baseline.json");
-const MARKER = /@fallback-of\s+\S+/;
+const MARKER = /@fallback-of\s+\S+|@runtime-prompt\s+\S+/;
 const MIN_LEN = 200; // solo blocchi realmente sostanziosi
 const LOOKBEHIND_LINES = 8;
 
