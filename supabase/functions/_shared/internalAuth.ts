@@ -5,6 +5,9 @@
  *  1. JWT utente valido (Authorization: Bearer <jwt>) → ritorna { kind: "user", userId, jwt }
  *  2. Token interno server-to-server (header `x-internal-token` === SUPABASE_SERVICE_ROLE_KEY)
  *     → ritorna { kind: "internal", userId: body.user_id ?? null }
+ *  3. `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` → ritorna { kind: "internal" }.
+ *     È il modo in cui pg_cron e le invocazioni edge→edge esistenti si firmano:
+ *     riconoscerlo evita di rompere gli scheduler quando si adotta il guard.
  *
  * Il service_role key è già un secret server-side mai esposto al client,
  * quindi non serve un secret addizionale: edge → edge possono firmarsi
@@ -52,6 +55,11 @@ export async function requireInternalOrUser(
   const jwt = authHeader.slice(7).trim();
   if (!jwt) {
     return { kind: "error", response: unauthorized(responseHeaders) };
+  }
+
+  // Path 3: service_role key nell'header Authorization (pg_cron / edge → edge legacy)
+  if (serviceKey && jwt === serviceKey) {
+    return { kind: "internal", userId: fallbackUserId ?? null };
   }
 
   try {
