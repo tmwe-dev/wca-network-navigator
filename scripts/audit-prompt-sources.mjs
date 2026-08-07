@@ -27,7 +27,7 @@ const ROOTS = ["src", "supabase/functions"];
 const BASELINE_FILE = path.resolve("scripts/.prompt-sources-baseline.json");
 const MARKER = /@fallback-of\s+\S+|@runtime-prompt\s+\S+/;
 const MIN_LEN = 200; // solo blocchi realmente sostanziosi
-const LOOKBEHIND_LINES = 8;
+const LOOKBEHIND_LINES = 12;
 
 // nomi (costanti o proprietà) che indicano un prompt / istruzione di sistema
 const NAME_RE = /(prompt|system_message|systemmessage|doctrine|persona|instructions)/i;
