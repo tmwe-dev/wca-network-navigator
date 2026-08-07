@@ -20,7 +20,7 @@ const DIR = path.resolve("supabase/functions");
 // Baseline misurato il 2026-08-06. Abbassare SOLO dopo aver uniformato funzioni.
 const BASELINE = {
   cors: 0,
-  auth: 95,
+  auth: 58,
   error: 132,
   logging: 139,
 };
