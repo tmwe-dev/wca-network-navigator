@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("sync-business-cards");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -55,7 +58,7 @@ Deno.serve(async (req) => {
         .range(page * pageSize, (page + 1) * pageSize - 1);
 
       if (batchErr) {
-        console.error("Error fetching external cards:", batchErr);
+        log.error("Error fetching external cards:", batchErr);
         return new Response(JSON.stringify({ success: false, error: batchErr.message }), {
           status: 500,
           headers: { ...dynCors, "Content-Type": "application/json" },
@@ -128,7 +131,7 @@ Deno.serve(async (req) => {
       if (toUpdate.length > 0) {
         const { error: updateErr } = await localSb.from("business_cards").upsert(toUpdate, { onConflict: "id" });
         if (updateErr) {
-          console.error(`Batch ${i} update error:`, updateErr);
+          log.error(`Batch ${i} update error:`, updateErr);
         } else {
           upserted += toUpdate.length;
         }
@@ -144,7 +147,7 @@ Deno.serve(async (req) => {
         if (newInserts.length > 0) {
           const { error: insertErr } = await localSb.from("business_cards").insert(newInserts);
           if (insertErr) {
-            console.error(`Batch ${i} insert error:`, insertErr);
+            log.error(`Batch ${i} insert error:`, insertErr);
           } else {
             upserted += newInserts.length;
             newInserts.forEach((b: Record<string, unknown>) => {
@@ -161,7 +164,7 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Sync error:", error);
+    log.error("Sync error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },

@@ -11,6 +11,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getCaCertsForHost } from "./caCerts.ts";
 import { assertOperatorOwned, assertAllMessagesOwned } from "../_shared/ownership.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("apply-email-rules");
 
 interface RuleRow {
   id: string;
@@ -416,7 +419,7 @@ Deno.serve(async (req) => {
       { headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (e: unknown) {
-    console.error("[apply-email-rules] error:", e);
+    log.error("[apply-email-rules] error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...cors, "Content-Type": "application/json" },

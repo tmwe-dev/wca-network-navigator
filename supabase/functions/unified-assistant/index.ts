@@ -9,6 +9,10 @@ import { forwardToFunction } from "../_shared/proxyUtils.ts";
 // jsonrepair: recupera JSON troncati o malformati nel content del modello
 // (causa tipica: cap max_tokens raggiunto durante l'ingestion Harmonizer).
 import { jsonrepair } from "https://esm.sh/jsonrepair@3.12.0";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("unified-assistant");
 
 const VALID_SCOPES = new Set([
   "partner_hub",
@@ -29,6 +33,9 @@ serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, dynCors);
+  if (auth.kind === "error") return auth.response;
 
   // Auth check before forwarding
   const authHeader = req.headers.get("Authorization");
@@ -99,7 +106,7 @@ serve(async (req) => {
               // Fallback: prova a riparare JSON troncato/malformato
               try {
                 parsed = JSON.parse(jsonrepair(raw));
-                console.warn("kb-supervisor: JSON recuperato via jsonrepair");
+                log.warn("kb-supervisor: JSON recuperato via jsonrepair");
               } catch (repairErr) {
                 console.warn("kb-supervisor: failed to parse/repair inline JSON block:", repairErr);
               }
@@ -122,7 +129,7 @@ serve(async (req) => {
 
     return upstream;
   } catch (e: unknown) {
-    console.error("unified-assistant error:", e instanceof Error ? e.message : String(e));
+    log.error("unified-assistant error:", e instanceof Error ? e.message : String(e));
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

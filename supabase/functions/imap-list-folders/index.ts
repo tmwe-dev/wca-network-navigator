@@ -2,11 +2,14 @@ import { ImapClient } from "jsr:@workingdevshero/deno-imap";
 import { getCaCertsForHost } from "./caCerts.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 type DebugGlobal = typeof globalThis & { __lastDebug?: Record<string, unknown> };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const auth = await requireInternalOrUser(req, null, corsHeaders);
+  if (auth.kind === "error") return auth.response;
   try {
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const which = (body.mailbox as string) || "booking";

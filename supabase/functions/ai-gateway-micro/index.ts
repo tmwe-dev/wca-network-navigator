@@ -12,6 +12,9 @@ import { z } from "https://esm.sh/zod@3.23.8";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("ai-gateway-micro");
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
@@ -135,7 +138,7 @@ Deno.serve(async (req) => {
       const status = statusMap[err.kind] ?? 502;
       return jsonResponse({ error: err.kind, message: err.message }, status, origin);
     }
-    console.error("[ai-gateway-micro] exception", err);
+    log.error("[ai-gateway-micro] exception", err);
     return jsonResponse(
       { error: "internal_error", message: err instanceof Error ? err.message : "unknown" },
       500,

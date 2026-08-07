@@ -26,6 +26,7 @@ import {
   runTriageAndAlert,
 } from "./stages/stageContentAndContext.ts";
 import { createTracer } from "../_shared/pipelineTrace.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -33,6 +34,9 @@ Deno.serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const corsH = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, corsH);
+  if (auth.kind === "error") return auth.response;
   const headers = getSecurityHeaders(corsH);
   const metrics = startMetrics("classify-inbound-message");
 

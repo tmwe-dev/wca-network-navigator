@@ -3,6 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("mission-executor");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -80,7 +83,7 @@ serve(async (req) => {
           p_success: false,
           p_error: "Action not found after acquisition",
         })
-        .catch((e) => console.error("[mission-executor] Failed to release slot after action not found:", e));
+        .catch((e) => log.error("[mission-executor] Failed to release slot after action not found:", e));
       return json({ error: "Action not found" }, 500);
     }
 
@@ -128,7 +131,7 @@ serve(async (req) => {
     } catch (e: unknown) {
       success = false;
       error = e instanceof Error ? e.message : "Unknown execution error";
-      console.error("[mission-executor] Execution failed:", e);
+      log.error("[mission-executor] Execution failed:", e);
     } finally {
       // Always release slot, even on crash
       if (slotAcquired) {
@@ -138,7 +141,7 @@ serve(async (req) => {
             p_success: success,
             p_error: error,
           })
-          .catch((e) => console.error("[mission-executor] Failed to release slot:", e));
+          .catch((e) => log.error("[mission-executor] Failed to release slot:", e));
       }
     }
 
@@ -179,7 +182,7 @@ serve(async (req) => {
       progress: snapshot,
     });
   } catch (e: unknown) {
-    console.error("mission-executor error:", e);
+    log.error("mission-executor error:", e);
     return json({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
   }
 });

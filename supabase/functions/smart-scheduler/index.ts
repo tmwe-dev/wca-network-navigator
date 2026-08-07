@@ -7,6 +7,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("smart-scheduler");
 
 Deno.serve(async (req) => {
   const dynCors = getCorsHeaders(req.headers.get("origin"));
@@ -153,7 +156,7 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[smart-scheduler] Error:", err);
+    log.error("[smart-scheduler] Error:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

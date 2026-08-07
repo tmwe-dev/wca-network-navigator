@@ -12,6 +12,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
@@ -51,6 +52,12 @@ Deno.serve(async (req) => {
   if (pre) return pre;
   const headers = getSecurityHeaders(getCorsHeaders(req.headers.get("origin")));
   const metrics = startMetrics("refresh-conversation-context");
+
+  const auth = await requireInternalOrUser(req, null, headers);
+  if (auth.kind === "error") {
+    endMetrics(metrics, false, 401);
+    return auth.response;
+  }
 
   try {
     const body: ReqBody = await req.json();

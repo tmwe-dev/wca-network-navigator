@@ -20,6 +20,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("funnemail-send-autoresponder");
 
 const BodySchema = z.object({
   source_message_id: z.string().uuid(),
@@ -46,6 +50,9 @@ Deno.serve(async (req) => {
   if (pre) return pre;
   const origin = req.headers.get("origin");
   const cors = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, cors);
+  if (auth.kind === "error") return auth.response;
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -143,7 +150,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (logErr) {
-      console.error("[autoresponder] log insert failed", logErr);
+      log.error("[autoresponder] log insert failed", logErr);
     }
 
     return new Response(

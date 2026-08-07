@@ -16,6 +16,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
@@ -94,6 +95,8 @@ Deno.serve(async (req) => {
     if (!authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
     }
+    const auth = await requireInternalOrUser(req, null, headers);
+    if (auth.kind === "error") return auth.response;
     const userClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false },

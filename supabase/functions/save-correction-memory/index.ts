@@ -6,6 +6,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("save-correction-memory");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -100,7 +103,7 @@ serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    console.error("save-correction-memory error:", extractErrorMessage(e));
+    log.error("save-correction-memory error:", extractErrorMessage(e));
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e), 500, dynCors);
   }
 });

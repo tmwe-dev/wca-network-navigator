@@ -2,6 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { decryptValue } from "../_shared/linkedinCrypto.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("get-linkedin-credentials");
 
 interface AppSettingRow {
   key: string;
@@ -68,17 +71,15 @@ Deno.serve(async (req) => {
     } else {
       rateData = { count: 1, window_start: now };
     }
-    await supabase
-      .from("app_settings")
-      .upsert(
-        {
-          user_id: user.id,
-          key: "linkedin_creds_rate",
-          value: JSON.stringify(rateData),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,key" },
-      );
+    await supabase.from("app_settings").upsert(
+      {
+        user_id: user.id,
+        key: "linkedin_creds_rate",
+        value: JSON.stringify(rateData),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,key" },
+    );
 
     // Fetch credentials scoped to authenticated user
     const { data, error } = await supabase
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (e: unknown) {
-    console.error("get-linkedin-credentials error:", e);
+    log.error("get-linkedin-credentials error:", e);
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }
 });

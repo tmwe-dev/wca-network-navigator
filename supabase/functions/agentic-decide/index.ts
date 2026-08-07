@@ -30,6 +30,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("agentic-decide");
 
 const DecideSchema = z.object({
   stop: z.boolean().default(false),
@@ -107,6 +111,9 @@ const SCHEMA = {
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, corsHeaders);
+  if (auth.kind === "error") return auth.response;
 
   try {
     const body = (await req.json()) as ReqBody;
@@ -197,7 +204,7 @@ serve(async (req) => {
     const aiJson = await aiRes.json();
     const argsStr = aiJson?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     if (!argsStr) {
-      console.error("No tool call", JSON.stringify(aiJson).slice(0, 500));
+      log.error("No tool call", JSON.stringify(aiJson).slice(0, 500));
       return new Response(JSON.stringify({ stop: true, reason: "AI non ha risposto", next_actions: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -208,13 +215,13 @@ serve(async (req) => {
       fallback: DECIDE_FALLBACK,
     });
     if (isFallback) {
-      console.warn("[agentic-decide] schema fallback triggered, stopping investigation");
+      log.warn("[agentic-decide] schema fallback triggered, stopping investigation");
     }
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("agentic-decide error", e);
+    log.error("agentic-decide error", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

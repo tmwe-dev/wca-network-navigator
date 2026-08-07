@@ -6,6 +6,9 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("suggest-email-groups");
 
 const ClassificationsSchema = z.object({
   classifications: z
@@ -379,7 +382,7 @@ serve(async (req) => {
         reasoning: c.reasoning,
       }));
       if (r.isFallback) {
-        console.warn("[suggest-email-groups] schema fallback → empty classifications");
+        log.warn("[suggest-email-groups] schema fallback → empty classifications");
       }
     }
 
@@ -406,7 +409,7 @@ serve(async (req) => {
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    console.error("suggest-email-groups error:", e);
+    log.error("suggest-email-groups error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

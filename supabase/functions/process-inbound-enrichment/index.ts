@@ -15,6 +15,7 @@ import { callLLM } from "../_shared/callLLM.ts";
 import { safeParseAiJson } from "../_shared/aiJsonValidator.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 const BATCH_SIZE = 5;
 const MAX_ATTEMPTS = 3;
@@ -44,6 +45,9 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const cors = getCorsHeaders(origin);
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, cors);
+  if (auth.kind === "error") return auth.response;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

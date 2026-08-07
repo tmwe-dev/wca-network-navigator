@@ -3,6 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { checkDailyBudget, recordUsage, budgetExceededResponse } from "../_shared/costGuardrail.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("tts");
 
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY")!;
 const DEFAULT_VOICE_ID_IT = "JBFqnCBsd6RMkjVDRZzb";
@@ -87,7 +90,7 @@ serve(async (req) => {
 
     if (!res.ok) {
       const err = await res.text();
-      console.error("[tts] ElevenLabs error:", err);
+      log.error("[tts] ElevenLabs error:", err);
       return new Response(JSON.stringify({ error: err }), {
         status: res.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -107,7 +110,7 @@ serve(async (req) => {
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "tts failed";
-    console.error("[tts] error:", msg);
+    log.error("[tts] error:", msg);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

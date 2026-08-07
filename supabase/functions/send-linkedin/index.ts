@@ -16,6 +16,9 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadLinkedInSettings } from "../_shared/linkedinSettings.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("send-linkedin");
 
 Deno.serve(async (req) => {
   const preflight = corsPreflight(req);
@@ -64,7 +67,7 @@ Deno.serve(async (req) => {
       .gte("created_at", todayStart);
 
     if (queryErr) {
-      console.error("[send-linkedin] Daily limit query error:", queryErr);
+      log.error("[send-linkedin] Daily limit query error:", queryErr);
       return new Response(JSON.stringify({ error: "internal_error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -73,7 +76,7 @@ Deno.serve(async (req) => {
 
     const dailyCount = todayMessages?.length || 0;
     if (dailyCount >= liSettings.dailyLimit) {
-      console.warn(`[send-linkedin] DAILY LIMIT exceeded for user ${user.id}: ${dailyCount}/${liSettings.dailyLimit}`);
+      log.warn(`[send-linkedin] DAILY LIMIT exceeded for user ${user.id}: ${dailyCount}/${liSettings.dailyLimit}`);
       return new Response(
         JSON.stringify({
           error: "daily_limit_exceeded",
@@ -231,7 +234,7 @@ Deno.serve(async (req) => {
 
       // Block send if journalist review verdict is "block"
       if (reviewResult.verdict === "block") {
-        console.warn(`[send-linkedin] BLOCKED by journalist review: ${reviewResult.reasoning_summary}`);
+        log.warn(`[send-linkedin] BLOCKED by journalist review: ${reviewResult.reasoning_summary}`);
         return new Response(
           JSON.stringify({
             success: false,
@@ -269,7 +272,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertErr) {
-      console.error("Queue insert error:", insertErr);
+      log.error("Queue insert error:", insertErr);
       return new Response(JSON.stringify({ error: "queue_failed", detail: insertErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -316,7 +319,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (err: unknown) {
-    console.error("[send-linkedin] Error:", err);
+    log.error("[send-linkedin] Error:", err);
     return new Response(JSON.stringify({ error: "internal_error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -26,6 +26,9 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { sanitizeForPrompt, summarizeFindings } from "../_shared/promptSanitizer.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("prompt-test-runner");
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -514,7 +517,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("prompt-test-runner error:", e);
+    log.error("prompt-test-runner error:", e);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

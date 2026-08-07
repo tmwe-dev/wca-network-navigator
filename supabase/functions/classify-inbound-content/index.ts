@@ -24,6 +24,7 @@ import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { loadConversationSummary } from "../_shared/conversationSummaryLoader.ts";
 import { resolveCaller, assertMessageOwned } from "../_shared/ownership.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 interface RequestBody {
   message_id: string;
@@ -206,6 +207,9 @@ Deno.serve(async (req) => {
 
   try {
     const cors = getCorsHeaders(req.headers.get("origin"));
+    // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+    const auth = await requireInternalOrUser(req, null, cors);
+    if (auth.kind === "error") return auth.response;
     const caller = await resolveCaller(req, cors);
     if (caller instanceof Response) {
       endMetrics(metrics, false, caller.status);

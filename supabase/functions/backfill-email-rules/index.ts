@@ -22,6 +22,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getCaCertsForHost } from "./caCerts.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("backfill-email-rules");
 
 const DEFAULT_BACKFILL_CAP = 5000;
 const MAX_ADDRESSES_PER_CALL = 20;
@@ -447,7 +450,7 @@ Deno.serve(async (req) => {
       { headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (e: unknown) {
-    console.error("[backfill-email-rules] error:", e);
+    log.error("[backfill-email-rules] error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...cors, "Content-Type": "application/json" },

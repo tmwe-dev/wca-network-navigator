@@ -4,6 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("generate-aliases");
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;
@@ -75,7 +78,7 @@ serve(async (req) => {
     if (!countryCodes?.length) throw new Error("countryCodes, partnerIds, or contactIds required");
     return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes, systemPrompt);
   } catch (e: unknown) {
-    console.error("generate-aliases error:", e);
+    log.error("generate-aliases error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },
@@ -139,7 +142,7 @@ async function callAI(apiKey: string, items: Array<Record<string, unknown>>, sys
   const aiResult = await response.json();
   const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall?.function?.arguments) {
-    console.error("No tool call in response:", JSON.stringify(aiResult));
+    log.error("No tool call in response:", JSON.stringify(aiResult));
     return [];
   }
   const { aliases } = JSON.parse(toolCall.function.arguments);
@@ -334,7 +337,7 @@ async function processPartners(
     const aiResult = await response.json();
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
-      console.error("No tool call in response:", JSON.stringify(aiResult));
+      log.error("No tool call in response:", JSON.stringify(aiResult));
       continue;
     }
 

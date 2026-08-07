@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { resolveCaller } from "../_shared/ownership.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 const VALID_SERVICES = [
   "air_freight",
@@ -77,6 +78,9 @@ Deno.serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, dynCors);
+  if (auth.kind === "error") return auth.response;
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

@@ -4,6 +4,9 @@ import { setDynCors, jsonResponse } from "./response.ts";
 import { resolveMailbox } from "../_shared/resolveMailbox.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { handleVerify, handleTest, handleFetch, handleSendEmail } from "./handlers.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("email-imap-proxy");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -65,7 +68,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "Endpoint non trovato" }, 404);
     }
   } catch (err: unknown) {
-    console.error("[email-imap-proxy] Error:", err);
+    log.error("[email-imap-proxy] Error:", err);
     return jsonResponse({ error: err instanceof Error ? err.message : "Errore interno" }, 500);
   }
 });

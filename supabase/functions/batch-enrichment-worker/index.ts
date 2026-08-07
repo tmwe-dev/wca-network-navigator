@@ -12,6 +12,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
+import { buildInternalAuthHeaders } from "../_shared/internalAuth.ts";
 
 // Audit Sez.1 — F: batch + sleep adattivo per migliorare throughput cron.
 const BATCH_SIZE = 8;
@@ -110,6 +111,9 @@ Deno.serve(async (req: Request) => {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${anonKey}`, // no user JWT → bypassa BYOK/credit check
+            // Chiamata server-to-server: il guard condiviso di enrich-partner-website
+            // riconosce questo header e non richiede un JWT utente.
+            ...buildInternalAuthHeaders(),
           },
           body: JSON.stringify({ partnerId: partner.id }),
         });

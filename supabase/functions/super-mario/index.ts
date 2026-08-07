@@ -27,6 +27,7 @@ import { postflightAudit } from "./postflightAudit.ts";
 import { applyHardGuards } from "./hardGuards.ts";
 import { logInvocation } from "./auditLogger.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -46,6 +47,9 @@ Deno.serve(async (req) => {
   const preflight = corsPreflight(req);
   if (preflight) return preflight;
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, corsHeaders);
+  if (auth.kind === "error") return auth.response;
 
   const t0 = Date.now();
   const traceId = crypto.randomUUID();

@@ -8,6 +8,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("optimus-analyze");
 
 interface AnalyzeInput {
   channel: "whatsapp" | "linkedin";
@@ -391,7 +394,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (upErr) {
-      console.error("[optimus-analyze] upsert error", upErr);
+      log.error("[optimus-analyze] upsert error", upErr);
     }
 
     await supabase.from("scraper_agent_log").insert({
@@ -421,7 +424,7 @@ Deno.serve(async (req) => {
       { status: 200, headers },
     );
   } catch (e) {
-    console.error("[optimus-analyze] fatal", e);
+    log.error("[optimus-analyze] fatal", e);
     const message = e instanceof Error ? e.message : String(e);
     return new Response(JSON.stringify({ error: "INTERNAL_ERROR", message }), { status: 500, headers });
   }

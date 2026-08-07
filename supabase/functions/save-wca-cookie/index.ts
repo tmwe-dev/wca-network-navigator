@@ -2,6 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("save-wca-cookie");
 
 /**
  * Save WCA cookie to app_settings.
@@ -85,7 +88,7 @@ Deno.serve(async (req) => {
       message,
     });
   } catch (error) {
-    console.error("save-wca-cookie error:", error);
+    log.error("save-wca-cookie error:", error);
     return respond(
       { success: false, message: "Errore: " + (error instanceof Error ? error.message : "Sconosciuto") },
       500,

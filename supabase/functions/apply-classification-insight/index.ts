@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("apply-classification-insight");
 
 /**
  * Applica un'insight approvata: append dell'hint al gruppo bersaglio
@@ -119,7 +122,7 @@ serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("[apply-classification-insight] fatal", e);
+    log.error("[apply-classification-insight] fatal", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

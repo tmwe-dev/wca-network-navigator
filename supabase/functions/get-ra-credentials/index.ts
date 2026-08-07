@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("get-ra-credentials");
 
 interface AppSettingRow {
   key: string;
@@ -65,7 +68,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (e: unknown) {
-    console.error("get-ra-credentials error:", e);
+    log.error("get-ra-credentials error:", e);
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
   }
 });

@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("sync-wca-partners");
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
@@ -242,7 +245,7 @@ Deno.serve(async (req) => {
       },
     });
   } catch (error) {
-    console.error("Sync error:", error);
+    log.error("Sync error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

@@ -20,6 +20,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 interface ReminderRow {
   id: string;
@@ -60,6 +61,9 @@ Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
   const cors = getCorsHeaders(req.headers.get("origin"));
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, cors);
+  if (auth.kind === "error") return auth.response;
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";

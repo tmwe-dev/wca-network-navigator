@@ -26,6 +26,9 @@ import { buildContextBlock, buildLearningBlock, buildMissionBlock } from "./cont
 import { loadAgentPersona, assembleSystemPrompt } from "./systemPrompt.ts";
 import { executeChatMode } from "./chatMode.ts";
 import { handleStateTransition, handleGeneralTask } from "./taskMode.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("agent-execute");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -166,7 +169,7 @@ serve(async (req) => {
           headers: { ...dynCors, "Content-Type": "application/json" },
         });
       } catch (taskErr) {
-        console.error("Task execution error:", taskErr);
+        log.error("Task execution error:", taskErr);
         endMetrics(metrics, false, 500);
         return new Response(
           JSON.stringify({
@@ -189,7 +192,7 @@ serve(async (req) => {
   } catch (err) {
     logEdgeError("agent-execute", err);
     endMetrics(metrics, false, 500);
-    console.error("agent-execute error:", err);
+    log.error("agent-execute error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore interno" }), {
       status: 500,
       headers: {

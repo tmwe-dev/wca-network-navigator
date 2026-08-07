@@ -12,6 +12,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 interface BatchResult {
   processed: number;
@@ -27,6 +28,9 @@ Deno.serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, dynCors);
+  if (auth.kind === "error") return auth.response;
 
   try {
     if (req.method !== "POST") {

@@ -8,6 +8,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseAiJson } from "../_shared/aiJsonValidator.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("agent-prompt-refiner");
 
 const RefinerSchema = z.object({
   has_suggestions: z.boolean(),
@@ -134,7 +137,7 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
         });
 
         if (!aiResponse.ok) {
-          console.error(`AI call failed for agent ${agent.name}:`, aiResponse.status);
+          log.error(`AI call failed for agent ${agent.name}:`, aiResponse.status);
           continue;
         }
 
@@ -147,7 +150,7 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
           fallback: REFINER_FALLBACK,
         });
         if (isFallback) {
-          console.warn(`[agent-prompt-refiner] schema fallback for agent=${agent.name} → skipping`);
+          log.warn(`[agent-prompt-refiner] schema fallback for agent=${agent.name} → skipping`);
           continue;
         }
 
@@ -178,7 +181,7 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
           processedCount++;
         }
       } catch (e: unknown) {
-        console.error(`Failed to process agent ${agent.name}:`, e instanceof Error ? e.message : String(e));
+        log.error(`Failed to process agent ${agent.name}:`, e instanceof Error ? e.message : String(e));
       }
     }
 
@@ -187,7 +190,7 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    console.error("agent-prompt-refiner error:", e);
+    log.error("agent-prompt-refiner error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

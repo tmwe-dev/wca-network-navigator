@@ -14,6 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { calculatePartnerQuality, savePartnerQuality } from "../_shared/partnerQualityScore.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 Deno.serve(async (req) => {
   // Handle CORS
@@ -22,6 +23,9 @@ Deno.serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, dynCors);
+  if (auth.kind === "error") return auth.response;
 
   try {
     const { partnerId, batch } = await req.json();

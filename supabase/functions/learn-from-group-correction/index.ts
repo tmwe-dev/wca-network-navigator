@@ -4,6 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("learn-from-group-correction");
 
 /**
  * learn-from-group-correction
@@ -221,7 +224,7 @@ Subject di riferimento: ${senderSubjects.slice(0, 3).join(" | ") || "N/A"}.`;
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("learn-from-group-correction error:", e);
+    log.error("learn-from-group-correction error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

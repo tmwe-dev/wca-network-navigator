@@ -4,6 +4,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { swallowedError } from "../_shared/swallowedError.ts";
 import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 // LOVABLE-75 — LEGACY
 // Questa funzione è mantenuta solo per useAcquisitionPipeline.
@@ -32,6 +33,9 @@ Deno.serve(async (req) => {
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, dynCors);
+  if (auth.kind === "error") return auth.response;
 
   try {
     const { partnerId, markdown: preScrapedMarkdown, sourceUrl: preScrapedUrl } = await req.json();

@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("email-sync-worker");
 
 /**
  * Email Sync Worker — server-side autonomous email download.
@@ -159,7 +162,7 @@ Deno.serve(async (req: Request) => {
           consecutiveErrors++;
           errorCount++;
           lastError = err.message;
-          console.warn(
+          log.warn(
             `[sync-worker] Job ${job.id} batch error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${err.message}`,
           );
 
@@ -175,7 +178,7 @@ Deno.serve(async (req: Request) => {
               })
               .eq("id", job.id);
 
-            console.error(`[sync-worker] Job ${job.id} failed after ${MAX_CONSECUTIVE_ERRORS} consecutive errors`);
+            log.error(`[sync-worker] Job ${job.id} failed after ${MAX_CONSECUTIVE_ERRORS} consecutive errors`, null);
             break;
           }
 
@@ -206,7 +209,7 @@ Deno.serve(async (req: Request) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err: Record<string, unknown>) {
-    console.error("[sync-worker] Fatal error:", err.message);
+    log.error("[sync-worker] Fatal error:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

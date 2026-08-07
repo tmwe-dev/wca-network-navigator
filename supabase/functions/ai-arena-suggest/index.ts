@@ -8,6 +8,9 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { detectRecipientLanguage } from "../_shared/languageDetector.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("ai-arena-suggest");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -218,7 +221,7 @@ serve(async (req) => {
       batch_size: batchSize,
     });
   } catch (e: unknown) {
-    console.error("ai-arena-suggest error:", e);
+    log.error("ai-arena-suggest error:", e);
     return edgeError(extractErrorMessage(e), 500, cors);
   }
 });

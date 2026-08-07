@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 /**
  * ai-tracking-healthcheck — Verifica copertura tracking AI cost.
@@ -62,6 +63,9 @@ serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
   const cors = getCorsHeaders(req);
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, cors);
+  if (auth.kind === "error") return auth.response;
 
   try {
     const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {

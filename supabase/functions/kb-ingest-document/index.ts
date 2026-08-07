@@ -22,6 +22,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { embedBatch } from "../_shared/embeddings.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("kb-ingest-document");
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
 const CHUNK_SIZE = 1000;
@@ -205,7 +208,7 @@ serve(async (req) => {
       const batch = rows.slice(i, i + 10);
       const { data, error } = await adminClient.from("kb_entries").insert(batch).select("id");
       if (error) {
-        console.error("kb_entries insert error", error);
+        log.error("kb_entries insert error", error);
         return json({ error: "insert_failed", message: error.message, inserted_so_far: insertedIds.length }, 500);
       }
       insertedIds.push(...(data || []).map((r) => r.id as string));
@@ -219,7 +222,7 @@ serve(async (req) => {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("kb-ingest-document fatal:", msg);
+    log.error("kb-ingest-document fatal:", msg);
     return json({ error: "server_error", message: msg }, 500);
   }
 });

@@ -19,15 +19,30 @@ const DIR = path.resolve("supabase/functions");
 
 // Baseline misurato il 2026-08-06. Abbassare SOLO dopo aver uniformato funzioni.
 const BASELINE = {
-  cors: 1,
-  auth: 95,
+  cors: 0,
+  auth: 0,
+  authInline: 50,
   error: 132,
-  logging: 139,
+  logging: 66,
 };
 
 // Funzioni server-to-server / redirect OAuth: non servite al browser,
 // quindi l'assenza di CORS è corretta e non conta come violazione.
-const NO_CORS_NEEDED = new Set(["mcp", "replay-domain-events", "tmwe-oauth-callback"]);
+const NO_CORS_NEEDED = new Set(["mcp", "replay-domain-events", "tmwe-oauth-callback", "record-e2e-run"]);
+
+// Funzioni pubbliche per contratto o autenticate da un secret condiviso
+// (webhook firmati, callback OAuth, healthcheck, job server-to-server):
+// non devono richiedere un JWT utente.
+const AUTH_EXEMPT = new Set([
+  "health-check", // liveness probe pubblica
+  "mcp", // resource server: valida il bearer OAuth per richiesta
+  "tmwe-oauth-callback", // redirect OAuth provider
+  "record-e2e-run", // job CI server-to-server (service role)
+  "email-delivery-webhook", // webhook provider, autenticato da secret
+  "dispatch-integrity-check", // cron server-to-server (service role)
+  "install-vault-service-role-key", // bootstrap one-shot (service role)
+  "agent-prompt-refiner", // job interno (service role)
+]);
 
 function readFn(name) {
   const entry = path.join(DIR, name, "index.ts");
@@ -48,7 +63,7 @@ const names = fs
   .map((d) => d.name)
   .sort();
 
-const offenders = { cors: [], auth: [], error: [], logging: [] };
+const offenders = { cors: [], auth: [], authInline: [], error: [], logging: [] };
 
 for (const name of names) {
   const src = readFn(name);
@@ -61,7 +76,13 @@ for (const name of names) {
     /_shared\/(authGuard|internalAuth|cronGuard|cronGate|extensionAuth|mailboxAccessGuard)|authenticateRequest|requireAuth/.test(
       src,
     );
-  if (!hasAuth) offenders.auth.push(name);
+  // Verifica inline (getClaims/getUser nel file) = sicura ma non ancora
+  // uniformata sul guard condiviso: contatore separato, da far scendere.
+  const hasInlineAuth = /auth\.getClaims\(|auth\.getUser\(/.test(src);
+  if (!hasAuth && !AUTH_EXEMPT.has(name)) {
+    if (hasInlineAuth) offenders.authInline.push(name);
+    else offenders.auth.push(name);
+  }
 
   const hasError = /handleEdgeError/.test(src);
   if (!hasError) offenders.error.push(name);
@@ -72,7 +93,8 @@ for (const name of names) {
 
 const LABELS = {
   cors: "CORS condiviso",
-  auth: "Auth guard condiviso",
+  auth: "Auth assente (bloccante)",
+  authInline: "Auth inline da migrare",
   error: "Contratto errore (handleEdgeError)",
   logging: "Logger strutturato",
 };

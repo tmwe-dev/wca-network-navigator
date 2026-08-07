@@ -17,6 +17,9 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { getCaCertsForHost } from "./caCerts.ts";
 import { resolveMailbox, MailboxNotConfiguredError } from "../_shared/resolveMailbox.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("manage-email-folders");
 
 /**
  * manage-email-folders — IMAP folder operations (move, archive, spam, list)
@@ -301,7 +304,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(result), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
-    console.error("manage-email-folders error:", e);
+    log.error("manage-email-folders error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

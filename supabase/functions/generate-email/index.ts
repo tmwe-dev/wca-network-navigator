@@ -23,6 +23,9 @@ import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("generate-email");
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -460,7 +463,7 @@ serve(async (req) => {
         groundingWarnings.push(...postReviewGrounding.warnings);
       }
     } catch (jerr) {
-      console.error("[generate-email] journalistReview failed:", jerr);
+      log.error("[generate-email] journalistReview failed:", jerr);
       const fallbackGrounding = guardGeneratedEmailGrounding({
         subject: finalSubject,
         body: finalBody,
@@ -588,7 +591,7 @@ serve(async (req) => {
   } catch (e: unknown) {
     logEdgeError("generate-email", e);
     endMetrics(metrics, false, 500);
-    console.error("generate-email error:", e);
+    log.error("generate-email error:", e);
     return mapErrorToResponse(e, getCorsHeaders(req.headers.get("origin")));
   }
 });
