@@ -10,6 +10,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 
 interface Body {
