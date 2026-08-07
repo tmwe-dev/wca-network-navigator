@@ -94,6 +94,8 @@ Deno.serve(async (req) => {
     if (!authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
     }
+    const auth = await requireInternalOrUser(req, null, headers);
+    if (auth.kind === "error") return auth.response;
     const userClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false },
