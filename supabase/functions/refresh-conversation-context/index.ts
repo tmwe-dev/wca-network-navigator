@@ -52,6 +52,12 @@ Deno.serve(async (req) => {
   const headers = getSecurityHeaders(getCorsHeaders(req.headers.get("origin")));
   const metrics = startMetrics("refresh-conversation-context");
 
+  const auth = await requireInternalOrUser(req, null, headers);
+  if (auth.kind === "error") {
+    endMetrics(metrics, false, 401);
+    return auth.response;
+  }
+
   try {
     const body: ReqBody = await req.json();
     if (!body.user_id || (!body.partner_id && !body.email_address)) {
