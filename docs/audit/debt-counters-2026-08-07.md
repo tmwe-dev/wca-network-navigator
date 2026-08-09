@@ -7,8 +7,8 @@ Gate: `node scripts/audit-edge-contract.mjs` (ratchet, blocca le regressioni).
 | CORS condiviso | 0 | 0 |
 | Auth assente (bloccante) | 41 | **0** |
 | Auth inline da migrare | 54 | 50 |
-| Contratto errore (handleEdgeError) | 132 | 132 |
-| Logger strutturato | 139 | **66** |
+| Contratto errore (handleEdgeError) | 132 | **54** |
+| Logger strutturato | 139 | **0** |
 
 ## Cosa è cambiato
 - 41 funzioni senza alcuna verifica auth ora usano `requireInternalOrUser` (`_shared/internalAuth.ts`).
@@ -20,7 +20,15 @@ Gate: `node scripts/audit-edge-contract.mjs` (ratchet, blocca le regressioni).
   `dispatch-integrity-check`, `install-vault-service-role-key`, `agent-prompt-refiner`).
 - 73 funzioni migrate a `createLogger` (`_shared/structuredLogger.ts`).
 
+## Lotto 2026-08-09
+- Logger: 13 funzioni con `console.*` grezzo migrate a `createLogger`; la regola
+  ora considera conforme una funzione che **non emette `console.*`** anche senza logger
+  (niente logger inutilizzati aggiunti solo per il contatore). Contatore: 66 → 0.
+- Contratto errore: 78 funzioni migrate a `edgeErrorWithStatus`
+  (`_shared/handleEdgeError.ts`) con **status HTTP invariato** e body additivo
+  (`{ error, code }`): nessuna rottura per i consumer esistenti. Contatore: 132 → 54.
+- Verifica: parse esbuild su tutte le 149 `index.ts`, typecheck, prettier, 3154 test verdi.
+
 ## Prossimi lotti
-1. Logger: restanti 66.
-2. `handleEdgeError`: 132.
-3. Auth inline → guard condiviso: 50.
+1. `handleEdgeError`: restanti 54 (pattern di errore non standard, da rivedere a mano).
+2. Auth inline → guard condiviso: 50.
