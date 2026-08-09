@@ -1,3 +1,6 @@
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("super-mario");
 /**
  * identityLoader.ts — Carica l'identità "super_mario_identities" per uno scope.
  * Cache in-memory 5 minuti per ridurre i round-trip al DB.
@@ -39,7 +42,7 @@ export async function loadIdentity(supabase: SupabaseClient, scope: string): Pro
     .maybeSingle();
 
   if (error || !data) {
-    console.warn("[super-mario] identity load failed, using fallback", { scope, error: error?.message });
+    log.warn("[super-mario] identity load failed, using fallback", { details: [{ scope, error: error?.message }] });
     return FALLBACK_IDENTITY;
   }
 

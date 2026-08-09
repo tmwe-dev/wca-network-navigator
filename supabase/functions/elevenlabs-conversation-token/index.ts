@@ -17,6 +17,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+
+const log = createLogger("elevenlabs-conversation-token");
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -36,12 +40,12 @@ async function mintBridgeToken(userId: string): Promise<string | null> {
       // expires_at default = 30 min (vedi migration 20260410101008)
     });
     if (error) {
-      console.warn("bridge_token insert failed", error.message);
+      log.warn("bridge_token insert failed", { details: [error.message] });
       return null;
     }
     return raw;
   } catch (e) {
-    console.warn("mintBridgeToken failed", (e as Error).message);
+    log.warn("mintBridgeToken failed", { details: [(e as Error).message] });
     return null;
   }
 }
@@ -57,9 +61,9 @@ serve(async (req) => {
   const secretAgentId = Deno.env.get("ELEVENLABS_COMMAND_AGENT_ID");
 
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY non configurato" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY non configurato", 500, {
+      ...cors,
+      "Content-Type": "application/json",
     });
   }
 
@@ -93,18 +97,17 @@ serve(async (req) => {
       agentId = Array.from(allowlist)[0];
     }
   } catch (e) {
-    console.warn("agent allowlist lookup failed", (e as Error).message);
+    log.warn("agent allowlist lookup failed", { details: [(e as Error).message] });
   }
   // Fallback finale al secret se la DB non fornisce nulla.
   if (!agentId) agentId = secretAgentId || null;
 
   if (!agentId) {
-    return new Response(
-      JSON.stringify({
-        error:
-          "Nessun agente vocale configurato. Imposta elevenlabs_agent_id su un agente o il secret ELEVENLABS_COMMAND_AGENT_ID.",
-      }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
+    return edgeErrorWithStatus(
+      "INTERNAL_ERROR",
+      "Nessun agente vocale configurato. Imposta elevenlabs_agent_id su un agente o il secret ELEVENLABS_COMMAND_AGENT_ID.",
+      500,
+      { ...cors, "Content-Type": "application/json" },
     );
   }
 
@@ -127,9 +130,9 @@ serve(async (req) => {
     const data = await resp.json();
     const token: string | undefined = data?.token;
     if (!token) {
-      return new Response(JSON.stringify({ error: "Risposta ElevenLabs senza token" }), {
-        status: 502,
-        headers: { ...cors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("UPSTREAM_ERROR", "Risposta ElevenLabs senza token", 502, {
+        ...cors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -146,7 +149,7 @@ serve(async (req) => {
         signedUrl = (sdata?.signed_url as string | undefined) || null;
       }
     } catch (e) {
-      console.warn("signed url fetch failed", (e as Error).message);
+      log.warn("signed url fetch failed", { details: [(e as Error).message] });
     }
 
     // Mint bridge_token per autenticare il client tool ask_brain → command-ask-brain
@@ -158,9 +161,6 @@ serve(async (req) => {
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", message, 500, { ...cors, "Content-Type": "application/json" });
   }
 });

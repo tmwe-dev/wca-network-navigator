@@ -4,6 +4,7 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { checkDailyBudget, recordUsage, budgetExceededResponse } from "../_shared/costGuardrail.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("tts");
 
@@ -46,16 +47,16 @@ serve(async (req) => {
 
     const { text, voiceId } = await req.json();
     if (!text || typeof text !== "string") {
-      return new Response(JSON.stringify({ error: "text required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "text required", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
     if (!ELEVENLABS_API_KEY) {
-      return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY not configured", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -111,9 +112,6 @@ serve(async (req) => {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "tts failed";
     log.error("[tts] error:", msg);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", msg, 500, { ...corsHeaders, "Content-Type": "application/json" });
   }
 });

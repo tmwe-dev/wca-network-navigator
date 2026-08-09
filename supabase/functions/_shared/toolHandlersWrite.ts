@@ -508,14 +508,12 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
     const data = await response.json();
     if (!response.ok || data.error) return { error: data.error || "Errore invio email" };
     if (args.partner_id) {
-      await supabase
-        .from("interactions")
-        .insert({
-          partner_id: args.partner_id,
-          interaction_type: "email",
-          subject: String(args.subject),
-          notes: `Inviata a ${args.to_email}`,
-        });
+      await supabase.from("interactions").insert({
+        partner_id: args.partner_id,
+        interaction_type: "email",
+        subject: String(args.subject),
+        notes: `Inviata a ${args.to_email}`,
+      });
     }
     return { success: true, message: `Email inviata a ${args.to_email} con oggetto "${args.subject}".` };
   }

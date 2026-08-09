@@ -24,6 +24,7 @@ import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("generate-email");
 
@@ -39,9 +40,9 @@ serve(async (req) => {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -52,9 +53,9 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await authClient.auth.getUser(token);
     if (userErr || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
     const userId = userData.user.id;
@@ -70,9 +71,9 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 

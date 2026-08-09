@@ -22,8 +22,8 @@ const BASELINE = {
   cors: 0,
   auth: 0,
   authInline: 50,
-  error: 132,
-  logging: 66,
+  error: 54,
+  logging: 0,
 };
 
 // Funzioni server-to-server / redirect OAuth: non servite al browser,
@@ -88,7 +88,9 @@ for (const name of names) {
   if (!hasError) offenders.error.push(name);
 
   const hasLogger = /structuredLogger|createLogger|edgeLogger/.test(src);
-  if (!hasLogger) offenders.logging.push(name);
+  // Conforme se usa il logger condiviso oppure se non emette console.* grezzo.
+  const hasRawConsole = /\bconsole\.(log|info|warn|error|debug)\s*\(/.test(src);
+  if (!hasLogger && hasRawConsole) offenders.logging.push(name);
 }
 
 const LABELS = {

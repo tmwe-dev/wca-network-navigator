@@ -15,6 +15,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { calculatePartnerQuality, savePartnerQuality } from "../_shared/partnerQualityScore.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 Deno.serve(async (req) => {
   // Handle CORS
@@ -31,9 +32,9 @@ Deno.serve(async (req) => {
     const { partnerId, batch } = await req.json();
 
     if (!partnerId && !batch) {
-      return new Response(JSON.stringify({ error: "Either partnerId or batch array is required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Either partnerId or batch array is required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -41,9 +42,9 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(JSON.stringify({ error: "Supabase credentials not configured" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Supabase credentials not configured", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -114,16 +115,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ error: "Invalid request parameters" }), {
-      status: 400,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("VALIDATION_ERROR", "Invalid request parameters", 400, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, {
+      "Content-Type": "application/json",
+    });
   }
 });

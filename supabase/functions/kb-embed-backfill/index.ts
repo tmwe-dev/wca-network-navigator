@@ -19,6 +19,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { embedBatch, DEFAULT_EMBEDDING_MODEL } from "../_shared/embeddings.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("kb-embed-backfill");
 
@@ -33,9 +34,9 @@ serve(async (req) => {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -46,9 +47,9 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claims, error: claimsErr } = await authClient.auth.getClaims(token);
     if (claimsErr || !claims?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -142,11 +143,9 @@ serve(async (req) => {
     );
   } catch (err) {
     log.error("kb-embed-backfill error:", err);
-    return new Response(
-      JSON.stringify({
-        error: err instanceof Error ? err.message : "Unknown error",
-      }),
-      { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
-    );
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

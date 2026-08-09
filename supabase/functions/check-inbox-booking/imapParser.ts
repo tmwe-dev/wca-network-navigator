@@ -5,6 +5,9 @@
 
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { decodeRfc2047 } from "./mimeDecoder.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox-booking");
 
 // ━━━ Constants ━━━
 
@@ -207,7 +210,7 @@ export async function getNextUidBatch(client: ImapClientLike, lastUid: number): 
       };
     }
   } catch (esearchErr: unknown) {
-    console.warn(`[check-inbox] ESEARCH MIN fallback: ${extractErrorMessage(esearchErr)}`);
+    log.warn(`[check-inbox] ESEARCH MIN fallback: ${extractErrorMessage(esearchErr)}`);
   }
 
   let windowSize = UID_SEARCH_INITIAL_WINDOW;
@@ -224,7 +227,7 @@ export async function getNextUidBatch(client: ImapClientLike, lastUid: number): 
         };
       }
     } catch (searchErr: unknown) {
-      console.warn(`[check-inbox] UID SEARCH ${minUid}:${maxUid} failed: ${extractErrorMessage(searchErr)}`);
+      log.warn(`[check-inbox] UID SEARCH ${minUid}:${maxUid} failed: ${extractErrorMessage(searchErr)}`);
     }
     windowSize *= 2;
   }
@@ -236,7 +239,7 @@ export async function getNextUidBatch(client: ImapClientLike, lastUid: number): 
       return { uids: [nextUid], remaining: 1, hasMore: true };
     }
   } catch (fallbackErr: unknown) {
-    console.error("[check-inbox] UID SEARCH fallback error:", extractErrorMessage(fallbackErr));
+    log.error("[check-inbox] UID SEARCH fallback error:", extractErrorMessage(fallbackErr));
   }
 
   return { uids: [], remaining: 0, hasMore: false };

@@ -18,6 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("sherlock-extract");
 
@@ -110,18 +111,18 @@ serve(async (req) => {
   try {
     const body = (await req.json()) as ReqBody;
     if (!body.markdown || !body.extract_prompt) {
-      return new Response(JSON.stringify({ error: "markdown e extract_prompt sono obbligatori" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "markdown e extract_prompt sono obbligatori", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY mancante" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY mancante", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -189,15 +190,15 @@ serve(async (req) => {
       const errText = await aiRes.text();
       console.error("AI gateway error", aiRes.status, errText);
       if (aiRes.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit AI. Riprova fra poco." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI. Riprova fra poco.", 429, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
         });
       }
       if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "Crediti AI esauriti. Aggiungi fondi al workspace Lovable." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti. Aggiungi fondi al workspace Lovable.", 402, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
         });
       }
       return new Response(JSON.stringify({ error: "Errore AI gateway", detail: errText }), {
@@ -250,9 +251,9 @@ serve(async (req) => {
     });
   } catch (e) {
     log.error("sherlock-extract error", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore sconosciuto", 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
     });
   }
 });

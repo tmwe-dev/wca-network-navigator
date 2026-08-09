@@ -19,6 +19,9 @@ import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperati
 import { detectBounce, handleBounce } from "./bounceDetector.ts";
 import { extractBodyAndAttachments } from "./bodyExtractor.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox-booking");
 
 const MAX_RAW_FETCH_BYTES = 15_000_000; // 15MB
 
@@ -59,7 +62,7 @@ export async function processMessage(
             const parsed = new Date(idateMatch[1]);
             if (!isNaN(parsed.getTime())) internalDate = parsed.toISOString();
           } catch (e: unknown) {
-            console.debug("internaldate parse skipped:", extractErrorMessage(e));
+            log.info("internaldate parse skipped:", { details: [extractErrorMessage(e)] });
           }
         }
         const sizeMatch = line.match(/RFC822\.SIZE\s+(\d+)/i);
@@ -303,7 +306,7 @@ export async function processMessage(
           channel: "email",
         });
       } catch (inboundErr) {
-        console.warn("[messageProcessor] EmailPM inbound event failed (non-blocking):", inboundErr);
+        log.warn("[messageProcessor] EmailPM inbound event failed (non-blocking):", { details: [inboundErr] });
       }
 
       // ── Bounce detection (best-effort) ──

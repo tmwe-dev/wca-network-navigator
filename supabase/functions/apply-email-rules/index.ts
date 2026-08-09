@@ -12,6 +12,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getCaCertsForHost } from "./caCerts.ts";
 import { assertOperatorOwned, assertAllMessagesOwned } from "../_shared/ownership.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("apply-email-rules");
 
@@ -208,9 +209,9 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401,
-        headers: { ...cors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, {
+        ...cors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -234,9 +235,9 @@ Deno.serve(async (req) => {
         data: { user },
       } = await userClient.auth.getUser();
       if (!user) {
-        return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-          status: 401,
-          headers: { ...cors, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, {
+          ...cors,
+          "Content-Type": "application/json",
         });
       }
       callerUserId = user.id;
@@ -420,9 +421,9 @@ Deno.serve(async (req) => {
     );
   } catch (e: unknown) {
     log.error("[apply-email-rules] error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...cors,
+      "Content-Type": "application/json",
     });
   }
 });

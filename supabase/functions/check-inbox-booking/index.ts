@@ -24,6 +24,9 @@ import { processMessage, matchResponseActivity } from "./messageProcessor.ts";
 import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "../_shared/inboxPostProcess.ts";
 import { resyncUnreadFlags } from "./flagResync.ts";
 import { enqueueInboundEnrichment } from "./enqueueEnrichment.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox-booking");
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -167,23 +170,25 @@ Deno.serve(async (req) => {
     try {
       const resync = await resyncUnreadFlags(supabase, imapExec, userId);
       if (resync.checked > 0) {
-        console.log(
-          JSON.stringify({
-            fn: "check-inbox-booking",
-            step: "flag_resync",
-            checked: resync.checked,
-            marked_read: resync.markedRead,
-          }),
+        log.info(
+          String(
+            JSON.stringify({
+              fn: "check-inbox-booking",
+              step: "flag_resync",
+              checked: resync.checked,
+              marked_read: resync.markedRead,
+            }),
+          ),
         );
       }
     } catch (resyncErr: unknown) {
-      console.warn("flag_resync skipped:", extractErrorMessage(resyncErr));
+      log.warn("flag_resync skipped:", { details: [extractErrorMessage(resyncErr)] });
     }
 
     try {
       client.disconnect();
     } catch (e: unknown) {
-      console.debug("disconnect skipped:", extractErrorMessage(e));
+      log.info("disconnect skipped:", { details: [extractErrorMessage(e)] });
     }
 
     // ── Post-sync operations (best-effort, fire-and-forget) ──
@@ -194,17 +199,19 @@ Deno.serve(async (req) => {
     try {
       const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
       if (enq.enqueued > 0) {
-        console.log(
-          JSON.stringify({
-            fn: "check-inbox-booking",
-            step: "enrichment_enqueue",
-            enqueued: enq.enqueued,
-            skipped: enq.skipped,
-          }),
+        log.info(
+          String(
+            JSON.stringify({
+              fn: "check-inbox-booking",
+              step: "enrichment_enqueue",
+              enqueued: enq.enqueued,
+              skipped: enq.skipped,
+            }),
+          ),
         );
       }
     } catch (enqErr: unknown) {
-      console.warn("enrichment_enqueue skipped:", extractErrorMessage(enqErr));
+      log.warn("enrichment_enqueue skipped:", { details: [extractErrorMessage(enqErr)] });
     }
 
     // ── Response ──

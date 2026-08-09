@@ -17,6 +17,7 @@ import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadLinkedInSettings } from "../_shared/linkedinSettings.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("send-linkedin");
 
@@ -29,9 +30,9 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -44,9 +45,9 @@ Deno.serve(async (req) => {
       error: authErr,
     } = await supabase.auth.getUser();
     if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -68,9 +69,9 @@ Deno.serve(async (req) => {
 
     if (queryErr) {
       log.error("[send-linkedin] Daily limit query error:", queryErr);
-      return new Response(JSON.stringify({ error: "internal_error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "internal_error", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -108,9 +109,9 @@ Deno.serve(async (req) => {
     } = body;
 
     if (!recipient || !message_text) {
-      return new Response(JSON.stringify({ error: "recipient and message_text required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "recipient and message_text required", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -141,9 +142,9 @@ Deno.serve(async (req) => {
     if (scheduled_for) {
       const d = new Date(scheduled_for);
       if (isNaN(d.getTime())) {
-        return new Response(JSON.stringify({ error: "invalid_scheduled_for" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("VALIDATION_ERROR", "invalid_scheduled_for", 400, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
         });
       }
       scheduledForIso = d.toISOString();
@@ -320,9 +321,9 @@ Deno.serve(async (req) => {
     );
   } catch (err: unknown) {
     log.error("[send-linkedin] Error:", err);
-    return new Response(JSON.stringify({ error: "internal_error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", "internal_error", 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
     });
   }
 });

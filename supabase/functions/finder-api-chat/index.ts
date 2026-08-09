@@ -12,6 +12,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 interface ChatMsg {
   role: "user" | "assistant" | "system" | "tool";
@@ -257,9 +258,9 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Missing Authorization", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -286,9 +287,9 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY not configured", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -310,15 +311,15 @@ Deno.serve(async (req) => {
       });
 
       if (aiRes.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit AI (riprova tra poco)." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI (riprova tra poco).", 429, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
         });
       }
       if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti.", 402, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
         });
       }
       if (!aiRes.ok) {
@@ -422,9 +423,6 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", msg, 500, { ...corsHeaders, "Content-Type": "application/json" });
   }
 });

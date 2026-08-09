@@ -21,6 +21,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 interface ReminderRow {
   id: string;
@@ -68,10 +69,7 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    return new Response(JSON.stringify({ error: "missing_env" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "missing_env", 500, { ...cors, "Content-Type": "application/json" });
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -91,10 +89,7 @@ Deno.serve(async (req) => {
     .limit(200);
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error.message, 500, { ...cors, "Content-Type": "application/json" });
   }
 
   const rows = (data ?? []) as ReminderRow[];

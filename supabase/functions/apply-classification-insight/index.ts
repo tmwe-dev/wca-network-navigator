@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("apply-classification-insight");
 
@@ -29,9 +30,9 @@ serve(async (req) => {
     const insightId: string | undefined = body.insight_id;
     const overrideText: string | undefined = body.override_change_text;
     if (!insightId) {
-      return new Response(JSON.stringify({ error: "insight_id required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "insight_id required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -41,9 +42,9 @@ serve(async (req) => {
       .eq("id", insightId)
       .maybeSingle();
     if (!insight) {
-      return new Response(JSON.stringify({ error: "insight not found" }), {
-        status: 404,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("NOT_FOUND", "insight not found", 404, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
     if (insight.status !== "pending") {
@@ -63,9 +64,9 @@ serve(async (req) => {
         .eq("id", insight.proposed_target_id)
         .maybeSingle();
       if (!group) {
-        return new Response(JSON.stringify({ error: "target group missing" }), {
-          status: 404,
-          headers: { ...dynCors, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("NOT_FOUND", "target group missing", 404, {
+          ...dynCors,
+          "Content-Type": "application/json",
         });
       }
       const existing: string = (group.classification_hint as string | null) ?? "";
@@ -84,9 +85,9 @@ serve(async (req) => {
         .eq("id", insight.proposed_target_id)
         .maybeSingle();
       if (!prompt) {
-        return new Response(JSON.stringify({ error: "target prompt missing" }), {
-          status: 404,
-          headers: { ...dynCors, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("NOT_FOUND", "target prompt missing", 404, {
+          ...dynCors,
+          "Content-Type": "application/json",
         });
       }
       const existing: string = (prompt.criteria as string | null) ?? "";
@@ -101,9 +102,9 @@ serve(async (req) => {
         appliedSummary = `Regola aggiunta al prompt ${insight.proposed_target_name ?? ""} (nuova versione creata)`;
       }
     } else {
-      return new Response(JSON.stringify({ error: "invalid target" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "invalid target", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -123,9 +124,9 @@ serve(async (req) => {
     });
   } catch (e) {
     log.error("[apply-classification-insight] fatal", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   }
 });

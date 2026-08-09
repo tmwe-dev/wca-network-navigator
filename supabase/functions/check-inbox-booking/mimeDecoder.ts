@@ -4,6 +4,9 @@
  */
 
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox-booking");
 
 // ━━━ RFC 2045/2046 — Content-Transfer-Encoding & Charset ━━━
 
@@ -67,7 +70,7 @@ export function decodeBase64Bytes(input: Uint8Array): Uint8Array {
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return bytes;
   } catch (e: unknown) {
-    console.debug("base64 decode failed, returning input:", extractErrorMessage(e));
+    log.info("base64 decode failed, returning input:", { details: [extractErrorMessage(e)] });
     return input;
   }
 }
@@ -89,7 +92,7 @@ export function decodeMimePart(rawBytes: Uint8Array, encoding: string, charset?:
   try {
     return new TextDecoder(cs).decode(decoded);
   } catch (e: unknown) {
-    console.debug("charset decode failed, falling back to utf-8:", extractErrorMessage(e));
+    log.info("charset decode failed, falling back to utf-8:", { details: [extractErrorMessage(e)] });
     return new TextDecoder("utf-8", { fatal: false }).decode(decoded);
   }
 }
@@ -139,7 +142,7 @@ export function decodeRfc2231(value: string): string {
       for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
       return new TextDecoder(normalizeCharset(charset)).decode(bytes);
     } catch (e: unknown) {
-      console.debug("RFC 2231 decode failed:", extractErrorMessage(e));
+      log.info("RFC 2231 decode failed:", { details: [extractErrorMessage(e)] });
       return encoded;
     }
   }
@@ -246,7 +249,7 @@ export function decodeRfc2047(input: string): string {
         try {
           return new TextDecoder(cs).decode(bytes);
         } catch (e: unknown) {
-          console.debug("RFC 2047 B decode fallback:", extractErrorMessage(e));
+          log.info("RFC 2047 B decode fallback:", { details: [extractErrorMessage(e)] });
           return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
         }
       }
@@ -258,11 +261,11 @@ export function decodeRfc2047(input: string): string {
       try {
         return new TextDecoder(cs).decode(bytes);
       } catch (e: unknown) {
-        console.debug("RFC 2047 Q decode fallback:", extractErrorMessage(e));
+        log.info("RFC 2047 Q decode fallback:", { details: [extractErrorMessage(e)] });
         return decoded;
       }
     } catch (e: unknown) {
-      console.debug("RFC 2047 decode error:", extractErrorMessage(e));
+      log.info("RFC 2047 decode error:", { details: [extractErrorMessage(e)] });
       return text;
     }
   });
@@ -330,7 +333,7 @@ export function parseMultipartFallback(rawBytes: Uint8Array, rawText: string): F
         const decoded = encoding.toUpperCase() === "BASE64" ? decodeBase64Bytes(imgBytes) : imgBytes;
         inlineImages.push({ cid, contentType, data: decoded });
       } catch (e: unknown) {
-        console.debug("inline image decode skipped:", extractErrorMessage(e));
+        log.info("inline image decode skipped:", { details: [extractErrorMessage(e)] });
       }
     }
   }

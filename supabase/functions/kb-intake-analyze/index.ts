@@ -14,6 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 interface Body {
   raw_content: string;
@@ -50,9 +51,9 @@ Deno.serve(async (req) => {
   try {
     const body = (await req.json()) as Body;
     if (!body.raw_content || body.raw_content.trim().length < 10) {
-      return new Response(JSON.stringify({ error: "raw_content troppo breve" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "raw_content troppo breve", 400, {
+        ...cors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -128,9 +129,9 @@ Deno.serve(async (req) => {
       { headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, {
+      ...cors,
+      "Content-Type": "application/json",
     });
   }
 });

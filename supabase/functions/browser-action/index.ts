@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("browser-action");
 
@@ -54,16 +55,16 @@ serve(async (req: Request) => {
     };
 
     if (!Array.isArray(actions) || actions.length === 0) {
-      return new Response(JSON.stringify({ error: "actions array obbligatorio" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "actions array obbligatorio", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
     if (actions.length > MAX_ACTIONS) {
-      return new Response(JSON.stringify({ error: `Max ${MAX_ACTIONS} azioni per richiesta` }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", `Max ${MAX_ACTIONS} azioni per richiesta`, 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 
@@ -71,11 +72,11 @@ serve(async (req: Request) => {
     for (const action of actions) {
       if (action.type === "navigate" && action.url) {
         if (!isDomainAllowed(action.url, allowedDomains)) {
-          return new Response(
-            JSON.stringify({
-              error: `Dominio non autorizzato: ${action.url}. Solo domini nella whitelist sono consentiti.`,
-            }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          return edgeErrorWithStatus(
+            "AUTH_INVALID",
+            `Dominio non autorizzato: ${action.url}. Solo domini nella whitelist sono consentiti.`,
+            403,
+            { ...corsHeaders, "Content-Type": "application/json" },
           );
         }
       }
@@ -271,9 +272,9 @@ serve(async (req: Request) => {
     });
   } catch (e) {
     log.error("browser-action error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore sconosciuto" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore sconosciuto", 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
     });
   }
 });

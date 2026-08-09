@@ -4,7 +4,6 @@ import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 import { resolveSharedMailbox } from "../_shared/resolveMailbox.ts";

@@ -177,14 +177,12 @@ export async function handleGetOperationsDashboard(supabase: SupabaseClient, use
       scheduled: emails.filter(
         (e: { status: string; scheduled_at?: string | null }) => e.scheduled_at && e.status === "pending",
       ).length,
-      recent: emails
-        .slice(0, 10)
-        .map((e: EmailQueueRow) => ({
-          status: e.status,
-          to: e.recipient_email,
-          subject: e.subject,
-          scheduled: e.scheduled_at,
-        })),
+      recent: emails.slice(0, 10).map((e: EmailQueueRow) => ({
+        status: e.status,
+        to: e.recipient_email,
+        subject: e.subject,
+        scheduled: e.scheduled_at,
+      })),
     },
     agent_tasks: {
       running: tasks.filter((t: { status: string }) => ["pending", "running"].includes(t.status)).length,

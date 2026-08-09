@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("refine-classification-rule");
 
@@ -31,9 +32,9 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -47,9 +48,9 @@ serve(async (req) => {
     });
     const { data: userData, error: userErr } = await anon.auth.getUser();
     if (userErr || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
     const userId = userData.user.id;
@@ -59,9 +60,9 @@ serve(async (req) => {
     const chosenGroupId: string | undefined = body.chosen_group_id;
     const userNote: string | undefined = body.user_note;
     if (!addressRuleId || !chosenGroupId) {
-      return new Response(JSON.stringify({ error: "address_rule_id and chosen_group_id required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "address_rule_id and chosen_group_id required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -72,9 +73,9 @@ serve(async (req) => {
       .eq("id", addressRuleId)
       .maybeSingle();
     if (!rule) {
-      return new Response(JSON.stringify({ error: "rule not found" }), {
-        status: 404,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("NOT_FOUND", "rule not found", 404, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -92,9 +93,9 @@ serve(async (req) => {
       .eq("id", chosenGroupId)
       .maybeSingle();
     if (!chosenGroup) {
-      return new Response(JSON.stringify({ error: "chosen group not found" }), {
-        status: 404,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("NOT_FOUND", "chosen group not found", 404, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -133,9 +134,9 @@ serve(async (req) => {
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI_NOT_CONFIGURED" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI_NOT_CONFIGURED", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -200,9 +201,9 @@ serve(async (req) => {
     if (!aiResp.ok) {
       const txt = await aiResp.text();
       console.error("[refine] ai gateway error", aiResp.status, txt);
-      return new Response(JSON.stringify({ error: "AI_GATEWAY_ERROR" }), {
-        status: 502,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("UPSTREAM_ERROR", "AI_GATEWAY_ERROR", 502, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -265,9 +266,9 @@ serve(async (req) => {
 
     if (insErr) {
       log.error("[refine] insert error", insErr);
-      return new Response(JSON.stringify({ error: "INSERT_FAILED" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "INSERT_FAILED", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -276,9 +277,9 @@ serve(async (req) => {
     });
   } catch (e) {
     log.error("[refine-classification-rule] fatal", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   }
 });

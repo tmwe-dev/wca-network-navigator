@@ -9,6 +9,7 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { TMWE_OPS, callTmwe, getUserToken, serviceClient } from "../_shared/tmweClient.ts";
 import { logTmweAudit, notConnectedResponse } from "../_shared/tmweAudit.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const InputSchema = z.object({
   partner_id: z.string().uuid(),
@@ -94,9 +95,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!partner) {
-      return new Response(JSON.stringify({ error: "PARTNER_NOT_FOUND" }), {
-        status: 404,
-        headers: { ...headers, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("NOT_FOUND", "PARTNER_NOT_FOUND", 404, {
+        ...headers,
+        "Content-Type": "application/json",
       });
     }
 

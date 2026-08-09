@@ -18,6 +18,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { loadLiveSchema } from "../_shared/liveSchemaLoader.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 /**
  * Lista tabelle business consultabili dall'AI. Unica fonte di verità: questa
@@ -162,9 +163,9 @@ Deno.serve(async (req: Request) => {
     const contextHint = typeof body?.contextHint === "string" ? body.contextHint : "";
 
     if (!prompt) {
-      return new Response(JSON.stringify({ error: "prompt richiesto" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "prompt richiesto", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
       });
     }
 

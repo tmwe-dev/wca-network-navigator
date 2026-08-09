@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("elevenlabs-tts");
 
@@ -19,9 +20,9 @@ serve(async (req) => {
 
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
   if (!ELEVENLABS_API_KEY) {
-    return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY not configured" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY not configured", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   }
 
@@ -29,9 +30,9 @@ serve(async (req) => {
     const { text, voiceId, language } = await req.json();
 
     if (!text || !voiceId) {
-      return new Response(JSON.stringify({ error: "text and voiceId are required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "text and voiceId are required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -117,9 +118,9 @@ serve(async (req) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error("ElevenLabs API error:", response.status, errText);
-      return new Response(JSON.stringify({ error: `ElevenLabs error: ${response.status}` }), {
-        status: 502,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("UPSTREAM_ERROR", `ElevenLabs error: ${response.status}`, 502, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -134,9 +135,9 @@ serve(async (req) => {
     });
   } catch (error) {
     log.error("TTS error:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", "Internal server error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   }
 });

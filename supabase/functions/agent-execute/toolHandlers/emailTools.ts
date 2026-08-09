@@ -116,14 +116,12 @@ export async function handleSendEmail(
   const data = await response.json();
   if (!response.ok) return { error: data.error || "Errore invio" };
   if (partnerId)
-    await supabase
-      .from("interactions")
-      .insert({
-        partner_id: partnerId,
-        interaction_type: "email",
-        subject: String(args.subject),
-        notes: `Inviata a ${args.to_email}`,
-      });
+    await supabase.from("interactions").insert({
+      partner_id: partnerId,
+      interaction_type: "email",
+      subject: String(args.subject),
+      notes: `Inviata a ${args.to_email}`,
+    });
 
   // ── POST-SEND PIPELINE UNIFICATA (LOVABLE-85) ──
   const seqDay = typeof args.sequence_day === "number" ? args.sequence_day : 0;

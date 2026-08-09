@@ -3,6 +3,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("linkedin-ai-extract");
 
@@ -22,16 +23,16 @@ Deno.serve(async (req) => {
     const { mode, pageType, snapshot } = await req.json();
 
     if (mode !== "learnDom") {
-      return new Response(JSON.stringify({ error: "Invalid mode. Use 'learnDom'" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Invalid mode. Use 'learnDom'", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
     if (!snapshot) {
-      return new Response(JSON.stringify({ error: "snapshot is required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "snapshot is required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -149,9 +150,6 @@ ${Object.entries(snapshot.htmlSamples || {})
     });
   } catch (err) {
     log.error("linkedin-ai-extract error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err.message, 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

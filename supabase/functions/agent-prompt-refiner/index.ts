@@ -9,6 +9,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseAiJson } from "../_shared/aiJsonValidator.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("agent-prompt-refiner");
 
@@ -83,9 +84,9 @@ serve(async (req) => {
     const LOVABLE_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY not configured", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -191,9 +192,9 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
     });
   } catch (e: unknown) {
     log.error("agent-prompt-refiner error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   }
 });

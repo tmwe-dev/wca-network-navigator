@@ -16,6 +16,7 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("process-ai-import");
 
@@ -194,9 +195,9 @@ serve(async (req) => {
     });
   } catch (error) {
     log.error("process-ai-import error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   }
 });
@@ -320,9 +321,9 @@ async function handleFixErrors(
   batchOffset: number = 0,
 ) {
   if (!lovableApiKey) {
-    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY non configurata" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY non configurata", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   }
 

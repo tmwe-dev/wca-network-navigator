@@ -3,6 +3,9 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox-booking");
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;
@@ -127,6 +130,6 @@ export async function handleBounce(
       decision_origin: "system_trigger",
     });
   } catch (err) {
-    console.error("[check-inbox] Bounce handling error:", err);
+    log.error("[check-inbox] Bounce handling error:", err);
   }
 }

@@ -5,6 +5,9 @@
 
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { decodeRfc2047 } from "./mimeDecoder.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox");
 
 // ━━━ Constants ━━━
 
@@ -211,7 +214,7 @@ export async function getNextUidBatch(
         hasMore: uids.length > BATCH_SIZE,
       };
     } catch (unseenErr: unknown) {
-      console.warn(`[check-inbox] UID SEARCH UNSEEN failed: ${extractErrorMessage(unseenErr)}`);
+      log.warn(`[check-inbox] UID SEARCH UNSEEN failed: ${extractErrorMessage(unseenErr)}`);
       return { uids: [], remaining: 0, hasMore: false };
     }
   }
@@ -232,7 +235,7 @@ export async function getNextUidBatch(
       };
     }
   } catch (esearchErr: unknown) {
-    console.warn(`[check-inbox] ESEARCH MIN fallback: ${extractErrorMessage(esearchErr)}`);
+    log.warn(`[check-inbox] ESEARCH MIN fallback: ${extractErrorMessage(esearchErr)}`);
   }
 
   let windowSize = UID_SEARCH_INITIAL_WINDOW;
@@ -249,7 +252,7 @@ export async function getNextUidBatch(
         };
       }
     } catch (searchErr: unknown) {
-      console.warn(`[check-inbox] UID SEARCH ${minUid}:${maxUid} failed: ${extractErrorMessage(searchErr)}`);
+      log.warn(`[check-inbox] UID SEARCH ${minUid}:${maxUid} failed: ${extractErrorMessage(searchErr)}`);
     }
     windowSize *= 2;
   }
@@ -261,7 +264,7 @@ export async function getNextUidBatch(
       return { uids: [nextUid], remaining: 1, hasMore: true };
     }
   } catch (fallbackErr: unknown) {
-    console.error("[check-inbox] UID SEARCH fallback error:", extractErrorMessage(fallbackErr));
+    log.error("[check-inbox] UID SEARCH fallback error:", extractErrorMessage(fallbackErr));
   }
 
   return { uids: [], remaining: 0, hasMore: false };

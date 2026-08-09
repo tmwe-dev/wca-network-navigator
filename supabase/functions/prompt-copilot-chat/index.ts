@@ -16,6 +16,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 interface Body {
   agent_slug?: string;
@@ -285,15 +286,15 @@ Deno.serve(async (req) => {
 
     if (!aiResp.ok) {
       if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit raggiunto, riprova tra poco." }), {
-          status: 429,
-          headers: { ...cors, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit raggiunto, riprova tra poco.", 429, {
+          ...cors,
+          "Content-Type": "application/json",
         });
       }
       if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Crediti AI esauriti." }), {
-          status: 402,
-          headers: { ...cors, "Content-Type": "application/json" },
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti.", 402, {
+          ...cors,
+          "Content-Type": "application/json",
         });
       }
       const t = await aiResp.text();
@@ -364,9 +365,9 @@ Deno.serve(async (req) => {
       { headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, {
+      ...cors,
+      "Content-Type": "application/json",
     });
   }
 });

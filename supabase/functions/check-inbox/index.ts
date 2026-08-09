@@ -24,6 +24,9 @@ import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "..
 // flagResync disabilitato (2026-06-15): import rimosso, nessun auto-mark read.
 // import { resyncUnreadFlags } from "./flagResync.ts";
 import { enqueueInboundEnrichment } from "./enqueueEnrichment.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox");
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -238,7 +241,7 @@ Deno.serve(async (req) => {
     try {
       client.disconnect();
     } catch (e: unknown) {
-      console.debug("disconnect skipped:", extractErrorMessage(e));
+      log.info("disconnect skipped:", { details: [extractErrorMessage(e)] });
     }
 
     // ── Post-sync operations (best-effort, fire-and-forget) ──
@@ -259,17 +262,19 @@ Deno.serve(async (req) => {
       try {
         const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
         if (enq.enqueued > 0) {
-          console.log(
-            JSON.stringify({
-              fn: "check-inbox",
-              step: "enrichment_enqueue",
-              enqueued: enq.enqueued,
-              skipped: enq.skipped,
-            }),
+          log.info(
+            String(
+              JSON.stringify({
+                fn: "check-inbox",
+                step: "enrichment_enqueue",
+                enqueued: enq.enqueued,
+                skipped: enq.skipped,
+              }),
+            ),
           );
         }
       } catch (enqErr: unknown) {
-        console.warn("enrichment_enqueue skipped:", extractErrorMessage(enqErr));
+        log.warn("enrichment_enqueue skipped:", { details: [extractErrorMessage(enqErr)] });
       }
     })();
     // deno-lint-ignore no-explicit-any

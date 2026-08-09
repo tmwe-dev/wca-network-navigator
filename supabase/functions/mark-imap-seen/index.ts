@@ -3,6 +3,7 @@ import { ImapClient } from "jsr:@workingdevshero/deno-imap";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { resolveMailbox } from "../_shared/resolveMailbox.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("mark-imap-seen");
 
@@ -194,9 +195,9 @@ Deno.serve(async (req) => {
 
     const { message_id } = await req.json();
     if (!message_id || typeof message_id !== "string") {
-      return new Response(JSON.stringify({ error: "message_id is required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
+      return edgeErrorWithStatus("VALIDATION_ERROR", "message_id is required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
       });
     }
 
@@ -255,9 +256,6 @@ Deno.serve(async (req) => {
     });
   } catch (err: Record<string, unknown>) {
     log.error(`[mark-imap-seen] Error: ${err.message}`, null);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err.message, 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

@@ -7,6 +7,7 @@ import { evaluateTransitions } from "../_shared/stateTransitions.ts";
 import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { getNextEngagementStep } from "../_shared/cadenceEngine.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -497,9 +498,9 @@ serve(async (req) => {
     });
   } catch (err) {
     await cronGuardLogRun(supabase, "agent_autonomous", {}, err instanceof Error ? err.message : String(err));
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Errore", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
     });
   }
 });
