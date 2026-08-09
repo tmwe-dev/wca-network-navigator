@@ -23,9 +23,7 @@ import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createTracer } from "../_shared/pipelineTrace.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("funnemail-auto-route");
 
 
 interface RequestBody {

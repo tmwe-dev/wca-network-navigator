@@ -3,9 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { aiFetch } from "../_shared/aiCallShim.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("analyze-import-structure");
 
 
 const TARGET_SCHEMA = {

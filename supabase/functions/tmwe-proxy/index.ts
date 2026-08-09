@@ -17,9 +17,7 @@ import {
   callTmwe,
   auditCall,
 } from "../_shared/tmweClient.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("tmwe-proxy");
 
 
 interface ProxyBody {

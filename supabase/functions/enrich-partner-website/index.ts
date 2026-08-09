@@ -5,9 +5,7 @@ import { swallowedError } from "../_shared/swallowedError.ts";
 import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("enrich-partner-website");
 
 
 // LOVABLE-75 — LEGACY

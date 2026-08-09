@@ -18,9 +18,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { loadLiveSchema } from "../_shared/liveSchemaLoader.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("ai-query-planner");
 
 
 /**

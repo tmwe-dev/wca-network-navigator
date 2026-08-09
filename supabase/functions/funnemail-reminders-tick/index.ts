@@ -21,9 +21,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("funnemail-reminders-tick");
 
 
 interface ReminderRow {

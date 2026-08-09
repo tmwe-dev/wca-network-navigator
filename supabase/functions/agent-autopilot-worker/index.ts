@@ -7,9 +7,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("agent-autopilot-worker");
 
 
 const BATCH_SIZE = 5;

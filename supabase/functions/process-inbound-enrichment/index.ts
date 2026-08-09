@@ -16,9 +16,7 @@ import { safeParseAiJson } from "../_shared/aiJsonValidator.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("process-inbound-enrichment");
 
 
 const BATCH_SIZE = 5;

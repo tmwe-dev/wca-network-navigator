@@ -12,9 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("deduplicate-partners");
 
 
 Deno.serve(async (req) => {

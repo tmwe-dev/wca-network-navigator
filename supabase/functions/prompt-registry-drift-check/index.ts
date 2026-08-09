@@ -16,9 +16,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { EDGE_FN_REGISTRY } from "../_shared/edgeFnPromptRegistry.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("prompt-registry-drift-check");
 
 
 interface DriftItem {

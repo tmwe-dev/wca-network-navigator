@@ -5,9 +5,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { serviceClient } from "../_shared/tmweClient.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("tmwe-disconnect");
 
 
 Deno.serve(async (req) => {

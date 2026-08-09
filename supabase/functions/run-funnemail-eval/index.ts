@@ -19,9 +19,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("run-funnemail-eval");
 
 
 const InputSchema = z.union([

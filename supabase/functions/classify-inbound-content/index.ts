@@ -25,9 +25,7 @@ import { loadConversationSummary } from "../_shared/conversationSummaryLoader.ts
 import { resolveCaller, assertMessageOwned } from "../_shared/ownership.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("classify-inbound-content");
 
 
 interface RequestBody {

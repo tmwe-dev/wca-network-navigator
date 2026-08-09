@@ -8,9 +8,7 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { serviceClient } from "../_shared/tmweClient.ts";
 import { logTmweAudit } from "../_shared/tmweAudit.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("tmwe-partner-link");
 
 
 const InputSchema = z.object({

@@ -6,9 +6,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { serviceClient, tmweBaseUrl, tmweOAuthRedirectUri } from "../_shared/tmweClient.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("tmwe-oauth-start");
 
 
 function randomState(): string {

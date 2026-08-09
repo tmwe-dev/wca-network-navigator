@@ -17,9 +17,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { resolveInjectionReview } from "../_shared/injectionGuard.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("confirm-injection-review");
 
 
 interface ReqBody {

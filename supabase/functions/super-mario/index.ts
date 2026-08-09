@@ -28,9 +28,7 @@ import { applyHardGuards } from "./hardGuards.ts";
 import { logInvocation } from "./auditLogger.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("super-mario");
 
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;

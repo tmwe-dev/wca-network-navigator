@@ -3,9 +3,7 @@ import { getCaCertsForHost } from "./caCerts.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("imap-list-folders");
 
 
 type DebugGlobal = typeof globalThis & { __lastDebug?: Record<string, unknown> };
