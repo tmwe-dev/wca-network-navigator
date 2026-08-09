@@ -22,7 +22,7 @@ const BASELINE = {
   cors: 0,
   auth: 0,
   authInline: 50,
-  error: 132,
+  error: 54,
   logging: 0,
 };
 
