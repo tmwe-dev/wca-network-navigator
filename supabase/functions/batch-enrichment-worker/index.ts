@@ -13,10 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { buildInternalAuthHeaders } from "../_shared/internalAuth.ts";
-import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
-
-const log = createLogger("batch-enrichment-worker");
 
 // Audit Sez.1 — F: batch + sleep adattivo per migliorare throughput cron.
 const BATCH_SIZE = 8;
