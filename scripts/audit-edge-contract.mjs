@@ -23,7 +23,7 @@ const BASELINE = {
   auth: 0,
   authInline: 50,
   error: 132,
-  logging: 66,
+  logging: 0,
 };
 
 // Funzioni server-to-server / redirect OAuth: non servite al browser,
