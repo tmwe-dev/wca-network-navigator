@@ -9,7 +9,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox-booking");
 
-
 // ━━━ Constants ━━━
 
 // Configurable via env to mitigate edge-runtime CPU limits.

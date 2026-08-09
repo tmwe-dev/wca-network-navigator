@@ -8,8 +8,6 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 
-
-
 const BATCH_SIZE = 5;
 const MAX_WALL_CLOCK_MS = 55_000;
 

@@ -195,7 +195,10 @@ serve(async (req) => {
     });
   } catch (error) {
     log.error("process-ai-import error:", error);
-    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });
 
@@ -318,7 +321,10 @@ async function handleFixErrors(
   batchOffset: number = 0,
 ) {
   if (!lovableApiKey) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY non configurata", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY non configurata", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   const FIX_BATCH_SIZE = 15;

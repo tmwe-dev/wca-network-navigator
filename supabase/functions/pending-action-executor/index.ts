@@ -25,8 +25,6 @@ import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import type { LeadStatus } from "../_shared/domainEvents.ts";
 
-
-
 interface PendingAction {
   id: string;
   user_id: string;

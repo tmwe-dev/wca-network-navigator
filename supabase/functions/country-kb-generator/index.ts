@@ -9,7 +9,6 @@ import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("country-kb-generator");
 
-
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -35,7 +34,10 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const body = await req.json().catch((e) => {
@@ -159,6 +161,9 @@ Rispondi SOLO con un JSON valido con questa struttura:
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

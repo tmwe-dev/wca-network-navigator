@@ -22,7 +22,6 @@ import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("elevenlabs-conversation-token");
 
-
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -62,7 +61,10 @@ serve(async (req) => {
   const secretAgentId = Deno.env.get("ELEVENLABS_COMMAND_AGENT_ID");
 
   if (!apiKey) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY non configurato", 500, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY non configurato", 500, {
+      ...cors,
+      "Content-Type": "application/json",
+    });
   }
 
   // Hard auth check: verifica crittografica del JWT (con verify_jwt=false il
@@ -101,7 +103,12 @@ serve(async (req) => {
   if (!agentId) agentId = secretAgentId || null;
 
   if (!agentId) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", "Nessun agente vocale configurato. Imposta elevenlabs_agent_id su un agente o il secret ELEVENLABS_COMMAND_AGENT_ID.", 500, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus(
+      "INTERNAL_ERROR",
+      "Nessun agente vocale configurato. Imposta elevenlabs_agent_id su un agente o il secret ELEVENLABS_COMMAND_AGENT_ID.",
+      500,
+      { ...cors, "Content-Type": "application/json" },
+    );
   }
 
   try {
@@ -123,7 +130,10 @@ serve(async (req) => {
     const data = await resp.json();
     const token: string | undefined = data?.token;
     if (!token) {
-      return edgeErrorWithStatus("UPSTREAM_ERROR", "Risposta ElevenLabs senza token", 502, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("UPSTREAM_ERROR", "Risposta ElevenLabs senza token", 502, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Signed URL WebSocket — fallback più compatibile del WebRTC, non soggetto

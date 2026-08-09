@@ -30,7 +30,10 @@ serve(async (req) => {
     const insightId: string | undefined = body.insight_id;
     const overrideText: string | undefined = body.override_change_text;
     if (!insightId) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "insight_id required", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "insight_id required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const { data: insight } = await supabase
@@ -39,7 +42,10 @@ serve(async (req) => {
       .eq("id", insightId)
       .maybeSingle();
     if (!insight) {
-      return edgeErrorWithStatus("NOT_FOUND", "insight not found", 404, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("NOT_FOUND", "insight not found", 404, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
     if (insight.status !== "pending") {
       return new Response(JSON.stringify({ error: "insight not pending", status: insight.status }), {
@@ -58,7 +64,10 @@ serve(async (req) => {
         .eq("id", insight.proposed_target_id)
         .maybeSingle();
       if (!group) {
-        return edgeErrorWithStatus("NOT_FOUND", "target group missing", 404, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("NOT_FOUND", "target group missing", 404, {
+          ...dynCors,
+          "Content-Type": "application/json",
+        });
       }
       const existing: string = (group.classification_hint as string | null) ?? "";
       const trimmed = changeText.trim();
@@ -76,7 +85,10 @@ serve(async (req) => {
         .eq("id", insight.proposed_target_id)
         .maybeSingle();
       if (!prompt) {
-        return edgeErrorWithStatus("NOT_FOUND", "target prompt missing", 404, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("NOT_FOUND", "target prompt missing", 404, {
+          ...dynCors,
+          "Content-Type": "application/json",
+        });
       }
       const existing: string = (prompt.criteria as string | null) ?? "";
       const trimmed = changeText.trim();
@@ -90,7 +102,10 @@ serve(async (req) => {
         appliedSummary = `Regola aggiunta al prompt ${insight.proposed_target_name ?? ""} (nuova versione creata)`;
       }
     } else {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "invalid target", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "invalid target", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     await supabase
@@ -109,6 +124,9 @@ serve(async (req) => {
     });
   } catch (e) {
     log.error("[apply-classification-insight] fatal", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

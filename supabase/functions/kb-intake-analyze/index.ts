@@ -16,8 +16,6 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 interface Body {
   raw_content: string;
   source?: "paste" | "url" | "file" | "chat";
@@ -53,7 +51,10 @@ Deno.serve(async (req) => {
   try {
     const body = (await req.json()) as Body;
     if (!body.raw_content || body.raw_content.trim().length < 10) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "raw_content troppo breve", 400, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "raw_content troppo breve", 400, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -128,6 +129,9 @@ Deno.serve(async (req) => {
       { headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, {
+      ...cors,
+      "Content-Type": "application/json",
+    });
   }
 });

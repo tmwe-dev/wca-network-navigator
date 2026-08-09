@@ -55,18 +55,29 @@ serve(async (req: Request) => {
     };
 
     if (!Array.isArray(actions) || actions.length === 0) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "actions array obbligatorio", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "actions array obbligatorio", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     if (actions.length > MAX_ACTIONS) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", `Max ${MAX_ACTIONS} azioni per richiesta`, 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", `Max ${MAX_ACTIONS} azioni per richiesta`, 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     // Validate domains upfront
     for (const action of actions) {
       if (action.type === "navigate" && action.url) {
         if (!isDomainAllowed(action.url, allowedDomains)) {
-          return edgeErrorWithStatus("AUTH_INVALID", `Dominio non autorizzato: ${action.url}. Solo domini nella whitelist sono consentiti.`, 403, { ...corsHeaders, "Content-Type": "application/json" });
+          return edgeErrorWithStatus(
+            "AUTH_INVALID",
+            `Dominio non autorizzato: ${action.url}. Solo domini nella whitelist sono consentiti.`,
+            403,
+            { ...corsHeaders, "Content-Type": "application/json" },
+          );
         }
       }
     }
@@ -261,6 +272,9 @@ serve(async (req: Request) => {
     });
   } catch (e) {
     log.error("browser-action error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore sconosciuto", 500, { ...corsHeaders, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore sconosciuto", 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    });
   }
 });

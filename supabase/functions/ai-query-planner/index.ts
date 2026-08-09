@@ -20,8 +20,6 @@ import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 /**
  * Lista tabelle business consultabili dall'AI. Unica fonte di verità: questa
  * costante. Per aggiungerne una nuova: aggiungi qui + verifica che esista nel DB.
@@ -165,7 +163,10 @@ Deno.serve(async (req: Request) => {
     const contextHint = typeof body?.contextHint === "string" ? body.contextHint : "";
 
     if (!prompt) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "prompt richiesto", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "prompt richiesto", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     // Carica schema reale dal DB (cache 5min)

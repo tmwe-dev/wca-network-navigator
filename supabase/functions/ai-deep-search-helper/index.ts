@@ -18,7 +18,6 @@ import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("ai-deep-search-helper");
 
-
 const DEFAULT_MODEL = "google/gemini-2.5-flash-lite";
 const MAX_PROMPT_LEN = 8000;
 
@@ -46,7 +45,10 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // ── Input validation ──
@@ -59,10 +61,16 @@ serve(async (req) => {
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
 
     if (!prompt) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "Empty prompt", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Empty prompt", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
     if (prompt.length > MAX_PROMPT_LEN) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", `Prompt too long (max ${MAX_PROMPT_LEN})`, 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", `Prompt too long (max ${MAX_PROMPT_LEN})`, 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // ── Centralized gateway call (retry, timeout, fallback) ──

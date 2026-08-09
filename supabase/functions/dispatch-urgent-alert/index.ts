@@ -13,8 +13,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 
-
-
 interface Body {
   user_id: string;
   message_id: string;

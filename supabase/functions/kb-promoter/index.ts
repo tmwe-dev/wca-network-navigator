@@ -4,8 +4,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -75,6 +73,9 @@ serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

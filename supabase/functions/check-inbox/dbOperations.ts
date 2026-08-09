@@ -10,7 +10,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox");
 
-
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -343,11 +342,15 @@ export async function saveMessageToDb(supabase: SupabaseClient, params: SaveMess
         });
 
         if (ruleErr) {
-          log.warn(`[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`, { details: [ruleErr.message] });
+          log.warn(`[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`, {
+            details: [ruleErr.message],
+          });
         }
       }
     } catch (e) {
-      log.warn(`[saveMessageToDb] Exception while creating email_address_rules for ${params.fromAddr}:`, { details: [e] });
+      log.warn(`[saveMessageToDb] Exception while creating email_address_rules for ${params.fromAddr}:`, {
+        details: [e],
+      });
     }
   }
 

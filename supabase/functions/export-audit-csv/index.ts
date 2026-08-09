@@ -40,7 +40,10 @@ serve(async (req) => {
 
     if (qErr) {
       log.error("audit_query_failed", qErr);
-      return edgeErrorWithStatus("INTERNAL_ERROR", qErr.message, 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", qErr.message, 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const rows = (logs ?? []) as Array<Record<string, unknown>>;
@@ -70,6 +73,9 @@ serve(async (req) => {
     });
   } catch (err) {
     log.error("export_failed", err);
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

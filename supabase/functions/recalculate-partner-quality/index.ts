@@ -15,8 +15,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 interface BatchResult {
   processed: number;
   updated: number;
@@ -37,7 +35,10 @@ Deno.serve(async (req) => {
 
   try {
     if (req.method !== "POST") {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "Method not allowed", 405, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Method not allowed", 405, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -87,7 +88,10 @@ Deno.serve(async (req) => {
       const { data: partners, error: listErr } = await supabase.from("partners").select("id").limit(batchSize);
 
       if (listErr || !partners) {
-        return edgeErrorWithStatus("INTERNAL_ERROR", "Failed to fetch partners", 500, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Failed to fetch partners", 500, {
+          ...dynCors,
+          "Content-Type": "application/json",
+        });
       }
 
       const { loadAndCalculateQuality, savePartnerQuality } = await import("../_shared/partnerQualityScore.ts");
@@ -123,6 +127,8 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, { "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, {
+      "Content-Type": "application/json",
+    });
   }
 });

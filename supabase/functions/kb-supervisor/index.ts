@@ -57,7 +57,10 @@ serve(async (req: Request) => {
     const auditLevel: string = body.audit_level || "all";
 
     if (!userId) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "user_id required", 400, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "user_id required", 400, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
 
     const results: AuditResult[] = [];

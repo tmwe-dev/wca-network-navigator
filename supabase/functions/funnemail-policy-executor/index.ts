@@ -15,8 +15,6 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 const KNOWN_ACTIONS = new Set([
   "tag_only",
   "deep_search",

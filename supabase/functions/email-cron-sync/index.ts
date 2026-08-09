@@ -7,7 +7,6 @@ import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("email-cron-sync");
 
-
 /**
  * Email Cron Sync — runs every 10 minutes via pg_cron.
  *

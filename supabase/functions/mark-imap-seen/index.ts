@@ -195,7 +195,10 @@ Deno.serve(async (req) => {
 
     const { message_id } = await req.json();
     if (!message_id || typeof message_id !== "string") {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "message_id is required", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "message_id is required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Fetch the message to get imap_uid and uidvalidity (scoped per user + mailbox).

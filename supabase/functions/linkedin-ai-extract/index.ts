@@ -23,11 +23,17 @@ Deno.serve(async (req) => {
     const { mode, pageType, snapshot } = await req.json();
 
     if (mode !== "learnDom") {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "Invalid mode. Use 'learnDom'", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Invalid mode. Use 'learnDom'", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     if (!snapshot) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "snapshot is required", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "snapshot is required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const systemPrompt = `Sei un esperto di CSS selector per pagine LinkedIn. Analizza lo snapshot strutturale e identifica i selettori CSS più affidabili.

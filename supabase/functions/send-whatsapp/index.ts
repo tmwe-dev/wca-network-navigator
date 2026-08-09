@@ -22,7 +22,10 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -34,7 +37,10 @@ Deno.serve(async (req) => {
       error: authErr,
     } = await supabase.auth.getUser();
     if (authErr || !user) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const body = await req.json();
@@ -42,7 +48,10 @@ Deno.serve(async (req) => {
       body;
 
     if (!recipient || !message_text) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "recipient and message_text required", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "recipient and message_text required", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     // Check rate limit
@@ -288,6 +297,9 @@ Deno.serve(async (req) => {
     );
   } catch (err: unknown) {
     log.error("[send-whatsapp] Error:", err);
-    return edgeErrorWithStatus("INTERNAL_ERROR", "internal_error", 500, { ...corsHeaders, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "internal_error", 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    });
   }
 });

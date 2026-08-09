@@ -19,8 +19,6 @@ import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { loadAgentCapabilities, DEFAULT_CAPABILITIES, READ_ONLY_TOOL_SET } from "../_shared/agentCapabilitiesLoader.ts";
 import { loadAgentPersona } from "../_shared/agentPersonaLoader.ts";
 
-
-
 // Mirror of agent-loop tool registry. Hardcoded source of truth.
 const TOOL_REGISTRY: ReadonlyArray<{ name: string; hardcoded_approval: boolean }> = [
   { name: "navigate", hardcoded_approval: false },

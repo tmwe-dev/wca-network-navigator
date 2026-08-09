@@ -22,8 +22,6 @@ import { createTracer, newTraceId } from "../_shared/pipelineTrace.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 const CLASSIFICATIONS = [
   "interested",
   "not_interested",

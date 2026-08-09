@@ -20,14 +20,20 @@ serve(async (req) => {
 
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
   if (!ELEVENLABS_API_KEY) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY not configured", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY not configured", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   try {
     const { text, voiceId, language } = await req.json();
 
     if (!text || !voiceId) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "text and voiceId are required", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "text and voiceId are required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // --- Auth & user settings ---
@@ -112,7 +118,10 @@ serve(async (req) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error("ElevenLabs API error:", response.status, errText);
-      return edgeErrorWithStatus("UPSTREAM_ERROR", `ElevenLabs error: ${response.status}`, 502, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("UPSTREAM_ERROR", `ElevenLabs error: ${response.status}`, 502, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const audioBuffer = await response.arrayBuffer();
@@ -126,6 +135,9 @@ serve(async (req) => {
     });
   } catch (error) {
     log.error("TTS error:", error);
-    return edgeErrorWithStatus("INTERNAL_ERROR", "Internal server error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "Internal server error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

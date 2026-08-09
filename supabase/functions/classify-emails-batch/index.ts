@@ -15,8 +15,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 const BATCH_SIZE = 50;
 const LOOKBACK_HOURS = 24;
 

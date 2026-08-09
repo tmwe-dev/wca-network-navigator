@@ -6,8 +6,6 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { serviceClient } from "../_shared/tmweClient.ts";
 
-
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;

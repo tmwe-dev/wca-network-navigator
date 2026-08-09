@@ -128,7 +128,10 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -139,7 +142,10 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
     const userId = claimsData.claims.sub;
     const log = createLogger("improve-email", { userId });
@@ -160,7 +166,10 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const {

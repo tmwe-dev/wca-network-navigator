@@ -11,8 +11,6 @@ import { TMWE_OPS, callTmwe, getUserToken, serviceClient } from "../_shared/tmwe
 import { logTmweAudit, notConnectedResponse } from "../_shared/tmweAudit.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 const InputSchema = z.object({
   partner_id: z.string().uuid(),
 });
@@ -97,7 +95,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!partner) {
-      return edgeErrorWithStatus("NOT_FOUND", "PARTNER_NOT_FOUND", 404, { ...headers, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("NOT_FOUND", "PARTNER_NOT_FOUND", 404, {
+        ...headers,
+        "Content-Type": "application/json",
+      });
     }
 
     const userTok = await getUserToken(svc, auth.userId);

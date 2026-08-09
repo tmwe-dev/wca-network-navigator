@@ -24,7 +24,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox");
 
-
 export async function processMessage(
   uid: number,
   uidvalidity: number | null,

@@ -119,13 +119,19 @@ serve(async (req) => {
   try {
     const body = (await req.json()) as ReqBody;
     if (!body.company_name) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "company_name obbligatorio", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "company_name obbligatorio", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY mancante", 500, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY mancante", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     // Riduci candidati a max 80 link e 20 google results per non saturare il context
@@ -179,10 +185,16 @@ serve(async (req) => {
       const errText = await aiRes.text();
       console.error("AI gateway error", aiRes.status, errText);
       if (aiRes.status === 429) {
-        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI. Riprova fra poco.", 429, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI. Riprova fra poco.", 429, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       if (aiRes.status === 402) {
-        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti. Aggiungi fondi al workspace Lovable.", 402, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti. Aggiungi fondi al workspace Lovable.", 402, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       return new Response(JSON.stringify({ error: "AI gateway error", detail: errText }), {
         status: 502,
@@ -211,6 +223,9 @@ serve(async (req) => {
     });
   } catch (e) {
     log.error("agentic-decide error", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore", 500, { ...corsHeaders, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore", 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    });
   }
 });

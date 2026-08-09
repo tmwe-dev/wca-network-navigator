@@ -18,7 +18,6 @@ import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("batch-enrichment-worker");
 
-
 // Audit Sez.1 — F: batch + sleep adattivo per migliorare throughput cron.
 const BATCH_SIZE = 8;
 const RATE_LIMIT_MS = 10_000;
@@ -38,7 +37,10 @@ Deno.serve(async (req: Request) => {
   // Auth: accetta service role o anon (cron usa anon inline)
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

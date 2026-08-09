@@ -7,8 +7,6 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 // LOVABLE-75 — LEGACY
 // Questa funzione è mantenuta solo per useAcquisitionPipeline.
 // Tutti gli altri chiamanti devono usare il Deep Search client-side (useDeepSearchLocal)
@@ -43,7 +41,10 @@ Deno.serve(async (req) => {
   try {
     const { partnerId, markdown: preScrapedMarkdown, sourceUrl: preScrapedUrl } = await req.json();
     if (!partnerId) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "partnerId is required", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "partnerId is required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const LOVABLE_API_KEY =
@@ -52,7 +53,10 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!LOVABLE_API_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "AI not configured", 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI not configured", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -65,7 +69,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (pauseSetting?.value === "true") {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Get partner
@@ -76,11 +83,17 @@ Deno.serve(async (req) => {
       .single();
 
     if (partnerError || !partner) {
-      return edgeErrorWithStatus("NOT_FOUND", "Partner not found", 404, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("NOT_FOUND", "Partner not found", 404, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     if (!partner.website) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "Partner has no website", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Partner has no website", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Format URL
@@ -313,7 +326,10 @@ Estrai queste informazioni (metti null se non trovate):
     }
 
     if (!enrichment) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "Failed to extract data", 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Failed to extract data", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     enrichment.source_url = url;
@@ -333,7 +349,10 @@ Estrai queste informazioni (metti null se non trovate):
       .eq("id", partnerId);
 
     if (updateError) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "Failed to save enrichment", 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Failed to save enrichment", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // LOVABLE-93: Auto-calculate quality score after enrichment
@@ -348,6 +367,9 @@ Estrai queste informazioni (metti null se non trovate):
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

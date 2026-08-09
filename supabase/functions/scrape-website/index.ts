@@ -7,7 +7,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("scrape-website");
 
-
 const USER_AGENT = "WCA-NetworkNavigator/1.0";
 const FETCH_TIMEOUT_MS = 25_000;
 const MAX_RAW_TEXT = 8_000;

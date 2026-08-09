@@ -14,8 +14,6 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -145,6 +143,9 @@ Deno.serve(async (req) => {
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (err: unknown) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

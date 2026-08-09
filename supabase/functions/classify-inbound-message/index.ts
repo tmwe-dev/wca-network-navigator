@@ -28,8 +28,6 @@ import {
 import { createTracer } from "../_shared/pipelineTrace.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;

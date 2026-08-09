@@ -41,7 +41,10 @@ serve(async (req) => {
   // Auth check before forwarding
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   try {
@@ -49,7 +52,10 @@ serve(async (req) => {
     const scope = body.scope || "partner_hub";
 
     if (!VALID_SCOPES.has(scope)) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", `Unknown scope: ${scope}`, 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", `Unknown scope: ${scope}`, 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Normalize: if body.message is a string and body.messages doesn't exist,
@@ -125,6 +131,9 @@ serve(async (req) => {
     return upstream;
   } catch (e: unknown) {
     log.error("unified-assistant error:", e instanceof Error ? e.message : String(e));
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

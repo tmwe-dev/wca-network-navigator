@@ -18,8 +18,6 @@ import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 const BATCH_SIZE = 5;
 const MAX_ATTEMPTS = 3;
 

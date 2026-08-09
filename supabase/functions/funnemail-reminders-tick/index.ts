@@ -23,8 +23,6 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 interface ReminderRow {
   id: string;
   message_id: string;

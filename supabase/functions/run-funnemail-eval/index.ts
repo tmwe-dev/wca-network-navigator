@@ -20,8 +20,6 @@ import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-
-
 const InputSchema = z.union([
   z.object({ case_id: z.string().uuid(), prompt_version_id: z.string().uuid().optional() }),
   z.object({ tags: z.array(z.string()).min(1), prompt_version_id: z.string().uuid().optional() }),

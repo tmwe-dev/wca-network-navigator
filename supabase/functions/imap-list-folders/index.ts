@@ -4,8 +4,6 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 type DebugGlobal = typeof globalThis & { __lastDebug?: Record<string, unknown> };
 
 Deno.serve(async (req) => {

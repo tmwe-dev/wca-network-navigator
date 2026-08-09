@@ -19,8 +19,6 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 Deno.serve(async (req: Request) => {
   const pre = corsPreflight(req);
   if (pre) return pre;

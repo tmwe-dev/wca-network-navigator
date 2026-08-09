@@ -26,8 +26,6 @@ import { resolveCaller, assertMessageOwned } from "../_shared/ownership.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 interface RequestBody {
   message_id: string;
   from_address: string;

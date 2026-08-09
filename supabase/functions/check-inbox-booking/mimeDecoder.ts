@@ -8,7 +8,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox-booking");
 
-
 // ━━━ RFC 2045/2046 — Content-Transfer-Encoding & Charset ━━━
 
 export function normalizeCharset(charset?: string | null): string {

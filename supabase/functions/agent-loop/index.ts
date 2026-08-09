@@ -155,13 +155,19 @@ serve(async (req: Request) => {
     const { goal, history, sessionContext, agentId } = await req.json();
 
     if (!goal || typeof goal !== "string") {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "goal è obbligatorio", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "goal è obbligatorio", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY non configurata", 500, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY non configurata", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     // ── Prompt Lab injection (UNIFIED loader): LUCA inherits the user's
@@ -228,13 +234,22 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
       const errText = await response.text();
       const status = response.status;
       if (status === 429) {
-        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit superato, riprova tra poco.", 429, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit superato, riprova tra poco.", 429, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       if (status === 402) {
-        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti.", 402, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti.", 402, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       console.error("AI gateway error:", status, errText);
-      return edgeErrorWithStatus("INTERNAL_ERROR", "Errore AI gateway", 500, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Errore AI gateway", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const data = await response.json();
@@ -285,6 +300,9 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
     );
   } catch (e) {
     log.error("agent-loop error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore sconosciuto", 500, { ...corsHeaders, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore sconosciuto", 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    });
   }
 });

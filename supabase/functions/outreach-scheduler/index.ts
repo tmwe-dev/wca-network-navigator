@@ -54,7 +54,10 @@ serve(async (req) => {
 
     if (batchErr) {
       endMetrics(metrics, false, 500);
-      return edgeErrorWithStatus("INTERNAL_ERROR", batchErr.message, 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", batchErr.message, 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     if (!batch || batch.length === 0) {
@@ -176,7 +179,10 @@ serve(async (req) => {
     } catch {
       /* ignore */
     }
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Internal error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Internal error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });
 

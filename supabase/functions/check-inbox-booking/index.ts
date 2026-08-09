@@ -28,7 +28,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox-booking");
 
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
@@ -171,12 +170,16 @@ Deno.serve(async (req) => {
     try {
       const resync = await resyncUnreadFlags(supabase, imapExec, userId);
       if (resync.checked > 0) {
-        log.info(String(JSON.stringify({
-            fn: "check-inbox-booking",
-            step: "flag_resync",
-            checked: resync.checked,
-            marked_read: resync.markedRead,
-          })));
+        log.info(
+          String(
+            JSON.stringify({
+              fn: "check-inbox-booking",
+              step: "flag_resync",
+              checked: resync.checked,
+              marked_read: resync.markedRead,
+            }),
+          ),
+        );
       }
     } catch (resyncErr: unknown) {
       log.warn("flag_resync skipped:", { details: [extractErrorMessage(resyncErr)] });
@@ -196,12 +199,16 @@ Deno.serve(async (req) => {
     try {
       const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
       if (enq.enqueued > 0) {
-        log.info(String(JSON.stringify({
-            fn: "check-inbox-booking",
-            step: "enrichment_enqueue",
-            enqueued: enq.enqueued,
-            skipped: enq.skipped,
-          })));
+        log.info(
+          String(
+            JSON.stringify({
+              fn: "check-inbox-booking",
+              step: "enrichment_enqueue",
+              enqueued: enq.enqueued,
+              skipped: enq.skipped,
+            }),
+          ),
+        );
       }
     } catch (enqErr: unknown) {
       log.warn("enrichment_enqueue skipped:", { details: [extractErrorMessage(enqErr)] });

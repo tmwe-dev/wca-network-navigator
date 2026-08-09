@@ -14,8 +14,6 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 const FAMILY_MAP: Record<string, string> = {
   // doctrine
   doctrine: "doctrine",

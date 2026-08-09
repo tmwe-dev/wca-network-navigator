@@ -17,8 +17,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 Deno.serve(async (req) => {
   // Handle CORS
   const pre = corsPreflight(req);
@@ -34,14 +32,20 @@ Deno.serve(async (req) => {
     const { partnerId, batch } = await req.json();
 
     if (!partnerId && !batch) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "Either partnerId or batch array is required", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Either partnerId or batch array is required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "Supabase credentials not configured", 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Supabase credentials not configured", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -111,8 +115,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    return edgeErrorWithStatus("VALIDATION_ERROR", "Invalid request parameters", 400, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("VALIDATION_ERROR", "Invalid request parameters", 400, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   } catch (error) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, { "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, {
+      "Content-Type": "application/json",
+    });
   }
 });

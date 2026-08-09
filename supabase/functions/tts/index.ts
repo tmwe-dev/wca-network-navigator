@@ -47,11 +47,17 @@ serve(async (req) => {
 
     const { text, voiceId } = await req.json();
     if (!text || typeof text !== "string") {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "text required", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "text required", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     if (!ELEVENLABS_API_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY not configured", 500, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "ELEVENLABS_API_KEY not configured", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const truncated = text.slice(0, 1500);

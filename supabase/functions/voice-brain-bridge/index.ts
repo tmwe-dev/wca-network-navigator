@@ -18,7 +18,6 @@ import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("voice-brain-bridge");
 
-
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BRIDGE_SECRET = Deno.env.get("VOICE_BRIDGE_SECRET") || "";
@@ -265,14 +264,20 @@ serve(async (req) => {
   const traceId = crypto.randomUUID();
 
   if (req.method !== "POST") {
-    return edgeErrorWithStatus("INTERNAL_ERROR", "method_not_allowed", 405, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "method_not_allowed", 405, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   let turn: IncomingTurn;
   try {
     turn = (await req.json()) as IncomingTurn;
   } catch {
-    return edgeErrorWithStatus("VALIDATION_ERROR", "invalid_json", 400, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("VALIDATION_ERROR", "invalid_json", 400, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
@@ -283,14 +288,20 @@ serve(async (req) => {
   if (turn.bridge_token) {
     const tokenUserId = await validateBridgeToken(supabase, turn.bridge_token);
     if (!tokenUserId) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "invalid_or_expired_bridge_token", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "invalid_or_expired_bridge_token", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
     resolvedUserId = tokenUserId;
   } else {
     // Legacy: shared secret in header
     const presented = req.headers.get("x-bridge-secret") || "";
     if (!BRIDGE_SECRET || presented !== BRIDGE_SECRET) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
     // Use service user fallback for legacy auth
   }
@@ -304,7 +315,10 @@ serve(async (req) => {
     .maybeSingle();
 
   if (pauseSettings?.value === "true") {
-    return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   // Upsert voice_call_sessions row

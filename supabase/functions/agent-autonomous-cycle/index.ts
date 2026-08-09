@@ -9,8 +9,6 @@ import { getNextEngagementStep } from "../_shared/cadenceEngine.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 // Defaults — overridden by app_settings at runtime
@@ -500,6 +498,9 @@ serve(async (req) => {
     });
   } catch (err) {
     await cronGuardLogRun(supabase, "agent_autonomous", {}, err instanceof Error ? err.message : String(err));
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Errore", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Errore", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

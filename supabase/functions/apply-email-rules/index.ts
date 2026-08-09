@@ -209,7 +209,10 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -232,7 +235,10 @@ Deno.serve(async (req) => {
         data: { user },
       } = await userClient.auth.getUser();
       if (!user) {
-        return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, { ...cors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, {
+          ...cors,
+          "Content-Type": "application/json",
+        });
       }
       callerUserId = user.id;
     }
@@ -415,6 +421,9 @@ Deno.serve(async (req) => {
     );
   } catch (e: unknown) {
     log.error("[apply-email-rules] error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...cors,
+      "Content-Type": "application/json",
+    });
   }
 });

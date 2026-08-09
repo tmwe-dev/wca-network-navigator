@@ -23,8 +23,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-
-
 interface RequestBody {
   from_address: string;
   message_id?: string;

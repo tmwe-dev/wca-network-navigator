@@ -18,8 +18,6 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { resolveInjectionReview } from "../_shared/injectionGuard.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 interface ReqBody {
   review_id?: string;
   decision?: "approved" | "rejected";

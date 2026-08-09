@@ -23,7 +23,10 @@ Deno.serve(async (req) => {
     const { linkedin_url } = await req.json();
 
     if (!linkedin_url) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "linkedin_url is required", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "linkedin_url is required", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // If no API key configured, return a clear message

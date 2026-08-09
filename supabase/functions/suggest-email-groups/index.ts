@@ -34,7 +34,10 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -47,7 +50,10 @@ serve(async (req) => {
     });
     const { data: userData, error: userError } = await anonClient.auth.getUser();
     if (userError || !userData?.user?.id) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
     const user = { id: userData.user.id };
 
@@ -77,7 +83,10 @@ serve(async (req) => {
     }
 
     if (!groups || groups.length === 0) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "No groups configured", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "No groups configured", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // 2. Load addresses to analyze.
@@ -271,7 +280,10 @@ serve(async (req) => {
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "AI not configured", 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI not configured", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Carica i prompt operativi dal Prompt Lab (scope: classification).
@@ -348,7 +360,10 @@ serve(async (req) => {
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
-      return edgeErrorWithStatus("INTERNAL_ERROR", "AI gateway error", 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI gateway error", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const aiData = await aiResponse.json();
@@ -396,6 +411,9 @@ serve(async (req) => {
     );
   } catch (e) {
     log.error("suggest-email-groups error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

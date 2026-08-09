@@ -29,7 +29,10 @@ serve(async (req) => {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -39,7 +42,10 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claims, error: claimsErr } = await authClient.auth.getClaims(token);
     if (claimsErr || !claims?.claims?.sub) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const body = await req.json().catch(() => ({}));
@@ -129,6 +135,9 @@ serve(async (req) => {
     );
   } catch (err: unknown) {
     log.error("memory-embed-backfill error:", err);
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

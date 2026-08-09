@@ -84,7 +84,10 @@ serve(async (req) => {
     const LOVABLE_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY not configured", 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY not configured", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     let processedCount = 0;
@@ -189,6 +192,9 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
     });
   } catch (e: unknown) {
     log.error("agent-prompt-refiner error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

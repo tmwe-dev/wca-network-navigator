@@ -9,8 +9,6 @@ import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { serviceClient } from "../_shared/tmweClient.ts";
 import { logTmweAudit } from "../_shared/tmweAudit.ts";
 
-
-
 const InputSchema = z.object({
   partner_id: z.string().uuid(),
   tmwe_client_id: z.string().min(1),

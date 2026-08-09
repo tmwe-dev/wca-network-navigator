@@ -17,7 +17,6 @@ import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("command-ask-brain");
 
-
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -73,14 +72,20 @@ serve(async (req) => {
   if (auth.kind === "error") return auth.response;
 
   if (req.method !== "POST") {
-    return edgeErrorWithStatus("INTERNAL_ERROR", "method_not_allowed", 405, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "method_not_allowed", 405, {
+      ...cors,
+      "Content-Type": "application/json",
+    });
   }
 
   let body: AskBrainBody;
   try {
     body = (await req.json()) as AskBrainBody;
   } catch {
-    return edgeErrorWithStatus("VALIDATION_ERROR", "invalid_json", 400, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("VALIDATION_ERROR", "invalid_json", 400, {
+      ...cors,
+      "Content-Type": "application/json",
+    });
   }
 
   const question = (body.question || "").trim();

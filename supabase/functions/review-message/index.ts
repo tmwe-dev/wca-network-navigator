@@ -27,7 +27,10 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -35,7 +38,10 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claims, error: authErr } = await supabase.auth.getClaims(token);
     if (authErr || !claims?.claims?.sub) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
     const userId = claims.claims.sub as string;
 
@@ -52,7 +58,10 @@ Deno.serve(async (req) => {
       });
     }
     if (!draft.trim()) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "empty_draft", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "empty_draft", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     // Context per la review

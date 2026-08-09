@@ -16,8 +16,6 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 const MAX_BATCH = 200;
 const DEFAULT_DAYS = 7;
 
@@ -154,6 +152,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", String(e instanceof Error ? e.message : e), 500, { ...headers, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", String(e instanceof Error ? e.message : e), 500, {
+      ...headers,
+      "Content-Type": "application/json",
+    });
   }
 });

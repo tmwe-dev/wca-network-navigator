@@ -17,8 +17,6 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 interface ReqBody {
   message_id: string;
   user_id?: string | null;

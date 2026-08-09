@@ -111,13 +111,19 @@ serve(async (req) => {
   try {
     const body = (await req.json()) as ReqBody;
     if (!body.markdown || !body.extract_prompt) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "markdown e extract_prompt sono obbligatori", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "markdown e extract_prompt sono obbligatori", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY mancante", 500, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY mancante", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     // ── Cache lookup (B) ──
@@ -184,10 +190,16 @@ serve(async (req) => {
       const errText = await aiRes.text();
       console.error("AI gateway error", aiRes.status, errText);
       if (aiRes.status === 429) {
-        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI. Riprova fra poco.", 429, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI. Riprova fra poco.", 429, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       if (aiRes.status === 402) {
-        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti. Aggiungi fondi al workspace Lovable.", 402, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti. Aggiungi fondi al workspace Lovable.", 402, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       return new Response(JSON.stringify({ error: "Errore AI gateway", detail: errText }), {
         status: 502,
@@ -239,6 +251,9 @@ serve(async (req) => {
     });
   } catch (e) {
     log.error("sherlock-extract error", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore sconosciuto", 500, { ...corsHeaders, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore sconosciuto", 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    });
   }
 });

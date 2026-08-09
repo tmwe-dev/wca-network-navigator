@@ -3,8 +3,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-
-
 const SUPPORTED_PROVIDERS = ["openai", "google", "anthropic"] as const;
 type Provider = (typeof SUPPORTED_PROVIDERS)[number];
 

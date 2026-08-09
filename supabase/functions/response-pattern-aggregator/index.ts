@@ -54,7 +54,10 @@ Deno.serve(async (req) => {
 
     if (actErr) {
       log.error("Failed to fetch activities:", actErr.message);
-      return edgeErrorWithStatus("INTERNAL_ERROR", actErr.message, 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", actErr.message, 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     if (!activities?.length) {
@@ -247,6 +250,9 @@ Deno.serve(async (req) => {
     );
   } catch (e: unknown) {
     log.error("response-pattern-aggregator error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

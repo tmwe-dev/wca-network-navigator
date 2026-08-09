@@ -24,7 +24,10 @@ serve(async (req) => {
   // Auth check before forwarding
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   try {
@@ -39,10 +42,16 @@ serve(async (req) => {
       case "deep_search":
         return forwardToFunction("ai-deep-search-helper", body, req.headers);
       default:
-        return edgeErrorWithStatus("VALIDATION_ERROR", `Unknown action: ${action}`, 400, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("VALIDATION_ERROR", `Unknown action: ${action}`, 400, {
+          ...dynCors,
+          "Content-Type": "application/json",
+        });
     }
   } catch (e: Record<string, unknown>) {
     log.error("ai-utility error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e.message || "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e.message || "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

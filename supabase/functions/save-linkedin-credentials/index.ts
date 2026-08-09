@@ -7,8 +7,6 @@ import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { encryptValue } from "../_shared/linkedinCrypto.ts";
 
-
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;

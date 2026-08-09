@@ -14,8 +14,6 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 interface ChatMsg {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
@@ -260,7 +258,10 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "Missing Authorization", 401, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Missing Authorization", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const { messages = [] } = (await req.json()) as { messages: ChatMsg[] };
@@ -286,7 +287,10 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY not configured", 500, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY not configured", 500, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     const systemMsg = { role: "system", content: BASE_PROMPT + opsBlock + schemaContext + kbContext };
@@ -307,10 +311,16 @@ Deno.serve(async (req) => {
       });
 
       if (aiRes.status === 429) {
-        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI (riprova tra poco).", 429, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI (riprova tra poco).", 429, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       if (aiRes.status === 402) {
-        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti.", 402, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti.", 402, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       if (!aiRes.ok) {
         const errTxt = await aiRes.text();

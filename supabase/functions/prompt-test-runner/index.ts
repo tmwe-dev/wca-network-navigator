@@ -381,7 +381,10 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!cronAuthorized && !authHeader.startsWith("Bearer ")) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "missing_auth", 401, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "missing_auth", 401, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     let body: { test_case_id?: string; prompt_id?: string; trigger_source?: string; cron_limit?: number };
@@ -393,7 +396,10 @@ Deno.serve(async (req) => {
 
     // Cron mode: nessun parametro richiesto, esegue tutti i test attivi (capped)
     if (!cronAuthorized && !body.test_case_id && !body.prompt_id) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "missing_test_case_id_or_prompt_id", 400, { ...corsHeaders, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "missing_test_case_id_or_prompt_id", 400, {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      });
     }
 
     let triggeredBy: string | null = null;
@@ -407,7 +413,10 @@ Deno.serve(async (req) => {
       const { data: userData } = await userClient.auth.getUser();
       authedUserId = userData?.user?.id ?? null;
       if (!authedUserId) {
-        return edgeErrorWithStatus("AUTH_REQUIRED", "invalid_jwt", 401, { ...corsHeaders, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("AUTH_REQUIRED", "invalid_jwt", 401, {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        });
       }
       try {
         const { data } = await userClient.rpc("get_current_operator_id");
@@ -510,6 +519,9 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     log.error("prompt-test-runner error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", (e as Error).message, 500, { ...corsHeaders, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", (e as Error).message, 500, {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    });
   }
 });

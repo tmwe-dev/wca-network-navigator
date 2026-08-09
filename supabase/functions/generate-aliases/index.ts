@@ -80,7 +80,10 @@ serve(async (req) => {
     return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes, systemPrompt);
   } catch (e: unknown) {
     log.error("generate-aliases error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });
 

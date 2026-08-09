@@ -28,7 +28,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox");
 
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
@@ -263,12 +262,16 @@ Deno.serve(async (req) => {
       try {
         const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
         if (enq.enqueued > 0) {
-          log.info(String(JSON.stringify({
-              fn: "check-inbox",
-              step: "enrichment_enqueue",
-              enqueued: enq.enqueued,
-              skipped: enq.skipped,
-            })));
+          log.info(
+            String(
+              JSON.stringify({
+                fn: "check-inbox",
+                step: "enrichment_enqueue",
+                enqueued: enq.enqueued,
+                skipped: enq.skipped,
+              }),
+            ),
+          );
         }
       } catch (enqErr: unknown) {
         log.warn("enrichment_enqueue skipped:", { details: [extractErrorMessage(enqErr)] });

@@ -22,7 +22,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox");
 
-
 const MAX_TEXT_LENGTH = 50_000;
 const MAX_HTML_LENGTH = 100_000;
 

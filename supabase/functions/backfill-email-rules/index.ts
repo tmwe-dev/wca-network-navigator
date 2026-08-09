@@ -278,7 +278,10 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -293,7 +296,10 @@ Deno.serve(async (req) => {
       data: { user },
     } = await userClient.auth.getUser();
     if (!user) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
 
     const supabase = createClient(supabaseUrl, serviceKey, {
@@ -311,10 +317,16 @@ Deno.serve(async (req) => {
     // operator_id è opzionale: se assente filtra solo per user_id.
     const effectiveUserId = userIdInput ?? user.id;
     if (!effectiveUserId || !scope || !target) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "missing user_id/scope/target", 400, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "missing user_id/scope/target", 400, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
     if (scope !== "address" && scope !== "group") {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "invalid scope", 400, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "invalid scope", 400, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Carica regole filtrate per USER + (eventuale operator) + scope.
@@ -370,7 +382,10 @@ Deno.serve(async (req) => {
     const imapUser = Deno.env.get("IMAP_USER") || "";
     const imapPass = Deno.env.get("IMAP_PASSWORD") || "";
     if (!host || !imapUser || !imapPass) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "IMAP credentials not configured", 500, { ...cors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "IMAP credentials not configured", 500, {
+        ...cors,
+        "Content-Type": "application/json",
+      });
     }
 
     const reports: AddressReport[] = [];
@@ -437,6 +452,9 @@ Deno.serve(async (req) => {
     );
   } catch (e: unknown) {
     log.error("[backfill-email-rules] error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...cors,
+      "Content-Type": "application/json",
+    });
   }
 });

@@ -23,8 +23,6 @@ import {
 } from "../_shared/approvalFlow.ts";
 import type { AutonomyLevel } from "../_shared/decisionEngine.ts";
 
-
-
 Deno.serve(async (req) => {
   const preflight = corsPreflight(req);
   if (preflight) return preflight;

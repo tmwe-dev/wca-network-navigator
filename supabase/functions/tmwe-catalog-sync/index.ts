@@ -10,8 +10,6 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { serviceClient, getSystemToken, tmweBaseUrl } from "../_shared/tmweClient.ts";
 
-
-
 type RiskLevel = "read" | "write" | "destructive" | "admin";
 
 interface DocEndpoint {

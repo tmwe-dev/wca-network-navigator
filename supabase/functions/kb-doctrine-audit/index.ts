@@ -18,8 +18,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { mapCategoryToFamily, KB_FAMILIES, type KbFamily } from "../_shared/kbCategoryMapper.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
-
-
 interface KbRow {
   id: string;
   title: string | null;

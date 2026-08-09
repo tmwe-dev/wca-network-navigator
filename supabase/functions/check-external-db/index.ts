@@ -2,8 +2,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;

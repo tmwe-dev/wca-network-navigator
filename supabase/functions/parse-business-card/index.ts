@@ -45,12 +45,18 @@ serve(async (req) => {
       error: authErr,
     } = await anonClient.auth.getUser(token);
     if (authErr || !user) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "Non autorizzato", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Non autorizzato", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const { imageUrl } = await req.json();
     if (!imageUrl) {
-      return edgeErrorWithStatus("VALIDATION_ERROR", "imageUrl richiesto", 400, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "imageUrl richiesto", 400, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Deduct 2 credits
@@ -62,7 +68,10 @@ serve(async (req) => {
     });
     const creditRow = creditResult?.[0];
     if (!creditRow?.success) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti insufficienti", 402, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti insufficienti", 402, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     // Download image as base64
@@ -146,7 +155,10 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
       const errText = await aiResp.text();
       console.error("AI Gateway error:", aiResp.status, errText);
       if (aiResp.status === 429) {
-        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI superato, riprova tra poco", 429, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI superato, riprova tra poco", 429, {
+          ...dynCors,
+          "Content-Type": "application/json",
+        });
       }
       throw new Error(`AI error: ${aiResp.status}`);
     }
@@ -204,6 +216,9 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
     );
   } catch (e) {
     log.error("parse-business-card error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e.message || "Errore interno", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e.message || "Errore interno", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

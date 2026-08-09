@@ -50,6 +50,9 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     log.error("country_counts_failed", err);
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

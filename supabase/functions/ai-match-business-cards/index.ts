@@ -187,10 +187,16 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
-        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit raggiunto, riprova tra poco.", 429, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit raggiunto, riprova tra poco.", 429, {
+          ...dynCors,
+          "Content-Type": "application/json",
+        });
       }
       if (aiResponse.status === 402) {
-        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti.", 402, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti.", 402, {
+          ...dynCors,
+          "Content-Type": "application/json",
+        });
       }
       const t = await aiResponse.text();
       console.error("AI error:", aiResponse.status, t);
@@ -255,6 +261,9 @@ confidence: 0-100. Only include candidates with confidence >= 50. Max 3 candidat
     );
   } catch (e) {
     log.error("ai-match error:", e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

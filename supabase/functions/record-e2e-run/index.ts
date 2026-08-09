@@ -13,8 +13,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 const jsonHeaders = { "Content-Type": "application/json" };
 
 interface SpecResult {

@@ -23,7 +23,6 @@ import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox-booking");
 
-
 const MAX_RAW_FETCH_BYTES = 15_000_000; // 15MB
 
 export async function processMessage(

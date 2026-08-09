@@ -24,7 +24,10 @@ serve(async (req) => {
   // Auth check before forwarding
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 
   try {
@@ -42,11 +45,17 @@ serve(async (req) => {
       case "analyze_edit":
         return forwardToFunction("analyze-email-edit", body, req.headers);
       default:
-        return edgeErrorWithStatus("VALIDATION_ERROR", `Unknown action: ${action}`, 400, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("VALIDATION_ERROR", `Unknown action: ${action}`, 400, {
+          ...dynCors,
+          "Content-Type": "application/json",
+        });
     }
   } catch (e: unknown) {
     log.error("generate-content error:", e);
     const message = e instanceof Error ? e.message : String(e);
-    return edgeErrorWithStatus("INTERNAL_ERROR", message || "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", message || "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

@@ -5,8 +5,6 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
-
-
 /**
  * ai-tracking-healthcheck — Verifica copertura tracking AI cost.
  *
@@ -105,6 +103,9 @@ serve(async (req) => {
       { headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, {
+      ...cors,
+      "Content-Type": "application/json",
+    });
   }
 });

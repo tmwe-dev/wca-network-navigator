@@ -19,7 +19,10 @@ Deno.serve(async (req) => {
     const extUrl = "https://dlldkrzoxvjxpgkkttxu.supabase.co";
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
     if (!extKey) {
-      return edgeErrorWithStatus("INTERNAL_ERROR", "WCA_EXTERNAL_SUPABASE_KEY not configured", 500, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "WCA_EXTERNAL_SUPABASE_KEY not configured", 500, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const localUrl = Deno.env.get("SUPABASE_URL")!;
@@ -28,14 +31,20 @@ Deno.serve(async (req) => {
     // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "Authentication required", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Authentication required", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
     const anonSb = createClient(localUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const {
       data: { user },
     } = await anonSb.auth.getUser(authHeader.replace("Bearer ", ""));
     if (!user) {
-      return edgeErrorWithStatus("AUTH_REQUIRED", "Invalid token", 401, { ...dynCors, "Content-Type": "application/json" });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Invalid token", 401, {
+        ...dynCors,
+        "Content-Type": "application/json",
+      });
     }
 
     const extSb = createClient(extUrl, extKey);
@@ -238,6 +247,9 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     log.error("Sync error:", error);
-    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, {
+      ...dynCors,
+      "Content-Type": "application/json",
+    });
   }
 });

@@ -24,8 +24,6 @@ import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createTracer } from "../_shared/pipelineTrace.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 
-
-
 interface RequestBody {
   message_id: string;
   from_address: string;
