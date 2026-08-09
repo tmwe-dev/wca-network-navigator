@@ -6,6 +6,8 @@
  *  1. cycles     : file in src/components|hooks|data|lib che importano @/v2/**
  *  2. rawDbAccess: file fuori dal DAL (src/data, src/v2/io) che usano .from(
  *  3. crossModule: import da src/v2/** verso moduli verticali legacy (escluso il Core)
+ *  4. ownedTables: accessi fuori dal DAL alle tabelle con ownership dichiarata
+ *                  (vedi docs/architecture/data-ownership.md)
  *
  * Esce sempre con codice 0: serve a tracciare una baseline, non a bloccare la CI.
  */
@@ -17,6 +19,17 @@ const SRC = join(ROOT, "src");
 
 /** Cartelle considerate Core Platform: import liberi. */
 const CORE_LEGACY = ["components/ui", "lib/utils", "lib/log", "lib/queryKeys", "lib/records"];
+
+/** Tabelle con source of truth dichiarata: l'accesso deve passare dal DAL del modulo owner. */
+const OWNED_TABLES = [
+  "partners",
+  "partner_contacts",
+  "imported_contacts",
+  "business_cards",
+  "prospects",
+  "channel_messages",
+  "interactions",
+];
 
 function walk(dir, acc = []) {
   for (const entry of readdirSync(dir)) {
@@ -36,6 +49,7 @@ const files = walk(SRC);
 const cycles = [];
 const rawDbAccess = [];
 const crossModule = new Map();
+const ownedTableHits = new Map();
 
 for (const file of files) {
   const rel = relative(ROOT, file).replaceAll("\\", "/");
@@ -46,6 +60,13 @@ for (const file of files) {
 
   if (isLegacy && /from\s+["']@\/v2\//.test(code)) cycles.push(rel);
   if (!isDal && /\.from\(/.test(code)) rawDbAccess.push(rel);
+
+  if (!isDal) {
+    for (const table of OWNED_TABLES) {
+      const re = new RegExp(`\\.from\\(["'\`]${table}["'\`]\\)`);
+      if (re.test(code)) ownedTableHits.set(table, (ownedTableHits.get(table) ?? 0) + 1);
+    }
+  }
 
   if (isV2) {
     for (const m of code.matchAll(/from\s+["']@\/((?:components|hooks|data|lib)\/[\w./-]+)["']/g)) {
@@ -58,11 +79,19 @@ for (const file of files) {
 }
 
 const crossTotal = [...crossModule.values()].reduce((a, b) => a + b, 0);
+const ownedTotal = [...ownedTableHits.values()].reduce((a, b) => a + b, 0);
 
 console.log("=== Module boundary audit (report only) ===");
 console.log(`Cicli legacy -> @/v2        : ${cycles.length}`);
 console.log(`Accessi DB fuori dal DAL    : ${rawDbAccess.length}`);
 console.log(`Import v2 -> legacy verticale: ${crossTotal}`);
+console.log(`Tabelle owned fuori dal DAL : ${ownedTotal}`);
+if (ownedTotal > 0) {
+  console.log("\nAccessi diretti a tabelle owned:");
+  for (const [table, count] of [...ownedTableHits.entries()].sort((a, b) => b[1] - a[1])) {
+    console.log(`  ${String(count).padStart(4)}  ${table}`);
+  }
+}
 console.log("\nTop sorgenti cross-module:");
 for (const [bucket, count] of [...crossModule.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15)) {
   console.log(`  ${String(count).padStart(4)}  ${bucket}`);
