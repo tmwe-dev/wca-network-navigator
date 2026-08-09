@@ -81,3 +81,78 @@ Conclusione chiave: non esiste piu' un "V1 applicativo" parallelo; esiste un **l
 ## Nota tecnica
 
 L'ipotesi "grande V1 residuo da cancellare" non e' confermata dai dati: il routing V1 e' gia' stato eliminato (1 sola pagina residua). Il debito reale e' **accoppiamento**, non duplicazione di pagine. Il piano privilegia quindi la creazione dei confini prima di ogni cancellazione.
+
+---
+
+# Addendum: suite di servizi + Cobra come orchestratore esterno
+
+## A1. Stato attuale rilevato (read-only)
+
+- **Cobra non esiste nel codice**: nessun file, funzione o riferimento "cobra" nel repo. Oggi e' solo un protocollo operativo di sviluppo in memoria progetto, non un motore. Va quindi **creato da zero come servizio esterno**, non estratto.
+- **Lo scraper e' oggi interno e sparso** su almeno 3 livelli: Edge Functions (`scrape-website`, `enrich-partner-website`, `batch-enrichment-worker`, `process-inbound-enrichment`, `ai-deep-search-helper`), client (`src/lib/api/wcaScraper.ts`, `src/lib/acquisition/scanDirectory.ts`, `hooks/useDeepSearch*`, `useFireScrapeExtensionBridge`, `WCAScraper.tsx`) e tool Command (`scrapeCompanyWebsite`, `enrichPartnerFromWebsite`, `enrichProspectFromWebsite`). Nessun confine unico: e' il candidato numero uno all'estrazione.
+
+## A2. Mappa target aggiornata (suite, non monolite)
+
+```text
+                         +-------------------+
+                         |   COBRA (esterno) |  orchestratore: DAG, fan-out,
+                         |  workflow engine  |  retry, attese, aggregazione
+                         +---------+---------+
+                                   | contratti/eventi (job API + webhook/outbox)
+   +-----------+-----------+-------+-------+-----------+-----------+
+   |           |           |               |           |           |
+ Scraper    Research/    Funnemail      WCA Network   AI Platform  Agent
+ (esterno)  Enrichment   (email svc)    (data src)    (capacita')  Framework
+   |           |           |               |           |           |
+   +-----------+-----------+-------+-------+-----------+-----------+
+                                   |
+                        +----------v-----------+
+                        |  NAVIGATOR (hub)     |  UI/Command Center,
+                        |  data hub + viste    |  CRM, Pipeline,
+                        |  aggregate + Dash    |  Operational Dashboard
+                        +----------------------+
+```
+
+Regola: lavoro semplice = chiamata diretta al servizio. Lavoro complesso = Navigator crea un **job** su Cobra; Cobra compone il DAG e riporta stato/risultati; Navigator li visualizza e li persiste.
+
+## A3. Classificazione: estrarre come servizio vs riorganizzare come modulo interno
+
+| Area | Destino | Motivazione |
+|---|---|---|
+| Scraper / crawling / fetch pagine | **Estrarre - servizio esterno** | I/O pesante, rate-limit, proxy, blocchi anti-bot, ciclo di rilascio proprio. Oggi sparso su edge + client + tool. |
+| Deep Search 3 livelli / Research-Enrichment | **Estrarre - servizio esterno** (consumatore dello Scraper) | Lavoro batch lungo, retry, costo; deve essere consumabile da CRM, Sales, Agents, Command. |
+| Funnemail (classificazione, routing, autoresponder) | **Estrarre - servizio email** | Dominio chiuso, gia' con tabelle proprie `funnemail_*`; espone API decisioni + eventi. |
+| IMAP sync / invio email | **Estrarre insieme a Funnemail** (worker) | Long-running, stateful, sensibile: non deve vivere nell'app. |
+| WCA Network / TMWE bridge | **Estrarre - fonte dati esterna** | E' gia' un sistema terzo; oggi accoppiato via `tmwe_*` e bridge token. |
+| Orchestrazione workflow (missioni, campagne multi-step, autopilot) | **Estrarre in Cobra** | E' esattamente il ruolo dell'orchestratore: DAG, fan-out, attese, aggregazione. |
+| Agent Framework (missioni/task/planning/execution) | **Modulo interno ora, estraibile poi** | Deve prima appoggiarsi a Cobra per l'esecuzione; l'intelligenza di planning puo' restare in Navigator. |
+| AI Platform (modelli, prompt, KB, memory, tooling) | **Modulo interno con API pubblica** | Capacita' condivisa; estrazione solo se serve scalare o isolare i costi. |
+| CRM (contatti, partner, dedup, soft-delete) | **Modulo interno estraibile** | E' il cuore del data hub; confine forte ma estrazione non prioritaria. |
+| Sales Intelligence, Pipeline, Deals | **Modulo interno** | Vive sui dati CRM, poco I/O esterno. |
+| Marketing Automation (outreach, cadenze, A/B) | **Modulo interno + worker Cobra** | Decisioni in Navigator, esecuzione temporizzata a Cobra. |
+| Operational Dashboard / osservabilita' | **Modulo interno, ma aggregatore multi-servizio** | Deve leggere lo stato dei job Cobra e la salute di ogni servizio. |
+| Core Platform (auth, layout, design system, contratti) | **Resta in Navigator** | Nessuna estrazione. |
+
+## A4. Contratti minimi da definire prima di qualsiasi estrazione (solo documento)
+
+1. **Job API** (Cobra): `POST /jobs {type, payload, idempotency_key}` -> `job_id`; `GET /jobs/{id}`; callback/webhook al completamento.
+2. **Event envelope** comune: `{event_id, type, occurred_at, source, subject_id, payload, version}`.
+3. **Outbox** lato Navigator: gli eventi si scrivono in tabella e un worker li pubblica (nessuna chiamata cross-service dentro una transazione UI).
+4. **Idempotenza obbligatoria** su ogni consumer (dedup, invio email, enrichment) per evitare doppi side-effect.
+5. **Service contract card** per ogni servizio: dati posseduti, API pubblica, eventi emessi/consumati, SLO, owner.
+
+## A5. Impatto sui batch
+
+Il Batch 1 resta invariato (documentazione + audit non bloccante + 15 file morti). Si aggiunge al Batch 1 solo documentazione:
+
+- `docs/architecture/service-suite.md`: mappa suite + ruolo di Cobra + tabella di classificazione qui sopra.
+- `docs/architecture/contracts/README.md`: bozza di Job API ed Event envelope (nessuna implementazione).
+
+Batch successivi proposti, nell'ordine (ognuno da approvare a parte):
+
+- **Batch 3 - Scraper facade**: introdurre un unico punto di accesso interno allo scraping (`src/v2/io/scraping/`) che oggi inoltra alle Edge Functions esistenti. Nessun cambio di comportamento, ma da quel momento esiste un solo confine da puntare al futuro servizio esterno.
+- **Batch 4 - Research facade**: stessa cosa per deep search/enrichment, sopra la facade scraper.
+- **Batch 5 - Job/Outbox contract (dietro feature flag, spento)**: tabella job + envelope evento, nessun consumer attivo.
+- **Batch 6 - Cobra PoC esterno**: primo workflow non critico (es. enrichment batch) instradato via Cobra, con fallback immediato al percorso attuale.
+
+Criteri di completamento e rollback restano quelli delle sezioni 7 e 8.
