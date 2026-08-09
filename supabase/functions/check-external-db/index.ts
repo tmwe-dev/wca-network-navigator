@@ -1,5 +1,6 @@
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 
 
@@ -82,9 +83,6 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e.message, 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

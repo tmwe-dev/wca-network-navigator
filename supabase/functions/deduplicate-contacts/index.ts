@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("deduplicate-contacts");
 
@@ -27,10 +28,7 @@ Deno.serve(async (req: Request) => {
       error: authErr,
     } = await userClient.auth.getUser();
     if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Non autenticato" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Non autenticato", 401, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const admin = createClient(supabaseUrl, serviceKey);
@@ -41,10 +39,7 @@ Deno.serve(async (req: Request) => {
     const contactIds: string[] = body.contactIds || [];
 
     if (contactIds.length < 2) {
-      return new Response(JSON.stringify({ error: "Seleziona almeno 2 contatti" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Seleziona almeno 2 contatti", 400, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // Fetch selected contacts
@@ -52,10 +47,7 @@ Deno.serve(async (req: Request) => {
 
     if (fetchErr) throw fetchErr;
     if (!contacts || contacts.length < 2) {
-      return new Response(JSON.stringify({ error: "Contatti non trovati" }), {
-        status: 404,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("NOT_FOUND", "Contatti non trovati", 404, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // Group by normalized company_name
@@ -165,9 +157,6 @@ Deno.serve(async (req: Request) => {
     );
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", msg, 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

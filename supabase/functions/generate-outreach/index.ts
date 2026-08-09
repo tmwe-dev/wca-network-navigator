@@ -21,6 +21,7 @@ import { loadOperativePrompts, type PromptScope } from "../_shared/operativeProm
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("generate-outreach");
 
@@ -51,10 +52,7 @@ serve(async (req) => {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -64,10 +62,7 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
     }
     const userId = claimsData.claims.sub as string;
 
@@ -82,10 +77,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // ── Rate limit ──

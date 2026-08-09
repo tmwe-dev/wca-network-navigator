@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("whatsapp-ai-extract");
 
@@ -48,10 +49,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader)
-      return new Response(JSON.stringify({ error: "Missing auth" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Missing auth", 401, { ...dynCors, "Content-Type": "application/json" });
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -60,20 +58,14 @@ serve(async (req) => {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user)
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
 
     const { html, mode } = await req.json();
     // mode: "sidebar" = extract unread from sidebar HTML
     // mode: "thread"  = extract messages from open chat HTML
 
     if (!html || typeof html !== "string") {
-      return new Response(JSON.stringify({ error: "html field required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "html field required", 400, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // Trim HTML to avoid token limits (keep max ~30k chars)
@@ -271,10 +263,7 @@ REGOLE:
     } catch (fetchErr) {
       clearTimeout(aiTimeout);
       if ((fetchErr as Error).name === "AbortError") {
-        return new Response(JSON.stringify({ error: "AI gateway timeout (30s)" }), {
-          status: 504,
-          headers: { ...dynCors, "Content-Type": "application/json" },
-        });
+        return edgeErrorWithStatus("INTERNAL_ERROR", "AI gateway timeout (30s)", 504, { ...dynCors, "Content-Type": "application/json" });
       }
       throw fetchErr;
     }
@@ -315,10 +304,7 @@ REGOLE:
         console.error("AI gateway error:", aiResponse.status, errText);
 
         if (aiResponse.status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded, retry later" }), {
-            status: 429,
-            headers: { ...dynCors, "Content-Type": "application/json" },
-          });
+          return edgeErrorWithStatus("RATE_LIMITED", "Rate limit exceeded, retry later", 429, { ...dynCors, "Content-Type": "application/json" });
         }
         if (aiResponse.status === 402) {
           return aiCreditsFallbackResponse(dynCors, mode);
@@ -387,9 +373,6 @@ REGOLE:
     );
   } catch (e) {
     log.error("whatsapp-ai-extract error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

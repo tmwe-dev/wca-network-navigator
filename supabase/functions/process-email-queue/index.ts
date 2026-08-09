@@ -7,6 +7,7 @@ import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 import { assertDraftOwned } from "../_shared/ownership.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("process-email-queue");
 
@@ -21,10 +22,7 @@ Deno.serve(async (req) => {
     // ── Auth check ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -33,10 +31,7 @@ Deno.serve(async (req) => {
     });
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(authHeader.replace("Bearer ", ""));
     if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
     }
     const userId = claimsData.claims.sub as string;
 
@@ -46,10 +41,7 @@ Deno.serve(async (req) => {
     const { draft_id, action } = await req.json();
 
     if (!draft_id) {
-      return new Response(JSON.stringify({ error: "Missing draft_id" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Missing draft_id", 400, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // ── Ownership guard: draft MUST belong to the authenticated user ──
@@ -104,10 +96,7 @@ Deno.serve(async (req) => {
 
     if (!smtpHost || !smtpUser || !smtpPass) {
       await supabase.from("email_drafts").update({ queue_status: "error" }).eq("id", draft_id);
-      return new Response(JSON.stringify({ error: "SMTP non configurato" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "SMTP non configurato", 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const senderEmailVal = s["default_sender_email"] || smtpUser;
@@ -122,10 +111,7 @@ Deno.serve(async (req) => {
       .eq("id", draft_id)
       .single();
     if (!draft) {
-      return new Response(JSON.stringify({ error: "Draft not found" }), {
-        status: 404,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("NOT_FOUND", "Draft not found", 404, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const delayMs = (draft.queue_delay_seconds || 5) * 1000;
@@ -456,9 +442,6 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     log.error("process-email-queue error:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "Internal server error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

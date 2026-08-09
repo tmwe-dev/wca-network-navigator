@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("sync-wca-partners");
 
@@ -18,10 +19,7 @@ Deno.serve(async (req) => {
     const extUrl = "https://dlldkrzoxvjxpgkkttxu.supabase.co";
     const extKey = Deno.env.get("WCA_EXTERNAL_SUPABASE_KEY");
     if (!extKey) {
-      return new Response(JSON.stringify({ error: "WCA_EXTERNAL_SUPABASE_KEY not configured" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "WCA_EXTERNAL_SUPABASE_KEY not configured", 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const localUrl = Deno.env.get("SUPABASE_URL")!;
@@ -30,20 +28,14 @@ Deno.serve(async (req) => {
     // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Authentication required" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Authentication required", 401, { ...dynCors, "Content-Type": "application/json" });
     }
     const anonSb = createClient(localUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const {
       data: { user },
     } = await anonSb.auth.getUser(authHeader.replace("Bearer ", ""));
     if (!user) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Invalid token", 401, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const extSb = createClient(extUrl, extKey);
@@ -246,9 +238,6 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     log.error("Sync error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

@@ -23,6 +23,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getCaCertsForHost } from "./caCerts.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("backfill-email-rules");
 
@@ -277,10 +278,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...cors, "Content-Type": "application/json" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -295,10 +293,7 @@ Deno.serve(async (req) => {
       data: { user },
     } = await userClient.auth.getUser();
     if (!user) {
-      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-        status: 401,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, { ...cors, "Content-Type": "application/json" });
     }
 
     const supabase = createClient(supabaseUrl, serviceKey, {
@@ -316,16 +311,10 @@ Deno.serve(async (req) => {
     // operator_id è opzionale: se assente filtra solo per user_id.
     const effectiveUserId = userIdInput ?? user.id;
     if (!effectiveUserId || !scope || !target) {
-      return new Response(JSON.stringify({ error: "missing user_id/scope/target" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "missing user_id/scope/target", 400, { ...cors, "Content-Type": "application/json" });
     }
     if (scope !== "address" && scope !== "group") {
-      return new Response(JSON.stringify({ error: "invalid scope" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "invalid scope", 400, { ...cors, "Content-Type": "application/json" });
     }
 
     // Carica regole filtrate per USER + (eventuale operator) + scope.
@@ -381,10 +370,7 @@ Deno.serve(async (req) => {
     const imapUser = Deno.env.get("IMAP_USER") || "";
     const imapPass = Deno.env.get("IMAP_PASSWORD") || "";
     if (!host || !imapUser || !imapPass) {
-      return new Response(JSON.stringify({ error: "IMAP credentials not configured" }), {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "IMAP credentials not configured", 500, { ...cors, "Content-Type": "application/json" });
     }
 
     const reports: AddressReport[] = [];
@@ -451,9 +437,6 @@ Deno.serve(async (req) => {
     );
   } catch (e: unknown) {
     log.error("[backfill-email-rules] error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...cors, "Content-Type": "application/json" });
   }
 });

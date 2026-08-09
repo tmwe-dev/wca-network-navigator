@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("analyze-email-edit");
 
@@ -46,18 +47,12 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const { original_html, edited_html, recipient_country, email_type } = await req.json();
     if (!original_html || !edited_html) {
-      return new Response(JSON.stringify({ error: "original_html and edited_html required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "original_html and edited_html required", 400, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const originalText = stripHtml(original_html);

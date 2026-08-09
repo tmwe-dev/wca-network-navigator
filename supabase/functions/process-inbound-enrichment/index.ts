@@ -16,6 +16,7 @@ import { safeParseAiJson } from "../_shared/aiJsonValidator.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 
 
@@ -67,10 +68,7 @@ Deno.serve(async (req) => {
     .limit(BATCH_SIZE);
 
   if (jobsErr) {
-    return new Response(JSON.stringify({ error: jobsErr.message }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", jobsErr.message, 500, { ...cors, "Content-Type": "application/json" });
   }
 
   if (!jobs || jobs.length === 0) {

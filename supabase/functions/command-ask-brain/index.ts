@@ -13,6 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("command-ask-brain");
 
@@ -72,20 +73,14 @@ serve(async (req) => {
   if (auth.kind === "error") return auth.response;
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "method_not_allowed" }), {
-      status: 405,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "method_not_allowed", 405, { ...cors, "Content-Type": "application/json" });
   }
 
   let body: AskBrainBody;
   try {
     body = (await req.json()) as AskBrainBody;
   } catch {
-    return new Response(JSON.stringify({ error: "invalid_json" }), {
-      status: 400,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("VALIDATION_ERROR", "invalid_json", 400, { ...cors, "Content-Type": "application/json" });
   }
 
   const question = (body.question || "").trim();

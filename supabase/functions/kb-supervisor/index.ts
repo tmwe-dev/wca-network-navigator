@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("kb-supervisor");
 
@@ -56,10 +57,7 @@ serve(async (req: Request) => {
     const auditLevel: string = body.audit_level || "all";
 
     if (!userId) {
-      return new Response(JSON.stringify({ error: "user_id required" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "user_id required", 400, { ...cors, "Content-Type": "application/json" });
     }
 
     const results: AuditResult[] = [];
@@ -322,9 +320,6 @@ serve(async (req: Request) => {
   } catch (error: unknown) {
     log.error("[kb-supervisor] error:", error);
     const msg = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", msg, 500, { ...cors, "Content-Type": "application/json" });
   }
 });

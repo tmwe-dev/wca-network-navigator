@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { z, safeParseAiJson, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("parse-business-card");
 
@@ -44,18 +45,12 @@ serve(async (req) => {
       error: authErr,
     } = await anonClient.auth.getUser(token);
     if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Non autorizzato" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Non autorizzato", 401, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const { imageUrl } = await req.json();
     if (!imageUrl) {
-      return new Response(JSON.stringify({ error: "imageUrl richiesto" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "imageUrl richiesto", 400, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // Deduct 2 credits
@@ -67,10 +62,7 @@ serve(async (req) => {
     });
     const creditRow = creditResult?.[0];
     if (!creditRow?.success) {
-      return new Response(JSON.stringify({ error: "Crediti insufficienti" }), {
-        status: 402,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti insufficienti", 402, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // Download image as base64
@@ -154,10 +146,7 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
       const errText = await aiResp.text();
       console.error("AI Gateway error:", aiResp.status, errText);
       if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit AI superato, riprova tra poco" }), {
-          status: 429,
-          headers: { ...dynCors, "Content-Type": "application/json" },
-        });
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI superato, riprova tra poco", 429, { ...dynCors, "Content-Type": "application/json" });
       }
       throw new Error(`AI error: ${aiResp.status}`);
     }
@@ -215,9 +204,6 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
     );
   } catch (e) {
     log.error("parse-business-card error:", e);
-    return new Response(JSON.stringify({ error: e.message || "Errore interno" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e.message || "Errore interno", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

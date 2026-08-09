@@ -27,6 +27,7 @@ import { sanitizeForPrompt, summarizeFindings } from "../_shared/promptSanitizer
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("prompt-test-runner");
 
@@ -380,10 +381,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!cronAuthorized && !authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "missing_auth" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "missing_auth", 401, { ...corsHeaders, "Content-Type": "application/json" });
     }
 
     let body: { test_case_id?: string; prompt_id?: string; trigger_source?: string; cron_limit?: number };
@@ -395,10 +393,7 @@ Deno.serve(async (req) => {
 
     // Cron mode: nessun parametro richiesto, esegue tutti i test attivi (capped)
     if (!cronAuthorized && !body.test_case_id && !body.prompt_id) {
-      return new Response(JSON.stringify({ error: "missing_test_case_id_or_prompt_id" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "missing_test_case_id_or_prompt_id", 400, { ...corsHeaders, "Content-Type": "application/json" });
     }
 
     let triggeredBy: string | null = null;
@@ -412,10 +407,7 @@ Deno.serve(async (req) => {
       const { data: userData } = await userClient.auth.getUser();
       authedUserId = userData?.user?.id ?? null;
       if (!authedUserId) {
-        return new Response(JSON.stringify({ error: "invalid_jwt" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return edgeErrorWithStatus("AUTH_REQUIRED", "invalid_jwt", 401, { ...corsHeaders, "Content-Type": "application/json" });
       }
       try {
         const { data } = await userClient.rpc("get_current_operator_id");
@@ -518,9 +510,6 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     log.error("prompt-test-runner error:", e);
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", (e as Error).message, 500, { ...corsHeaders, "Content-Type": "application/json" });
   }
 });

@@ -5,6 +5,7 @@ import { swallowedError } from "../_shared/swallowedError.ts";
 import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 
 
@@ -42,10 +43,7 @@ Deno.serve(async (req) => {
   try {
     const { partnerId, markdown: preScrapedMarkdown, sourceUrl: preScrapedUrl } = await req.json();
     if (!partnerId) {
-      return new Response(JSON.stringify({ error: "partnerId is required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "partnerId is required", 400, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const LOVABLE_API_KEY =
@@ -54,10 +52,7 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI not configured", 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -70,10 +65,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (pauseSetting?.value === "true") {
-      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // Get partner
@@ -84,17 +76,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (partnerError || !partner) {
-      return new Response(JSON.stringify({ error: "Partner not found" }), {
-        status: 404,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("NOT_FOUND", "Partner not found", 404, { ...dynCors, "Content-Type": "application/json" });
     }
 
     if (!partner.website) {
-      return new Response(JSON.stringify({ error: "Partner has no website" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "Partner has no website", 400, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // Format URL
@@ -288,10 +274,7 @@ Estrai queste informazioni (metti null se non trovate):
         aiResponse.status === 402
           ? "Crediti AI esauriti. Riprova più tardi."
           : `AI analysis failed (${aiResponse.status})`;
-      return new Response(JSON.stringify({ error: detail }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", detail, 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     if (aiResponse && !enrichment) {
@@ -330,10 +313,7 @@ Estrai queste informazioni (metti null se non trovate):
     }
 
     if (!enrichment) {
-      return new Response(JSON.stringify({ error: "Failed to extract data" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Failed to extract data", 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     enrichment.source_url = url;
@@ -353,10 +333,7 @@ Estrai queste informazioni (metti null se non trovate):
       .eq("id", partnerId);
 
     if (updateError) {
-      return new Response(JSON.stringify({ error: "Failed to save enrichment" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "Failed to save enrichment", 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // LOVABLE-93: Auto-calculate quality score after enrichment
@@ -371,9 +348,6 @@ Estrai queste informazioni (metti null se non trovate):
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("receive-channel-message");
 
@@ -19,10 +20,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...corsHeaders, "Content-Type": "application/json" });
     }
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -34,10 +32,7 @@ Deno.serve(async (req) => {
       error: authErr,
     } = await supabase.auth.getUser();
     if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...corsHeaders, "Content-Type": "application/json" });
     }
 
     // Rate limit: 30 messages/min per user
@@ -64,10 +59,7 @@ Deno.serve(async (req) => {
     } = body;
 
     if (!channel || !direction) {
-      return new Response(JSON.stringify({ error: "channel and direction required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "channel and direction required", 400, { ...corsHeaders, "Content-Type": "application/json" });
     }
 
     // Resolve operator_id for this user
@@ -182,9 +174,6 @@ Deno.serve(async (req) => {
     );
   } catch (err: unknown) {
     log.error("[receive-channel-message] Error:", err);
-    return new Response(JSON.stringify({ error: "internal_error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "internal_error", 500, { ...corsHeaders, "Content-Type": "application/json" });
   }
 });

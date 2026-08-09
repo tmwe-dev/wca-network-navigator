@@ -8,6 +8,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("smart-scheduler");
 
@@ -157,9 +158,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     log.error("[smart-scheduler] Error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", String(err), 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

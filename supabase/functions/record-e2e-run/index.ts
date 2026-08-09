@@ -11,6 +11,7 @@
  * scripts/audit-edge-contract.mjs).
  */
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 
 
@@ -43,42 +44,27 @@ interface Payload {
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "method not allowed" }), {
-      status: 405,
-      headers: jsonHeaders,
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "method not allowed", 405, jsonHeaders);
   }
 
   const expected = Deno.env.get("E2E_WEBHOOK_SECRET");
   if (!expected) {
-    return new Response(JSON.stringify({ error: "webhook secret not configured" }), {
-      status: 500,
-      headers: jsonHeaders,
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "webhook secret not configured", 500, jsonHeaders);
   }
   const provided = req.headers.get("x-e2e-secret");
   if (provided !== expected) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: jsonHeaders,
-    });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, jsonHeaders);
   }
 
   let body: Payload;
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "invalid json" }), {
-      status: 400,
-      headers: jsonHeaders,
-    });
+    return edgeErrorWithStatus("VALIDATION_ERROR", "invalid json", 400, jsonHeaders);
   }
 
   if (!body.run_id || typeof body.total_tests !== "number") {
-    return new Response(JSON.stringify({ error: "missing required fields: run_id, total_tests" }), {
-      status: 400,
-      headers: jsonHeaders,
-    });
+    return edgeErrorWithStatus("VALIDATION_ERROR", "missing required fields: run_id, total_tests", 400, jsonHeaders);
   }
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -105,10 +91,7 @@ Deno.serve(async (req) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: jsonHeaders,
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error.message, 500, jsonHeaders);
   }
 
   return new Response(JSON.stringify({ ok: true, id: data?.id }), {

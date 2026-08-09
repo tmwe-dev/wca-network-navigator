@@ -14,6 +14,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { buildInternalAuthHeaders } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("batch-enrichment-worker");
 
@@ -37,10 +38,7 @@ Deno.serve(async (req: Request) => {
   // Auth: accetta service role o anon (cron usa anon inline)
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

@@ -32,6 +32,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("agentic-decide");
 
@@ -118,19 +119,13 @@ serve(async (req) => {
   try {
     const body = (await req.json()) as ReqBody;
     if (!body.company_name) {
-      return new Response(JSON.stringify({ error: "company_name obbligatorio" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "company_name obbligatorio", 400, { ...corsHeaders, "Content-Type": "application/json" });
     }
 
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY mancante" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "LOVABLE_API_KEY mancante", 500, { ...corsHeaders, "Content-Type": "application/json" });
     }
 
     // Riduci candidati a max 80 link e 20 google results per non saturare il context
@@ -184,16 +179,10 @@ serve(async (req) => {
       const errText = await aiRes.text();
       console.error("AI gateway error", aiRes.status, errText);
       if (aiRes.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit AI. Riprova fra poco." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return edgeErrorWithStatus("RATE_LIMITED", "Rate limit AI. Riprova fra poco.", 429, { ...corsHeaders, "Content-Type": "application/json" });
       }
       if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "Crediti AI esauriti. Aggiungi fondi al workspace Lovable." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return edgeErrorWithStatus("INTERNAL_ERROR", "Crediti AI esauriti. Aggiungi fondi al workspace Lovable.", 402, { ...corsHeaders, "Content-Type": "application/json" });
       }
       return new Response(JSON.stringify({ error: "AI gateway error", detail: errText }), {
         status: 502,
@@ -222,9 +211,6 @@ serve(async (req) => {
     });
   } catch (e) {
     log.error("agentic-decide error", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Errore" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Errore", 500, { ...corsHeaders, "Content-Type": "application/json" });
   }
 });

@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("export-audit-csv");
 
@@ -39,10 +40,7 @@ serve(async (req) => {
 
     if (qErr) {
       log.error("audit_query_failed", qErr);
-      return new Response(JSON.stringify({ error: qErr.message }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", qErr.message, 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const rows = (logs ?? []) as Array<Record<string, unknown>>;
@@ -72,9 +70,6 @@ serve(async (req) => {
     });
   } catch (err) {
     log.error("export_failed", err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : String(err), 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

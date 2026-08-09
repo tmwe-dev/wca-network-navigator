@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("learn-from-group-correction");
 
@@ -31,10 +32,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -46,10 +44,7 @@ serve(async (req) => {
     });
     const { data: userData, error: userError } = await anonClient.auth.getUser();
     if (userError || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, { ...dynCors, "Content-Type": "application/json" });
     }
     const userId = userData.user.id;
 
@@ -110,10 +105,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY =
       Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI not configured", 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const peersBlock =
@@ -159,10 +151,7 @@ Rispondi SOLO con il testo dell'istruzione, niente preamboli.`;
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI gateway error", 500, { ...dynCors, "Content-Type": "application/json" });
     }
     const aiData = await aiResponse.json();
     const lesson = String(aiData.choices?.[0]?.message?.content || "").trim();
@@ -225,9 +214,6 @@ Subject di riferimento: ${senderSubjects.slice(0, 3).join(" | ") || "N/A"}.`;
     });
   } catch (e) {
     log.error("learn-from-group-correction error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("country-kb-generator");
 
@@ -34,10 +35,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const body = await req.json().catch((e) => {
@@ -161,9 +159,6 @@ Rispondi SOLO con un JSON valido con questa struttura:
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

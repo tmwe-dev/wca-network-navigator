@@ -14,6 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 
 
@@ -153,9 +154,6 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e instanceof Error ? e.message : e) }), {
-      status: 500,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", String(e instanceof Error ? e.message : e), 500, { ...headers, "Content-Type": "application/json" });
   }
 });

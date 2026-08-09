@@ -13,6 +13,7 @@ import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import type { JournalistReviewInput, ReviewChannel } from "../_shared/journalistTypes.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("review-message");
 
@@ -26,10 +27,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...corsHeaders, "Content-Type": "application/json" });
     }
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -37,10 +35,7 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claims, error: authErr } = await supabase.auth.getClaims(token);
     if (authErr || !claims?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "unauthorized", 401, { ...corsHeaders, "Content-Type": "application/json" });
     }
     const userId = claims.claims.sub as string;
 
@@ -57,10 +52,7 @@ Deno.serve(async (req) => {
       });
     }
     if (!draft.trim()) {
-      return new Response(JSON.stringify({ error: "empty_draft" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "empty_draft", 400, { ...corsHeaders, "Content-Type": "application/json" });
     }
 
     // Context per la review

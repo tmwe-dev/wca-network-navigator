@@ -6,6 +6,7 @@ import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { assemblePrompt } from "../_shared/prompts/assembler.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("daily-briefing");
 
@@ -252,9 +253,6 @@ serve(async (req) => {
     );
   } catch (e) {
     log.error("daily-briefing error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e.message, 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

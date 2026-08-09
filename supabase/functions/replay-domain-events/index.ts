@@ -30,6 +30,7 @@ import { initLeadProcessManager } from "../_shared/processManagers/leadProcessMa
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
 import type { WCADomainEvent } from "../_shared/domainEvents.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("replay-domain-events");
 
@@ -253,10 +254,7 @@ async function dispatchEvent(
 serve(async (req: Request) => {
   // Only accept POST requests (CRON uses POST)
   if (req.method !== "POST" && req.method !== "GET") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "Method not allowed", 405, { "Content-Type": "application/json" });
   }
 
   // Auth: cron secret OR admin JWT

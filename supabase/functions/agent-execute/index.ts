@@ -27,6 +27,7 @@ import { loadAgentPersona, assembleSystemPrompt } from "./systemPrompt.ts";
 import { executeChatMode } from "./chatMode.ts";
 import { handleStateTransition, handleGeneralTask } from "./taskMode.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("agent-execute");
 
@@ -129,10 +130,7 @@ serve(async (req) => {
 
       if (taskErr || !task) {
         endMetrics(metrics, false, 404);
-        return new Response(JSON.stringify({ error: "Task non trovato" }), {
-          status: 404,
-          headers: { ...dynCors, "Content-Type": "application/json" },
-        });
+        return edgeErrorWithStatus("NOT_FOUND", "Task non trovato", 404, { ...dynCors, "Content-Type": "application/json" });
       }
 
       await supabase
@@ -171,34 +169,20 @@ serve(async (req) => {
       } catch (taskErr) {
         log.error("Task execution error:", taskErr);
         endMetrics(metrics, false, 500);
-        return new Response(
-          JSON.stringify({
-            error: taskErr instanceof Error ? taskErr.message : "Errore durante l'esecuzione del task",
-          }),
-          {
-            status: 500,
-            headers: { ...dynCors, "Content-Type": "application/json" },
-          },
-        );
+        return edgeErrorWithStatus("INTERNAL_ERROR", taskErr instanceof Error ? taskErr.message : "Errore durante l'esecuzione del task",, 500, { ...dynCors, "Content-Type": "application/json" });
       }
     }
 
     // No execution mode specified
     endMetrics(metrics, false, 400);
-    return new Response(JSON.stringify({ error: "Specificare chat_messages o task_id" }), {
-      status: 400,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("VALIDATION_ERROR", "Specificare chat_messages o task_id", 400, { ...dynCors, "Content-Type": "application/json" });
   } catch (err) {
     logEdgeError("agent-execute", err);
     endMetrics(metrics, false, 500);
     log.error("agent-execute error:", err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore interno" }), {
-      status: 500,
-      headers: {
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Errore interno", 500, {
         ...getCorsHeaders(req.headers.get("origin")),
         "Content-Type": "application/json",
-      },
-    });
+      });
   }
 });

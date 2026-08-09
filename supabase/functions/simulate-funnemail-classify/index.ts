@@ -20,6 +20,7 @@ import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { createTracer, newTraceId } from "../_shared/pipelineTrace.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 
 
@@ -51,10 +52,7 @@ interface AuthOk {
 async function authenticate(req: Request, corsH: Record<string, string>): Promise<AuthOk | Response> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsH, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...corsH, "Content-Type": "application/json" });
   }
   const sb = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
     global: { headers: { Authorization: authHeader } },
@@ -62,10 +60,7 @@ async function authenticate(req: Request, corsH: Record<string, string>): Promis
   const token = authHeader.replace("Bearer ", "");
   const { data, error } = await sb.auth.getClaims(token);
   if (error || !data?.claims?.sub) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsH, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...corsH, "Content-Type": "application/json" });
   }
   return { userId: data.claims.sub };
 }

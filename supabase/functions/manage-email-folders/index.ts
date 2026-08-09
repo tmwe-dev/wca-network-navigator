@@ -18,6 +18,7 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { getCaCertsForHost } from "./caCerts.ts";
 import { resolveMailbox, MailboxNotConfiguredError } from "../_shared/resolveMailbox.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("manage-email-folders");
 
@@ -37,10 +38,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "AUTH_REQUIRED" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "AUTH_REQUIRED", 401, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -50,10 +48,7 @@ serve(async (req) => {
     });
     const { data: userData, error: authErr } = await userClient.auth.getUser(token);
     if (authErr || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "INVALID_TOKEN", 401, { ...dynCors, "Content-Type": "application/json" });
     }
     const user = { id: userData.user.id };
 
@@ -97,10 +92,7 @@ serve(async (req) => {
           { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
-      return new Response(JSON.stringify({ error: "IMAP not configured" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "IMAP not configured", 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // Connect to IMAP (caCerts evita "invalid peer certificate: UnknownIssuer"
@@ -148,10 +140,7 @@ serve(async (req) => {
     const loginResp = await sendCommand(`LOGIN "${IMAP_USER}" "${IMAP_PASSWORD}"`);
     if (!loginResp.includes("OK")) {
       conn.close();
-      return new Response(JSON.stringify({ error: "IMAP login failed" }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "IMAP login failed", 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     let result: Record<string, unknown> = {};
@@ -305,9 +294,6 @@ serve(async (req) => {
     return new Response(JSON.stringify(result), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
     log.error("manage-email-folders error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", e instanceof Error ? e.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("email-sync-worker");
 
@@ -22,10 +23,7 @@ Deno.serve(async (req: Request) => {
   // ── Auth check: require valid Bearer token ──
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -40,10 +38,7 @@ Deno.serve(async (req: Request) => {
     });
     const { error: claimsErr } = await authClient.auth.getClaims(token);
     if (claimsErr) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
     }
   }
 
@@ -210,9 +205,6 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err: Record<string, unknown>) {
     log.error("[sync-worker] Fatal error:", err.message);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err.message, 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

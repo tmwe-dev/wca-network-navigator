@@ -1,6 +1,7 @@
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("linkedin-profile-api");
 
@@ -22,10 +23,7 @@ Deno.serve(async (req) => {
     const { linkedin_url } = await req.json();
 
     if (!linkedin_url) {
-      return new Response(JSON.stringify({ error: "linkedin_url is required" }), {
-        status: 400,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("VALIDATION_ERROR", "linkedin_url is required", 400, { ...dynCors, "Content-Type": "application/json" });
     }
 
     // If no API key configured, return a clear message

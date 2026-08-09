@@ -15,6 +15,7 @@ import { buildEmailContract, validateEmailContract, type ResolvedEmailType } fro
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 interface KbEntry {
   title: string;
@@ -127,10 +128,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -141,10 +139,7 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("AUTH_REQUIRED", "Unauthorized", 401, { ...dynCors, "Content-Type": "application/json" });
     }
     const userId = claimsData.claims.sub;
     const log = createLogger("improve-email", { userId });
@@ -165,10 +160,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
-        status: 503,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", "AI automations are paused", 503, { ...dynCors, "Content-Type": "application/json" });
     }
 
     const {

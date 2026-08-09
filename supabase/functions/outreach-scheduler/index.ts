@@ -8,6 +8,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 
 const log = createLogger("outreach-scheduler");
 
@@ -53,10 +54,7 @@ serve(async (req) => {
 
     if (batchErr) {
       endMetrics(metrics, false, 500);
-      return new Response(JSON.stringify({ error: batchErr.message }), {
-        status: 500,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
+      return edgeErrorWithStatus("INTERNAL_ERROR", batchErr.message, 500, { ...dynCors, "Content-Type": "application/json" });
     }
 
     if (!batch || batch.length === 0) {
@@ -178,10 +176,7 @@ serve(async (req) => {
     } catch {
       /* ignore */
     }
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }), {
-      status: 500,
-      headers: { ...dynCors, "Content-Type": "application/json" },
-    });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Internal error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });
 
