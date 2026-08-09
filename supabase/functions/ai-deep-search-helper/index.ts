@@ -13,6 +13,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
 import { aiChat, ALLOWED_MODELS, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("ai-deep-search-helper");
+
 
 const DEFAULT_MODEL = "google/gemini-2.5-flash-lite";
 const MAX_PROMPT_LEN = 8000;
@@ -49,7 +53,7 @@ serve(async (req) => {
 
     // ── Input validation ──
     const body = await req.json().catch((e) => {
-      console.warn("[ai-deep-search-helper] Invalid JSON body:", e.message);
+      log.warn("[ai-deep-search-helper] Invalid JSON body:", { details: [e.message] });
       return {};
     });
     const prompt = typeof body.prompt === "string" ? body.prompt : "";

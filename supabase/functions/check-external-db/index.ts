@@ -1,5 +1,9 @@
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-external-db");
+
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);

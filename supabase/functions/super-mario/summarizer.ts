@@ -1,4 +1,8 @@
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("super-mario");
+
 /**
  * summarizer.ts — Riassume i turni meno recenti in `conversation_summaries`
  * (versionato, coverage esplicita).
@@ -80,7 +84,7 @@ export async function ensureSummaryCoverage(opts: {
     .maybeSingle();
 
   if (error || !inserted) {
-    console.warn("[super-mario] summary insert failed", { error: error?.message });
+    log.warn("[super-mario] summary insert failed", { details: [{ error: error?.message }] });
     return existing as SummaryCoverage | null;
   }
   return inserted as SummaryCoverage;
@@ -89,7 +93,7 @@ export async function ensureSummaryCoverage(opts: {
 async function callSummarizer(turns: TurnLike[], model: string): Promise<string | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) {
-    console.warn("[super-mario] LOVABLE_API_KEY mancante, skip summarizer");
+    log.warn("[super-mario] LOVABLE_API_KEY mancante, skip summarizer");
     return null;
   }
 
@@ -108,14 +112,14 @@ async function callSummarizer(turns: TurnLike[], model: string): Promise<string 
       ],
     });
     if (!resp.ok) {
-      console.warn("[super-mario] summarizer http error", resp.status);
+      log.warn("[super-mario] summarizer http error", { details: [resp.status] });
       return null;
     }
     const data = await resp.json();
     const text = data?.choices?.[0]?.message?.content;
     return typeof text === "string" ? text.trim() : null;
   } catch (e) {
-    console.warn("[super-mario] summarizer call failed", e);
+    log.warn("[super-mario] summarizer call failed", { details: [e] });
     return null;
   }
 }

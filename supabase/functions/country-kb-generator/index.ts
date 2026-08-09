@@ -4,6 +4,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("country-kb-generator");
+
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -37,7 +41,7 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch((e) => {
-      console.warn("[country-kb-generator] Invalid JSON body:", e.message);
+      log.warn("[country-kb-generator] Invalid JSON body:", { details: [e.message] });
       return {};
     });
     const countryCodes: string[] = body.country_codes || [];

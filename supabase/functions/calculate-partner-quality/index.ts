@@ -15,6 +15,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { calculatePartnerQuality, savePartnerQuality } from "../_shared/partnerQualityScore.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("calculate-partner-quality");
+
 
 Deno.serve(async (req) => {
   // Handle CORS

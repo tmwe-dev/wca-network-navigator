@@ -3,6 +3,10 @@ import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("scrape-website");
+
 
 const USER_AGENT = "WCA-NetworkNavigator/1.0";
 const FETCH_TIMEOUT_MS = 25_000;
@@ -262,7 +266,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(filtered), { headers });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "scrape failed";
-    console.error(JSON.stringify({ fn: "scrape-website", error: msg }));
+    log.error(String(JSON.stringify({ fn: "scrape-website", error: msg })), null);
     return new Response(JSON.stringify({ error: msg }), { status: 500, headers });
   }
 });

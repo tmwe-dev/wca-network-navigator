@@ -14,6 +14,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("kb-intake-analyze");
+
 
 interface Body {
   raw_content: string;

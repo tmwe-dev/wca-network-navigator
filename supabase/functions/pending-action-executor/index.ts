@@ -24,6 +24,10 @@ import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import type { LeadStatus } from "../_shared/domainEvents.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("pending-action-executor");
+
 
 interface PendingAction {
   id: string;

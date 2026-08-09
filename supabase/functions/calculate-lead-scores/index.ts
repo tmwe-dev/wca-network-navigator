@@ -17,6 +17,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("calculate-lead-scores");
+
 
 Deno.serve(async (req: Request) => {
   const pre = corsPreflight(req);

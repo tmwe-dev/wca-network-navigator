@@ -13,6 +13,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
 import { buildInternalAuthHeaders } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("batch-enrichment-worker");
+
 
 // Audit Sez.1 — F: batch + sleep adattivo per migliorare throughput cron.
 const BATCH_SIZE = 8;
@@ -96,7 +100,7 @@ Deno.serve(async (req: Request) => {
     for (const partner of partners) {
       // Wall clock cap
       if (Date.now() - startedAt > WALL_CLOCK_CAP_MS) {
-        console.log("[batch-enrichment] wall-clock cap reached, exiting");
+        log.info("[batch-enrichment] wall-clock cap reached, exiting");
         break;
       }
 
@@ -121,15 +125,15 @@ Deno.serve(async (req: Request) => {
         if (!resp.ok) {
           const txt = await resp.text();
           log.errors.push({ partnerId: partner.id, error: `HTTP ${resp.status}: ${txt.slice(0, 200)}` });
-          console.error(`[batch-enrichment] partner ${partner.id} failed: ${resp.status} ${txt.slice(0, 200)}`);
+          log.error(`[batch-enrichment] partner ${partner.id} failed: ${resp.status} ${txt.slice(0, 200)}`, null);
         } else {
           log.enriched++;
-          console.log(`[batch-enrichment] partner ${partner.id} enriched`);
+          log.info(`[batch-enrichment] partner ${partner.id} enriched`);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         log.errors.push({ partnerId: partner.id, error: msg });
-        console.error(`[batch-enrichment] partner ${partner.id} exception: ${msg}`);
+        log.error(`[batch-enrichment] partner ${partner.id} exception: ${msg}`, null);
       }
 
       // (F) Rate limit adattivo: se la chiamata ha già impiegato >= RATE_LIMIT_MS,
@@ -151,7 +155,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[batch-enrichment] fatal:", msg);
+    log.error("[batch-enrichment] fatal:", msg);
     return new Response(JSON.stringify({ error: msg, ...log }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

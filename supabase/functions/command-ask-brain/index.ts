@@ -12,6 +12,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("command-ask-brain");
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -139,7 +143,7 @@ serve(async (req) => {
 
     if (!resp.ok) {
       const detail = await resp.text();
-      console.warn("command-ask-brain ai-assistant error", resp.status, detail);
+      log.warn("command-ask-brain ai-assistant error", { details: [resp.status, detail] });
       return new Response(
         JSON.stringify({
           answer: "Ho avuto un problema a recuperare l'informazione. Riprova tra qualche secondo.",
@@ -157,7 +161,7 @@ serve(async (req) => {
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.warn("command-ask-brain failed", (e as Error).message);
+    log.warn("command-ask-brain failed", { details: [(e as Error).message] });
     return new Response(
       JSON.stringify({
         answer: "Connessione lenta verso il sistema. Posso riprovare se ripeti la domanda.",

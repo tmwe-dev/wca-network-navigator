@@ -18,6 +18,10 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { loadAgentCapabilities, DEFAULT_CAPABILITIES, READ_ONLY_TOOL_SET } from "../_shared/agentCapabilitiesLoader.ts";
 import { loadAgentPersona } from "../_shared/agentPersonaLoader.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("agent-audit");
+
 
 // Mirror of agent-loop tool registry. Hardcoded source of truth.
 const TOOL_REGISTRY: ReadonlyArray<{ name: string; hardcoded_approval: boolean }> = [

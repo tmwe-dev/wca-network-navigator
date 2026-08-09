@@ -6,6 +6,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { encryptValue } from "../_shared/linkedinCrypto.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("save-linkedin-credentials");
+
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);

@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("deduplicate-contacts");
+
 
 Deno.serve(async (req: Request) => {
   const pre = corsPreflight(req);
@@ -31,7 +35,7 @@ Deno.serve(async (req: Request) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
     const body = await req.json().catch((e) => {
-      console.warn("[deduplicate-contacts] Invalid JSON body:", e.message);
+      log.warn("[deduplicate-contacts] Invalid JSON body:", { details: [e.message] });
       return {};
     });
     const contactIds: string[] = body.contactIds || [];

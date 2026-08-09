@@ -4,6 +4,10 @@ import { embedBatch, DEFAULT_EMBEDDING_MODEL } from "../_shared/embeddings.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { swallowedError } from "../_shared/swallowedError.ts";
 import { cronPausedResponse } from "../_shared/cronGate.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("memory-promoter");
+
 
 interface MemoryRow {
   id: string;
@@ -39,7 +43,7 @@ async function generateEmbeddingsForRows(
         .update({ embedding: vectors[i], embedding_model: DEFAULT_EMBEDDING_MODEL, embedding_updated_at: now })
         .eq("id", rows[i].id);
       if (!error) count++;
-      else console.warn(`embed update ${rows[i].id} failed:`, error.message);
+      else log.warn(`embed update ${rows[i].id} failed:`, { details: [error.message] });
     }
     return count;
   } catch {

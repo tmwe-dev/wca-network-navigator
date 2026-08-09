@@ -22,6 +22,10 @@ import {
   expireStaleActions,
 } from "../_shared/approvalFlow.ts";
 import type { AutonomyLevel } from "../_shared/decisionEngine.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("decision-dashboard");
+
 
 Deno.serve(async (req) => {
   const preflight = corsPreflight(req);

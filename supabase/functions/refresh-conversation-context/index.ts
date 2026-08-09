@@ -18,6 +18,10 @@ import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("refresh-conversation-context");
+
 
 const DEBOUNCE_MS = 5 * 60 * 1000; // 5 min
 

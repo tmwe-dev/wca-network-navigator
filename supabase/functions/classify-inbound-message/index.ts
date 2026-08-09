@@ -27,6 +27,10 @@ import {
 } from "./stages/stageContentAndContext.ts";
 import { createTracer } from "../_shared/pipelineTrace.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("classify-inbound-message");
+
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);

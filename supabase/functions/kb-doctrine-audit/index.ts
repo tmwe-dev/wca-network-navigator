@@ -17,6 +17,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { mapCategoryToFamily, KB_FAMILIES, type KbFamily } from "../_shared/kbCategoryMapper.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("kb-doctrine-audit");
+
 
 interface KbRow {
   id: string;

@@ -6,6 +6,10 @@ import { resolveCaller } from "../_shared/ownership.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("analyze-partner");
+
 
 const VALID_SERVICES = [
   "air_freight",

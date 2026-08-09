@@ -20,6 +20,10 @@ import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { createTracer, newTraceId } from "../_shared/pipelineTrace.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("simulate-funnemail-classify");
+
 
 const CLASSIFICATIONS = [
   "interested",

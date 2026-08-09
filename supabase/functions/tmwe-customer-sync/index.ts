@@ -10,6 +10,10 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { TMWE_OPS, callTmwe, getUserToken, getSystemToken, serviceClient } from "../_shared/tmweClient.ts";
 import { logTmweAudit, notConnectedResponse } from "../_shared/tmweAudit.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("tmwe-customer-sync");
+
 
 const InputSchema = z.union([
   z.object({ mode: z.literal("single"), tmwe_client_id: z.string().min(1) }),

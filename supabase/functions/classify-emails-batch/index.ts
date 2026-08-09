@@ -14,6 +14,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("classify-emails-batch");
+
 
 const BATCH_SIZE = 50;
 const LOOKBACK_HOURS = 24;

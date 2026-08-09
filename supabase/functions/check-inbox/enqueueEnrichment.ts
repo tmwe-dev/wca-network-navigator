@@ -1,3 +1,6 @@
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox");
 /**
  * enqueueEnrichment — accoda mail in arrivo da mittenti SCONOSCIUTI per
  * arricchimento + classificazione AI in background (process-inbound-enrichment).
@@ -132,12 +135,12 @@ export async function enqueueInboundEnrichment(
       .from("inbound_enrichment_queue")
       .upsert(rows, { onConflict: "message_id", ignoreDuplicates: true });
     if (error) {
-      console.warn("enqueueInboundEnrichment failed:", error.message);
+      log.warn("enqueueInboundEnrichment failed:", { details: [error.message] });
       return { enqueued, skipped };
     }
     enqueued = rows.length;
   } catch (e) {
-    console.warn("enqueueInboundEnrichment exception:", (e as Error).message);
+    log.warn("enqueueInboundEnrichment exception:", { details: [(e as Error).message] });
   }
 
   return { enqueued, skipped };

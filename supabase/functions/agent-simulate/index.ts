@@ -22,6 +22,10 @@ import {
 import { loadAgentPersona, renderPersonaBlock } from "../_shared/agentPersonaLoader.ts";
 import { EDGE_FN_REGISTRY, getEdgeFnSpec, isEdgeFnAgentId } from "../_shared/edgeFnPromptRegistry.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("agent-simulate");
+
 
 // Mirror of agent-loop tool registry. Kept here so the simulator stays
 // in sync without importing the live function (each edge fn is isolated).

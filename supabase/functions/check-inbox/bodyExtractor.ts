@@ -18,6 +18,10 @@ import {
   INLINE_DATA_URI_THRESHOLD,
 } from "./imapParser.ts";
 import { type AttachmentRecord } from "./dbOperations.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox");
+
 
 const MAX_TEXT_LENGTH = 50_000;
 const MAX_HTML_LENGTH = 100_000;
@@ -119,7 +123,7 @@ export async function extractBodyAndAttachments(
         const bndMatch = ctHdrText?.match(/boundary="?([^\s";\r\n]+)"?/i);
         if (bndMatch) mainBoundary = bndMatch[1];
       } catch (e: unknown) {
-        console.debug("content-type header fetch skipped:", extractErrorMessage(e));
+        log.info("content-type header fetch skipped:", { details: [extractErrorMessage(e)] });
       }
 
       const rfc822Response = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[TEXT])`);

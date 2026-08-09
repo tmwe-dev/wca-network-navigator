@@ -7,6 +7,10 @@ import { evaluateTransitions } from "../_shared/stateTransitions.ts";
 import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { getNextEngagementStep } from "../_shared/cadenceEngine.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("agent-autonomous-cycle");
+
 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 

@@ -1,3 +1,6 @@
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("super-mario");
 /**
  * auditLogger.ts — Log redatto di ogni invocazione Super Mario.
  *
@@ -81,6 +84,6 @@ export async function logInvocation(supabase: SupabaseClient, p: AuditPayload): 
       error_code: p.ok ? null : (p.failure_reason ?? "unknown"),
     });
   } catch (e) {
-    console.warn("[super-mario] audit log failed", { error: (e as Error).message });
+    log.warn("[super-mario] audit log failed", { details: [{ error: (e as Error).message }] });
   }
 }

@@ -6,6 +6,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("check-inbox-booking");
+
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;
@@ -71,10 +75,10 @@ export async function matchSender(supabase: SupabaseClient, email: string, userI
         }
       }
       if (error) {
-        console.warn(`[matchSender] RPC error, falling back to legacy queries:`, error.message);
+        log.warn(`[matchSender] RPC error, falling back to legacy queries:`, { details: [error.message] });
       }
     } catch (e) {
-      console.warn(`[matchSender] RPC threw, fallback:`, e);
+      log.warn(`[matchSender] RPC threw, fallback:`, { details: [e] });
     }
   }
 
@@ -229,7 +233,7 @@ export async function saveMessageToDb(supabase: SupabaseClient, params: SaveMess
       messageCategory = rule.category;
     }
   } catch (e) {
-    console.warn(`[saveMessageToDb] Failed to lookup sender category for ${params.fromAddr}:`, e);
+    log.warn(`[saveMessageToDb] Failed to lookup sender category for ${params.fromAddr}:`, { details: [e] });
   }
 
   const msgData: Record<string, unknown> = {
@@ -300,7 +304,7 @@ export async function saveMessageToDb(supabase: SupabaseClient, params: SaveMess
         .from("email_attachments")
         .upsert(attRows, { onConflict: "message_id,filename" });
       if (attSaveErr) {
-        console.warn(`[check-inbox] UID ${params.uid}: attachment DB error:`, attSaveErr.message);
+        log.warn(`[check-inbox] UID ${params.uid}: attachment DB error:`, { details: [attSaveErr.message] });
       }
     }
   }
@@ -335,14 +339,11 @@ export async function saveMessageToDb(supabase: SupabaseClient, params: SaveMess
         });
 
         if (ruleErr) {
-          console.warn(
-            `[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`,
-            ruleErr.message,
-          );
+          log.warn(`[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`, { details: [ruleErr.message] });
         }
       }
     } catch (e) {
-      console.warn(`[saveMessageToDb] Exception while creating email_address_rules for ${params.fromAddr}:`, e);
+      log.warn(`[saveMessageToDb] Exception while creating email_address_rules for ${params.fromAddr}:`, { details: [e] });
     }
   }
 

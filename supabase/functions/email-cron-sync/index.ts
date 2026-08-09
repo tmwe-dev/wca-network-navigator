@@ -2,6 +2,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isOutsideWorkHours, loadWorkHourSettings } from "../_shared/timeUtils.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("email-cron-sync");
+
 
 /**
  * Email Cron Sync — runs every 10 minutes via pg_cron.
@@ -113,7 +117,7 @@ Deno.serve(async (req: Request) => {
         });
       }
     } catch (e) {
-      console.warn("[email-cron-sync] shared mailbox auto-enroll failed:", e);
+      log.warn("[email-cron-sync] shared mailbox auto-enroll failed:", { details: [e] });
     }
 
     // ━━━ A) Itera per (user_id, mailbox_id) ━━━

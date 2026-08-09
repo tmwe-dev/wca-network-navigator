@@ -13,6 +13,10 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { swallowedError } from "../_shared/swallowedError.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
+
+const log = createLogger("voice-brain-bridge");
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -232,7 +236,7 @@ async function logRequest(supabase: ReturnType<typeof createClient>, payload: Re
   try {
     await supabase.from("request_logs").insert(payload);
   } catch (e) {
-    console.warn("request_logs insert failed:", (e as Error).message);
+    log.warn("request_logs insert failed:", { details: [(e as Error).message] });
   }
 }
 
@@ -243,7 +247,7 @@ async function logAiRequest(
   try {
     await supabase.from("ai_request_log").insert(payload);
   } catch (e) {
-    console.warn("ai_request_log insert failed:", (e as Error).message);
+    log.warn("ai_request_log insert failed:", { details: [(e as Error).message] });
   }
 }
 
