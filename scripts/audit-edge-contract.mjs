@@ -88,7 +88,9 @@ for (const name of names) {
   if (!hasError) offenders.error.push(name);
 
   const hasLogger = /structuredLogger|createLogger|edgeLogger/.test(src);
-  if (!hasLogger) offenders.logging.push(name);
+  // Conforme se usa il logger condiviso oppure se non emette console.* grezzo.
+  const hasRawConsole = /\bconsole\.(log|info|warn|error|debug)\s*\(/.test(src);
+  if (!hasLogger && hasRawConsole) offenders.logging.push(name);
 }
 
 const LABELS = {
