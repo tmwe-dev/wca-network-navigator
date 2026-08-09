@@ -66,7 +66,7 @@ serve(async (req: Request) => {
     for (const action of actions) {
       if (action.type === "navigate" && action.url) {
         if (!isDomainAllowed(action.url, allowedDomains)) {
-          return edgeErrorWithStatus("AUTH_INVALID", `Dominio non autorizzato: ${action.url}. Solo domini nella whitelist sono consentiti.`,, 403, { ...corsHeaders, "Content-Type": "application/json" });
+          return edgeErrorWithStatus("AUTH_INVALID", `Dominio non autorizzato: ${action.url}. Solo domini nella whitelist sono consentiti.`, 403, { ...corsHeaders, "Content-Type": "application/json" });
         }
       }
     }

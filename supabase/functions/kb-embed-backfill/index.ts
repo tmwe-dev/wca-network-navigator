@@ -137,6 +137,6 @@ serve(async (req) => {
     );
   } catch (err) {
     log.error("kb-embed-backfill error:", err);
-    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error",, 500, { ...dynCors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error", 500, { ...dynCors, "Content-Type": "application/json" });
   }
 });

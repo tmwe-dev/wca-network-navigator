@@ -169,7 +169,7 @@ serve(async (req) => {
       } catch (taskErr) {
         log.error("Task execution error:", taskErr);
         endMetrics(metrics, false, 500);
-        return edgeErrorWithStatus("INTERNAL_ERROR", taskErr instanceof Error ? taskErr.message : "Errore durante l'esecuzione del task",, 500, { ...dynCors, "Content-Type": "application/json" });
+        return edgeErrorWithStatus("INTERNAL_ERROR", taskErr instanceof Error ? taskErr.message : "Errore durante l'esecuzione del task", 500, { ...dynCors, "Content-Type": "application/json" });
       }
     }
 

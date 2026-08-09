@@ -101,7 +101,7 @@ serve(async (req) => {
   if (!agentId) agentId = secretAgentId || null;
 
   if (!agentId) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", "Nessun agente vocale configurato. Imposta elevenlabs_agent_id su un agente o il secret ELEVENLABS_COMMAND_AGENT_ID.",, 500, { ...cors, "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", "Nessun agente vocale configurato. Imposta elevenlabs_agent_id su un agente o il secret ELEVENLABS_COMMAND_AGENT_ID.", 500, { ...cors, "Content-Type": "application/json" });
   }
 
   try {

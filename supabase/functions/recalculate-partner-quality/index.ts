@@ -123,6 +123,6 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error",, 500, { "Content-Type": "application/json" });
+    return edgeErrorWithStatus("INTERNAL_ERROR", error instanceof Error ? error.message : "Unknown error", 500, { "Content-Type": "application/json" });
   }
 });
