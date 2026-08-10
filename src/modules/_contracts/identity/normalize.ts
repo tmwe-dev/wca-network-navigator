@@ -50,8 +50,10 @@ const COMPANY_STOPWORDS = new Set([
 export function normalizeCompanyName(value: string | null | undefined): string {
   const base = normalizeText(value).replace(NON_ALNUM, " ").trim();
   if (!base) return "";
-  const tokens = base.split(" ").filter((t) => t && !COMPANY_STOPWORDS.has(t));
-  return (tokens.length ? tokens : base.split(" ")).join(" ");
+  // "s.r.l." → "s r l" → "srl": ricompatta le sequenze di lettere singole.
+  const compacted = base.replace(/\b(?:[a-z] ){1,4}[a-z]\b/g, (m) => m.replace(/ /g, ""));
+  const tokens = compacted.split(" ").filter((t) => t && !COMPANY_STOPWORDS.has(t));
+  return (tokens.length ? tokens : compacted.split(" ")).join(" ");
 }
 
 /** Nome persona comparabile: token ordinati per rendere "Mario Rossi" == "Rossi Mario". */

@@ -55,7 +55,7 @@ function signals(a: IdentityTraits, b: IdentityTraits): Signal[] {
   return [
     { label: "email", weight: 0.6, matched: !!emailA && emailA === emailB },
     { label: "linkedin", weight: 0.5, matched: !!liA && liA === liB },
-    { label: "phone", weight: 0.3, matched: !!phoneA && phoneA === phoneB },
+    { label: "phone", weight: 0.35, matched: !!phoneA && phoneA === phoneB },
     { label: "name", weight: 0.25, matched: !!nameA && nameA === nameB },
     { label: "company", weight: 0.15, matched: !!compA && compA === compB },
     {
