@@ -6,7 +6,7 @@ import {
   findSocialLinksByPartnerIds,
   getProspectContactsByIds,
 } from "@/data/partnerRelations";
-import { findCockpitQueue, deleteCockpitQueueBySource, insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { findCockpitQueue, deleteCockpitQueueBySources, insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
