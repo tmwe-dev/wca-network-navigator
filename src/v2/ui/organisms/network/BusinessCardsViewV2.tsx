@@ -5,12 +5,14 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { findBusinessCardsForUser } from "@/data/businessCards";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert, Mail } from "lucide-react";
 import { EmptyState } from "../../atoms/EmptyState";
 import { StatusBadge } from "../../atoms/StatusBadge";
 import { queryKeys } from "@/lib/queryKeys";
 import { useBlacklistedCompanyNames } from "@/hooks/useBlacklist";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 
 export function BusinessCardsViewV2(): React.ReactElement {
   const { data: cards, isLoading } = useQuery({
