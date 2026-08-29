@@ -5,12 +5,14 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { findBusinessCardsForUser } from "@/data/businessCards";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert, Mail } from "lucide-react";
 import { EmptyState } from "../../atoms/EmptyState";
 import { StatusBadge } from "../../atoms/StatusBadge";
 import { queryKeys } from "@/lib/queryKeys";
 import { useBlacklistedCompanyNames } from "@/hooks/useBlacklist";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { SendEmailDialog } from "@/components/operations/SendEmailDialog";
 
 export function BusinessCardsViewV2(): React.ReactElement {
   const { data: cards, isLoading } = useQuery({
@@ -71,6 +73,8 @@ interface BcaCardRowProps {
 function BcaCardRow({ card, matchStatusMap, blacklistNames }: BcaCardRowProps): React.ReactElement {
   const norm = (card.company_name ?? "").toLowerCase().trim();
   const isBlacklisted = !!blacklistNames && !!norm && blacklistNames.has(norm);
+  const [emailOpen, setEmailOpen] = React.useState(false);
+  const matchedPartnerId = typeof card.matched_partner_id === "string" ? card.matched_partner_id : null;
   return (
     <div
       className={
@@ -104,7 +108,31 @@ function BcaCardRow({ card, matchStatusMap, blacklistNames }: BcaCardRowProps): 
         {card.match_confidence != null && card.match_confidence > 0 && (
           <span className="text-[10px] text-muted-foreground">{Math.round(card.match_confidence)}%</span>
         )}
+        {card.email && !isBlacklisted && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 text-xs"
+            onClick={() => setEmailOpen(true)}
+            title={`Invia email a ${card.email}`}
+          >
+            <Mail className="w-3.5 h-3.5" />
+            Email
+          </Button>
+        )}
       </div>
+
+      {card.email && (
+        <SendEmailDialog
+          open={emailOpen}
+          onOpenChange={setEmailOpen}
+          recipientEmail={card.email}
+          recipientName={card.contact_name ?? card.email}
+          companyName={card.company_name ?? ""}
+          partnerId={matchedPartnerId}
+          isDark={false}
+        />
+      )}
     </div>
   );
 }
