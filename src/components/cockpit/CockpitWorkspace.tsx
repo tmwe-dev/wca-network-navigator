@@ -13,7 +13,7 @@ import type { DraftState, DraftChannel } from "@/types/cockpit";
 import { ArrowLeft, Mail, Linkedin, MessageCircle, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const CHANNEL_META: Record<Exclude<DraftChannel, null>, { label: string; icon: React.ElementType; color: string }> = {
   email: { label: "Email", icon: Mail, color: "text-primary" },
@@ -98,11 +98,34 @@ export function CockpitWorkspace(props: Props) {
     });
   };
 
+  // ── Guard anti-doppio-drop ──────────────────────────────────────────
+  // Il drop può arrivare da due strade: (a) onDrop nativo della casella,
+  // (b) fallback su `dragend` con hit-test del puntatore. Senza guard la
+  // stessa bozza veniva generata due volte.
+  const dropGuardRef = useRef<string | null>(null);
+  const guardedDrop = useCallback(
+    (channel: DraftChannel, contactId: string, contactName: string) => {
+      const key = `${channel}:${contactId}`;
+      if (dropGuardRef.current === key) return;
+      dropGuardRef.current = key;
+      window.setTimeout(() => {
+        if (dropGuardRef.current === key) dropGuardRef.current = null;
+      }, 600);
+      onDrop(channel, contactId, contactName);
+    },
+    [onDrop],
+  );
+
   // ── Pointer-based hit test (port da Email Intelligence / Funny Mail) ──
   // Traccia il cursore durante tutto il drag e risolve la drop zone via
   // document.elementFromPoint. Più preciso del nativo HTML5 drop e immune
   // al bug macOS in cui dragend riporta (0,0).
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const draggedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (draggedContactId) draggedIdRef.current = draggedContactId;
+  }, [draggedContactId]);
+
   useEffect(() => {
     if (!isDragging || !draggedContactId) return;
 
@@ -122,11 +145,10 @@ export function CockpitWorkspace(props: Props) {
     const onDragEnd = () => {
       const p = lastPointerRef.current;
       lastPointerRef.current = null;
-      if (!p) return;
+      const id = draggedIdRef.current;
+      if (!p || !id) return;
       const ch = resolveChannel(p.x, p.y);
-      if (ch && draggedContactId) {
-        onDrop(ch, draggedContactId, "Contact");
-      }
+      if (ch) guardedDrop(ch, id, "Contact");
     };
 
     document.addEventListener("dragover", onDragOver);
@@ -135,7 +157,8 @@ export function CockpitWorkspace(props: Props) {
       document.removeEventListener("dragover", onDragOver);
       document.removeEventListener("dragend", onDragEnd);
     };
-  }, [isDragging, draggedContactId, onDrop]);
+  }, [isDragging, draggedContactId, guardedDrop]);
+
 
   return (
     <div className="flex-1 min-w-0 overflow-hidden relative">
@@ -253,7 +276,7 @@ export function CockpitWorkspace(props: Props) {
               isDragging={isDragging}
               draggedContactId={draggedContactId}
               dragCount={dragCount}
-              onDrop={onDrop}
+              onDrop={guardedDrop}
               hasActiveContact={!!draftState.contactId}
               contactAvailability={contactAvailability}
               onReadProfile={onReadProfile}

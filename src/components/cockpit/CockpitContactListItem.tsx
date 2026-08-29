@@ -90,7 +90,19 @@ export function CockpitContactListItem({
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: index * 0.03, duration: 0.2 }}
         draggable
-        onDragStart={onDragStart}
+        onDragStart={(e) => {
+          const dt = (e as unknown as React.DragEvent).dataTransfer;
+          if (dt) {
+            dt.effectAllowed = "copy";
+            try {
+              dt.setData("text/plain", contact.id);
+            } catch {
+              /* noop */
+            }
+          }
+          onDragStart();
+        }}
+
         onDragStartCapture={(e: React.DragEvent) => {
           const el = e.currentTarget as HTMLElement;
           const clone = el.cloneNode(true) as HTMLElement;

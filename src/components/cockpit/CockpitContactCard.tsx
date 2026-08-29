@@ -152,7 +152,20 @@ export function CockpitContactCard({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04, duration: 0.3 }}
         draggable={!isProcessing}
-        onDragStart={onDragStart}
+        onDragStart={(e) => {
+          // Senza dataTransfer alcuni browser (Firefox) annullano subito il drag.
+          const dt = (e as unknown as React.DragEvent).dataTransfer;
+          if (dt) {
+            dt.effectAllowed = "copy";
+            try {
+              dt.setData("text/plain", contact.id);
+            } catch {
+              /* noop */
+            }
+          }
+          onDragStart();
+        }}
+
         onDragEnd={onDragEnd}
         whileHover={isProcessing ? {} : { scale: 1.02, y: -2 }}
         whileTap={isProcessing ? {} : { scale: 0.98 }}
