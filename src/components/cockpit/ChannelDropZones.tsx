@@ -202,14 +202,21 @@ export function ChannelDropZones({
             transition={{ delay: i * 0.04, duration: 0.2, type: "spring", stiffness: 300, damping: 20 }}
             onDragOver={(e) => {
               e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
               setHoveredChannel(ch.id);
             }}
-            onDragLeave={() => setHoveredChannel(null)}
+            onDragLeave={(e) => {
+              const next = e.relatedTarget as Node | null;
+              if (next && e.currentTarget.contains(next)) return;
+              setHoveredChannel((prev) => (prev === ch.id ? null : prev));
+            }}
             onDrop={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               setHoveredChannel(null);
               if (draggedContactId) onDrop(ch.id, draggedContactId, "Contact");
             }}
+
             className={cn(
               "relative flex flex-1 items-center justify-center gap-4 px-6 py-6 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[100px]",
               !isHovered && "border-muted-foreground/30 bg-card/40",
