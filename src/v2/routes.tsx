@@ -271,7 +271,8 @@ export function V2Routes(): React.ReactElement {
           <Route path="rubrica/whatsapp" element={guardedPage(RubricaWhatsAppPage, "RubricaWA")} />
           <Route path="rubrica/linkedin" element={guardedPage(RubricaLinkedInPage, "RubricaLI")} />
           <Route path="todo" element={<Navigate to="/v2/cestinone" replace />} />
-          <Route path="approvals" element={<Navigate to="/v2/cestinone" replace />} />
+          <Route path="approvazioni" element={guardedPage(ApprovazioniPage, "Approvazioni")} />
+          <Route path="approvals" element={<Navigate to="/v2/approvazioni" replace />} />
 
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
           <Route path="kpi" element={guardedPage(KpiPage, "KPI")} />
