@@ -276,7 +276,7 @@ export function CockpitWorkspace(props: Props) {
               isDragging={isDragging}
               draggedContactId={draggedContactId}
               dragCount={dragCount}
-              onDrop={onDrop}
+              onDrop={guardedDrop}
               hasActiveContact={!!draftState.contactId}
               contactAvailability={contactAvailability}
               onReadProfile={onReadProfile}
