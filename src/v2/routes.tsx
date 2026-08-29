@@ -143,6 +143,9 @@ const AgendaSection = lazy(() => import("./ui/pages/sections/AgendaSection"));
 
 // ── Cestinone (unified pre-send queue) ───────────────────────────────
 const CestinonePage = lazy(() => import("./ui/pages/CestinonePage").then((m) => ({ default: m.CestinonePage })));
+const ApprovazioniPage = lazy(() =>
+  import("./ui/pages/ApprovazioniPage").then((m) => ({ default: m.ApprovazioniPage })),
+);
 const CommsPage = lazy(() => import("./ui/pages/CommsPage").then((m) => ({ default: m.CommsPage })));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
