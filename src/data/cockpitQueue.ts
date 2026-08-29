@@ -35,6 +35,28 @@ export async function deleteCockpitQueueBySource(userId: string, sourceType: str
   return count ?? 0;
 }
 
+/**
+ * Cancellazione massiva: una sola DELETE per chunk invece di una per record.
+ * Stessa semantica di `deleteCockpitQueueBySource` (nessun filtro user_id).
+ */
+export async function deleteCockpitQueueBySources(sourceType: string, sourceIds: string[]): Promise<number> {
+  if (sourceIds.length === 0) return 0;
+  const CHUNK = 100;
+  let total = 0;
+  for (let i = 0; i < sourceIds.length; i += CHUNK) {
+    const chunk = sourceIds.slice(i, i + CHUNK);
+    const { error, count } = await supabase
+      .from("cockpit_queue")
+      .delete({ count: "exact" })
+      .eq("source_type", sourceType)
+      .in("source_id", chunk);
+    if (error) throw error;
+    total += count ?? 0;
+  }
+  emitBusyPartnersChanged();
+  return total;
+}
+
 export async function findCockpitQueue(userId: string, status = "queued", limit = 500) {
   const { data, error } = await supabase
     .from("cockpit_queue")
