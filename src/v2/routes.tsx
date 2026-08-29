@@ -143,6 +143,9 @@ const AgendaSection = lazy(() => import("./ui/pages/sections/AgendaSection"));
 
 // ── Cestinone (unified pre-send queue) ───────────────────────────────
 const CestinonePage = lazy(() => import("./ui/pages/CestinonePage").then((m) => ({ default: m.CestinonePage })));
+const ApprovazioniPage = lazy(() =>
+  import("./ui/pages/ApprovazioniPage").then((m) => ({ default: m.ApprovazioniPage })),
+);
 const CommsPage = lazy(() => import("./ui/pages/CommsPage").then((m) => ({ default: m.CommsPage })));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
@@ -268,7 +271,8 @@ export function V2Routes(): React.ReactElement {
           <Route path="rubrica/whatsapp" element={guardedPage(RubricaWhatsAppPage, "RubricaWA")} />
           <Route path="rubrica/linkedin" element={guardedPage(RubricaLinkedInPage, "RubricaLI")} />
           <Route path="todo" element={<Navigate to="/v2/cestinone" replace />} />
-          <Route path="approvals" element={<Navigate to="/v2/cestinone" replace />} />
+          <Route path="approvazioni" element={guardedPage(ApprovazioniPage, "Approvazioni")} />
+          <Route path="approvals" element={<Navigate to="/v2/approvazioni" replace />} />
 
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
           <Route path="kpi" element={guardedPage(KpiPage, "KPI")} />
