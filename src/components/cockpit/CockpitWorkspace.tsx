@@ -253,10 +253,11 @@ export function CockpitWorkspace(props: Props) {
           // FACCIA A — 4 casellone canali (sempre visibili, accettano drop)
           <motion.div
             key="channels-face"
-            initial={{ opacity: 0, rotateY: -90 }}
-            animate={{ opacity: 1, rotateY: 0 }}
-            exit={{ opacity: 0, rotateY: 90 }}
-            transition={{ duration: isDragging ? 0 : 0.35, ease: "easeOut" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: isDragging ? 0 : 0.15, ease: "easeOut" }}
+
             onDragOver={(e) => {
               e.preventDefault();
               e.dataTransfer.dropEffect = "copy";
