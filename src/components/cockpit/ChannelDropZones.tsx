@@ -126,14 +126,23 @@ export function ChannelDropZones({
                 data-channel-id={ch.id}
                 onDragOver={(e) => {
                   e.preventDefault();
+                  e.dataTransfer.dropEffect = "copy";
                   setHoveredChannel(ch.id);
                 }}
-                onDragLeave={() => setHoveredChannel(null)}
+                onDragLeave={(e) => {
+                  // Ignora i dragleave generati dai figli: causavano sfarfallio
+                  // e perdita dell'evidenziazione durante il trascinamento.
+                  const next = e.relatedTarget as Node | null;
+                  if (next && e.currentTarget.contains(next)) return;
+                  setHoveredChannel((prev) => (prev === ch.id ? null : prev));
+                }}
                 onDrop={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   setHoveredChannel(null);
                   if (draggedContactId) onDrop(ch.id, draggedContactId, "Contact");
                 }}
+
                 className={cn(
                   "flex items-center gap-3 px-5 py-5 rounded-xl border-2 border-dashed transition-all duration-200 min-h-[72px]",
                   !isHovered && "border-border/40 bg-card/40 text-muted-foreground",
