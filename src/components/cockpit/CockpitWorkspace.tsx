@@ -167,10 +167,11 @@ export function CockpitWorkspace(props: Props) {
           // FACCIA B — Oracolo + Bozza a tutta larghezza, con header di scelta canale
           <motion.div
             key="oracle-face"
-            initial={{ opacity: 0, rotateY: 90 }}
-            animate={{ opacity: 1, rotateY: 0 }}
-            exit={{ opacity: 0, rotateY: -90 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+
             className="absolute inset-0 flex flex-col overflow-hidden"
             style={{ transformStyle: "preserve-3d", perspective: 1200 }}
           >
