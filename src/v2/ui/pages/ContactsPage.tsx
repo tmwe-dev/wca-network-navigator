@@ -19,6 +19,10 @@ import type { CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
 import { EntityListWithDetail } from "@/v2/ui/organisms/EntityListWithDetail";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
 import { BulkChangeOriginDialog } from "@/v2/ui/organisms/BulkChangeOriginDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { addCockpitPreselection } from "@/lib/cockpitPreselection";
+
 
 const log = createLogger("Contacts");
 
