@@ -13,7 +13,7 @@ import type { DraftState, DraftChannel } from "@/types/cockpit";
 import { ArrowLeft, Mail, Linkedin, MessageCircle, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const CHANNEL_META: Record<Exclude<DraftChannel, null>, { label: string; icon: React.ElementType; color: string }> = {
   email: { label: "Email", icon: Mail, color: "text-primary" },
