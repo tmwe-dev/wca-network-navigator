@@ -98,12 +98,27 @@ export function ContactsPage() {
     [setUrlContactId, loadContactById],
   );
 
-  const handleBulkAddToCockpit = useCallback((sel: CompanyEntity[]) => {
-    window.dispatchEvent(
-      new CustomEvent("cockpit-add-bulk-contacts", { detail: { companyIds: sel.map((s) => s.id) } }),
-    );
-    toast.success(`${sel.length} aziende aggiunte al Cockpit`);
+  const handleBulkAddToCockpit = useCallback(async (sel: CompanyEntity[]) => {
+    if (!sel.length) return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) {
+        toast.error("Utente non autenticato");
+        return;
+      }
+      const items = sel.map((s) => ({ user_id: userId, source_type: "contact", source_id: s.id }));
+      await insertCockpitQueueItems(items);
+      addCockpitPreselection(items.map((i) => i.source_id));
+      toast.success(`${sel.length} contatti aggiunti al Cockpit`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Errore invio al Cockpit", { description: msg });
+    }
   }, []);
+
 
   const handleBulkCampaign = useCallback((sel: CompanyEntity[]) => {
     const withEmail = sel.filter((s) => s.channels?.email);
