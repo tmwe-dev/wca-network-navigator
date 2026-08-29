@@ -6,7 +6,7 @@ import {
   findSocialLinksByPartnerIds,
   getProspectContactsByIds,
 } from "@/data/partnerRelations";
-import { findCockpitQueue, deleteCockpitQueueBySource, insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { findCockpitQueue, deleteCockpitQueueBySources, insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
@@ -491,8 +491,15 @@ export function useDeleteCockpitContacts() {
       }
 
       let deleted = 0;
+      // Batch per tipo sorgente: una DELETE ogni 100 id invece di una per record.
+      const byType = new Map<string, string[]>();
       for (const entry of sourceEntries) {
-        deleted += await deleteCockpitQueueBySource(user.id, entry.type, entry.id);
+        const list = byType.get(entry.type) ?? [];
+        list.push(entry.id);
+        byType.set(entry.type, list);
+      }
+      for (const [type, ids] of byType) {
+        deleted += await deleteCockpitQueueBySources(type, ids);
       }
       if (activityIds.length > 0) {
         const idsToDelete = new Set(activityIds);
