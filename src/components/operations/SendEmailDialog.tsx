@@ -15,7 +15,7 @@ interface SendEmailDialogProps {
   recipientEmail: string;
   recipientName: string;
   companyName: string;
-  partnerId: string;
+  partnerId: string | null;
   isDark: boolean;
 }
 
