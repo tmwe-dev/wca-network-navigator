@@ -113,12 +113,30 @@ export function ContactsPage() {
         toast.error("Utente non autenticato");
         return;
       }
-      const items = sel.map((s) => ({ user_id: userId, source_type: "contact", source_id: s.id }));
+      // `CompanyEntity.id` in questa vista è una chiave sintetica di gruppo
+      // (`crm:<azienda>`), mentre cockpit_queue.source_id richiede l'UUID del
+      // contatto reale. Accodiamo quindi tutti i contatti dei gruppi scelti.
+      const items = sel.flatMap((company) =>
+        (company.contacts ?? []).map((contact) => ({
+          user_id: userId,
+          source_type: "contact",
+          source_id: contact.id,
+        })),
+      );
+      if (items.length === 0) {
+        toast.info("Nessun contatto da inviare");
+        return;
+      }
       await insertCockpitQueueItems(items);
       addCockpitPreselection(items.map((i) => i.source_id));
-      toast.success(`${sel.length} contatti aggiunti al Cockpit`);
+      toast.success(`${items.length} contatti aggiunti al Cockpit`);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "message" in err
+            ? String(err.message)
+            : String(err);
       toast.error("Errore invio al Cockpit", { description: msg });
     }
   }, []);
