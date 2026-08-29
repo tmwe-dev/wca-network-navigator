@@ -40,8 +40,8 @@ export function SendEmailDialog({
     const html = body.replace(/\n/g, "<br/>");
     const res = await enqueue({
       action_type: "send_email",
-      payload: { to: recipientEmail, subject, html, body, partner_id: partnerId },
-      partner_id: partnerId,
+      payload: { to: recipientEmail, subject, html, body, partner_id: partnerId || null },
+      partner_id: partnerId || null,
       email_address: recipientEmail,
       suggested_content: body,
       reasoning: `Email manuale da SendEmailDialog a ${recipientName}.`,
