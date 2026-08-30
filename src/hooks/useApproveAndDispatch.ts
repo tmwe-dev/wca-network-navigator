@@ -108,6 +108,7 @@ export function useApproveAndDispatch() {
       };
       const partnerId = asUuid(action.partner_id) ?? asUuid(payload.partner_id);
       const contactId = asUuid(action.contact_id) ?? asUuid(payload.contact_id);
+      const actionMailboxId = asUuid(payload.mailbox_id) ?? asUuid(payload.shared_mailbox_id) ?? mailboxId;
 
       const actionType = String(action.action_type);
 
@@ -157,7 +158,7 @@ export function useApproveAndDispatch() {
       switch (actionType) {
         case "send_email":
         case "send_proposal":
-          result = await dispatchEmail(payload, finalText, partnerId, contactId, mailboxId, opts);
+          result = await dispatchEmail(payload, finalText, partnerId, contactId, actionMailboxId, opts);
           break;
         case "send_whatsapp":
           result = await dispatchWhatsApp(payload, finalText, waBridge);
