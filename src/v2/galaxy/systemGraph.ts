@@ -12,7 +12,7 @@ import { APP_MAP } from "@/v2/search/appMap";
 import { EDGE_FUNCTIONS_BY_DOMAIN, EDGE_FUNCTION_COUNT } from "./edgeFunctions.generated";
 import { FN_TABLES, FN_CALLS, PAGE_CALLS } from "./synapses.generated";
 
-export type GalaxyKind = "core" | "hub" | "brain" | "orchestrator" | "source" | "surface" | "store" | "external";
+export type GalaxyKind = "hub" | "brain" | "orchestrator" | "source" | "surface" | "store" | "external";
 
 
 export interface GalaxyDomain {
@@ -170,21 +170,12 @@ export interface SystemGraph {
   };
 }
 
-const CORE_ID = "core";
 /** Una funzione che ne invoca almeno 3 altre è considerata orchestratore. */
 const ORCHESTRATOR_THRESHOLD = 3;
 
 export function buildSystemGraph(): SystemGraph {
-  const nodes: GalaxyNode[] = [
-    {
-      id: CORE_ID,
-      label: "Navigator Core",
-      kind: "core",
-      domain: "core",
-      detail: "Nucleo: contratti, DAL, RLS e bus di eventi. Tutto passa da qui.",
-      weight: 3,
-    },
-  ];
+  // Nessun centro unico: il sistema è una rete di domini paritetici.
+  const nodes: GalaxyNode[] = [];
   const links: GalaxyLink[] = [];
   const linkSeen = new Set<string>();
   const addLink = (from: string, to: string, relation: GalaxyLink["relation"]) => {
@@ -203,7 +194,6 @@ export function buildSystemGraph(): SystemGraph {
       detail: d.description,
       weight: 2,
     });
-    addLink(CORE_ID, `hub-${d.id}`, "appartiene");
   }
 
   // ---- Funzioni server (nodi) + dominio di appartenenza ------------------

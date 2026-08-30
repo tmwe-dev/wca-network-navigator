@@ -30,7 +30,7 @@ export function layoutGraph(graph: SystemGraph): {
 
   const perDomain = new Map<string, GalaxyNode[]>();
   for (const n of graph.nodes) {
-    if (n.kind === "core" || n.kind === "hub") continue;
+    if (n.kind === "hub") continue;
     const arr = perDomain.get(n.domain) ?? [];
     arr.push(n);
     perDomain.set(n.domain, arr);
@@ -43,10 +43,6 @@ export function layoutGraph(graph: SystemGraph): {
     const base = (di / GALAXY_DOMAINS.length) * Math.PI * 2;
     const color = domainColor.get(n.domain) ?? new THREE.Color("#ffffff");
 
-    if (n.kind === "core") {
-      out.push({ ...n, position: new THREE.Vector3(0, 0, 0), color: new THREE.Color("#fff6d8") });
-      continue;
-    }
     if (n.kind === "hub") {
       const r = 2.9;
       out.push({

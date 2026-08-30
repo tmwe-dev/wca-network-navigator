@@ -44,32 +44,6 @@ interface SceneProps {
 }
 
 
-function Core({ pulse = true }: { pulse?: boolean }) {
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame((state) => {
-    if (!ref.current || !pulse) return;
-    const s = 1 + Math.sin(state.clock.elapsedTime * 1.2) * 0.06;
-    ref.current.scale.setScalar(s);
-  });
-  return (
-    <group>
-      <mesh ref={ref}>
-        <sphereGeometry args={[0.75, 32, 32]} />
-        <meshBasicMaterial color="#fff3cf" />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[1.5, 32, 32]} />
-        <meshBasicMaterial color="#ffb347" transparent opacity={0.16} side={THREE.BackSide} />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[2.6, 32, 32]} />
-        <meshBasicMaterial color="#7aa2ff" transparent opacity={0.06} side={THREE.BackSide} />
-      </mesh>
-      <pointLight position={[0, 0, 0]} intensity={40} distance={40} color="#ffd88a" />
-    </group>
-  );
-}
-
 /** Polvere della galassia: nube di punti rotondi che segue i bracci visibili. */
 function Dust({ discMap, visibleDomains }: { discMap: THREE.Texture; visibleDomains: readonly string[] }) {
   const geo = useMemo(() => {
@@ -179,7 +153,7 @@ function Nodes({
   const hoveredRef = useRef<number | null>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  const paintable = useMemo(() => nodes.filter((n) => n.kind !== "core"), [nodes]);
+  const paintable = nodes;
 
   useEffect(() => {
     const mesh = meshRef.current;
@@ -262,7 +236,7 @@ export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate, 
 
   const filteredGraph = useMemo<SystemGraph>(() => {
     const keep = new Set(visibleDomains);
-    const nodes = graph.nodes.filter((n) => n.kind === "core" || keep.has(n.domain));
+    const nodes = graph.nodes.filter((n) => keep.has(n.domain));
     const ids = new Set(nodes.map((n) => n.id));
     const links = graph.links.filter((l) => ids.has(l.from) && ids.has(l.to));
     return { ...graph, nodes, links };
@@ -281,7 +255,7 @@ export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate, 
       <fog attach="fog" args={["#04060f", 40, 82]} />
       <ambientLight intensity={0.35} />
       <Rotator enabled={autoRotate}>
-        <Core />
+        
         <Dust discMap={discMap} visibleDomains={visibleDomains} />
         <Links graph={filteredGraph} byId={byId} selectedId={selectedId} />
         <Nodes nodes={nodes} selectedId={selectedId} onSelect={onSelect} onHover={onHover} />

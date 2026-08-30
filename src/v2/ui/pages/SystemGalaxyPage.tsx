@@ -15,7 +15,7 @@ import { ChevronDown } from "lucide-react";
 const GalaxyScene = lazy(() => import("@/v2/galaxy/GalaxyScene").then((m) => ({ default: m.GalaxyScene })));
 
 const KIND_LABEL: Record<GalaxyKind, string> = {
-  core: "Nucleo",
+  
   hub: "Braccio",
   brain: "Cervello AI",
   orchestrator: "Orchestratore",
