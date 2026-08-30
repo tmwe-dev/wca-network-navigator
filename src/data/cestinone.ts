@@ -148,7 +148,7 @@ function detectPartnerType(p: {
 export async function fetchCestinone(): Promise<CestinoItem[]> {
   const out: CestinoItem[] = [];
 
-  const [emailQ, campaignQ, cockpitQ, outreachQ] = await Promise.allSettled([
+  const [emailQ, campaignQ, cockpitQ, outreachQ, pendingQ] = await Promise.allSettled([
     supabase
       .from("email_campaign_queue")
       .select(
@@ -177,6 +177,15 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         "id, partner_id, channel, recipient_name, recipient_email, recipient_phone, recipient_linkedin_url, subject, body, status, created_at, attempts, max_attempts, last_error, operator_id, created_by",
       )
       .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("ai_pending_actions")
+      .select(
+        "id, partner_id, contact_id, email_address, action_type, action_payload, suggested_content, status, created_at, operator_id, last_error, execution_attempts",
+      )
+      .eq("status", "pending")
+      .in("action_type", ["send_email", "send_proposal", "send_whatsapp", "send_linkedin", "linkedin_connect"])
       .order("created_at", { ascending: false })
       .limit(500),
   ]);
