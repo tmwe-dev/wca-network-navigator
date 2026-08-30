@@ -150,7 +150,14 @@ serve(async (req) => {
             ...srcAgent,
             language: body.language || (srcAgent.language as string) || "it",
             first_message: body.first_message ?? "Ciao Luca, sono Aurora. Dimmi pure.",
-            prompt: { ...srcPrompt, prompt: promptText },
+            // ElevenLabs rifiuta `tools` e `tool_ids` insieme: teniamo solo gli id.
+            prompt: (() => {
+              const cloned = { ...srcPrompt, prompt: promptText } as Record<string, unknown>;
+              if (Array.isArray(cloned.tool_ids) && (cloned.tool_ids as unknown[]).length > 0) {
+                delete cloned.tools;
+              }
+              return cloned;
+            })(),
           },
         },
       };
