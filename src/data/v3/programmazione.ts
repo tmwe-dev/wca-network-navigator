@@ -116,33 +116,32 @@ export interface V3Campagna {
 }
 
 /**
- * Campagne come lotti reali: raggruppiamo le attività per `campaign_batch_id`
- * sul campione delle 2000 più recenti che ne dichiarano uno.
+ * Campagne come lotti reali: righe di `email_campaign_queue` raggruppate per
+ * oggetto (è ciò che identifica di fatto un invio massivo oggi). "Con risposta"
+ * usa le aperture registrate: è il solo segnale disponibile su questa tabella.
  */
 export async function listCampagneV3(giorni: number): Promise<V3Campagna[]> {
   const dal = new Date(Date.now() - Math.max(giorni, 1) * 86_400_000).toISOString();
 
   const { data, error } = await supabase
-    .from("activities")
-    .select("campaign_batch_id, sent_at, status, response_received, created_at")
-    .is("deleted_at", null)
-    .not("campaign_batch_id", "is", null)
+    .from("email_campaign_queue")
+    .select("subject, status, sent_at, created_at, open_count")
     .gte("created_at", dal)
     .order("created_at", { ascending: false })
     .limit(2000);
 
   if (error) throw error;
 
-  const lotti = new Map<string, { totale: number; inviate: number; risposte: number; date: string[] }>();
+  const lotti = new Map<string, { totale: number; inviate: number; aperte: number; date: string[] }>();
   for (const row of (data ?? []) as Record<string, unknown>[]) {
-    const key = String(row.campaign_batch_id);
-    const agg = lotti.get(key) ?? { totale: 0, inviate: 0, risposte: 0, date: [] };
+    const key = String(row.subject ?? "senza oggetto");
+    const agg = lotti.get(key) ?? { totale: 0, inviate: 0, aperte: 0, date: [] };
     agg.totale += 1;
     if (row.sent_at) {
       agg.inviate += 1;
       agg.date.push(String(row.sent_at));
     }
-    if (row.response_received) agg.risposte += 1;
+    if (((row.open_count as number | null) ?? 0) > 0) agg.aperte += 1;
     lotti.set(key, agg);
   }
 
@@ -153,7 +152,7 @@ export async function listCampagneV3(giorni: number): Promise<V3Campagna[]> {
         lotto,
         totale: agg.totale,
         inviate: agg.inviate,
-        conRisposta: agg.risposte,
+        conRisposta: agg.aperte,
         primoInvio: ordinate[0] ?? null,
         ultimoInvio: ordinate[ordinate.length - 1] ?? null,
       };
