@@ -81,7 +81,7 @@ Sostituisce: `pipeline`, `pipeline/kanban`, `crm/kanban`, `deals`, `dashboard`, 
 | Command | `/v3/command` | O | Chiedi qualsiasi cosa al sistema | conversazioni recenti | strumenti usati, fonti, azioni proposte |
 | Impostazioni | `/v3/impostazioni` | D | Come è configurato il sistema? | — | sezioni: caselle, AI, alert, marchio |
 
-Command è **l'unico** cervello conversazionale: gli strumenti che espone coprono le capacità dei sette moduli. La voce (Aurora) usa gli stessi strumenti, non un secondo cervello.
+Command è **l'unico** cervello conversazionale del sistema: gli strumenti che espone coprono le capacità dei sette moduli. Nessuna superficie vocale — l'agente Aurora è stato abbandonato (decisione D3).
 
 ## Fuori dalla V3 — Laboratorio
 
