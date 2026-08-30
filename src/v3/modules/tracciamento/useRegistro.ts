@@ -8,7 +8,7 @@ import { listRegistroV3, type V3VoceRegistro } from "@/data/v3/tracciamento";
 
 export type { V3VoceRegistro };
 
-export const V3_PERIODI_REGISTRO = [7, 30, 90] as const;
+export const V3_PERIODI_REGISTRO = [30, 90, 365] as const;
 
 const PER_PAGINA = 25;
 
@@ -39,7 +39,7 @@ export interface UseRegistroResult {
 }
 
 export function useRegistro(): UseRegistroResult {
-  const [giorni, setGiorniState] = React.useState<number>(30);
+  const [giorni, setGiorniState] = React.useState<number>(365);
   const [tipoDecisione, setTipoState] = React.useState<string | null>(null);
   const [revisione, setRevisioneState] = React.useState<string | null>(null);
   const [soloAutomatiche, setSoloAutomaticheState] = React.useState(false);
@@ -96,7 +96,7 @@ export function useRegistro(): UseRegistroResult {
 
     vaiA: (value) => setPagina(Math.max(0, value)),
     azzeraFiltri: () => {
-      setGiorniState(30);
+      setGiorniState(365);
       setTipoState(null);
       setRevisioneState(null);
       setSoloAutomaticheState(false);

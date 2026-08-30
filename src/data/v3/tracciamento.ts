@@ -124,12 +124,12 @@ export async function getAndamentoV3(giorni: number): Promise<V3Andamento> {
       .from("channel_messages")
       .select("id", { count: "exact", head: true })
       .eq("direction", "inbound")
-      .gte("sent_at", dal),
+      .gte("email_date", dal),
     supabase
       .from("channel_messages")
       .select("id", { count: "exact", head: true })
       .eq("direction", "outbound")
-      .gte("sent_at", dal),
+      .gte("email_date", dal),
     supabase
       .from("activities")
       .select("id", { count: "exact", head: true })
@@ -147,7 +147,7 @@ export async function getAndamentoV3(giorni: number): Promise<V3Andamento> {
       .is("deleted_at", null)
       .eq("status", "completed")
       .gte("created_at", dal),
-    supabase.from("channel_messages").select("channel").gte("sent_at", dal).limit(2000),
+    supabase.from("channel_messages").select("channel").gte("email_date", dal).limit(2000),
   ]);
 
   for (const res of [ricevuti, inviati, conRisposta, attivitaCreate, attivitaCompletate, canali]) {
