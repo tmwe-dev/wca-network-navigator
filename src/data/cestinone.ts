@@ -19,7 +19,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
 export type CestinoChannel = "email" | "whatsapp" | "linkedin" | "voice" | "other";
-export type CestinoSource = "email_campaign_queue" | "campaign_jobs" | "cockpit_queue" | "outreach_queue";
+export type CestinoSource =
+  | "email_campaign_queue"
+  | "campaign_jobs"
+  | "cockpit_queue"
+  | "outreach_queue"
+  | "ai_pending_actions";
 export type CestinoStatus = "pending" | "queued" | "scheduled" | "blocked" | "draft";
 export type CestinoTrigger = "campaign" | "inbound_reply" | "mission" | "manual" | "auto_touch" | "cockpit_draft";
 export type CestinoPartnerType = "wca_partner" | "customer" | "lead" | "prospect" | null;
