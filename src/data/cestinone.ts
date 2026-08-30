@@ -642,6 +642,11 @@ export async function cancelCestinoItem(item: CestinoItem): Promise<void> {
       if (error) throw error;
       break;
     }
+    case "ai_pending_actions": {
+      const { error } = await supabase.from("ai_pending_actions").update({ status: "rejected" }).eq("id", realId);
+      if (error) throw error;
+      break;
+    }
   }
 
   emitBusyPartnersChanged();
