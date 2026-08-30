@@ -109,12 +109,14 @@ export function SystemGalaxyPage(): React.ReactElement {
           </p>
           <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
             <Stat label="Cervelli AI" value={graph.stats.brains} />
+            <Stat label="Orchestratori" value={graph.stats.orchestrators} />
             <Stat label="Origini dati" value={graph.stats.sources} />
             <Stat label="Superfici" value={graph.stats.surfaces} />
             <Stat label="Store" value={graph.stats.stores} />
             <Stat label="Funzioni server" value={graph.stats.edgeFunctions} />
-            <Stat label="Connessioni" value={graph.stats.links} />
+            <Stat label="Sinapsi" value={graph.stats.links} />
           </dl>
+
           <button
             type="button"
             onClick={() => setAutoRotate((v) => !v)}
