@@ -13657,6 +13657,20 @@ export type Database = {
         }
         Returns: string
       }
+      v3_list_deleted: {
+        Args: { _giorni?: number; _limite?: number; _tipo?: string }
+        Returns: {
+          dettaglio: string
+          eliminato_il: string
+          id: string
+          nome: string
+          tipo: string
+        }[]
+      }
+      v3_restore_deleted: {
+        Args: { _id: string; _tipo: string }
+        Returns: undefined
+      }
     }
     Enums: {
       activity_status: "pending" | "in_progress" | "completed" | "cancelled"
