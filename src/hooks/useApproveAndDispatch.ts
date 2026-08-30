@@ -26,6 +26,12 @@ const log = createLogger("useApproveAndDispatch");
 
 type AnyRecord = Record<string, unknown>;
 
+/** Destinatari in copia scelti al momento dell'approvazione. */
+export interface DispatchOptions {
+  cc?: string[];
+  bcc?: string[];
+}
+
 interface DispatchResult {
   success: boolean;
   detail: string;
@@ -41,6 +47,27 @@ function pick(payload: AnyRecord, keys: string[]): string {
     if (typeof v === "string" && v.trim()) return v;
   }
   return "";
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Unisce le copie scelte in UI con quelle già presenti nel payload, deduplicate e validate. */
+function normalizeAddressList(fromUi: string[] | undefined, fromPayload: unknown): string[] {
+  const raw: string[] = [];
+  if (Array.isArray(fromUi)) raw.push(...fromUi.map(asStr));
+  if (Array.isArray(fromPayload)) raw.push(...fromPayload.map(asStr));
+  else if (typeof fromPayload === "string") raw.push(...fromPayload.split(/[,;]/));
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of raw) {
+    const e = item.trim();
+    if (!EMAIL_RE.test(e)) continue;
+    const k = e.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(e);
+  }
+  return out;
 }
 
 function buildIdempotencyKey(to: string, subject: string, body: string): string {
@@ -59,7 +86,7 @@ export function useApproveAndDispatch() {
   const { activeMailbox } = useActiveMailbox();
   const mailboxId = activeMailbox?.kind === "shared" ? activeMailbox.mailbox_id : null;
 
-  const dispatch = async (pendingActionId: string): Promise<DispatchResult> => {
+  const dispatch = async (pendingActionId: string, opts?: DispatchOptions): Promise<DispatchResult> => {
     setDispatching(true);
     try {
       // 1. Carica l'azione
@@ -130,7 +157,7 @@ export function useApproveAndDispatch() {
       switch (actionType) {
         case "send_email":
         case "send_proposal":
-          result = await dispatchEmail(payload, finalText, partnerId, contactId, mailboxId);
+          result = await dispatchEmail(payload, finalText, partnerId, contactId, mailboxId, opts);
           break;
         case "send_whatsapp":
           result = await dispatchWhatsApp(payload, finalText, waBridge);
@@ -188,6 +215,7 @@ async function dispatchEmail(
   partnerId: string | null,
   contactId: string | null,
   mailboxId: string | null,
+  opts?: DispatchOptions,
 ): Promise<DispatchResult> {
   const to = pick(payload, ["to", "recipient_email", "email", "email_address"]);
   const subject = pick(payload, ["subject", "draft_subject"]) || "(senza oggetto)";
@@ -206,6 +234,8 @@ async function dispatchEmail(
         html: sanitizedHtml,
         partner_id: partnerId,
         contact_id: contactId,
+        cc: normalizeAddressList(opts?.cc, payload.cc),
+        bcc: normalizeAddressList(opts?.bcc, payload.bcc),
         idempotency_key: buildIdempotencyKey(to, subject, sanitizedHtml),
       },
       headers: mailboxId ? { "x-mailbox-id": mailboxId } : undefined,
