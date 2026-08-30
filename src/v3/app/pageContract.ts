@@ -162,7 +162,7 @@ export const V3_PAGES = {
     question: "Cosa arriva da WhatsApp e LinkedIn?",
     filters: ["canale", "contatto", "periodo"],
     workflow: ["apri-conversazione"],
-    implemented: false,
+    implemented: true,
   },
 
   // ── Modulo 4 — Comprensione ──────────────────────────────────────

@@ -30,6 +30,7 @@ const CodaPage = lazy(() => import("@/v3/modules/programmazione/pages/CodaPage")
 const PipelinePage = lazy(() => import("@/v3/modules/tracciamento/pages/PipelinePage").then((m) => ({ default: m.PipelinePage })));
 const AndamentoPage = lazy(() => import("@/v3/modules/tracciamento/pages/AndamentoPage").then((m) => ({ default: m.AndamentoPage })));
 const RegistroPage = lazy(() => import("@/v3/modules/tracciamento/pages/RegistroPage").then((m) => ({ default: m.RegistroPage })));
+const CanaliPage = lazy(() => import("@/v3/modules/messaggi/pages/CanaliPage").then((m) => ({ default: m.CanaliPage })));
 const ClassificazionePage = lazy(() => import("@/v3/modules/comprensione/pages/ClassificazionePage").then((m) => ({ default: m.ClassificazionePage })));
 
 function V3Fallback() {
@@ -67,6 +68,7 @@ export function V3Routes(): React.ReactElement {
           <Route path={relative(V3_PAGES.pipeline.path)} element={<PipelinePage />} />
           <Route path={relative(V3_PAGES.andamento.path)} element={<AndamentoPage />} />
           <Route path={relative(V3_PAGES.registro.path)} element={<RegistroPage />} />
+          <Route path={relative(V3_PAGES.canali.path)} element={<CanaliPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to={V3_HOME_PATH} replace />} />
