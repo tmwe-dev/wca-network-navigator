@@ -15,7 +15,7 @@ import { createWriteHandlers } from "../_shared/toolHandlersWrite.ts";
 import { createEnterpriseHandlers } from "../_shared/toolHandlersEnterprise.ts";
 
 import { resolveAiProvider, consumeCredits, compressMessages } from "./contextLoader.ts";
-import { TOOL_DEFINITIONS } from "./toolDefinitions.ts";
+import { TOOL_DEFINITIONS, VOICE_TOOL_DEFINITIONS } from "./toolDefinitions.ts";
 import type { ToolExecutorDeps } from "./toolExecutors.ts";
 
 import { detectRepetitions } from "./repetitionDetection.ts";
@@ -244,12 +244,22 @@ serve(async (req) => {
     const isConversational: boolean =
       mode === "conversational" || context?.conversational === true || context?.mode === "conversational";
 
+    // Canale VOCE: resta conversazionale (risposte brevi, no markdown) ma con
+    // i tool di SOLA LETTURA attivi, così può cercare davvero nel database.
+    const isVoiceChannel: boolean = context?.channel === "voice" || context?.source === "command_voice";
+    const activeTools = isConversational
+      ? isVoiceChannel
+        ? (VOICE_TOOL_DEFINITIONS as unknown as Record<string, unknown>[])
+        : undefined
+      : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[]);
+
     // ── Build system prompt ──
     const systemPromptBase = await composeSystemPrompt({
       operatorBriefing: typeof context?.operatorBriefing === "string" ? context.operatorBriefing : undefined,
       activeWorkflow: undefined, // Set by contextAssembly
       scope: scope || undefined,
       conversational: isConversational,
+      voiceChannel: isVoiceChannel,
     });
 
     // ── Assemble full system prompt with context ──
@@ -315,7 +325,7 @@ serve(async (req) => {
       isConversational,
       scope,
       allMessages,
-      isConversational ? undefined : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[]),
+      activeTools,
     );
 
     if (!initialResponse.ok) {
@@ -351,7 +361,7 @@ serve(async (req) => {
           isConversational,
           scope,
           loopMessages,
-          isConversational ? undefined : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[]),
+          activeTools,
         );
         return {
           ok: res.ok,
