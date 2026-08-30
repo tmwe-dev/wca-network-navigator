@@ -35,10 +35,14 @@ export interface GalaxyNode {
   readonly weight: number;
 }
 
+export type GalaxyRelation = "appartiene" | "invoca" | "legge/scrive" | "alimenta";
+
 export interface GalaxyLink {
   readonly from: string;
   readonly to: string;
+  readonly relation: GalaxyRelation;
 }
+
 
 export const GALAXY_DOMAINS: readonly GalaxyDomain[] = [
   {
