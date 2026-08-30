@@ -71,7 +71,7 @@ export const SEARCH_ACTIONS: readonly SearchActionEntry[] = [
   },
   {
     label: "Configura profilo mittente e firma / piè di pagina",
-    path: "/v2/email-forge",
+    path: "/v2/email/forge",
     keywords: "firma signature footer pie di pagina mittente alias identita",
     hint: "Email Forge",
   },
