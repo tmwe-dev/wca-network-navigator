@@ -153,7 +153,7 @@ export function useApproveAndDispatch() {
           user_id: action.user_id,
           actor_type: "user",
           actor_name: "approve-and-dispatch",
-          action_category: result.success ? "action_executed" : "action_failed",
+          action_category: result.success ? "pending_action_approved" : "mission_failed",
           action_detail: `${actionType}: ${result.detail}`,
           target_id: pendingActionId,
           target_type: "pending_action",
