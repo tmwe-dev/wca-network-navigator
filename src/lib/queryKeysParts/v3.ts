@@ -23,6 +23,9 @@ export const v3Keys = {
     pipelineFasi: ["v3", "pipeline-fasi"] as const,
     andamento: (giorni?: number) => ["v3", "andamento", giorni ?? null] as const,
     registro: (filtri?: unknown) => ["v3", "registro", filtri] as const,
+    canali: (filtri?: unknown) => ["v3", "canali", filtri] as const,
+    cestino: (filtri?: unknown) => ["v3", "cestino", filtri] as const,
+    cestinoConteggi: ["v3", "cestino-conteggi"] as const,
   },
 } as const;
 
