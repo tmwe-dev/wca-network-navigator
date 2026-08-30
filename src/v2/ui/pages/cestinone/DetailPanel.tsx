@@ -30,9 +30,14 @@ import { AgentBadge } from "./AgentBadge";
 import { PreviewTab, OriginTab, HistoryTab, ChecksTab, RecipientTab } from "./tabs";
 import { minutesUntilTomorrow9, minutesUntilNextMonday9 } from "./utils";
 
+export interface ConfirmOptions {
+  cc?: string[];
+  bcc?: string[];
+}
+
 export interface DetailPanelProps {
   item: CestinoItem;
-  onConfirm: () => void;
+  onConfirm: (opts?: ConfirmOptions) => void;
   onEdit: () => void;
   onOpenOrigin: () => void;
   onOpenPartner: () => void;
