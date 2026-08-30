@@ -90,7 +90,7 @@ export const V3_PAGES = {
     question: "Chi devo contattare?",
     filters: ["ricerca", "paese", "gruppo", "stato", "tag"],
     workflow: ["nuovo", "import", "azioni-massive"],
-    implemented: false,
+    implemented: true,
   },
   contatto: {
     path: "/v3/contatti/:id",
@@ -100,7 +100,7 @@ export const V3_PAGES = {
     question: "Chi è e cosa ci siamo detti?",
     filters: [],
     workflow: ["scrivi", "programma", "unisci", "archivia"],
-    implemented: false,
+    implemented: true,
   },
   importazione: {
     path: "/v3/import",
@@ -317,4 +317,4 @@ export const V3_IMPLEMENTED_PAGES: readonly (readonly [V3PageId, V3PageDefinitio
 ).filter(([, page]) => page.implemented);
 
 /** Prima pagina disponibile: destinazione dopo il login e fallback del router. */
-export const V3_HOME_PATH: string = V3_PAGES.operatori.path;
+export const V3_HOME_PATH: string = V3_PAGES.contatti.path;

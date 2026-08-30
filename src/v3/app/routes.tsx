@@ -17,6 +17,8 @@ const LoginPage = lazy(() =>
 const OperatoriPage = lazy(() =>
   import("@/v3/modules/identita/pages/OperatoriPage").then((m) => ({ default: m.OperatoriPage })),
 );
+const ContattiPage = lazy(() => import("@/v3/modules/contatti/pages/ContattiPage").then((m) => ({ default: m.ContattiPage })));
+const ContattoPage = lazy(() => import("@/v3/modules/contatti/pages/ContattoPage").then((m) => ({ default: m.ContattoPage })));
 
 function V3Fallback() {
   return (
@@ -39,6 +41,8 @@ export function V3Routes(): React.ReactElement {
 
         <Route element={<AppShell />}>
           <Route path={relative(V3_PAGES.operatori.path)} element={<OperatoriPage />} />
+          <Route path={relative(V3_PAGES.contatti.path)} element={<ContattiPage />} />
+          <Route path={relative(V3_PAGES.contatto.path)} element={<ContattoPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to={V3_HOME_PATH} replace />} />
