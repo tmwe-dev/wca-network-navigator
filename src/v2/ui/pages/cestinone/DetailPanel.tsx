@@ -63,6 +63,17 @@ export function DetailPanel({
   const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
   const pt = item.partnerType ? PARTNER_TYPE_META[item.partnerType] : null;
   const flag = item.partnerCountryCode ? countryCodeToFlag(item.partnerCountryCode) : "";
+  const isEmail = item.channel === "email";
+  const [cc, setCc] = React.useState<string[]>([]);
+  const [bcc, setBcc] = React.useState<string[]>([]);
+  const [showCopies, setShowCopies] = React.useState(false);
+
+  React.useEffect(() => {
+    setCc([]);
+    setBcc([]);
+    setShowCopies(false);
+  }, [item.id]);
+
 
   return (
     <>
