@@ -35,7 +35,22 @@ export interface EnqueueActionResult {
   error?: string;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * I contatti del cockpit usano id sintetici con prefisso sorgente
+ * (`pc-`, `ic-`, `bc-`, `prc-`, `act-`). Le colonne uuid di
+ * `ai_pending_actions` accettano solo l'uuid puro: qui normalizziamo,
+ * e scartiamo (null) qualunque valore che non sia un uuid valido.
+ */
+function normalizeUuid(value?: string | null): string | null {
+  if (!value) return null;
+  const raw = value.replace(/^(pc-|ic-|bc-|prc-|act-)/, "");
+  return UUID_RE.test(raw) ? raw : null;
+}
+
 export function useEnqueueAction() {
+
   const [enqueuing, setEnqueuing] = useState(false);
 
   const enqueue = async (args: EnqueueActionArgs): Promise<EnqueueActionResult> => {
@@ -54,8 +69,9 @@ export function useEnqueueAction() {
         user_id: userId,
         action_type: args.action_type,
         action_payload: toJsonValue(args.payload),
-        partner_id: args.partner_id ?? null,
-        contact_id: args.contact_id ?? null,
+        partner_id: normalizeUuid(args.partner_id),
+        contact_id: normalizeUuid(args.contact_id),
+
         email_address: args.email_address ?? null,
         suggested_content: args.suggested_content ?? null,
         reasoning: args.reasoning ?? `Manual ${args.action_type} dal cockpit. In attesa di autorizzazione.`,

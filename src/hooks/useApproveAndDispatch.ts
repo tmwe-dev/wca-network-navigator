@@ -72,8 +72,16 @@ export function useApproveAndDispatch() {
       }
 
       const payload = (action.action_payload ?? {}) as AnyRecord;
-      const partnerId = (action.partner_id as string | null) ?? (payload.partner_id as string | null) ?? null;
-      const contactId = (action.contact_id as string | null) ?? (payload.contact_id as string | null) ?? null;
+      // Gli id sintetici del cockpit (`ic-`, `pc-`, …) non sono uuid validi lato DB.
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const asUuid = (v: unknown): string | null => {
+        if (typeof v !== "string" || !v) return null;
+        const raw = v.replace(/^(pc-|ic-|bc-|prc-|act-)/, "");
+        return UUID_RE.test(raw) ? raw : null;
+      };
+      const partnerId = asUuid(action.partner_id) ?? asUuid(payload.partner_id);
+      const contactId = asUuid(action.contact_id) ?? asUuid(payload.contact_id);
+
       const actionType = String(action.action_type);
 
       // 2. Editorial review HARD fail-closed (solo per canali messaggio)
