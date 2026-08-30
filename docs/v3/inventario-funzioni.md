@@ -79,8 +79,8 @@ Osservazione chiave: **tre classificatori distinti girano in parallelo sullo ste
 | Capacità | Dove vive oggi | Prova d'uso | Destino |
 |---|---|---|---|
 | Classificare un messaggio in entrata | `classify-inbound-message` | 35.608 | NUCLEO (canonico) |
-| Classificare il contenuto | `classify-inbound-content` | 15.341 | DUP — assorbire nel canonico |
-| Classificare per Funnemail | `funnemail-classify` | 15.370 | DUP — assorbire nel canonico |
+| Classificare il contenuto | `classify-inbound-content` | 15.341 | ALIAS del canonico (D1) — guscio senza logica |
+| Classificare per Funnemail | `funnemail-classify` | 15.370 | ALIAS del canonico (D1) — guscio senza logica |
 | Classificazione batch | `classify-emails-batch` | VERIFICA | DUP |
 | Regole di routing inbox | `funnemail-auto-route`, `funnemail_routing_rules` | 15.345 | NUCLEO |
 | Policy engine inbox | `funnemail-policy-engine`, `funnemail-policy-executor` | 17.401 | NUCLEO |
