@@ -263,6 +263,24 @@ export default tseslint.config(
     files: ["src/v3/**/*.{ts,tsx}"],
     ignores: ["src/v3/**/*.test.{ts,tsx}", "src/v3/**/__tests__/**"],
     rules: {
+      // Le primitive shadcn (@/components/ui/*) sono l'unica eredità ammessa:
+      // ogni altro import da src/components riporterebbe la V1 dentro la V3.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportDeclaration > Literal[value=/^@\\u002Fcomponents\\u002F(?!ui\\u002F)/]",
+          message:
+            "In V3 sono ammesse solo le primitive @/components/ui/*. Tutto il resto va estratto in src/v3. Vedi docs/v3/contratto-pagina.md.",
+        },
+        {
+          selector: "ImportExpression > Literal[value=/^@\\u002Fcomponents\\u002F(?!ui\\u002F)/]",
+          message: "In V3 sono ammesse solo le primitive @/components/ui/*. Vedi docs/v3/contratto-pagina.md.",
+        },
+        {
+          selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
+          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead.",
+        },
+      ],
       "no-restricted-imports": [
         "error",
         {
@@ -274,12 +292,6 @@ export default tseslint.config(
             {
               group: ["@/pages/*", "@/pages/**"],
               message: "La V3 non importa dalle pagine V1. Vedi docs/v3/mappa-innesto.md.",
-            },
-            {
-              // Le primitive shadcn sono l'unica eredità ammessa.
-              group: ["@/components/**", "!@/components/ui/**"],
-              message:
-                "In V3 sono ammesse solo le primitive @/components/ui/*. Tutto il resto va estratto in src/v3. Vedi docs/v3/contratto-pagina.md.",
             },
             {
               group: ["@/data/*", "@/data/**"],
@@ -297,6 +309,24 @@ export default tseslint.config(
     files: ["src/v3/**/*.{ts,tsx}"],
     ignores: ["src/v3/**/pages/**"],
     rules: {
+      // Le primitive shadcn (@/components/ui/*) sono l'unica eredità ammessa:
+      // ogni altro import da src/components riporterebbe la V1 dentro la V3.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportDeclaration > Literal[value=/^@\\u002Fcomponents\\u002F(?!ui\\u002F)/]",
+          message:
+            "In V3 sono ammesse solo le primitive @/components/ui/*. Tutto il resto va estratto in src/v3. Vedi docs/v3/contratto-pagina.md.",
+        },
+        {
+          selector: "ImportExpression > Literal[value=/^@\\u002Fcomponents\\u002F(?!ui\\u002F)/]",
+          message: "In V3 sono ammesse solo le primitive @/components/ui/*. Vedi docs/v3/contratto-pagina.md.",
+        },
+        {
+          selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
+          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead.",
+        },
+      ],
       "no-restricted-imports": [
         "error",
         {
@@ -308,11 +338,6 @@ export default tseslint.config(
             {
               group: ["@/pages/*", "@/pages/**"],
               message: "La V3 non importa dalle pagine V1. Vedi docs/v3/mappa-innesto.md.",
-            },
-            {
-              group: ["@/components/**", "!@/components/ui/**"],
-              message:
-                "In V3 sono ammesse solo le primitive @/components/ui/*. Tutto il resto va estratto in src/v3.",
             },
           ],
         },
