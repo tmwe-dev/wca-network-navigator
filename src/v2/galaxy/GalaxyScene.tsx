@@ -194,7 +194,7 @@ function Nodes({
         if (e.instanceId != null) onSelect(paintable[e.instanceId]);
       }}
     >
-      <meshBasicMaterial vertexColors toneMapped={false} />
+      <meshBasicMaterial color="#ffffff" toneMapped={false} />
     </instancedMesh>
   );
 }
