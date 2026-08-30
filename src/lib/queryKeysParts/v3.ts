@@ -26,6 +26,7 @@ export const v3Keys = {
     canali: (filtri?: unknown) => ["v3", "canali", filtri] as const,
     cestino: (filtri?: unknown) => ["v3", "cestino", filtri] as const,
     cestinoConteggi: ["v3", "cestino-conteggi"] as const,
+    commandConversazioni: ["v3", "command-conversazioni"] as const,
     duplicati: (filtri?: unknown) => ["v3", "duplicati", filtri] as const,
     impostazioni: (ricerca?: string) => ["v3", "impostazioni", ricerca ?? null] as const,
   },
