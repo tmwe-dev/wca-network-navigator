@@ -27,8 +27,26 @@ const fnNames = fs
 const fnTables = {};
 const fnCalls = {};
 
+const SHARED = path.join(FN_DIR, "_shared");
+
+/** File di _shared importati (transitivamente) da un file di edge function. */
+function sharedDeps(file, seen = new Set()) {
+  if (!fs.existsSync(file) || seen.has(file)) return seen;
+  seen.add(file);
+  const src = fs.readFileSync(file, "utf8");
+  for (const m of src.matchAll(/from\s+["'](\.[^"']+)["']/g)) {
+    const target = path.resolve(path.dirname(file), m[1]);
+    const cand = [target, target + ".ts", path.join(target, "index.ts")].find((c) => fs.existsSync(c) && fs.statSync(c).isFile());
+    if (cand && cand.startsWith(SHARED)) sharedDeps(cand, seen);
+  }
+  return seen;
+}
+
 for (const fn of fnNames) {
-  const files = walk(path.join(FN_DIR, fn));
+  const own = walk(path.join(FN_DIR, fn));
+  const shared = new Set();
+  for (const f of own) for (const d of sharedDeps(f)) if (d.startsWith(SHARED)) shared.add(d);
+  const files = [...own, ...shared];
   const tables = new Set();
   const calls = new Set();
   for (const f of files) {
@@ -49,8 +67,9 @@ for (const m of routesSrc.matchAll(/const\s+(\w+)\s*=\s*lazy\(\s*\(\)\s*=>[\s\S]
   compFile.set(m[1], m[2]);
 }
 const routeComp = [];
-for (const m of routesSrc.matchAll(/path=["']([^"']+)["'][\s\S]{0,160}?element=\{<(\w+)/g)) {
-  routeComp.push([m[1], m[2]]);
+for (const m of routesSrc.matchAll(/path=["']([^"']+)["'][\s\S]{0,200}?element=\{(?:<|guardedPage\()\s*(\w+)/g)) {
+  const raw = m[1];
+  routeComp.push([raw.startsWith("/") ? raw : `/v2/${raw}`, m[2]]);
 }
 
 function resolve(spec, fromFile) {
