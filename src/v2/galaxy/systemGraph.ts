@@ -10,8 +10,10 @@
  */
 import { APP_MAP } from "@/v2/search/appMap";
 import { EDGE_FUNCTIONS_BY_DOMAIN, EDGE_FUNCTION_COUNT } from "./edgeFunctions.generated";
+import { FN_TABLES, FN_CALLS, PAGE_CALLS } from "./synapses.generated";
 
-export type GalaxyKind = "core" | "hub" | "brain" | "source" | "surface" | "store" | "external";
+export type GalaxyKind = "core" | "hub" | "brain" | "orchestrator" | "source" | "surface" | "store" | "external";
+
 
 export interface GalaxyDomain {
   readonly id: string;
