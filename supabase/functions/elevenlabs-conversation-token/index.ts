@@ -86,13 +86,22 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: rows } = await supabase
       .from("agents")
-      .select("elevenlabs_agent_id")
+      .select("elevenlabs_agent_id, role")
       .not("elevenlabs_agent_id", "is", null);
     const allowlist = new Set(
       (rows ?? []).map((r) => (r.elevenlabs_agent_id as string | null)?.trim()).filter((v): v is string => !!v),
     );
+    // Default copilota interno: preferisci l'agente con role="voice" (Aurora)
+    // invece del primo id in ordine arbitrario (che era l'agente vendite).
+    const defaultVoiceAgent =
+      (rows ?? [])
+        .filter((r) => (r.role as string | null)?.toLowerCase() === "voice")
+        .map((r) => (r.elevenlabs_agent_id as string | null)?.trim())
+        .find((v): v is string => !!v) ?? null;
     if (requestedAgentId && allowlist.has(requestedAgentId)) {
       agentId = requestedAgentId;
+    } else if (defaultVoiceAgent) {
+      agentId = defaultVoiceAgent;
     } else if (allowlist.size > 0) {
       agentId = Array.from(allowlist)[0];
     }
