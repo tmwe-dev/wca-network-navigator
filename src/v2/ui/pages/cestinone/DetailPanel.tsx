@@ -28,6 +28,7 @@ import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import type { CestinoItem } from "@/data/cestinone";
 import { CHANNEL_META, STATUS_META, TRIGGER_META, PARTNER_TYPE_META } from "./meta";
 import { AgentBadge } from "./AgentBadge";
+import { CcPicker } from "./CcPicker";
 import { PreviewTab, OriginTab, HistoryTab, ChecksTab, RecipientTab } from "./tabs";
 import { minutesUntilTomorrow9, minutesUntilNextMonday9 } from "./utils";
 
