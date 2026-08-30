@@ -260,7 +260,7 @@ export const V3_PAGES = {
     question: "A che punto sono le trattative?",
     filters: ["fase", "operatore", "valore", "periodo"],
     workflow: ["sposta-fase", "crea-attivita"],
-    implemented: false,
+    implemented: true,
   },
   andamento: {
     path: "/v3/andamento",
@@ -270,7 +270,7 @@ export const V3_PAGES = {
     question: "Sta funzionando?",
     filters: ["periodo", "canale", "operatore"],
     workflow: ["esporta"],
-    implemented: false,
+    implemented: true,
   },
   registro: {
     path: "/v3/registro",
@@ -280,7 +280,7 @@ export const V3_PAGES = {
     question: "Cosa ha deciso l'AI e perché?",
     filters: ["funzione", "esito", "periodo"],
     workflow: ["apri-traccia", "esporta"],
-    implemented: false,
+    implemented: true,
   },
 
   // ── Trasversale ──────────────────────────────────────────────────
