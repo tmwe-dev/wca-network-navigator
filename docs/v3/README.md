@@ -10,4 +10,6 @@ Tre documenti, nessun codice applicativo. Vanno letti in ordine.
 
 Idea guida: la V3 non si scrive da zero e non migra la V2. **Estrae** dal sistema esistente il ciclo del messaggio — contatto, messaggio, comprensione, risposta, programmazione, tracciamento — e lascia fuori la strumentazione.
 
-Stato: Fase 0 completata e decisioni chiuse. Il passo successivo è il piano del Modulo 1 (guscio `src/v3` + identità).
+5. [Modulo 1 — Identità](./modulo-1-identita.md) — primo modulo innestato: guscio `src/v3`, contratto di pagina applicato, accesso e pagina Operatori.
+
+Stato: Fase 0 chiusa, decisioni prese, Modulo 1 innestato e verificato. Prossimo passo: Modulo 2 (Contatti).

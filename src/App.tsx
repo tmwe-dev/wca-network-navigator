@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { V2Routes } from "@/v2/routes";
+import { V3Routes } from "@/v3/app/routes";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -156,6 +157,9 @@ const App = () => (
 
                         {/* V2 routes */}
                         <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
+
+                        {/* V3 — guscio in costruzione, isolato da V1 e V2 */}
+                        <Route path="/v3/*" element={withFeatureBoundary(<V3Routes />, "V3")} />
 
                         {/* Legacy bare paths — redirect to V2 equivalents */}
                         <Route path="/email-composer" element={<LegacyRedirect to="/v2/outreach/composer" />} />

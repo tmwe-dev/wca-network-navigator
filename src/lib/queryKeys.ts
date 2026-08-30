@@ -9,6 +9,7 @@ import { commsKeys } from "./queryKeysParts/comms";
 import { systemKeys } from "./queryKeysParts/system";
 import { aiAndAnalyticsKeys } from "./queryKeysParts/aiAndAnalytics";
 import { v2Keys } from "./queryKeysParts/v2";
+import { v3Keys } from "./queryKeysParts/v3";
 
 export const queryKeys = {
   ...crmKeys,
@@ -16,4 +17,5 @@ export const queryKeys = {
   ...systemKeys,
   ...aiAndAnalyticsKeys,
   ...v2Keys,
+  ...v3Keys,
 } as const;

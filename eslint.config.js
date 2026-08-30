@@ -254,6 +254,96 @@ export default tseslint.config(
       ],
     },
   },
+  // ── Isolamento V3: la V3 non eredita né V1 né V2 ──
+  // Regola del contratto (docs/v3/contratto-pagina.md §6): src/v3 può usare
+  // solo le primitive shadcn (src/components/ui), il design system, i provider
+  // di base e il DAL src/data. Qualsiasi altro import da V1/V2 riporterebbe
+  // dentro la V3 il groviglio che stiamo estraendo.
+  {
+    files: ["src/v3/**/*.{ts,tsx}"],
+    ignores: ["src/v3/**/*.test.{ts,tsx}", "src/v3/**/__tests__/**"],
+    rules: {
+      // Le primitive shadcn (@/components/ui/*) sono l'unica eredità ammessa:
+      // ogni altro import da src/components riporterebbe la V1 dentro la V3.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportDeclaration > Literal[value=/^@\\u002Fcomponents\\u002F(?!ui\\u002F)/]",
+          message:
+            "In V3 sono ammesse solo le primitive @/components/ui/*. Tutto il resto va estratto in src/v3. Vedi docs/v3/contratto-pagina.md.",
+        },
+        {
+          selector: "ImportExpression > Literal[value=/^@\\u002Fcomponents\\u002F(?!ui\\u002F)/]",
+          message: "In V3 sono ammesse solo le primitive @/components/ui/*. Vedi docs/v3/contratto-pagina.md.",
+        },
+        {
+          selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
+          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead.",
+        },
+      ],
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/v2/*", "@/v2/**"],
+              message: "La V3 non importa dalla V2. Estrai il pezzo che serve dentro src/v3. Vedi docs/v3/.",
+            },
+            {
+              group: ["@/pages/*", "@/pages/**"],
+              message: "La V3 non importa dalle pagine V1. Vedi docs/v3/mappa-innesto.md.",
+            },
+            {
+              group: ["@/data/*", "@/data/**"],
+              message: "Le pagine V3 non chiamano il DAL: passa da un hook in src/v3/modules/*.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // ── Eccezioni motivate dell'isolamento V3 ──
+  // 1. Le primitive shadcn sono condivise per contratto.
+  // 2. Gli hook di modulo (non-UI) sono il punto legittimo di accesso al DAL.
+  {
+    files: ["src/v3/**/*.{ts,tsx}"],
+    ignores: ["src/v3/**/pages/**"],
+    rules: {
+      // Le primitive shadcn (@/components/ui/*) sono l'unica eredità ammessa:
+      // ogni altro import da src/components riporterebbe la V1 dentro la V3.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportDeclaration > Literal[value=/^@\\u002Fcomponents\\u002F(?!ui\\u002F)/]",
+          message:
+            "In V3 sono ammesse solo le primitive @/components/ui/*. Tutto il resto va estratto in src/v3. Vedi docs/v3/contratto-pagina.md.",
+        },
+        {
+          selector: "ImportExpression > Literal[value=/^@\\u002Fcomponents\\u002F(?!ui\\u002F)/]",
+          message: "In V3 sono ammesse solo le primitive @/components/ui/*. Vedi docs/v3/contratto-pagina.md.",
+        },
+        {
+          selector: "CallExpression[callee.object.name='supabase'][callee.property.name='from']",
+          message: "Direct supabase.from() is forbidden outside src/data/. Use the DAL layer instead.",
+        },
+      ],
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/v2/*", "@/v2/**"],
+              message: "La V3 non importa dalla V2. Estrai il pezzo che serve dentro src/v3. Vedi docs/v3/.",
+            },
+            {
+              group: ["@/pages/*", "@/pages/**"],
+              message: "La V3 non importa dalle pagine V1. Vedi docs/v3/mappa-innesto.md.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // ── Governance TMWE: regole custom del repo, ora effettivamente attive ──
   // Erano presenti in eslint-rules/ ma non agganciate ad alcun blocco:
   // AI Invocation Charter R3 e il vincolo bulkOps non venivano applicati.
