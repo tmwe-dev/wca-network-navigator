@@ -17,6 +17,7 @@ import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 import { SECONDARY_NAV, findSecondaryNavGroup } from "@/v2/navigation/registry";
 import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 import { EXPANDABLE_MAIN_NAV, sectionRoot } from "./navMenuConfig";
+import { SEARCH_ACTIONS } from "@/v2/search/searchIndex";
 
 // Re-export per retro-compatibilità: altri moduli importano ancora
 // EXPANDABLE_MAIN_NAV / sectionRoot da questo file.
