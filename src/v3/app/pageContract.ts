@@ -120,7 +120,7 @@ export const V3_PAGES = {
     question: "Cosa devo unire?",
     filters: ["soglia", "tipo"],
     workflow: ["unisci", "ignora"],
-    implemented: false,
+    implemented: true,
   },
   cestino: {
     path: "/v3/cestino",
