@@ -9,6 +9,10 @@ export const v3Keys = {
     messaggio: (id?: string | null) => ["v3", "messaggio", id ?? null] as const,
     messaggioThread: (threadId?: string | null) => ["v3", "messaggio-thread", threadId ?? null] as const,
     caselle: ["v3", "caselle"] as const,
+    regole: (filtri?: unknown) => ["v3", "regole", filtri] as const,
+    gruppiMittenti: ["v3", "gruppi-mittenti"] as const,
+    classificazioni: (filtri?: unknown) => ["v3", "classificazioni", filtri] as const,
+    qualitaClassificazione: (giorni?: number) => ["v3", "qualita-classificazione", giorni ?? null] as const,
   },
 } as const;
 
