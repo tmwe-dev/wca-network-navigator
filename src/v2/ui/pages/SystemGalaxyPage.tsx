@@ -221,22 +221,28 @@ export function SystemGalaxyPage(): React.ReactElement {
             </Button>
           )}
 
-          {neighbours.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/45">
-                Connessioni ({neighbours.length})
-              </p>
-              <ul className="space-y-1">
-                {neighbours.map((n) => (
-                  <li key={n.id}>
-                    <span className="block truncate rounded-md px-2 py-1 text-[11px] text-white/70">
-                      {n.label} <span className="text-white/35">· {KIND_LABEL[n.kind]}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          {synapseCount > 0 && (
+            <div className="mt-5 space-y-4">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Sinapsi ({synapseCount})</p>
+              {synapses.map((g) => (
+                <div key={g.label}>
+                  <p className="mb-1 text-[10px] uppercase tracking-wide text-white/35">
+                    {g.label} · {g.nodes.length}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {g.nodes.map((n) => (
+                      <li key={`${g.label}-${n.id}`}>
+                        <span className="block truncate rounded-md px-2 py-1 text-[11px] text-white/70">
+                          {n.label} <span className="text-white/35">· {KIND_LABEL[n.kind]}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           )}
+
         </aside>
       )}
     </div>
