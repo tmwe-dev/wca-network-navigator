@@ -105,6 +105,7 @@ export function useCestinonePageState() {
 
   const navigate = useNavigate();
   const { open: openDrawer } = useContactDrawer();
+  const { dispatch } = useApproveAndDispatch();
 
   const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? items[0] ?? null, [items, selectedId]);
 
