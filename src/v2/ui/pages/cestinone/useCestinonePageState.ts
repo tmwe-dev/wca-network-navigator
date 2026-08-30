@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useCestinone } from "@/v2/hooks/useCestinone";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
+import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";
 import type { CestinoChannel, CestinoItem } from "@/data/cestinone";
 
 export function useCestinonePageState() {
@@ -104,6 +105,7 @@ export function useCestinonePageState() {
 
   const navigate = useNavigate();
   const { open: openDrawer } = useContactDrawer();
+  const { dispatch } = useApproveAndDispatch();
 
   const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? items[0] ?? null, [items, selectedId]);
 
@@ -122,6 +124,16 @@ export function useCestinonePageState() {
   }
 
   function handleConfirm(item: CestinoItem): void {
+    if (item.source === "ai_pending_actions") {
+      const realId = item.id.split(":")[1] ?? "";
+      dismiss(item.id);
+      toast.loading("Invio in corso…", { id: realId });
+      void dispatch(realId).then((res) => {
+        if (res.success) toast.success("Inviato", { id: realId, description: res.detail });
+        else toast.error("Invio fallito", { id: realId, description: res.detail });
+      });
+      return;
+    }
     dismiss(item.id);
     toast.success("Confermato. Apro l'origine per il send finale.");
     navigate(originHref(item));

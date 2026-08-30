@@ -19,7 +19,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
 export type CestinoChannel = "email" | "whatsapp" | "linkedin" | "voice" | "other";
-export type CestinoSource = "email_campaign_queue" | "campaign_jobs" | "cockpit_queue" | "outreach_queue";
+export type CestinoSource =
+  | "email_campaign_queue"
+  | "campaign_jobs"
+  | "cockpit_queue"
+  | "outreach_queue"
+  | "ai_pending_actions";
 export type CestinoStatus = "pending" | "queued" | "scheduled" | "blocked" | "draft";
 export type CestinoTrigger = "campaign" | "inbound_reply" | "mission" | "manual" | "auto_touch" | "cockpit_draft";
 export type CestinoPartnerType = "wca_partner" | "customer" | "lead" | "prospect" | null;
@@ -143,7 +148,7 @@ function detectPartnerType(p: {
 export async function fetchCestinone(): Promise<CestinoItem[]> {
   const out: CestinoItem[] = [];
 
-  const [emailQ, campaignQ, cockpitQ, outreachQ] = await Promise.allSettled([
+  const [emailQ, campaignQ, cockpitQ, outreachQ, pendingQ] = await Promise.allSettled([
     supabase
       .from("email_campaign_queue")
       .select(
@@ -172,6 +177,15 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         "id, partner_id, channel, recipient_name, recipient_email, recipient_phone, recipient_linkedin_url, subject, body, status, created_at, attempts, max_attempts, last_error, operator_id, created_by",
       )
       .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("ai_pending_actions")
+      .select(
+        "id, partner_id, contact_id, email_address, action_type, action_payload, suggested_content, status, created_at, operator_id, last_error, execution_attempts",
+      )
+      .eq("status", "pending")
+      .in("action_type", ["send_email", "send_proposal", "send_whatsapp", "send_linkedin", "linkedin_connect"])
       .order("created_at", { ascending: false })
       .limit(500),
   ]);
@@ -336,6 +350,66 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
       });
     }
   }
+
+  if (pendingQ.status === "fulfilled" && pendingQ.value.data) {
+    for (const r of pendingQ.value.data as Array<Record<string, unknown>>) {
+      const payload = (r.action_payload ?? {}) as Record<string, unknown>;
+      const at = String(r.action_type ?? "");
+      const ch: CestinoChannel =
+        at === "send_whatsapp"
+          ? "whatsapp"
+          : at === "send_linkedin" || at === "linkedin_connect"
+            ? "linkedin"
+            : "email";
+      const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
+      const body =
+        str(payload.draft_body) ??
+        str(payload.html) ??
+        str(payload.body) ??
+        str(payload.message_text) ??
+        str(r.suggested_content);
+      const handle =
+        str(payload.to) ??
+        str(payload.recipient_email) ??
+        str(payload.recipient) ??
+        str(payload.phone) ??
+        str(payload.profile_url) ??
+        str(r.email_address);
+      out.push({
+        id: `pa:${String(r.id)}`,
+        source: "ai_pending_actions",
+        channel: ch,
+        status: "pending",
+        partnerId: (r.partner_id as string) ?? null,
+        recipientName: str(payload.recipient_name),
+        recipientHandle: handle,
+        subject: str(payload.subject) ?? str(payload.draft_subject) ?? (ch === "email" ? "(senza oggetto)" : at),
+        preview: body ? stripHtml(body).slice(0, 220) : null,
+        scheduledAt: null,
+        createdAt: String(r.created_at ?? new Date().toISOString()),
+        partnerName: null,
+        partnerType: null,
+        partnerCountryCode: null,
+        partnerCountryName: null,
+        partnerLeadStatus: null,
+        partnerWcaId: null,
+        agentName: (r.operator_id as string) ?? null,
+        campaignName: null,
+        triggerKind: "manual",
+        originContext: { source: "manual", label: "Azione AI in attesa di approvazione" },
+        previousMessage: null,
+        recentInteractions: [],
+        bodyText: ch === "email" ? null : body,
+        bodyHtml: ch === "email" ? body : null,
+        retryCount: Number(r.execution_attempts ?? 0),
+        maxRetries: 3,
+        lastError: (r.last_error as string) ?? null,
+        deepSearchDoneAt: null,
+      });
+    }
+  }
+
+
 
   // === ENRICHMENT BATCH (partners + profiles + sherlock) ===
   const partnerIds = Array.from(new Set(out.map((i) => i.partnerId).filter(Boolean) as string[]));
@@ -565,6 +639,11 @@ export async function cancelCestinoItem(item: CestinoItem): Promise<void> {
     }
     case "outreach_queue": {
       const { error } = await supabase.from("outreach_queue").update({ status: "cancelled" }).eq("id", realId);
+      if (error) throw error;
+      break;
+    }
+    case "ai_pending_actions": {
+      const { error } = await supabase.from("ai_pending_actions").update({ status: "rejected" }).eq("id", realId);
       if (error) throw error;
       break;
     }
