@@ -6,7 +6,7 @@ import { edgeError as edgeErrorBase, extractErrorMessage } from "../_shared/hand
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
-import { resolveSharedMailbox } from "../_shared/resolveMailbox.ts";
+import { resolvePersonalMailbox, resolveSharedMailbox } from "../_shared/resolveMailbox.ts";
 import { assertMailboxAccessible, MailboxAccessDenied } from "../_shared/mailboxAccessGuard.ts";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -337,10 +337,21 @@ Deno.serve(async (req) => {
       smtpUser = s["smtp_user"];
       smtpPass = s["smtp_password"];
       if (!smtpHost || !smtpUser || !smtpPass) {
-        return edgeError(
-          "VALIDATION_ERROR",
-          "SMTP personale non configurato (host/utente/password mancanti). Vai in Impostazioni → Email per inserirli, oppure seleziona una casella aziendale già configurata prima di inviare.",
-        );
+        try {
+          // La posta in ingresso personale usa già queste credenziali centralizzate.
+          // Manteniamo prioritarie le impostazioni dell'utente, ma se sono
+          // incomplete usiamo la stessa configurazione anche per l'invio.
+          const resolved = resolvePersonalMailbox();
+          smtpHost = resolved.smtp_host;
+          smtpPort = resolved.smtp_port;
+          smtpUser = resolved.smtp_user;
+          smtpPass = resolved.smtp_password;
+        } catch {
+          return edgeError(
+            "VALIDATION_ERROR",
+            "SMTP personale non configurato (host/utente/password mancanti). Vai in Impostazioni → Email per inserirli, oppure seleziona una casella aziendale già configurata prima di inviare.",
+          );
+        }
       }
     }
 
