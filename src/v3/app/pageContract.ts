@@ -196,7 +196,7 @@ export const V3_PAGES = {
     question: "Cosa mando e a chi?",
     filters: ["destinatari", "canale", "template"],
     workflow: ["genera", "revisiona", "allega", "invia"],
-    implemented: false,
+    implemented: true,
   },
   approvazioni: {
     path: "/v3/approvazioni",
