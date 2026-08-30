@@ -146,8 +146,9 @@ export function ImpostazioniPage(): React.ReactElement {
               <p className="text-sm text-muted-foreground">Nessuna chiave con questo filtro.</p>
             ) : (
               <ul className="space-y-1">
-                {dati.chiavi.map((chiave) => (
-                  <li key={chiave.chiave} className="rounded-md border border-border px-3 py-2">
+                {dati.chiavi.map((chiave, indice) => (
+                  <li key={`${chiave.chiave}-${indice}`} className="rounded-md border border-border px-3 py-2">
+
                     <div className="flex items-center gap-2">
                       <span className="truncate text-xs font-medium text-foreground">{chiave.chiave}</span>
                       <span className="ml-auto text-[11px] text-muted-foreground">{dataOra(chiave.aggiornataIl)}</span>
