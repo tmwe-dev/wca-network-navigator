@@ -33,6 +33,7 @@ const RegistroPage = lazy(() => import("@/v3/modules/tracciamento/pages/Registro
 const CanaliPage = lazy(() => import("@/v3/modules/messaggi/pages/CanaliPage").then((m) => ({ default: m.CanaliPage })));
 const ImpostazioniPage = lazy(() => import("@/v3/modules/impostazioni/pages/ImpostazioniPage").then((m) => ({ default: m.ImpostazioniPage })));
 const DuplicatiPage = lazy(() => import("@/v3/modules/contatti/pages/DuplicatiPage").then((m) => ({ default: m.DuplicatiPage })));
+const CommandPage = lazy(() => import("@/v3/modules/command/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
 const ClassificazionePage = lazy(() => import("@/v3/modules/comprensione/pages/ClassificazionePage").then((m) => ({ default: m.ClassificazionePage })));
 
 function V3Fallback() {
@@ -73,6 +74,7 @@ export function V3Routes(): React.ReactElement {
           <Route path={relative(V3_PAGES.canali.path)} element={<CanaliPage />} />
           <Route path={relative(V3_PAGES.impostazioni.path)} element={<ImpostazioniPage />} />
           <Route path={relative(V3_PAGES.duplicati.path)} element={<DuplicatiPage />} />
+          <Route path={relative(V3_PAGES.command.path)} element={<CommandPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to={V3_HOME_PATH} replace />} />

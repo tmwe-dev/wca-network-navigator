@@ -292,7 +292,7 @@ export const V3_PAGES = {
     question: "Chiedi qualsiasi cosa al sistema",
     filters: ["conversazioni-recenti"],
     workflow: ["strumenti-usati", "fonti", "azioni-proposte"],
-    implemented: false,
+    implemented: true,
   },
   impostazioni: {
     path: "/v3/impostazioni",
