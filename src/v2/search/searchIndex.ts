@@ -83,13 +83,13 @@ export const SEARCH_ACTIONS: readonly SearchActionEntry[] = [
   },
   {
     label: "Componi una nuova email",
-    path: "/v2/scrivi",
+    path: "/v2/communicate/compose",
     keywords: "scrivi compose nuova email messaggio",
     hint: "Comunica",
   },
   {
     label: "Leggi la posta in arrivo",
-    path: "/v2/leggi",
+    path: "/v2/inbox",
     keywords: "leggi inbox posta ricevuta messaggi",
     hint: "Comunica",
   },
