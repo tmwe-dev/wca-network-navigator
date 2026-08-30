@@ -45,7 +45,7 @@ Nessuna cancellazione immediata: **resta in V2 e raggiungibile**, ma la V3 non l
 | Harmonizer, Sherlock, `super-mario`, `optimus-analyze`, `decision-dashboard` | nessun log | fuori — Laboratorio |
 | Famiglia `kb-*` (10 funzioni) | supervisione KB | fuori — la V3 legge la KB, non la amministra |
 | TMWE / Findair (11 funzioni) incl. `finder-api-chat`, login popup | dominio esterno | fuori — rientra come tool di Command se serve |
-| MCP, Globe, Deep Search, RA Explorer/Scraping (23 funz. acquisizione) | dominio a sé | fuori dal nucleo — rientra come Modulo 8 dopo il Modulo 7 |
+| MCP, Globe, Deep Search, RA Explorer/Scraping (23 funz. acquisizione) | dominio a sé | fuori per sempre — resta in V2 (D2) |
 | A/B test, simulate/eval classificatore | sperimentazione | fuori — Laboratorio |
 | Agent autopilot / simulate | 5.083 eventi ma non è il ciclo del messaggio | fuori dal nucleo, resta attivo in V2 |
 
