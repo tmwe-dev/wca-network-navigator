@@ -2,7 +2,7 @@
 
 Cosa entra nella V3 e cosa no. Finché questo foglio non è chiuso, non si scrive codice V3.
 
-Stato: **BOZZA — in attesa delle 4 decisioni aperte (§3).**
+Stato: **CHIUSO — le 4 decisioni aperte sono state prese il 2026-08-30 (§3).**
 
 ---
 
