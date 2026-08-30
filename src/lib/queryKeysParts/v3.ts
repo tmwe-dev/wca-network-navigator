@@ -30,6 +30,7 @@ export const v3Keys = {
     duplicati: (filtri?: unknown) => ["v3", "duplicati", filtri] as const,
     impostazioni: (ricerca?: string) => ["v3", "impostazioni", ricerca ?? null] as const,
     scriviDestinatari: (ricerca?: string) => ["v3", "scrivi-destinatari", ricerca ?? null] as const,
+    importLogs: (filtri?: unknown) => ["v3", "import-logs", filtri] as const,
   },
 } as const;
 
