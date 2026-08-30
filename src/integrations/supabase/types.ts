@@ -5322,7 +5322,7 @@ export type Database = {
           open_count: number | null
           opened_at: string | null
           operator_id: string | null
-          partner_id: string
+          partner_id: string | null
           position: number
           recipient_email: string
           recipient_name: string | null
@@ -5345,7 +5345,7 @@ export type Database = {
           open_count?: number | null
           opened_at?: string | null
           operator_id?: string | null
-          partner_id: string
+          partner_id?: string | null
           position?: number
           recipient_email: string
           recipient_name?: string | null
@@ -5368,7 +5368,7 @@ export type Database = {
           open_count?: number | null
           opened_at?: string | null
           operator_id?: string | null
-          partner_id?: string
+          partner_id?: string | null
           position?: number
           recipient_email?: string
           recipient_name?: string | null

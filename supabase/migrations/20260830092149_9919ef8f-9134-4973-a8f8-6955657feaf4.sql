@@ -1,0 +1,1 @@
+ALTER TABLE public.email_campaign_queue ALTER COLUMN partner_id DROP NOT NULL;
