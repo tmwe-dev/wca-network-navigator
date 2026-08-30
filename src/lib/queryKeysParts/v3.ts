@@ -13,6 +13,9 @@ export const v3Keys = {
     gruppiMittenti: ["v3", "gruppi-mittenti"] as const,
     classificazioni: (filtri?: unknown) => ["v3", "classificazioni", filtri] as const,
     qualitaClassificazione: (giorni?: number) => ["v3", "qualita-classificazione", giorni ?? null] as const,
+    approvazioni: (filtri?: unknown) => ["v3", "approvazioni", filtri] as const,
+    sintesiApprovazioni: (stato?: string) => ["v3", "sintesi-approvazioni", stato ?? null] as const,
+    modelli: (filtri?: unknown) => ["v3", "modelli", filtri] as const,
   },
 } as const;
 
