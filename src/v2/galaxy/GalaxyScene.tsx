@@ -4,13 +4,35 @@
 import * as React from "react";
 import { useMemo, useRef, useEffect } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Stars, Html } from "@react-three/drei";
+import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { SystemGraph } from "./systemGraph";
 import { GALAXY_DOMAINS } from "./systemGraph";
 import { layoutGraph, type PositionedNode } from "./layout";
 
-const NODE_GEOMETRY = new THREE.SphereGeometry(1, 10, 10);
+const NODE_GEOMETRY = new THREE.SphereGeometry(1, 20, 20);
+
+/** Sprite circolare: evita i punti quadrati di default. */
+function makeDiscTexture(): THREE.Texture {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.45, "rgba(255,255,255,0.95)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 interface SceneProps {
   graph: SystemGraph;
@@ -18,7 +40,9 @@ interface SceneProps {
   onSelect: (node: PositionedNode | null) => void;
   onHover: (node: PositionedNode | null) => void;
   autoRotate: boolean;
+  visibleDomains: readonly string[];
 }
+
 
 function Core({ pulse = true }: { pulse?: boolean }) {
   const ref = useRef<THREE.Mesh>(null);
@@ -46,23 +70,25 @@ function Core({ pulse = true }: { pulse?: boolean }) {
   );
 }
 
-/** Polvere della galassia: nube di punti che segue i bracci. */
-function Dust() {
+/** Polvere della galassia: nube di punti rotondi che segue i bracci visibili. */
+function Dust({ discMap, visibleDomains }: { discMap: THREE.Texture; visibleDomains: readonly string[] }) {
   const geo = useMemo(() => {
-    const N = 5200;
+    const arms = GALAXY_DOMAINS.filter((d) => visibleDomains.includes(d.id));
+    const N = arms.length * 1400;
     const pos = new Float32Array(N * 3);
     const col = new Float32Array(N * 3);
     const c = new THREE.Color();
     for (let i = 0; i < N; i++) {
-      const arm = i % GALAXY_DOMAINS.length;
-      const base = (arm / GALAXY_DOMAINS.length) * Math.PI * 2;
+      const domain = arms[i % Math.max(arms.length, 1)];
+      const armIndex = GALAXY_DOMAINS.findIndex((d) => d.id === domain?.id);
+      const base = (armIndex / GALAXY_DOMAINS.length) * Math.PI * 2;
       const t = Math.pow(Math.random(), 0.65);
       const r = 2.5 + t * 17;
       const a = base + t * 1.15 + (Math.random() - 0.5) * 0.55;
       pos[i * 3] = Math.cos(a) * r + (Math.random() - 0.5) * 1.2;
       pos[i * 3 + 1] = (Math.random() - 0.5) * (0.8 + t * 2.4);
       pos[i * 3 + 2] = Math.sin(a) * r + (Math.random() - 0.5) * 1.2;
-      c.set(`hsl(${GALAXY_DOMAINS[arm].hsl.replace(/ /g, ", ")})`).lerp(new THREE.Color("#0b1030"), 0.45);
+      c.set(`hsl(${(domain?.hsl ?? "0 0% 80%").replace(/ /g, ", ")})`).lerp(new THREE.Color("#0b1030"), 0.45);
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
@@ -71,14 +97,60 @@ function Dust() {
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     g.setAttribute("color", new THREE.BufferAttribute(col, 3));
     return g;
+  }, [visibleDomains]);
+
+  return (
+    <points geometry={geo}>
+      <pointsMaterial
+        size={0.075}
+        map={discMap}
+        alphaMap={discMap}
+        sizeAttenuation
+        vertexColors
+        transparent
+        opacity={0.55}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
+/** Campo stellare con punti rotondi (sostituisce Stars di drei, che rende quadrati). */
+function RoundStars({ discMap }: { discMap: THREE.Texture }) {
+  const geo = useMemo(() => {
+    const N = 4200;
+    const pos = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+      const r = 45 + Math.random() * 55;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.cos(phi);
+      pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    return g;
   }, []);
 
   return (
     <points geometry={geo}>
-      <pointsMaterial size={0.075} vertexColors transparent opacity={0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
+      <pointsMaterial
+        size={0.42}
+        map={discMap}
+        alphaMap={discMap}
+        color="#e8f0ff"
+        sizeAttenuation
+        transparent
+        opacity={0.8}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
     </points>
   );
 }
+
 
 function Links({ graph, byId, selectedId }: { graph: SystemGraph; byId: ReadonlyMap<string, PositionedNode>; selectedId: string | null }) {
   const base = useMemo(() => {
@@ -138,6 +210,7 @@ function Nodes({
   onHover: (n: PositionedNode | null) => void;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const hitRef = useRef<THREE.InstancedMesh>(null);
   const hoveredRef = useRef<number | null>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
@@ -157,15 +230,21 @@ function Nodes({
     paintable.forEach((n, i) => {
       const isSel = n.id === selectedId;
       const isHover = hoveredRef.current === i;
-      const pulse = isSel ? 1.7 + Math.sin(t * 3) * 0.25 : isHover ? 1.5 : 1;
-      const s = (0.075 + n.weight * 0.075) * pulse;
+      const pulse = isSel ? 1.9 + Math.sin(t * 1.4) * 0.2 : isHover ? 1.6 : 1;
+      const s = (0.042 + n.weight * 0.032) * pulse;
       dummy.position.copy(n.position);
-      dummy.position.y += Math.sin(t * 0.5 + n.position.x) * 0.03;
+      dummy.position.y += Math.sin(t * 0.18 + n.position.x) * 0.02;
       dummy.scale.setScalar(s);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
+      if (hitRef.current) {
+        dummy.scale.setScalar(Math.max(s * 3.2, 0.16));
+        dummy.updateMatrix();
+        hitRef.current.setMatrixAt(i, dummy.matrix);
+      }
     });
     mesh.instanceMatrix.needsUpdate = true;
+    if (hitRef.current) hitRef.current.instanceMatrix.needsUpdate = true;
   });
 
   const handleMove = (e: ThreeEvent<PointerEvent>) => {
@@ -184,18 +263,24 @@ function Nodes({
   };
 
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[NODE_GEOMETRY, undefined, paintable.length]}
-      onPointerMove={handleMove}
-      onPointerOut={handleOut}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (e.instanceId != null) onSelect(paintable[e.instanceId]);
-      }}
-    >
-      <meshBasicMaterial color="#ffffff" toneMapped={false} />
-    </instancedMesh>
+    <>
+      <instancedMesh ref={meshRef} args={[NODE_GEOMETRY, undefined, paintable.length]} raycast={() => null}>
+        <meshBasicMaterial color="#ffffff" toneMapped={false} />
+      </instancedMesh>
+      {/* Sfere invisibili più grandi: rendono i nodi facili da toccare */}
+      <instancedMesh
+        ref={hitRef}
+        args={[NODE_GEOMETRY, undefined, paintable.length]}
+        onPointerMove={handleMove}
+        onPointerOut={handleOut}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (e.instanceId != null) onSelect(paintable[e.instanceId]);
+        }}
+      >
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </instancedMesh>
+    </>
   );
 }
 
@@ -222,33 +307,52 @@ function HubLabels({ nodes, onSelect }: { nodes: readonly PositionedNode[]; onSe
 function Rotator({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null);
   useFrame((_, delta) => {
-    if (ref.current && enabled) ref.current.rotation.y += delta * 0.045;
+    if (ref.current && enabled) ref.current.rotation.y += delta * 0.012;
   });
   return <group ref={ref}>{children}</group>;
 }
 
-export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate }: SceneProps) {
-  const { nodes, byId } = useMemo(() => layoutGraph(graph), [graph]);
+export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate, visibleDomains }: SceneProps) {
+  const discMap = useMemo(() => makeDiscTexture(), []);
+
+  const filteredGraph = useMemo<SystemGraph>(() => {
+    const keep = new Set(visibleDomains);
+    const nodes = graph.nodes.filter((n) => n.kind === "core" || keep.has(n.domain));
+    const ids = new Set(nodes.map((n) => n.id));
+    const links = graph.links.filter((l) => ids.has(l.from) && ids.has(l.to));
+    return { ...graph, nodes, links };
+  }, [graph, visibleDomains]);
+
+  const { nodes, byId } = useMemo(() => layoutGraph(filteredGraph), [filteredGraph]);
 
   return (
     <Canvas
       camera={{ position: [0, 11, 30], fov: 52 }}
-      dpr={[1, 2]}
-      gl={{ antialias: true }}
+      dpr={[1.5, 3]}
+      gl={{ antialias: true, powerPreference: "high-performance" }}
       onPointerMissed={() => onSelect(null)}
     >
       <color attach="background" args={["#04060f"]} />
-      <fog attach="fog" args={["#04060f", 34, 68]} />
+      <fog attach="fog" args={["#04060f", 40, 82]} />
       <ambientLight intensity={0.35} />
-      <Stars radius={90} depth={60} count={6000} factor={4} saturation={0} fade speed={0.6} />
+      <RoundStars discMap={discMap} />
       <Rotator enabled={autoRotate}>
         <Core />
-        <Dust />
-        <Links graph={graph} byId={byId} selectedId={selectedId} />
+        <Dust discMap={discMap} visibleDomains={visibleDomains} />
+        <Links graph={filteredGraph} byId={byId} selectedId={selectedId} />
         <Nodes nodes={nodes} selectedId={selectedId} onSelect={onSelect} onHover={onHover} />
         <HubLabels nodes={nodes} onSelect={onSelect} />
       </Rotator>
-      <OrbitControls enablePan={false} minDistance={6} maxDistance={60} enableDamping dampingFactor={0.06} />
+      <OrbitControls
+        enablePan={false}
+        minDistance={4}
+        maxDistance={70}
+        enableDamping
+        dampingFactor={0.06}
+        rotateSpeed={0.45}
+        zoomSpeed={0.6}
+      />
     </Canvas>
   );
 }
+
