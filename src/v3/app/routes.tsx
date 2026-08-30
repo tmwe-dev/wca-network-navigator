@@ -49,6 +49,8 @@ export function V3Routes(): React.ReactElement {
           <Route path={relative(V3_PAGES.contatto.path)} element={<ContattoPage />} />
           <Route path={relative(V3_PAGES.inbox.path)} element={<InboxPage />} />
           <Route path={relative(V3_PAGES.conversazione.path)} element={<ConversazionePage />} />
+          <Route path={relative(V3_PAGES.regole.path)} element={<RegolePage />} />
+          <Route path={relative(V3_PAGES.classificazione.path)} element={<ClassificazionePage />} />
         </Route>
 
         <Route path="*" element={<Navigate to={V3_HOME_PATH} replace />} />
