@@ -30,16 +30,16 @@ function Core({ pulse = true }: { pulse?: boolean }) {
   return (
     <group>
       <mesh ref={ref}>
-        <sphereGeometry args={[1.15, 32, 32]} />
+        <sphereGeometry args={[0.75, 32, 32]} />
         <meshBasicMaterial color="#fff3cf" />
       </mesh>
       <mesh>
-        <sphereGeometry args={[2.1, 32, 32]} />
-        <meshBasicMaterial color="#ffb347" transparent opacity={0.12} side={THREE.BackSide} />
+        <sphereGeometry args={[1.5, 32, 32]} />
+        <meshBasicMaterial color="#ffb347" transparent opacity={0.16} side={THREE.BackSide} />
       </mesh>
       <mesh>
-        <sphereGeometry args={[3.4, 32, 32]} />
-        <meshBasicMaterial color="#7aa2ff" transparent opacity={0.05} side={THREE.BackSide} />
+        <sphereGeometry args={[2.6, 32, 32]} />
+        <meshBasicMaterial color="#7aa2ff" transparent opacity={0.06} side={THREE.BackSide} />
       </mesh>
       <pointLight position={[0, 0, 0]} intensity={40} distance={40} color="#ffd88a" />
     </group>
@@ -115,7 +115,7 @@ function Links({ graph, byId, selectedId }: { graph: SystemGraph; byId: Readonly
   return (
     <>
       <lineSegments geometry={base}>
-        <lineBasicMaterial vertexColors transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} />
+        <lineBasicMaterial vertexColors transparent opacity={0.12} depthWrite={false} blending={THREE.AdditiveBlending} />
       </lineSegments>
       {highlight && (
         <lineSegments geometry={highlight}>
@@ -158,7 +158,7 @@ function Nodes({
       const isSel = n.id === selectedId;
       const isHover = hoveredRef.current === i;
       const pulse = isSel ? 1.7 + Math.sin(t * 3) * 0.25 : isHover ? 1.5 : 1;
-      const s = (0.055 + n.weight * 0.055) * pulse;
+      const s = (0.075 + n.weight * 0.075) * pulse;
       dummy.position.copy(n.position);
       dummy.position.y += Math.sin(t * 0.5 + n.position.x) * 0.03;
       dummy.scale.setScalar(s);
@@ -232,7 +232,7 @@ export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate }
 
   return (
     <Canvas
-      camera={{ position: [0, 13, 26], fov: 55 }}
+      camera={{ position: [0, 11, 30], fov: 52 }}
       dpr={[1, 2]}
       gl={{ antialias: true }}
       onPointerMissed={() => onSelect(null)}
