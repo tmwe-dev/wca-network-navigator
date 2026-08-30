@@ -130,7 +130,7 @@ export const V3_PAGES = {
     question: "Cosa ho eliminato?",
     filters: ["tipo", "periodo"],
     workflow: ["ripristina"],
-    implemented: true,
+    implemented: false,
   },
 
   // ── Modulo 3 — Messaggi ──────────────────────────────────────────

@@ -8,7 +8,7 @@ import {
   listConversazioniCanaliV3,
   V3_CANALI_NON_EMAIL,
   type V3Conversazione,
-} from "@/data/v3/canaliCestino";
+} from "@/data/v3/canali";
 
 export { V3_CANALI_NON_EMAIL };
 export type { V3Conversazione };
