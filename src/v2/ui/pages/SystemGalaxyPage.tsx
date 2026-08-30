@@ -18,11 +18,13 @@ const KIND_LABEL: Record<GalaxyKind, string> = {
   core: "Nucleo",
   hub: "Braccio",
   brain: "Cervello AI",
+  orchestrator: "Orchestratore",
   source: "Origine dati",
   surface: "Superficie (pagina)",
   store: "Store dati",
   external: "Funzione di sistema",
 };
+
 
 const ALL_DOMAINS = GALAXY_DOMAINS.map((d) => d.id);
 
