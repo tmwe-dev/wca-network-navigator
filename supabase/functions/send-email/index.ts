@@ -337,7 +337,10 @@ Deno.serve(async (req) => {
       smtpUser = s["smtp_user"];
       smtpPass = s["smtp_password"];
       if (!smtpHost || !smtpUser || !smtpPass) {
-        return edgeError("VALIDATION_ERROR", "SMTP non configurato. Vai in Impostazioni → Email per configurarlo.");
+        return edgeError(
+          "VALIDATION_ERROR",
+          "SMTP personale non configurato (host/utente/password mancanti). Vai in Impostazioni → Email per inserirli, oppure seleziona una casella aziendale già configurata prima di inviare.",
+        );
       }
     }
 
