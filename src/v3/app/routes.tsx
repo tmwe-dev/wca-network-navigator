@@ -76,6 +76,7 @@ export function V3Routes(): React.ReactElement {
           <Route path={relative(V3_PAGES.impostazioni.path)} element={<ImpostazioniPage />} />
           <Route path={relative(V3_PAGES.duplicati.path)} element={<DuplicatiPage />} />
           <Route path={relative(V3_PAGES.command.path)} element={<CommandPage />} />
+          <Route path={relative(V3_PAGES.scrivi.path)} element={<ScriviPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to={V3_HOME_PATH} replace />} />
