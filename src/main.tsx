@@ -8,6 +8,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { installRemoteSink } from "@/lib/log/remoteSink";
 import { installGlobalErrorCatchers } from "@/lib/errorCatchers";
+import { installPreventSwipeNavigation } from "@/lib/preventSwipeNavigation";
 import "./i18n";
 import { bootstrapThemeClasses } from "@/v2/ui/theme/themeRegistry";
 
