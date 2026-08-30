@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useCestinone } from "@/v2/hooks/useCestinone";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
+import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";
 import type { CestinoChannel, CestinoItem } from "@/data/cestinone";
 
 export function useCestinonePageState() {
