@@ -85,7 +85,9 @@ Command è **l'unico** cervello conversazionale del sistema: gli strumenti che e
 
 ## Fuori dalla V3 — Laboratorio
 
-Restano in V2, raggiungibili da una sola voce "Laboratorio": Galassia, Prompt Lab, AI Arena, AI Test Hub, KB Supervisor, Harmonizer, Sherlock, Agents/Autopilot, Deep Search, RA Explorer/Scraping, Globe, TMWE/Findair, Design System Preview, E2E Status, Diagnostics.
+Restano in V2, raggiungibili da una sola voce "Laboratorio": Galassia, Prompt Lab, AI Arena, AI Test Hub, KB Supervisor, Harmonizer, Sherlock, Agents/Autopilot, Design System Preview, E2E Status, Diagnostics.
+
+**Restano in V2 in modo definitivo** (decisione D2, mai migrati): Deep Search, RA Explorer, Scraping e le 23 funzioni di acquisizione, Globe, TMWE/Findair, MCP. Producono contatti; la V3 li legge e basta.
 
 ## Conteggio
 
