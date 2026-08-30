@@ -44,32 +44,6 @@ interface SceneProps {
 }
 
 
-function Core({ pulse = true }: { pulse?: boolean }) {
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame((state) => {
-    if (!ref.current || !pulse) return;
-    const s = 1 + Math.sin(state.clock.elapsedTime * 1.2) * 0.06;
-    ref.current.scale.setScalar(s);
-  });
-  return (
-    <group>
-      <mesh ref={ref}>
-        <sphereGeometry args={[0.75, 32, 32]} />
-        <meshBasicMaterial color="#fff3cf" />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[1.5, 32, 32]} />
-        <meshBasicMaterial color="#ffb347" transparent opacity={0.16} side={THREE.BackSide} />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[2.6, 32, 32]} />
-        <meshBasicMaterial color="#7aa2ff" transparent opacity={0.06} side={THREE.BackSide} />
-      </mesh>
-      <pointLight position={[0, 0, 0]} intensity={40} distance={40} color="#ffd88a" />
-    </group>
-  );
-}
-
 /** Polvere della galassia: nube di punti rotondi che segue i bracci visibili. */
 function Dust({ discMap, visibleDomains }: { discMap: THREE.Texture; visibleDomains: readonly string[] }) {
   const geo = useMemo(() => {
