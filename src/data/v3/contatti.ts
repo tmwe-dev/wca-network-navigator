@@ -160,8 +160,9 @@ export async function getContattoV3(id: string): Promise<V3ContattoDettaglio | n
 export interface V3Interazione {
   readonly id: string;
   readonly tipo: string | null;
-  readonly canale: string | null;
-  readonly oggetto: string | null;
+  readonly titolo: string | null;
+  readonly descrizione: string | null;
+  readonly esito: string | null;
   readonly data: string | null;
 }
 
@@ -169,7 +170,7 @@ export interface V3Interazione {
 export async function listInterazioniContattoV3(contattoId: string, limite = 20): Promise<V3Interazione[]> {
   const { data, error } = await supabase
     .from("contact_interactions")
-    .select("id, interaction_type, channel, subject, created_at")
+    .select("id, interaction_type, title, description, outcome, created_at")
     .eq("contact_id", contattoId)
     .order("created_at", { ascending: false })
     .limit(limite);
@@ -181,8 +182,9 @@ export async function listInterazioniContattoV3(contattoId: string, limite = 20)
     return {
       id: String(item.id),
       tipo: (item.interaction_type as string | null) ?? null,
-      canale: (item.channel as string | null) ?? null,
-      oggetto: (item.subject as string | null) ?? null,
+      titolo: (item.title as string | null) ?? null,
+      descrizione: (item.description as string | null) ?? null,
+      esito: (item.outcome as string | null) ?? null,
       data: (item.created_at as string | null) ?? null,
     };
   });
