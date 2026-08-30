@@ -169,8 +169,27 @@ export function DetailPanel({
         </TabsContent>
       </Tabs>
 
+      {isEmail && (
+        <div className="px-3 py-2 border-t bg-muted/10 space-y-1.5 shrink-0">
+          {showCopies ? (
+            <>
+              <CcPicker label="Cc" values={cc} onChange={setCc} />
+              <CcPicker label="Ccn" values={bcc} onChange={setBcc} />
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowCopies(true)}
+              className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            >
+              <Users className="h-3 w-3" /> Aggiungi Cc / Ccn
+            </button>
+          )}
+        </div>
+      )}
+
       <footer className="px-3 py-2 border-t bg-muted/20 flex items-center gap-1.5 flex-wrap shrink-0">
-        <Button size="sm" className="h-8 gap-1.5" onClick={onConfirm}>
+        <Button size="sm" className="h-8 gap-1.5" onClick={() => onConfirm({ cc, bcc })}>
           <CheckCircle2 className="h-3.5 w-3.5" /> Conferma
         </Button>
         <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={onEdit}>
