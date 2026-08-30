@@ -206,7 +206,7 @@ export const V3_PAGES = {
     question: "Cosa devo approvare prima che parta?",
     filters: ["canale", "rischio", "richiedente"],
     workflow: ["approva", "correggi", "rifiuta"],
-    implemented: false,
+    implemented: true,
   },
   modelli: {
     path: "/v3/modelli",
@@ -216,7 +216,7 @@ export const V3_PAGES = {
     question: "Con che tono e struttura scriviamo?",
     filters: ["canale", "lingua", "uso"],
     workflow: ["nuovo", "duplica", "prova"],
-    implemented: false,
+    implemented: true,
   },
 
   // ── Modulo 6 — Programmazione ────────────────────────────────────

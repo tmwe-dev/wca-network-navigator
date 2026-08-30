@@ -22,6 +22,8 @@ const InboxPage = lazy(() => import("@/v3/modules/messaggi/pages/InboxPage").the
 const ConversazionePage = lazy(() => import("@/v3/modules/messaggi/pages/ConversazionePage").then((m) => ({ default: m.ConversazionePage })));
 const ContattoPage = lazy(() => import("@/v3/modules/contatti/pages/ContattoPage").then((m) => ({ default: m.ContattoPage })));
 const RegolePage = lazy(() => import("@/v3/modules/comprensione/pages/RegolePage").then((m) => ({ default: m.RegolePage })));
+const ApprovazioniPage = lazy(() => import("@/v3/modules/risposta/pages/ApprovazioniPage").then((m) => ({ default: m.ApprovazioniPage })));
+const ModelliPage = lazy(() => import("@/v3/modules/risposta/pages/ModelliPage").then((m) => ({ default: m.ModelliPage })));
 const ClassificazionePage = lazy(() => import("@/v3/modules/comprensione/pages/ClassificazionePage").then((m) => ({ default: m.ClassificazionePage })));
 
 function V3Fallback() {
@@ -51,6 +53,8 @@ export function V3Routes(): React.ReactElement {
           <Route path={relative(V3_PAGES.conversazione.path)} element={<ConversazionePage />} />
           <Route path={relative(V3_PAGES.regole.path)} element={<RegolePage />} />
           <Route path={relative(V3_PAGES.classificazione.path)} element={<ClassificazionePage />} />
+          <Route path={relative(V3_PAGES.approvazioni.path)} element={<ApprovazioniPage />} />
+          <Route path={relative(V3_PAGES.modelli.path)} element={<ModelliPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to={V3_HOME_PATH} replace />} />
