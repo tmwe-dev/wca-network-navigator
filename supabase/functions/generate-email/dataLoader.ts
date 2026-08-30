@@ -33,7 +33,15 @@ export async function loadPartnerMetadata(
     isPartnerSource && quality !== "fast"
       ? supabase.from("partner_services").select("service_category").eq("partner_id", partner.id!)
       : Promise.resolve({ data: [] }),
-    supabase.from("app_settings").select("key, value").like("key", "ai_%"),
+    // Scope obbligatorio all'utente autenticato (+ eventuali default globali
+    // con user_id NULL): senza filtro si mescolavano i profili mittente di
+    // operatori diversi (es. firma di un altro utente).
+    supabase
+      .from("app_settings")
+      .select("key, value, user_id")
+      .like("key", "ai_%")
+      .or(`user_id.eq.${userId},user_id.is.null`),
+
     isPartnerSource && quality === "premium"
       ? supabase.from("partner_social_links").select("platform, url, contact_id").eq("partner_id", partner.id!)
       : Promise.resolve({ data: [] }),
@@ -43,9 +51,19 @@ export async function loadPartnerMetadata(
   const services = (servicesRes.data || []) as ServiceRow[];
   const socialLinks = (socialRes.data || []) as SocialLinkRow[];
   const settings: Record<string, string> = {};
-  ((settingsRes.data || []) as { key: string; value: string | null }[]).forEach((r) => {
-    settings[r.key] = r.value || "";
-  });
+  const settingRows = (settingsRes.data || []) as { key: string; value: string | null; user_id?: string | null }[];
+  // prima i default globali, poi le righe dell'utente che li sovrascrivono
+  settingRows
+    .filter((r) => !r.user_id)
+    .forEach((r) => {
+      settings[r.key] = r.value || "";
+    });
+  settingRows
+    .filter((r) => r.user_id === userId)
+    .forEach((r) => {
+      settings[r.key] = r.value || "";
+    });
+
 
   return { networks, services, socialLinks, settings };
 }

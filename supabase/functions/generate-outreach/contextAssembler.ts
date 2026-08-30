@@ -267,14 +267,22 @@ export async function assembleOutreachContext(
   if (!rawSnippet) intelligence.warning = "Nessun dato trovato nel DB. L'AI lavora solo con dati base.";
 
   // Settings
-  // FIX 2026-05-13: identità org-wide. Le chiavi ai_% sono UNIQUE globali in
-  // app_settings → carichiamo tutte le righe (RLS limita per operator scope).
-  void userId;
-  const { data: settingsRows } = await supabase.from("app_settings").select("key, value").like("key", "ai_%");
+  // Identità: le righe dell'operatore autenticato hanno priorità; le altre
+  // (org-wide / legacy) restano come fallback se l'utente non le ha impostate.
+  const { data: settingsRows } = await supabase.from("app_settings").select("key, value, user_id").like("key", "ai_%");
   const settings: Record<string, string> = {};
-  (settingsRows || []).forEach((r: { key: string; value: string | null }) => {
-    settings[r.key] = r.value || "";
-  });
+  const rows = (settingsRows || []) as { key: string; value: string | null; user_id?: string | null }[];
+  rows
+    .filter((r) => r.user_id !== userId)
+    .forEach((r) => {
+      settings[r.key] = r.value || "";
+    });
+  rows
+    .filter((r) => r.user_id === userId)
+    .forEach((r) => {
+      settings[r.key] = r.value || "";
+    });
+
 
   // Sales KB
   const kbResult = await fetchKbEntriesForOutreach(supabase, quality, channel, userId);
