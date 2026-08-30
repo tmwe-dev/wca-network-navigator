@@ -4,13 +4,35 @@
 import * as React from "react";
 import { useMemo, useRef, useEffect } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Stars, Html } from "@react-three/drei";
+import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { SystemGraph } from "./systemGraph";
 import { GALAXY_DOMAINS } from "./systemGraph";
 import { layoutGraph, type PositionedNode } from "./layout";
 
-const NODE_GEOMETRY = new THREE.SphereGeometry(1, 10, 10);
+const NODE_GEOMETRY = new THREE.SphereGeometry(1, 20, 20);
+
+/** Sprite circolare: evita i punti quadrati di default. */
+function makeDiscTexture(): THREE.Texture {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.45, "rgba(255,255,255,0.95)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 interface SceneProps {
   graph: SystemGraph;
@@ -18,7 +40,9 @@ interface SceneProps {
   onSelect: (node: PositionedNode | null) => void;
   onHover: (node: PositionedNode | null) => void;
   autoRotate: boolean;
+  visibleDomains: readonly string[];
 }
+
 
 function Core({ pulse = true }: { pulse?: boolean }) {
   const ref = useRef<THREE.Mesh>(null);
