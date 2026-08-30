@@ -10,20 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { V3_STATI_LEAD } from "@/data/v3/contatti";
 import { useContatti } from "../useContatti";
-
-const ETICHETTE_STATO: Record<string, string> = {
-  new: "Nuovo",
-  first_touch_sent: "Primo contatto",
-  holding: "In attesa",
-  engaged: "In dialogo",
-  qualified: "Qualificato",
-  negotiation: "Trattativa",
-  converted: "Convertito",
-  archived: "Archiviato",
-  blacklisted: "Bloccato",
-};
+import { ETICHETTE_STATO_LEAD, V3_STATI_LEAD, etichettaStato } from "../statiLead";
 
 function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -87,7 +75,7 @@ export function ContattiPage(): React.ReactElement {
               className="h-7 px-2 text-xs"
               onClick={() => setStato(value)}
             >
-              {ETICHETTE_STATO[value] ?? value}
+              {ETICHETTE_STATO_LEAD[value] ?? value}
             </Button>
           ))}
         </div>
@@ -228,7 +216,7 @@ export function ContattiPage(): React.ReactElement {
                   <TableCell className="py-2 text-xs text-muted-foreground">{riga.paese ?? "—"}</TableCell>
                   <TableCell className="py-2">
                     <Badge variant="outline" className="text-[11px]">
-                      {riga.stato ? (ETICHETTE_STATO[riga.stato] ?? riga.stato) : "—"}
+                      {etichettaStato(riga.stato)}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-2 text-right text-xs tabular-nums text-muted-foreground">

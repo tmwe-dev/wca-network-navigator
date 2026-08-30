@@ -9,18 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useContatto } from "../useContatto";
-
-const ETICHETTE_STATO: Record<string, string> = {
-  new: "Nuovo",
-  first_touch_sent: "Primo contatto",
-  holding: "In attesa",
-  engaged: "In dialogo",
-  qualified: "Qualificato",
-  negotiation: "Trattativa",
-  converted: "Convertito",
-  archived: "Archiviato",
-  blacklisted: "Bloccato",
-};
+import { etichettaStato } from "../statiLead";
 
 function Campo({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -120,7 +109,7 @@ export function ContattoPage(): React.ReactElement {
           <Sezione title="Stato commerciale">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="text-[11px]">
-                {contatto.stato ? (ETICHETTE_STATO[contatto.stato] ?? contatto.stato) : "senza stato"}
+                {contatto.stato ? etichettaStato(contatto.stato) : "senza stato"}
               </Badge>
               {contatto.punteggio !== null && (
                 <Badge variant="outline" className="text-[11px]">
