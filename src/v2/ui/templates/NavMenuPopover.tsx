@@ -17,6 +17,7 @@ import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 import { SECONDARY_NAV, findSecondaryNavGroup } from "@/v2/navigation/registry";
 import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 import { EXPANDABLE_MAIN_NAV, sectionRoot } from "./navMenuConfig";
+import { SEARCH_ACTIONS } from "@/v2/search/searchIndex";
 
 // Re-export per retro-compatibilità: altri moduli importano ancora
 // EXPANDABLE_MAIN_NAV / sectionRoot da questo file.
@@ -104,7 +105,7 @@ export function NavMenuPopover({
 
   // Indice piatto per ricerca su tutte le voci (principali, sotto-cartelle,
   // tab Config, pagine Development).
-  type SearchEntry = { label: string; path: string; trail: string };
+  type SearchEntry = { label: string; path: string; trail: string; keywords?: string };
   const searchIndex = React.useMemo<SearchEntry[]>(() => {
     const out: SearchEntry[] = [];
     for (const item of FULL_NAV_ITEMS) {
@@ -130,16 +131,29 @@ export function NavMenuPopover({
         }
       }
     }
-    // Dedup per path
+    // Funzioni operative con sinonimi (es. "pie di pagina" → firma in Email Forge)
+    for (const a of SEARCH_ACTIONS) {
+      out.push({ label: a.label, path: a.path, trail: `Funzione › ${a.hint}`, keywords: a.keywords });
+    }
+    // Dedup per path + label (le funzioni possono puntare a pagine già indicizzate)
     const seen = new Set<string>();
-    return out.filter((e) => (seen.has(e.path) ? false : (seen.add(e.path), true)));
+    return out.filter((e) => {
+      const k = `${e.path}|${e.label}`;
+      return seen.has(k) ? false : (seen.add(k), true);
+    });
   }, [t]);
 
   const q = query.trim().toLowerCase();
   const results = React.useMemo(() => {
     if (!q) return [] as SearchEntry[];
+    // Ogni parola della query deve comparire in label, percorso o sinonimi:
+    // così "pie di pagina" trova la firma anche se nessuna voce si chiama così.
+    const terms = q.split(/\s+/).filter(Boolean);
     return searchIndex
-      .filter((e) => e.label.toLowerCase().includes(q) || e.trail.toLowerCase().includes(q))
+      .filter((e) => {
+        const hay = `${e.label} ${e.trail} ${e.keywords ?? ""}`.toLowerCase();
+        return terms.every((term) => hay.includes(term));
+      })
       .slice(0, 30);
   }, [q, searchIndex]);
 
