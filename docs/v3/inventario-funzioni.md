@@ -55,7 +55,7 @@ Osservazione chiave: **tre classificatori distinti girano in parallelo sullo ste
 | Holding pattern (siblings) | `apply_sibling_holding`, `check_sibling_risk` | strutturale | NUCLEO |
 | Lead scoring | `calculate-lead-scores`, `calculate-partner-quality` | VERIFICA | NUCLEO |
 | Import file / CSV / OCR biglietti | `process-ai-import`, `parse-business-card`, `analyze-import-structure` | periodico | NUCLEO |
-| Scraping WCA / ReportAziende / LinkedIn | 23 funzioni `acquisizione` + 4 estensioni browser | VERIFICA | LAB (rientra dopo il modulo 3) |
+| Scraping WCA / ReportAziende / LinkedIn | 23 funzioni `acquisizione` + 4 estensioni browser | VERIFICA | **Resta in V2 per sempre** (D2) — la V3 legge i contatti prodotti |
 | Arricchimento sito partner | `enrich-partner-website`, `scrape-website` | VERIFICA | VERIFICA |
 | Directory partner e conteggi paese | `wca-country-counts`, `directory_cache` | VERIFICA | NUCLEO |
 
@@ -79,8 +79,8 @@ Osservazione chiave: **tre classificatori distinti girano in parallelo sullo ste
 | Capacità | Dove vive oggi | Prova d'uso | Destino |
 |---|---|---|---|
 | Classificare un messaggio in entrata | `classify-inbound-message` | 35.608 | NUCLEO (canonico) |
-| Classificare il contenuto | `classify-inbound-content` | 15.341 | DUP — assorbire nel canonico |
-| Classificare per Funnemail | `funnemail-classify` | 15.370 | DUP — assorbire nel canonico |
+| Classificare il contenuto | `classify-inbound-content` | 15.341 | ALIAS del canonico (D1) — guscio senza logica |
+| Classificare per Funnemail | `funnemail-classify` | 15.370 | ALIAS del canonico (D1) — guscio senza logica |
 | Classificazione batch | `classify-emails-batch` | VERIFICA | DUP |
 | Regole di routing inbox | `funnemail-auto-route`, `funnemail_routing_rules` | 15.345 | NUCLEO |
 | Policy engine inbox | `funnemail-policy-engine`, `funnemail-policy-executor` | 17.401 | NUCLEO |
@@ -147,7 +147,7 @@ Osservazione chiave: **tre classificatori distinti girano in parallelo sullo ste
 | Grounding KB e mappa app | `appMap.ts`, `kb_entries`, `navBridge` | attivo | NUCLEO |
 | Memoria conversazionale | `ai_memory`, `conversation_summaries`, `memory-promoter` | attivo | NUCLEO (una sola) |
 | Brain dedicato Command | `command-ask-brain` | nessun log | DUP di ai-assistant |
-| Cervello vocale | `voice-brain-bridge` + ElevenLabs | VERIFICA | NUCLEO (stessi tool) |
+| Cervello vocale | `voice-brain-bridge`, `elevenlabs-agent-sync` + ElevenLabs | VERIFICA | **ABBANDONATA** (D3) — spegnere cron/webhook, poi rimuovere |
 | Motore condiviso mai adottato | `_shared/assistantEngine.ts`, `toolExecutionLoop.ts`, `platformTools*` | **0 importatori** | MORTA — rimuovere |
 | Copilota prompt | `prompt-copilot-chat` | nessun log | LAB |
 | Chat proposte harmonizer | `harmonize-proposal-chat` | nessun log | LAB |

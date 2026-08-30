@@ -2,7 +2,7 @@
 
 Cosa entra nella V3 e cosa no. Finché questo foglio non è chiuso, non si scrive codice V3.
 
-Stato: **BOZZA — in attesa delle 4 decisioni aperte (§3).**
+Stato: **CHIUSO — le 4 decisioni aperte sono state prese il 2026-08-30 (§3).**
 
 ---
 
@@ -45,7 +45,7 @@ Nessuna cancellazione immediata: **resta in V2 e raggiungibile**, ma la V3 non l
 | Harmonizer, Sherlock, `super-mario`, `optimus-analyze`, `decision-dashboard` | nessun log | fuori — Laboratorio |
 | Famiglia `kb-*` (10 funzioni) | supervisione KB | fuori — la V3 legge la KB, non la amministra |
 | TMWE / Findair (11 funzioni) incl. `finder-api-chat`, login popup | dominio esterno | fuori — rientra come tool di Command se serve |
-| MCP, Globe, Deep Search, RA Explorer/Scraping (23 funz. acquisizione) | dominio a sé | fuori dal nucleo — rientra come Modulo 8 dopo il Modulo 7 |
+| MCP, Globe, Deep Search, RA Explorer/Scraping (23 funz. acquisizione) | dominio a sé | fuori per sempre — resta in V2 (D2) |
 | A/B test, simulate/eval classificatore | sperimentazione | fuori — Laboratorio |
 | Agent autopilot / simulate | 5.083 eventi ma non è il ciclo del messaggio | fuori dal nucleo, resta attivo in V2 |
 
@@ -58,21 +58,38 @@ Nessuna cancellazione immediata: **resta in V2 e raggiungibile**, ma la V3 non l
 | `command-ask-brain` | 0 eventi, duplica `ai-assistant` | rimuovere dopo strumentazione |
 | Header orfani `GoldenHeaderBar`, `AutoPageTitle` | 0 usi | rimuovere |
 
-## 3. Decisioni aperte — servono le tue risposte
+## 3. Decisioni prese (2026-08-30)
 
-### D1 — I tre classificatori
-`classify-inbound-message` (35.608) · `classify-inbound-content` (15.341) · `funnemail-classify` (15.370) girano sullo stesso flusso.
-Opzioni: (a) uno solo canonico e gli altri diventano alias sottili; (b) uno solo e gli altri spenti dopo 30 giorni di doppia scrittura di confronto; (c) restano due, uno per la posta operativa e uno per Funnemail.
+### D1 — Classificatori → **uno solo canonico, gli altri diventano alias**
+`classify-inbound-message` (35.608 eventi) è il canonico.
+`classify-inbound-content` e `funnemail-classify` restano deployati ma diventano gusci sottili: stesso contratto d'ingresso, delegano al canonico, nessuna logica propria. Nessun chiamante va modificato, nessun flusso si interrompe.
+Da eliminare: le tre implementazioni parallele di prompt e parsing. Restano tre porte, un solo motore.
+Conseguenza per la V3: il Modulo 4 espone **una** capacità "classifica messaggio in entrata".
 
-### D2 — Acquisizione lead (scraping, WCA, ReportAziende, deep search)
-23 funzioni. È metà del valore commerciale, ma non è il ciclo del messaggio.
-Opzioni: (a) fuori dal nucleo, rientra come Modulo 8 dopo il 7; (b) dentro subito nel Modulo 2 Contatti; (c) resta per sempre in V2.
+### D2 — Acquisizione lead → **resta in V2 per sempre**
+Le 23 funzioni di acquisizione (scraping, WCA, ReportAziende, deep search, estensioni browser) non vengono mai migrate. Continuano a girare dove sono e scrivono sulle stesse tabelle.
+La V3 **legge** i contatti che producono, non li produce. Nessun Modulo 8.
+Conseguenza: `src/v3` non contiene nulla di acquisizione; le pagine RA Explorer / Deep Search / Scraping restano raggiungibili dalla V2.
 
-### D3 — Voce (Aurora / ElevenLabs)
-Opzioni: (a) nel nucleo, stessi tool di Command, nessun secondo cervello; (b) fuori dal nucleo per ora, resta in V2; (c) si abbandona.
+### D3 — Voce (Aurora / ElevenLabs) → **abbandonata**
+Si smette di mantenerla. Tutto l'investimento conversazionale va su Command.
+Da dismettere: `voice-brain-bridge`, `elevenlabs-agent-sync`, sincronizzazione prompt agente, pagine vocali. Prima si spengono i cron/webhook, poi si rimuove il codice.
+Conseguenza: **un solo cervello nel sistema**, senza eccezioni.
 
-### D4 — Destino della V2
-Opzioni: (a) V2 resta viva come "Laboratorio" a tempo indeterminato; (b) V2 muore quando i 7 moduli sono in V3, il Laboratorio viene portato in V3 come sezione separata; (c) si decide più avanti.
+### D4 — Destino della V2 → **si decide dopo il Modulo 7**
+Per ora V2 e V3 convivono. La V3 non importa mai da V2 (regola di lint). La scelta se spegnere la V2 o assorbirne il Laboratorio si riprende a Modulo 7 chiuso.
+
+---
+
+## 5. Effetto netto delle decisioni
+
+| | Prima | Dopo |
+|---|---:|---:|
+| Motori di classificazione | 3 | 1 (3 porte) |
+| Cervelli conversazionali | 9 | 1 |
+| Domini da migrare in V3 | 8 | 7 (acquisizione esclusa) |
+| Superfici vocali da mantenere | 1 | 0 |
+
 
 ---
 

@@ -81,11 +81,13 @@ Sostituisce: `pipeline`, `pipeline/kanban`, `crm/kanban`, `deals`, `dashboard`, 
 | Command | `/v3/command` | O | Chiedi qualsiasi cosa al sistema | conversazioni recenti | strumenti usati, fonti, azioni proposte |
 | Impostazioni | `/v3/impostazioni` | D | Come è configurato il sistema? | — | sezioni: caselle, AI, alert, marchio |
 
-Command è **l'unico** cervello conversazionale: gli strumenti che espone coprono le capacità dei sette moduli. La voce (Aurora) usa gli stessi strumenti, non un secondo cervello.
+Command è **l'unico** cervello conversazionale del sistema: gli strumenti che espone coprono le capacità dei sette moduli. Nessuna superficie vocale — l'agente Aurora è stato abbandonato (decisione D3).
 
 ## Fuori dalla V3 — Laboratorio
 
-Restano in V2, raggiungibili da una sola voce "Laboratorio": Galassia, Prompt Lab, AI Arena, AI Test Hub, KB Supervisor, Harmonizer, Sherlock, Agents/Autopilot, Deep Search, RA Explorer/Scraping, Globe, TMWE/Findair, Design System Preview, E2E Status, Diagnostics.
+Restano in V2, raggiungibili da una sola voce "Laboratorio": Galassia, Prompt Lab, AI Arena, AI Test Hub, KB Supervisor, Harmonizer, Sherlock, Agents/Autopilot, Design System Preview, E2E Status, Diagnostics.
+
+**Restano in V2 in modo definitivo** (decisione D2, mai migrati): Deep Search, RA Explorer, Scraping e le 23 funzioni di acquisizione, Globe, TMWE/Findair, MCP. Producono contatti; la V3 li legge e basta.
 
 ## Conteggio
 
