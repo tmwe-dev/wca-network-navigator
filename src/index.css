@@ -4,18 +4,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Protezione swipe-back/forward del trackpad senza rompere gli scroll
- * interni: blocchiamo il chaining orizzontale a livello di html/body
- * (impedisce navigazione browser) e di #root (impedisce che uno scroll
- * orizzontale interno arrivato a fine corsa propaghi alla pagina).
- * Lo scroll verticale e i container annidati restano intatti. */
+/* Protezione totale contro la navigazione da gesture di scroll
+ * (swipe-back/forward trackpad, pull-to-refresh, overscroll chaining).
+ * Nessuno scroll — orizzontale o verticale — deve poter cambiare pagina.
+ * Gli scroll interni restano intatti: `contain` blocca solo la
+ * propagazione al contenitore padre, non lo scroll stesso. */
 html,
 body {
+  overscroll-behavior: none;
   overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
 }
 #root {
-  overscroll-behavior-x: contain;
+  overscroll-behavior: contain;
 }
+/* Ogni contenitore scrollabile non propaga l'overscroll alla pagina */
+[class*="overflow-auto"],
+[class*="overflow-scroll"],
+[class*="overflow-x-auto"],
+[class*="overflow-y-auto"],
+[class*="overflow-x-scroll"],
+[class*="overflow-y-scroll"] {
+  overscroll-behavior: contain;
+}
+
 
 @layer base {
   :root {
