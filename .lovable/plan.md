@@ -34,13 +34,63 @@ Sopra ai sette: **un solo cervello conversazionale** (Command) che sa fare tutto
 
 Resta dov'è, in una zona chiaramente marcata "laboratorio": galassia, prompt lab, arena, AI test hub, harmonizer, sherlock, super-mario, optimus, decision dashboard, TMWE/Findair, agent autopilot. Nessuna cancellazione ora: la V3 semplicemente non li ospita. Se dopo tre mesi nessuno li apre, si eliminano con i dati alla mano.
 
+## Sì: prima si analizza tutto, poi si tocca un pezzo alla volta
+
+L'ordine è questo, e la Fase 0 è tutta analisi — non si scrive una riga di applicazione finché non è finita.
+
+### Fase 0.A — Censimento funzionale completo (nessuna funzione si perde)
+
+Si produce un unico registro, `docs/v3/inventario-funzioni.md`, con una riga per ogni capacità reale del sistema — non per file, ma per **cosa sa fare**. Per ciascuna:
+
+| Campo | Esempio |
+|---|---|
+| Capacità | "Classifica una email in arrivo e assegna il gruppo mittente" |
+| Dove vive oggi | pagina, hook, funzione edge, tabelle toccate |
+| Usata davvero? | prova da log di invocazione, non da grep |
+| Destino | Nucleo V3 / Laboratorio / Duplicato di X / Morta |
+
+Questo registro è il contratto: **nessun modulo si dichiara migrato se una sua riga del registro non è coperta.** È la risposta a "salvaguardando le funzioni": la salvaguardia è la lista, non la memoria.
+
+### Fase 0.B — Standard di pagina V3 (prima delle pagine, non dopo)
+
+Il caos della V2 nasce proprio da qui: oggi convivono `PageTitleHeader` (22 pagine), `StandardPageFrame` (2 pagine), `ExploreContextHeader`, più header orfani. Tre standard = nessuno standard.
+
+Per la V3 si definisce **un solo contratto di pagina**, scritto prima di costruire qualsiasi maschera:
+
+```text
+┌─ Top bar globale (fissa, unica) ────────────────────┐
+│ ☰   Titolo pagina                    stato · azioni │
+├─────────┬───────────────────────────────┬───────────┤
+│ Filtri  │  Header di pagina + toolbar   │ Workflow  │
+│ (sx,    │  ─────────────────────────────│ (dx,      │
+│ solo    │  CONTENUTO                    │ solo      │
+│ filtri) │  (lista / dettaglio / form)   │ azioni)   │
+└─────────┴───────────────────────────────┴───────────┘
+                    ✦ AI sempre in alto a destra della maschera
+```
+
+Regole non negoziabili del contratto:
+- Un solo componente header. Niente varianti, niente eccezioni "per questa pagina".
+- Sinistra = solo filtri. Destra = solo workflow/azioni. Mai contenuto.
+- Ogni pagina risponde a **una sola domanda** ("cosa devo fare ora") e la sua azione principale è visibile senza scroll.
+- Tre soli tipi di maschera: **Lista**, **Dettaglio**, **Operativa** (canvas tipo Cockpit/Command). Ogni pagina V3 dichiara il suo tipo.
+- Mobile: filtri e workflow diventano drawer, il contenuto resta intero.
+- Nessun colore fuori dai token; badge e stati da un unico set.
+
+Il contratto vive in `src/v3/app/pageContract.ts` + `PageFrame.tsx`, ed è coperto da una regola di lint: una pagina V3 che non usa `PageFrame` non compila.
+
+### Fase 0.C — Mappa di innesto
+
+Per ognuno dei sette moduli si dichiara in anticipo: quali pagine avrà, di che tipo (Lista/Dettaglio/Operativa), quali filtri a sinistra, quali azioni a destra. Un foglio solo, prima di scrivere. Così quando si innestano gli elementi si sa già dove vanno.
+
 ## Metodo: come si costruisce senza rompere
 
 - La V3 vive in `src/v3` con un proprio router, accessibile da subito su un percorso dedicato. V1 e V2 continuano a funzionare in parallelo per tutto il tempo.
 - Un modulo alla volta: si copia il codice che serve dentro `src/v3/modules/<nome>`, si ripulisce mentre si copia, e da quel momento **la V3 non importa più nulla da `src/components` o `src/v2`**. Regola ESLint che lo impedisce, come già fatto per l'accesso diretto al DB.
 - Il backend non si tocca nella prima parte: stesse tabelle, stesse funzioni edge. Solo l'accesso passa dal Data Access Layer del modulo.
-- Ogni modulo è "finito" quando: la sua pagina funziona in V3, i dati sono corretti, e ha zero import fuori dal proprio confine.
+- Ogni modulo è "finito" quando: le righe del registro che gli competono sono tutte coperte, la sua pagina rispetta il contratto, i dati sono corretti, e ha zero import fuori dal proprio confine.
 - Solo quando tutti e sette i moduli sono in V3 si spegne il router V1/V2 — e i file restano nel repo un ciclo intero prima della rimozione.
+
 
 ## Ordine dei moduli (dal più semplice)
 
@@ -62,7 +112,7 @@ In parallelo restano validi i due audit già fatti (Integrazioni e Cervello AI):
 
 ## Prossimo passo che propongo
 
-Partire dal piano dettagliato del **Modulo 1 + guscio V3**: creare `src/v3` con router, layout e il modulo identità, senza toccare niente di esistente. È l'intervento a rischio più basso possibile e rende concreta l'infrastruttura su cui appoggiare tutto il resto.
+**Fase 0 sola, tutta analisi**: il registro completo delle capacità (0.A), il contratto di pagina V3 scritto e approvato (0.B) e la mappa di innesto dei sette moduli (0.C). Zero codice applicativo, zero rischio. Solo quando quei tre documenti sono approvati si apre il piano del Modulo 1 (guscio `src/v3` + identità).
 
 ## Note tecniche
 
