@@ -210,6 +210,7 @@ function Nodes({
   onHover: (n: PositionedNode | null) => void;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const hitRef = useRef<THREE.InstancedMesh>(null);
   const hoveredRef = useRef<number | null>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
@@ -229,15 +230,21 @@ function Nodes({
     paintable.forEach((n, i) => {
       const isSel = n.id === selectedId;
       const isHover = hoveredRef.current === i;
-      const pulse = isSel ? 1.7 + Math.sin(t * 3) * 0.25 : isHover ? 1.5 : 1;
-      const s = (0.075 + n.weight * 0.075) * pulse;
+      const pulse = isSel ? 1.9 + Math.sin(t * 1.4) * 0.2 : isHover ? 1.6 : 1;
+      const s = (0.042 + n.weight * 0.032) * pulse;
       dummy.position.copy(n.position);
-      dummy.position.y += Math.sin(t * 0.5 + n.position.x) * 0.03;
+      dummy.position.y += Math.sin(t * 0.18 + n.position.x) * 0.02;
       dummy.scale.setScalar(s);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
+      if (hitRef.current) {
+        dummy.scale.setScalar(Math.max(s * 3.2, 0.16));
+        dummy.updateMatrix();
+        hitRef.current.setMatrixAt(i, dummy.matrix);
+      }
     });
     mesh.instanceMatrix.needsUpdate = true;
+    if (hitRef.current) hitRef.current.instanceMatrix.needsUpdate = true;
   });
 
   const handleMove = (e: ThreeEvent<PointerEvent>) => {
@@ -256,18 +263,24 @@ function Nodes({
   };
 
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[NODE_GEOMETRY, undefined, paintable.length]}
-      onPointerMove={handleMove}
-      onPointerOut={handleOut}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (e.instanceId != null) onSelect(paintable[e.instanceId]);
-      }}
-    >
-      <meshBasicMaterial color="#ffffff" toneMapped={false} />
-    </instancedMesh>
+    <>
+      <instancedMesh ref={meshRef} args={[NODE_GEOMETRY, undefined, paintable.length]} raycast={() => null}>
+        <meshBasicMaterial color="#ffffff" toneMapped={false} />
+      </instancedMesh>
+      {/* Sfere invisibili più grandi: rendono i nodi facili da toccare */}
+      <instancedMesh
+        ref={hitRef}
+        args={[NODE_GEOMETRY, undefined, paintable.length]}
+        onPointerMove={handleMove}
+        onPointerOut={handleOut}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (e.instanceId != null) onSelect(paintable[e.instanceId]);
+        }}
+      >
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </instancedMesh>
+    </>
   );
 }
 
@@ -294,33 +307,52 @@ function HubLabels({ nodes, onSelect }: { nodes: readonly PositionedNode[]; onSe
 function Rotator({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null);
   useFrame((_, delta) => {
-    if (ref.current && enabled) ref.current.rotation.y += delta * 0.045;
+    if (ref.current && enabled) ref.current.rotation.y += delta * 0.012;
   });
   return <group ref={ref}>{children}</group>;
 }
 
-export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate }: SceneProps) {
-  const { nodes, byId } = useMemo(() => layoutGraph(graph), [graph]);
+export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate, visibleDomains }: SceneProps) {
+  const discMap = useMemo(() => makeDiscTexture(), []);
+
+  const filteredGraph = useMemo<SystemGraph>(() => {
+    const keep = new Set(visibleDomains);
+    const nodes = graph.nodes.filter((n) => n.kind === "core" || keep.has(n.domain));
+    const ids = new Set(nodes.map((n) => n.id));
+    const links = graph.links.filter((l) => ids.has(l.from) && ids.has(l.to));
+    return { ...graph, nodes, links };
+  }, [graph, visibleDomains]);
+
+  const { nodes, byId } = useMemo(() => layoutGraph(filteredGraph), [filteredGraph]);
 
   return (
     <Canvas
       camera={{ position: [0, 11, 30], fov: 52 }}
-      dpr={[1, 2]}
-      gl={{ antialias: true }}
+      dpr={[1.5, 3]}
+      gl={{ antialias: true, powerPreference: "high-performance" }}
       onPointerMissed={() => onSelect(null)}
     >
       <color attach="background" args={["#04060f"]} />
-      <fog attach="fog" args={["#04060f", 34, 68]} />
+      <fog attach="fog" args={["#04060f", 40, 82]} />
       <ambientLight intensity={0.35} />
-      <Stars radius={90} depth={60} count={6000} factor={4} saturation={0} fade speed={0.6} />
+      <RoundStars discMap={discMap} />
       <Rotator enabled={autoRotate}>
         <Core />
-        <Dust />
-        <Links graph={graph} byId={byId} selectedId={selectedId} />
+        <Dust discMap={discMap} visibleDomains={visibleDomains} />
+        <Links graph={filteredGraph} byId={byId} selectedId={selectedId} />
         <Nodes nodes={nodes} selectedId={selectedId} onSelect={onSelect} onHover={onHover} />
         <HubLabels nodes={nodes} onSelect={onSelect} />
       </Rotator>
-      <OrbitControls enablePan={false} minDistance={6} maxDistance={60} enableDamping dampingFactor={0.06} />
+      <OrbitControls
+        enablePan={false}
+        minDistance={4}
+        maxDistance={70}
+        enableDamping
+        dampingFactor={0.06}
+        rotateSpeed={0.45}
+        zoomSpeed={0.6}
+      />
     </Canvas>
   );
 }
+
