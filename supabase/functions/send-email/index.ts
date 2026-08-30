@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
-import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { edgeError as edgeErrorBase, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
@@ -70,6 +70,17 @@ Deno.serve(async (req) => {
   if (pre) return pre;
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Le risposte di errore DEVONO portare i CORS dell'origin reale: senza,
+  // il browser blocca la risposta e il client vede "Failed to send a request
+  // to the Edge Function" invece del vero motivo (es. indirizzo bounced).
+  const edgeError = (
+    code: Parameters<typeof edgeErrorBase>[0],
+    message: string,
+    details?: string,
+    headers?: Record<string, string>,
+    extra?: Record<string, unknown>,
+  ): Response => edgeErrorBase(code, message, details, headers ?? dynCors, extra);
+
 
   try {
     // ── Auth check ──
