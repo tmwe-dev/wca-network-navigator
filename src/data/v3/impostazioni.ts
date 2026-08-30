@@ -61,10 +61,10 @@ export async function getImpostazioniV3(ricercaChiave: string): Promise<V3Impost
   const [caselle, sync, operatori, chiavi] = await Promise.all([
     supabase
       .from("shared_mailboxes")
-      .select("id, label, email, department, imap_host, smtp_host, reply_to, is_active")
+      .select("id, label, email, department, imap_host, imap_user, smtp_host, reply_to, is_active")
       .is("deleted_at", null)
       .order("label", { ascending: true }),
-    supabase.from("email_sync_state").select("shared_mailbox_id, imap_user, last_sync_at"),
+    supabase.from("email_sync_state").select("shared_mailbox_id, mailbox_id, imap_user, last_sync_at"),
     supabase.from("operators").select("id, name, email, is_active").order("name", { ascending: true }),
     chiaviQuery,
   ]);
@@ -74,11 +74,23 @@ export async function getImpostazioniV3(ricercaChiave: string): Promise<V3Impost
   if (operatori.error) throw operatori.error;
   if (chiavi.error) throw chiavi.error;
 
+  // La sincronizzazione si aggancia alla casella per id oppure, quando l'id
+  // non è valorizzato (righe storiche), per indirizzo IMAP.
   const ultimaSyncPerCasella = new Map<string, string>();
-  for (const row of (sync.data ?? []) as { shared_mailbox_id: string | null; last_sync_at: string | null }[]) {
-    if (!row.shared_mailbox_id || !row.last_sync_at) continue;
-    const attuale = ultimaSyncPerCasella.get(row.shared_mailbox_id);
-    if (!attuale || row.last_sync_at > attuale) ultimaSyncPerCasella.set(row.shared_mailbox_id, row.last_sync_at);
+  const registra = (chiave: string | null, quando: string | null) => {
+    if (!chiave || !quando) return;
+    const attuale = ultimaSyncPerCasella.get(chiave);
+    if (!attuale || quando > attuale) ultimaSyncPerCasella.set(chiave, quando);
+  };
+  for (const row of (sync.data ?? []) as {
+    shared_mailbox_id: string | null;
+    mailbox_id: string | null;
+    imap_user: string | null;
+    last_sync_at: string | null;
+  }[]) {
+    registra(row.shared_mailbox_id, row.last_sync_at);
+    registra(row.mailbox_id, row.last_sync_at);
+    registra(row.imap_user ? row.imap_user.toLowerCase() : null, row.last_sync_at);
   }
 
   return {
@@ -94,7 +106,11 @@ export async function getImpostazioniV3(ricercaChiave: string): Promise<V3Impost
         smtpHost: (item.smtp_host as string | null) ?? null,
         rispondiA: (item.reply_to as string | null) ?? null,
         attiva: item.is_active !== false,
-        ultimaSync: ultimaSyncPerCasella.get(id) ?? null,
+        ultimaSync:
+          ultimaSyncPerCasella.get(id) ??
+          ultimaSyncPerCasella.get(String(item.email ?? "").toLowerCase()) ??
+          ultimaSyncPerCasella.get(String(item.imap_user ?? "").toLowerCase()) ??
+          null,
       };
     }),
     operatori: (operatori.data ?? []).map((row) => {
