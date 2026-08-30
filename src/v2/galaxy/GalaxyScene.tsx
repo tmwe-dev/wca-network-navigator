@@ -152,7 +152,7 @@ function Links({ graph, byId, selectedId }: { graph: SystemGraph; byId: Readonly
   return (
     <>
       <lineSegments geometry={base}>
-        <lineBasicMaterial vertexColors transparent opacity={0.12} depthWrite={false} blending={THREE.AdditiveBlending} />
+        <lineBasicMaterial vertexColors transparent opacity={0.07} depthWrite={false} blending={THREE.AdditiveBlending} />
       </lineSegments>
       {highlight && (
         <lineSegments geometry={highlight}>
