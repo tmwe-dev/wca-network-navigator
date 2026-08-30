@@ -70,23 +70,25 @@ function Core({ pulse = true }: { pulse?: boolean }) {
   );
 }
 
-/** Polvere della galassia: nube di punti che segue i bracci. */
-function Dust() {
+/** Polvere della galassia: nube di punti rotondi che segue i bracci visibili. */
+function Dust({ discMap, visibleDomains }: { discMap: THREE.Texture; visibleDomains: readonly string[] }) {
   const geo = useMemo(() => {
-    const N = 5200;
+    const arms = GALAXY_DOMAINS.filter((d) => visibleDomains.includes(d.id));
+    const N = arms.length * 1400;
     const pos = new Float32Array(N * 3);
     const col = new Float32Array(N * 3);
     const c = new THREE.Color();
     for (let i = 0; i < N; i++) {
-      const arm = i % GALAXY_DOMAINS.length;
-      const base = (arm / GALAXY_DOMAINS.length) * Math.PI * 2;
+      const domain = arms[i % Math.max(arms.length, 1)];
+      const armIndex = GALAXY_DOMAINS.findIndex((d) => d.id === domain?.id);
+      const base = (armIndex / GALAXY_DOMAINS.length) * Math.PI * 2;
       const t = Math.pow(Math.random(), 0.65);
       const r = 2.5 + t * 17;
       const a = base + t * 1.15 + (Math.random() - 0.5) * 0.55;
       pos[i * 3] = Math.cos(a) * r + (Math.random() - 0.5) * 1.2;
       pos[i * 3 + 1] = (Math.random() - 0.5) * (0.8 + t * 2.4);
       pos[i * 3 + 2] = Math.sin(a) * r + (Math.random() - 0.5) * 1.2;
-      c.set(`hsl(${GALAXY_DOMAINS[arm].hsl.replace(/ /g, ", ")})`).lerp(new THREE.Color("#0b1030"), 0.45);
+      c.set(`hsl(${(domain?.hsl ?? "0 0% 80%").replace(/ /g, ", ")})`).lerp(new THREE.Color("#0b1030"), 0.45);
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
@@ -95,14 +97,60 @@ function Dust() {
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     g.setAttribute("color", new THREE.BufferAttribute(col, 3));
     return g;
+  }, [visibleDomains]);
+
+  return (
+    <points geometry={geo}>
+      <pointsMaterial
+        size={0.075}
+        map={discMap}
+        alphaMap={discMap}
+        sizeAttenuation
+        vertexColors
+        transparent
+        opacity={0.55}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
+/** Campo stellare con punti rotondi (sostituisce Stars di drei, che rende quadrati). */
+function RoundStars({ discMap }: { discMap: THREE.Texture }) {
+  const geo = useMemo(() => {
+    const N = 4200;
+    const pos = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+      const r = 45 + Math.random() * 55;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.cos(phi);
+      pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    return g;
   }, []);
 
   return (
     <points geometry={geo}>
-      <pointsMaterial size={0.075} vertexColors transparent opacity={0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
+      <pointsMaterial
+        size={0.42}
+        map={discMap}
+        alphaMap={discMap}
+        color="#e8f0ff"
+        sizeAttenuation
+        transparent
+        opacity={0.8}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
     </points>
   );
 }
+
 
 function Links({ graph, byId, selectedId }: { graph: SystemGraph; byId: ReadonlyMap<string, PositionedNode>; selectedId: string | null }) {
   const base = useMemo(() => {
