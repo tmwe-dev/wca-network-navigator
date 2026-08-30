@@ -204,13 +204,17 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       if (d === "mission") setMissionOpen(true);
       else if (d === "filters") setFiltersOpen(true);
     };
+    const globalSearchHandler = () => setCommandOpen(true);
     document.addEventListener("keydown", down);
     window.addEventListener("open-drawer", drawerHandler);
+    window.addEventListener("open-global-search", globalSearchHandler);
     return () => {
       document.removeEventListener("keydown", down);
       window.removeEventListener("open-drawer", drawerHandler);
+      window.removeEventListener("open-global-search", globalSearchHandler);
     };
   }, []);
+
 
   useEffect(() => {
     const handler = (e: Event) => {

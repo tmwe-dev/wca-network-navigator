@@ -217,7 +217,23 @@ export function NavMenuPopover({
                   </button>
                 ))
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setQuery("");
+                  requestAnimationFrame(() => {
+                    document.body.style.pointerEvents = "";
+                    window.dispatchEvent(new CustomEvent("open-global-search", { detail: query }));
+                  });
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-left text-xs text-primary hover:bg-primary/10"
+              >
+                <Search className="h-3 w-3" />
+                Cerca in tutto il sistema (funzioni, contatti, campi) — ⌘K
+              </button>
               <div className="my-1 border-t border-white/10" />
+
             </div>
           )}
           {!q && (
