@@ -142,7 +142,7 @@ export const V3_PAGES = {
     question: "Cosa è arrivato e cosa richiede risposta?",
     filters: ["casella", "gruppo", "stato", "periodo", "non-letti"],
     workflow: ["rispondi", "assegna", "archivia", "regole"],
-    implemented: false,
+    implemented: true,
   },
   conversazione: {
     path: "/v3/inbox/:id",
@@ -152,7 +152,7 @@ export const V3_PAGES = {
     question: "Cosa dice questo messaggio e cosa faccio?",
     filters: [],
     workflow: ["rispondi", "programma", "classifica", "escala"],
-    implemented: false,
+    implemented: true,
   },
   canali: {
     path: "/v3/canali",
