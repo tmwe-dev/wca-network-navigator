@@ -57,6 +57,9 @@ const MissionBuilderPage = lazy(() =>
   import("./ui/pages/MissionBuilderPage").then((m) => ({ default: m.MissionBuilderPage })),
 );
 const RADashboardPage = lazy(() => import("./ui/pages/RADashboardPage").then((m) => ({ default: m.RADashboard })));
+const SystemGalaxyPage = lazy(() =>
+  import("./ui/pages/SystemGalaxyPage").then((m) => ({ default: m.SystemGalaxyPage })),
+);
 const SortingPage = lazy(() => import("./ui/pages/SortingPage").then((m) => ({ default: m.Sorting })));
 const OperationsPage = lazy(() => import("./ui/pages/OperationsPage").then((m) => ({ default: m.OperationsPage })));
 const AcquisizionePartnerPage = lazy(() =>
