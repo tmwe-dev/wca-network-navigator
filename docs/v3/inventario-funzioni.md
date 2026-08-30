@@ -55,7 +55,7 @@ Osservazione chiave: **tre classificatori distinti girano in parallelo sullo ste
 | Holding pattern (siblings) | `apply_sibling_holding`, `check_sibling_risk` | strutturale | NUCLEO |
 | Lead scoring | `calculate-lead-scores`, `calculate-partner-quality` | VERIFICA | NUCLEO |
 | Import file / CSV / OCR biglietti | `process-ai-import`, `parse-business-card`, `analyze-import-structure` | periodico | NUCLEO |
-| Scraping WCA / ReportAziende / LinkedIn | 23 funzioni `acquisizione` + 4 estensioni browser | VERIFICA | LAB (rientra dopo il modulo 3) |
+| Scraping WCA / ReportAziende / LinkedIn | 23 funzioni `acquisizione` + 4 estensioni browser | VERIFICA | **Resta in V2 per sempre** (D2) — la V3 legge i contatti prodotti |
 | Arricchimento sito partner | `enrich-partner-website`, `scrape-website` | VERIFICA | VERIFICA |
 | Directory partner e conteggi paese | `wca-country-counts`, `directory_cache` | VERIFICA | NUCLEO |
 
