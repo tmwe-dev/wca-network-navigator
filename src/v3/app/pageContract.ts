@@ -228,7 +228,7 @@ export const V3_PAGES = {
     question: "Cosa devo fare oggi?",
     filters: ["tipo", "operatore", "priorita", "giorno"],
     workflow: ["completa", "rimanda", "crea"],
-    implemented: false,
+    implemented: true,
   },
   campagne: {
     path: "/v3/campagne",
@@ -238,7 +238,7 @@ export const V3_PAGES = {
     question: "Cosa sta partendo e quando?",
     filters: ["stato", "canale", "periodo"],
     workflow: ["avvia", "sospendi", "modifica-cadenza"],
-    implemented: false,
+    implemented: true,
   },
   coda: {
     path: "/v3/coda",
@@ -248,7 +248,7 @@ export const V3_PAGES = {
     question: "Cosa è in coda e cosa si è bloccato?",
     filters: ["stato", "canale", "errore"],
     workflow: ["riprova", "sblocca", "annulla"],
-    implemented: false,
+    implemented: true,
   },
 
   // ── Modulo 7 — Tracciamento ──────────────────────────────────────
