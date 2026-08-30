@@ -123,12 +123,12 @@ export function useCestinonePageState() {
     return `/v2/communicate/outreach?multi=${encodeURIComponent(localId)}`;
   }
 
-  function handleConfirm(item: CestinoItem): void {
+  function handleConfirm(item: CestinoItem, opts?: { cc?: string[]; bcc?: string[] }): void {
     if (item.source === "ai_pending_actions") {
       const realId = item.id.split(":")[1] ?? "";
       dismiss(item.id);
       toast.loading("Invio in corso…", { id: realId });
-      void dispatch(realId).then((res) => {
+      void dispatch(realId, { cc: opts?.cc, bcc: opts?.bcc }).then((res) => {
         if (res.success) toast.success("Inviato", { id: realId, description: res.detail });
         else toast.error("Invio fallito", { id: realId, description: res.detail });
       });

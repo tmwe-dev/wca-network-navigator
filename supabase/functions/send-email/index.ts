@@ -25,6 +25,9 @@ interface SendEmailBody {
   contact_id?: string;
   agent_id?: string;
   reply_to?: string;
+  /** Destinatari in copia (visibile / nascosta). Validati e deduplicati. */
+  cc?: string[] | string;
+  bcc?: string[] | string;
   operator_id?: string;
   in_reply_to?: string;
   references?: string;
@@ -52,6 +55,8 @@ interface SmtpSendOptions {
   content: string;
   html: string;
   replyTo?: string;
+  cc?: string[];
+  bcc?: string[];
   attachments?: Array<{
     filename: string;
     content: Uint8Array | string;
@@ -489,6 +494,26 @@ Deno.serve(async (req) => {
     if (resolvedReplyTo) {
       sendOptions.replyTo = resolvedReplyTo;
     }
+
+    // ── Cc / Ccn ──────────────────────────────────────────────────────
+    const normalizeCopies = (input: string[] | string | undefined): string[] => {
+      const raw = Array.isArray(input) ? input : typeof input === "string" ? input.split(/[,;]/) : [];
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const item of raw) {
+        const e = String(item ?? "").trim();
+        if (!EMAIL_REGEX.test(e)) continue;
+        const k = e.toLowerCase();
+        if (k === recipientEmail || seen.has(k)) continue;
+        seen.add(k);
+        out.push(e);
+      }
+      return out.slice(0, 20);
+    };
+    const ccList = normalizeCopies(body.cc);
+    const bccList = normalizeCopies(body.bcc);
+    if (ccList.length > 0) sendOptions.cc = ccList;
+    if (bccList.length > 0) sendOptions.bcc = bccList;
 
     // ── Allegati (Cockpit) ──
     if (Array.isArray(body.attachments) && body.attachments.length > 0) {

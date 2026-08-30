@@ -121,7 +121,7 @@ export function CestinonePage(): React.ReactElement {
           {s.selected ? (
             <DetailPanel
               item={s.selected}
-              onConfirm={() => s.handleConfirm(s.selected!)}
+              onConfirm={(opts) => s.handleConfirm(s.selected!, opts)}
               onEdit={() => s.handleEdit(s.selected!)}
               onOpenOrigin={() => s.handleOpenOrigin(s.selected!)}
               onOpenPartner={() => s.handleOpenPartner(s.selected!)}
