@@ -153,7 +153,7 @@ function Nodes({
   const hoveredRef = useRef<number | null>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  const paintable = useMemo(() => nodes.filter((n) => n.kind !== "core"), [nodes]);
+  const paintable = nodes;
 
   useEffect(() => {
     const mesh = meshRef.current;
@@ -236,7 +236,7 @@ export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate, 
 
   const filteredGraph = useMemo<SystemGraph>(() => {
     const keep = new Set(visibleDomains);
-    const nodes = graph.nodes.filter((n) => n.kind === "core" || keep.has(n.domain));
+    const nodes = graph.nodes.filter((n) => keep.has(n.domain));
     const ids = new Set(nodes.map((n) => n.id));
     const links = graph.links.filter((l) => ids.has(l.from) && ids.has(l.to));
     return { ...graph, nodes, links };
@@ -255,7 +255,7 @@ export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate, 
       <fog attach="fog" args={["#04060f", 40, 82]} />
       <ambientLight intensity={0.35} />
       <Rotator enabled={autoRotate}>
-        <Core />
+        
         <Dust discMap={discMap} visibleDomains={visibleDomains} />
         <Links graph={filteredGraph} byId={byId} selectedId={selectedId} />
         <Nodes nodes={nodes} selectedId={selectedId} onSelect={onSelect} onHover={onHover} />
