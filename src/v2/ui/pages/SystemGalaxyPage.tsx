@@ -43,15 +43,41 @@ export function SystemGalaxyPage(): React.ReactElement {
     setVisibleDomains((prev) => (prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]));
   }, []);
 
-  const neighbours = useMemo(() => {
+  /** Sinapsi reali del nodo selezionato, raggruppate per relazione e direzione. */
+  const synapses = useMemo(() => {
     if (!selected) return [];
-    const ids = new Set<string>();
+    const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+    const groups = new Map<string, { label: string; nodes: typeof graph.nodes }>();
     for (const l of graph.links) {
-      if (l.from === selected.id) ids.add(l.to);
-      else if (l.to === selected.id) ids.add(l.from);
+      const outgoing = l.from === selected.id;
+      const incoming = l.to === selected.id;
+      if (!outgoing && !incoming) continue;
+      const other = byId.get(outgoing ? l.to : l.from);
+      if (!other) continue;
+      const label =
+        l.relation === "invoca"
+          ? outgoing
+            ? "Invoca"
+            : "Invocata da"
+          : l.relation === "legge/scrive"
+            ? outgoing
+              ? "Legge / scrive"
+              : "Usata da"
+            : l.relation === "alimenta"
+              ? outgoing
+                ? "Alimenta"
+                : "Alimentata da"
+              : outgoing
+                ? "Contiene"
+                : "Appartiene a";
+      const g = groups.get(label) ?? { label, nodes: [] as typeof graph.nodes };
+      groups.set(label, { label, nodes: [...g.nodes, other] });
     }
-    return graph.nodes.filter((n) => ids.has(n.id)).slice(0, 24);
+    return [...groups.values()];
   }, [selected, graph]);
+
+  const synapseCount = useMemo(() => synapses.reduce((s, g) => s + g.nodes.length, 0), [synapses]);
+
 
   const domainMeta = selected ? GALAXY_DOMAINS.find((d) => d.id === selected.domain) : undefined;
 
