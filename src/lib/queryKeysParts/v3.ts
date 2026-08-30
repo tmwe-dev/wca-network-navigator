@@ -16,6 +16,9 @@ export const v3Keys = {
     approvazioni: (filtri?: unknown) => ["v3", "approvazioni", filtri] as const,
     sintesiApprovazioni: (stato?: string) => ["v3", "sintesi-approvazioni", stato ?? null] as const,
     modelli: (filtri?: unknown) => ["v3", "modelli", filtri] as const,
+    agenda: (filtri?: unknown) => ["v3", "agenda", filtri] as const,
+    campagne: (giorni?: number) => ["v3", "campagne", giorni ?? null] as const,
+    coda: (filtri?: unknown) => ["v3", "coda", filtri] as const,
   },
 } as const;
 
