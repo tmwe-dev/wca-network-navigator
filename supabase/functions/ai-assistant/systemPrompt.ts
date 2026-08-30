@@ -44,6 +44,14 @@ export async function composeSystemPrompt(opts: ComposeSystemPromptOptions): Pro
 
   const parts: string[] = [base];
 
+  // Routing: prompt leggero, il dettaglio vive nella KB (data-schema/app-map).
+  parts.push(
+    `🧭 ROUTING APPLICAZIONE
+Non memorizzi l'elenco delle pagine: la mappa completa (pagine, campi, funzioni) è la voce KB "Mappa Applicazione (pagine, campi, funzioni)" (canonical_id data-schema/app-map).
+Se l'utente chiede DOVE si fa una cosa o di APRIRE una pagina, usa il tool di navigazione (navigate-to); se chiedi la struttura del software usa app-map.
+Se la voce KB manca o è obsoleta, rigenerala con il tool app-map. Non inventare mai percorsi: prendili dalla mappa.`,
+  );
+
   // Charter R5 — Grounding obbligatorio (direttiva fissa, non aggirabile dal modello).
   parts.push(
     `🛡️ AI INVOCATION CHARTER — REGOLA INVIOLABILE (R5)

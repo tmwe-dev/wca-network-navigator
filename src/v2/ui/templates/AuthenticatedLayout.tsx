@@ -6,6 +6,7 @@ import * as React from "react";
 import { useEffect, useState, Suspense, useRef } from "react";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import { registerNavigator } from "@/v2/navigation/navBridge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { useQuery } from "@tanstack/react-query";
@@ -94,6 +95,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const [_sidebarOpen, setSidebarOpen] = useState(false);
 
   useAiBridgeListener();
+
+  // Ponte per i tool dell'agente Command (routing verso pagine).
+  useEffect(() => registerNavigator((path: string) => navigate(path)), [navigate]);
 
   const { t } = useTranslation();
   useEffect(() => {

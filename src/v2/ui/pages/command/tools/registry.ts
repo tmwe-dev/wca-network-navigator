@@ -71,9 +71,14 @@ import { updateKbEntryTool, deleteKbEntryTool } from "./kbAdmin";
 import { cancelOutreachItemTool } from "./cancelOutreach";
 import { restoreContactTool } from "./restoreContact";
 import { runPromptTestTool } from "./runPromptTest";
+import { navigateToTool } from "./navigateTo";
+import { appMapTool } from "./appMapTool";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
+  // Routing / meta (match molto selettivo: precedono tutto)
+  navigateToTool,
+  appMapTool,
   // Composers / special
   composeEmailTool,
   // Reads
