@@ -6,6 +6,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { listAgendaV3, type V3VoceAgenda } from "@/data/v3/programmazione";
 
+export type { V3VoceAgenda };
+
 export const V3_FINESTRE = [1, 7, 30] as const;
 
 export const V3_TIPI_ATTIVITA = [

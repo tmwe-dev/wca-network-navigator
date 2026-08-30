@@ -8,8 +8,7 @@ import { PageFrame } from "@/v3/app/PageFrame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import { useAgenda, V3_FINESTRE, V3_TIPI_ATTIVITA } from "../useAgenda";
-import type { V3VoceAgenda } from "@/data/v3/programmazione";
+import { useAgenda, V3_FINESTRE, V3_TIPI_ATTIVITA, type V3VoceAgenda } from "../useAgenda";
 
 function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
