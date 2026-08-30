@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useMemo, useRef, useEffect } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { SystemGraph } from "./systemGraph";
 import { GALAXY_DOMAINS } from "./systemGraph";
@@ -116,41 +116,6 @@ function Dust({ discMap, visibleDomains }: { discMap: THREE.Texture; visibleDoma
   );
 }
 
-/** Campo stellare con punti rotondi (sostituisce Stars di drei, che rende quadrati). */
-function RoundStars({ discMap }: { discMap: THREE.Texture }) {
-  const geo = useMemo(() => {
-    const N = 4200;
-    const pos = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) {
-      const r = 45 + Math.random() * 55;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i * 3 + 1] = r * Math.cos(phi);
-      pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    return g;
-  }, []);
-
-  return (
-    <points geometry={geo}>
-      <pointsMaterial
-        size={0.42}
-        map={discMap}
-        alphaMap={discMap}
-        color="#e8f0ff"
-        sizeAttenuation
-        transparent
-        opacity={0.8}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
-  );
-}
-
 
 function Links({ graph, byId, selectedId }: { graph: SystemGraph; byId: ReadonlyMap<string, PositionedNode>; selectedId: string | null }) {
   const base = useMemo(() => {
@@ -187,7 +152,7 @@ function Links({ graph, byId, selectedId }: { graph: SystemGraph; byId: Readonly
   return (
     <>
       <lineSegments geometry={base}>
-        <lineBasicMaterial vertexColors transparent opacity={0.12} depthWrite={false} blending={THREE.AdditiveBlending} />
+        <lineBasicMaterial vertexColors transparent opacity={0.07} depthWrite={false} blending={THREE.AdditiveBlending} />
       </lineSegments>
       {highlight && (
         <lineSegments geometry={highlight}>
@@ -284,26 +249,6 @@ function Nodes({
   );
 }
 
-function HubLabels({ nodes, onSelect }: { nodes: readonly PositionedNode[]; onSelect: (n: PositionedNode) => void }) {
-  return (
-    <>
-      {nodes
-        .filter((n) => n.kind === "hub")
-        .map((n) => (
-          <Html key={n.id} position={[n.position.x, n.position.y + 0.75, n.position.z]} center distanceFactor={22}>
-            <button
-              type="button"
-              onClick={() => onSelect(n)}
-              className="whitespace-nowrap rounded-full border border-white/25 bg-black/50 px-2.5 py-1 text-[11px] font-medium tracking-wide text-white/90 backdrop-blur-sm transition-colors hover:border-white/60 hover:bg-black/70"
-            >
-              {n.label}
-            </button>
-          </Html>
-        ))}
-    </>
-  );
-}
-
 function Rotator({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null);
   useFrame((_, delta) => {
@@ -335,13 +280,11 @@ export function GalaxyScene({ graph, selectedId, onSelect, onHover, autoRotate, 
       <color attach="background" args={["#04060f"]} />
       <fog attach="fog" args={["#04060f", 40, 82]} />
       <ambientLight intensity={0.35} />
-      <RoundStars discMap={discMap} />
       <Rotator enabled={autoRotate}>
         <Core />
         <Dust discMap={discMap} visibleDomains={visibleDomains} />
         <Links graph={filteredGraph} byId={byId} selectedId={selectedId} />
         <Nodes nodes={nodes} selectedId={selectedId} onSelect={onSelect} onHover={onHover} />
-        <HubLabels nodes={nodes} onSelect={onSelect} />
       </Rotator>
       <OrbitControls
         enablePan={false}

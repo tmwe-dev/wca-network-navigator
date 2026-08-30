@@ -18,11 +18,13 @@ const KIND_LABEL: Record<GalaxyKind, string> = {
   core: "Nucleo",
   hub: "Braccio",
   brain: "Cervello AI",
+  orchestrator: "Orchestratore",
   source: "Origine dati",
   surface: "Superficie (pagina)",
   store: "Store dati",
   external: "Funzione di sistema",
 };
+
 
 const ALL_DOMAINS = GALAXY_DOMAINS.map((d) => d.id);
 
@@ -41,15 +43,41 @@ export function SystemGalaxyPage(): React.ReactElement {
     setVisibleDomains((prev) => (prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]));
   }, []);
 
-  const neighbours = useMemo(() => {
+  /** Sinapsi reali del nodo selezionato, raggruppate per relazione e direzione. */
+  const synapses = useMemo(() => {
     if (!selected) return [];
-    const ids = new Set<string>();
+    const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+    const groups = new Map<string, { label: string; nodes: typeof graph.nodes }>();
     for (const l of graph.links) {
-      if (l.from === selected.id) ids.add(l.to);
-      else if (l.to === selected.id) ids.add(l.from);
+      const outgoing = l.from === selected.id;
+      const incoming = l.to === selected.id;
+      if (!outgoing && !incoming) continue;
+      const other = byId.get(outgoing ? l.to : l.from);
+      if (!other) continue;
+      const label =
+        l.relation === "invoca"
+          ? outgoing
+            ? "Invoca"
+            : "Invocata da"
+          : l.relation === "legge/scrive"
+            ? outgoing
+              ? "Legge / scrive"
+              : "Usata da"
+            : l.relation === "alimenta"
+              ? outgoing
+                ? "Alimenta"
+                : "Alimentata da"
+              : outgoing
+                ? "Contiene"
+                : "Appartiene a";
+      const g = groups.get(label) ?? { label, nodes: [] as typeof graph.nodes };
+      groups.set(label, { label, nodes: [...g.nodes, other] });
     }
-    return graph.nodes.filter((n) => ids.has(n.id)).slice(0, 24);
+    return [...groups.values()];
   }, [selected, graph]);
+
+  const synapseCount = useMemo(() => synapses.reduce((s, g) => s + g.nodes.length, 0), [synapses]);
+
 
   const domainMeta = selected ? GALAXY_DOMAINS.find((d) => d.id === selected.domain) : undefined;
 
@@ -81,12 +109,14 @@ export function SystemGalaxyPage(): React.ReactElement {
           </p>
           <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
             <Stat label="Cervelli AI" value={graph.stats.brains} />
+            <Stat label="Orchestratori" value={graph.stats.orchestrators} />
             <Stat label="Origini dati" value={graph.stats.sources} />
             <Stat label="Superfici" value={graph.stats.surfaces} />
             <Stat label="Store" value={graph.stats.stores} />
             <Stat label="Funzioni server" value={graph.stats.edgeFunctions} />
-            <Stat label="Connessioni" value={graph.stats.links} />
+            <Stat label="Sinapsi" value={graph.stats.links} />
           </dl>
+
           <button
             type="button"
             onClick={() => setAutoRotate((v) => !v)}
@@ -193,22 +223,28 @@ export function SystemGalaxyPage(): React.ReactElement {
             </Button>
           )}
 
-          {neighbours.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/45">
-                Connessioni ({neighbours.length})
-              </p>
-              <ul className="space-y-1">
-                {neighbours.map((n) => (
-                  <li key={n.id}>
-                    <span className="block truncate rounded-md px-2 py-1 text-[11px] text-white/70">
-                      {n.label} <span className="text-white/35">· {KIND_LABEL[n.kind]}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          {synapseCount > 0 && (
+            <div className="mt-5 space-y-4">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Sinapsi ({synapseCount})</p>
+              {synapses.map((g) => (
+                <div key={g.label}>
+                  <p className="mb-1 text-[10px] uppercase tracking-wide text-white/35">
+                    {g.label} · {g.nodes.length}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {g.nodes.map((n) => (
+                      <li key={`${g.label}-${n.id}`}>
+                        <span className="block truncate rounded-md px-2 py-1 text-[11px] text-white/70">
+                          {n.label} <span className="text-white/35">· {KIND_LABEL[n.kind]}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           )}
+
         </aside>
       )}
     </div>

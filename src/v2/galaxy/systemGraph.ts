@@ -10,8 +10,10 @@
  */
 import { APP_MAP } from "@/v2/search/appMap";
 import { EDGE_FUNCTIONS_BY_DOMAIN, EDGE_FUNCTION_COUNT } from "./edgeFunctions.generated";
+import { FN_TABLES, FN_CALLS, PAGE_CALLS } from "./synapses.generated";
 
-export type GalaxyKind = "core" | "hub" | "brain" | "source" | "surface" | "store" | "external";
+export type GalaxyKind = "core" | "hub" | "brain" | "orchestrator" | "source" | "surface" | "store" | "external";
+
 
 export interface GalaxyDomain {
   readonly id: string;
@@ -33,10 +35,14 @@ export interface GalaxyNode {
   readonly weight: number;
 }
 
+export type GalaxyRelation = "appartiene" | "invoca" | "legge/scrive" | "alimenta";
+
 export interface GalaxyLink {
   readonly from: string;
   readonly to: string;
+  readonly relation: GalaxyRelation;
 }
+
 
 export const GALAXY_DOMAINS: readonly GalaxyDomain[] = [
   {
@@ -108,31 +114,20 @@ const EXTERNAL_SOURCES: readonly { id: string; label: string; detail: string }[]
   { id: "src-tmwe", label: "TMWE ERP", detail: "OAuth + proxy verso l'ERP: clienti, quotazioni, revenue." },
 ];
 
-/** Store persistenti principali. */
-const STORES: readonly { id: string; label: string; detail: string }[] = [
-  { id: "db-partners", label: "partners", detail: "Anagrafica partner della rete." },
-  { id: "db-contacts", label: "partner_contacts", detail: "Persone collegate ai partner." },
-  { id: "db-imported", label: "imported_contacts", detail: "Contatti importati in staging/dedup." },
-  { id: "db-prospects", label: "prospects", detail: "Lead in prospezione." },
-  { id: "db-cards", label: "business_cards", detail: "Biglietti da visita digitalizzati." },
-  { id: "db-messages", label: "channel_messages", detail: "Messaggi multicanale (email/WA/LI)." },
-  { id: "db-kb", label: "kb_entries", detail: "Knowledge base che nutre gli agenti." },
-  { id: "db-prompts", label: "operative_prompts", detail: "Prompt operativi versionati." },
-  { id: "db-agents", label: "agents", detail: "Registro degli agenti AI." },
-  { id: "db-queue", label: "outreach_queue", detail: "Coda invii e cadenze." },
-  { id: "db-pending", label: "ai_pending_actions", detail: "Azioni AI in attesa di approvazione umana." },
-  { id: "db-audit", label: "supervisor_audit_log", detail: "Tracciamento governance delle azioni AI." },
-];
-
-/** Dominio → store toccati (connessioni "fili leggeri" tra bracci). */
-const DOMAIN_STORES: Readonly<Record<string, readonly string[]>> = {
-  intelligenza: ["db-kb", "db-prompts", "db-agents", "db-pending", "db-audit"],
-  voce: ["db-kb", "db-agents"],
-  acquisizione: ["db-partners", "db-contacts", "db-imported", "db-prospects", "db-cards"],
-  comunicazione: ["db-messages", "db-contacts", "db-partners"],
-  outreach: ["db-queue", "db-pending", "db-messages"],
-  governance: ["db-audit", "db-partners", "db-imported"],
-  integrazioni: ["db-partners", "db-audit"],
+/** Descrizioni curate per gli store più noti (le altre tabelle sono derivate dal codice). */
+const STORE_DETAIL: Readonly<Record<string, string>> = {
+  partners: "Anagrafica partner della rete.",
+  partner_contacts: "Persone collegate ai partner.",
+  imported_contacts: "Contatti importati in staging/dedup.",
+  prospects: "Lead in prospezione.",
+  business_cards: "Biglietti da visita digitalizzati.",
+  channel_messages: "Messaggi multicanale (email/WA/LI).",
+  kb_entries: "Knowledge base che nutre gli agenti.",
+  operative_prompts: "Prompt operativi versionati.",
+  agents: "Registro degli agenti AI.",
+  outreach_queue: "Coda invii e cadenze.",
+  ai_pending_actions: "Azioni AI in attesa di approvazione umana.",
+  supervisor_audit_log: "Tracciamento governance delle azioni AI.",
 };
 
 /** Origine → dominio che la consuma. */
@@ -148,6 +143,19 @@ const SOURCE_DOMAIN: Readonly<Record<string, string>> = {
   "src-tmwe": "integrazioni",
 };
 
+/** Origine → funzioni reali che la leggono (prefissi dei nomi funzione). */
+const SOURCE_FN_MATCH: Readonly<Record<string, readonly string[]>> = {
+  "src-wca": ["wca", "sync-wca", "save-wca"],
+  "src-ra": ["save-ra", "get-ra", "save-ra-cookie"],
+  "src-imap": ["email-imap", "check-inbox", "imap-", "email-sync", "email-cron", "mark-imap", "manage-email-folders"],
+  "src-linkedin": ["linkedin", "send-linkedin", "get-linkedin", "save-linkedin"],
+  "src-whatsapp": ["whatsapp", "send-whatsapp"],
+  "src-ocr": ["parse-business-card", "sync-business-cards", "ai-match-business-cards"],
+  "src-csv": ["process-ai-import", "analyze-import-structure"],
+  "src-web": ["scrape-website", "enrich-partner-website", "browser-action"],
+  "src-tmwe": ["tmwe"],
+};
+
 export interface SystemGraph {
   readonly nodes: readonly GalaxyNode[];
   readonly links: readonly GalaxyLink[];
@@ -158,10 +166,13 @@ export interface SystemGraph {
     readonly stores: number;
     readonly links: number;
     readonly edgeFunctions: number;
+    readonly orchestrators: number;
   };
 }
 
 const CORE_ID = "core";
+/** Una funzione che ne invoca almeno 3 altre è considerata orchestratore. */
+const ORCHESTRATOR_THRESHOLD = 3;
 
 export function buildSystemGraph(): SystemGraph {
   const nodes: GalaxyNode[] = [
@@ -175,6 +186,13 @@ export function buildSystemGraph(): SystemGraph {
     },
   ];
   const links: GalaxyLink[] = [];
+  const linkSeen = new Set<string>();
+  const addLink = (from: string, to: string, relation: GalaxyLink["relation"]) => {
+    const key = `${from}|${to}|${relation}`;
+    if (from === to || linkSeen.has(key)) return;
+    linkSeen.add(key);
+    links.push({ from, to, relation });
+  };
 
   for (const d of GALAXY_DOMAINS) {
     nodes.push({
@@ -185,54 +203,112 @@ export function buildSystemGraph(): SystemGraph {
       detail: d.description,
       weight: 2,
     });
-    links.push({ from: CORE_ID, to: `hub-${d.id}` });
+    addLink(CORE_ID, `hub-${d.id}`, "appartiene");
   }
 
-  // Cervelli / funzioni server per dominio
+  // ---- Funzioni server (nodi) + dominio di appartenenza ------------------
+  const domainOf = new Map<string, string>();
   for (const [domain, fns] of Object.entries(EDGE_FUNCTIONS_BY_DOMAIN)) {
-    for (const name of fns) {
-      const id = `fn-${name}`;
-      nodes.push({
-        id,
-        label: name,
-        kind: domain === "intelligenza" || domain === "voce" ? "brain" : "external",
-        domain,
-        detail: `Funzione server \`${name}\` del dominio ${domain}.`,
-        weight: 1,
-      });
-      links.push({ from: `hub-${domain}`, to: id });
-    }
+    for (const name of fns) domainOf.set(name, domain);
   }
 
-  // Origini dati
-  for (const s of EXTERNAL_SOURCES) {
-    nodes.push({ id: s.id, label: s.label, kind: "source", domain: SOURCE_DOMAIN[s.id] ?? "acquisizione", detail: s.detail, weight: 1.8 });
-    links.push({ from: s.id, to: `hub-${SOURCE_DOMAIN[s.id] ?? "acquisizione"}` });
+  const callers = new Map<string, string[]>();
+  for (const [fn, targets] of Object.entries(FN_CALLS)) {
+    for (const t of targets) callers.set(t, [...(callers.get(t) ?? []), fn]);
   }
 
-  // Store
-  for (const t of STORES) {
-    nodes.push({ id: t.id, label: t.label, kind: "store", domain: "dati", detail: t.detail, weight: 1.6 });
-    links.push({ from: "hub-dati", to: t.id });
-  }
-
-  // Superfici (pagine reali)
-  for (const p of APP_MAP) {
+  for (const [name, domain] of domainOf) {
+    const tables = FN_TABLES[name] ?? [];
+    const calls = FN_CALLS[name] ?? [];
+    const called = callers.get(name) ?? [];
+    const isOrchestrator = calls.length >= ORCHESTRATOR_THRESHOLD;
+    const id = `fn-${name}`;
     nodes.push({
-      id: `page-${p.path}`,
+      id,
+      label: name,
+      kind: isOrchestrator ? "orchestrator" : domain === "intelligenza" || domain === "voce" ? "brain" : "external",
+      domain,
+      detail: [
+        isOrchestrator ? `Orchestratore: invoca ${calls.length} funzioni.` : `Funzione server del dominio ${domain}.`,
+        tables.length ? `Tabelle toccate (${tables.length}): ${tables.join(", ")}.` : "Nessuna tabella letta/scritta direttamente.",
+        calls.length ? `Invoca: ${calls.join(", ")}.` : null,
+        called.length ? `Invocata da: ${called.join(", ")}.` : null,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      weight: isOrchestrator ? 2.2 : 1 + Math.min(tables.length, 6) * 0.12,
+    });
+    addLink(`hub-${domain}`, id, "appartiene");
+  }
+
+  // ---- Sinapsi reali: funzione → funzione --------------------------------
+  for (const [fn, targets] of Object.entries(FN_CALLS)) {
+    if (!domainOf.has(fn)) continue;
+    for (const t of targets) if (domainOf.has(t)) addLink(`fn-${fn}`, `fn-${t}`, "invoca");
+  }
+
+  // ---- Store reali derivati dalle tabelle usate dal codice ---------------
+  const tableUsage = new Map<string, string[]>();
+  for (const [fn, tables] of Object.entries(FN_TABLES)) {
+    if (!domainOf.has(fn)) continue;
+    for (const t of tables) tableUsage.set(t, [...(tableUsage.get(t) ?? []), fn]);
+  }
+  const storeTables = [...tableUsage.entries()]
+    .filter(([, users]) => users.length >= 2)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 60);
+
+  for (const [table, users] of storeTables) {
+    const id = `db-${table}`;
+    nodes.push({
+      id,
+      label: table,
+      kind: "store",
+      domain: "dati",
+      detail: `${STORE_DETAIL[table] ?? "Tabella del database."} Usata da ${users.length} funzioni server.`,
+      weight: 1.2 + Math.min(users.length, 20) * 0.06,
+    });
+    addLink("hub-dati", id, "appartiene");
+    for (const fn of users) addLink(`fn-${fn}`, id, "legge/scrive");
+  }
+
+  // ---- Origini dati ------------------------------------------------------
+  for (const s of EXTERNAL_SOURCES) {
+    const domain = SOURCE_DOMAIN[s.id] ?? "acquisizione";
+    const matches = (SOURCE_FN_MATCH[s.id] ?? []).flatMap((prefix) =>
+      [...domainOf.keys()].filter((fn) => fn.includes(prefix)),
+    );
+    const uniq = [...new Set(matches)];
+    nodes.push({
+      id: s.id,
+      label: s.label,
+      kind: "source",
+      domain,
+      detail: `${s.detail} Entra nel sistema tramite ${uniq.length} funzioni.`,
+      weight: 1.8,
+    });
+    addLink(s.id, `hub-${domain}`, "appartiene");
+    for (const fn of uniq) addLink(s.id, `fn-${fn}`, "alimenta");
+  }
+
+  // ---- Superfici (pagine reali) + funzioni realmente invocate ------------
+  for (const p of APP_MAP) {
+    const id = `page-${p.path}`;
+    const calls = (PAGE_CALLS[p.path] ?? []).filter((fn) => domainOf.has(fn));
+    nodes.push({
+      id,
       label: p.label,
       kind: "surface",
       domain: "superfici",
-      detail: p.purpose ?? `Pagina del gruppo ${p.group}.`,
+      detail: [
+        p.purpose ?? `Pagina del gruppo ${p.group}.`,
+        calls.length ? `Invoca ${calls.length} funzioni server: ${calls.join(", ")}.` : "Nessuna invocazione diretta rilevata nel codice della pagina.",
+      ].join(" "),
       path: p.path,
-      weight: 1.2,
+      weight: 1.2 + Math.min(calls.length, 8) * 0.08,
     });
-    links.push({ from: "hub-superfici", to: `page-${p.path}` });
-  }
-
-  // Fili trasversali dominio → store
-  for (const [domain, stores] of Object.entries(DOMAIN_STORES)) {
-    for (const s of stores) links.push({ from: `hub-${domain}`, to: s });
+    addLink("hub-superfici", id, "appartiene");
+    for (const fn of calls) addLink(id, `fn-${fn}`, "invoca");
   }
 
   const count = (k: GalaxyKind) => nodes.filter((n) => n.kind === k).length;
@@ -247,6 +323,8 @@ export function buildSystemGraph(): SystemGraph {
       stores: count("store"),
       links: links.length,
       edgeFunctions: EDGE_FUNCTION_COUNT,
+      orchestrators: count("orchestrator"),
     },
   };
 }
+
