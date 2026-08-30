@@ -57,6 +57,9 @@ const MissionBuilderPage = lazy(() =>
   import("./ui/pages/MissionBuilderPage").then((m) => ({ default: m.MissionBuilderPage })),
 );
 const RADashboardPage = lazy(() => import("./ui/pages/RADashboardPage").then((m) => ({ default: m.RADashboard })));
+const SystemGalaxyPage = lazy(() =>
+  import("./ui/pages/SystemGalaxyPage").then((m) => ({ default: m.SystemGalaxyPage })),
+);
 const SortingPage = lazy(() => import("./ui/pages/SortingPage").then((m) => ({ default: m.Sorting })));
 const OperationsPage = lazy(() => import("./ui/pages/OperationsPage").then((m) => ({ default: m.OperationsPage })));
 const AcquisizionePartnerPage = lazy(() =>
@@ -400,6 +403,7 @@ export function V2Routes(): React.ReactElement {
 
           {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
+          <Route path="galaxy" element={guardedPage(SystemGalaxyPage, "SystemGalaxy")} />
           <Route path="globe" element={<Navigate to="/v2/explore/map" replace />} />
           <Route path="deep-search" element={<Navigate to="/v2/explore/deep-search" replace />} />
           <Route path="sorting" element={guardedPage(SortingPage, "Sorting")} />
