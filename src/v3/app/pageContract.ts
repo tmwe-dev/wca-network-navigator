@@ -110,7 +110,7 @@ export const V3_PAGES = {
     question: "Cosa sto caricando?",
     filters: [],
     workflow: ["carica", "mappa-campi", "conferma"],
-    implemented: false,
+    implemented: true,
   },
   duplicati: {
     path: "/v3/duplicati",
@@ -130,7 +130,7 @@ export const V3_PAGES = {
     question: "Cosa ho eliminato?",
     filters: ["tipo", "periodo"],
     workflow: ["ripristina"],
-    implemented: false,
+    implemented: true,
   },
 
   // ── Modulo 3 — Messaggi ──────────────────────────────────────────
@@ -196,7 +196,7 @@ export const V3_PAGES = {
     question: "Cosa mando e a chi?",
     filters: ["destinatari", "canale", "template"],
     workflow: ["genera", "revisiona", "allega", "invia"],
-    implemented: false,
+    implemented: true,
   },
   approvazioni: {
     path: "/v3/approvazioni",
