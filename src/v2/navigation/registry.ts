@@ -86,6 +86,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
   {
     title: "Sistema & Diagnostica",
     items: [
+      { label: "Galassia di Sistema", path: "/v2/galaxy" },
       { label: "Finder API", path: "/v2/finder-api" },
       { label: "Finder API Catalog", path: "/v2/finder-api/schema" },
       { label: "Guida", path: "/v2/guida" },
