@@ -302,7 +302,7 @@ export const V3_PAGES = {
     question: "Come è configurato il sistema?",
     filters: [],
     workflow: ["caselle", "ai", "alert", "marchio"],
-    implemented: false,
+    implemented: true,
   },
 } as const satisfies Record<string, V3PageDefinition>;
 
