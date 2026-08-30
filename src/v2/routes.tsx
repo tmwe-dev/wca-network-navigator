@@ -359,6 +359,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-lab" element={<Navigate to="/v2/lab?group=tests&tab=ai-lab" replace />} />
           <Route path="email-lab" element={<Navigate to="/v2/lab?group=tests&tab=email-lab" replace />} />
           <Route path="ai-staff/email-forge" element={<Navigate to="/v2/email/forge" replace />} />
+          <Route path="email-forge" element={<Navigate to="/v2/email/forge" replace />} />
           <Route path="ai-staff/prompt-lab" element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
           <Route path="prompt-lab" element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
           <Route path="settings/prompt-lab" element={<Navigate to="/v2/lab?group=tests&tab=prompt-lab" replace />} />
