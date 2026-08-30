@@ -36,5 +36,6 @@ if (isPreviewHost || isInIframe) {
 // non è impostato (deploy senza credenziali continua a funzionare).
 installRemoteSink();
 installGlobalErrorCatchers();
+installPreventSwipeNavigation();
 
 createRoot(document.getElementById("root")!).render(<App />);
