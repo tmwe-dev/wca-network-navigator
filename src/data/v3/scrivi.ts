@@ -33,7 +33,7 @@ export async function cercaDestinatariV3(ricerca: string): Promise<readonly V3De
   const [contatti, partner] = await Promise.all([
     supabase
       .from("imported_contacts")
-      .select("id, name, email, company_name, partner_id")
+      .select("id, name, email, company_name")
       .not("email", "is", null)
       .is("deleted_at", null)
       .or(filtro)
@@ -58,7 +58,7 @@ export async function cercaDestinatariV3(ricerca: string): Promise<readonly V3De
       nome: (row.name as string | null) ?? null,
       azienda: (row.company_name as string | null) ?? null,
       email: String(row.email),
-      partnerId: (row.partner_id as string | null) ?? null,
+      partnerId: null,
       contattoId: String(row.id),
     }));
 
