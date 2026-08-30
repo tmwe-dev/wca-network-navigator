@@ -1,62 +1,73 @@
-# Audit Cervello AI — stato reale e piano di semplificazione
+# V3 — Estrarre il sistema semplice che c'è già dentro
 
-Risposta breve alla domanda: no, il braccio Intelligenza **non** è più fluido di quello Integrazioni. È il più problematico dei due — più codice, più cervelli paralleli, più fonti di verità per prompt e memoria, e del codice condiviso costruito per unificare tutto che oggi non è usato da nessuno.
+## Risposta diretta alla domanda
 
-## 1. Numeri verificati
+Sì, conviene una V3. Ma non una V3 "nuova": una V3 **per estrazione**. Si crea un guscio pulito e si tirano dentro, uno alla volta, solo i pezzi che passano un test: "serve al sistema di comunicazione?". Tutto il resto resta dov'è finché non muore da solo.
 
-- 45 funzioni edge nel braccio Cervello AI, ~9.500 righe (le Integrazioni erano ~35 funzioni / ~6.500 righe).
-- `ai-assistant` da solo: 23 file, 4.579 righe — è il vero motore.
-- 60 file edge chiamano direttamente lo shim AI; 10 file fanno `fetch` diretto verso endpoint di modello.
-- 42 file toccano `kb_entries`, 26 toccano `ai_memory` / `conversation_summaries`.
+E la base da cui ripartire, guardando tutto quello che c'è, è una sola: **il ciclo del messaggio**.
 
-## 2. Problemi trovati (in ordine di gravità)
+```text
+CONTATTO → MESSAGGIO IN ENTRATA → CAPISCI → DECIDI → RISPONDI/PROGRAMMA → TRACCIA
+```
 
-### 2.1 Motore condiviso morto
-`_shared/assistantEngine.ts` (153), `_shared/toolExecutionLoop.ts` (178), `_shared/platformTools.ts` + `platformToolDefs.ts` (94) hanno **zero importatori**: nessuna funzione li usa. In parallelo `ai-assistant` ha un proprio `toolLoopHandler.ts` + 5 file `toolDefs-*`. Esiste cioè un tentativo di unificazione abbandonato a metà, ~425 righe di codice fantasma che confondono chiunque legga il sistema (compresa l'AI che lo modifica).
+Tutto il resto del sistema (galassia, prompt lab, arena, harmonizer, agent autopilot, TMWE, sherlock, super-mario, optimus) è **strumentazione intorno a questo ciclo**, non il ciclo. È lì che si è accumulata la complessità.
 
-### 2.2 Troppi cervelli conversazionali
-Loop tool + prompt propri, indipendenti: `ai-assistant`, `command-ask-brain`, `voice-brain-bridge`, `prompt-copilot-chat`, `harmonize-proposal-chat`, `super-mario`, `optimus-analyze`, `agentic-decide`, più `finder-api-chat` già visto nelle Integrazioni. Nove punti dove correggere una regola di comportamento significa nove modifiche.
+## Perché la V2 non è la base
 
-### 2.3 Un hop inutile
-`unified-assistant` (139 righe) non fa altro che inoltrare a `ai-assistant`: il commento nel file lo dichiara esplicitamente. Ma è chiamato da 16 file frontend, mentre altri 15 chiamano `ai-assistant` direttamente. Due porte per lo stesso motore.
+Verificato: `src/v2` conta 103.078 righe ma importa **232 percorsi distinti** da `src/components` (104.833 righe di V1). La V2 non è mai diventata autonoma — è un secondo strato appoggiato sul primo. Ci sono anche due router (`App.tsx` e `v2/routes.tsx`) e 91 pagine sotto `v2/ui/pages`. Continuare a "migrare V1 → V2" significa portarsi dietro il debito. Per questo la V3 va fatta per estrazione, non per migrazione.
 
-### 2.4 Il motore bypassa il proprio gateway
-`ai-assistant` ha `aiProviderResolver.ts` + `aiCallHandler.ts` che fanno chiamate dirette al provider, invece di passare da `_shared/aiCallShim.ts` come le altre 60 chiamate. Budget, costo e logging non sono garantiti sullo stesso percorso.
+## Il nucleo V3 (quello che non si perde mai)
 
-### 2.5 Prompt su quattro registri
-`operative_prompts`, `prompt_templates`, `email_prompts`, `prompt_versions`, più `edgeFnPromptRegistry.ts` a codice, più prompt inline nei singoli file. Esistono già trigger di mirroring tra tabelle: sintomo, non soluzione.
+Sette moduli, in ordine di dipendenza:
 
-### 2.6 Conoscenza frammentata
-`kb_entries` + `kb_entry_proposals` + `finder_api_kb` + i file in `public/kb-source/` + `ai_memory` + `conversation_summaries` + `scraper_agent_memory`. Sette contenitori per "quello che il sistema sa", con 10 funzioni `kb-*` e 2 `memory-*` che li muovono tra loro.
+1. **Identità & accesso** — whitelist, ruoli, operatori. Già solido, si copia quasi com'è.
+2. **Contatti** — anagrafica unica, dedup, soft-delete. Il cuore dati.
+3. **Messaggi** — ingest email/WhatsApp/LinkedIn, thread, allegati. Un solo modello di messaggio.
+4. **Comprensione** — un solo classificatore: chi scrive, di cosa, quanto urge, cosa vuole.
+5. **Risposta** — un solo generatore + editorial review obbligatorio, multicanale.
+6. **Programmazione** — cadenze, follow-up, agenda, code di invio.
+7. **Tracciamento** — pipeline, esiti, log decisionale.
 
-### 2.7 Famiglia agent sovrapposta
-`agent-loop`, `agent-execute`, `agent-autonomous-cycle`, `agent-task-drainer`, `agent-autopilot-worker`, `agent-simulate`, `agent-audit`: ~2.100 righe con tre cicli di esecuzione diversi che fanno concettualmente la stessa cosa (prendi task → decidi → esegui → logga).
+Sopra ai sette: **un solo cervello conversazionale** (Command) che sa fare tutto quello che sanno fare i sette moduli, tramite tool. Non nove cervelli.
 
-## 3. Quanto si può semplificare
+## Cosa resta fuori dal nucleo (e non viene buttato)
 
-| Intervento | Da → A | Rischio |
-|---|---|---|
-| Rimuovere il motore condiviso morto | −425 righe | Nullo |
-| Chiudere il doppio hop `unified-assistant` | 2 porte → 1 | Basso |
-| Portare `ai-assistant` sullo shim AI unico | 1 bypass → 0 | Basso |
-| Consolidare i cervelli minori come scope di `ai-assistant` (`command-ask-brain`, `voice-brain-bridge`, `super-mario`, `finder-api-chat`) | 9 loop → 4-5 | Medio |
-| Registro prompt unico (`operative_prompts` come SSOT, gli altri diventano viste) | 4 registri → 1 | Medio |
-| KB unica con `source_type` (assorbe `finder_api_kb` e `public/kb-source`) | 7 contenitori → 3 | Medio |
-| Un solo ciclo agent parametrico | 7 funzioni → 4 | Alto |
+Resta dov'è, in una zona chiaramente marcata "laboratorio": galassia, prompt lab, arena, AI test hub, harmonizer, sherlock, super-mario, optimus, decision dashboard, TMWE/Findair, agent autopilot. Nessuna cancellazione ora: la V3 semplicemente non li ospita. Se dopo tre mesi nessuno li apre, si eliminano con i dati alla mano.
 
-Totale realistico: da 45 a ~32 funzioni, ~2.500 righe in meno, e — soprattutto — un solo posto dove si cambia il comportamento dell'AI invece di nove.
+## Metodo: come si costruisce senza rompere
 
-## 4. Ordine proposto
+- La V3 vive in `src/v3` con un proprio router, accessibile da subito su un percorso dedicato. V1 e V2 continuano a funzionare in parallelo per tutto il tempo.
+- Un modulo alla volta: si copia il codice che serve dentro `src/v3/modules/<nome>`, si ripulisce mentre si copia, e da quel momento **la V3 non importa più nulla da `src/components` o `src/v2`**. Regola ESLint che lo impedisce, come già fatto per l'accesso diretto al DB.
+- Il backend non si tocca nella prima parte: stesse tabelle, stesse funzioni edge. Solo l'accesso passa dal Data Access Layer del modulo.
+- Ogni modulo è "finito" quando: la sua pagina funziona in V3, i dati sono corretti, e ha zero import fuori dal proprio confine.
+- Solo quando tutti e sette i moduli sono in V3 si spegne il router V1/V2 — e i file restano nel repo un ciclo intero prima della rimozione.
 
-1. Fase A (rischio nullo/basso): eliminare il codice motore morto, chiudere il doppio hop, portare `ai-assistant` sullo shim unico. Nessun cambiamento di comportamento visibile.
-2. Fase B: registro prompt unico con compatibilità di lettura per i nomi vecchi.
-3. Fase C: KB unificata con `source_type`, assorbendo `finder_api_kb`.
-4. Fase D: assorbire i cervelli minori come scope, uno alla volta, con confronto risposta prima/dopo.
-5. Fase E (solo alla fine): ciclo agent unico.
+## Ordine dei moduli (dal più semplice)
 
-## 5. Note tecniche
+| # | Modulo | Perché in questa posizione | Rischio |
+|---|---|---|---|
+| 1 | Identità & accesso | Nessuna dipendenza, già pulito, fa da fondazione | Basso |
+| 2 | Contatti | Tutto il resto vi si appoggia; regole dedup già mature | Basso |
+| 3 | Messaggi (lettura) | Sola lettura: si può verificare senza inviare niente | Basso |
+| 4 | Comprensione | Un classificatore unico al posto dei rami paralleli | Medio |
+| 5 | Risposta | Tocca l'invio reale — dopo che i primi quattro sono stabili | Alto |
+| 6 | Programmazione | Cadenze e code, dipende da 5 | Medio |
+| 7 | Tracciamento | Pipeline e log, si chiude per ultimo | Basso |
 
-- Ogni fase mantiene invariati i contratti di invocazione frontend: le porte vecchie restano come alias finché tutti i chiamanti non sono migrati.
-- Prima di ogni rimozione: verifica dei log di invocazione reali, non solo dei riferimenti statici.
-- Le fasi A–C sono indipendenti dal piano Integrazioni e possono procedere in parallelo; la D tocca `finder-api-chat`, quindi va coordinata con la Fase B di quel piano.
-- Il braccio "Cervello AI" della galassia va aggiornato per mostrare i loop tool reali, così che questa mappa resti verificabile a colpo d'occhio.
+## Piani separati, uno per modulo
+
+Questo è il piano quadro. Ogni modulo avrà poi il suo piano dedicato, autonomo e approvabile a sé, con: cosa si copia, cosa si riscrive, cosa si abbandona, come si verifica che non si è perso niente. Così se un modulo si rompe, si ripara da solo senza bloccare gli altri — che è esattamente il punto che hai sollevato.
+
+In parallelo restano validi i due audit già fatti (Integrazioni e Cervello AI): le loro fasi a rischio nullo/basso — codice motore morto, doppio hop, gateway unico — si possono eseguire subito sul sistema attuale, perché riducono ciò che poi va copiato in V3.
+
+## Prossimo passo che propongo
+
+Partire dal piano dettagliato del **Modulo 1 + guscio V3**: creare `src/v3` con router, layout e il modulo identità, senza toccare niente di esistente. È l'intervento a rischio più basso possibile e rende concreta l'infrastruttura su cui appoggiare tutto il resto.
+
+## Note tecniche
+
+- `src/v3/` con struttura `app/` (router, layout, shell), `modules/<nome>/{ui,hooks,dal}/`, `shared/` (solo design system e utility pure).
+- Regola ESLint `tmwe/v3-no-legacy-import`: blocca ogni import da `@/components` e `@/v2` dentro `src/v3`.
+- Il design system (`src/design-system`, 692 righe) e le primitive shadcn sono l'unica eredità condivisa consentita.
+- Query key centralizzate e logger strutturato restano gli standard, ereditati per copia.
+- Nessuna migrazione DB in questa fase: la V3 legge lo schema esistente attraverso il proprio DAL.
