@@ -174,7 +174,7 @@ export const V3_PAGES = {
     question: "Come viene smistato ciò che arriva?",
     filters: ["tipo-regola", "gruppo", "stato"],
     workflow: ["nuova-regola", "testa", "correggi"],
-    implemented: false,
+    implemented: true,
   },
   classificazione: {
     path: "/v3/classificazione",
@@ -184,7 +184,7 @@ export const V3_PAGES = {
     question: "Sta classificando bene?",
     filters: ["periodo", "esito", "gruppo"],
     workflow: ["correggi", "promuovi-a-regola"],
-    implemented: false,
+    implemented: true,
   },
 
   // ── Modulo 5 — Risposta ──────────────────────────────────────────
