@@ -19,6 +19,10 @@ export const v3Keys = {
     agenda: (filtri?: unknown) => ["v3", "agenda", filtri] as const,
     campagne: (giorni?: number) => ["v3", "campagne", giorni ?? null] as const,
     coda: (filtri?: unknown) => ["v3", "coda", filtri] as const,
+    pipeline: (filtri?: unknown) => ["v3", "pipeline", filtri] as const,
+    pipelineFasi: ["v3", "pipeline-fasi"] as const,
+    andamento: (giorni?: number) => ["v3", "andamento", giorni ?? null] as const,
+    registro: (filtri?: unknown) => ["v3", "registro", filtri] as const,
   },
 } as const;
 
