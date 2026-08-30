@@ -34,6 +34,11 @@ import {
 import { executeCreateContact, executeCreateCampaign, executeScheduleEmail } from "./toolExecutors/crm.ts";
 import { executeUpdateAgentPrompt, executeAddAgentKbEntry } from "./toolExecutors/agents.ts";
 import { executeRunKbAudit } from "./toolExecutors/system.ts";
+import {
+  executeFindAnything,
+  executeInspectField,
+  executeDescribeTables,
+} from "./toolExecutors/schemaTools.ts";
 
 export interface ToolExecutorDeps {
   supabase: AnySupabaseClient;
@@ -54,6 +59,11 @@ export async function executeTool(
   authHeader?: string,
 ): Promise<unknown> {
   const { supabase, readH, writeH, entH } = deps;
+
+  // ── Grounding / introspezione (schemaTools.ts) ──
+  if (name === "find_anything") return executeFindAnything(supabase, args);
+  if (name === "inspect_field") return executeInspectField(supabase, args);
+  if (name === "describe_tables") return executeDescribeTables(supabase, args);
 
   // ── Read handlers (shared module) ──
   const readMap: Record<string, () => Promise<unknown>> = {

@@ -57,7 +57,28 @@ Se la voce KB manca o è obsoleta, rigenerala con il tool app-map. Non inventare
     `🛡️ AI INVOCATION CHARTER — REGOLA INVIOLABILE (R5)
 Per ogni domanda che menziona entità del database (partner, paesi, lead, mission, contatti, campagne, business cards) DEVI chiamare il tool appropriato (search_partners, get_country_stats, search_contacts, ecc.) PRIMA di rispondere.
 VIETATO inventare nomi, conteggi, statistiche, sedi.
-Se non sei sicuro di un'entità chiama il tool. Se il tool restituisce vuoto rispondi "Non trovato nel database" — NON ipotizzare.`,
+Se non sei sicuro di un'entità chiama il tool.`,
+  );
+
+  // Protocollo ricerca dati — mai dire "non c'è" senza averlo verificato.
+  parts.push(
+    `🔎 PROTOCOLLO RICERCA DATI (obbligatorio)
+Non devi conoscere a memoria i nomi dei campi: il database è ispezionabile.
+1. Se l'utente cita un nome, un'azienda, un indirizzo, un'email o un telefono e non sai dove stia → chiama **find_anything** (cerca su partner, contatti partner, contatti importati, biglietti da visita, prospect; ti dice tabella, id e campo che ha fatto match).
+2. Se una ricerca torna vuota → PRIMA di rispondere "non c'è", riprova con una radice più corta (cognome, prima parola del nome azienda) e usa **inspect_field** sul campo sospetto.
+3. **inspect_field** distingue i due casi: se \`non_null = 0\` il dato non esiste davvero; se il campo è popolato allora il TUO filtro era sbagliato → guarda \`top_values\` e riprova con il valore nella forma reale.
+4. Se non ricordi il nome esatto di una colonna → **describe_tables** (colonne e valori enum reali). Non inventare mai nomi di campo.
+5. La mappa completa dei campi è nella voce KB "Mappa Campi Database" (canonical_id \`data-schema/db-fields\`).
+Dichiarare "non trovato" senza aver eseguito almeno find_anything + inspect_field è un errore grave.`,
+  );
+
+  // Conteggio parziale dichiarato.
+  parts.push(
+    `🔢 CONTEGGIO PARZIALE DICHIARATO
+Quando elenchi record devi sempre distinguere QUANTI NE HAI VISTI da QUANTI NE ESISTONO.
+- Se un tool restituisce un limite raggiunto (\`partial: true\`, o risultati = limit), scrivi esplicitamente: "Mostro N su un totale di M" oppure "Ne ho letti N, il totale potrebbe essere superiore: posso contarli tutti".
+- Per un totale reale usa il conteggio dedicato (es. \`count_only\`) invece di contare le righe che hai visto.
+- Non presentare mai un elenco troncato come se fosse completo, e non stimare numeri a occhio.`,
   );
 
   if (opts.scope) {

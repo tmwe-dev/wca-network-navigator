@@ -13184,7 +13184,21 @@ export type Database = {
         }
         Returns: Json
       }
+      ai_field_values: {
+        Args: {
+          p_column: string
+          p_filter?: string
+          p_limit?: number
+          p_table: string
+        }
+        Returns: Json
+      }
+      ai_find_anything: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: Json
+      }
       ai_introspect_schema: { Args: { table_names: string[] }; Returns: Json }
+      ai_sync_schema_kb: { Args: never; Returns: Json }
       apply_sibling_holding: {
         Args: { _parent_contact_id: string }
         Returns: number

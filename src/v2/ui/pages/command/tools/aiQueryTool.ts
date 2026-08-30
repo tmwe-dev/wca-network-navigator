@@ -16,6 +16,7 @@ import type { Tool, ToolResult, ToolResultColumn, MultiResultPart } from "./type
 import { planQuery } from "@/v2/io/edge/aiQueryPlanner";
 import { executeQueryPlan, QueryValidationError, type QueryPlan } from "../lib/safeQueryExecutor";
 import { isOk } from "@/v2/core/domain/result";
+import { extractSearchTerm, findAnything, summarizeDetail } from "../lib/crossEntityFallback";
 
 /** Module-level cache of the LAST successful QueryPlan, read by useCommandSubmit
  *  to update conversational query context. Single-tab assumption is fine here. */
@@ -322,6 +323,45 @@ export const aiQueryTool: Tool = {
       return buildPart(plan, null, msg, 0);
     });
 
+    // ── Rete di sicurezza: zero risultati ovunque → ricerca trasversale ──
+    // Il piano può aver sbagliato tabella o forma del valore. Prima di dire
+    // "non trovato" cerchiamo lo stesso testo su tutte le entità principali.
+    const allEmpty = parts.length > 0 && parts.every((p) => !p.error && p.count === 0);
+    if (allEmpty) {
+      const term = extractSearchTerm(
+        planList.flatMap((p) => p.filters ?? []),
+        naturalPrompt,
+      );
+      const cross = term ? await findAnything(term, 15) : null;
+      if (cross && cross.matches.length > 0) {
+        return {
+          kind: "table",
+          title: `Ricerca trasversale · "${cross.term}"`,
+          columns: [
+            { key: "label", label: "Nome" },
+            { key: "source", label: "Dove" },
+            { key: "matched_on", label: "Campo" },
+            { key: "detail", label: "Dettagli" },
+          ],
+          rows: cross.matches.map((m) => ({
+            id: m.id,
+            label: m.label ?? "—",
+            source: m.source,
+            matched_on: m.matched_on,
+            detail: summarizeDetail(m.detail ?? {}),
+          })),
+          meta: {
+            count: cross.matches.length,
+            sourceLabel: `Ricerca trasversale · la query iniziale su ${planList
+              .map((p) => p.table)
+              .join(", ")} non aveva risultati${cross.partial ? " · elenco parziale" : ""}`,
+          },
+          selectable: false,
+          idField,
+        };
+      }
+    }
+
     // ── Caso 1 piano: mantengo retro-compatibilità totale (kind:"table"). ──
     if (parts.length === 1) {
       const part = parts[0];
@@ -343,7 +383,10 @@ export const aiQueryTool: Tool = {
         rows: part.rows,
         meta: {
           count: part.count,
-          sourceLabel: `AI Query · ${part.table}${plan.rationale ? ` · ${plan.rationale}` : ""}`,
+          sourceLabel:
+            `AI Query · ${part.table}` +
+            (part.rows.length < part.count ? ` · mostrati ${part.rows.length} di ${part.count}` : "") +
+            (plan.rationale ? ` · ${plan.rationale}` : ""),
         },
         selectable: true,
         idField,
