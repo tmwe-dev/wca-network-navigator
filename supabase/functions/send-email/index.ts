@@ -356,13 +356,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build sender
+    // Build sender — SEMPRE con display name, altrimenti i client mostrano
+    // l'header nudo `<indirizzo@dominio>` (parentesi angolari visibili).
+    const stripBrackets = (v: string) => v.replace(/[<>]/g, "").trim();
+    const prettifyLocalPart = (email: string): string =>
+      stripBrackets(email)
+        .split("@")[0]
+        .split(/[._-]+/)
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+
     let senderEmail = from;
     if (!senderEmail) {
-      const senderEmailVal = sharedSenderEmail || s["default_sender_email"] || smtpUser;
-      const senderName = s["default_sender_name"];
-      senderEmail = senderName ? `${senderName} <${senderEmailVal}>` : senderEmailVal;
+      const senderEmailVal = stripBrackets(sharedSenderEmail || s["default_sender_email"] || smtpUser);
+      let senderName = (s["default_sender_name"] || "").trim();
+      if (!senderName) {
+        const { data: opRow } = await supabase
+          .from("operators")
+          .select("name")
+          .ilike("email", senderEmailVal)
+          .limit(1)
+          .maybeSingle();
+        senderName = (opRow?.name as string | undefined)?.trim() || prettifyLocalPart(senderEmailVal);
+      }
+      senderEmail = `${senderName} <${senderEmailVal}>`;
+    } else if (!/</.test(senderEmail)) {
+      const addr = stripBrackets(senderEmail);
+      senderEmail = `${prettifyLocalPart(addr)} <${addr}>`;
     }
+
 
     // Determine TLS mode
     const useTLS = smtpPort === 587;
