@@ -509,13 +509,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Presentazione finale: paragrafi leggibili + shell tipografico email-safe.
+    const styledHtml = wrapEmailShell(ensureHtmlBody(finalHtml));
+
     const sendOptions: SmtpSendOptions = {
       from: senderEmail,
       to: to,
       subject: subject,
       content: "auto",
-      html: finalHtml,
+      html: styledHtml,
     };
+
     if (resolvedReplyTo) {
       sendOptions.replyTo = resolvedReplyTo;
     }
