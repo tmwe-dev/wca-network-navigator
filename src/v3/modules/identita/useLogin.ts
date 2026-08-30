@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { createLogger } from "@/lib/logger";
+import { createLogger } from "@/lib/log";
 
 const log = createLogger("v3:login");
 
