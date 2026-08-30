@@ -21,6 +21,8 @@ const ContattiPage = lazy(() => import("@/v3/modules/contatti/pages/ContattiPage
 const InboxPage = lazy(() => import("@/v3/modules/messaggi/pages/InboxPage").then((m) => ({ default: m.InboxPage })));
 const ConversazionePage = lazy(() => import("@/v3/modules/messaggi/pages/ConversazionePage").then((m) => ({ default: m.ConversazionePage })));
 const ContattoPage = lazy(() => import("@/v3/modules/contatti/pages/ContattoPage").then((m) => ({ default: m.ContattoPage })));
+const RegolePage = lazy(() => import("@/v3/modules/comprensione/pages/RegolePage").then((m) => ({ default: m.RegolePage })));
+const ClassificazionePage = lazy(() => import("@/v3/modules/comprensione/pages/ClassificazionePage").then((m) => ({ default: m.ClassificazionePage })));
 
 function V3Fallback() {
   return (
