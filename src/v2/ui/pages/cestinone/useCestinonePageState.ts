@@ -122,6 +122,16 @@ export function useCestinonePageState() {
   }
 
   function handleConfirm(item: CestinoItem): void {
+    if (item.source === "ai_pending_actions") {
+      const realId = item.id.split(":")[1] ?? "";
+      dismiss(item.id);
+      toast.loading("Invio in corso…", { id: realId });
+      void dispatch(realId).then((res) => {
+        if (res.success) toast.success("Inviato", { id: realId, description: res.detail });
+        else toast.error("Invio fallito", { id: realId, description: res.detail });
+      });
+      return;
+    }
     dismiss(item.id);
     toast.success("Confermato. Apro l'origine per il send finale.");
     navigate(originHref(item));
