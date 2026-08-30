@@ -60,7 +60,7 @@ export function CampagnePage(): React.ReactElement {
         </div>
       </RailGroup>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Campione: le 2.000 attività più recenti che dichiarano un lotto di campagna.
+        Lotti ricavati dalla coda di invio, raggruppati per oggetto. Campione: 2.000 righe più recenti.
       </p>
     </>
   );
