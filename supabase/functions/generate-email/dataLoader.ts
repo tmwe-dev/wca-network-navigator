@@ -51,9 +51,19 @@ export async function loadPartnerMetadata(
   const services = (servicesRes.data || []) as ServiceRow[];
   const socialLinks = (socialRes.data || []) as SocialLinkRow[];
   const settings: Record<string, string> = {};
-  ((settingsRes.data || []) as { key: string; value: string | null }[]).forEach((r) => {
-    settings[r.key] = r.value || "";
-  });
+  const settingRows = (settingsRes.data || []) as { key: string; value: string | null; user_id?: string | null }[];
+  // prima i default globali, poi le righe dell'utente che li sovrascrivono
+  settingRows
+    .filter((r) => !r.user_id)
+    .forEach((r) => {
+      settings[r.key] = r.value || "";
+    });
+  settingRows
+    .filter((r) => r.user_id === userId)
+    .forEach((r) => {
+      settings[r.key] = r.value || "";
+    });
+
 
   return { networks, services, socialLinks, settings };
 }
