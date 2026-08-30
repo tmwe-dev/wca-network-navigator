@@ -82,7 +82,7 @@ export function CampagnePage(): React.ReactElement {
       <RailGroup label="Sintesi periodo">
         <p className="text-xs text-muted-foreground">{righe.length} lotti</p>
         <p className="text-xs text-muted-foreground">{totaleInviati.toLocaleString("it-IT")} inviate su {totaleMessaggi.toLocaleString("it-IT")}</p>
-        <p className="text-xs text-muted-foreground">{totaleRisposte.toLocaleString("it-IT")} con risposta</p>
+        <p className="text-xs text-muted-foreground">{totaleRisposte.toLocaleString("it-IT")} con almeno un'apertura</p>
         <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={refetch}>
           <RefreshCw className="h-3.5 w-3.5" />
           Aggiorna
@@ -136,14 +136,14 @@ export function CampagnePage(): React.ReactElement {
                       {riga.inviate}/{riga.totale} inviate
                     </Badge>
                     <Badge variant="outline" className="text-[11px]">
-                      {tassoRisposta}% risposte
+                      {tassoRisposta}% aperture
                     </Badge>
                     <span className="ml-auto text-[11px] text-muted-foreground">{dataOra(riga.ultimoInvio)}</span>
                   </div>
                   {attiva && (
                     <p className="mt-1 text-xs text-muted-foreground">
                       Primo invio {dataOra(riga.primoInvio)} · ultimo invio {dataOra(riga.ultimoInvio)} ·{" "}
-                      {riga.conRisposta} risposte su {riga.inviate} messaggi partiti
+                      {riga.conRisposta} aperture su {riga.inviate} messaggi partiti
                     </p>
                   )}
                 </button>
