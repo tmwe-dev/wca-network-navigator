@@ -277,7 +277,7 @@ export default tseslint.config(
             },
             {
               // Le primitive shadcn sono l'unica eredità ammessa.
-              group: ["@/components/*", "!@/components/ui/*"],
+              group: ["@/components/**", "!@/components/ui/**"],
               message:
                 "In V3 sono ammesse solo le primitive @/components/ui/*. Tutto il resto va estratto in src/v3. Vedi docs/v3/contratto-pagina.md.",
             },
@@ -310,7 +310,7 @@ export default tseslint.config(
               message: "La V3 non importa dalle pagine V1. Vedi docs/v3/mappa-innesto.md.",
             },
             {
-              group: ["@/components/*", "!@/components/ui/*"],
+              group: ["@/components/**", "!@/components/ui/**"],
               message:
                 "In V3 sono ammesse solo le primitive @/components/ui/*. Tutto il resto va estratto in src/v3.",
             },
