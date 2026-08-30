@@ -277,4 +277,56 @@ export const DATA_ACCESS_TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "find_anything",
+      description:
+        "GROUNDING UNIVERSALE. Cerca un testo qualsiasi (nome persona, azienda, email, telefono, indirizzo, città, P.IVA, sito) contemporaneamente su partners, partner_contacts, imported_contacts, business_cards, prospects e prospect_contacts, SENZA dover conoscere il nome esatto del campo. Restituisce per ogni match la tabella, l'id, l'etichetta e il campo su cui ha fatto match. USA SEMPRE QUESTO TOOL COME PRIMO PASSO quando l'utente cita un nome, un indirizzo o un contatto e non sai in quale tabella/campo si trovi.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Testo da cercare (min 2 caratteri). Usa radici brevi per match più ampi." },
+          limit: { type: "number", description: "Max risultati per tabella (default 10, max 50)" },
+        },
+        required: ["query"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "inspect_field",
+      description:
+        "DIAGNOSI CAMPO. Mostra i VALORI reali contenuti in una colonna: totale righe, quante valorizzate, quante nulle, valori distinti e i più frequenti. Serve a distinguere 'il dato non esiste' da 'ho usato un filtro/valore sbagliato'. Usalo SEMPRE prima di dichiarare a un utente che un'informazione non è presente, e per scoprire la forma reale dei valori (es. come sono scritti i paesi, gli stati lead, le città).",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", description: "Nome tabella (es. partners, partner_contacts, imported_contacts, business_cards, prospects)" },
+          column: { type: "string", description: "Nome colonna da ispezionare" },
+          contains: { type: "string", description: "Filtra i valori che contengono questo testo" },
+          limit: { type: "number", description: "Max valori restituiti (default 20, max 100)" },
+        },
+        required: ["table", "column"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "describe_tables",
+      description:
+        "Restituisce le colonne reali (nome, tipo, enum ammessi) delle tabelle indicate, lette live dal database. Usalo quando non sei sicuro di come si chiama un campo prima di filtrare o quando l'utente usa un termine generico ('indirizzo', 'referente', 'stato').",
+      parameters: {
+        type: "object",
+        properties: {
+          tables: { type: "array", items: { type: "string" }, description: "Elenco tabelle (max 12)" },
+        },
+        required: ["tables"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
