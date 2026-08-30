@@ -112,7 +112,7 @@ In parallelo restano validi i due audit già fatti (Integrazioni e Cervello AI):
 
 ## Prossimo passo che propongo
 
-Partire dal piano dettagliato del **Modulo 1 + guscio V3**: creare `src/v3` con router, layout e il modulo identità, senza toccare niente di esistente. È l'intervento a rischio più basso possibile e rende concreta l'infrastruttura su cui appoggiare tutto il resto.
+**Fase 0 sola, tutta analisi**: il registro completo delle capacità (0.A), il contratto di pagina V3 scritto e approvato (0.B) e la mappa di innesto dei sette moduli (0.C). Zero codice applicativo, zero rischio. Solo quando quei tre documenti sono approvati si apre il piano del Modulo 1 (guscio `src/v3` + identità).
 
 ## Note tecniche
 
