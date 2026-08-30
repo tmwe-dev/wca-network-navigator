@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
+import { ensureHtmlBody, wrapEmailShell } from "../_shared/emailLayout.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { edgeError as edgeErrorBase, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
@@ -509,13 +510,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Presentazione finale: paragrafi leggibili + shell tipografico email-safe.
+    const styledHtml = wrapEmailShell(ensureHtmlBody(finalHtml));
+
     const sendOptions: SmtpSendOptions = {
       from: senderEmail,
       to: to,
       subject: subject,
       content: "auto",
-      html: finalHtml,
+      html: styledHtml,
     };
+
     if (resolvedReplyTo) {
       sendOptions.replyTo = resolvedReplyTo;
     }
