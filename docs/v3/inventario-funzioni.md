@@ -147,7 +147,7 @@ Osservazione chiave: **tre classificatori distinti girano in parallelo sullo ste
 | Grounding KB e mappa app | `appMap.ts`, `kb_entries`, `navBridge` | attivo | NUCLEO |
 | Memoria conversazionale | `ai_memory`, `conversation_summaries`, `memory-promoter` | attivo | NUCLEO (una sola) |
 | Brain dedicato Command | `command-ask-brain` | nessun log | DUP di ai-assistant |
-| Cervello vocale | `voice-brain-bridge` + ElevenLabs | VERIFICA | NUCLEO (stessi tool) |
+| Cervello vocale | `voice-brain-bridge`, `elevenlabs-agent-sync` + ElevenLabs | VERIFICA | **ABBANDONATA** (D3) — spegnere cron/webhook, poi rimuovere |
 | Motore condiviso mai adottato | `_shared/assistantEngine.ts`, `toolExecutionLoop.ts`, `platformTools*` | **0 importatori** | MORTA — rimuovere |
 | Copilota prompt | `prompt-copilot-chat` | nessun log | LAB |
 | Chat proposte harmonizer | `harmonize-proposal-chat` | nessun log | LAB |
