@@ -351,6 +351,66 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
     }
   }
 
+  if (pendingQ.status === "fulfilled" && pendingQ.value.data) {
+    for (const r of pendingQ.value.data as Array<Record<string, unknown>>) {
+      const payload = (r.action_payload ?? {}) as Record<string, unknown>;
+      const at = String(r.action_type ?? "");
+      const ch: CestinoChannel =
+        at === "send_whatsapp"
+          ? "whatsapp"
+          : at === "send_linkedin" || at === "linkedin_connect"
+            ? "linkedin"
+            : "email";
+      const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
+      const body =
+        str(payload.draft_body) ??
+        str(payload.html) ??
+        str(payload.body) ??
+        str(payload.message_text) ??
+        str(r.suggested_content);
+      const handle =
+        str(payload.to) ??
+        str(payload.recipient_email) ??
+        str(payload.recipient) ??
+        str(payload.phone) ??
+        str(payload.profile_url) ??
+        str(r.email_address);
+      out.push({
+        id: `pa:${String(r.id)}`,
+        source: "ai_pending_actions",
+        channel: ch,
+        status: "pending",
+        partnerId: (r.partner_id as string) ?? null,
+        recipientName: str(payload.recipient_name),
+        recipientHandle: handle,
+        subject: str(payload.subject) ?? str(payload.draft_subject) ?? (ch === "email" ? "(senza oggetto)" : at),
+        preview: body ? stripHtml(body).slice(0, 220) : null,
+        scheduledAt: null,
+        createdAt: String(r.created_at ?? new Date().toISOString()),
+        partnerName: null,
+        partnerType: null,
+        partnerCountryCode: null,
+        partnerCountryName: null,
+        partnerLeadStatus: null,
+        partnerWcaId: null,
+        agentName: (r.operator_id as string) ?? null,
+        campaignName: null,
+        triggerKind: "manual",
+        originContext: { source: "manual", label: "Azione AI in attesa di approvazione" },
+        previousMessage: null,
+        recentInteractions: [],
+        bodyText: ch === "email" ? null : body,
+        bodyHtml: ch === "email" ? body : null,
+        retryCount: Number(r.execution_attempts ?? 0),
+        maxRetries: 3,
+        lastError: (r.last_error as string) ?? null,
+        deepSearchDoneAt: null,
+      });
+    }
+  }
+
+
+
   // === ENRICHMENT BATCH (partners + profiles + sherlock) ===
   const partnerIds = Array.from(new Set(out.map((i) => i.partnerId).filter(Boolean) as string[]));
   const operatorIds = Array.from(
