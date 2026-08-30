@@ -97,10 +97,22 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const authClient = createUserClient(authHeader);
     const { data: userData, error: authError } = await authClient.auth.getUser(token);
-    if (authError || !userData?.user?.id) {
+
+    // Chiamata interna server-to-server (voice bridge, cron): il bearer è la
+    // service role key e l'utente da impersonare arriva in header. Senza questo
+    // ramo il canale VOCE non poteva interrogare il cervello.
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const impersonated = req.headers.get("x-impersonate-user")?.trim() ?? "";
+    const isInternalCall =
+      serviceRoleKey.length > 0 &&
+      token === serviceRoleKey &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(impersonated);
+
+    if ((authError || !userData?.user?.id) && !isInternalCall) {
       return edgeError("AUTH_INVALID", "Unauthorized", undefined, dynCors);
     }
-    const userId: string = userData.user.id;
+    const userId: string = userData?.user?.id ?? impersonated;
+
 
     // ── Rate limiting ──
     const rl = checkRateLimit(`ai-assistant:${userId}`, { maxTokens: 15, refillRate: 0.25 });
