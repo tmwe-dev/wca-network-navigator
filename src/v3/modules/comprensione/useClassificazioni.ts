@@ -9,11 +9,15 @@ import {
   listClassificazioniV3,
   type V3Classificazione,
   type V3QualitaClassificazione,
+  V3_SOGLIA_INCERTEZZA,
 } from "@/data/v3/comprensione";
 
 const PER_PAGINA = 30;
 
 export const V3_PERIODI = [7, 30, 90] as const;
+
+/** Ri-esportata per le maschere: le pagine non importano dal DAL. */
+export const SOGLIA_INCERTEZZA = V3_SOGLIA_INCERTEZZA;
 
 export interface UseClassificazioniResult {
   readonly righe: readonly V3Classificazione[];

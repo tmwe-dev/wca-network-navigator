@@ -6,8 +6,8 @@ import { ChevronLeft, ChevronRight, Gauge, Loader2, RefreshCw, ShieldCheck, Wand
 import { PageFrame } from "@/v3/app/PageFrame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { V3_SOGLIA_INCERTEZZA } from "@/data/v3/comprensione";
-import { useClassificazioni, V3_PERIODI } from "../useClassificazioni";
+
+import { SOGLIA_INCERTEZZA, useClassificazioni, V3_PERIODI } from "../useClassificazioni";
 
 function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -91,7 +91,7 @@ export function ClassificazionePage(): React.ReactElement {
           className="h-7 w-full justify-start px-2 text-xs"
           onClick={() => setSoloIncerte(!soloIncerte)}
         >
-          Solo incerte (&lt; {Math.round(V3_SOGLIA_INCERTEZZA * 100)}%)
+          Solo incerte (&lt; {Math.round(SOGLIA_INCERTEZZA * 100)}%)
         </Button>
       </RailGroup>
 
@@ -204,7 +204,7 @@ export function ClassificazionePage(): React.ReactElement {
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
           {righe.map((riga) => {
-            const incerta = riga.confidenza !== null && riga.confidenza < V3_SOGLIA_INCERTEZZA;
+            const incerta = riga.confidenza !== null && riga.confidenza < SOGLIA_INCERTEZZA;
             return (
               <li key={riga.id} className="flex items-start gap-3 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
