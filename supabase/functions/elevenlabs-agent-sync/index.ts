@@ -26,7 +26,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const EL_BASE = "https://api.elevenlabs.io/v1/convai/agents";
 
 interface Body {
-  action?: "get" | "push";
+  action?: "get" | "push" | "create_copilot";
   /** ID agente ElevenLabs (deve essere in allowlist). */
   elevenlabs_agent_id?: string;
   /** Record `agents` da cui prendere il prompt quando non è passato inline. */
@@ -34,6 +34,9 @@ interface Body {
   prompt?: string;
   first_message?: string;
   language?: string;
+  /** create_copilot: nome del nuovo agente e agente sorgente da cui copiare voce/tool. */
+  name?: string;
+  source_agent_id?: string;
 }
 
 serve(async (req) => {
@@ -117,6 +120,59 @@ serve(async (req) => {
         }),
         { status: 200, headers: json },
       );
+    }
+
+    // ── create_copilot: crea un agente vocale dedicato copiando voce e tool ──
+    if (body.action === "create_copilot") {
+      const promptText = (body.prompt ?? rowPrompt ?? "").trim();
+      if (promptText.length < 50) {
+        return edgeErrorWithStatus("VALIDATION_ERROR", "Prompt mancante per il nuovo agente", 400, json);
+      }
+      const sourceId = body.source_agent_id?.trim() || agentId;
+      const src = await fetch(`${EL_BASE}/${encodeURIComponent(sourceId)}`, { headers });
+      if (!src.ok) {
+        const detail = await src.text();
+        return new Response(JSON.stringify({ error: `ElevenLabs GET sorgente ${src.status}`, detail: detail.slice(0, 500) }), {
+          status: 502,
+          headers: json,
+        });
+      }
+      const srcData = (await src.json()) as Record<string, unknown>;
+      const srcConv = (srcData.conversation_config ?? {}) as Record<string, unknown>;
+      const srcAgent = (srcConv.agent ?? {}) as Record<string, unknown>;
+      const srcPrompt = (srcAgent.prompt ?? {}) as Record<string, unknown>;
+
+      const payload = {
+        name: body.name || "AURORA — Copilota Command",
+        conversation_config: {
+          ...srcConv,
+          agent: {
+            ...srcAgent,
+            language: body.language || (srcAgent.language as string) || "it",
+            first_message: body.first_message ?? "Ciao Luca, sono Aurora. Dimmi pure.",
+            prompt: { ...srcPrompt, prompt: promptText },
+          },
+        },
+      };
+
+      const created = await fetch(`${EL_BASE}/create`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const createdRaw = await created.text();
+      if (!created.ok) {
+        return new Response(JSON.stringify({ error: `ElevenLabs CREATE ${created.status}`, detail: createdRaw.slice(0, 800) }), {
+          status: 502,
+          headers: json,
+        });
+      }
+      const createdData = JSON.parse(createdRaw) as Record<string, unknown>;
+      log.info("voice copilot created", { details: [String(createdData.agent_id ?? "")] });
+      return new Response(JSON.stringify({ success: true, agent_id: createdData.agent_id ?? null }), {
+        status: 200,
+        headers: json,
+      });
     }
 
     // ── push ──
