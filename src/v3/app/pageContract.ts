@@ -110,7 +110,7 @@ export const V3_PAGES = {
     question: "Cosa sto caricando?",
     filters: [],
     workflow: ["carica", "mappa-campi", "conferma"],
-    implemented: false,
+    implemented: true,
   },
   duplicati: {
     path: "/v3/duplicati",
