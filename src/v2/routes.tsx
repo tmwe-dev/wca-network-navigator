@@ -403,6 +403,7 @@ export function V2Routes(): React.ReactElement {
 
           {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
+          <Route path="galaxy" element={guardedPage(SystemGalaxyPage, "SystemGalaxy")} />
           <Route path="globe" element={<Navigate to="/v2/explore/map" replace />} />
           <Route path="deep-search" element={<Navigate to="/v2/explore/deep-search" replace />} />
           <Route path="sorting" element={guardedPage(SortingPage, "Sorting")} />
