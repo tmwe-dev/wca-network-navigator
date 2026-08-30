@@ -44,3 +44,4 @@
 - [IMAP PEEK no auto-read](mem://tech/imap-peek-no-auto-read) — Fetch IMAP SEMPRE con BODY.PEEK[]; vietato BODY[]/RFC822 (marcano \Seen in automatico). \Seen solo su azione utente via mark-imap-seen. Fix email-imap-proxy 2026-06-20.
 - [Email Cron Drain Loop](mem://tech/email-cron-drain-loop) — email-cron-sync chiama check-inbox in loop (budget 50s, cap 40/casella). BATCH_SIZE=1 lasciava le caselle con arretrato perennemente indietro (Personale ferma al 1 giugno). Fix 2026-06-20.
 - [AI Cost Control & Deep Mail Gate](mem://tech/ai-cost-control-deep-mail-gate)
+- [Grounding dati Command](mem://architecture/grounding-dati-command) — RPC ai_find_anything / ai_field_values, KB data-schema/db-fields e app-map, protocollo ricerca dati e conteggio parziale dichiarato
