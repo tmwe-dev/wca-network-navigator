@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Check, Sparkles, Loader2 } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Loader2, UploadCloud } from "lucide-react";
 import { findAgents, updateAgent, type Agent } from "@/data/agents";
 import { findAgentPersonas, updateAgentPersona, type AgentPersona } from "@/data/agentPersonas";
 import { useAuth } from "@/providers/AuthProvider";
@@ -14,6 +14,7 @@ import { useLabAgent } from "../hooks/useLabAgent";
 import { useVoiceCoherenceCheck } from "../hooks/useVoiceCoherenceCheck";
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 export function VoiceElevenLabsTab() {
@@ -34,6 +35,7 @@ export function VoiceElevenLabsTab() {
   const [syncing, setSyncing] = useState(false);
   const [savingPersona, setSavingPersona] = useState(false);
   const [savingAgent, setSavingAgent] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   // Load agents + personas
   useEffect(() => {
@@ -178,6 +180,42 @@ export function VoiceElevenLabsTab() {
     }
   }
 
+  /** Pubblica il prompt sull'agente ElevenLabs reale (dashboard). */
+  async function handlePublishToElevenLabs() {
+    if (!currentAgent?.elevenlabs_agent_id) {
+      toast.error("Questo agente non è collegato a un agente vocale ElevenLabs");
+      return;
+    }
+    if (voicePrompt.trim().length < 50) {
+      toast.error("Prompt troppo corto per la pubblicazione");
+      return;
+    }
+    setPublishing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("elevenlabs-agent-sync", {
+        body: {
+          action: "push",
+          elevenlabs_agent_id: currentAgent.elevenlabs_agent_id,
+          prompt: voicePrompt,
+          language: "it",
+        },
+      });
+      if (error) throw error;
+      const res = data as { success?: boolean; error?: string } | null;
+      if (!res?.success) throw new Error(res?.error ?? "Pubblicazione non riuscita");
+      await logSupervisorAudit({
+        action: "voice_prompt_publish",
+        target_table: "agents",
+        target_id: currentAgent.id,
+      });
+      toast.success("Prompt pubblicato sull'agente vocale");
+    } catch (e) {
+      toast.error(`Pubblicazione fallita: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3">
@@ -309,15 +347,32 @@ export function VoiceElevenLabsTab() {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Prompt ElevenLabs (Voice)
             </h3>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 text-xs"
-              disabled={!currentAgent || savingAgent}
-              onClick={handleSaveAgent}
-            >
-              {savingAgent ? "..." : "Salva voice"}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs"
+                disabled={!currentAgent || savingAgent}
+                onClick={handleSaveAgent}
+              >
+                {savingAgent ? "..." : "Salva voice"}
+              </Button>
+              <Button
+                size="sm"
+                className="h-6 text-xs"
+                disabled={!currentAgent?.elevenlabs_agent_id || publishing}
+                onClick={handlePublishToElevenLabs}
+                title="Scrive questo prompt sull'agente vocale ElevenLabs"
+              >
+                {publishing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <>
+                    <UploadCloud className="h-3 w-3" /> Pubblica
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
           <Textarea
             value={voicePrompt}
