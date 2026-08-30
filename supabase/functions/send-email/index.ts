@@ -70,6 +70,17 @@ Deno.serve(async (req) => {
   if (pre) return pre;
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+  // Le risposte di errore DEVONO portare i CORS dell'origin reale: senza,
+  // il browser blocca la risposta e il client vede "Failed to send a request
+  // to the Edge Function" invece del vero motivo (es. indirizzo bounced).
+  const edgeError = (
+    code: Parameters<typeof edgeErrorBase>[0],
+    message: string,
+    details?: string,
+    headers?: Record<string, string>,
+    extra?: Record<string, unknown>,
+  ): Response => edgeErrorBase(code, message, details, headers ?? dynCors, extra);
+
 
   try {
     // ── Auth check ──
