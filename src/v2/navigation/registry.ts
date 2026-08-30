@@ -54,6 +54,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
   {
     title: "Legacy & Controllo",
     items: [
+      { label: "Approvazioni Invii", path: "/v2/approvazioni" },
       { label: "AI Control Center", path: "/v2/ai-control" },
       { label: "Dashboard (legacy)", path: "/v2/dashboard" },
       { label: "Calendar (deep-link)", path: "/v2/calendar" },

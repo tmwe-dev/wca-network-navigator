@@ -88,7 +88,7 @@ export function useEnqueueAction() {
 
       toast({
         title: "📥 In coda di approvazione",
-        description: "Apri il pannello AI Control per approvare e inviare.",
+        description: "Apri Menu → Approvazioni Invii (/v2/approvazioni) per approvare e inviare.",
       });
       return { id, ok: true };
     } catch (err) {
