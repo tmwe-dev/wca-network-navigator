@@ -75,16 +75,16 @@ export async function listPipelineV3(filtri: V3PipelineFiltri): Promise<V3Pipeli
 
   let query = supabase
     .from("partners")
-    .select("id, company_name, country, city, lead_status, email, last_contact_date, interaction_count", {
+    .select("id, company_name, country_name, city, lead_status, email, last_interaction_at, interaction_count", {
       count: "exact",
     })
     .is("deleted_at", null)
     .eq("lead_status", filtri.fase)
-    .order("last_contact_date", { ascending: false, nullsFirst: false })
+    .order("last_interaction_at", { ascending: false, nullsFirst: false })
     .range(from, from + perPagina - 1);
 
   const ricerca = sanitizeSearch(filtri.ricerca ?? "");
-  if (ricerca) query = query.or(`company_name.ilike.%${ricerca}%,email.ilike.%${ricerca}%,country.ilike.%${ricerca}%`);
+  if (ricerca) query = query.or(`company_name.ilike.%${ricerca}%,email.ilike.%${ricerca}%,country_name.ilike.%${ricerca}%`);
 
   const { data, error, count } = await query;
   if (error) throw error;
@@ -95,11 +95,11 @@ export async function listPipelineV3(filtri: V3PipelineFiltri): Promise<V3Pipeli
       return {
         id: String(item.id),
         azienda: String(item.company_name ?? "Senza nome"),
-        paese: (item.country as string | null) ?? null,
+        paese: (item.country_name as string | null) ?? null,
         citta: (item.city as string | null) ?? null,
         fase: String(item.lead_status ?? "new"),
         email: (item.email as string | null) ?? null,
-        ultimoContatto: (item.last_contact_date as string | null) ?? null,
+        ultimoContatto: (item.last_interaction_at as string | null) ?? null,
         interazioni: (item.interaction_count as number | null) ?? 0,
       };
     }),
@@ -116,52 +116,44 @@ export interface V3Andamento {
   readonly perCanale: readonly { readonly canale: string; readonly conteggio: number }[];
 }
 
-async function conta(
-  tabella: "channel_messages" | "activities",
-  costruisci: (q: ReturnType<typeof supabase.from>) => unknown,
-): Promise<number> {
-  const query = costruisci(supabase.from(tabella)) as Promise<{ count: number | null; error: unknown }>;
-  const { count, error } = await query;
-  if (error) throw error;
-  return count ?? 0;
-}
-
 export async function getAndamentoV3(giorni: number): Promise<V3Andamento> {
   const dal = new Date(Date.now() - Math.max(giorni, 1) * 86_400_000).toISOString();
 
   const [ricevuti, inviati, conRisposta, attivitaCreate, attivitaCompletate, canali] = await Promise.all([
-    conta("channel_messages", (q) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (q as any).select("id", { count: "exact", head: true }).eq("direction", "inbound").gte("sent_at", dal),
-    ),
-    conta("channel_messages", (q) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (q as any).select("id", { count: "exact", head: true }).eq("direction", "outbound").gte("sent_at", dal),
-    ),
-    conta("activities", (q) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (q as any)
-        .select("id", { count: "exact", head: true })
-        .is("deleted_at", null)
-        .eq("response_received", true)
-        .gte("created_at", dal),
-    ),
-    conta("activities", (q) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (q as any).select("id", { count: "exact", head: true }).is("deleted_at", null).gte("created_at", dal),
-    ),
-    conta("activities", (q) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (q as any)
-        .select("id", { count: "exact", head: true })
-        .is("deleted_at", null)
-        .eq("status", "completed")
-        .gte("created_at", dal),
-    ),
+    supabase
+      .from("channel_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("direction", "inbound")
+      .gte("sent_at", dal),
+    supabase
+      .from("channel_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("direction", "outbound")
+      .gte("sent_at", dal),
+    supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .eq("response_received", true)
+      .gte("created_at", dal),
+    supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .gte("created_at", dal),
+    supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .eq("status", "completed")
+      .gte("created_at", dal),
     supabase.from("channel_messages").select("channel").gte("sent_at", dal).limit(2000),
   ]);
 
-  if (canali.error) throw canali.error;
+  for (const res of [ricevuti, inviati, conRisposta, attivitaCreate, attivitaCompletate, canali]) {
+    if (res.error) throw res.error;
+  }
+
   const perCanale = new Map<string, number>();
   for (const row of (canali.data ?? []) as { channel: string | null }[]) {
     const key = row.channel ?? "sconosciuto";
@@ -169,11 +161,11 @@ export async function getAndamentoV3(giorni: number): Promise<V3Andamento> {
   }
 
   return {
-    ricevuti,
-    inviati,
-    conRisposta,
-    attivitaCreate,
-    attivitaCompletate,
+    ricevuti: ricevuti.count ?? 0,
+    inviati: inviati.count ?? 0,
+    conRisposta: conRisposta.count ?? 0,
+    attivitaCreate: attivitaCreate.count ?? 0,
+    attivitaCompletate: attivitaCompletate.count ?? 0,
     perCanale: [...perCanale.entries()]
       .map(([canale, conteggio]) => ({ canale, conteggio }))
       .sort((a, b) => b.conteggio - a.conteggio),
