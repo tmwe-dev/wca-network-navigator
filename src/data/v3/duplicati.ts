@@ -50,16 +50,21 @@ function normalizzaAzienda(value: string): string {
 }
 
 export async function listDuplicatiV3(filtri: V3DuplicatiFiltri): Promise<V3DuplicatiRisultato> {
-  const { data, error } = await supabase
-    .from("partners")
-    .select("id, company_name, email, country_name, city, interaction_count, created_at")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(CAMPIONE);
-
-  if (error) throw error;
-
-  const righe = (data ?? []) as Record<string, unknown>[];
+  // PostgREST limita ogni risposta a 1000 righe: il campione si compone a blocchi.
+  const BLOCCO = 1000;
+  const righe: Record<string, unknown>[] = [];
+  for (let from = 0; from < CAMPIONE; from += BLOCCO) {
+    const { data, error } = await supabase
+      .from("partners")
+      .select("id, company_name, email, country_name, city, interaction_count, created_at")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .range(from, from + BLOCCO - 1);
+    if (error) throw error;
+    const blocco = (data ?? []) as Record<string, unknown>[];
+    righe.push(...blocco);
+    if (blocco.length < BLOCCO) break;
+  }
   const gruppi = new Map<string, { valore: string; membri: V3MembroDuplicato[] }>();
 
   for (const row of righe) {
