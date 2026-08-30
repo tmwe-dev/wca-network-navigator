@@ -2,7 +2,7 @@
  * CommandPalette — Ricerca globale di sistema (⌘K).
  * Cerca in: pagine, funzioni/azioni, partner, contatti e campi/tabelle DB.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CommandDialog,
@@ -14,54 +14,19 @@ import {
 } from "@/components/ui/command";
 import { Building2, User, Database, Zap, FileText, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { searchEverything, type GlobalDataResults } from "@/data/globalSearch";
+import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { SEARCH_PAGES, SEARCH_ACTIONS } from "@/v2/search/searchIndex";
-import { createLogger } from "@/lib/log";
-
-const log = createLogger("CommandPalette");
 
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const EMPTY: GlobalDataResults = { partners: [], contacts: [], fields: [] };
-
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [data, setData] = useState<GlobalDataResults>(EMPTY);
-  const [loading, setLoading] = useState(false);
+  const { query: debounced, data, loading } = useGlobalSearch(search, open);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(search.trim()), 250);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!open || debounced.length < 2) {
-      setData(EMPTY);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    searchEverything(debounced)
-      .then((res) => {
-        if (!cancelled) setData(res);
-      })
-      .catch((err) => {
-        log.error("global search failed", { error: err instanceof Error ? err.message : String(err) });
-        if (!cancelled) setData(EMPTY);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, debounced]);
 
   const q = debounced.toLowerCase();
 
