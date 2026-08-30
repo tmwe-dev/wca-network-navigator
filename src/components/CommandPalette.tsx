@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+/**
+ * CommandPalette — Ricerca globale di sistema (⌘K).
+ * Cerca in: pagine, funzioni/azioni, partner, contatti e campi/tabelle DB.
+ */
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import {
   CommandDialog,
   CommandEmpty,
@@ -9,66 +12,139 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Building2 } from "lucide-react";
-import { searchPartners } from "@/data/partners";
-import { macroAreaGroups, type NavItemDef } from "@/v2/ui/templates/navConfig";
+import { Building2, User, Database, Zap, FileText, Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { searchEverything, type GlobalDataResults } from "@/data/globalSearch";
+import { SEARCH_PAGES, SEARCH_ACTIONS } from "@/v2/search/searchIndex";
+import { createLogger } from "@/lib/log";
 
-interface Partner {
-  id: string;
-  company_name: string;
-  city: string;
-  country_name?: string;
-}
+const log = createLogger("CommandPalette");
 
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+const EMPTY: GlobalDataResults = { partners: [], contacts: [], fields: [] };
+
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const [partners, setPartners] = useState<Partner[]>([]);
   const [search, setSearch] = useState("");
-
-  // SSOT navigazione: stesse 7 macro-aree del menu principale (navConfig).
-  const labelOf = (item: NavItemDef): string => {
-    const translated = t(item.labelKey);
-    return translated === item.labelKey ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ") : translated;
-  };
+  const [debounced, setDebounced] = useState("");
+  const [data, setData] = useState<GlobalDataResults>(EMPTY);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (open && search.length >= 2) {
-      searchPartners(search, 5).then((data) => {
-        setPartners(data.map((d) => ({ ...d, city: (d as Record<string, string>).city ?? "" })) as Partner[]);
-      });
-    } else {
-      setPartners([]);
-    }
-  }, [open, search]);
+    const t = setTimeout(() => setDebounced(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const runCommand = (command: () => void) => {
+  useEffect(() => {
+    let cancelled = false;
+    if (!open || debounced.length < 2) {
+      setData(EMPTY);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    searchEverything(debounced)
+      .then((res) => {
+        if (!cancelled) setData(res);
+      })
+      .catch((err) => {
+        log.error("global search failed", { error: err instanceof Error ? err.message : String(err) });
+        if (!cancelled) setData(EMPTY);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, debounced]);
+
+  const q = debounced.toLowerCase();
+
+  const pages = useMemo(() => {
+    if (!q) return SEARCH_PAGES.slice(0, 8);
+    return SEARCH_PAGES.filter(
+      (p) => p.label.toLowerCase().includes(q) || p.group.toLowerCase().includes(q) || p.path.includes(q),
+    ).slice(0, 10);
+  }, [q]);
+
+  const actions = useMemo(() => {
+    if (!q) return SEARCH_ACTIONS.slice(0, 6);
+    return SEARCH_ACTIONS.filter(
+      (a) => a.label.toLowerCase().includes(q) || a.keywords.includes(q) || a.hint.toLowerCase().includes(q),
+    ).slice(0, 8);
+  }, [q]);
+
+  const run = (fn: () => void) => {
     onOpenChange(false);
     setSearch("");
-    command();
+    fn();
+  };
+
+  const copyField = (text: string) => {
+    void navigator.clipboard?.writeText(text);
+    toast({ title: "Campo copiato", description: text });
   };
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Cerca partner, pagine, azioni..." value={search} onValueChange={setSearch} />
+      <CommandInput
+        placeholder="Cerca ovunque: pagine, funzioni, partner, contatti, campi…"
+        value={search}
+        onValueChange={setSearch}
+      />
       <CommandList>
-        <CommandEmpty>Nessun risultato trovato.</CommandEmpty>
+        <CommandEmpty>
+          {loading ? (
+            <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Ricerca in corso…
+            </span>
+          ) : (
+            "Nessun risultato trovato."
+          )}
+        </CommandEmpty>
 
-        {partners.length > 0 && (
+        {actions.length > 0 && (
+          <CommandGroup heading="Funzioni">
+            {actions.map((a) => (
+              <CommandItem key={a.label} value={`azione ${a.label} ${a.keywords}`} onSelect={() => run(() => navigate(a.path))}>
+                <Zap className="mr-2 h-4 w-4 text-primary" />
+                <span className="flex-1">{a.label}</span>
+                <span className="text-xs text-muted-foreground">{a.hint}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {pages.length > 0 && (
+          <CommandGroup heading="Pagine">
+            {pages.map((p) => (
+              <CommandItem key={p.path} value={`pagina ${p.label} ${p.group} ${p.path}`} onSelect={() => run(() => navigate(p.path))}>
+                <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{p.label}</span>
+                <span className="text-xs text-muted-foreground">{p.group}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {data.partners.length > 0 && (
           <CommandGroup heading="Partner">
-            {partners.map((partner) => (
-              <CommandItem key={partner.id} onSelect={() => runCommand(() => navigate("/v2/network"))}>
+            {data.partners.map((p) => (
+              <CommandItem
+                key={p.id}
+                value={`partner ${p.company_name}`}
+                onSelect={() => run(() => navigate(`/v2/explore/network?partner=${p.id}`))}
+              >
                 <Building2 className="mr-2 h-4 w-4" />
                 <div className="flex flex-col">
-                  <span>{partner.company_name}</span>
+                  <span>{p.company_name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {partner.city}
-                    {partner.country_name ? `, ${partner.country_name}` : ""}
+                    {[p.city, p.country_name].filter(Boolean).join(", ")}
                   </span>
                 </div>
               </CommandItem>
@@ -76,20 +152,43 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandGroup>
         )}
 
-        {macroAreaGroups.map((group) => (
-          <CommandGroup key={group.key} heading={group.label}>
-            {group.items.map((item) => (
+        {data.contacts.length > 0 && (
+          <CommandGroup heading="Contatti">
+            {data.contacts.map((c) => (
               <CommandItem
-                key={item.path}
-                value={`${labelOf(item)} ${group.label}`}
-                onSelect={() => runCommand(() => navigate(item.path))}
+                key={c.id}
+                value={`contatto ${c.name ?? ""} ${c.email ?? ""}`}
+                onSelect={() => run(() => navigate("/v2/explore/contacts"))}
               >
-                <span className="mr-2 inline-flex h-4 w-4 items-center justify-center">{item.icon}</span>
-                <span>{labelOf(item)}</span>
+                <User className="mr-2 h-4 w-4" />
+                <div className="flex flex-col">
+                  <span>{c.name ?? c.email ?? "—"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {[c.email, c.company, c.source].filter(Boolean).join(" · ")}
+                  </span>
+                </div>
               </CommandItem>
             ))}
           </CommandGroup>
-        ))}
+        )}
+
+        {data.fields.length > 0 && (
+          <CommandGroup heading="Campi di sistema">
+            {data.fields.map((f) => (
+              <CommandItem
+                key={`${f.table}.${f.column}`}
+                value={`campo ${f.table} ${f.column}`}
+                onSelect={() => run(() => copyField(`${f.table}.${f.column}`))}
+              >
+                <Database className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">
+                  {f.table}.<span className="font-medium">{f.column}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">{f.type}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   );
