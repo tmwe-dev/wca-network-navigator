@@ -1370,9 +1370,19 @@ export const PAGE_CALLS: Readonly<Record<string, readonly string[]>> = {
     "tmwe-proxy",
     "tmwe-quote-lookup"
   ],
+  "/v2/finder-api": [
+    "command-ask-brain",
+    "elevenlabs-conversation-token"
+  ],
   "/v2/finder-api/schema": [
     "tmwe-catalog-sync",
     "tmwe-proxy"
+  ],
+  "/v2/command": [
+    "browser-action",
+    "command-ask-brain",
+    "elevenlabs-conversation-token",
+    "scrape-website"
   ],
   "/v2/command/help": [
     "browser-action",

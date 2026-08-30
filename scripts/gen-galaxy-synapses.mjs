@@ -101,7 +101,7 @@ for (const [routePath, comp] of routeComp) {
   const spec = compFile.get(comp);
   if (!spec) continue;
   const file = resolve(spec, path.join(ROOT, "src/v2/routes.tsx"));
-  const calls = [...invokedBy(file, 2)].filter((c) => fnNames.includes(c)).sort();
+  const calls = [...invokedBy(file, 3)].filter((c) => fnNames.includes(c)).sort();
   if (calls.length) pageCalls[routePath] = calls;
 }
 
