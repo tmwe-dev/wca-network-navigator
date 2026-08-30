@@ -69,8 +69,9 @@ export function useEnqueueAction() {
         user_id: userId,
         action_type: args.action_type,
         action_payload: toJsonValue(args.payload),
-        partner_id: args.partner_id ?? null,
-        contact_id: args.contact_id ?? null,
+        partner_id: normalizeUuid(args.partner_id),
+        contact_id: normalizeUuid(args.contact_id),
+
         email_address: args.email_address ?? null,
         suggested_content: args.suggested_content ?? null,
         reasoning: args.reasoning ?? `Manual ${args.action_type} dal cockpit. In attesa di autorizzazione.`,
