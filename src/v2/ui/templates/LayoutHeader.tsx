@@ -94,7 +94,7 @@ export function LayoutHeader({
               <Menu className="h-5 w-5" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" side="bottom" className="w-72 p-0">
+          <PopoverContent align="start" side="bottom" className="flex h-[min(72vh,640px)] w-72 flex-col overflow-hidden p-0">
             <MainMenu />
           </PopoverContent>
         </Popover>
