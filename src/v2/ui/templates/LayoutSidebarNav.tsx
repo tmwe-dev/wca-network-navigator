@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { prefetchRoute } from "@/lib/prefetchRoutes";
 import { LogOut, Command, Wifi, WifiOff, Sun, Moon, Compass } from "lucide-react";
 import { Button } from "../atoms/Button";
-import { navItemsDef, navGroupsDef } from "./navConfig";
-import { OrphanPagesNav } from "./OrphanPagesNav";
+import { navGroupsDef } from "./navConfig";
+import { MainMenu } from "./MainMenu";
 
 /** Backward-compatible export for any code referencing navGroups */
 export const navGroups = navGroupsDef.map((g) => ({
@@ -81,44 +81,9 @@ export function LayoutSidebarNav({
           </kbd>
         </button>
       )}
-      <nav className="flex-1 min-h-0 p-2 overflow-y-auto overscroll-contain" data-testid="main-sidebar">
-        <div className="space-y-1" aria-label="Navigazione principale">
-          {navItemsDef.map((navItem) => {
-            const navId =
-              navItem.path.replace("/v2/", "").replace("/v2", "dashboard").replace(/\//g, "-") || "dashboard";
-            const translated = t(navItem.labelKey);
-            // Fallback: when the i18n key is not registered yet, show a humanized stem.
-            const label =
-              translated === navItem.labelKey ? navItem.labelKey.replace(/^nav\./, "").replace(/_/g, " ") : translated;
-            return (
-              <button
-                key={navItem.path}
-                data-testid={`nav-${navId}`}
-                onMouseEnter={() => prefetchRoute(navItem.path)}
-                onClick={() => {
-                  navigate(navItem.path);
-                  onMobileClose?.();
-                }}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors capitalize",
-                  isActive(navItem.path)
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
-                )}
-              >
-                {navItem.icon}
-                {label}
-                {navItem.badge && (
-                  <span className="ml-auto text-[9px] font-bold uppercase bg-primary/15 text-primary px-1.5 py-0.5 rounded">
-                    {navItem.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <OrphanPagesNav onNavigate={onMobileClose} />
-      </nav>
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <MainMenu onNavigate={onMobileClose} />
+      </div>
       <div className="p-2 border-t border-border/50 space-y-1">
         <div className="mx-1 mb-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] leading-tight text-amber-700 dark:text-amber-400">
           Versione legacy: usala solo per funzioni non ancora in V3.
