@@ -16,7 +16,7 @@
  */
 import * as React from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Sparkles, ChevronRight } from "lucide-react";
+import { Sparkles, ChevronRight, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buildCrumbs } from "./breadcrumbConfig";
 import { SectionTabs, type SectionTab } from "./SectionTabs";
