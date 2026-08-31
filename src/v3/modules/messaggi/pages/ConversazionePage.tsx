@@ -1,16 +1,17 @@
 /**
  * Conversazione — maschera Dettaglio. "Cosa dice questo messaggio e cosa faccio?"
  *
- * Il corpo HTML non viene iniettato: si mostra il testo estratto. La resa HTML
- * sicura arriverà con il Modulo 5, con sanitizzazione dedicata.
+ * Il corpo HTML è reso in iframe sandboxed (`CorpoEmail`), con immagini remote
+ * bloccate finché l'operatore non le abilita. Niente script, niente tracking.
  */
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowUpRight, CalendarClock, Loader2, Send, Tags, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, CalendarClock, ImageOff, Image, Loader2, Send, Tags, TriangleAlert } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { CorpoEmail } from "@/v3/ui/CorpoEmail";
 import { useConversazione } from "../useConversazione";
 import { dataEstesa, dataMessaggio, etichettaCanale, mittente } from "../canali";
 
@@ -26,6 +27,8 @@ function Sezione({ title, children }: { title: string; children: React.ReactNode
 export function ConversazionePage(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const { messaggio, thread, isLoading, nonTrovato, error } = useConversazione(id);
+  const [mostraHtml, setMostraHtml] = React.useState(true);
+  const [mostraImmagini, setMostraImmagini] = React.useState(false);
 
   const workflow = (
     <div className="space-y-1.5">
@@ -124,16 +127,50 @@ export function ConversazionePage(): React.ReactElement {
           </Sezione>
 
           <Sezione title="Contenuto">
-            {messaggio.corpoTesto ? (
+            {messaggio.corpoHtml && (
+              <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                <Button
+                  variant={mostraHtml ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setMostraHtml(true)}
+                >
+                  Formattata
+                </Button>
+                <Button
+                  variant={mostraHtml ? "outline" : "secondary"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setMostraHtml(false)}
+                  disabled={!messaggio.corpoTesto}
+                >
+                  Testo semplice
+                </Button>
+                {mostraHtml && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 px-2 text-xs"
+                    onClick={() => setMostraImmagini((v) => !v)}
+                  >
+                    {mostraImmagini ? (
+                      <ImageOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <Image className="h-3.5 w-3.5" />
+                    )}
+                    {mostraImmagini ? "Nascondi immagini" : "Mostra immagini"}
+                  </Button>
+                )}
+              </div>
+            )}
+            {mostraHtml && messaggio.corpoHtml ? (
+              <CorpoEmail html={messaggio.corpoHtml} mostraImmaginiRemote={mostraImmagini} />
+            ) : messaggio.corpoTesto ? (
               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
                 {messaggio.corpoTesto}
               </p>
-            ) : messaggio.corpoHtml ? (
-              <p className="text-sm text-muted-foreground">
-                Questo messaggio ha solo contenuto HTML: la resa sicura arriva con il Modulo 5.
-              </p>
             ) : (
-              <p className="text-sm text-muted-foreground">Nessun contenuto testuale disponibile.</p>
+              <p className="text-sm text-muted-foreground">Nessun contenuto disponibile.</p>
             )}
           </Sezione>
 
