@@ -7,7 +7,7 @@
  */
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Building2, CheckCircle2, Loader2, Mail, Send, User, X } from "lucide-react";
+import { Building2, CheckCircle2, Loader2, Mail, Send, Sparkles, User, X } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { V3_PAGES } from "@/v3/app/pageContract";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +65,12 @@ export function ScriviPage(): React.ReactElement {
     setOggetto,
     corpo,
     setCorpo,
+    obiettivo,
+    setObiettivo,
+    genera,
+    isGenerando,
+    revisione,
+    erroreGenerazione,
     modelli,
     applicaModello,
     emailEffettiva,
@@ -82,6 +88,16 @@ export function ScriviPage(): React.ReactElement {
         <>
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={azzera}>
             Azzera
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 px-3 text-xs"
+            disabled={isGenerando}
+            onClick={genera}
+          >
+            {isGenerando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Scrivi con l'AI
           </Button>
           <Button size="sm" className="h-7 gap-1.5 px-3 text-xs" disabled={!pronto || isAccodando} onClick={accoda}>
             {isAccodando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
@@ -175,6 +191,33 @@ export function ScriviPage(): React.ReactElement {
                 type="email"
                 className="h-8 text-sm"
               />
+            </div>
+          )}
+        </section>
+
+        {/* Obiettivo per l'AI */}
+        <section className="space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Obiettivo (per l'AI)</p>
+          <Input
+            value={obiettivo}
+            onChange={(e) => setObiettivo(e.target.value)}
+            placeholder="Es. primo contatto per collaborazione su spedizioni aeree Italia–Brasile"
+            className="h-8 text-sm"
+          />
+          {erroreGenerazione && (
+            <p className="text-[11px] text-destructive">Generazione non riuscita: {erroreGenerazione}</p>
+          )}
+          {revisione && (
+            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
+              <span className="font-medium text-foreground">Revisione editoriale: {revisione.verdetto}</span>
+              {revisione.punteggio !== null && <span> · qualità {revisione.punteggio}/100</span>}
+              {revisione.note.length > 0 && (
+                <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                  {revisione.note.slice(0, 4).map((nota) => (
+                    <li key={nota}>{nota}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </section>

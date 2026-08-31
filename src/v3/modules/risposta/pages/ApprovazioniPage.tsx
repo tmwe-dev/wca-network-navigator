@@ -5,7 +5,7 @@
  * reale resta nella pipeline esistente finché il modulo di invio non è innestato.
  */
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw, ShieldAlert, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2, RefreshCw, ShieldAlert, X } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,9 @@ export function ApprovazioniPage(): React.ReactElement {
     seleziona,
     rifiuta,
     isRifiutando,
+    approva,
+    isApprovando,
+    esitoApprovazione,
     vaiA,
     azzeraFiltri,
     refetch,
@@ -127,17 +130,27 @@ export function ApprovazioniPage(): React.ReactElement {
             <p className="text-xs font-medium text-foreground">{corrente.tipoAzione}</p>
             <p className="truncate text-xs text-muted-foreground">{corrente.indirizzo ?? "destinatario non indicato"}</p>
             <Button
+              size="sm"
+              className="h-8 w-full justify-start gap-2 text-xs"
+              disabled={corrente.stato !== "pending" || isApprovando || isRifiutando}
+              onClick={() => approva(corrente.id)}
+            >
+              {isApprovando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              Approva e invia
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               className="h-8 w-full justify-start gap-2 text-xs"
-              disabled={corrente.stato !== "pending" || isRifiutando}
+              disabled={corrente.stato !== "pending" || isRifiutando || isApprovando}
               onClick={() => rifiuta(corrente.id)}
             >
               {isRifiutando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
               Rifiuta
             </Button>
+            {esitoApprovazione && <p className="text-[11px] text-muted-foreground">{esitoApprovazione}</p>}
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              L'approvazione con invio reale resta nella pipeline attuale: arriverà qui con il modulo di invio.
+              L'invio parte solo dopo questo tasto: esegue la pipeline esistente, nessun invio duplicato.
             </p>
           </div>
         ) : (
