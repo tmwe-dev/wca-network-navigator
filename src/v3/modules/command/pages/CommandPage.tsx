@@ -34,8 +34,27 @@ function dataOra(value: string | null): string {
   return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+/** Domande di partenza: coprono le funzioni principali del sistema. */
+const SUGGERIMENTI: readonly string[] = [
+  "Quali contatti hanno risposto negli ultimi 7 giorni?",
+  "Cosa devo fare oggi in base allo storico delle interazioni?",
+  "Prepara un messaggio per i contatti nel circuito di attesa",
+  "Quante aziende ho per paese?",
+];
+
 export function CommandPage(): React.ReactElement {
-  const { messaggi, bozza, setBozza, invia, isPending, errore, conversazioni, pulisci } = useCommand();
+  const {
+    messaggi,
+    bozza,
+    setBozza,
+    invia,
+    isPending,
+    errore,
+    conversazioni,
+    conversazioneAttiva,
+    apriConversazione,
+    nuovaConversazione,
+  } = useCommand();
   const fine = React.useRef<HTMLDivElement | null>(null);
   const naviga = useNavigate();
 
@@ -51,9 +70,19 @@ export function CommandPage(): React.ReactElement {
       ) : (
         <ul className="space-y-1">
           {conversazioni.map((c) => (
-            <li key={c.id} className="rounded-md border border-border px-2 py-1.5">
-              <p className="truncate text-xs text-foreground">{c.titolo}</p>
-              <p className="text-[11px] text-muted-foreground">{dataOra(c.aggiornataIl)}</p>
+            <li key={c.id}>
+              <button
+                type="button"
+                onClick={() => apriConversazione(c.id)}
+                className={`w-full rounded-md border px-2 py-1.5 text-left transition-colors ${
+                  conversazioneAttiva === c.id
+                    ? "border-primary/60 bg-primary/10"
+                    : "border-border hover:bg-accent/30"
+                }`}
+              >
+                <p className="truncate text-xs text-foreground">{c.titolo}</p>
+                <p className="text-[11px] text-muted-foreground">{dataOra(c.aggiornataIl)}</p>
+              </button>
             </li>
           ))}
         </ul>
@@ -64,11 +93,18 @@ export function CommandPage(): React.ReactElement {
   const workflow = (
     <>
       <RailGroup label="Sessione">
-        <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" onClick={pulisci}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 w-full justify-start gap-2 text-xs"
+          onClick={nuovaConversazione}
+        >
           <Trash2 className="h-3.5 w-3.5" />
-          Svuota conversazione
+          Nuova conversazione
         </Button>
-        <p className="text-xs text-muted-foreground">{messaggi.length} messaggi in questa sessione</p>
+        <p className="text-xs text-muted-foreground">
+          {messaggi.length} messaggi · {conversazioneAttiva ? "salvata" : "non ancora salvata"}
+        </p>
       </RailGroup>
 
       <RailGroup label="Azioni proposte">
@@ -95,8 +131,21 @@ export function CommandPage(): React.ReactElement {
       <div className="flex h-full min-h-[50vh] flex-col">
         <div className="flex-1 space-y-3 overflow-y-auto pb-3">
           {messaggi.length === 0 ? (
-            <div className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-              Chiedi qualsiasi cosa: contatti, messaggi, regole, stato del sistema.
+            <div className="space-y-3 rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
+              <p>Chiedi qualsiasi cosa: contatti, messaggi, regole, stato del sistema.</p>
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {SUGGERIMENTI.map((s) => (
+                  <Button
+                    key={s}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setBozza(s)}
+                  >
+                    {s}
+                  </Button>
+                ))}
+              </div>
             </div>
           ) : (
             messaggi.map((m, i) => {
