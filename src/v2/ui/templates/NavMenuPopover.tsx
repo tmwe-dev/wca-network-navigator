@@ -9,7 +9,7 @@ import * as React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronRight, Layers, LogOut, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Compass, Layers, LogOut, Search, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FULL_NAV_ITEMS, macroAreaGroups } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
@@ -498,7 +498,7 @@ export function NavMenuPopover({
             role="menuitem"
             onClick={() => {
               setOpen(false);
-              navigate("/v3/inbox");
+              handleSelect("/v3/inbox");
             }}
             className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
