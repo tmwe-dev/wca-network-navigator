@@ -12,7 +12,7 @@
  */
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, SlidersHorizontal, PanelRight } from "lucide-react";
+import { Sparkles, SlidersHorizontal, PanelRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
