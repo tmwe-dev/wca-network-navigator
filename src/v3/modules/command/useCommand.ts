@@ -11,6 +11,8 @@ import {
   type V3CommandMessaggio,
   type V3ConversazioneRecente,
 } from "@/data/v3/command";
+import { costruisciGroundingCommandV3 } from "./kb";
+
 
 export type { V3CommandMessaggio, V3ConversazioneRecente };
 
@@ -39,8 +41,9 @@ export function useCommand(): UseCommandResult {
   const invio = useMutation({
     mutationFn: async (domanda: string) => {
       const storico = messaggi;
-      return chiediACommandV3(storico, domanda);
+      return chiediACommandV3(storico, domanda, costruisciGroundingCommandV3());
     },
+
     onSuccess: (risposta) => {
       setMessaggi((prev) => [...prev, { ruolo: "assistant", contenuto: risposta }]);
     },

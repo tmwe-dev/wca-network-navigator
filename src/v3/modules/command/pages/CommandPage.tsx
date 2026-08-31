@@ -3,12 +3,20 @@
  * Dialogo con il cervello esistente; le azioni restano proposte.
  */
 import * as React from "react";
-import { Loader2, Send, Sparkles, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowUpRight, Loader2, Send, Sparkles, Trash2 } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 import { useCommand } from "../useCommand";
+
+/** Percorsi V3 citati dall'assistente: diventano tasti "Apri". */
+function percorsiCitati(testo: string): string[] {
+  const trovati = testo.match(/\/v3\/[a-z0-9/_-]+/gi) ?? [];
+  return Array.from(new Set(trovati.map((p) => p.replace(/[.,;:)]+$/, "")))).slice(0, 4);
+}
+
 
 function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -29,6 +37,8 @@ function dataOra(value: string | null): string {
 export function CommandPage(): React.ReactElement {
   const { messaggi, bozza, setBozza, invia, isPending, errore, conversazioni, pulisci } = useCommand();
   const fine = React.useRef<HTMLDivElement | null>(null);
+  const naviga = useNavigate();
+
 
   React.useEffect(() => {
     fine.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -89,18 +99,38 @@ export function CommandPage(): React.ReactElement {
               Chiedi qualsiasi cosa: contatti, messaggi, regole, stato del sistema.
             </div>
           ) : (
-            messaggi.map((m, i) => (
-              <div
-                key={`${m.ruolo}-${i}`}
-                className={`max-w-[85%] rounded-md border px-3 py-2 text-sm ${
-                  m.ruolo === "user"
-                    ? "ml-auto border-primary/40 bg-primary/10 text-foreground"
-                    : "border-border bg-muted/40 text-foreground"
-                }`}
-              >
-                <p className="whitespace-pre-wrap break-words">{m.contenuto}</p>
-              </div>
-            ))
+            messaggi.map((m, i) => {
+              const percorsi = m.ruolo === "assistant" ? percorsiCitati(m.contenuto) : [];
+              return (
+                <div
+                  key={`${m.ruolo}-${i}`}
+                  className={`max-w-[85%] rounded-md border px-3 py-2 text-sm ${
+                    m.ruolo === "user"
+                      ? "ml-auto border-primary/40 bg-primary/10 text-foreground"
+                      : "border-border bg-muted/40 text-foreground"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{m.contenuto}</p>
+                  {percorsi.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
+                      {percorsi.map((p) => (
+                        <Button
+                          key={p}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => naviga(p)}
+                        >
+                          <ArrowUpRight className="h-3 w-3" />
+                          Apri {p}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+
           )}
           {isPending && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
