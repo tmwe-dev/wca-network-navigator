@@ -8,6 +8,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { insertPendingActionReturningId } from "@/data/aiPendingActions";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 export interface V3Destinatario {
   readonly id: string;
