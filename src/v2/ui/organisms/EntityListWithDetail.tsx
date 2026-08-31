@@ -403,11 +403,12 @@ export function EntityListWithDetail({
         onHoldingFilterChange={updateHoldingFilter}
         rightSlot={
           <>
-            {selectAllButton}
             {filterButton}
             {toolbarRightSlot}
+            {overflowMenu}
           </>
         }
+
       />
       <div className="flex-1 min-h-0 px-3 pt-2 overflow-hidden">
         <CompanyCardList
