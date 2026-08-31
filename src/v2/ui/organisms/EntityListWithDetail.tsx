@@ -10,8 +10,17 @@
  */
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Filter as FilterIcon, ChevronUp } from "lucide-react";
+import { Filter as FilterIcon, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
 import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
 import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
