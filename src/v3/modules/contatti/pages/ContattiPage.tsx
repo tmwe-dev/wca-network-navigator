@@ -15,9 +15,10 @@ import { V3DataTable, type V3Colonna } from "@/v3/ui/DataTable";
 import { CompanyLogo } from "@/v3/ui/CompanyLogo";
 import { iso2Paese } from "@/v3/ui/paese";
 import { CountryFlag } from "@/v3/ui/CountryFlag";
+import { InterazioniBadge, StatoCircuitoBadge } from "@/v3/ui/StatoBadge";
 import { RailAzione, RailScelte, RailSelect, RailSezione, RailToggle } from "@/v3/ui/Rail";
 import { useContatti } from "../useContatti";
-import { ETICHETTE_STATO_LEAD, V3_STATI_LEAD, etichettaStato } from "../statiLead";
+import { ETICHETTE_STATO_LEAD, V3_STATI_LEAD } from "../statiLead";
 import { ETICHETTE_FONTE, V3_FONTI_ANAGRAFICA, type V3AnagraficaRiga } from "@/data/v3/anagrafiche";
 
 const CLASSI_FONTE: Record<string, string> = {
@@ -119,18 +120,18 @@ export function ContattiPage(): React.ReactElement {
         },
       },
       {
+        // Stato del circuito (holding incluso) e interazioni sono sempre
+        // visibili ed evidenziati: mai colonne secondarie.
         id: "stato",
-        intestazione: "Stato",
+        intestazione: "Stato circuito",
         larghezza: "w-32",
-        secondaria: true,
-        cella: (riga) => <Etichetta>{etichettaStato(riga.stato)}</Etichetta>,
+        cella: (riga) => <StatoCircuitoBadge stato={riga.stato} />,
       },
       {
         id: "interazioni",
         intestazione: "Interazioni",
         larghezza: "w-24",
-        secondaria: true,
-        cella: (riga) => <span className="text-xs tabular-nums text-muted-foreground">{riga.interazioni}</span>,
+        cella: (riga) => <InterazioniBadge numero={riga.interazioni} />,
       },
     ],
     [],
