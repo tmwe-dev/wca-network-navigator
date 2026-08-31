@@ -66,7 +66,7 @@ export function PageFrame({
     <div className="flex h-full min-h-0 w-full">
       {/* ── Rail filtri (sinistra) ─────────────────────────────── */}
       {hasFilters && (
-        <aside className="hidden w-60 shrink-0 border-r border-border bg-muted/30 lg:block">
+        <aside className="v3-glass-plain hidden w-60 shrink-0 border-r border-border lg:block">
           <ScrollArea className="h-full">
             <div className="p-3">
               <RailHeading>Filtri</RailHeading>
@@ -78,7 +78,7 @@ export function PageFrame({
 
       {/* ── Colonna centrale ───────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">
+        <header className="v3-glass-plain flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">
           {hasFilters && (
             <Sheet>
               <SheetTrigger asChild>
@@ -86,7 +86,7 @@ export function PageFrame({
                   <SlidersHorizontal className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
+              <SheetContent side="left" className="v3-root w-72 p-0">
                 <SheetHeader className="border-b border-border p-3">
                   <SheetTitle className="text-sm">Filtri</SheetTitle>
                 </SheetHeader>
@@ -138,7 +138,7 @@ export function PageFrame({
                     <PanelRight className="h-4 w-4" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-72 p-0">
+                <SheetContent side="right" className="v3-root w-72 p-0">
                   <SheetHeader className="border-b border-border p-3">
                     <SheetTitle className="text-sm">Azioni</SheetTitle>
                   </SheetHeader>
@@ -152,7 +152,7 @@ export function PageFrame({
         </header>
 
         {toolbar && (
-          <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-muted/20 px-3">{toolbar}</div>
+          <div className="v3-glass-plain flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">{toolbar}</div>
         )}
 
         <main
@@ -168,7 +168,7 @@ export function PageFrame({
 
       {/* ── Rail workflow (destra) ─────────────────────────────── */}
       {hasWorkflow && (
-        <aside className="hidden w-60 shrink-0 border-l border-border bg-muted/30 lg:block">
+        <aside className="v3-glass-plain hidden w-60 shrink-0 border-l border-border lg:block">
           <ScrollArea className="h-full">
             <div className="p-3">
               <RailHeading>Azioni</RailHeading>
