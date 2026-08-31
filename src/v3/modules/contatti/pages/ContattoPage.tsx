@@ -8,8 +8,11 @@ import { PageFrame } from "@/v3/app/PageFrame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { IntestazioneEntita } from "@/v3/ui/IntestazioneEntita";
+import { StatoCircuitoBadge, InterazioniBadge } from "@/v3/ui/StatoBadge";
 import { useContatto } from "../useContatto";
 import { etichettaStato } from "../statiLead";
+
 
 function Campo({ label, value }: { label: string; value: React.ReactNode }) {
   return (
