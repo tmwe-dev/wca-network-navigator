@@ -3,13 +3,24 @@
  */
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Inbox, Loader2, RefreshCw, Send, SlidersHorizontal } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Inbox,
+  Loader2,
+  RefreshCw,
+  Send,
+  SlidersHorizontal,
+  Square,
+} from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useMessaggi } from "../useMessaggi";
+import { useSync } from "../useSync";
 import { V3_CANALI, dataMessaggio, etichettaCanale, mittente } from "../canali";
 
 function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
