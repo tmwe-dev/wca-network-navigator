@@ -287,11 +287,16 @@ export function EntityListWithDetail({
     return out;
   }, [globalChips, filters.country, filters.city]);
 
-  // Auto-focus prima entità se non c'è dettaglio aperto e nessuna selezione attiva.
-  // Dispatcha l'handler appropriato (contatto o azienda) e il dettaglio si apre da solo.
+  // Auto-focus prima entità: solo su desktop e solo se non c'è un deep-link
+  // in corso (?partnerId / ?contactId), per non aprire un dettaglio non voluto.
   const autoFocusedRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (isLoading) return;
+    if (typeof window !== "undefined") {
+      if (window.innerWidth < 768) return;
+      const q = new URLSearchParams(window.location.search);
+      if (q.get("partnerId") || q.get("contactId")) return;
+    }
     if (detailSlot) {
       autoFocusedRef.current = null;
       return;
@@ -305,17 +310,28 @@ export function EntityListWithDetail({
     else if (onOpenCompany) onOpenCompany(first);
   }, [isLoading, detailSlot, selection.count, sorted, onOpenContact, onOpenCompany]);
 
+  // Un solo punto d'ingresso per i filtri: il rail contestuale. I filtri
+  // avanzati locali (drawer) vengono richiamati dal rail stesso.
+  const openFiltersRail = React.useCallback(() => {
+    window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }));
+  }, []);
+  React.useEffect(() => {
+    const handler = () => setFiltersOpen(true);
+    window.addEventListener("entity-filters-advanced", handler);
+    return () => window.removeEventListener("entity-filters-advanced", handler);
+  }, []);
+
   const filterButton = (
     <button
       type="button"
-      onClick={() => setFiltersOpen(true)}
+      onClick={openFiltersRail}
       className={cn(
         "h-7 px-2 rounded-md text-[11px] font-medium border inline-flex items-center gap-1 transition-all",
         activeFiltersCount > 0
           ? "bg-primary/15 text-primary border-primary/40"
           : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground",
       )}
-      title="Apri filtri avanzati"
+      title="Apri i filtri della maschera"
     >
       <FilterIcon className="w-3 h-3" /> Filtri
       {activeFiltersCount > 0 && (
@@ -326,22 +342,33 @@ export function EntityListWithDetail({
     </button>
   );
 
-  const selectAllButton = (
-    <button
-      type="button"
-      onClick={() => selection.selectAll(visibleIds)}
-      className={cn(
-        "h-7 px-2 rounded-md text-[11px] font-medium border inline-flex items-center gap-1 transition-all",
-        allSelected
-          ? "bg-primary/15 text-primary border-primary/40"
-          : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground",
-      )}
-      title={allSelected ? "Deseleziona tutto" : "Seleziona tutti i visibili"}
-    >
-      <ChevronUp className={cn("w-3 h-3 transition-transform", allSelected && "rotate-180")} />
-      {allSelected ? "Deseleziona" : "Seleziona tutto"}
-    </button>
+  const overflowMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="h-7 w-7 rounded-md border border-border/40 bg-card/40 text-muted-foreground inline-flex items-center justify-center transition-all hover:text-foreground"
+          title="Altre azioni"
+          aria-label="Altre azioni"
+        >
+          <MoreHorizontal className="w-3.5 h-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="z-[80] min-w-[200px]">
+        <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          Elenco
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-xs" onClick={() => selection.selectAll(visibleIds)}>
+          {allSelected ? "Deseleziona tutto" : "Seleziona tutti i visibili"}
+        </DropdownMenuItem>
+        <DropdownMenuItem className="text-xs" onClick={() => setFiltersOpen(true)}>
+          Filtri avanzati…
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
+
 
   const list = (
     <div className="flex flex-col h-full min-h-0 pb-2">
