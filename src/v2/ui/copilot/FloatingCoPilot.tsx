@@ -95,9 +95,20 @@ export function FloatingCoPilot() {
       setEnabled(true);
       setExpanded(true);
     };
+    // Apertura + avvio voce dal pulsante 🎙 in-mask
+    const voiceHandler = () => {
+      setEnabled(true);
+      setExpanded(true);
+      if (voice.status !== "connected" && voice.status !== "connecting") void voice.start();
+    };
     window.addEventListener("copilot-open", handler);
-    return () => window.removeEventListener("copilot-open", handler);
-  }, [setEnabled]);
+    window.addEventListener("copilot-voice", voiceHandler);
+    return () => {
+      window.removeEventListener("copilot-open", handler);
+      window.removeEventListener("copilot-voice", voiceHandler);
+    };
+  }, [setEnabled, voice]);
+
 
   const respondConfirmation = (result: "ok" | "cancel") => {
     if (!confirmRequest) return;
