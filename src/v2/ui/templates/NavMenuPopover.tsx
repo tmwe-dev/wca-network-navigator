@@ -496,10 +496,7 @@ export function NavMenuPopover({
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              handleSelect("/v3/inbox");
-            }}
+            onClick={() => handleSelect("/v3/inbox")}
             className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
             <Compass className="h-4 w-4" />
