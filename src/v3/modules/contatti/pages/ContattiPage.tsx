@@ -1,17 +1,18 @@
 /**
- * Contatti — maschera Lista. "Chi devo contattare?"
+ * Contatti — maschera Lista di riferimento della V3.
  *
- * Anagrafica unificata (CRM, biglietti da visita, partner WCA) montata sullo
- * standard visivo V3: tabella unica (`V3DataTable`), sidebar a primitive
- * (`Rail*`), logo azienda, bandiera paese, indicatore di aziende con più
- * persone collegate. Nessuna logica qui: solo presentazione.
+ * È l'esempio canonico dello standard descritto in docs/v3/standard-maschere.md:
+ * intestazioni ordinabili, elementi cliccabili che aggiungono filtri, barra dei
+ * filtri attivi con X sopra la tabella e nella sidebar, popup scheda azienda.
  */
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Upload, UserPlus, Users } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { Button } from "@/components/ui/button";
-import { V3DataTable, type V3Colonna } from "@/v3/ui/DataTable";
+import { V3CellaFiltro, V3DataTable, type V3Colonna } from "@/v3/ui/DataTable";
+import { V3FiltriAttivi } from "@/v3/ui/FiltriAttivi";
+import { filtroAttivo, valoriDi, type V3Filtro } from "@/v3/ui/filtri";
 import { CompanyLogo } from "@/v3/ui/CompanyLogo";
 import { iso2Paese } from "@/v3/ui/paese";
 import { CountryFlag } from "@/v3/ui/CountryFlag";
@@ -20,6 +21,7 @@ import { RailAzione, RailScelte, RailSelect, RailSezione, RailToggle } from "@/v
 import { useContatti } from "../useContatti";
 import { ETICHETTE_STATO_LEAD, V3_STATI_LEAD } from "../statiLead";
 import { ETICHETTE_FONTE, V3_FONTI_ANAGRAFICA, type V3AnagraficaRiga } from "@/data/v3/anagrafiche";
+import { SchedaAzienda } from "./SchedaAzienda";
 
 const CLASSI_FONTE: Record<string, string> = {
   crm: "border-primary/50 bg-primary/15 text-foreground",
@@ -52,19 +54,45 @@ export function ContattiPage(): React.ReactElement {
     error,
     ricerca,
     setRicerca,
-    fonte,
-    setFonte,
-    paese,
-    setPaese,
-    stato,
-    setStato,
+    filtri,
+    alterna,
+    rimuoviFiltro,
     soloConEmail,
     setSoloConEmail,
     paesiDisponibili,
+    ordinamento,
+    ordinaPer,
     vaiA,
     azzeraFiltri,
     refetch,
   } = useContatti();
+
+  const [azienda, setAzienda] = React.useState<{ nome: string; dominio: string | null } | null>(null);
+
+  const fonteSelezionata = valoriDi(filtri, "fonte")[0] ?? null;
+  const statoSelezionato = valoriDi(filtri, "stato")[0] ?? null;
+  const paeseSelezionato = valoriDi(filtri, "paese")[0] ?? null;
+
+  const alternaFonte = React.useCallback(
+    (valore: string) =>
+      alterna({ campo: "fonte", valore, etichetta: `Fonte: ${ETICHETTE_FONTE[valore as never] ?? valore}` }),
+    [alterna],
+  );
+  const alternaStato = React.useCallback(
+    (valore: string) =>
+      alterna({ campo: "stato", valore, etichetta: `Stato: ${ETICHETTE_STATO_LEAD[valore] ?? valore}` }),
+    [alterna],
+  );
+  const alternaPaese = React.useCallback(
+    (valore: string, etichetta?: string) =>
+      alterna({ campo: "paese", valore, etichetta: `Paese: ${etichetta ?? valore}` }),
+    [alterna],
+  );
+  const alternaAzienda = React.useCallback(
+    (nome: string) =>
+      alterna({ campo: "azienda", valore: nome.trim().toLowerCase(), etichetta: `Azienda: ${nome}` }),
+    [alterna],
+  );
 
   const colonne = React.useMemo<readonly V3Colonna<V3AnagraficaRiga>[]>(
     () => [
@@ -72,6 +100,7 @@ export function ContattiPage(): React.ReactElement {
         id: "contatto",
         intestazione: "Contatto",
         larghezza: "w-[30%]",
+        ordinaPer: "nome",
         cella: (riga) => (
           <div className="flex min-w-0 items-center gap-2 text-left">
             <CompanyLogo dominio={riga.dominio} nome={riga.azienda ?? riga.nome} />
@@ -86,14 +115,33 @@ export function ContattiPage(): React.ReactElement {
         id: "azienda",
         intestazione: "Azienda",
         larghezza: "w-[24%]",
+        ordinaPer: "azienda",
         cella: (riga) => (
           <div className="min-w-0 text-left">
-            <p className="truncate text-xs text-foreground">{riga.azienda ?? "—"}</p>
-            {riga.colleghi > 1 && (
-              <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            {riga.azienda ? (
+              <V3CellaFiltro
+                onFiltra={() => alternaAzienda(riga.azienda as string)}
+                attivo={filtroAttivo(filtri, "azienda", riga.azienda.trim().toLowerCase())}
+                titolo={`Filtra per ${riga.azienda}`}
+                className="block w-full px-1 -mx-1"
+              >
+                <span className="block truncate text-xs text-foreground">{riga.azienda}</span>
+              </V3CellaFiltro>
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            )}
+            {riga.colleghi > 1 && riga.azienda && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setAzienda({ nome: riga.azienda as string, dominio: riga.dominio });
+                }}
+                className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-accent/60 hover:text-foreground"
+              >
                 <Users className="h-3 w-3" />
                 {riga.colleghi} persone
-              </span>
+              </button>
             )}
           </div>
         ),
@@ -102,20 +150,35 @@ export function ContattiPage(): React.ReactElement {
         id: "fonte",
         intestazione: "Fonte",
         larghezza: "w-24",
-        cella: (riga) => <Etichetta classe={CLASSI_FONTE[riga.fonte]}>{ETICHETTE_FONTE[riga.fonte]}</Etichetta>,
+        ordinaPer: "fonte",
+        cella: (riga) => (
+          <V3CellaFiltro onFiltra={() => alternaFonte(riga.fonte)} attivo={filtroAttivo(filtri, "fonte", riga.fonte)}>
+            <Etichetta classe={CLASSI_FONTE[riga.fonte]}>{ETICHETTE_FONTE[riga.fonte]}</Etichetta>
+          </V3CellaFiltro>
+        ),
       },
       {
         id: "paese",
         intestazione: "Paese",
         larghezza: "w-36",
         secondaria: true,
+        ordinaPer: "paese",
         cella: (riga) => {
-          const valore = riga.paeseCode ?? riga.paese;
+          const codice = riga.paeseCode ?? riga.paese;
+          const nome = riga.paese ?? iso2Paese(codice) ?? null;
+          if (!nome && !codice) return <span className="text-xs text-muted-foreground">—</span>;
+          const valore = riga.paese ?? (codice as string);
           return (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CountryFlag paese={valore} />
-              <span className="truncate">{riga.paese ?? iso2Paese(valore) ?? "—"}</span>
-            </span>
+            <V3CellaFiltro
+              onFiltra={() => alternaPaese(valore, nome ?? valore)}
+              attivo={filtroAttivo(filtri, "paese", valore)}
+              className="block w-full px-1 -mx-1"
+            >
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CountryFlag paese={codice} />
+                <span className="truncate">{nome ?? valore}</span>
+              </span>
+            </V3CellaFiltro>
           );
         },
       },
@@ -125,16 +188,28 @@ export function ContattiPage(): React.ReactElement {
         id: "stato",
         intestazione: "Stato circuito",
         larghezza: "w-32",
-        cella: (riga) => <StatoCircuitoBadge stato={riga.stato} />,
+        ordinaPer: "stato",
+        cella: (riga) =>
+          riga.stato ? (
+            <V3CellaFiltro
+              onFiltra={() => alternaStato(riga.stato as string)}
+              attivo={filtroAttivo(filtri, "stato", riga.stato)}
+            >
+              <StatoCircuitoBadge stato={riga.stato} />
+            </V3CellaFiltro>
+          ) : (
+            <StatoCircuitoBadge stato={riga.stato} />
+          ),
       },
       {
         id: "interazioni",
         intestazione: "Interazioni",
         larghezza: "w-24",
+        ordinaPer: "interazioni",
         cella: (riga) => <InterazioniBadge numero={riga.interazioni} />,
       },
     ],
-    [],
+    [filtri, alternaAzienda, alternaFonte, alternaPaese, alternaStato],
   );
 
   const filters = (
@@ -151,10 +226,16 @@ export function ContattiPage(): React.ReactElement {
         </div>
       </RailSezione>
 
+      {filtri.length > 0 && (
+        <RailSezione titolo={`Filtri attivi (${filtri.length})`}>
+          <V3FiltriAttivi filtri={filtri} onRimuovi={rimuoviFiltro} onAzzera={azzeraFiltri} compatto />
+        </RailSezione>
+      )}
+
       <RailSezione titolo="Provenienza">
         <RailScelte
-          valore={fonte}
-          onChange={(valore) => setFonte(valore as typeof fonte)}
+          valore={fonteSelezionata}
+          onChange={(valore) => (valore ? alternaFonte(valore) : azzeraCampo("fonte"))}
           opzioni={[
             { valore: null, etichetta: "Tutte" },
             ...V3_FONTI_ANAGRAFICA.map((value) => ({ valore: value, etichetta: ETICHETTE_FONTE[value] })),
@@ -164,8 +245,8 @@ export function ContattiPage(): React.ReactElement {
 
       <RailSezione titolo="Stato">
         <RailScelte
-          valore={stato}
-          onChange={setStato}
+          valore={statoSelezionato}
+          onChange={(valore) => (valore ? alternaStato(valore) : azzeraCampo("stato"))}
           opzioni={[
             { valore: null, etichetta: "Tutti" },
             ...V3_STATI_LEAD.map((value) => ({ valore: value, etichetta: ETICHETTE_STATO_LEAD[value] ?? value })),
@@ -175,8 +256,8 @@ export function ContattiPage(): React.ReactElement {
 
       <RailSezione titolo="Paese" apertaDefault={false}>
         <RailSelect
-          valore={paese}
-          onChange={setPaese}
+          valore={paeseSelezionato}
+          onChange={(valore) => (valore ? alternaPaese(valore) : azzeraCampo("paese"))}
           etichettaVuoto="Tutti i paesi"
           opzioni={paesiDisponibili.map((code) => ({ valore: code, etichetta: code }))}
         />
@@ -188,6 +269,10 @@ export function ContattiPage(): React.ReactElement {
       </RailSezione>
     </>
   );
+
+  function azzeraCampo(campo: string): void {
+    filtri.filter((f) => f.campo === campo).forEach(rimuoviFiltro);
+  }
 
   const workflow = (
     <>
@@ -257,10 +342,18 @@ export function ContattiPage(): React.ReactElement {
         </div>
       ) : (
         <>
+          {filtri.length > 0 && (
+            <div className="mb-2">
+              <V3FiltriAttivi filtri={filtri} onRimuovi={rimuoviFiltro} onAzzera={azzeraFiltri} />
+            </div>
+          )}
+
           <V3DataTable
             colonne={colonne}
             righe={righe}
             chiave={(riga) => `${riga.fonte}-${riga.id}`}
+            ordinamento={ordinamento}
+            onOrdina={ordinaPer}
             vuoto="Nessuna voce corrisponde ai filtri."
             onRigaClick={(riga) => {
               // Solo i contatti CRM hanno una scheda dettaglio in V3.
@@ -277,6 +370,21 @@ export function ContattiPage(): React.ReactElement {
             </p>
           )}
         </>
+      )}
+
+      {azienda && (
+        <SchedaAzienda
+          azienda={azienda.nome}
+          dominio={azienda.dominio}
+          onChiudi={() => setAzienda(null)}
+          onFiltraAzienda={(chiave) =>
+            alterna({ campo: "azienda", valore: chiave, etichetta: `Azienda: ${azienda.nome}` })
+          }
+          onApriContatto={(id) => {
+            setAzienda(null);
+            navigate(`/v3/contatti/${id}`);
+          }}
+        />
       )}
     </PageFrame>
   );
