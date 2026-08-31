@@ -424,6 +424,46 @@ export function EntityListWithDetail({
         />
       </div>
 
+      {selection.count === 1 && (
+        <div className="mx-3 mt-2 flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5">
+          <span className="text-[11px] font-semibold text-primary">1 selezionato</span>
+          {onBulkAddToCockpit && (
+            <button
+              type="button"
+              onClick={() => onBulkAddToCockpit(selectedCompanies)}
+              className="h-6 rounded-md border border-border/50 bg-card/60 px-2 text-[11px] font-medium text-foreground transition-colors hover:border-primary/50"
+            >
+              Cockpit
+            </button>
+          )}
+          {onBulkDeepSearch && (
+            <button
+              type="button"
+              onClick={() => onBulkDeepSearch(selectedCompanies)}
+              className="h-6 rounded-md border border-border/50 bg-card/60 px-2 text-[11px] font-medium text-foreground transition-colors hover:border-primary/50"
+            >
+              Deep Search
+            </button>
+          )}
+          {onBulkCreateCampaign && (
+            <button
+              type="button"
+              onClick={() => onBulkCreateCampaign(selectedCompanies)}
+              className="h-6 rounded-md border border-border/50 bg-card/60 px-2 text-[11px] font-medium text-foreground transition-colors hover:border-primary/50"
+            >
+              Campagna
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={selection.clear}
+            className="ml-auto h-6 rounded-md px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Annulla
+          </button>
+        </div>
+      )}
+
       <EntityFiltersDrawer
         open={filtersOpen}
         onOpenChange={setFiltersOpen}
@@ -434,6 +474,7 @@ export function EntityListWithDetail({
       />
     </div>
   );
+
 
   // Con 2+ selezionati → pannello bulk a destra. Con 1 solo selezionato il
   // dettaglio resta aperto e le azioni compaiono nella barra sotto l'elenco.
