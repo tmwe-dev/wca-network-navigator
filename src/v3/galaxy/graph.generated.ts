@@ -83,7 +83,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "command",
     "kind": "dal",
     "module": "dati",
-    "detail": "src/data/v3/command.ts · 67 righe",
+    "detail": "src/data/v3/command.ts · 70 righe",
     "weight": 1.3
   },
   {
@@ -155,7 +155,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "risposta",
     "kind": "dal",
     "module": "dati",
-    "detail": "src/data/v3/risposta.ts · 221 righe",
+    "detail": "src/data/v3/risposta.ts · 243 righe",
     "weight": 1.3
   },
   {
@@ -163,7 +163,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "scrivi",
     "kind": "dal",
     "module": "dati",
-    "detail": "src/data/v3/scrivi.ts · 122 righe",
+    "detail": "src/data/v3/scrivi.ts · 192 righe",
     "weight": 1.3
   },
   {
@@ -179,7 +179,15 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "AppShell",
     "kind": "app",
     "module": "trasversale",
-    "detail": "src/v3/app/AppShell.tsx · 161 righe",
+    "detail": "src/v3/app/AppShell.tsx · 139 righe",
+    "weight": 1
+  },
+  {
+    "id": "src/v3/app/navigation.ts",
+    "label": "navigation",
+    "kind": "app",
+    "module": "trasversale",
+    "detail": "src/v3/app/navigation.ts · 59 righe",
     "weight": 1
   },
   {
@@ -187,7 +195,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "pageContract",
     "kind": "app",
     "module": "trasversale",
-    "detail": "src/v3/app/pageContract.ts · 352 righe",
+    "detail": "src/v3/app/pageContract.ts · 362 righe",
     "weight": 1
   },
   {
@@ -203,7 +211,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "routes",
     "kind": "app",
     "module": "trasversale",
-    "detail": "src/v3/app/routes.tsx · 105 righe",
+    "detail": "src/v3/app/routes.tsx · 108 righe",
     "weight": 1
   },
   {
@@ -239,11 +247,19 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1
   },
   {
+    "id": "src/v3/modules/command/kb.ts",
+    "label": "kb",
+    "kind": "logica",
+    "module": "trasversale",
+    "detail": "src/v3/modules/command/kb.ts · 39 righe",
+    "weight": 1
+  },
+  {
     "id": "src/v3/modules/command/pages/CommandPage.tsx",
     "label": "CommandPage",
     "kind": "pagina",
     "module": "trasversale",
-    "detail": "src/v3/modules/command/pages/CommandPage.tsx · 143 righe",
+    "detail": "src/v3/modules/command/pages/CommandPage.tsx · 173 righe",
     "weight": 1.6
   },
   {
@@ -251,7 +267,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "useCommand",
     "kind": "hook",
     "module": "trasversale",
-    "detail": "src/v3/modules/command/useCommand.ts · 75 righe",
+    "detail": "src/v3/modules/command/useCommand.ts · 78 righe",
     "weight": 1
   },
   {
@@ -443,7 +459,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "LaboratorioPage",
     "kind": "pagina",
     "module": "trasversale",
-    "detail": "src/v3/modules/impostazioni/pages/LaboratorioPage.tsx · 180 righe",
+    "detail": "src/v3/modules/impostazioni/pages/LaboratorioPage.tsx · 196 righe",
     "weight": 1.6
   },
   {
@@ -543,6 +559,14 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.6
   },
   {
+    "id": "src/v3/modules/programmazione/pages/DaFarePage.tsx",
+    "label": "DaFarePage",
+    "kind": "pagina",
+    "module": "programmazione",
+    "detail": "src/v3/modules/programmazione/pages/DaFarePage.tsx · 71 righe",
+    "weight": 1.6
+  },
+  {
     "id": "src/v3/modules/programmazione/useAgenda.ts",
     "label": "useAgenda",
     "kind": "hook",
@@ -571,7 +595,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "ApprovazioniPage",
     "kind": "pagina",
     "module": "risposta",
-    "detail": "src/v3/modules/risposta/pages/ApprovazioniPage.tsx · 261 righe",
+    "detail": "src/v3/modules/risposta/pages/ApprovazioniPage.tsx · 274 righe",
     "weight": 1.6
   },
   {
@@ -587,7 +611,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "ScriviPage",
     "kind": "pagina",
     "module": "risposta",
-    "detail": "src/v3/modules/risposta/pages/ScriviPage.tsx · 215 righe",
+    "detail": "src/v3/modules/risposta/pages/ScriviPage.tsx · 257 righe",
     "weight": 1.6
   },
   {
@@ -595,7 +619,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "useApprovazioni",
     "kind": "hook",
     "module": "risposta",
-    "detail": "src/v3/modules/risposta/useApprovazioni.ts · 126 righe",
+    "detail": "src/v3/modules/risposta/useApprovazioni.ts · 154 righe",
     "weight": 1
   },
   {
@@ -611,7 +635,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "useScrivi",
     "kind": "hook",
     "module": "risposta",
-    "detail": "src/v3/modules/risposta/useScrivi.ts · 136 righe",
+    "detail": "src/v3/modules/risposta/useScrivi.ts · 184 righe",
     "weight": 1
   },
   {
@@ -911,7 +935,17 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
+    "from": "src/v3/app/AppShell.tsx",
+    "to": "src/v3/app/navigation.ts",
+    "relation": "usa"
+  },
+  {
     "from": "src/v3/app/PageFrame.tsx",
+    "to": "src/v3/app/pageContract.ts",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/app/navigation.ts",
     "to": "src/v3/app/pageContract.ts",
     "relation": "usa"
   },
@@ -946,6 +980,11 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
+    "from": "src/v3/modules/command/kb.ts",
+    "to": "src/v3/app/pageContract.ts",
+    "relation": "usa"
+  },
+  {
     "from": "src/v3/modules/command/pages/CommandPage.tsx",
     "to": "src/v3/app/PageFrame.tsx",
     "relation": "usa"
@@ -958,6 +997,11 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   {
     "from": "src/v3/modules/command/useCommand.ts",
     "to": "src/data/v3/command.ts",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/modules/command/useCommand.ts",
+    "to": "src/v3/modules/command/kb.ts",
     "relation": "usa"
   },
   {
@@ -1261,6 +1305,11 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
+    "from": "src/v3/modules/impostazioni/pages/LaboratorioPage.tsx",
+    "to": "src/v3/app/navigation.ts",
+    "relation": "usa"
+  },
+  {
     "from": "src/v3/modules/impostazioni/useImpostazioni.ts",
     "to": "src/data/v3/impostazioni.ts",
     "relation": "usa"
@@ -1413,11 +1462,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   {
     "from": "src/v3/modules/risposta/pages/ScriviPage.tsx",
     "to": "src/v3/modules/risposta/useScrivi.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/risposta/pages/ScriviPage.tsx",
-    "to": "src/data/v3/scrivi.ts",
     "relation": "usa"
   },
   {
@@ -1682,4 +1726,4 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   }
 ] as const;
 
-export const V3_GRAPH_GENERATED_AT = "2026-08-31T07:33:29.183Z";
+export const V3_GRAPH_GENERATED_AT = "2026-08-31T09:20:01.337Z";
