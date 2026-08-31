@@ -37,6 +37,8 @@ function dataOra(value: string | null): string {
 export function CommandPage(): React.ReactElement {
   const { messaggi, bozza, setBozza, invia, isPending, errore, conversazioni, pulisci } = useCommand();
   const fine = React.useRef<HTMLDivElement | null>(null);
+  const naviga = useNavigate();
+
 
   React.useEffect(() => {
     fine.current?.scrollIntoView({ behavior: "smooth", block: "end" });
