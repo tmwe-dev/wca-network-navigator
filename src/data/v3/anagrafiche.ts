@@ -35,15 +35,32 @@ export interface V3AnagraficaRiga {
   readonly colleghi: number;
 }
 
+export const V3_ORDINI_ANAGRAFICA = [
+  "recente",
+  "nome",
+  "azienda",
+  "paese",
+  "fonte",
+  "stato",
+  "interazioni",
+] as const;
+export type V3OrdineAnagrafica = (typeof V3_ORDINI_ANAGRAFICA)[number];
+
 export interface V3AnagraficaFiltri {
   readonly ricerca?: string;
-  readonly fonte?: V3FonteAnagrafica | null;
-  readonly paese?: string | null;
-  readonly stato?: string | null;
+  /** Filtri multipli: più valori sullo stesso campo si sommano in OR. */
+  readonly fonti?: readonly string[];
+  readonly paesi?: readonly string[];
+  readonly stati?: readonly string[];
+  /** Nomi azienda già normalizzati in minuscolo. */
+  readonly aziende?: readonly string[];
   readonly soloConEmail?: boolean;
+  readonly ordine?: V3OrdineAnagrafica;
+  readonly discendente?: boolean;
   readonly pagina: number;
   readonly perPagina: number;
 }
+
 
 export interface V3AnagraficaPagina {
   readonly righe: readonly V3AnagraficaRiga[];
@@ -76,16 +93,22 @@ export async function listAnagraficaV3(filtri: V3AnagraficaFiltri): Promise<V3An
   const perPagina = Math.min(Math.max(filtri.perPagina, 1), 200);
   const pagina = Math.max(filtri.pagina, 0);
 
+  const lista = (valori?: readonly string[]) => (valori && valori.length > 0 ? [...valori] : undefined);
+
   // Parametri omessi (undefined) = default SQL null = nessun filtro.
   const { data, error } = await supabase.rpc("v3_directory", {
     _search: filtri.ricerca?.trim() ? filtri.ricerca.trim() : undefined,
-    _fonte: filtri.fonte ?? undefined,
-    _paese: filtri.paese ?? undefined,
-    _stato: filtri.stato ?? undefined,
+    _fonti: lista(filtri.fonti),
+    _paesi: lista(filtri.paesi),
+    _stati: lista(filtri.stati),
+    _aziende: lista(filtri.aziende),
     _solo_email: filtri.soloConEmail ?? false,
+    _ordine: filtri.ordine ?? "recente",
+    _discendente: filtri.discendente ?? true,
     _offset: pagina * perPagina,
     _limit: perPagina,
   });
+
 
   if (error) throw error;
 
