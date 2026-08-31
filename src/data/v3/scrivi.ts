@@ -120,3 +120,72 @@ export async function accodaBozzaV3(input: V3BozzaInput): Promise<string> {
   if (error) throw new Error(error.message);
   return id ?? "";
 }
+
+/* ─────────── Generazione assistita (agente di scrittura) ─────────── */
+
+export interface V3GeneraInput {
+  readonly obiettivo: string;
+  readonly nome?: string | null;
+  readonly azienda?: string | null;
+  readonly partnerId?: string | null;
+  readonly contattoId?: string | null;
+}
+
+export interface V3Bozza {
+  readonly oggetto: string;
+  readonly corpo: string;
+  /** Esito della revisione editoriale, quando l'agente la restituisce. */
+  readonly revisione: {
+    readonly verdetto: string;
+    readonly punteggio: number | null;
+    readonly note: readonly string[];
+  } | null;
+}
+
+interface GenerateEmailResponse {
+  subject?: string;
+  body?: string;
+  full_content?: string;
+  journalist_review?: {
+    verdict?: string;
+    quality_score?: number;
+    warnings?: { description?: string }[];
+  } | null;
+}
+
+/**
+ * Chiede all'agente di scrittura una bozza. Non salva e non invia nulla:
+ * il testo torna nell'editor, l'operatore lo corregge e poi lo accoda.
+ * Riusa l'edge `generate-email` esistente (editorial review inclusa).
+ */
+export async function generaBozzaV3(input: V3GeneraInput): Promise<V3Bozza> {
+  const data = await invokeAi<GenerateEmailResponse>("generate-email", {
+    scope: "email",
+    context: { source: "v3/scrivi", mode: "generate", route: "/v3/scrivi" },
+    body: {
+      standalone: true,
+      partner_id: input.partnerId ?? null,
+      contact_id: input.contattoId ?? null,
+      recipient_name: input.nome ?? undefined,
+      recipient_company: input.azienda ?? undefined,
+      goal: input.obiettivo,
+      use_kb: true,
+      quality: "standard",
+    },
+  });
+
+  const review = data.journalist_review ?? null;
+  return {
+    oggetto: data.subject ?? "",
+    corpo: data.body ?? data.full_content ?? "",
+    revisione: review
+      ? {
+          verdetto: String(review.verdict ?? "pass"),
+          punteggio: typeof review.quality_score === "number" ? review.quality_score : null,
+          note: (review.warnings ?? [])
+            .map((w) => w.description)
+            .filter((d): d is string => typeof d === "string"),
+        }
+      : null,
+  };
+}
