@@ -76,7 +76,8 @@ Si smette di mantenerla. Tutto l'investimento conversazionale va su Command.
 Da dismettere: `voice-brain-bridge`, `elevenlabs-agent-sync`, sincronizzazione prompt agente, pagine vocali. Prima si spengono i cron/webhook, poi si rimuove il codice.
 Conseguenza: **un solo cervello nel sistema**, senza eccezioni.
 
-### D4 — Destino della V2 → **si decide dopo il Modulo 7**
+### D4 — Destino della V2 → **due ingressi** (deciso 2026-08-30)
+La radice `/` apre una pagina di scelta con due porte: **Operativo (V3)** e **Completo (V2)**. Nessun redirect forzato, nessuno spegnimento. Da ogni versione si passa all'altra (voce in sidebar). Dettaglio in `docs/v3/d4-destino-v2.md`.
 Per ora V2 e V3 convivono. La V3 non importa mai da V2 (regola di lint). La scelta se spegnere la V2 o assorbirne il Laboratorio si riprende a Modulo 7 chiuso.
 
 ---
