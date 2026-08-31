@@ -4,7 +4,9 @@
  * Regola: una pagina esiste in V3 solo se dichiarata qui. Il router non
  * registra nulla che non abbia una voce in `V3_PAGES`.
  *
- * Riferimenti: docs/v3/contratto-pagina.md, docs/v3/mappa-innesto.md
+ * Perimetro: il nucleo commerciale (contatti, messaggi multicanale, regole di
+ * catalogazione, scrittura assistita, approvazioni, coda, agenda, tracciamento).
+ * Tutto il resto vive in V2 e si apre dal Laboratorio: vedi `V3_RINVII_V2`.
  */
 
 /** Tre soli tipi di maschera. Un quarto tipo si aggiunge solo modificando il contratto. */
@@ -53,12 +55,23 @@ export const V3_MODULE_LABELS: Record<V3ModuleId, string> = {
 
 export const V3_BASE_PATH = "/v3";
 
-/**
- * Le 22 pagine della V3, dichiarate in anticipo (Fase 0.C).
- * `implemented: false` = pianificata, non ancora innestata.
- */
+/** Riga compatta: path, modulo, tipo, titolo, domanda, filtri, azioni. */
+type Riga = readonly [
+  path: string,
+  module: V3ModuleId,
+  kind: V3PageKind,
+  title: string,
+  question: string,
+  filters: readonly string[],
+  workflow: readonly string[],
+];
+
+function pagina([path, module, kind, title, question, filters, workflow]: Riga): V3PageDefinition {
+  return { path, module, kind, title, question, filters, workflow, implemented: true };
+}
+
+/** Le maschere della V3. Nessuna riga qui che non serva al ciclo commerciale. */
 export const V3_PAGES = {
-  // ── Modulo 1 — Identità e accesso ────────────────────────────────
   login: {
     path: "/v3/login",
     module: "identita",
@@ -69,285 +82,51 @@ export const V3_PAGES = {
     workflow: [],
     implemented: true,
     publicRoute: true,
-  },
-  operatori: {
-    path: "/v3/operatori",
-    module: "identita",
-    kind: "list",
-    title: "Operatori",
-    question: "Chi può fare cosa?",
-    filters: ["ricerca", "ruolo", "stato"],
-    workflow: ["invita", "ruoli", "revoca"],
-    implemented: true,
-  },
+  } satisfies V3PageDefinition,
 
-  // ── Modulo 2 — Contatti ──────────────────────────────────────────
-  contatti: {
-    path: "/v3/contatti",
-    module: "contatti",
-    kind: "list",
-    title: "Contatti",
-    question: "Chi devo contattare?",
-    filters: ["ricerca", "paese", "gruppo", "stato", "tag"],
-    workflow: ["nuovo", "import", "azioni-massive"],
-    implemented: true,
-  },
-  contatto: {
-    path: "/v3/contatti/:id",
-    module: "contatti",
-    kind: "detail",
-    title: "Scheda contatto",
-    question: "Chi è e cosa ci siamo detti?",
-    filters: [],
-    workflow: ["scrivi", "programma", "unisci", "archivia"],
-    implemented: true,
-  },
-  importazione: {
-    path: "/v3/import",
-    module: "contatti",
-    kind: "operational",
-    title: "Import",
-    question: "Cosa sto caricando?",
-    filters: [],
-    workflow: ["carica", "mappa-campi", "conferma"],
-    implemented: true,
-  },
-  duplicati: {
-    path: "/v3/duplicati",
-    module: "contatti",
-    kind: "list",
-    title: "Duplicati",
-    question: "Cosa devo unire?",
-    filters: ["soglia", "tipo"],
-    workflow: ["unisci", "ignora"],
-    implemented: true,
-  },
-  cestino: {
-    path: "/v3/cestino",
-    module: "contatti",
-    kind: "list",
-    title: "Cestino",
-    question: "Cosa ho eliminato?",
-    filters: ["tipo", "periodo"],
-    workflow: ["ripristina"],
-    implemented: true,
-  },
+  operatori: pagina(["/v3/operatori", "identita", "list", "Operatori", "Chi può fare cosa?", ["ricerca", "ruolo", "stato"], ["invita", "ruoli", "revoca"]]),
 
-  // ── Modulo 3 — Messaggi ──────────────────────────────────────────
-  inbox: {
-    path: "/v3/inbox",
-    module: "messaggi",
-    kind: "operational",
-    title: "Inbox",
-    question: "Cosa è arrivato e cosa richiede risposta?",
-    filters: ["casella", "gruppo", "stato", "periodo", "non-letti"],
-    workflow: ["rispondi", "assegna", "archivia", "regole"],
-    implemented: true,
-  },
-  conversazione: {
-    path: "/v3/inbox/:id",
-    module: "messaggi",
-    kind: "detail",
-    title: "Conversazione",
-    question: "Cosa dice questo messaggio e cosa faccio?",
-    filters: [],
-    workflow: ["rispondi", "programma", "classifica", "escala"],
-    implemented: true,
-  },
-  canali: {
-    path: "/v3/canali",
-    module: "messaggi",
-    kind: "list",
-    title: "Canali",
-    question: "Cosa arriva da WhatsApp e LinkedIn?",
-    filters: ["canale", "contatto", "periodo"],
-    workflow: ["apri-conversazione"],
-    implemented: true,
-  },
+  contatti: pagina(["/v3/contatti", "contatti", "list", "Contatti", "Chi devo contattare?", ["ricerca", "paese", "gruppo", "stato", "tag"], ["nuovo", "azioni-massive"]]),
+  contatto: pagina(["/v3/contatti/:id", "contatti", "detail", "Scheda contatto", "Chi è e cosa ci siamo detti?", [], ["scrivi", "programma", "archivia"]]),
 
-  // ── Modulo 4 — Comprensione ──────────────────────────────────────
-  regole: {
-    path: "/v3/regole",
-    module: "comprensione",
-    kind: "list",
-    title: "Regole e gruppi",
-    question: "Come viene smistato ciò che arriva?",
-    filters: ["tipo-regola", "gruppo", "stato"],
-    workflow: ["nuova-regola", "testa", "correggi"],
-    implemented: true,
-  },
-  classificazione: {
-    path: "/v3/classificazione",
-    module: "comprensione",
-    kind: "list",
-    title: "Qualità classificazione",
-    question: "Sta classificando bene?",
-    filters: ["periodo", "esito", "gruppo"],
-    workflow: ["correggi", "promuovi-a-regola"],
-    implemented: true,
-  },
+  inbox: pagina(["/v3/inbox", "messaggi", "operational", "Inbox", "Cosa è arrivato e cosa richiede risposta?", ["casella", "gruppo", "stato", "periodo", "non-letti"], ["rispondi", "assegna", "archivia", "regole"]]),
+  conversazione: pagina(["/v3/inbox/:id", "messaggi", "detail", "Conversazione", "Cosa dice questo messaggio e cosa faccio?", [], ["rispondi", "programma", "classifica", "escala"]]),
+  canali: pagina(["/v3/canali", "messaggi", "list", "Canali", "Cosa arriva da WhatsApp e LinkedIn?", ["canale", "contatto", "periodo"], ["apri-conversazione"]]),
 
-  // ── Modulo 5 — Risposta ──────────────────────────────────────────
-  scrivi: {
-    path: "/v3/scrivi",
-    module: "risposta",
-    kind: "operational",
-    title: "Scrivi",
-    question: "Cosa mando e a chi?",
-    filters: ["destinatari", "canale", "template"],
-    workflow: ["genera", "revisiona", "allega", "invia"],
-    implemented: true,
-  },
-  approvazioni: {
-    path: "/v3/approvazioni",
-    module: "risposta",
-    kind: "list",
-    title: "Approvazioni",
-    question: "Cosa devo approvare prima che parta?",
-    filters: ["canale", "rischio", "richiedente"],
-    workflow: ["approva", "correggi", "rifiuta"],
-    implemented: true,
-  },
-  modelli: {
-    path: "/v3/modelli",
-    module: "risposta",
-    kind: "list",
-    title: "Modelli",
-    question: "Con che tono e struttura scriviamo?",
-    filters: ["canale", "lingua", "uso"],
-    workflow: ["nuovo", "duplica", "prova"],
-    implemented: true,
-  },
+  regole: pagina(["/v3/regole", "comprensione", "list", "Regole e gruppi", "Come viene smistato ciò che arriva?", ["tipo-regola", "gruppo", "stato"], ["nuova-regola", "testa", "correggi"]]),
 
-  // ── Modulo 6 — Programmazione ────────────────────────────────────
-  dafare: {
-    path: "/v3/da-fare",
-    module: "programmazione",
-    kind: "operational",
-    title: "Da fare",
-    question: "Cosa devo decidere io oggi?",
-    filters: [],
-    workflow: ["approva", "completa", "sblocca"],
-    implemented: true,
-  },
-  agenda: {
-    path: "/v3/agenda",
-    module: "programmazione",
-    kind: "operational",
-    title: "Agenda",
-    question: "Cosa devo fare oggi?",
-    filters: ["tipo", "operatore", "priorita", "giorno"],
-    workflow: ["completa", "rimanda", "crea"],
-    implemented: true,
-  },
-  campagne: {
-    path: "/v3/campagne",
-    module: "programmazione",
-    kind: "list",
-    title: "Campagne",
-    question: "Cosa sta partendo e quando?",
-    filters: ["stato", "canale", "periodo"],
-    workflow: ["avvia", "sospendi", "modifica-cadenza"],
-    implemented: true,
-  },
-  coda: {
-    path: "/v3/coda",
-    module: "programmazione",
-    kind: "list",
-    title: "Coda di invio",
-    question: "Cosa è in coda e cosa si è bloccato?",
-    filters: ["stato", "canale", "errore"],
-    workflow: ["riprova", "sblocca", "annulla"],
-    implemented: true,
-  },
+  scrivi: pagina(["/v3/scrivi", "risposta", "operational", "Scrivi", "Cosa mando e a chi?", ["destinatari", "canale", "template"], ["genera", "revisiona", "allega", "invia"]]),
+  approvazioni: pagina(["/v3/approvazioni", "risposta", "list", "Approvazioni", "Cosa devo approvare prima che parta?", ["canale", "rischio", "richiedente"], ["approva", "correggi", "rifiuta"]]),
 
-  // ── Modulo 7 — Tracciamento ──────────────────────────────────────
-  pipeline: {
-    path: "/v3/pipeline",
-    module: "tracciamento",
-    kind: "operational",
-    title: "Pipeline",
-    question: "A che punto sono le trattative?",
-    filters: ["fase", "operatore", "valore", "periodo"],
-    workflow: ["sposta-fase", "crea-attivita"],
-    implemented: true,
-  },
-  andamento: {
-    path: "/v3/andamento",
-    module: "tracciamento",
-    kind: "list",
-    title: "Andamento",
-    question: "Sta funzionando?",
-    filters: ["periodo", "canale", "operatore"],
-    workflow: ["esporta"],
-    implemented: true,
-  },
-  registro: {
-    path: "/v3/registro",
-    module: "tracciamento",
-    kind: "list",
-    title: "Registro AI",
-    question: "Cosa ha deciso l'AI e perché?",
-    filters: ["funzione", "esito", "periodo"],
-    workflow: ["apri-traccia", "esporta"],
-    implemented: true,
-  },
+  dafare: pagina(["/v3/da-fare", "programmazione", "operational", "Da fare", "Cosa devo decidere io oggi?", [], ["approva", "completa", "sblocca"]]),
+  agenda: pagina(["/v3/agenda", "programmazione", "operational", "Agenda", "Cosa devo fare oggi?", ["tipo", "operatore", "priorita", "giorno"], ["completa", "rimanda", "crea"]]),
+  coda: pagina(["/v3/coda", "programmazione", "list", "Coda di invio", "Cosa è in coda e cosa si è bloccato?", ["stato", "canale", "errore"], ["riprova", "sblocca", "annulla"]]),
 
-  // ── Trasversale ──────────────────────────────────────────────────
-  command: {
-    path: "/v3/command",
-    module: "trasversale",
-    kind: "operational",
-    title: "Command",
-    question: "Chiedi qualsiasi cosa al sistema",
-    filters: ["conversazioni-recenti"],
-    workflow: ["strumenti-usati", "fonti", "azioni-proposte"],
-    implemented: true,
-  },
-  impostazioni: {
-    path: "/v3/impostazioni",
-    module: "trasversale",
-    kind: "detail",
-    title: "Impostazioni",
-    question: "Come è configurato il sistema?",
-    filters: [],
-    workflow: ["caselle", "ai", "alert", "marchio"],
-    implemented: true,
-  },
-  laboratorio: {
-    path: "/v3/laboratorio",
-    module: "trasversale",
-    kind: "operational",
-    title: "Laboratorio",
-    question: "Dove sono acquisizione, laboratorio AI e diagnostica?",
-    filters: [],
-    workflow: ["acquisizione", "laboratorio", "osservabilita"],
-    implemented: true,
-  },
-  galassia: {
-    path: "/v3/galassia",
-    module: "trasversale",
-    kind: "detail",
-    title: "Galassia",
-    question: "Che aspetto ha lo standard e quanto è cresciuta la V3?",
-    filters: [],
-    workflow: [],
-    implemented: true,
-  },
-  galassia3d: {
-    path: "/v3/galassia-3d",
-    module: "trasversale",
-    kind: "operational",
-    title: "Galassia 3D",
-    question: "Com'è fatto l'albero della V3 e come sono collegati i pezzi?",
-    filters: [],
-    workflow: [],
-    implemented: true,
-  },
+  andamento: pagina(["/v3/andamento", "tracciamento", "list", "Andamento", "Sta funzionando?", ["periodo", "canale", "operatore"], ["esporta"]]),
+  registro: pagina(["/v3/registro", "tracciamento", "list", "Registro AI", "Cosa ha deciso l'AI e perché?", ["funzione", "esito", "periodo"], ["apri-traccia", "esporta"]]),
 
+  command: pagina(["/v3/command", "trasversale", "operational", "Command", "Chiedi qualsiasi cosa al sistema", ["conversazioni-recenti"], ["strumenti-usati", "fonti", "azioni-proposte"]]),
+  impostazioni: pagina(["/v3/impostazioni", "trasversale", "detail", "Impostazioni", "Come è configurato il sistema?", [], ["caselle", "ai", "alert", "marchio"]]),
+  laboratorio: pagina(["/v3/laboratorio", "trasversale", "operational", "Laboratorio", "Dove sono acquisizione, laboratorio AI e diagnostica?", [], ["acquisizione", "laboratorio", "osservabilita"]]),
+  galassia: pagina(["/v3/galassia", "trasversale", "detail", "Galassia", "Che aspetto ha lo standard e quanto è cresciuta la V3?", [], []]),
+  galassia3d: pagina(["/v3/galassia-3d", "trasversale", "operational", "Galassia 3D", "Com'è fatto l'albero della V3 e come sono collegati i pezzi?", [], []]),
 } as const satisfies Record<string, V3PageDefinition>;
 
 export type V3PageId = keyof typeof V3_PAGES;
+
+/**
+ * Maschere fuori perimetro: non esistono in V3, il vecchio percorso rimanda alla
+ * superficie V2 corrispondente. Serve a non lasciare link morti.
+ */
+export const V3_RINVII_V2: readonly { readonly path: string; readonly titolo: string; readonly destinazione: string }[] = [
+  { path: "/v3/import", titolo: "Import contatti", destinazione: "/v2/explore/contacts" },
+  { path: "/v3/duplicati", titolo: "Duplicati", destinazione: "/v2/agenda/duplicati" },
+  { path: "/v3/cestino", titolo: "Cestino", destinazione: "/v2/cestinone" },
+  { path: "/v3/classificazione", titolo: "Qualità classificazione", destinazione: "/v2/email-intelligence" },
+  { path: "/v3/modelli", titolo: "Modelli di testo", destinazione: "/v2/settings/prompt-lab" },
+  { path: "/v3/campagne", titolo: "Campagne", destinazione: "/v2/explore/campaigns" },
+  { path: "/v3/pipeline", titolo: "Pipeline trattative", destinazione: "/v2/agenda/pipeline" },
+];
 
 export function getV3Page(id: V3PageId): V3PageDefinition {
   return V3_PAGES[id];
