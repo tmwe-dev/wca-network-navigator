@@ -86,11 +86,23 @@ export function ContattoPage(): React.ReactElement {
         </div>
       ) : (
         <div className="space-y-4">
-          <Sezione title="Identità">
+          <IntestazioneEntita
+            nome={contatto.nome ?? contatto.email ?? "Contatto senza nome"}
+            ruolo={contatto.ruolo}
+            azienda={contatto.partnerNome ?? contatto.azienda}
+            citta={contatto.citta}
+            paese={contatto.paese}
+            email={contatto.email}
+            badge={
+              <>
+                <StatoCircuitoBadge stato={contatto.stato} />
+                <InterazioniBadge numero={contatto.interazioni} />
+              </>
+            }
+          />
+
+          <Sezione title="Recapiti">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Campo label="Nome" value={contatto.nome} />
-              <Campo label="Ruolo" value={contatto.ruolo} />
-              <Campo label="Azienda" value={contatto.partnerNome ?? contatto.azienda} />
               <Campo
                 label="Email"
                 value={
@@ -102,7 +114,7 @@ export function ContattoPage(): React.ReactElement {
                 }
               />
               <Campo label="Telefono" value={contatto.telefono ?? contatto.mobile} />
-              <Campo label="Luogo" value={[contatto.citta, contatto.paese].filter(Boolean).join(", ")} />
+              <Campo label="Indirizzo" value={contatto.indirizzo} />
             </div>
           </Sezione>
 
@@ -130,6 +142,7 @@ export function ContattoPage(): React.ReactElement {
               <p className="mt-2 text-xs text-muted-foreground">Origine: {contatto.origine}</p>
             )}
           </Sezione>
+
 
           {contatto.note && (
             <Sezione title="Note">
