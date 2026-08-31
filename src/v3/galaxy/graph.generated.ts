@@ -39,22 +39,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.2
   },
   {
-    "id": "rpc:v3_list_deleted",
-    "label": "v3_list_deleted",
-    "kind": "rpc",
-    "module": "backend",
-    "detail": "Funzione backend v3_list_deleted()",
-    "weight": 1.2
-  },
-  {
-    "id": "rpc:v3_restore_deleted",
-    "label": "v3_restore_deleted",
-    "kind": "rpc",
-    "module": "backend",
-    "detail": "Funzione backend v3_restore_deleted()",
-    "weight": 1.2
-  },
-  {
     "id": "src/data/v3/anagrafiche.ts",
     "label": "anagrafiche",
     "kind": "dal",
@@ -71,14 +55,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.3
   },
   {
-    "id": "src/data/v3/cestino.ts",
-    "label": "cestino",
-    "kind": "dal",
-    "module": "dati",
-    "detail": "src/data/v3/cestino.ts · 50 righe",
-    "weight": 1.3
-  },
-  {
     "id": "src/data/v3/command.ts",
     "label": "command",
     "kind": "dal",
@@ -91,7 +67,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "comprensione",
     "kind": "dal",
     "module": "dati",
-    "detail": "src/data/v3/comprensione.ts · 271 righe",
+    "detail": "src/data/v3/comprensione.ts · 155 righe",
     "weight": 1.3
   },
   {
@@ -103,27 +79,11 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.3
   },
   {
-    "id": "src/data/v3/duplicati.ts",
-    "label": "duplicati",
-    "kind": "dal",
-    "module": "dati",
-    "detail": "src/data/v3/duplicati.ts · 114 righe",
-    "weight": 1.3
-  },
-  {
     "id": "src/data/v3/identita.ts",
     "label": "identita",
     "kind": "dal",
     "module": "dati",
     "detail": "src/data/v3/identita.ts · 85 righe",
-    "weight": 1.3
-  },
-  {
-    "id": "src/data/v3/importazione.ts",
-    "label": "importazione",
-    "kind": "dal",
-    "module": "dati",
-    "detail": "src/data/v3/importazione.ts · 82 righe",
     "weight": 1.3
   },
   {
@@ -147,7 +107,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "programmazione",
     "kind": "dal",
     "module": "dati",
-    "detail": "src/data/v3/programmazione.ts · 244 righe",
+    "detail": "src/data/v3/programmazione.ts · 190 righe",
     "weight": 1.3
   },
   {
@@ -171,7 +131,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "tracciamento",
     "kind": "dal",
     "module": "dati",
-    "detail": "src/data/v3/tracciamento.ts · 274 righe",
+    "detail": "src/data/v3/tracciamento.ts · 178 righe",
     "weight": 1.3
   },
   {
@@ -195,7 +155,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "pageContract",
     "kind": "app",
     "module": "trasversale",
-    "detail": "src/v3/app/pageContract.ts · 362 righe",
+    "detail": "src/v3/app/pageContract.ts · 141 righe",
     "weight": 1
   },
   {
@@ -211,7 +171,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "routes",
     "kind": "app",
     "module": "trasversale",
-    "detail": "src/v3/app/routes.tsx · 108 righe",
+    "detail": "src/v3/app/routes.tsx · 102 righe",
     "weight": 1
   },
   {
@@ -271,14 +231,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1
   },
   {
-    "id": "src/v3/modules/comprensione/pages/ClassificazionePage.tsx",
-    "label": "ClassificazionePage",
-    "kind": "pagina",
-    "module": "comprensione",
-    "detail": "src/v3/modules/comprensione/pages/ClassificazionePage.tsx · 258 righe",
-    "weight": 1.6
-  },
-  {
     "id": "src/v3/modules/comprensione/pages/RegolePage.tsx",
     "label": "RegolePage",
     "kind": "pagina",
@@ -287,28 +239,12 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.6
   },
   {
-    "id": "src/v3/modules/comprensione/useClassificazioni.ts",
-    "label": "useClassificazioni",
-    "kind": "hook",
-    "module": "comprensione",
-    "detail": "src/v3/modules/comprensione/useClassificazioni.ts · 111 righe",
-    "weight": 1
-  },
-  {
     "id": "src/v3/modules/comprensione/useRegole.ts",
     "label": "useRegole",
     "kind": "hook",
     "module": "comprensione",
     "detail": "src/v3/modules/comprensione/useRegole.ts · 117 righe",
     "weight": 1
-  },
-  {
-    "id": "src/v3/modules/contatti/pages/CestinoPage.tsx",
-    "label": "CestinoPage",
-    "kind": "pagina",
-    "module": "contatti",
-    "detail": "src/v3/modules/contatti/pages/CestinoPage.tsx · 144 righe",
-    "weight": 1.6
   },
   {
     "id": "src/v3/modules/contatti/pages/ContattiPage.tsx",
@@ -327,27 +263,11 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.6
   },
   {
-    "id": "src/v3/modules/contatti/pages/DuplicatiPage.tsx",
-    "label": "DuplicatiPage",
-    "kind": "pagina",
-    "module": "contatti",
-    "detail": "src/v3/modules/contatti/pages/DuplicatiPage.tsx · 204 righe",
-    "weight": 1.6
-  },
-  {
-    "id": "src/v3/modules/contatti/pages/ImportazionePage.tsx",
-    "label": "ImportazionePage",
-    "kind": "pagina",
-    "module": "contatti",
-    "detail": "src/v3/modules/contatti/pages/ImportazionePage.tsx · 189 righe",
-    "weight": 1.6
-  },
-  {
     "id": "src/v3/modules/contatti/pages/SchedaAzienda.tsx",
     "label": "SchedaAzienda",
     "kind": "pagina",
     "module": "contatti",
-    "detail": "src/v3/modules/contatti/pages/SchedaAzienda.tsx · 112 righe",
+    "detail": "src/v3/modules/contatti/pages/SchedaAzienda.tsx · 98 righe",
     "weight": 1.6
   },
   {
@@ -359,19 +279,11 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1
   },
   {
-    "id": "src/v3/modules/contatti/useCestino.ts",
-    "label": "useCestino",
-    "kind": "hook",
-    "module": "contatti",
-    "detail": "src/v3/modules/contatti/useCestino.ts · 71 righe",
-    "weight": 1
-  },
-  {
     "id": "src/v3/modules/contatti/useContatti.ts",
     "label": "useContatti",
     "kind": "hook",
     "module": "contatti",
-    "detail": "src/v3/modules/contatti/useContatti.ts · 147 righe",
+    "detail": "src/v3/modules/contatti/useContatti.ts · 180 righe",
     "weight": 1
   },
   {
@@ -380,22 +292,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "kind": "hook",
     "module": "contatti",
     "detail": "src/v3/modules/contatti/useContatto.ts · 44 righe",
-    "weight": 1
-  },
-  {
-    "id": "src/v3/modules/contatti/useDuplicati.ts",
-    "label": "useDuplicati",
-    "kind": "hook",
-    "module": "contatti",
-    "detail": "src/v3/modules/contatti/useDuplicati.ts · 80 righe",
-    "weight": 1
-  },
-  {
-    "id": "src/v3/modules/contatti/useImportazione.ts",
-    "label": "useImportazione",
-    "kind": "hook",
-    "module": "contatti",
-    "detail": "src/v3/modules/contatti/useImportazione.ts · 76 righe",
     "weight": 1
   },
   {
@@ -459,7 +355,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "LaboratorioPage",
     "kind": "pagina",
     "module": "trasversale",
-    "detail": "src/v3/modules/impostazioni/pages/LaboratorioPage.tsx · 196 righe",
+    "detail": "src/v3/modules/impostazioni/pages/LaboratorioPage.tsx · 210 righe",
     "weight": 1.6
   },
   {
@@ -543,14 +439,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.6
   },
   {
-    "id": "src/v3/modules/programmazione/pages/CampagnePage.tsx",
-    "label": "CampagnePage",
-    "kind": "pagina",
-    "module": "programmazione",
-    "detail": "src/v3/modules/programmazione/pages/CampagnePage.tsx · 160 righe",
-    "weight": 1.6
-  },
-  {
     "id": "src/v3/modules/programmazione/pages/CodaPage.tsx",
     "label": "CodaPage",
     "kind": "pagina",
@@ -575,14 +463,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1
   },
   {
-    "id": "src/v3/modules/programmazione/useCampagne.ts",
-    "label": "useCampagne",
-    "kind": "hook",
-    "module": "programmazione",
-    "detail": "src/v3/modules/programmazione/useCampagne.ts · 54 righe",
-    "weight": 1
-  },
-  {
     "id": "src/v3/modules/programmazione/useCoda.ts",
     "label": "useCoda",
     "kind": "hook",
@@ -596,14 +476,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "kind": "pagina",
     "module": "risposta",
     "detail": "src/v3/modules/risposta/pages/ApprovazioniPage.tsx · 274 righe",
-    "weight": 1.6
-  },
-  {
-    "id": "src/v3/modules/risposta/pages/ModelliPage.tsx",
-    "label": "ModelliPage",
-    "kind": "pagina",
-    "module": "risposta",
-    "detail": "src/v3/modules/risposta/pages/ModelliPage.tsx · 231 righe",
     "weight": 1.6
   },
   {
@@ -623,14 +495,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1
   },
   {
-    "id": "src/v3/modules/risposta/useModelli.ts",
-    "label": "useModelli",
-    "kind": "hook",
-    "module": "risposta",
-    "detail": "src/v3/modules/risposta/useModelli.ts · 102 righe",
-    "weight": 1
-  },
-  {
     "id": "src/v3/modules/risposta/useScrivi.ts",
     "label": "useScrivi",
     "kind": "hook",
@@ -647,14 +511,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.6
   },
   {
-    "id": "src/v3/modules/tracciamento/pages/PipelinePage.tsx",
-    "label": "PipelinePage",
-    "kind": "pagina",
-    "module": "tracciamento",
-    "detail": "src/v3/modules/tracciamento/pages/PipelinePage.tsx · 202 righe",
-    "weight": 1.6
-  },
-  {
     "id": "src/v3/modules/tracciamento/pages/RegistroPage.tsx",
     "label": "RegistroPage",
     "kind": "pagina",
@@ -668,14 +524,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "kind": "hook",
     "module": "tracciamento",
     "detail": "src/v3/modules/tracciamento/useAndamento.ts · 41 righe",
-    "weight": 1
-  },
-  {
-    "id": "src/v3/modules/tracciamento/usePipeline.ts",
-    "label": "usePipeline",
-    "kind": "hook",
-    "module": "tracciamento",
-    "detail": "src/v3/modules/tracciamento/usePipeline.ts · 108 righe",
     "weight": 1
   },
   {
@@ -847,14 +695,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1.1
   },
   {
-    "id": "tab:email_classifications",
-    "label": "email_classifications",
-    "kind": "tabella",
-    "module": "backend",
-    "detail": "Tabella email_classifications",
-    "weight": 1.1
-  },
-  {
     "id": "tab:email_sender_groups",
     "label": "email_sender_groups",
     "kind": "tabella",
@@ -868,14 +708,6 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "kind": "tabella",
     "module": "backend",
     "detail": "Tabella email_sync_state",
-    "weight": 1.1
-  },
-  {
-    "id": "tab:import_logs",
-    "label": "import_logs",
-    "kind": "tabella",
-    "module": "backend",
-    "detail": "Tabella import_logs",
     "weight": 1.1
   },
   {
@@ -1005,16 +837,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
-    "from": "src/v3/modules/comprensione/pages/ClassificazionePage.tsx",
-    "to": "src/v3/app/PageFrame.tsx",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/comprensione/pages/ClassificazionePage.tsx",
-    "to": "src/v3/modules/comprensione/useClassificazioni.ts",
-    "relation": "usa"
-  },
-  {
     "from": "src/v3/modules/comprensione/pages/RegolePage.tsx",
     "to": "src/v3/app/PageFrame.tsx",
     "relation": "usa"
@@ -1025,28 +847,8 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
-    "from": "src/v3/modules/comprensione/useClassificazioni.ts",
-    "to": "src/data/v3/comprensione.ts",
-    "relation": "usa"
-  },
-  {
     "from": "src/v3/modules/comprensione/useRegole.ts",
     "to": "src/data/v3/comprensione.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/pages/CestinoPage.tsx",
-    "to": "src/v3/app/PageFrame.tsx",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/pages/CestinoPage.tsx",
-    "to": "src/v3/modules/contatti/useCestino.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/pages/CestinoPage.tsx",
-    "to": "src/data/v3/cestino.ts",
     "relation": "usa"
   },
   {
@@ -1106,11 +908,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   },
   {
     "from": "src/v3/modules/contatti/pages/ContattiPage.tsx",
-    "to": "src/data/v3/anagrafiche.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/pages/ContattiPage.tsx",
     "to": "src/v3/modules/contatti/pages/SchedaAzienda.tsx",
     "relation": "usa"
   },
@@ -1140,28 +937,8 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
-    "from": "src/v3/modules/contatti/pages/DuplicatiPage.tsx",
-    "to": "src/v3/app/PageFrame.tsx",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/pages/DuplicatiPage.tsx",
-    "to": "src/v3/modules/contatti/useDuplicati.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/pages/ImportazionePage.tsx",
-    "to": "src/v3/app/PageFrame.tsx",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/pages/ImportazionePage.tsx",
-    "to": "src/v3/modules/contatti/useImportazione.ts",
-    "relation": "usa"
-  },
-  {
     "from": "src/v3/modules/contatti/pages/SchedaAzienda.tsx",
-    "to": "src/data/v3/anagrafiche.ts",
+    "to": "src/v3/modules/contatti/useContatti.ts",
     "relation": "usa"
   },
   {
@@ -1177,11 +954,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   {
     "from": "src/v3/modules/contatti/statiLead.ts",
     "to": "src/data/v3/contatti.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/useCestino.ts",
-    "to": "src/data/v3/cestino.ts",
     "relation": "usa"
   },
   {
@@ -1202,16 +974,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   {
     "from": "src/v3/modules/contatti/useContatto.ts",
     "to": "src/data/v3/contatti.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/useDuplicati.ts",
-    "to": "src/data/v3/duplicati.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/contatti/useImportazione.ts",
-    "to": "src/data/v3/importazione.ts",
     "relation": "usa"
   },
   {
@@ -1310,6 +1072,11 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
+    "from": "src/v3/modules/impostazioni/pages/LaboratorioPage.tsx",
+    "to": "src/v3/app/pageContract.ts",
+    "relation": "usa"
+  },
+  {
     "from": "src/v3/modules/impostazioni/useImpostazioni.ts",
     "to": "src/data/v3/impostazioni.ts",
     "relation": "usa"
@@ -1395,16 +1162,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
-    "from": "src/v3/modules/programmazione/pages/CampagnePage.tsx",
-    "to": "src/v3/app/PageFrame.tsx",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/programmazione/pages/CampagnePage.tsx",
-    "to": "src/v3/modules/programmazione/useCampagne.ts",
-    "relation": "usa"
-  },
-  {
     "from": "src/v3/modules/programmazione/pages/CodaPage.tsx",
     "to": "src/v3/app/PageFrame.tsx",
     "relation": "usa"
@@ -1416,11 +1173,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   },
   {
     "from": "src/v3/modules/programmazione/useAgenda.ts",
-    "to": "src/data/v3/programmazione.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/programmazione/useCampagne.ts",
     "to": "src/data/v3/programmazione.ts",
     "relation": "usa"
   },
@@ -1440,16 +1192,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
-    "from": "src/v3/modules/risposta/pages/ModelliPage.tsx",
-    "to": "src/v3/app/PageFrame.tsx",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/risposta/pages/ModelliPage.tsx",
-    "to": "src/v3/modules/risposta/useModelli.ts",
-    "relation": "usa"
-  },
-  {
     "from": "src/v3/modules/risposta/pages/ScriviPage.tsx",
     "to": "src/v3/app/PageFrame.tsx",
     "relation": "usa"
@@ -1466,11 +1208,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   },
   {
     "from": "src/v3/modules/risposta/useApprovazioni.ts",
-    "to": "src/data/v3/risposta.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/risposta/useModelli.ts",
     "to": "src/data/v3/risposta.ts",
     "relation": "usa"
   },
@@ -1495,16 +1232,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
-    "from": "src/v3/modules/tracciamento/pages/PipelinePage.tsx",
-    "to": "src/v3/app/PageFrame.tsx",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/tracciamento/pages/PipelinePage.tsx",
-    "to": "src/v3/modules/tracciamento/usePipeline.ts",
-    "relation": "usa"
-  },
-  {
     "from": "src/v3/modules/tracciamento/pages/RegistroPage.tsx",
     "to": "src/v3/app/PageFrame.tsx",
     "relation": "usa"
@@ -1516,11 +1243,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   },
   {
     "from": "src/v3/modules/tracciamento/useAndamento.ts",
-    "to": "src/data/v3/tracciamento.ts",
-    "relation": "usa"
-  },
-  {
-    "from": "src/v3/modules/tracciamento/usePipeline.ts",
     "to": "src/data/v3/tracciamento.ts",
     "relation": "usa"
   },
@@ -1570,16 +1292,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "legge/scrive"
   },
   {
-    "from": "src/data/v3/cestino.ts",
-    "to": "rpc:v3_list_deleted",
-    "relation": "invoca"
-  },
-  {
-    "from": "src/data/v3/cestino.ts",
-    "to": "rpc:v3_restore_deleted",
-    "relation": "invoca"
-  },
-  {
     "from": "src/data/v3/command.ts",
     "to": "tab:ai_conversations",
     "relation": "legge/scrive"
@@ -1592,11 +1304,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   {
     "from": "src/data/v3/comprensione.ts",
     "to": "tab:email_address_rules",
-    "relation": "legge/scrive"
-  },
-  {
-    "from": "src/data/v3/comprensione.ts",
-    "to": "tab:email_classifications",
     "relation": "legge/scrive"
   },
   {
@@ -1620,11 +1327,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "legge/scrive"
   },
   {
-    "from": "src/data/v3/duplicati.ts",
-    "to": "tab:partners",
-    "relation": "legge/scrive"
-  },
-  {
     "from": "src/data/v3/identita.ts",
     "to": "tab:authorized_users",
     "relation": "legge/scrive"
@@ -1632,11 +1334,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   {
     "from": "src/data/v3/identita.ts",
     "to": "tab:operators",
-    "relation": "legge/scrive"
-  },
-  {
-    "from": "src/data/v3/importazione.ts",
-    "to": "tab:import_logs",
     "relation": "legge/scrive"
   },
   {
@@ -1706,11 +1403,6 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   },
   {
     "from": "src/data/v3/tracciamento.ts",
-    "to": "tab:partners",
-    "relation": "legge/scrive"
-  },
-  {
-    "from": "src/data/v3/tracciamento.ts",
     "to": "tab:channel_messages",
     "relation": "legge/scrive"
   },
@@ -1726,4 +1418,4 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   }
 ] as const;
 
-export const V3_GRAPH_GENERATED_AT = "2026-08-31T09:20:01.337Z";
+export const V3_GRAPH_GENERATED_AT = "2026-08-31T10:57:50.561Z";
