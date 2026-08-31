@@ -106,60 +106,6 @@ export async function listAgendaV3(filtri: V3AgendaFiltri): Promise<V3VoceAgenda
   return voci.sort((a, b) => (a.scadenza ?? "9999").localeCompare(b.scadenza ?? "9999"));
 }
 
-export interface V3Campagna {
-  readonly lotto: string;
-  readonly totale: number;
-  readonly inviate: number;
-  readonly conRisposta: number;
-  readonly primoInvio: string | null;
-  readonly ultimoInvio: string | null;
-}
-
-/**
- * Campagne come lotti reali: righe di `email_campaign_queue` raggruppate per
- * oggetto (è ciò che identifica di fatto un invio massivo oggi). "Con risposta"
- * usa le aperture registrate: è il solo segnale disponibile su questa tabella.
- */
-export async function listCampagneV3(giorni: number): Promise<V3Campagna[]> {
-  const dal = new Date(Date.now() - Math.max(giorni, 1) * 86_400_000).toISOString();
-
-  const { data, error } = await supabase
-    .from("email_campaign_queue")
-    .select("subject, status, sent_at, created_at, open_count")
-    .gte("created_at", dal)
-    .order("created_at", { ascending: false })
-    .limit(2000);
-
-  if (error) throw error;
-
-  const lotti = new Map<string, { totale: number; inviate: number; aperte: number; date: string[] }>();
-  for (const row of (data ?? []) as Record<string, unknown>[]) {
-    const key = String(row.subject ?? "senza oggetto");
-    const agg = lotti.get(key) ?? { totale: 0, inviate: 0, aperte: 0, date: [] };
-    agg.totale += 1;
-    if (row.sent_at) {
-      agg.inviate += 1;
-      agg.date.push(String(row.sent_at));
-    }
-    if (((row.open_count as number | null) ?? 0) > 0) agg.aperte += 1;
-    lotti.set(key, agg);
-  }
-
-  return [...lotti.entries()]
-    .map(([lotto, agg]) => {
-      const ordinate = agg.date.sort();
-      return {
-        lotto,
-        totale: agg.totale,
-        inviate: agg.inviate,
-        conRisposta: agg.aperte,
-        primoInvio: ordinate[0] ?? null,
-        ultimoInvio: ordinate[ordinate.length - 1] ?? null,
-      };
-    })
-    .sort((a, b) => (b.ultimoInvio ?? "").localeCompare(a.ultimoInvio ?? ""));
-}
-
 export interface V3VoceCoda {
   readonly id: string;
   readonly destinatario: string | null;

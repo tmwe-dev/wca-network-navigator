@@ -8,6 +8,7 @@ import * as React from "react";
 import { ExternalLink, FlaskConical, Radar, Activity, Search } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { V3_PAGINE_SECONDARIE } from "@/v3/app/navigation";
+import { V3_RINVII_V2 } from "@/v3/app/pageContract";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
@@ -97,7 +98,20 @@ const GRUPPO_V3_SECONDARIE: Gruppo = {
   })),
 };
 
-const GRUPPI: readonly Gruppo[] = [GRUPPO_V3_SECONDARIE, ...GRUPPI_V2];
+/** Funzioni tolte dalla V3 per restare nel perimetro: vivono nella versione completa. */
+const GRUPPO_FUORI_PERIMETRO: Gruppo = {
+  id: "fuori-perimetro",
+  titolo: "Fuori dal perimetro V3",
+  nota: "Import, duplicati, cestino, qualità classificazione, modelli, campagne e pipeline restano in V2: la V3 tiene solo il ciclo commerciale.",
+  icona: FlaskConical,
+  voci: V3_RINVII_V2.map((r) => ({
+    titolo: r.titolo,
+    descrizione: `Si apre nella versione completa (${r.destinazione}).`,
+    path: r.destinazione,
+  })),
+};
+
+const GRUPPI: readonly Gruppo[] = [GRUPPO_V3_SECONDARIE, GRUPPO_FUORI_PERIMETRO, ...GRUPPI_V2];
 
 export function LaboratorioPage(): React.ReactElement {
   const [ricerca, setRicerca] = React.useState("");
