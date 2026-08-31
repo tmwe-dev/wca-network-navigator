@@ -131,8 +131,21 @@ export function CommandPage(): React.ReactElement {
       <div className="flex h-full min-h-[50vh] flex-col">
         <div className="flex-1 space-y-3 overflow-y-auto pb-3">
           {messaggi.length === 0 ? (
-            <div className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-              Chiedi qualsiasi cosa: contatti, messaggi, regole, stato del sistema.
+            <div className="space-y-3 rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
+              <p>Chiedi qualsiasi cosa: contatti, messaggi, regole, stato del sistema.</p>
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {SUGGERIMENTI.map((s) => (
+                  <Button
+                    key={s}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setBozza(s)}
+                  >
+                    {s}
+                  </Button>
+                ))}
+              </div>
             </div>
           ) : (
             messaggi.map((m, i) => {
