@@ -7,6 +7,7 @@
 import * as React from "react";
 import { ExternalLink, FlaskConical, Radar, Activity, Search } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
+import { V3_PAGINE_SECONDARIE } from "@/v3/app/navigation";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
