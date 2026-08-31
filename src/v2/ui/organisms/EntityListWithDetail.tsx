@@ -435,10 +435,10 @@ export function EntityListWithDetail({
     </div>
   );
 
-  // Quando 1+ selezionati (checkbox) → bulk panel; altrimenti dettaglio singolo
-  // (apertura via click sulla card, indipendente dalla selezione checkbox).
+  // Con 2+ selezionati → pannello bulk a destra. Con 1 solo selezionato il
+  // dettaglio resta aperto e le azioni compaiono nella barra sotto l'elenco.
   const right = (() => {
-    if (selection.count >= 1) {
+    if (selection.count >= 2) {
       return (
         <BulkActionsPanel
           selected={selectedCompanies}
@@ -459,10 +459,11 @@ export function EntityListWithDetail({
       testId={testId ?? "entity-list-with-detail"}
       list={list}
       detail={right}
-      trailingLabel={selection.count >= 1 ? `${selection.count} selezionati` : (trailingLabel ?? null)}
+      trailingLabel={selection.count >= 2 ? `${selection.count} selezionati` : (trailingLabel ?? null)}
       hideHeader
     />
   );
+
 }
 
 export default EntityListWithDetail;
