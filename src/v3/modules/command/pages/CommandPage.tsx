@@ -3,12 +3,20 @@
  * Dialogo con il cervello esistente; le azioni restano proposte.
  */
 import * as React from "react";
-import { Loader2, Send, Sparkles, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowUpRight, Loader2, Send, Sparkles, Trash2 } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 import { useCommand } from "../useCommand";
+
+/** Percorsi V3 citati dall'assistente: diventano tasti "Apri". */
+function percorsiCitati(testo: string): string[] {
+  const trovati = testo.match(/\/v3\/[a-z0-9/_-]+/gi) ?? [];
+  return Array.from(new Set(trovati.map((p) => p.replace(/[.,;:)]+$/, "")))).slice(0, 4);
+}
+
 
 function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
