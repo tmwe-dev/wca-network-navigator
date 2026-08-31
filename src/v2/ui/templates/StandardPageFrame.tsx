@@ -26,6 +26,12 @@ export function openCoPilot(): void {
   window.dispatchEvent(new CustomEvent("copilot-open"));
 }
 
+/** Apre il Co-Pilot e avvia direttamente la conversazione vocale. */
+export function openCoPilotVoice(): void {
+  window.dispatchEvent(new CustomEvent("copilot-voice"));
+}
+
+
 export interface StandardPageFrameProps {
   /** Override del titolo (altrimenti deriva dal breadcrumb). */
   readonly title?: React.ReactNode;
