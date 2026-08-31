@@ -220,7 +220,17 @@ export const V3_PAGES = {
   },
 
   // ── Modulo 6 — Programmazione ────────────────────────────────────
-  agenda: {
+  dafare: {
+    path: "/v3/da-fare",
+    module: "programmazione",
+    kind: "operational",
+    title: "Da fare",
+    question: "Cosa devo decidere io oggi?",
+    filters: [],
+    workflow: ["approva", "completa", "sblocca"],
+    implemented: true,
+  },
+
     path: "/v3/agenda",
     module: "programmazione",
     kind: "operational",
