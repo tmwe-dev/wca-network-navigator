@@ -109,6 +109,14 @@ export function CompanyCard({
   const firstPhone = primaryContactFull?.phone || primaryPhone || null;
 
   const logoFromMeta = meta?.logoUrl ?? logoUrl ?? null;
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  const initials = (name ?? "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("");
+
   const isCustomer = leadStatus === "converted";
   const enrichedLabel = React.useMemo(() => computeEnrichedLabel(enrichedAt), [enrichedAt]);
 
