@@ -13659,13 +13659,16 @@ export type Database = {
       }
       v3_directory: {
         Args: {
-          _fonte?: string
+          _aziende?: string[]
+          _discendente?: boolean
+          _fonti?: string[]
           _limit?: number
           _offset?: number
-          _paese?: string
+          _ordine?: string
+          _paesi?: string[]
           _search?: string
           _solo_email?: boolean
-          _stato?: string
+          _stati?: string[]
         }
         Returns: {
           azienda: string
