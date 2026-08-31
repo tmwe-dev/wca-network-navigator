@@ -109,6 +109,14 @@ export function CompanyCard({
   const firstPhone = primaryContactFull?.phone || primaryPhone || null;
 
   const logoFromMeta = meta?.logoUrl ?? logoUrl ?? null;
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  const initials = (name ?? "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("");
+
   const isCustomer = leadStatus === "converted";
   const enrichedLabel = React.useMemo(() => computeEnrichedLabel(enrichedAt), [enrichedAt]);
 
@@ -177,62 +185,102 @@ export function CompanyCard({
     );
   })();
 
+  /** Livello 1 = max 2 badge visibili; il resto collassa in «+N» (mostrato al click sulla card). */
+  const capBadges = (nodes: React.ReactNode[], titles: string[]) => {
+    const list = nodes.filter(Boolean);
+    if (opened || list.length <= 2) return list;
+    const hidden = list.length - 2;
+    return [
+      ...list.slice(0, 2),
+      <span
+        key="more"
+        className={cn(BADGE_BASE, "bg-muted/40 text-muted-foreground border-border/40")}
+        title={titles.join(" · ")}
+      >
+        +{hidden}
+      </span>,
+    ];
+  };
+
+  const sourceBadgeNodes: React.ReactNode[] = [
+    badge ? (
+      <Badge
+        key="src"
+        variant="outline"
+        className={cn(
+          BADGE_BASE,
+          badge.tone === "wca" && "bg-primary/15 text-primary border-primary/30",
+          badge.tone === "primary" && "bg-primary/15 text-primary border-primary/30",
+          badge.tone === "neutral" && "bg-muted/40 text-muted-foreground border-border/40",
+        )}
+      >
+        {badge.label}
+      </Badge>
+    ) : null,
+    meta?.wcaYears != null ? (
+      <Badge
+        key="years"
+        variant="outline"
+        className={cn(BADGE_BASE, "bg-muted/40 text-muted-foreground border-border/40")}
+        title={`${meta.wcaYears} anni di membership WCA`}
+      >
+        <Trophy className="h-3 w-3" />
+        {meta.wcaYears}
+      </Badge>
+    ) : null,
+    hasBca ? (
+      <Badge
+        key="bca"
+        variant="outline"
+        className={cn(BADGE_BASE, "bg-muted/40 text-muted-foreground border-border/40")}
+        title="Biglietti da visita collegati"
+      >
+        BCA{bcaCount && bcaCount > 1 ? ` ${bcaCount}` : ""}
+      </Badge>
+    ) : null,
+  ];
+
   const sourceBadgesSlot = (
     <div className="flex flex-wrap justify-start gap-1.5">
-      {badge && (
-        <Badge
-          variant="outline"
-          className={cn(
-            BADGE_BASE,
-            badge.tone === "wca" && "bg-primary/15 text-primary border-primary/30",
-            badge.tone === "primary" && "bg-primary/15 text-primary border-primary/30",
-            badge.tone === "neutral" && "bg-muted/40 text-muted-foreground border-border/40",
-          )}
-        >
-          {badge.label}
-        </Badge>
-      )}
-      {meta?.wcaYears != null && (
-        <Badge variant="outline" className={cn(BADGE_BASE, "bg-warning/10 text-warning border-warning/30")}>
-          <Trophy className="h-3 w-3" />
-          {meta.wcaYears}
-        </Badge>
-      )}
-      {hasBca && (
-        <Badge variant="outline" className={cn(BADGE_BASE, "bg-success/10 text-success border-success/30")}>
-          BCA{bcaCount && bcaCount > 1 ? ` ${bcaCount}` : ""}
-        </Badge>
-      )}
+      {capBadges(sourceBadgeNodes, ["Origine", "Anni WCA", "BCA"])}
     </div>
   );
 
+  const statusBadgeNodes: React.ReactNode[] = [
+    isBlacklisted ? (
+      <Badge
+        key="bl"
+        variant="outline"
+        className={cn(BADGE_BASE, "bg-destructive/15 text-destructive border-destructive/40")}
+        title="Azienda presente nella blacklist WCA World"
+      >
+        <ShieldAlert className="h-3 w-3" />
+        Blacklist
+      </Badge>
+    ) : null,
+    isCustomer ? (
+      <Badge key="cli" variant="outline" className={cn(BADGE_BASE, "bg-success/20 text-success border-success/40")}>
+        Cliente
+      </Badge>
+    ) : null,
+    leadStatusBadge ? <React.Fragment key="lead">{leadStatusBadge}</React.Fragment> : null,
+    sherlockLevel ? (
+      <SherlockLevelBadge key="sherlock" level={sherlockLevel} completedAt={sherlockCompletedAt} />
+    ) : null,
+  ];
+
   const statusBadgesSlot = (
     <div className="flex flex-wrap justify-end gap-1.5">
-      {isBlacklisted && (
-        <Badge
-          variant="outline"
-          className={cn(BADGE_BASE, "bg-destructive/15 text-destructive border-destructive/40")}
-          title="Azienda presente nella blacklist WCA World"
-        >
-          <ShieldAlert className="h-3 w-3" />
-          Blacklist
-        </Badge>
-      )}
-      {isCustomer && (
-        <Badge variant="outline" className={cn(BADGE_BASE, "bg-success/20 text-success border-success/40")}>
-          Cliente
-        </Badge>
-      )}
-      {leadStatusBadge}
-      {sherlockLevel && <SherlockLevelBadge level={sherlockLevel} completedAt={sherlockCompletedAt} />}
+      {capBadges(statusBadgeNodes, ["Blacklist", "Cliente", "Stato lead", "Sherlock"])}
       {isFavorite && <Star className="h-4 w-4 shrink-0 fill-warning text-warning" />}
       {meta?.holding && (
         <span title="In circuito di attesa">
-          <Plane className="h-4 w-4 shrink-0 animate-pulse text-primary" />
+          <Plane className="h-4 w-4 shrink-0 text-muted-foreground" />
         </span>
       )}
     </div>
   );
+
 
   const recencySlot = (
     <span
@@ -290,7 +338,10 @@ export function CompanyCard({
         <a
           href={`mailto:${firstEmail}`}
           onClick={(e) => e.stopPropagation()}
-          className={cn(CHIP_BASE, "border-primary/25 bg-primary/10 text-primary hover:border-primary/50")}
+          className={cn(
+            CHIP_BASE,
+            "border-border/50 bg-muted/25 text-muted-foreground hover:border-primary/45 hover:text-primary",
+          )}
           title={firstEmail}
         >
           <Mail className="h-3.5 w-3.5 shrink-0" />
@@ -301,7 +352,10 @@ export function CompanyCard({
         <a
           href={`tel:${firstPhone.replace(/[^0-9+]/g, "")}`}
           onClick={(e) => e.stopPropagation()}
-          className={cn(CHIP_BASE, "border-chart-3/25 bg-chart-3/10 text-chart-3 hover:border-chart-3/50")}
+          className={cn(
+            CHIP_BASE,
+            "border-border/50 bg-muted/25 text-muted-foreground hover:border-primary/45 hover:text-primary",
+          )}
           title={firstPhone}
         >
           <Phone className="h-3.5 w-3.5 shrink-0" />
@@ -311,7 +365,8 @@ export function CompanyCard({
     </div>
   );
 
-  const metaSlot = (city || enrichedLabel || origin) && (
+  // Livello 2: arricchimento e origine appaiono solo sulla card aperta.
+  const metaSlot = (city || (opened && (enrichedLabel || origin))) && (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
       {city &&
         (onCityClick ? (
@@ -336,7 +391,7 @@ export function CompanyCard({
             <span className="truncate">{city}</span>
           </span>
         ))}
-      {enrichedLabel && (
+      {opened && enrichedLabel && (
         <span
           className={cn(CHIP_BASE, "border-success/25 bg-success/10 text-success")}
           title={enrichedAt ? `Ultima Deep Search: ${new Date(enrichedAt).toLocaleString()}` : undefined}
@@ -344,7 +399,7 @@ export function CompanyCard({
           {enrichedLabel}
         </span>
       )}
-      {origin && (
+      {opened && origin && (
         <span
           className={cn(CHIP_BASE, "max-w-[150px] border-border/45 bg-muted/25 text-muted-foreground")}
           title={`Origine: ${origin}`}
@@ -353,6 +408,7 @@ export function CompanyCard({
         </span>
       )}
     </div>
+
   );
 
   const countryNode = <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />;
@@ -409,17 +465,23 @@ export function CompanyCard({
         <div className="min-w-0 space-y-2">
           <div className="min-w-0 space-y-1.5">
             <div className="flex min-w-0 items-start gap-2">
-              {logoFromMeta && (
-                <img
-                  src={logoFromMeta}
-                  alt=""
-                  loading="lazy"
-                  className="mt-0.5 h-5 w-5 shrink-0 rounded-md border border-border/50 bg-background object-contain"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              )}
+              <span
+                className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted/40 text-[9px] font-bold uppercase text-muted-foreground"
+                aria-hidden="true"
+              >
+                {logoFromMeta && !logoFailed ? (
+                  <img
+                    src={logoFromMeta}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-contain"
+                    onError={() => setLogoFailed(true)}
+                  />
+                ) : (
+                  initials
+                )}
+              </span>
+
               <h3 className="min-w-0 flex-1 truncate text-[17px] font-extrabold uppercase leading-tight text-foreground">
                 {name || "—"}
               </h3>

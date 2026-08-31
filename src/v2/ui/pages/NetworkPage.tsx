@@ -14,6 +14,9 @@
 import * as React from "react";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { SlidersHorizontal } from "lucide-react";
+import { StandardPageFrame } from "@/v2/ui/templates/StandardPageFrame";
+
 import { toast } from "sonner";
 import { useTrackPage } from "@/hooks/useTrackPage";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
@@ -159,27 +162,45 @@ export function NetworkPage(): React.ReactElement {
   }, []);
 
   return (
-    <div data-testid="page-network" className="flex flex-col h-full min-h-0 overflow-hidden">
-      <EntityListWithDetail
-        source="wca"
-        companies={focusedCompanies}
-        isLoading={isLoading}
-        emptyMessage="Seleziona un paese dalla sidebar per vedere i partner"
-        sortStorageKey="list:wca"
-        sortOptions={WCA_SORT_OPTIONS}
-        globalChips={focusedChips}
-        searchPlaceholder="Cerca partner, città, referente…"
-        onOpenCompany={handleOpenCompany}
-        detailSlot={
-          selectedPartnerId ? (
-            <PartnerDetailInline partnerId={selectedPartnerId} onClose={() => setSelectedPartnerId(null)} />
-          ) : null
-        }
-        openedId={selectedPartnerId}
-        onBulkAddToCockpit={handleBulkAddToCockpit}
-        onBulkDeepSearch={handleBulkDeepSearch}
-        onBulkCreateCampaign={handleBulkCampaign}
-      />
-    </div>
+    <StandardPageFrame
+      testId="page-network"
+      title="WCA Partner"
+      contentOverflow="contain"
+      className="h-full"
+      actions={
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }))}
+          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+          title="Apri i filtri della maschera"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" /> Filtri
+        </button>
+      }
+    >
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <EntityListWithDetail
+          source="wca"
+          companies={focusedCompanies}
+          isLoading={isLoading}
+          emptyMessage="Seleziona un paese dalla sidebar per vedere i partner"
+          sortStorageKey="list:wca"
+          sortOptions={WCA_SORT_OPTIONS}
+          globalChips={focusedChips}
+          searchPlaceholder="Cerca partner, città, referente…"
+          onOpenCompany={handleOpenCompany}
+          detailSlot={
+            selectedPartnerId ? (
+              <PartnerDetailInline partnerId={selectedPartnerId} onClose={() => setSelectedPartnerId(null)} />
+            ) : null
+          }
+          openedId={selectedPartnerId}
+          onBulkAddToCockpit={handleBulkAddToCockpit}
+          onBulkDeepSearch={handleBulkDeepSearch}
+          onBulkCreateCampaign={handleBulkCampaign}
+        />
+      </div>
+    </StandardPageFrame>
   );
 }
+

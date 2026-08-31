@@ -363,10 +363,19 @@ export function NetworkFiltersSection() {
       </FilterSection>
 
       <FilterSection icon={RefreshCw} label="Azioni">
+        <Button
+          variant="outline"
+          size="sm"
+          className="mb-2 h-9 w-full gap-2 text-xs"
+          onClick={() => window.dispatchEvent(new CustomEvent("entity-filters-advanced"))}
+        >
+          <Sparkles className="w-3 h-3" /> Filtri avanzati elenco…
+        </Button>
         <Button variant="default" size="sm" className="w-full h-9 text-xs gap-2" onClick={handleSyncWca}>
           <RefreshCw className="w-3 h-3" /> Sincronizza WCA
         </Button>
       </FilterSection>
+
     </>
   );
 }
