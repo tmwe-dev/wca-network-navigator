@@ -86,6 +86,8 @@ const IN_SVILUPPO: readonly MenuItemDef[] = [
   { path: "/v2/finder-api/schema", label: "Finder API Catalog", stato: "sviluppo" },
   { path: "/v2/guida", label: "Guida", stato: "sviluppo" },
   { path: "/v2/dashboard", label: "Dashboard (legacy)", stato: "sviluppo" },
+  { path: "/v2/operations-legacy", label: "Operations (legacy)", stato: "sviluppo" },
+  { path: "/v2/design-system-preview", label: "Design System Preview", stato: "sviluppo" },
   { path: "/v2/calendar", label: "Calendar (legacy)", stato: "sviluppo" },
   { path: "/v2/settings/admin-users", label: "Admin Users", stato: "sviluppo" },
   { path: "/v2/settings/ai-routing", label: "AI Routing", stato: "sviluppo" },
