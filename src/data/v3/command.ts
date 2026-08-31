@@ -24,8 +24,10 @@ interface RispostaAssistente {
 export async function chiediACommandV3(
   storico: readonly V3CommandMessaggio[],
   domanda: string,
+  grounding?: string,
 ): Promise<string> {
   const messages = [
+    ...(grounding ? [{ role: "system" as const, content: grounding }] : []),
     ...storico.slice(-8).map((m) => ({ role: m.ruolo, content: m.contenuto })),
     { role: "user" as const, content: domanda },
   ];
@@ -38,6 +40,7 @@ export async function chiediACommandV3(
 
   return data.content || data.message || data.reply || data.error || "Nessuna risposta.";
 }
+
 
 export interface V3ConversazioneRecente {
   readonly id: string;
