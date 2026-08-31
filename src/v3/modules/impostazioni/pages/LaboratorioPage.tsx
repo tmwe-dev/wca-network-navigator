@@ -24,7 +24,7 @@ interface Gruppo {
   readonly voci: readonly Voce[];
 }
 
-const GRUPPI: readonly Gruppo[] = [
+const GRUPPI_V2: readonly Gruppo[] = [
   {
     id: "acquisizione",
     titolo: "Acquisizione lead",
