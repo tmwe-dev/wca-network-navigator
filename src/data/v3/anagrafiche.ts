@@ -25,10 +25,14 @@ export interface V3AnagraficaRiga {
   readonly email: string | null;
   readonly telefono: string | null;
   readonly paese: string | null;
+  readonly paeseCode: string | null;
+  readonly dominio: string | null;
   readonly ruolo: string | null;
   readonly stato: string | null;
   readonly interazioni: number;
   readonly ultimaInterazione: string | null;
+  /** Quante voci dell'anagrafica condividono la stessa azienda. */
+  readonly colleghi: number;
 }
 
 export interface V3AnagraficaFiltri {
@@ -54,10 +58,13 @@ interface DirectoryRow {
   email: string | null;
   telefono: string | null;
   paese: string | null;
+  paese_code: string | null;
+  dominio: string | null;
   ruolo: string | null;
   stato: string | null;
   interazioni: number | null;
   ultima_interazione: string | null;
+  colleghi: number | null;
   totale: number | null;
 }
 
@@ -92,10 +99,13 @@ export async function listAnagraficaV3(filtri: V3AnagraficaFiltri): Promise<V3An
       email: row.email,
       telefono: row.telefono,
       paese: row.paese,
+      paeseCode: row.paese_code,
+      dominio: row.dominio,
       ruolo: row.ruolo,
       stato: row.stato,
       interazioni: row.interazioni ?? 0,
       ultimaInterazione: row.ultima_interazione,
+      colleghi: row.colleghi ?? 1,
     })),
     totale: rows.length > 0 ? (rows[0].totale ?? 0) : 0,
   };
