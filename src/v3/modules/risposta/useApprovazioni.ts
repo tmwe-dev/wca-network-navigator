@@ -6,6 +6,7 @@ import * as React from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import {
+  approvaEdEseguiV3,
   getSintesiApprovazioniV3,
   listApprovazioniV3,
   rifiutaApprovazioneV3,
