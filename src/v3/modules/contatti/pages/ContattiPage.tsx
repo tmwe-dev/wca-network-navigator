@@ -1,6 +1,7 @@
 /**
  * Contatti — maschera Lista. "Chi devo contattare?"
- * UI senza logica: filtri, paginazione e dati vivono in `useContatti`.
+ * Anagrafica unificata: contatti CRM, biglietti da visita e partner WCA
+ * nella stessa tabella, con badge di provenienza. UI senza logica.
  */
 import * as React from "react";
 import { Link } from "react-router-dom";
@@ -12,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useContatti } from "../useContatti";
 import { ETICHETTE_STATO_LEAD, V3_STATI_LEAD, etichettaStato } from "../statiLead";
+import { ETICHETTE_FONTE, V3_FONTI_ANAGRAFICA, type V3AnagraficaRiga, type V3FonteAnagrafica } from "@/data/v3/anagrafiche";
+
+const VARIANTI_FONTE: Record<V3FonteAnagrafica, "default" | "secondary" | "outline"> = {
+  crm: "default",
+  biglietti: "secondary",
+  wca: "outline",
+};
 
 function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -20,6 +28,24 @@ function RailGroup({ label, children }: { label: string; children: React.ReactNo
       {children}
     </div>
   );
+}
+
+function CellaContatto({ riga }: { riga: V3AnagraficaRiga }) {
+  const corpo = (
+    <>
+      <p className="truncate text-sm font-medium text-foreground">{riga.nome ?? "Senza nome"}</p>
+      <p className="truncate text-xs text-muted-foreground">{riga.email ?? "nessuna email"}</p>
+    </>
+  );
+  // Solo i contatti CRM hanno una scheda dettaglio in V3.
+  if (riga.fonte === "crm") {
+    return (
+      <Link to={`/v3/contatti/${riga.id}`} className="block min-w-0 hover:underline">
+        {corpo}
+      </Link>
+    );
+  }
+  return <div className="min-w-0">{corpo}</div>;
 }
 
 export function ContattiPage(): React.ReactElement {
@@ -34,6 +60,8 @@ export function ContattiPage(): React.ReactElement {
     error,
     ricerca,
     setRicerca,
+    fonte,
+    setFonte,
     paese,
     setPaese,
     stato,
@@ -52,9 +80,33 @@ export function ContattiPage(): React.ReactElement {
         <Input
           value={ricerca}
           onChange={(event) => setRicerca(event.target.value)}
-          placeholder="Nome, azienda, email, città"
+          placeholder="Nome, azienda, email"
           className="h-8 text-xs"
         />
+      </RailGroup>
+
+      <RailGroup label="Provenienza">
+        <div className="flex flex-wrap gap-1">
+          <Button
+            variant={fonte === null ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => setFonte(null)}
+          >
+            Tutte
+          </Button>
+          {V3_FONTI_ANAGRAFICA.map((value) => (
+            <Button
+              key={value}
+              variant={fonte === value ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setFonte(value)}
+            >
+              {ETICHETTE_FONTE[value]}
+            </Button>
+          ))}
+        </div>
       </RailGroup>
 
       <RailGroup label="Stato">
@@ -130,7 +182,7 @@ export function ContattiPage(): React.ReactElement {
       </RailGroup>
 
       <RailGroup label="Stato dati">
-        <p className="text-xs text-muted-foreground">{totale.toLocaleString("it-IT")} contatti nel filtro</p>
+        <p className="text-xs text-muted-foreground">{totale.toLocaleString("it-IT")} voci nel filtro</p>
         <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={refetch}>
           <RefreshCw className="h-3.5 w-3.5" />
           Aggiorna
@@ -143,7 +195,7 @@ export function ContattiPage(): React.ReactElement {
     <>
       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Users className="h-3.5 w-3.5" />
-        {isLoading ? "…" : `${totale.toLocaleString("it-IT")} contatti`}
+        {isLoading ? "…" : `${totale.toLocaleString("it-IT")} voci`}
       </span>
       {isFetching && !isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
       <div className="ml-auto flex items-center gap-1">
@@ -179,15 +231,15 @@ export function ContattiPage(): React.ReactElement {
       {isLoading ? (
         <div className="flex h-40 items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Caricamento contatti…
+          Caricamento anagrafica…
         </div>
       ) : error ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-          Impossibile caricare i contatti: {error.message}
+          Impossibile caricare l'anagrafica: {error.message}
         </div>
       ) : righe.length === 0 ? (
         <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Nessun contatto corrisponde ai filtri.
+          Nessuna voce corrisponde ai filtri.
         </div>
       ) : (
         <div className="overflow-hidden rounded-md border border-border">
@@ -196,6 +248,7 @@ export function ContattiPage(): React.ReactElement {
               <TableRow>
                 <TableHead className="text-xs">Contatto</TableHead>
                 <TableHead className="text-xs">Azienda</TableHead>
+                <TableHead className="text-xs">Fonte</TableHead>
                 <TableHead className="text-xs">Paese</TableHead>
                 <TableHead className="text-xs">Stato</TableHead>
                 <TableHead className="text-right text-xs">Interazioni</TableHead>
@@ -203,15 +256,17 @@ export function ContattiPage(): React.ReactElement {
             </TableHeader>
             <TableBody>
               {righe.map((riga) => (
-                <TableRow key={riga.id}>
+                <TableRow key={`${riga.fonte}-${riga.id}`}>
                   <TableCell className="py-2">
-                    <Link to={`/v3/contatti/${riga.id}`} className="block min-w-0 hover:underline">
-                      <p className="truncate text-sm font-medium text-foreground">{riga.nome ?? "Senza nome"}</p>
-                      <p className="truncate text-xs text-muted-foreground">{riga.email ?? "nessuna email"}</p>
-                    </Link>
+                    <CellaContatto riga={riga} />
                   </TableCell>
                   <TableCell className="py-2">
                     <span className="line-clamp-1 text-xs text-muted-foreground">{riga.azienda ?? "—"}</span>
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <Badge variant={VARIANTI_FONTE[riga.fonte]} className="text-[11px]">
+                      {ETICHETTE_FONTE[riga.fonte]}
+                    </Badge>
                   </TableCell>
                   <TableCell className="py-2 text-xs text-muted-foreground">{riga.paese ?? "—"}</TableCell>
                   <TableCell className="py-2">
