@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { prefetchRoute } from "@/lib/prefetchRoutes";
-import { LogOut, Command, Wifi, WifiOff, Sun, Moon } from "lucide-react";
+import { LogOut, Command, Wifi, WifiOff, Sun, Moon, Compass } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { navItemsDef, navGroupsDef } from "./navConfig";
 import { OrphanPagesNav } from "./OrphanPagesNav";
@@ -120,6 +120,16 @@ export function LayoutSidebarNav({
         <OrphanPagesNav onNavigate={onMobileClose} />
       </nav>
       <div className="p-2 border-t border-border/50 space-y-1">
+        <button
+          onClick={() => {
+            navigate("/v3/inbox");
+            onMobileClose?.();
+          }}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
+        >
+          <Compass className="h-3.5 w-3.5" />
+          Vai alla V3 (operativo)
+        </button>
         <button
           onClick={onWcaReconnect}
           className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"

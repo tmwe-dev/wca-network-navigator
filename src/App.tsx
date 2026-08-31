@@ -34,6 +34,7 @@ import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy
 import { GlobalSherlockLauncher } from "@/components/global/GlobalSherlockLauncher";
 const SimpleHomePage = lazyRetry(() => import("@/v2/ui/pages/SimpleHomePage"));
 const OAuthConsent = lazyRetry(() => import("@/pages/OAuthConsent"));
+const IngressoPage = lazyRetry(() => import("@/pages/Ingresso"));
 
 // Init observability layer (idempotent, safe before any render)
 traceCollector.init();
@@ -139,7 +140,8 @@ const App = () => (
                     <GlobalSherlockLauncher />
                     <Suspense fallback={<PageFallback />}>
                       <Routes>
-                        <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
+                        {/* Ingresso a due porte: V3 operativo e V2 completo. */}
+                        <Route path="/" element={<IngressoPage />} />
 
                         {/* Nuovo menu esclusivo del sistema semplificato (non tocca /v2/*). */}
                         <Route path="/app" element={<SimpleHomePage />} />
