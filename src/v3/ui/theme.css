@@ -1,0 +1,74 @@
+/**
+ * Standard visivo V3 — un solo posto per colori, superfici e bordi.
+ *
+ * Regole non negoziabili (valgono per ogni maschera della V3):
+ * - due sole famiglie di colore: BLU (struttura, stato, azione primaria)
+ *   e MARRONE (accento, evidenza, provenienza);
+ * - ogni superficie è vetrata e sfumata (`.v3-glass`);
+ * - ogni bordo è 1px, sottile, mai doppio;
+ * - tutto allineato a sinistra: nessuna colonna centrata.
+ *
+ * I token qui sotto sovrascrivono le variabili shadcn SOLO dentro `.v3-root`,
+ * così la V2 resta intatta.
+ */
+
+.v3-root {
+  --background: 218 42% 7%;
+  --foreground: 30 22% 93%;
+
+  --card: 218 36% 10%;
+  --card-foreground: 30 22% 93%;
+  --popover: 218 38% 9%;
+  --popover-foreground: 30 22% 93%;
+
+  /* BLU — azione primaria e struttura */
+  --primary: 213 72% 56%;
+  --primary-foreground: 218 42% 8%;
+
+  /* MARRONE — accento e provenienza */
+  --secondary: 24 30% 22%;
+  --secondary-foreground: 30 40% 90%;
+  --accent: 26 44% 38%;
+  --accent-foreground: 32 46% 94%;
+
+  --muted: 218 26% 14%;
+  --muted-foreground: 28 12% 66%;
+
+  --destructive: 8 62% 48%;
+  --destructive-foreground: 30 30% 95%;
+
+  --border: 214 22% 22%;
+  --input: 214 22% 22%;
+  --ring: 213 72% 56%;
+
+  --radius: 0.5rem;
+
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(1100px 620px at 8% -8%, hsl(213 70% 40% / 0.22), transparent 62%),
+    radial-gradient(900px 560px at 96% 4%, hsl(26 55% 34% / 0.2), transparent 58%);
+  background-attachment: fixed;
+}
+
+/* Superficie vetrata standard: pannelli, barre, tabelle, card. */
+.v3-root .v3-glass {
+  background-image: linear-gradient(160deg, hsl(213 60% 60% / 0.1), hsl(26 50% 42% / 0.07) 58%, hsl(218 40% 8% / 0.35));
+  background-color: hsl(218 36% 10% / 0.62);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  border: 1px solid hsl(var(--border));
+}
+
+/* Variante senza bordo proprio: usata quando il bordo lo mette il contenitore. */
+.v3-root .v3-glass-plain {
+  background-image: linear-gradient(160deg, hsl(213 60% 60% / 0.08), hsl(26 50% 42% / 0.05) 60%, transparent);
+  background-color: hsl(218 36% 10% / 0.5);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+}
+
+/* Riga di tabella: hover blu tenue, separatore 1px. */
+.v3-root .v3-row:hover {
+  background-color: hsl(213 70% 55% / 0.08);
+}
