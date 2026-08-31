@@ -8,6 +8,8 @@ import { queryKeys } from "@/lib/queryKeys";
 import {
   accodaBozzaV3,
   cercaDestinatariV3,
+  generaBozzaV3,
+  type V3Bozza,
   type V3Destinatario,
 } from "@/data/v3/scrivi";
 import { listModelliV3, type V3Modello } from "@/data/v3/risposta";
@@ -28,6 +30,13 @@ export interface UseScriviResult {
   readonly setOggetto: (value: string) => void;
   readonly corpo: string;
   readonly setCorpo: (value: string) => void;
+
+  readonly obiettivo: string;
+  readonly setObiettivo: (value: string) => void;
+  readonly genera: () => void;
+  readonly isGenerando: boolean;
+  readonly revisione: V3Bozza["revisione"];
+  readonly erroreGenerazione: string | null;
 
   readonly modelli: readonly V3Modello[];
   readonly applicaModello: (modello: V3Modello) => void;
@@ -68,6 +77,22 @@ export function useScrivi(): UseScriviResult {
     staleTime: 60_000,
   });
 
+  const [obiettivo, setObiettivo] = React.useState("");
+  const [revisione, setRevisione] = React.useState<V3Bozza["revisione"]>(null);
+  const [erroreGenerazione, setErroreGenerazione] = React.useState<string | null>(null);
+
+  const generazione = useMutation({
+    mutationFn: generaBozzaV3,
+    onSuccess: (bozza) => {
+      if (bozza.oggetto) setOggetto(bozza.oggetto);
+      if (bozza.corpo) setCorpo(bozza.corpo);
+      setRevisione(bozza.revisione);
+    },
+    onError: (err: unknown) => {
+      setErroreGenerazione(err instanceof Error ? err.message : "Generazione non riuscita.");
+    },
+  });
+
   const accodamento = useMutation({
     mutationFn: accodaBozzaV3,
     onSuccess: () => {
@@ -77,6 +102,7 @@ export function useScrivi(): UseScriviResult {
       setRicercaState("");
       setOggetto("");
       setCorpo("");
+      setRevisione(null);
       void queryClient.invalidateQueries({ queryKey: ["v3", "approvazioni"] });
     },
   });
@@ -104,6 +130,23 @@ export function useScrivi(): UseScriviResult {
     setOggetto,
     corpo,
     setCorpo,
+    obiettivo,
+    setObiettivo,
+    genera: () => {
+      setErroreGenerazione(null);
+      setRevisione(null);
+      generazione.mutate({
+        obiettivo: obiettivo.trim() || "Primo contatto commerciale, tono professionale e sintetico.",
+        nome: destinatario?.nome ?? null,
+        azienda: destinatario?.azienda ?? null,
+        partnerId: destinatario?.partnerId ?? null,
+        contattoId: destinatario?.contattoId ?? null,
+      });
+    },
+    isGenerando: generazione.isPending,
+    revisione,
+    erroreGenerazione,
+
     modelli: modelliQuery.data?.righe ?? [],
     applicaModello: (modello) => {
       const parti = [modello.obiettivo, modello.procedura].filter(Boolean).join("\n\n");
@@ -130,6 +173,9 @@ export function useScrivi(): UseScriviResult {
       setOggetto("");
       setCorpo("");
       setEsitoAccodamento(null);
+      setObiettivo("");
+      setRevisione(null);
+      setErroreGenerazione(null);
     },
   };
 }
