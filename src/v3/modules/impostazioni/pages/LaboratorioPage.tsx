@@ -83,6 +83,21 @@ function RailGroup({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
+/** Maschere V3 fuori dalle 6 sezioni: restano attive, ma si aprono da qui. */
+const GRUPPO_V3_SECONDARIE: Gruppo = {
+  id: "v3-secondarie",
+  titolo: "Maschere V3 secondarie",
+  nota: "Fuori dalle 6 sezioni del perimetro: utili di tanto in tanto, non nel lavoro quotidiano.",
+  icona: FlaskConical,
+  voci: V3_PAGINE_SECONDARIE.map((p) => ({
+    titolo: p.title,
+    descrizione: p.question,
+    path: p.path,
+  })),
+};
+
+const GRUPPI: readonly Gruppo[] = [GRUPPO_V3_SECONDARIE, ...GRUPPI_V2];
+
 export function LaboratorioPage(): React.ReactElement {
   const [ricerca, setRicerca] = React.useState("");
 
