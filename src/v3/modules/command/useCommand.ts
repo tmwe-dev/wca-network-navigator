@@ -39,8 +39,9 @@ export function useCommand(): UseCommandResult {
   const invio = useMutation({
     mutationFn: async (domanda: string) => {
       const storico = messaggi;
-      return chiediACommandV3(storico, domanda);
+      return chiediACommandV3(storico, domanda, costruisciGroundingCommandV3());
     },
+
     onSuccess: (risposta) => {
       setMessaggi((prev) => [...prev, { ruolo: "assistant", contenuto: risposta }]);
     },
