@@ -44,7 +44,7 @@ export function V3DataTable<T>({
   return (
     <div className={cn("v3-glass overflow-hidden rounded-lg", className)}>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-sm">
+        <table className="w-full table-fixed border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-border">
               {colonne.map((colonna) => (
@@ -52,7 +52,7 @@ export function V3DataTable<T>({
                   key={colonna.id}
                   scope="col"
                   className={cn(
-                    "whitespace-nowrap px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
+                    "truncate whitespace-nowrap px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
                     colonna.larghezza,
                     colonna.secondaria && "hidden md:table-cell",
                   )}
