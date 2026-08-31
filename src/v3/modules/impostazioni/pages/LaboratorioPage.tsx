@@ -7,6 +7,7 @@
 import * as React from "react";
 import { ExternalLink, FlaskConical, Radar, Activity, Search } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
+import { V3_PAGINE_SECONDARIE } from "@/v3/app/navigation";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
@@ -24,7 +25,7 @@ interface Gruppo {
   readonly voci: readonly Voce[];
 }
 
-const GRUPPI: readonly Gruppo[] = [
+const GRUPPI_V2: readonly Gruppo[] = [
   {
     id: "acquisizione",
     titolo: "Acquisizione lead",
@@ -82,6 +83,21 @@ function RailGroup({ label, children }: { label: string; children: React.ReactNo
     </div>
   );
 }
+
+/** Maschere V3 fuori dalle 6 sezioni: restano attive, ma si aprono da qui. */
+const GRUPPO_V3_SECONDARIE: Gruppo = {
+  id: "v3-secondarie",
+  titolo: "Maschere V3 secondarie",
+  nota: "Fuori dalle 6 sezioni del perimetro: utili di tanto in tanto, non nel lavoro quotidiano.",
+  icona: FlaskConical,
+  voci: V3_PAGINE_SECONDARIE.map((p) => ({
+    titolo: p.title,
+    descrizione: p.question,
+    path: p.path,
+  })),
+};
+
+const GRUPPI: readonly Gruppo[] = [GRUPPO_V3_SECONDARIE, ...GRUPPI_V2];
 
 export function LaboratorioPage(): React.ReactElement {
   const [ricerca, setRicerca] = React.useState("");

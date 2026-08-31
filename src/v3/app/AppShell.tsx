@@ -15,23 +15,10 @@ import { useAuth } from "@/providers/AuthProvider";
 import "@/v3/ui/theme.css";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  V3_IMPLEMENTED_PAGES,
-  V3_MODULE_LABELS,
   V3_PAGES,
-  type V3ModuleId,
   type V3PageDefinition,
 } from "./pageContract";
-
-const MODULE_ORDER: readonly V3ModuleId[] = [
-  "identita",
-  "contatti",
-  "messaggi",
-  "comprensione",
-  "risposta",
-  "programmazione",
-  "tracciamento",
-  "trasversale",
-];
+import { V3_NAV } from "./navigation";
 
 function useCurrentPage(): V3PageDefinition | null {
   const { pathname } = useLocation();
@@ -45,37 +32,27 @@ function useCurrentPage(): V3PageDefinition | null {
 
 function NavigationList({ onNavigate }: { onNavigate: () => void }) {
   const { pathname } = useLocation();
-  const grouped = React.useMemo(() => {
-    const map = new Map<V3ModuleId, V3PageDefinition[]>();
-    for (const [, page] of V3_IMPLEMENTED_PAGES) {
-      if (page.publicRoute) continue;
-      const list = map.get(page.module) ?? [];
-      list.push(page);
-      map.set(page.module, list);
-    }
-    return map;
-  }, []);
 
   return (
     <nav className="space-y-4 p-3">
-      {MODULE_ORDER.filter((module) => grouped.has(module)).map((module) => (
-        <div key={module} className="space-y-1">
+      {V3_NAV.map((sezione) => (
+        <div key={sezione.id} className="space-y-1">
           <p className="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {V3_MODULE_LABELS[module]}
+            {sezione.titolo}
           </p>
-          {(grouped.get(module) ?? []).map((page) => (
+          {sezione.voci.map((voce) => (
             <Link
-              key={page.path}
-              to={page.path}
+              key={voce.path}
+              to={voce.path}
               onClick={onNavigate}
               className={cn(
                 "block rounded-md border px-2 py-1.5 text-left text-sm transition-colors",
-                pathname === page.path
+                pathname === voce.path
                   ? "border-primary/60 bg-primary/20 font-medium text-foreground"
                   : "border-transparent text-muted-foreground hover:border-accent/60 hover:bg-accent/15 hover:text-foreground",
               )}
             >
-              {page.title}
+              {voce.titolo}
             </Link>
           ))}
         </div>
@@ -94,6 +71,7 @@ function NavigationList({ onNavigate }: { onNavigate: () => void }) {
     </nav>
   );
 }
+
 
 export function AppShell(): React.ReactElement {
   const location = useLocation();

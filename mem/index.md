@@ -47,3 +47,4 @@
 - [Grounding dati Command](mem://architecture/grounding-dati-command) — RPC ai_find_anything / ai_field_values, KB data-schema/db-fields e app-map, protocollo ricerca dati e conteggio parziale dichiarato
 - [Agente vocale Aurora](mem://architecture/voice-agent-aurora) — persona Aurora 8 sezioni, tool read-only in voce, elevenlabs-agent-sync, fix auth bridge vocale
 - [Standard visivo V3](mem://design/v3-visual-standard) — tabella unica V3DataTable, sidebar a primitive Rail, vetro blu+marrone, bordo 1px, loghi e bandiere
+- [V3 perimetro 6 sezioni](mem://architecture/v3-perimetro-6-sezioni)

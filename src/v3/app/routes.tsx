@@ -27,6 +27,7 @@ const ModelliPage = lazy(() => import("@/v3/modules/risposta/pages/ModelliPage")
 const AgendaPage = lazy(() => import("@/v3/modules/programmazione/pages/AgendaPage").then((m) => ({ default: m.AgendaPage })));
 const CampagnePage = lazy(() => import("@/v3/modules/programmazione/pages/CampagnePage").then((m) => ({ default: m.CampagnePage })));
 const CodaPage = lazy(() => import("@/v3/modules/programmazione/pages/CodaPage").then((m) => ({ default: m.CodaPage })));
+const DaFarePage = lazy(() => import("@/v3/modules/programmazione/pages/DaFarePage").then((m) => ({ default: m.DaFarePage })));
 const PipelinePage = lazy(() => import("@/v3/modules/tracciamento/pages/PipelinePage").then((m) => ({ default: m.PipelinePage })));
 const AndamentoPage = lazy(() => import("@/v3/modules/tracciamento/pages/AndamentoPage").then((m) => ({ default: m.AndamentoPage })));
 const RegistroPage = lazy(() => import("@/v3/modules/tracciamento/pages/RegistroPage").then((m) => ({ default: m.RegistroPage })));
@@ -80,6 +81,8 @@ export function V3Routes(): React.ReactElement {
           <Route path={relative(V3_PAGES.agenda.path)} element={<AgendaPage />} />
           <Route path={relative(V3_PAGES.campagne.path)} element={<CampagnePage />} />
           <Route path={relative(V3_PAGES.coda.path)} element={<CodaPage />} />
+          <Route path={relative(V3_PAGES.dafare.path)} element={<DaFarePage />} />
+
           <Route path={relative(V3_PAGES.pipeline.path)} element={<PipelinePage />} />
           <Route path={relative(V3_PAGES.andamento.path)} element={<AndamentoPage />} />
           <Route path={relative(V3_PAGES.registro.path)} element={<RegistroPage />} />
