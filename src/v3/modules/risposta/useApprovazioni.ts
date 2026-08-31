@@ -39,6 +39,9 @@ export interface UseApprovazioniResult {
   readonly seleziona: (id: string | null) => void;
   readonly rifiuta: (id: string) => void;
   readonly isRifiutando: boolean;
+  readonly approva: (id: string) => void;
+  readonly isApprovando: boolean;
+  readonly esitoApprovazione: string | null;
 
   readonly vaiA: (pagina: number) => void;
   readonly azzeraFiltri: () => void;
@@ -80,6 +83,21 @@ export function useApprovazioni(): UseApprovazioniResult {
     },
   });
 
+  const [esitoApprovazione, setEsitoApprovazione] = React.useState<string | null>(null);
+
+  const approvazione = useMutation({
+    mutationFn: (id: string) => approvaEdEseguiV3(id),
+    onSuccess: () => {
+      setSelezionata(null);
+      setEsitoApprovazione("Azione approvata e inviata alla pipeline di esecuzione.");
+      void queryClient.invalidateQueries({ queryKey: ["v3", "approvazioni"] });
+      void queryClient.invalidateQueries({ queryKey: ["v3", "sintesi-approvazioni"] });
+    },
+    onError: (err: unknown) => {
+      setEsitoApprovazione(err instanceof Error ? `Esecuzione fallita: ${err.message}` : "Esecuzione fallita.");
+    },
+  });
+
   const totale = query.data?.totale ?? 0;
 
   return {
@@ -110,9 +128,18 @@ export function useApprovazioni(): UseApprovazioniResult {
     },
 
     selezionata,
-    seleziona: setSelezionata,
+    seleziona: (id) => {
+      setEsitoApprovazione(null);
+      setSelezionata(id);
+    },
     rifiuta: (id) => rifiuto.mutate(id),
     isRifiutando: rifiuto.isPending,
+    approva: (id) => {
+      setEsitoApprovazione(null);
+      approvazione.mutate(id);
+    },
+    isApprovando: approvazione.isPending,
+    esitoApprovazione,
 
     vaiA: (value) => setPagina(Math.max(0, value)),
     azzeraFiltri: () => {
