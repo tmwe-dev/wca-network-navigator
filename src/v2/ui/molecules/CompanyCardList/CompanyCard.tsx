@@ -457,17 +457,23 @@ export function CompanyCard({
         <div className="min-w-0 space-y-2">
           <div className="min-w-0 space-y-1.5">
             <div className="flex min-w-0 items-start gap-2">
-              {logoFromMeta && (
-                <img
-                  src={logoFromMeta}
-                  alt=""
-                  loading="lazy"
-                  className="mt-0.5 h-5 w-5 shrink-0 rounded-md border border-border/50 bg-background object-contain"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              )}
+              <span
+                className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted/40 text-[9px] font-bold uppercase text-muted-foreground"
+                aria-hidden="true"
+              >
+                {logoFromMeta && !logoFailed ? (
+                  <img
+                    src={logoFromMeta}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-contain"
+                    onError={() => setLogoFailed(true)}
+                  />
+                ) : (
+                  initials
+                )}
+              </span>
+
               <h3 className="min-w-0 flex-1 truncate text-[17px] font-extrabold uppercase leading-tight text-foreground">
                 {name || "—"}
               </h3>
