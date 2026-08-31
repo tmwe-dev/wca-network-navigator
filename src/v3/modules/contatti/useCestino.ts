@@ -68,3 +68,6 @@ export function useCestino(): UseCestinoResult {
     refetch: () => void query.refetch(),
   };
 }
+
+/** Tipo esposto alla maschera Cestino (che non importa il DAL). */
+export type { V3TipoEliminato };

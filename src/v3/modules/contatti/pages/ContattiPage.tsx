@@ -20,7 +20,7 @@ import { InterazioniBadge, StatoCircuitoBadge } from "@/v3/ui/StatoBadge";
 import { RailAzione, RailScelte, RailSelect, RailSezione, RailToggle } from "@/v3/ui/Rail";
 import { useContatti } from "../useContatti";
 import { ETICHETTE_STATO_LEAD, V3_STATI_LEAD } from "../statiLead";
-import { ETICHETTE_FONTE, V3_FONTI_ANAGRAFICA, type V3AnagraficaRiga } from "@/data/v3/anagrafiche";
+import { ETICHETTE_FONTE, V3_FONTI_ANAGRAFICA, type V3AnagraficaRiga } from "@/v3/modules/contatti/useContatti";
 import { SchedaAzienda } from "./SchedaAzienda";
 
 const CLASSI_FONTE: Record<string, string> = {

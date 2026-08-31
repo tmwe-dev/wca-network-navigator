@@ -11,7 +11,7 @@ import { PageFrame } from "@/v3/app/PageFrame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCestino } from "../useCestino";
-import type { V3TipoEliminato } from "@/data/v3/cestino";
+import type { V3TipoEliminato } from "@/v3/modules/contatti/useCestino";
 
 const OPZIONI_TIPO: readonly { readonly value: V3TipoEliminato; readonly label: string }[] = [
   { value: "partner", label: "Aziende" },
