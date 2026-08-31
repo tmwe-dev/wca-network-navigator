@@ -97,18 +97,38 @@ export function CommandPage(): React.ReactElement {
               Chiedi qualsiasi cosa: contatti, messaggi, regole, stato del sistema.
             </div>
           ) : (
-            messaggi.map((m, i) => (
-              <div
-                key={`${m.ruolo}-${i}`}
-                className={`max-w-[85%] rounded-md border px-3 py-2 text-sm ${
-                  m.ruolo === "user"
-                    ? "ml-auto border-primary/40 bg-primary/10 text-foreground"
-                    : "border-border bg-muted/40 text-foreground"
-                }`}
-              >
-                <p className="whitespace-pre-wrap break-words">{m.contenuto}</p>
-              </div>
-            ))
+            messaggi.map((m, i) => {
+              const percorsi = m.ruolo === "assistant" ? percorsiCitati(m.contenuto) : [];
+              return (
+                <div
+                  key={`${m.ruolo}-${i}`}
+                  className={`max-w-[85%] rounded-md border px-3 py-2 text-sm ${
+                    m.ruolo === "user"
+                      ? "ml-auto border-primary/40 bg-primary/10 text-foreground"
+                      : "border-border bg-muted/40 text-foreground"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{m.contenuto}</p>
+                  {percorsi.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
+                      {percorsi.map((p) => (
+                        <Button
+                          key={p}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => naviga(p)}
+                        >
+                          <ArrowUpRight className="h-3 w-3" />
+                          Apri {p}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+
           )}
           {isPending && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
