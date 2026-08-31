@@ -330,7 +330,10 @@ export function CompanyCard({
         <a
           href={`mailto:${firstEmail}`}
           onClick={(e) => e.stopPropagation()}
-          className={cn(CHIP_BASE, "border-primary/25 bg-primary/10 text-primary hover:border-primary/50")}
+          className={cn(
+            CHIP_BASE,
+            "border-border/50 bg-muted/25 text-muted-foreground hover:border-primary/45 hover:text-primary",
+          )}
           title={firstEmail}
         >
           <Mail className="h-3.5 w-3.5 shrink-0" />
@@ -341,7 +344,10 @@ export function CompanyCard({
         <a
           href={`tel:${firstPhone.replace(/[^0-9+]/g, "")}`}
           onClick={(e) => e.stopPropagation()}
-          className={cn(CHIP_BASE, "border-chart-3/25 bg-chart-3/10 text-chart-3 hover:border-chart-3/50")}
+          className={cn(
+            CHIP_BASE,
+            "border-border/50 bg-muted/25 text-muted-foreground hover:border-primary/45 hover:text-primary",
+          )}
           title={firstPhone}
         >
           <Phone className="h-3.5 w-3.5 shrink-0" />
@@ -351,7 +357,8 @@ export function CompanyCard({
     </div>
   );
 
-  const metaSlot = (city || enrichedLabel || origin) && (
+  // Livello 2: arricchimento e origine appaiono solo sulla card aperta.
+  const metaSlot = (city || (opened && (enrichedLabel || origin))) && (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
       {city &&
         (onCityClick ? (
@@ -376,7 +383,7 @@ export function CompanyCard({
             <span className="truncate">{city}</span>
           </span>
         ))}
-      {enrichedLabel && (
+      {opened && enrichedLabel && (
         <span
           className={cn(CHIP_BASE, "border-success/25 bg-success/10 text-success")}
           title={enrichedAt ? `Ultima Deep Search: ${new Date(enrichedAt).toLocaleString()}` : undefined}
@@ -384,7 +391,7 @@ export function CompanyCard({
           {enrichedLabel}
         </span>
       )}
-      {origin && (
+      {opened && origin && (
         <span
           className={cn(CHIP_BASE, "max-w-[150px] border-border/45 bg-muted/25 text-muted-foreground")}
           title={`Origine: ${origin}`}
@@ -393,6 +400,7 @@ export function CompanyCard({
         </span>
       )}
     </div>
+
   );
 
   const countryNode = <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />;
