@@ -230,7 +230,7 @@ export async function listModelliV3(filtri: V3ModelliFiltri): Promise<V3ModelliP
 export async function approvaEdEseguiV3(id: string): Promise<void> {
   const { error } = await supabase
     .from("ai_pending_actions")
-    .update({ status: "approved", approved_at: new Date().toISOString() })
+    .update({ status: "approved" })
     .eq("id", id)
     .eq("status", "pending");
   if (error) throw error;
