@@ -3,13 +3,24 @@
  */
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Inbox, Loader2, RefreshCw, Send, SlidersHorizontal } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Inbox,
+  Loader2,
+  RefreshCw,
+  Send,
+  SlidersHorizontal,
+  Square,
+} from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useMessaggi } from "../useMessaggi";
+import { useSync } from "../useSync";
 import { V3_CANALI, dataMessaggio, etichettaCanale, mittente } from "../canali";
 
 function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
@@ -46,6 +57,7 @@ export function InboxPage(): React.ReactElement {
     azzeraFiltri,
     refetch,
   } = useMessaggi();
+  const { isSyncing, progress, avvia, ferma } = useSync();
 
   const filters = (
     <>
@@ -157,6 +169,35 @@ export function InboxPage(): React.ReactElement {
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Risposta e regole arrivano con i Moduli 4 e 5. Apri un messaggio per leggerlo per intero.
         </p>
+      </RailGroup>
+
+      <RailGroup label="Sincronizzazione">
+        {isSyncing ? (
+          <>
+            <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" onClick={ferma}>
+              <Square className="h-3.5 w-3.5" />
+              Ferma · {progress.downloaded} scaricati
+            </Button>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {progress.lastSubject ? `Ultima: ${progress.lastSubject}` : "Scaricamento in corso…"}
+            </p>
+          </>
+        ) : (
+          <>
+            <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" onClick={avvia}>
+              <Download className="h-3.5 w-3.5" />
+              Scarica nuove email
+            </Button>
+            {progress.status === "done" && (
+              <p className="text-[11px] text-muted-foreground">
+                Ultima sync: {progress.downloaded} nuove, {progress.skipped} già presenti.
+              </p>
+            )}
+            {progress.status === "error" && (
+              <p className="text-[11px] text-destructive">Sync interrotta: riprova.</p>
+            )}
+          </>
+        )}
       </RailGroup>
 
       <RailGroup label="Stato dati">

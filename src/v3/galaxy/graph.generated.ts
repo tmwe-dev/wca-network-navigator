@@ -187,7 +187,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "pageContract",
     "kind": "app",
     "module": "trasversale",
-    "detail": "src/v3/app/pageContract.ts · 342 righe",
+    "detail": "src/v3/app/pageContract.ts · 352 righe",
     "weight": 1
   },
   {
@@ -203,7 +203,15 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "routes",
     "kind": "app",
     "module": "trasversale",
-    "detail": "src/v3/app/routes.tsx · 103 righe",
+    "detail": "src/v3/app/routes.tsx · 105 righe",
+    "weight": 1
+  },
+  {
+    "id": "src/v3/galaxy/layout.ts",
+    "label": "layout",
+    "kind": "ui",
+    "module": "trasversale",
+    "detail": "src/v3/galaxy/layout.ts · 63 righe",
     "weight": 1
   },
   {
@@ -212,6 +220,14 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "kind": "ui",
     "module": "trasversale",
     "detail": "src/v3/galaxy/types.ts · 59 righe",
+    "weight": 1
+  },
+  {
+    "id": "src/v3/galaxy/V3GalaxyScene.tsx",
+    "label": "V3GalaxyScene",
+    "kind": "ui",
+    "module": "trasversale",
+    "detail": "src/v3/galaxy/V3GalaxyScene.tsx · 275 righe",
     "weight": 1
   },
   {
@@ -399,6 +415,14 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "weight": 1
   },
   {
+    "id": "src/v3/modules/impostazioni/pages/Galassia3DPage.tsx",
+    "label": "Galassia3DPage",
+    "kind": "pagina",
+    "module": "trasversale",
+    "detail": "src/v3/modules/impostazioni/pages/Galassia3DPage.tsx · 260 righe",
+    "weight": 1.6
+  },
+  {
     "id": "src/v3/modules/impostazioni/pages/GalassiaPage.tsx",
     "label": "GalassiaPage",
     "kind": "pagina",
@@ -451,7 +475,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "ConversazionePage",
     "kind": "pagina",
     "module": "messaggi",
-    "detail": "src/v3/modules/messaggi/pages/ConversazionePage.tsx · 173 righe",
+    "detail": "src/v3/modules/messaggi/pages/ConversazionePage.tsx · 210 righe",
     "weight": 1.6
   },
   {
@@ -459,7 +483,7 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "label": "InboxPage",
     "kind": "pagina",
     "module": "messaggi",
-    "detail": "src/v3/modules/messaggi/pages/InboxPage.tsx · 283 righe",
+    "detail": "src/v3/modules/messaggi/pages/InboxPage.tsx · 324 righe",
     "weight": 1.6
   },
   {
@@ -484,6 +508,14 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "kind": "hook",
     "module": "messaggi",
     "detail": "src/v3/modules/messaggi/useMessaggi.ts · 127 righe",
+    "weight": 1
+  },
+  {
+    "id": "src/v3/modules/messaggi/useSync.ts",
+    "label": "useSync",
+    "kind": "hook",
+    "module": "messaggi",
+    "detail": "src/v3/modules/messaggi/useSync.ts · 58 righe",
     "weight": 1
   },
   {
@@ -636,6 +668,14 @@ export const V3_GRAPH_NODES: readonly V3GalaxyNode[] = [
     "kind": "ui",
     "module": "design",
     "detail": "src/v3/ui/CompanyLogo.tsx · 56 righe",
+    "weight": 1
+  },
+  {
+    "id": "src/v3/ui/CorpoEmail.tsx",
+    "label": "CorpoEmail",
+    "kind": "ui",
+    "module": "design",
+    "detail": "src/v3/ui/CorpoEmail.tsx · 101 righe",
     "weight": 1
   },
   {
@@ -883,6 +923,21 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   {
     "from": "src/v3/app/routes.tsx",
     "to": "src/v3/app/pageContract.ts",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/galaxy/V3GalaxyScene.tsx",
+    "to": "src/v3/galaxy/types.ts",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/galaxy/V3GalaxyScene.tsx",
+    "to": "src/v3/galaxy/layout.ts",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/galaxy/layout.ts",
+    "to": "src/v3/galaxy/types.ts",
     "relation": "usa"
   },
   {
@@ -1141,6 +1196,21 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
     "relation": "usa"
   },
   {
+    "from": "src/v3/modules/impostazioni/pages/Galassia3DPage.tsx",
+    "to": "src/v3/galaxy/v3Graph.ts",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/modules/impostazioni/pages/Galassia3DPage.tsx",
+    "to": "src/v3/galaxy/types.ts",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/modules/impostazioni/pages/Galassia3DPage.tsx",
+    "to": "src/v3/galaxy/layout.ts",
+    "relation": "usa"
+  },
+  {
     "from": "src/v3/modules/impostazioni/pages/GalassiaPage.tsx",
     "to": "src/v3/app/PageFrame.tsx",
     "relation": "usa"
@@ -1217,6 +1287,11 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   },
   {
     "from": "src/v3/modules/messaggi/pages/ConversazionePage.tsx",
+    "to": "src/v3/ui/CorpoEmail.tsx",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/modules/messaggi/pages/ConversazionePage.tsx",
     "to": "src/v3/modules/messaggi/useConversazione.ts",
     "relation": "usa"
   },
@@ -1233,6 +1308,11 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   {
     "from": "src/v3/modules/messaggi/pages/InboxPage.tsx",
     "to": "src/v3/modules/messaggi/useMessaggi.ts",
+    "relation": "usa"
+  },
+  {
+    "from": "src/v3/modules/messaggi/pages/InboxPage.tsx",
+    "to": "src/v3/modules/messaggi/useSync.ts",
     "relation": "usa"
   },
   {
@@ -1602,4 +1682,4 @@ export const V3_GRAPH_LINKS: readonly V3GalaxyLink[] = [
   }
 ] as const;
 
-export const V3_GRAPH_GENERATED_AT = "2026-08-31T06:06:21.415Z";
+export const V3_GRAPH_GENERATED_AT = "2026-08-31T07:33:29.183Z";
