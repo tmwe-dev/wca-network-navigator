@@ -11,6 +11,8 @@ import {
   type V3CommandMessaggio,
   type V3ConversazioneRecente,
 } from "@/data/v3/command";
+import { costruisciGroundingCommandV3 } from "./kb";
+
 
 export type { V3CommandMessaggio, V3ConversazioneRecente };
 
