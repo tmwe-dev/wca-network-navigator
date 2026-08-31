@@ -304,6 +304,16 @@ export const V3_PAGES = {
     workflow: ["caselle", "ai", "alert", "marchio"],
     implemented: true,
   },
+  laboratorio: {
+    path: "/v3/laboratorio",
+    module: "trasversale",
+    kind: "operational",
+    title: "Laboratorio",
+    question: "Dove sono acquisizione, laboratorio AI e diagnostica?",
+    filters: [],
+    workflow: ["acquisizione", "laboratorio", "osservabilita"],
+    implemented: true,
+  },
 } as const satisfies Record<string, V3PageDefinition>;
 
 export type V3PageId = keyof typeof V3_PAGES;
