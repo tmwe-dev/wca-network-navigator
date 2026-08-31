@@ -33,10 +33,11 @@ const HOLDING_LABEL: Record<HoldingFilterMode, string> = {
 };
 
 const HOLDING_TONE: Record<HoldingFilterMode, string> = {
-  exclude: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40",
-  include: "bg-amber-500/15 text-amber-400 border-amber-500/40",
-  only: "bg-sky-500/15 text-sky-400 border-sky-500/40",
+  exclude: "bg-muted/40 text-muted-foreground border-border/50",
+  include: "bg-warning/15 text-warning border-warning/40",
+  only: "bg-primary/15 text-primary border-primary/40",
 };
+
 
 export interface SortOption<K extends string = string> {
   key: K;
