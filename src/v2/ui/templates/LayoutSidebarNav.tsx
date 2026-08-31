@@ -120,6 +120,9 @@ export function LayoutSidebarNav({
         <OrphanPagesNav onNavigate={onMobileClose} />
       </nav>
       <div className="p-2 border-t border-border/50 space-y-1">
+        <div className="mx-1 mb-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] leading-tight text-amber-700 dark:text-amber-400">
+          Versione legacy: usala solo per funzioni non ancora in V3.
+        </div>
         <button
           onClick={() => {
             navigate("/v3/inbox");
