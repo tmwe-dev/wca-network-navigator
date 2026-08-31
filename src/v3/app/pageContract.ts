@@ -324,6 +324,16 @@ export const V3_PAGES = {
     workflow: [],
     implemented: true,
   },
+  galassia3d: {
+    path: "/v3/galassia-3d",
+    module: "trasversale",
+    kind: "operational",
+    title: "Galassia 3D",
+    question: "Com'è fatto l'albero della V3 e come sono collegati i pezzi?",
+    filters: [],
+    workflow: [],
+    implemented: true,
+  },
 
 } as const satisfies Record<string, V3PageDefinition>;
 

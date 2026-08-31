@@ -45,6 +45,7 @@ const LaboratorioPage = lazy(() =>
   import("@/v3/modules/impostazioni/pages/LaboratorioPage").then((m) => ({ default: m.LaboratorioPage })),
 );
 const GalassiaPage = lazy(() => import("@/v3/modules/impostazioni/pages/GalassiaPage").then((m) => ({ default: m.GalassiaPage })));
+const Galassia3DPage = lazy(() => import("@/v3/modules/impostazioni/pages/Galassia3DPage").then((m) => ({ default: m.Galassia3DPage })));
 const ClassificazionePage = lazy(() => import("@/v3/modules/comprensione/pages/ClassificazionePage").then((m) => ({ default: m.ClassificazionePage })));
 
 function V3Fallback() {
@@ -91,6 +92,7 @@ export function V3Routes(): React.ReactElement {
           <Route path={relative(V3_PAGES.cestino.path)} element={<CestinoPage />} />
           <Route path={relative(V3_PAGES.laboratorio.path)} element={<LaboratorioPage />} />
           <Route path={relative(V3_PAGES.galassia.path)} element={<GalassiaPage />} />
+          <Route path={relative(V3_PAGES.galassia3d.path)} element={<Galassia3DPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to={V3_HOME_PATH} replace />} />
