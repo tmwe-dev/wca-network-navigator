@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Template maschera Esplora — WCA Partner</title>
+<style>
+  :root{
+    --bg:#0a0a1a; --surface:#141432; --surface-2:#181840; --border:#26265c;
+    --fg:#e8e8f5; --muted:#8d8dae; --accent:#4f46e5;
+    --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --ai:#a855f7;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  a{color:inherit}
+  .wrap{max-width:1400px;margin:0 auto;padding:24px}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:12px;margin-bottom:20px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:20}
+  .tab{border:1px solid var(--border);background:var(--surface);color:var(--muted);padding:6px 12px;border-radius:999px;font-size:11px;font-weight:600;cursor:pointer}
+  .tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+  section[hidden]{display:none}
+  .note{border-left:2px solid var(--accent);background:#4f46e51a;padding:10px 12px;border-radius:0 8px 8px 0;font-size:12px;color:#c9c9e6;margin:0 0 14px}
+  .note b{color:#fff}
+
+  /* shell */
+  .shell{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface);height:640px;display:flex;flex-direction:column}
+  .topbar{height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--border);background:#0d0d24}
+  .brand{font-weight:700;font-size:12px;letter-spacing:.04em}
+  .topbar .spacer{flex:1}
+  .pagehead{height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border)}
+  .crumb{font-size:12px;color:var(--muted)}
+  .crumb b{color:var(--fg);font-weight:600}
+  .toolbar{height:38px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);background:#111129}
+  .body{flex:1;display:flex;min-height:0}
+  .rail{width:210px;flex:none;border-right:1px solid var(--border);background:#0f0f26;overflow:auto;padding:10px}
+  .rail.right{border-right:0;border-left:1px solid var(--border);width:240px}
+  .col{flex:1;min-width:0;display:flex;flex-direction:column}
+  .list{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+  .detail{flex:1;min-width:0;border-left:1px solid var(--border);overflow:auto;padding:14px;background:#101026}
+
+  /* atoms */
+  .btn{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:8px;border:1px solid var(--border);background:#1a1a3d;color:var(--fg);font-size:11px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.ghost{background:transparent;color:var(--muted)}
+  .btn.icon{width:26px;padding:0;justify-content:center}
+  .input{height:26px;flex:1;min-width:0;border-radius:8px;border:1px solid var(--border);background:#0f0f26;color:var(--fg);padding:0 9px;font-size:11px}
+  .badge{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid}
+  .b-neutral{background:#ffffff0f;color:var(--muted);border-color:var(--border)}
+  .b-accent{background:#4f46e526;color:#a5a1f5;border-color:#4f46e566}
+  .b-ok{background:#22c55e1f;color:#6ee7a8;border-color:#22c55e4d}
+  .b-warn{background:#f59e0b1f;color:#fbbf24;border-color:#f59e0b4d}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .lab{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:12px 0 6px}
+  .lab:first-child{margin-top:0}
+  .muted{color:var(--muted)}
+  .tiny{font-size:11px}
+
+  /* card partner */
+  .card{border:1px solid var(--border);background:var(--surface-2);border-radius:var(--r);padding:10px;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+  .card:hover{border-color:#4f46e580}
+  .card.sel{border-color:var(--accent);background:#4f46e514}
+  .logo{width:34px;height:34px;flex:none;border-radius:8px;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
+  .cmain{flex:1;min-width:0}
+  .crow1{display:flex;align-items:center;gap:6px}
+  .cname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow2{display:flex;align-items:center;gap:10px;margin-top:3px;color:var(--muted);font-size:11px}
+  .crow3{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .chip{height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 7px;border-radius:6px;border:1px solid var(--border);background:#ffffff08;font-size:10px;color:var(--muted)}
+  .cact{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .score{font-size:11px;font-weight:700;color:#a5a1f5}
+
+  /* filtri */
+  .frow{display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:6px;font-size:12px;cursor:pointer}
+  .frow:hover{background:#ffffff0a}
+  .frow.on{background:#4f46e526;color:#fff}
+  .cnt{font-size:10px;color:var(--muted)}
+
+  /* detail */
+  .dhead{display:flex;gap:12px;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--border)}
+  .dlogo{width:48px;height:48px;border-radius:10px;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;color:#9a9ad2}
+  .dtabs{display:flex;gap:4px;margin:12px 0}
+  .dtab{padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;color:var(--muted);border:1px solid transparent;cursor:pointer}
+  .dtab.on{background:#1a1a3d;border-color:var(--border);color:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .panel{border:1px solid var(--border);border-radius:var(--r);background:var(--surface-2);padding:10px}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
+  .kv span:first-child{color:var(--muted);font-size:11px}
+
+  .bulkbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#4f46e51f;border-bottom:1px solid #4f46e566}
+  .kpi{display:flex;gap:8px}
+  .kpibox{border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:var(--surface-2);min-width:78px}
+  .kpibox b{display:block;font-size:15px}
+  .kpibox span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+  .table{width:100%;border-collapse:collapse;font-size:12px}
+  .table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#111129}
+  .table td{padding:7px 8px;border-bottom:1px solid #ffffff0d}
+  .table tr:hover td{background:#ffffff08}
+
+  .phone{width:360px;height:640px;border:1px solid var(--border);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;background:var(--surface);margin:0 auto}
+  .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Maschera «Esplora → WCA Partner» — template unico</h1>
+  <div class="sub">Stesso scheletro, 6 stati. Nessun colore decorativo: solo accento unico + stati semantici.</div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-v="v1">1 · Lista + Dettaglio (default)</button>
+    <button class="tab" role="tab" aria-selected="false" data-v="v2">2 · Solo lista (esplorazione)</button>
+    <button class="tab" role="tab" aria-selected="false" data-v="v3">3 · Selezione multipla (bulk)</button>
+    <button class="tab" role="tab" aria-selected="false" data-v="v4">4 · Dettaglio a tutta pagina</button>
+    <button class="tab" role="tab" aria-selected="false" data-v="v5">5 · Vista tabella (densa)</button>
+    <button class="tab" role="tab" aria-selected="false" data-v="v6">6 · Mobile</button>
+    <button class="tab" role="tab" aria-selected="false" data-v="v7">7 · Anatomia card</button>
+  </div>
+
+  <section id="v1"></section>
+  <section id="v2" hidden></section>
+  <section id="v3" hidden></section>
+  <section id="v4" hidden></section>
+  <section id="v5" hidden></section>
+  <section id="v6" hidden></section>
+  <section id="v7" hidden></section>
+</div>
+
+<script>
+const COMPANIES = [
+  {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', f:'🇰🇷', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
+  {n:'Nordwind Spedition GmbH', c:'Hamburg', f:'🇩🇪', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
+  {n:'Trans Adriatic Cargo Srl', c:'Trieste', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
+  {n:'Pacific Rim Forwarding', c:'Singapore', f:'🇸🇬', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
+  {n:'Atlas Freight Services', c:'Casablanca', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, contact:'—', last:'mai', ch:'✉'},
+  {n:'Baltic Line Logistics', c:'Gdańsk', f:'🇵🇱', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
+];
+
+const topbar = `<div class="topbar">
+  <span class="brand">TMWE</span>
+  <button class="btn ghost">☰ Maschere</button>
+  <input class="input" style="max-width:260px" placeholder="Cerca ovunque   ⌘K" />
+  <span class="spacer"></span>
+  <span class="tiny muted">Luca Arcanà</span>
+</div>`;
+
+function pagehead(actions){return `<div class="pagehead">
+  <span class="crumb">Esplora / <b>WCA Partner</b></span>
+  <span style="flex:1"></span>
+  <button class="btn" title="Assistente">✦ AI</button>
+  <button class="btn icon" title="Voce">🎙</button>
+  <button class="btn icon" title="Riepilogo">📊</button>
+  ${actions||''}
+  <button class="btn icon" title="Altro">⋯</button>
+</div>`;}
+
+function toolbar(extra){return `<div class="toolbar">
+  <input class="input" style="max-width:280px" placeholder="Cerca partner, città, referente…" />
+  <button class="btn">Filtri <span class="badge b-accent" style="margin-left:4px">3</span></button>
+  <button class="btn ghost">Ordina: Score ↓</button>
+  <span style="flex:1"></span>
+  <span class="tiny muted">1.248 aziende</span>
+  ${extra||''}
+</div>`;}
+
+const railLeft = `<div class="rail">
+  <div class="lab">Ricerca salvate</div>
+  <div class="frow on">Corea + attivi <span class="cnt">42</span></div>
+  <div class="frow">Da ricontattare <span class="cnt">18</span></div>
+  <div class="lab">Paese</div>
+  ${[['🇰🇷 Corea',42],['🇩🇪 Germania',88],['🇮🇹 Italia',131],['🇸🇬 Singapore',27],['🇵🇱 Polonia',35],['🇲🇦 Marocco',9]].map(([a,b],i)=>`<div class="frow ${i===0?'on':''}">${a} <span class="cnt">${b}</span></div>`).join('')}
+  <div class="lab">Qualità dati</div>
+  <div class="frow">Con email <span class="cnt">920</span></div>
+  <div class="frow">Con LinkedIn <span class="cnt">411</span></div>
+  <div class="frow">Senza referente <span class="cnt">203</span></div>
+  <div class="lab">Stato</div>
+  <div class="frow">Attivo <span class="cnt">1.041</span></div>
+  <div class="frow">Holding <span class="cnt">64</span></div>
+  <button class="btn" style="width:100%;margin-top:12px">Filtri avanzati…</button>
+</div>`;
+
+function card(c, sel, i){return `<div class="card ${sel?'sel':''}">
+  <div class="logo">${c.k}</div>
+  <div class="cmain">
+    <div class="crow1">
+      <span class="cname">${c.n}</span>
+      <span class="badge ${c.badge==='WCA'?'b-accent':'b-neutral'}">${c.badge}</span>
+      ${c.extra?`<span class="badge b-neutral">+${c.extra}</span>`:''}
+    </div>
+    <div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span>${c.contact}</span></div>
+    <div class="crow3">
+      <span class="chip">${c.ch}</span>
+      <span class="chip">ultimo contatto ${c.last}</span>
+    </div>
+  </div>
+  <div class="cact">
+    <span class="score">${c.s}</span>
+    <button class="btn icon" title="Azioni">⋯</button>
+  </div>
+</div>`;}
+
+const detail = `<div class="detail">
+  <div class="dhead">
+    <div class="dlogo">EU</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:15px;font-weight:700">"EUGENE" Logistics Co., Ltd.</div>
+      <div class="tiny muted">🇰🇷 Busan, Corea del Sud · Membro WCA dal 2016 · Score 86</div>
+    </div>
+    <button class="btn primary">Contatta</button>
+    <button class="btn icon">⋯</button>
+    <button class="btn icon" title="Chiudi">✕</button>
+  </div>
+  <div class="dtabs">
+    <div class="dtab on">Panoramica</div><div class="dtab">Referenti (4)</div>
+    <div class="dtab">Comunicazioni</div><div class="dtab">Biglietti (2)</div><div class="dtab">Deep Search</div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="lab">Identità</div>
+      <div class="kv"><span>Sede</span><b>Busan, KR</b></div>
+      <div class="kv"><span>Tipo ufficio</span><b>HQ</b></div>
+      <div class="kv"><span>Sito</span><b>eugenelog.co.kr</b></div>
+      <div class="kv"><span>Membership</span><b>scade 04/2027</b></div>
+    </div>
+    <div class="panel">
+      <div class="lab">Relazione</div>
+      <div class="kv"><span>Stato</span><b><span class="dot" style="background:var(--ok)"></span> Attivo</b></div>
+      <div class="kv"><span>Ultimo contatto</span><b>2 giorni fa</b></div>
+      <div class="kv"><span>Interazioni</span><b>37</b></div>
+      <div class="kv"><span>Owner</span><b>Luca Arcanà</b></div>
+    </div>
+    <div class="panel" style="grid-column:1/-1">
+      <div class="lab">Referente principale</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="logo">JP</div>
+        <div style="flex:1"><b>Jin-Ho Park</b><div class="tiny muted">Sales Director · jinho@eugenelog.co.kr</div></div>
+        <button class="btn">✉ Email</button><button class="btn">💬 WA</button><button class="btn">in</button>
+      </div>
+    </div>
+    <div class="panel" style="grid-column:1/-1">
+      <div class="lab">Servizi e mercati</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${['Air Freight','Sea LCL','Sea FCL','Customs','Project Cargo','Warehousing','KR ↔ EU','KR ↔ US'].map(s=>`<span class="chip">${s}</span>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>`;
+
+const railRight = `<div class="rail right">
+  <div class="lab">Azioni</div>
+  <button class="btn primary" style="width:100%;margin-bottom:6px">✦ Deep Search</button>
+  <button class="btn" style="width:100%;margin-bottom:6px">Aggiungi a Cockpit</button>
+  <button class="btn" style="width:100%;margin-bottom:6px">Crea campagna</button>
+  <div class="lab">Stato dati</div>
+  <div class="kv"><span>Completezza</span><b>72%</b></div>
+  <div class="kv"><span>Ultimo enrich</span><b>14/08</b></div>
+  <div class="kv"><span>Duplicati</span><b>0</b></div>
+  <div class="lab">Attività recente</div>
+  <div class="tiny muted">✉ Risposta ricevuta · 2 g<br/>✦ Deep Search L2 · 14/08<br/>💬 WhatsApp inviato · 03/08</div>
+</div>`;
+
+function shell(inner){return `<div class="shell">${topbar}${inner}</div>`;}
+
+// V1 lista + dettaglio
+document.getElementById('v1').innerHTML = `
+<p class="note"><b>Default.</b> Rail filtri a sinistra (unico posto dei filtri), elenco stretto al centro, dettaglio a destra. La card mostra <b>5 informazioni di livello 1</b>: identità, luogo, referente, ultimo contatto, score. Tutto il resto vive nel dettaglio.</p>
+${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col"><div class="list" style="max-width:340px">${COMPANIES.map((c,i)=>card(c,i===0)).join('')}</div></div>${detail}</div>`)}`;
+
+// V2 solo lista
+document.getElementById('v2').innerHTML = `
+<p class="note"><b>Esplorazione.</b> Nessun dettaglio aperto: l'elenco occupa tutta la larghezza e le card diventano a 2 colonne. Stesso header, stessa toolbar — cambia solo il contenitore.</p>
+${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col"><div class="list" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${COMPANIES.concat(COMPANIES.slice(0,2)).map(c=>card(c,false)).join('')}</div></div>${railRight}</div>`)}`;
+
+// V3 bulk
+document.getElementById('v3').innerHTML = `
+<p class="note"><b>Selezione multipla.</b> Da <b>2 elementi in su</b> compare la barra bulk sopra l'elenco: sostituisce la toolbar, non si somma. Il dettaglio si chiude, il rail destro mostra le azioni massive.</p>
+${shell(`${pagehead()}<div class="bulkbar"><b>3 selezionati</b><button class="btn ghost">Deseleziona</button><span style="flex:1"></span><button class="btn">✉ Campagna</button><button class="btn">✦ Deep Search</button><button class="btn">＋ Cockpit</button><button class="btn">Esporta</button><button class="btn icon">⋯</button></div><div class="body">${railLeft}<div class="col"><div class="list">${COMPANIES.map((c,i)=>card(c,i<3)).join('')}</div></div>${railRight}</div>`)}`;
+
+// V4 dettaglio full
+document.getElementById('v4').innerHTML = `
+<p class="note"><b>Dettaglio a tutta pagina.</b> Per lavorare a fondo su un partner (o su schermi stretti). L'elenco collassa in un pulsante «← Elenco»; il breadcrumb diventa il nome del partner.</p>
+${shell(`<div class="pagehead"><button class="btn ghost">← Elenco</button><span class="crumb">Esplora / WCA Partner / <b>"EUGENE" Logistics</b></span><span style="flex:1"></span><button class="btn">✦ AI</button><button class="btn icon">🎙</button><button class="btn primary">Contatta</button><button class="btn icon">⋯</button></div><div class="body"><div class="col" style="overflow:auto">${detail.replace('class="detail"','class="detail" style="border-left:0"')}</div>${railRight}</div>`)}`;
+
+// V5 tabella
+document.getElementById('v5').innerHTML = `
+<p class="note"><b>Vista tabella.</b> Stessa maschera, stessi filtri, stesse azioni: cambia solo la resa dei dati per confronto e lavoro massivo. Interruttore card/tabella nella toolbar.</p>
+${shell(`${pagehead()}${toolbar('<button class="btn">▤ Tabella</button><button class="btn ghost">▦ Card</button>')}<div class="body">${railLeft}<div class="col" style="overflow:auto"><table class="table"><thead><tr><th style="width:26px"></th><th>Azienda</th><th>Paese</th><th>Città</th><th>Referente</th><th>Canali</th><th>Ultimo contatto</th><th>Score</th><th></th></tr></thead><tbody>
+${COMPANIES.concat(COMPANIES).map(c=>`<tr><td><input type="checkbox"/></td><td><b>${c.n}</b></td><td>${c.f}</td><td>${c.c}</td><td class="muted">${c.contact}</td><td>${c.ch}</td><td class="muted">${c.last}</td><td class="score">${c.s}</td><td><button class="btn icon">⋯</button></td></tr>`).join('')}
+</tbody></table></div></div>`)}`;
+
+// V6 mobile
+document.getElementById('v6').innerHTML = `
+<p class="note"><b>Mobile.</b> I due rail diventano drawer richiamabili dalla toolbar (Filtri / Azioni). La card passa a due righe. Il dettaglio si apre a tutta pagina, mai affiancato.</p>
+<div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn icon">⋯</button></div>
+<div class="toolbar"><input class="input" placeholder="Cerca…"/><button class="btn icon">⛭</button></div>
+<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="logo">${c.k}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge ${c.badge==='WCA'?'b-accent':'b-neutral'}">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
+<div style="display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)"><button class="btn" style="flex:1">Filtri (3)</button><button class="btn" style="flex:1">Azioni</button></div></div>`;
+
+// V7 anatomia
+document.getElementById('v7').innerHTML = `
+<p class="note"><b>Anatomia della card.</b> Regola: 5 informazioni di livello 1, massimo 2 badge visibili (il resto in «+N»), un solo accento, un solo menu «⋯». Confronto prima/dopo.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div><div class="lab">Oggi (14 elementi)</div>
+    <div class="card" style="flex-wrap:wrap">
+      <div class="logo">EU</div>
+      <div class="cmain"><div class="crow1"><span class="cname" style="text-transform:uppercase">"EUGENE" LOGISTICS CO., LTD.</span>
+      <span class="badge b-accent">WCA</span><span class="badge b-warn">🏆</span><span class="badge b-ok">DS3</span><span class="badge b-neutral">HQ</span><span class="badge b-warn">HOLD</span></div>
+      <div class="crow2">🇰🇷 KR · Busan · Contatto: Jin-Ho Park · jinho@eugenelog.co.kr · ⏱ 2g · 37 int. · ✉ 💬 in · ★</div></div>
+      <div class="cact"><span class="score">86</span><button class="btn icon">⋯</button></div>
+    </div>
+    <div class="tiny muted" style="margin-top:8px">Nessuna gerarchia: l'occhio non sa dove atterrare, i colori competono tra loro.</div>
+  </div>
+  <div><div class="lab">Template (5 elementi)</div>
+    ${card(COMPANIES[0],false)}
+    <div class="legend">
+      <div class="panel tiny"><b>1 · Identità</b><div class="muted">logo + nome + max 2 badge (+N)</div></div>
+      <div class="panel tiny"><b>2 · Luogo</b><div class="muted">bandiera + città, cliccabili = filtro</div></div>
+      <div class="panel tiny"><b>3 · Referente</b><div class="muted">nome + ruolo, uno solo</div></div>
+      <div class="panel tiny"><b>4 · Segnale</b><div class="muted">canali attivi + ultimo contatto</div></div>
+      <div class="panel tiny"><b>5 · Valore</b><div class="muted">score + menu ⋯</div></div>
+    </div>
+  </div>
+</div>`;
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected', x===t));
+  document.querySelectorAll('section').forEach(s=>s.hidden = s.id!==t.dataset.v);
+  window.scrollTo({top:0});
+});
+</script>
+</body>
+</html>
