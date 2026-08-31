@@ -12,7 +12,7 @@ import { PageFrame } from "@/v3/app/PageFrame";
 import { Button } from "@/components/ui/button";
 import { V3CellaFiltro, V3DataTable, type V3Colonna } from "@/v3/ui/DataTable";
 import { V3FiltriAttivi } from "@/v3/ui/FiltriAttivi";
-import { filtroAttivo, valoriDi, type V3Filtro } from "@/v3/ui/filtri";
+import { filtroAttivo, valoriDi } from "@/v3/ui/filtri";
 import { CompanyLogo } from "@/v3/ui/CompanyLogo";
 import { iso2Paese } from "@/v3/ui/paese";
 import { CountryFlag } from "@/v3/ui/CountryFlag";
