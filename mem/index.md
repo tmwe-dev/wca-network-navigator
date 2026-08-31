@@ -48,3 +48,4 @@
 - [Agente vocale Aurora](mem://architecture/voice-agent-aurora) — persona Aurora 8 sezioni, tool read-only in voce, elevenlabs-agent-sync, fix auth bridge vocale
 - [Standard visivo V3](mem://design/v3-visual-standard) — tabella unica V3DataTable, sidebar a primitive Rail, vetro blu+marrone, bordo 1px, loghi e bandiere
 - [V3 perimetro 6 sezioni](mem://architecture/v3-perimetro-6-sezioni)
+- [Sistema Grafico Unico V2](mem://design/sistema-grafico-unico-v2) — Palette Midnight Indigo (#0a0a1a/#141432/#1e1e5a/accento #4f46e5), guscio unico StandardPageFrame, 5 archetipi di pagina, densità 2/5 (max 5 info livello 1, 2 badge, 3 azioni header). Doc in docs/design/. Escluse Globo/Campagne/Galassia/Command.
