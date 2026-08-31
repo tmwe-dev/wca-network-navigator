@@ -144,3 +144,36 @@ export function useContatti(): UseContattiResult {
     refetch: () => void query.refetch(),
   };
 }
+
+/** Costanti e tipi dell'anagrafica esposti alle maschere (che non toccano il DAL). */
+export {
+  ETICHETTE_FONTE,
+  V3_FONTI_ANAGRAFICA,
+  type V3AnagraficaRiga,
+  type V3FonteAnagrafica,
+} from "@/data/v3/anagrafiche";
+
+/** Persone di una singola azienda: alimenta il popup «Scheda azienda». */
+export function usePersoneAzienda(azienda: string | null): {
+  readonly righe: readonly V3AnagraficaRiga[];
+  readonly isLoading: boolean;
+} {
+  const chiave = (azienda ?? "").trim().toLowerCase();
+  const parametri = React.useMemo(
+    () => ({
+      aziende: chiave ? [chiave] : [],
+      ordine: "nome" as const,
+      discendente: false,
+      pagina: 0,
+      perPagina: 100,
+    }),
+    [chiave],
+  );
+  const query = useQuery({
+    queryKey: queryKeys.v3.anagrafica(parametri),
+    queryFn: () => listAnagraficaV3(parametri),
+    enabled: Boolean(chiave),
+    staleTime: 30_000,
+  });
+  return { righe: query.data?.righe ?? [], isLoading: query.isLoading };
+}

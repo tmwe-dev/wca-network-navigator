@@ -7,12 +7,10 @@
  * principale su quell'azienda.
  */
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Loader2, Filter } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { queryKeys } from "@/lib/queryKeys";
-import { listAnagraficaV3, ETICHETTE_FONTE } from "@/data/v3/anagrafiche";
+import { ETICHETTE_FONTE, usePersoneAzienda } from "@/v3/modules/contatti/useContatti";
 import { CompanyLogo } from "@/v3/ui/CompanyLogo";
 import { InterazioniBadge, StatoCircuitoBadge } from "@/v3/ui/StatoBadge";
 
@@ -30,20 +28,8 @@ export function SchedaAzienda({
   readonly onApriContatto: (id: string) => void;
 }): React.ReactElement {
   const chiave = (azienda ?? "").trim().toLowerCase();
+  const { righe, isLoading } = usePersoneAzienda(azienda);
 
-  const parametri = React.useMemo(
-    () => ({ aziende: chiave ? [chiave] : [], ordine: "nome" as const, discendente: false, pagina: 0, perPagina: 100 }),
-    [chiave],
-  );
-
-  const query = useQuery({
-    queryKey: queryKeys.v3.anagrafica(parametri),
-    queryFn: () => listAnagraficaV3(parametri),
-    enabled: Boolean(chiave),
-    staleTime: 30_000,
-  });
-
-  const righe = query.data?.righe ?? [];
 
   return (
     <Dialog open={Boolean(azienda)} onOpenChange={(aperto) => !aperto && onChiudi()}>
@@ -55,7 +41,7 @@ export function SchedaAzienda({
           </DialogTitle>
         </DialogHeader>
 
-        {query.isLoading ? (
+        {isLoading ? (
           <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Caricamento persone…
           </div>
