@@ -3,6 +3,8 @@ export const v3Keys = {
     operatori: ["v3", "operatori"] as const,
     contatti: (filtri?: unknown) => ["v3", "contatti", filtri] as const,
     contattiPaesi: ["v3", "contatti-paesi"] as const,
+    anagrafica: (filtri?: unknown) => ["v3", "anagrafica", filtri] as const,
+    anagraficaPaesi: ["v3", "anagrafica-paesi"] as const,
     contatto: (id?: string | null) => ["v3", "contatto", id ?? null] as const,
     contattoInterazioni: (id?: string | null) => ["v3", "contatto-interazioni", id ?? null] as const,
     messaggi: (filtri?: unknown) => ["v3", "messaggi", filtri] as const,

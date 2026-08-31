@@ -13657,6 +13657,37 @@ export type Database = {
         }
         Returns: string
       }
+      v3_directory: {
+        Args: {
+          _fonte?: string
+          _limit?: number
+          _offset?: number
+          _paese?: string
+          _search?: string
+          _solo_email?: boolean
+          _stato?: string
+        }
+        Returns: {
+          azienda: string
+          email: string
+          fonte: string
+          id: string
+          interazioni: number
+          nome: string
+          paese: string
+          ruolo: string
+          stato: string
+          telefono: string
+          totale: number
+          ultima_interazione: string
+        }[]
+      }
+      v3_directory_countries: {
+        Args: never
+        Returns: {
+          paese: string
+        }[]
+      }
       v3_list_deleted: {
         Args: { _giorni?: number; _limite?: number; _tipo?: string }
         Returns: {
