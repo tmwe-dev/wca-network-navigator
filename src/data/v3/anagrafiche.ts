@@ -35,15 +35,32 @@ export interface V3AnagraficaRiga {
   readonly colleghi: number;
 }
 
+export const V3_ORDINI_ANAGRAFICA = [
+  "recente",
+  "nome",
+  "azienda",
+  "paese",
+  "fonte",
+  "stato",
+  "interazioni",
+] as const;
+export type V3OrdineAnagrafica = (typeof V3_ORDINI_ANAGRAFICA)[number];
+
 export interface V3AnagraficaFiltri {
   readonly ricerca?: string;
-  readonly fonte?: V3FonteAnagrafica | null;
-  readonly paese?: string | null;
-  readonly stato?: string | null;
+  /** Filtri multipli: più valori sullo stesso campo si sommano in OR. */
+  readonly fonti?: readonly string[];
+  readonly paesi?: readonly string[];
+  readonly stati?: readonly string[];
+  /** Nomi azienda già normalizzati in minuscolo. */
+  readonly aziende?: readonly string[];
   readonly soloConEmail?: boolean;
+  readonly ordine?: V3OrdineAnagrafica;
+  readonly discendente?: boolean;
   readonly pagina: number;
   readonly perPagina: number;
 }
+
 
 export interface V3AnagraficaPagina {
   readonly righe: readonly V3AnagraficaRiga[];
