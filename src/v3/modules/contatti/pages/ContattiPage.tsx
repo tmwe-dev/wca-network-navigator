@@ -13,7 +13,8 @@ import { PageFrame } from "@/v3/app/PageFrame";
 import { Button } from "@/components/ui/button";
 import { V3DataTable, type V3Colonna } from "@/v3/ui/DataTable";
 import { CompanyLogo } from "@/v3/ui/CompanyLogo";
-import { bandieraPaese, iso2Paese } from "@/v3/ui/paese";
+import { iso2Paese } from "@/v3/ui/paese";
+import { CountryFlag } from "@/v3/ui/CountryFlag";
 import { RailAzione, RailScelte, RailSelect, RailSezione, RailToggle } from "@/v3/ui/Rail";
 import { useContatti } from "../useContatti";
 import { ETICHETTE_STATO_LEAD, V3_STATI_LEAD, etichettaStato } from "../statiLead";
@@ -69,6 +70,7 @@ export function ContattiPage(): React.ReactElement {
       {
         id: "contatto",
         intestazione: "Contatto",
+        larghezza: "w-[30%]",
         cella: (riga) => (
           <div className="flex min-w-0 items-center gap-2 text-left">
             <CompanyLogo dominio={riga.dominio} nome={riga.azienda ?? riga.nome} />
@@ -82,6 +84,7 @@ export function ContattiPage(): React.ReactElement {
       {
         id: "azienda",
         intestazione: "Azienda",
+        larghezza: "w-[24%]",
         cella: (riga) => (
           <div className="min-w-0 text-left">
             <p className="truncate text-xs text-foreground">{riga.azienda ?? "—"}</p>
@@ -106,14 +109,11 @@ export function ContattiPage(): React.ReactElement {
         larghezza: "w-36",
         secondaria: true,
         cella: (riga) => {
-          const bandiera = bandieraPaese(riga.paeseCode ?? riga.paese);
-          const iso = iso2Paese(riga.paeseCode ?? riga.paese);
+          const valore = riga.paeseCode ?? riga.paese;
           return (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span aria-hidden className="text-sm leading-none">
-                {bandiera ?? "🏳️"}
-              </span>
-              <span className="truncate">{riga.paese ?? iso ?? "—"}</span>
+              <CountryFlag paese={valore} />
+              <span className="truncate">{riga.paese ?? iso2Paese(valore) ?? "—"}</span>
             </span>
           );
         },
