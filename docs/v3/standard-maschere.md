@@ -78,6 +78,19 @@ Tre colonne fisse, sempre le stesse, montate da `PageFrame`:
   ruolo, email, stato circuito e interazioni, e l'azione «Filtra l'elenco su questa
   azienda» che aggiunge il filtro `azienda` e chiude.
 
+## 6bis. Tasti e intestazione di dettaglio
+
+- **Un tasto deve sembrare un tasto.** Mai un'azione nascosta dietro testo semplice
+  o un breadcrumb: bordo 1px, sfondo, altezza fissa (`h-7`), icona a sinistra.
+- Il **ritorno indietro** è un tasto `outline` con freccia `ArrowLeft` e l'etichetta
+  della maschera di provenienza («← Contatti»). Lo monta `PageFrame` da `parent`.
+- Ogni maschera di dettaglio apre con `IntestazioneEntita` (`src/v3/ui/`):
+  logo azienda, nome, e sotto ruolo · azienda · bandiera + città, con i badge di
+  stato a destra.
+- L'azienda **non va mai tra parentesi** accanto al nome, né nel titolo né nelle
+  liste: sta nell'intestazione con il suo logo, la bandiera e la città.
+- Verifica visiva di tutte queste regole: **`/v3/galassia`**.
+
 ## 7. Sidebar e menu
 
 - Solo quattro primitive, da `src/v3/ui/Rail.tsx`:
