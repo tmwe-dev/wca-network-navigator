@@ -10,6 +10,7 @@
  * duplichiamo in V3 finché il modulo di invio non è innestato.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 
 export interface V3Approvazione {
   readonly id: string;
@@ -217,4 +218,25 @@ export async function listModelliV3(filtri: V3ModelliFiltri): Promise<V3ModelliP
   const tagDisponibili = [...new Set(righe.flatMap((r) => r.tag))].sort((a, b) => a.localeCompare(b, "it"));
 
   return { righe, totale: count ?? righe.length, tagDisponibili };
+}
+
+/* ─────────── Approvazione con invio reale ─────────── */
+
+/**
+ * Approva un'azione pendente e la fa eseguire dalla pipeline esistente
+ * (`pending-action-executor`, unico autorizzato al dispatch post-approvazione).
+ * Nessun invio duplicato qui: si passa allo stato `approved` e si delega.
+ */
+export async function approvaEdEseguiV3(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("ai_pending_actions")
+    .update({ status: "approved", approved_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "pending");
+  if (error) throw error;
+
+  await invokeEdge("pending-action-executor", {
+    body: { pending_action_id: id },
+    context: "v3/approvazioni.approvaEdEsegui",
+  });
 }
