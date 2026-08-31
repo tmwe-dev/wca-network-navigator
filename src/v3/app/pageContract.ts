@@ -230,7 +230,7 @@ export const V3_PAGES = {
     workflow: ["approva", "completa", "sblocca"],
     implemented: true,
   },
-
+  agenda: {
     path: "/v3/agenda",
     module: "programmazione",
     kind: "operational",
