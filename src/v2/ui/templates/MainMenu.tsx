@@ -29,7 +29,7 @@ export function MainMenu({ onNavigate }: Props): React.ReactElement {
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
-    <div className="flex min-h-0 flex-col" data-testid="main-menu">
+    <div className="flex h-full min-h-0 flex-col" data-testid="main-menu">
       <div className="flex items-center gap-2 border-b border-border/50 p-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

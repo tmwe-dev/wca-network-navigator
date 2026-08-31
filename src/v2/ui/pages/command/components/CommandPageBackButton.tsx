@@ -26,7 +26,7 @@ export function CommandPageBackButton({ currentPath }: CommandPageBackButtonProp
           <span>Menu</span>
         </motion.button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 p-0">
+      <PopoverContent align="start" className="flex h-[min(72vh,640px)] w-72 flex-col overflow-hidden p-0">
         <MainMenu />
       </PopoverContent>
     </Popover>
