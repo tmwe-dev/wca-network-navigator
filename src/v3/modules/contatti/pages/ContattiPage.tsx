@@ -1,54 +1,45 @@
 /**
  * Contatti — maschera Lista. "Chi devo contattare?"
- * Anagrafica unificata: contatti CRM, biglietti da visita e partner WCA
- * nella stessa tabella, con badge di provenienza. UI senza logica.
+ *
+ * Anagrafica unificata (CRM, biglietti da visita, partner WCA) montata sullo
+ * standard visivo V3: tabella unica (`V3DataTable`), sidebar a primitive
+ * (`Rail*`), logo azienda, bandiera paese, indicatore di aziende con più
+ * persone collegate. Nessuna logica qui: solo presentazione.
  */
 import * as React from "react";
-import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Upload, UserPlus, Users } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Upload, UserPlus, Users } from "lucide-react";
 import { PageFrame } from "@/v3/app/PageFrame";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { V3DataTable, type V3Colonna } from "@/v3/ui/DataTable";
+import { CompanyLogo } from "@/v3/ui/CompanyLogo";
+import { iso2Paese } from "@/v3/ui/paese";
+import { CountryFlag } from "@/v3/ui/CountryFlag";
+import { RailAzione, RailScelte, RailSelect, RailSezione, RailToggle } from "@/v3/ui/Rail";
 import { useContatti } from "../useContatti";
 import { ETICHETTE_STATO_LEAD, V3_STATI_LEAD, etichettaStato } from "../statiLead";
-import { ETICHETTE_FONTE, V3_FONTI_ANAGRAFICA, type V3AnagraficaRiga, type V3FonteAnagrafica } from "@/data/v3/anagrafiche";
+import { ETICHETTE_FONTE, V3_FONTI_ANAGRAFICA, type V3AnagraficaRiga } from "@/data/v3/anagrafiche";
 
-const VARIANTI_FONTE: Record<V3FonteAnagrafica, "default" | "secondary" | "outline"> = {
-  crm: "default",
-  biglietti: "secondary",
-  wca: "outline",
+const CLASSI_FONTE: Record<string, string> = {
+  crm: "border-primary/50 bg-primary/15 text-foreground",
+  biglietti: "border-accent/60 bg-accent/20 text-foreground",
+  wca: "border-border bg-muted/30 text-muted-foreground",
 };
 
-function RailGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function Etichetta({ children, classe }: { children: React.ReactNode; classe?: string }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+    <span
+      className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] leading-none ${
+        classe ?? "border-border bg-transparent text-muted-foreground"
+      }`}
+    >
       {children}
-    </div>
+    </span>
   );
-}
-
-function CellaContatto({ riga }: { riga: V3AnagraficaRiga }) {
-  const corpo = (
-    <>
-      <p className="truncate text-sm font-medium text-foreground">{riga.nome ?? "Senza nome"}</p>
-      <p className="truncate text-xs text-muted-foreground">{riga.email ?? "nessuna email"}</p>
-    </>
-  );
-  // Solo i contatti CRM hanno una scheda dettaglio in V3.
-  if (riga.fonte === "crm") {
-    return (
-      <Link to={`/v3/contatti/${riga.id}`} className="block min-w-0 hover:underline">
-        {corpo}
-      </Link>
-    );
-  }
-  return <div className="min-w-0">{corpo}</div>;
 }
 
 export function ContattiPage(): React.ReactElement {
+  const navigate = useNavigate();
   const {
     righe,
     totale,
@@ -74,120 +65,146 @@ export function ContattiPage(): React.ReactElement {
     refetch,
   } = useContatti();
 
+  const colonne = React.useMemo<readonly V3Colonna<V3AnagraficaRiga>[]>(
+    () => [
+      {
+        id: "contatto",
+        intestazione: "Contatto",
+        larghezza: "w-[30%]",
+        cella: (riga) => (
+          <div className="flex min-w-0 items-center gap-2 text-left">
+            <CompanyLogo dominio={riga.dominio} nome={riga.azienda ?? riga.nome} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">{riga.nome ?? "Senza nome"}</p>
+              <p className="truncate text-xs text-muted-foreground">{riga.email ?? "nessuna email"}</p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "azienda",
+        intestazione: "Azienda",
+        larghezza: "w-[24%]",
+        cella: (riga) => (
+          <div className="min-w-0 text-left">
+            <p className="truncate text-xs text-foreground">{riga.azienda ?? "—"}</p>
+            {riga.colleghi > 1 && (
+              <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Users className="h-3 w-3" />
+                {riga.colleghi} persone
+              </span>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "fonte",
+        intestazione: "Fonte",
+        larghezza: "w-24",
+        cella: (riga) => <Etichetta classe={CLASSI_FONTE[riga.fonte]}>{ETICHETTE_FONTE[riga.fonte]}</Etichetta>,
+      },
+      {
+        id: "paese",
+        intestazione: "Paese",
+        larghezza: "w-36",
+        secondaria: true,
+        cella: (riga) => {
+          const valore = riga.paeseCode ?? riga.paese;
+          return (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CountryFlag paese={valore} />
+              <span className="truncate">{riga.paese ?? iso2Paese(valore) ?? "—"}</span>
+            </span>
+          );
+        },
+      },
+      {
+        id: "stato",
+        intestazione: "Stato",
+        larghezza: "w-32",
+        secondaria: true,
+        cella: (riga) => <Etichetta>{etichettaStato(riga.stato)}</Etichetta>,
+      },
+      {
+        id: "interazioni",
+        intestazione: "Interazioni",
+        larghezza: "w-24",
+        secondaria: true,
+        cella: (riga) => <span className="text-xs tabular-nums text-muted-foreground">{riga.interazioni}</span>,
+      },
+    ],
+    [],
+  );
+
   const filters = (
     <>
-      <RailGroup label="Ricerca">
-        <Input
-          value={ricerca}
-          onChange={(event) => setRicerca(event.target.value)}
-          placeholder="Nome, azienda, email"
-          className="h-8 text-xs"
+      <RailSezione titolo="Ricerca">
+        <div className="flex items-center gap-2 rounded-md border border-border bg-background/40 px-2">
+          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <input
+            value={ricerca}
+            onChange={(event) => setRicerca(event.target.value)}
+            placeholder="Nome, azienda, email"
+            className="h-8 w-full bg-transparent text-left text-xs text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+      </RailSezione>
+
+      <RailSezione titolo="Provenienza">
+        <RailScelte
+          valore={fonte}
+          onChange={(valore) => setFonte(valore as typeof fonte)}
+          opzioni={[
+            { valore: null, etichetta: "Tutte" },
+            ...V3_FONTI_ANAGRAFICA.map((value) => ({ valore: value, etichetta: ETICHETTE_FONTE[value] })),
+          ]}
         />
-      </RailGroup>
+      </RailSezione>
 
-      <RailGroup label="Provenienza">
-        <div className="flex flex-wrap gap-1">
-          <Button
-            variant={fonte === null ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => setFonte(null)}
-          >
-            Tutte
-          </Button>
-          {V3_FONTI_ANAGRAFICA.map((value) => (
-            <Button
-              key={value}
-              variant={fonte === value ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => setFonte(value)}
-            >
-              {ETICHETTE_FONTE[value]}
-            </Button>
-          ))}
-        </div>
-      </RailGroup>
+      <RailSezione titolo="Stato">
+        <RailScelte
+          valore={stato}
+          onChange={setStato}
+          opzioni={[
+            { valore: null, etichetta: "Tutti" },
+            ...V3_STATI_LEAD.map((value) => ({ valore: value, etichetta: ETICHETTE_STATO_LEAD[value] ?? value })),
+          ]}
+        />
+      </RailSezione>
 
-      <RailGroup label="Stato">
-        <div className="flex flex-wrap gap-1">
-          <Button
-            variant={stato === null ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => setStato(null)}
-          >
-            Tutti
-          </Button>
-          {V3_STATI_LEAD.map((value) => (
-            <Button
-              key={value}
-              variant={stato === value ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => setStato(value)}
-            >
-              {ETICHETTE_STATO_LEAD[value] ?? value}
-            </Button>
-          ))}
-        </div>
-      </RailGroup>
+      <RailSezione titolo="Paese" apertaDefault={false}>
+        <RailSelect
+          valore={paese}
+          onChange={setPaese}
+          etichettaVuoto="Tutti i paesi"
+          opzioni={paesiDisponibili.map((code) => ({ valore: code, etichetta: code }))}
+        />
+      </RailSezione>
 
-      <RailGroup label="Paese">
-        <select
-          value={paese ?? ""}
-          onChange={(event) => setPaese(event.target.value || null)}
-          className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs text-foreground"
-        >
-          <option value="">Tutti i paesi</option>
-          {paesiDisponibili.map((code) => (
-            <option key={code} value={code}>
-              {code}
-            </option>
-          ))}
-        </select>
-      </RailGroup>
-
-      <RailGroup label="Contattabilità">
-        <Button
-          variant={soloConEmail ? "secondary" : "ghost"}
-          size="sm"
-          className="h-7 w-full justify-start px-2 text-xs"
-          onClick={() => setSoloConEmail(!soloConEmail)}
-        >
-          Solo con email
-        </Button>
-      </RailGroup>
-
-      <Button variant="ghost" size="sm" className="h-7 w-full px-2 text-xs" onClick={azzeraFiltri}>
-        Azzera filtri
-      </Button>
+      <RailSezione titolo="Contattabilità" apertaDefault={false}>
+        <RailToggle etichetta="Solo con email" attivo={soloConEmail} onChange={setSoloConEmail} />
+        <RailAzione onClick={azzeraFiltri}>Azzera filtri</RailAzione>
+      </RailSezione>
     </>
   );
 
   const workflow = (
     <>
-      <RailGroup label="Aggiungi">
-        <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" disabled>
-          <UserPlus className="h-3.5 w-3.5" />
+      <RailSezione titolo="Aggiungi">
+        <RailAzione disabilitato icona={<UserPlus className="h-3.5 w-3.5" />}>
           Nuovo contatto
-        </Button>
-        <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" disabled>
-          <Upload className="h-3.5 w-3.5" />
+        </RailAzione>
+        <RailAzione disabilitato icona={<Upload className="h-3.5 w-3.5" />}>
           Import
-        </Button>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Creazione e import restano in V2 finché il Modulo 2 non è completo.
-        </p>
-      </RailGroup>
+        </RailAzione>
+      </RailSezione>
 
-      <RailGroup label="Stato dati">
-        <p className="text-xs text-muted-foreground">{totale.toLocaleString("it-IT")} voci nel filtro</p>
-        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={refetch}>
-          <RefreshCw className="h-3.5 w-3.5" />
+      <RailSezione titolo="Stato dati">
+        <p className="text-left text-xs text-muted-foreground">{totale.toLocaleString("it-IT")} voci nel filtro</p>
+        <RailAzione onClick={refetch} icona={<RefreshCw className="h-3.5 w-3.5" />}>
           Aggiorna
-        </Button>
-      </RailGroup>
+        </RailAzione>
+      </RailSezione>
     </>
   );
 
@@ -229,65 +246,36 @@ export function ContattiPage(): React.ReactElement {
   return (
     <PageFrame pageId="contatti" filters={filters} workflow={workflow} toolbar={toolbar}>
       {isLoading ? (
-        <div className="flex h-40 items-center justify-center gap-2 text-sm text-muted-foreground">
+        <div className="flex h-40 items-center gap-2 text-left text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Caricamento anagrafica…
         </div>
       ) : error ? (
-        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-left text-sm text-destructive">
           Impossibile caricare l'anagrafica: {error.message}
         </div>
-      ) : righe.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Nessuna voce corrisponde ai filtri.
-        </div>
       ) : (
-        <div className="overflow-hidden rounded-md border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">Contatto</TableHead>
-                <TableHead className="text-xs">Azienda</TableHead>
-                <TableHead className="text-xs">Fonte</TableHead>
-                <TableHead className="text-xs">Paese</TableHead>
-                <TableHead className="text-xs">Stato</TableHead>
-                <TableHead className="text-right text-xs">Interazioni</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {righe.map((riga) => (
-                <TableRow key={`${riga.fonte}-${riga.id}`}>
-                  <TableCell className="py-2">
-                    <CellaContatto riga={riga} />
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <span className="line-clamp-1 text-xs text-muted-foreground">{riga.azienda ?? "—"}</span>
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <Badge variant={VARIANTI_FONTE[riga.fonte]} className="text-[11px]">
-                      {ETICHETTE_FONTE[riga.fonte]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-2 text-xs text-muted-foreground">{riga.paese ?? "—"}</TableCell>
-                  <TableCell className="py-2">
-                    <Badge variant="outline" className="text-[11px]">
-                      {etichettaStato(riga.stato)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-2 text-right text-xs tabular-nums text-muted-foreground">
-                    {riga.interazioni}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {!isLoading && righe.length > 0 && (
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          Righe {pagina * perPagina + 1}–{pagina * perPagina + righe.length} di {totale.toLocaleString("it-IT")}.
-        </p>
+        <>
+          <V3DataTable
+            colonne={colonne}
+            righe={righe}
+            chiave={(riga) => `${riga.fonte}-${riga.id}`}
+            vuoto="Nessuna voce corrisponde ai filtri."
+            onRigaClick={(riga) => {
+              // Solo i contatti CRM hanno una scheda dettaglio in V3.
+              if (riga.fonte === "crm") navigate(`/v3/contatti/${riga.id}`);
+            }}
+          />
+          {righe.length > 0 && (
+            <p className="mt-2 text-left text-[11px] text-muted-foreground">
+              Righe {pagina * perPagina + 1}–{pagina * perPagina + righe.length} di{" "}
+              {totale.toLocaleString("it-IT")}.{" "}
+              <Link to="/v3/duplicati" className="underline underline-offset-2 hover:text-foreground">
+                Verifica duplicati
+              </Link>
+            </p>
+          )}
+        </>
       )}
     </PageFrame>
   );

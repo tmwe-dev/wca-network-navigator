@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
+import "@/v3/ui/theme.css";
 import { supabase } from "@/integrations/supabase/client";
 import {
   V3_IMPLEMENTED_PAGES,
@@ -68,10 +69,10 @@ function NavigationList({ onNavigate }: { onNavigate: () => void }) {
               to={page.path}
               onClick={onNavigate}
               className={cn(
-                "block rounded-md px-2 py-1.5 text-sm transition-colors",
+                "block rounded-md border px-2 py-1.5 text-left text-sm transition-colors",
                 pathname === page.path
-                  ? "bg-accent font-medium text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                  ? "border-primary/60 bg-primary/20 font-medium text-foreground"
+                  : "border-transparent text-muted-foreground hover:border-accent/60 hover:bg-accent/15 hover:text-foreground",
               )}
             >
               {page.title}
@@ -113,15 +114,15 @@ export function AppShell(): React.ReactElement {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
+    <div className="v3-root flex h-screen flex-col overflow-hidden text-foreground">
+      <header className="v3-glass-plain flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
         <Sheet open={navOpen} onOpenChange={setNavOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Apri navigazione">
               <Menu className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0">
+          <SheetContent side="left" className="v3-root w-64 p-0">
             <SheetHeader className="border-b border-border p-3">
               <SheetTitle className="text-sm">Navigator V3</SheetTitle>
             </SheetHeader>

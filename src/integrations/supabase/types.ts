@@ -13669,12 +13669,15 @@ export type Database = {
         }
         Returns: {
           azienda: string
+          colleghi: number
+          dominio: string
           email: string
           fonte: string
           id: string
           interazioni: number
           nome: string
           paese: string
+          paese_code: string
           ruolo: string
           stato: string
           telefono: string
