@@ -12,7 +12,7 @@
  */
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, SlidersHorizontal, PanelRight } from "lucide-react";
+import { Sparkles, SlidersHorizontal, PanelRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -99,21 +99,23 @@ export function PageFrame({
 
           <div className="flex min-w-0 items-center gap-2">
             {parent && (
-              <>
-                <Link
-                  to={parent.to}
-                  className="truncate text-xs text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {parent.label}
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-7 shrink-0 gap-1.5 px-2 text-xs"
+                title={`Torna a ${parent.label}`}
+              >
+                <Link to={parent.to}>
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span className="max-w-[9rem] truncate">{parent.label}</span>
                 </Link>
-                <span aria-hidden className="text-xs text-muted-foreground/60">
-                  /
-                </span>
-              </>
+              </Button>
             )}
             <h1 className="truncate text-sm font-semibold text-foreground">{title}</h1>
             <span className="hidden truncate text-xs text-muted-foreground xl:inline">— {page.question}</span>
           </div>
+
 
           <div className="ml-auto flex items-center gap-1.5">
             {actions}

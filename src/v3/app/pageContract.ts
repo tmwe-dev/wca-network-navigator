@@ -314,6 +314,17 @@ export const V3_PAGES = {
     workflow: ["acquisizione", "laboratorio", "osservabilita"],
     implemented: true,
   },
+  galassia: {
+    path: "/v3/galassia",
+    module: "trasversale",
+    kind: "detail",
+    title: "Galassia",
+    question: "Che aspetto ha lo standard e quanto è cresciuta la V3?",
+    filters: [],
+    workflow: [],
+    implemented: true,
+  },
+
 } as const satisfies Record<string, V3PageDefinition>;
 
 export type V3PageId = keyof typeof V3_PAGES;
