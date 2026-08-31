@@ -81,6 +81,8 @@ export function V3Routes(): React.ReactElement {
           <Route path={relative(V3_PAGES.agenda.path)} element={<AgendaPage />} />
           <Route path={relative(V3_PAGES.campagne.path)} element={<CampagnePage />} />
           <Route path={relative(V3_PAGES.coda.path)} element={<CodaPage />} />
+          <Route path={relative(V3_PAGES.dafare.path)} element={<DaFarePage />} />
+
           <Route path={relative(V3_PAGES.pipeline.path)} element={<PipelinePage />} />
           <Route path={relative(V3_PAGES.andamento.path)} element={<AndamentoPage />} />
           <Route path={relative(V3_PAGES.registro.path)} element={<RegistroPage />} />
