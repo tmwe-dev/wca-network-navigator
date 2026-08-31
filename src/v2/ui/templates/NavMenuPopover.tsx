@@ -9,7 +9,7 @@ import * as React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronRight, Layers, LogOut, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Compass, Layers, LogOut, Search, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FULL_NAV_ITEMS, macroAreaGroups } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
@@ -489,6 +489,19 @@ export function NavMenuPopover({
               )}
             </>
           )}
+          <div className="my-1 border-t border-white/10" />
+          <div className="mx-1 my-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] leading-tight text-amber-700 dark:text-amber-400">
+            Versione legacy: usala solo per funzioni non ancora in V3.
+          </div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleSelect("/v3/inbox")}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          >
+            <Compass className="h-4 w-4" />
+            <span>Vai alla V3 (operativo)</span>
+          </button>
           <div className="my-1 border-t border-white/10" />
           <div className="px-1">
             <ThemePicker variant="menu-row" />

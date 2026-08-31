@@ -30,7 +30,7 @@ const PORTE: readonly Porta[] = [
   {
     to: "/v2/command",
     titolo: "Completo",
-    sottotitolo: "V2",
+    sottotitolo: "V2 · Legacy",
     descrizione: "Acquisizione lead, laboratorio AI, diagnostica e tutte le superfici storiche.",
     voci: ["Acquisizione e scraping", "Prompt Lab e Knowledge Base", "Osservabilità e telemetria", "Galassia di sistema"],
     icona: <Layers className="h-5 w-5" aria-hidden="true" />,
