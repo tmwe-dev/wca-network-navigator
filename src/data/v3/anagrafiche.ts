@@ -69,11 +69,12 @@ export async function listAnagraficaV3(filtri: V3AnagraficaFiltri): Promise<V3An
   const perPagina = Math.min(Math.max(filtri.perPagina, 1), 200);
   const pagina = Math.max(filtri.pagina, 0);
 
+  // Parametri omessi (undefined) = default SQL null = nessun filtro.
   const { data, error } = await supabase.rpc("v3_directory", {
-    _search: filtri.ricerca?.trim() ? filtri.ricerca.trim() : null,
-    _fonte: filtri.fonte ?? null,
-    _paese: filtri.paese ?? null,
-    _stato: filtri.stato ?? null,
+    _search: filtri.ricerca?.trim() ? filtri.ricerca.trim() : undefined,
+    _fonte: filtri.fonte ?? undefined,
+    _paese: filtri.paese ?? undefined,
+    _stato: filtri.stato ?? undefined,
     _solo_email: filtri.soloConEmail ?? false,
     _offset: pagina * perPagina,
     _limit: perPagina,
