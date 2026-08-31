@@ -14,8 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useScrivi } from "../useScrivi";
-import type { V3Destinatario } from "@/data/v3/scrivi";
+import { useScrivi, type V3Destinatario } from "../useScrivi";
 
 function RigaDestinatario({
   destinatario,

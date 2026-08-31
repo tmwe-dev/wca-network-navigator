@@ -14,6 +14,8 @@ import {
 } from "@/data/v3/scrivi";
 import { listModelliV3, type V3Modello } from "@/data/v3/risposta";
 
+export type { V3Destinatario } from "@/data/v3/scrivi";
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface UseScriviResult {
