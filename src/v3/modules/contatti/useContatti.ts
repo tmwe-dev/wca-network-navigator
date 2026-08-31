@@ -1,6 +1,8 @@
 /**
  * Stato dell'anagrafica unificata: contatti CRM, biglietti da visita e partner WCA.
- * Filtri e paginazione sono server-side (funzione SQL `v3_directory`).
+ *
+ * Modello standard V3: una sola lista di filtri (campo, valore) più un solo
+ * ordinamento. Filtri e paginazione sono server-side (funzione SQL `v3_directory`).
  */
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -9,8 +11,10 @@ import {
   listAnagraficaV3,
   listPaesiAnagraficaV3,
   type V3AnagraficaRiga,
-  type V3FonteAnagrafica,
+  type V3OrdineAnagrafica,
 } from "@/data/v3/anagrafiche";
+import { alternaFiltro, rimuoviFiltro as rimuovi, valoriDi, type V3Filtro } from "@/v3/ui/filtri";
+import type { V3Ordinamento } from "@/v3/ui/DataTable";
 
 const PER_PAGINA = 50;
 
@@ -26,15 +30,15 @@ export interface UseContattiResult {
 
   readonly ricerca: string;
   readonly setRicerca: (value: string) => void;
-  readonly fonte: V3FonteAnagrafica | null;
-  readonly setFonte: (value: V3FonteAnagrafica | null) => void;
-  readonly paese: string | null;
-  readonly setPaese: (value: string | null) => void;
-  readonly stato: string | null;
-  readonly setStato: (value: string | null) => void;
+  readonly filtri: readonly V3Filtro[];
+  readonly alterna: (filtro: V3Filtro) => void;
+  readonly rimuoviFiltro: (filtro: V3Filtro) => void;
   readonly soloConEmail: boolean;
   readonly setSoloConEmail: (value: boolean) => void;
   readonly paesiDisponibili: readonly string[];
+
+  readonly ordinamento: V3Ordinamento;
+  readonly ordinaPer: (campo: string) => void;
 
   readonly vaiA: (pagina: number) => void;
   readonly azzeraFiltri: () => void;
@@ -44,10 +48,12 @@ export interface UseContattiResult {
 export function useContatti(): UseContattiResult {
   const [ricercaInput, setRicercaInput] = React.useState("");
   const [ricerca, setRicerca] = React.useState("");
-  const [fonte, setFonteState] = React.useState<V3FonteAnagrafica | null>(null);
-  const [paese, setPaeseState] = React.useState<string | null>(null);
-  const [stato, setStatoState] = React.useState<string | null>(null);
+  const [filtri, setFiltri] = React.useState<readonly V3Filtro[]>([]);
   const [soloConEmail, setSoloConEmailState] = React.useState(false);
+  const [ordinamento, setOrdinamento] = React.useState<V3Ordinamento>({
+    campo: "recente",
+    discendente: true,
+  });
   const [pagina, setPagina] = React.useState(0);
 
   // Debounce: la ricerca colpisce il database, non un array già in memoria.
@@ -59,14 +65,25 @@ export function useContatti(): UseContattiResult {
     return () => window.clearTimeout(timer);
   }, [ricercaInput]);
 
-  const filtri = React.useMemo(
-    () => ({ ricerca, fonte, paese, stato, soloConEmail, pagina, perPagina: PER_PAGINA }),
-    [ricerca, fonte, paese, stato, soloConEmail, pagina],
+  const parametri = React.useMemo(
+    () => ({
+      ricerca,
+      fonti: valoriDi(filtri, "fonte"),
+      paesi: valoriDi(filtri, "paese"),
+      stati: valoriDi(filtri, "stato"),
+      aziende: valoriDi(filtri, "azienda"),
+      soloConEmail,
+      ordine: ordinamento.campo as V3OrdineAnagrafica,
+      discendente: ordinamento.discendente,
+      pagina,
+      perPagina: PER_PAGINA,
+    }),
+    [ricerca, filtri, soloConEmail, ordinamento, pagina],
   );
 
   const query = useQuery({
-    queryKey: queryKeys.v3.anagrafica(filtri),
-    queryFn: () => listAnagraficaV3(filtri),
+    queryKey: queryKeys.v3.anagrafica(parametri),
+    queryFn: () => listAnagraficaV3(parametri),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
@@ -91,19 +108,13 @@ export function useContatti(): UseContattiResult {
 
     ricerca: ricercaInput,
     setRicerca: setRicercaInput,
-    fonte,
-    setFonte: (value) => {
-      setFonteState(value);
+    filtri,
+    alterna: (filtro) => {
+      setFiltri((correnti) => alternaFiltro(correnti, filtro));
       setPagina(0);
     },
-    paese,
-    setPaese: (value) => {
-      setPaeseState(value);
-      setPagina(0);
-    },
-    stato,
-    setStato: (value) => {
-      setStatoState(value);
+    rimuoviFiltro: (filtro) => {
+      setFiltri((correnti) => rimuovi(correnti, filtro));
       setPagina(0);
     },
     soloConEmail,
@@ -113,12 +124,20 @@ export function useContatti(): UseContattiResult {
     },
     paesiDisponibili: paesi.data ?? [],
 
+    ordinamento,
+    ordinaPer: (campo) => {
+      setOrdinamento((corrente) =>
+        corrente.campo === campo
+          ? { campo, discendente: !corrente.discendente }
+          : { campo, discendente: campo === "recente" || campo === "interazioni" },
+      );
+      setPagina(0);
+    },
+
     vaiA: (value) => setPagina(Math.max(0, value)),
     azzeraFiltri: () => {
       setRicercaInput("");
-      setFonteState(null);
-      setPaeseState(null);
-      setStatoState(null);
+      setFiltri([]);
       setSoloConEmailState(false);
       setPagina(0);
     },
