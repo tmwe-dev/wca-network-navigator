@@ -1,72 +1,61 @@
-# V2 — Analisi navigazione e piano di ristrutturazione
+# Studio architetturale: sistema grafico unico per tutte le maschere
 
-## Cosa ho misurato (dati reali del codice)
+Obiettivo: un solo linguaggio visivo e un solo scheletro di pagina, applicabile a tutte le maschere tranne le due a globo 3D (Globo/Mappa e Campagne), che restano full-bleed.
 
-- **153 rotte** registrate in `src/v2/routes.tsx`
-- **91 pagine** in `src/v2/ui/pages/`
-- **15 voci** nel menu principale (`navConfig.tsx`), raggruppate in 7 macro-aree
-- Quindi: **circa 120 rotte non sono raggiungibili dal menu**. Vivono solo dentro Config › Development › «Tutte le pagine», che non è una cartella di sviluppo ma il vero elenco delle maschere del sistema.
+Questa fase produce **solo documenti + specifiche**. Nessuna pagina viene migrata ora.
 
-## Le tre malattie della navigazione
+## Cosa ho verificato oggi (stato reale)
 
-**1. Rotte doppie e triple sulla stessa maschera.** Lo stesso schermo ha più indirizzi, quindi il menu non può mai evidenziare "dove sono":
+- 91 pagine in `src/v2/ui/pages`.
+- Adozione dei gusci attuali: **2** pagine usano `StandardPageFrame`, **16** usano `PageShell`, **22** usano `PageTitleHeader`, le restanti ~40 costruiscono l'header a mano.
+- Esistono già 3 gusci concorrenti (`StandardPageFrame`, `PageShell`, `PageTitleHeader`) più `GoldenLayout`/`GoldenHeaderBar`: da qui nascono header diversi, spaziature diverse e doppioni di pulsanti.
+- `layoutTokens.ts` definisce già altezze e z-index, ma **non** il colore: i colori sono liberi nelle pagine, da cui l'esplosione cromatica visibile nello screenshot.
 
-| Maschera        | Indirizzi attivi                                                             |
-| --------------- | ---------------------------------------------------------------------------- |
-| Contatti        | `/v2/contacts`, `/v2/crm/contacts`, `/v2/pipeline/contacts`, `/v2/partner-directory` |
-| Agenda          | `/v2/agenda`, `/v2/calendar`, `/v2/outreach/agenda`, `/v2/pipeline/agenda`     |
-| Biglietti       | `/v2/biglietti`, `/v2/business-cards`, `/v2/crm/biglietti`, `/v2/pipeline/biglietti` |
-| Campagne        | `/v2/campaigns`, `/v2/communicate/campaigns`, `/v2/pipeline/campaigns`         |
-| Approvazioni    | `/v2/approvals`, `/v2/approvazioni`, `/v2/communicate/approve`                 |
-| Prompt Lab      | `/v2/prompt-lab`, `/v2/ai-staff/prompt-lab`, `/v2/settings/prompt-lab`         |
-| Ricerca aziende | `/v2/ra-explorer`, `/v2/research/explorer`, `/v2/deep-search`                  |
+## Decisioni prese (dalle tue scelte)
 
-Sono almeno **40 rotte alias** su ~20 maschere reali.
+- **Palette**: Midnight Indigo ripulita — `#0a0a1a` sfondo, `#141432` superficie, `#1e1e5a` bordo/elevazione, `#4f46e5` unico accento. Viola, verde, ambra e rosso restano **solo** come stati semantici (successo, attenzione, errore, AI), mai come decorazione.
+- **Layout base**: Dashboard a pannelli — header di pagina + rail contestuali + pannelli.
+- **Densità: 2/5 (essenziale)** — in prima battuta si mostrano poche informazioni chiave; il resto vive dietro "Mostra dettagli", drawer o pannello secondario.
 
-**2. Il menu non riflette il lavoro.** Le 15 voci in menu sono un misto di cose quotidiane (Command, Inbox, Email, Cockpit) e cose rare o tecniche (Cestinone, Lab, Rubrica WhatsApp, Rubrica LinkedIn) mentre mancano dal menu maschere che l'utente usa davvero: Contatti, Biglietti da visita, Campagne, Approvazioni, Pipeline/Kanban, Knowledge Base, Prompt Lab.
+## Deliverable dello studio
 
-**3. "Development" è diventato l'indice del sistema.** Il pannello dentro Config raccoglie le maschere sotto etichette da manutentore ("Legacy & Controllo", "Lab & Verifiche", "Sistema & Diagnostica"). L'utente ci va per trovare cose importanti, con l'impressione che tutto sia sperimentale.
+### 1. Censimento pagina per pagina
+Tabella con: pagina, guscio usato oggi, tipo di contenuto (elenco, dettaglio, form, monitor, editor, hub), numero di azioni in header, colori fuori palette. Serve a scoprire che le 91 maschere ricadono in poche famiglie ricorrenti.
 
-## Ristrutturazione proposta — per priorità d'uso, non per storia del codice
+### 2. Le famiglie di pagina (archetipi)
+Previsti 6 archetipi, ognuno con wireframe testuale e regole:
+- **Elenco → Dettaglio** (Partner, Contatti, Inbox, Rubriche)
+- **Monitor / KPI** (Missioni Autopilot, Cockpit, Analytics, KPI)
+- **Editor / Configurazione** (Persona, Prompt, Config, Strategie)
+- **Flusso operativo** (Approvazioni, Sorting, Cestinone)
+- **Hub di navigazione** (Lab, AI Staff, Agenti)
+- **Full-bleed** (Globo, Campagne) — esclusi dal template, tocca loro solo la palette.
 
-### Livello 1 — Menu quotidiano (7 voci, sempre visibili)
+### 3. Contratto di pagina unico
+Regole valide per ogni maschera:
+- Un solo header: titolo/breadcrumb a sinistra, **max 3** azioni primarie a destra, tutto il resto in un menu "…".
+- Il tasto AI sempre nella stessa posizione.
+- Filtri sempre nel rail sinistro, workflow/azioni di contesto sempre nel rail destro; mai duplicati nel corpo pagina.
+- Una sola gerarchia di testo (titolo, sezione, etichetta, valore, nota).
+- Badge: massimo 2 visibili per riga/card, gli altri collassati in "+N".
+- Livello 1 = informazione essenziale; livello 2 = dettagli a richiesta.
 
-Sono le maschere del ciclo commerciale: si usano ogni giorno.
+### 4. Sistema di colore semantico
+Mappa completa: quale token per sfondo, superficie, bordo, testo, accento, stati (attivo/pausa/errore/successo), canali (email, WhatsApp, LinkedIn) e AI. Regola: nessun colore scritto a mano nelle pagine.
 
-```text
-Command        /v2/command          chiedere e far fare
-Contatti       /v2/contacts         anagrafica unificata (persone, aziende, biglietti)
-Messaggi       /v2/inbox            posta in arrivo, tutti i canali
-Scrivi         /v2/communicate/compose  redazione + invio bulk
-Da fare        /v2/cockpit          approvazioni, agenda, coda in un'unica maschera
-Campagne       /v2/campaigns        cadenze e circuito di attesa
-Regole         /v2/email-intelligence   catalogazione, filtri, classificazione
-```
+### 5. Prototipo di riferimento: Missioni Autopilot
+La pagina viene ridisegnata **su carta** (wireframe + specifica) come esemplare dell'archetipo "Monitor / KPI", con prima/dopo dei suoi elementi. Serve da metro per tutte le altre.
 
-### Livello 2 — Menu di secondo piano (accessibile dal ☰, sotto una riga di separazione)
+### 6. Piano di migrazione a ondate
+Ordine delle ondate, criterio di uscita per ogni ondata, e regola per non rompere le pagine funzionanti (nessuna modifica alla logica, solo presentazione).
 
-Cervello e configurazione: si usano una volta a settimana.
+## Note tecniche
 
-```text
-Agenti · Knowledge Base · Prompt Lab · Andamento (KPI/Analytics) · Impostazioni
-```
+- Documenti prodotti: `docs/design/censimento-maschere.md`, `docs/design/archetipi-pagina.md`, `docs/design/contratto-pagina.md`, `docs/design/token-colore.md`, `docs/design/prototipo-missioni-autopilot.md`, `docs/design/piano-migrazione.md`.
+- I token colore vengono specificati come variabili HSL da inserire poi in `index.css` / `tailwind.config.ts`; in questa fase restano descritti nel documento, non applicati.
+- `StandardPageFrame` è il candidato naturale a guscio unico: `PageShell` e `PageTitleHeader` verranno assorbiti in fase di migrazione, non ora.
+- Nessuna modifica a routing, hook, DAL, edge function o database.
 
-### Livello 3 — Strumenti tecnici (dentro Impostazioni › Sistema)
+## Fuori perimetro
 
-Diagnostica, Telemetria, Osservabilità, E2E, Galassia, Design System, Test hub. Qui "Development" ha finalmente senso, perché contiene solo cose da manutentore.
-
-### Regola sulle rotte
-
-Per ogni maschera **un solo indirizzo canonico**. Tutti gli alias diventano redirect permanenti verso il canonico, così i vecchi link continuano a funzionare ma il menu può sempre evidenziare la voce attiva. Nessuna pagina viene cancellata in questa fase.
-
-## Ordine di esecuzione
-
-1. **Inventario canonico** — tabella maschera → indirizzo canonico → alias, scritta in un file di configurazione unico (`src/v2/navigation/canonical.ts`). Nessun cambio di comportamento, solo verità scritta.
-2. **Redirect degli alias** — `routes.tsx` riscritto: le ~40 rotte alias diventano `<Navigate replace>`. Le maschere restano identiche.
-3. **Nuovo menu a 3 livelli** — `navConfig.tsx` riorganizzato sui livelli sopra; il ☰ mostra Livello 1 sempre, Livello 2 sotto separatore, Livello 3 solo dentro Impostazioni.
-4. **Config › Development ripulito** — resta solo il Livello 3; le maschere operative escono da lì ed entrano nel menu.
-5. **Barra superiore** — il template a tre zone (identità / contesto pagina / sistema) descritto nell'analisi precedente, applicato dopo che il menu è stabile.
-
-## Cosa serve da te
-
-Conferma sui **7 nomi del Livello 1** e su quali maschere consideri quotidiane. Se il tuo lavoro reale ha una voce in più o in meno rispetto a quella lista, la sistemiamo prima di toccare il codice: da lì dipende tutto il resto.
+Migrazione delle pagine, modifiche alla logica, ridisegno del menu, pagine a globo 3D.
