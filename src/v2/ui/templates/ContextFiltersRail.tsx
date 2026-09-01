@@ -122,7 +122,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
         aria-label={isOpen ? `Chiudi ${context.title}` : `Apri ${context.title}`}
         aria-expanded={isOpen}
       >
-        {isOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <SlidersHorizontal className="h-3.5 w-3.5" />}
+        {isOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <Filter className="h-3.5 w-3.5" />}
       </button>
 
       {/* Backdrop oscurato — clic per chiudere */}
