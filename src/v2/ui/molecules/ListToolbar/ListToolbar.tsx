@@ -99,6 +99,13 @@ export function ListToolbar<K extends string = string>({
 }: ListToolbarProps<K>): React.ReactElement {
   const currentSortLabel = sortOptions.find((o) => o.key === sortKey)?.label ?? "Ordina";
 
+  // La ricerca vive nella top bar (slot centrale) quando lo slot esiste,
+  // altrimenti resta inline in toolbar. Nessun cambio di logica.
+  const [searchSlot, setSearchSlot] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    setSearchSlot(document.getElementById("page-search-slot"));
+  }, []);
+
   const handleSortKeyChange = (key: K) => {
     if (onSelectSortKey) onSelectSortKey(key);
     else if (key !== sortKey) onCycleSort(key); // cycle change-key resets dir to asc
@@ -108,6 +115,29 @@ export function ListToolbar<K extends string = string>({
     if (onToggleSortDir) onToggleSortDir();
     else onCycleSort(sortKey); // stessa key → inverte dir
   };
+
+  const searchBox = (
+    <div className="relative w-full min-w-[180px] max-w-[420px]">
+      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+      <Input
+        value={search}
+        onChange={(e) => onSearchChange?.(e.target.value)}
+        placeholder={searchPlaceholder}
+        className="h-7 pl-8 pr-7 text-xs bg-card/50"
+      />
+      {search && onSearchChange && (
+        <button
+          type="button"
+          onClick={() => onSearchChange("")}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted/40 rounded"
+          aria-label="Pulisci ricerca"
+        >
+          <X className="w-3 h-3 text-muted-foreground" />
+        </button>
+      )}
+    </div>
+  );
+
 
   return (
     <div className={cn("flex flex-col gap-1.5 px-3 py-2 border-b border-border/40 bg-card/40", className)}>
