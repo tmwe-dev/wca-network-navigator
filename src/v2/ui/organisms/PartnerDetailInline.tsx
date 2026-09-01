@@ -19,6 +19,10 @@ import { getPartnerDisplayCity } from "@/lib/partnerUtils";
 import { SherlockLauncherDialog, type SherlockLauncherTarget } from "./sherlock/SherlockLauncherDialog";
 import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
 import { SherlockLevelBadge } from "../atoms/SherlockLevelBadge";
+import { EnrichmentBadge } from "../atoms/EnrichmentBadge";
+import { MiniStars } from "@/components/partners/shared/MiniStars";
+import { TrophyRow } from "@/components/partners/shared/TrophyRow";
+import { getYearsMember } from "@/lib/countries";
 import type { SherlockLevel } from "@/v2/services/sherlock/sherlockTypes";
 
 interface Props {
@@ -40,6 +44,8 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
 
   const vm = partner as unknown as PartnerViewModel | undefined;
   const title = isLoading ? "Caricamento…" : ((vm?.company_name as string | undefined) ?? "Partner");
+  const years = vm ? getYearsMember((vm.member_since as string | null) ?? null) : 0;
+  const rating = Number(vm?.rating ?? 0);
 
   const target: SherlockLauncherTarget | null = vm
     ? {
