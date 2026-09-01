@@ -321,7 +321,6 @@ function card(c, sel){return `<div class="card ${sel?'sel':''}">
   <div class="cid">
     ${logoImg(c)}
     <div class="flagwrap">${flagImg(c.iso)}</div>
-    <div><div class="gcountry">${c.country}</div><div class="gcity">${c.c}</div></div>
   </div>
   <div class="ccorner tr">
     <span class="spill" title="Score ${c.s}">◆<span>${c.s}</span></span>
@@ -337,29 +336,28 @@ function card(c, sel){return `<div class="card ${sel?'sel':''}">
         <span class="flat">${c.badge}${c.extra?` +${c.extra}`:''}</span>
       </span>
     </div>
+    <div class="crow4"><span class="gcountry">${c.country}</span><span class="gcity">${c.c}</span></div>
   </div>
 </div>`;}
 
 
-// DETTAGLIO — panoramica divisa in 3 sezioni funzionali: Chi è / Relazione / Operatività
+// DETTAGLIO — l'identità sta già nell'elenco a sinistra: qui niente logo né bandiera ripetuti.
+// Solo nome, una riga di contesto, l'azione primaria e la chiusura.
 function sect(t){return `<div class="sect"><span class="t">${t}</span><span class="line"></span></div>`;}
 const detail = `<div class="detail">
   <div class="dhead">
-    <div class="dlogo"><img src="https://www.google.com/s2/favicons?domain=eugene-logistics.com&sz=128" alt="" onerror="this.replaceWith(document.createTextNode('EU'))"/></div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:15px;font-weight:400">"EUGENE" Logistics Co., Ltd.</div>
-      <div class="tiny muted" style="display:flex;align-items:center;gap:6px">${flagImg('kr','sm')} Busan, Corea del Sud · Membro WCA dal 2016 · Score 86</div>
+      <div style="font-size:15px">"EUGENE" Logistics Co., Ltd.</div>
+      <div class="tiny muted">Busan, Corea del Sud · membro dal 2016</div>
     </div>
     <button class="btn primary">Contatta</button>
-    <button class="btn more" title="Menu azioni">⋮</button>
     <button class="btn icon" title="Chiudi">✕</button>
   </div>
   <div class="dtabs">
     <div class="dtab on">Panoramica</div>
-    <span class="sep"></span>
-    <div class="dtab">Referenti (4)</div><div class="dtab">Comunicazioni</div>
-    <span class="sep"></span>
-    <div class="dtab">Biglietti (2)</div><div class="dtab">Deep Search</div>
+    <div class="dtab">Referenti (4)</div>
+    <div class="dtab">Comunicazioni</div>
+    <button class="btn more" title="Biglietti (2) · Deep Search">⋮</button>
   </div>
   <div class="grid2">
     ${sect('Chi è — anagrafica')}
