@@ -364,13 +364,7 @@ export function EntityListWithDetail({
         onRemoveChip={handleRemoveChip}
         holdingFilter={holdingFilter}
         onHoldingFilterChange={updateHoldingFilter}
-        rightSlot={
-          <>
-            
-            {toolbarRightSlot}
-            {overflowMenu}
-          </>
-        }
+        rightSlot={toolbarRightSlot}
 
       />
       <div className="flex-1 min-h-0 px-3 pt-2 overflow-hidden">
