@@ -53,15 +53,15 @@ export function PartnerDetailHeader({
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
 
-          {/* Riga 1 — due colonne: sx nome + tipo + badge; dx bandiera/paese + città + stelline/coppa + #id */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col items-start gap-1 min-w-0">
+          {/* Riga 1 — nome + valutazione (stelle · anni) + preferiti, ben separati */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col items-start gap-1.5 min-w-0">
+              <h2 className="text-xl font-bold text-foreground truncate">{String(partner.company_name)}</h2>
               <div className="flex items-center gap-2 flex-wrap min-w-0">
-                <h2 className="text-lg font-bold text-foreground truncate">{String(partner.company_name)}</h2>
                 <EnrichmentBadge partner={partner} variant="pill" />
                 <span
                   className={cn(
-                    "text-[10px] px-1.5 py-0.5 rounded-full border font-medium",
+                    "text-xs px-2 py-0.5 rounded-full border font-medium",
                     isExpired
                       ? "border-destructive/30 text-destructive"
                       : isExpiringSoon
@@ -74,8 +74,8 @@ export function PartnerDetailHeader({
                 {inHolding && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium animate-pulse">
-                        <Plane className="w-3 h-3" /> In attesa
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium">
+                        <Plane className="w-3.5 h-3.5" /> In attesa
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>Azienda nel circuito di attesa ({String(partner.lead_status)})</TooltipContent>
@@ -85,62 +85,70 @@ export function PartnerDetailHeader({
                   <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-foreground flex-wrap">
-                <PartnerTypeIcon className="w-3.5 h-3.5 opacity-60" strokeWidth={1.5} />
+              <div className="flex items-center gap-2 text-sm text-foreground flex-wrap">
+                <PartnerTypeIcon className="w-4 h-4 opacity-60" strokeWidth={1.5} />
                 <span>{formatPartnerType(String(partner.partner_type || ""))}</span>
                 {partner.office_type && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 font-medium text-foreground">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 font-medium text-foreground">
                     {partner.office_type === "head_office" ? "HQ" : "Branch"}
                   </span>
                 )}
                 {networks.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-primary/20 text-foreground font-medium">
+                  <span className="text-xs px-2 py-0.5 rounded-full border border-primary/20 text-foreground font-medium">
                     {networks.length} network
                   </span>
                 )}
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              <div className="flex items-center gap-2">
-                {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-3.5 h-3.5" />}
-                {years > 0 && <TrophyRow years={years} />}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={onToggleFavorite}
-                      className={cn("h-7 w-7 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}
-                    >
-                      {partner.is_favorite ? (
-                        <Star className="w-4 h-4 fill-primary text-primary" />
-                      ) : (
-                        <StarOff className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-foreground">
+
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              {/* Preferiti: azione isolata, in alto a destra */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onToggleFavorite}
+                    className={cn("h-8 w-8 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}
+                  >
+                    {partner.is_favorite ? (
+                      <Star className="w-5 h-5 fill-primary text-primary" />
+                    ) : (
+                      <StarOff className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
+              </Tooltip>
+
+              {/* Valutazione e anzianità: blocco proprio, separato */}
+              {(Number(partner.rating || 0) > 0 || years > 0) && (
+                <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/50 px-2.5 py-1">
+                  {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-4 h-4" />}
+                  {Number(partner.rating || 0) > 0 && years > 0 && <span className="h-4 w-px bg-border/70" />}
+                  {years > 0 && <TrophyRow years={years} />}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-sm text-foreground">
                 <span>{String(partner.country_name)}</span>
                 {displayCity && <span className="text-muted-foreground">{displayCity}</span>}
                 {partner.wca_id && (
-                  <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
+                  <span className="text-xs text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
                 )}
               </div>
             </div>
-
           </div>
 
+
           {/* Riga 3 — contatti sempre a sinistra */}
-          <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
+          <div className="flex items-center gap-4 mt-3 text-sm flex-wrap">
             {partner.phone && (
               <a
                 href={`tel:${String(partner.phone)}`}
                 className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
               >
-                <Phone className="w-3 h-3" strokeWidth={1.5} /> {String(partner.phone)}
+                <Phone className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.phone)}
               </a>
             )}
             {partner.email && (
@@ -148,7 +156,7 @@ export function PartnerDetailHeader({
                 href={`mailto:${String(partner.email)}`}
                 className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
               >
-                <Mail className="w-3 h-3" strokeWidth={1.5} /> {String(partner.email)}
+                <Mail className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.email)}
               </a>
             )}
             {partner.website && (
@@ -162,7 +170,7 @@ export function PartnerDetailHeader({
                 rel="noopener"
                 className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
               >
-                <Globe className="w-3 h-3" strokeWidth={1.5} /> {String(partner.website)}
+                <Globe className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.website)}
               </a>
             )}
           </div>

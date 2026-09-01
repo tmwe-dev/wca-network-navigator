@@ -101,7 +101,7 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
               {outreachQueue.pendingCount}
             </Badge>
           )}
-          <span className="hidden xl:inline text-muted-foreground">{summary}</span>
+          <span className="sr-only">{summary}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[26rem] max-w-[calc(100vw-1rem)] p-3 space-y-3">

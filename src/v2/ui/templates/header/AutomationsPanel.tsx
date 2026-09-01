@@ -190,7 +190,7 @@ export function AutomationsPanel(): React.ReactElement {
           title="Automazioni"
         >
           <Cog className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="hidden xl:inline text-muted-foreground">Automazioni</span>
+          <span className="sr-only">Automazioni</span>
           <span className={`inline-block h-2 w-2 rounded-full ${dot}`} />
           {failed24h > 0 && (
             <Badge variant="outline" className="h-4 px-1 text-[10px] text-amber-600 border-amber-500/40">

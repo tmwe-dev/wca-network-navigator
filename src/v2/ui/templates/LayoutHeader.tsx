@@ -99,10 +99,6 @@ export function LayoutHeader({
           </PopoverContent>
         </Popover>
 
-        <StatusPill onAiClick={onAiClick ?? (() => {})} outreachQueue={outreachQueue} globalSync={globalSync} />
-
-        <AutomationsPanel />
-
         {/* Header contestuale per la sezione Esplora (auto-nascosto altrove) */}
         <ExploreContextHeader />
 
@@ -113,8 +109,13 @@ export function LayoutHeader({
         <div id="campaign-header-controls" className="flex min-w-0 items-center gap-2" />
       </div>
 
-      {/* RIGHT cluster — solo essenziale */}
+      {/* CENTER — slot ricerca della maschera corrente (riempito via Portal) */}
+      <div id="page-search-slot" className="flex min-w-0 flex-[1.2] items-center justify-center px-3" />
+
+      {/* RIGHT cluster — stato, automazioni e strumenti (tutte le icone qui) */}
       <div className="flex items-center gap-0.5 shrink-0">
+        <StatusPill onAiClick={onAiClick ?? (() => {})} outreachQueue={outreachQueue} globalSync={globalSync} />
+        <AutomationsPanel />
         <NotificationCenter />
         <DownloadExtensionsButton />
         <WhatsAppSyncButton />

@@ -10,7 +10,7 @@
  */
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Filter as FilterIcon, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -330,26 +330,11 @@ export function EntityListWithDetail({
     return () => window.removeEventListener("entity-filters-advanced", handler);
   }, []);
 
-  const filterButton = (
-    <button
-      type="button"
-      onClick={openFiltersRail}
-      className={cn(
-        "h-7 px-2 rounded-md text-[11px] font-medium border inline-flex items-center gap-1 transition-all",
-        activeFiltersCount > 0
-          ? "bg-primary/15 text-primary border-primary/40"
-          : "bg-card/40 text-muted-foreground border-border/40 hover:text-foreground",
-      )}
-      title="Apri i filtri della maschera"
-    >
-      <FilterIcon className="w-3 h-3" /> Filtri
-      {activeFiltersCount > 0 && (
-        <span className="ml-1 px-1 rounded bg-primary text-primary-foreground text-[9px] font-bold">
-          {activeFiltersCount}
-        </span>
-      )}
-    </button>
-  );
+  // Nessun pulsante "Filtri" in toolbar: i filtri si aprono dalla linguetta
+  // laterale del rail (unico punto d'ingresso).
+  void openFiltersRail;
+  void activeFiltersCount;
+
 
   const overflowMenu = (
     <DropdownMenu>
@@ -403,7 +388,7 @@ export function EntityListWithDetail({
         onHoldingFilterChange={updateHoldingFilter}
         rightSlot={
           <>
-            {filterButton}
+            
             {toolbarRightSlot}
             {overflowMenu}
           </>

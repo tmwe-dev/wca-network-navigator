@@ -9,7 +9,7 @@
  * partner_services, partner_certifications, interactions, reminders.
  */
 import * as React from "react";
-import { Loader2, X, Search, ScanSearch, Telescope } from "lucide-react";
+import { Loader2, Search, ScanSearch, Telescope } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
@@ -32,6 +32,9 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
   const sherlockLevel = useSherlockLevel("partner", partnerId);
   const [launcherOpen, setLauncherOpen] = React.useState(false);
   const [launcherLevel, setLauncherLevel] = React.useState<SherlockLevel | undefined>(undefined);
+
+  // Il dettaglio non è chiudibile: nessuna X in testata.
+  void onClose;
 
   if (!partnerId) return null;
 
@@ -112,9 +115,6 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
               </Tooltip>
             </div>
           )}
-          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Chiudi">
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
