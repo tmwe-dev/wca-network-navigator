@@ -3,11 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Star, StarOff, Phone, Mail, Globe, Plane, Box } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
-import { formatPartnerType, formatServiceCategory, getCountryFlag } from "@/lib/countries";
+import { formatPartnerType, getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { getPartnerDisplayCity } from "@/lib/partnerUtils";
-import { PARTNER_TYPE_ICONS, resolveServiceIcon } from "@/components/partners/shared/ServiceIcons";
+import { PARTNER_TYPE_ICONS } from "@/components/partners/shared/ServiceIcons";
 import { SocialLinks } from "@/components/partners/SocialLinks";
 import { EnrichmentInsightStrip } from "@/components/partners/EnrichmentInsightStrip";
 
@@ -72,13 +72,6 @@ export function PartnerDetailHeader({
 
   // Le icone servizi comprendono anche i servizi emersi dall'arricchimento,
   // così non spariscono quando `partner_services` è vuoto.
-  const extraServices = [
-    ...(Array.isArray(enrichment?.additional_services) ? (enrichment!.additional_services as unknown[]) : []),
-    ...(Array.isArray((enrichment?.company_profile as Record<string, unknown> | undefined)?.specialties)
-      ? (((enrichment!.company_profile as Record<string, unknown>).specialties as unknown[]) ?? [])
-      : []),
-  ].filter((s): s is string => typeof s === "string" && s.trim().length > 0);
-  const serviceLabels = [...new Set([...services.map((s) => s.service_category), ...extraServices])].slice(0, 12);
 
   return (
     <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-3">
