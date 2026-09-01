@@ -12,13 +12,15 @@
     --r:10px;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-weight:400}
+  /* REGOLA: nessun grassetto in tutta l'applicazione. La gerarchia si fa con dimensione e colore. */
+  b,strong,th{font-weight:400}
   a{color:inherit}
   .wrap{max-width:1400px;margin:0 auto;padding:24px}
   h1{font-size:18px;margin:0 0 4px}
   .sub{color:var(--muted);font-size:12px;margin-bottom:20px}
   .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:20}
-  .tab{border:1px solid var(--border);background:var(--surface);color:var(--muted);padding:6px 12px;border-radius:999px;font-size:11px;font-weight:600;cursor:pointer}
+  .tab{border:1px solid var(--border);background:var(--surface);color:var(--muted);padding:6px 12px;border-radius:999px;font-size:11px;font-weight:400;cursor:pointer}
   .tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
   section[hidden]{display:none}
   .note{border-left:2px solid var(--accent);background:#4f46e51a;padding:10px 12px;border-radius:0 8px 8px 0;font-size:12px;color:#c9c9e6;margin:0 0 14px}
@@ -27,11 +29,11 @@
   /* shell */
   .shell{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface);height:640px;display:flex;flex-direction:column}
   .topbar{height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--border);background:#0d0d24}
-  .brand{font-weight:700;font-size:12px;letter-spacing:.04em}
+  .brand{font-weight:400;font-size:12px;letter-spacing:.04em}
   .topbar .spacer{flex:1}
   .pagehead{height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border)}
   .crumb{font-size:12px;color:var(--muted)}
-  .crumb b{color:var(--fg);font-weight:600}
+  .crumb b{color:var(--fg);font-weight:400}
   .toolbar{height:38px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);background:#111129}
   .body{flex:1;display:flex;min-height:0}
   .rail{width:210px;flex:none;border-right:1px solid var(--border);background:#0f0f26;overflow:auto;padding:10px}
@@ -41,14 +43,14 @@
   .detail{flex:1;min-width:0;border-left:1px solid var(--border);overflow:auto;padding:14px;background:#101026}
 
   /* atoms */
-  .btn{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:8px;border:1px solid var(--border);background:#1a1a3d;color:var(--fg);font-size:11px;font-weight:600;cursor:pointer}
+  .btn{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:8px;border:1px solid var(--border);background:#1a1a3d;color:var(--fg);font-size:11px;font-weight:400;cursor:pointer}
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn.ghost{background:transparent;color:var(--muted)}
   .btn.icon{width:26px;padding:0;justify-content:center}
   .input{height:26px;flex:1;min-width:0;border-radius:8px;border:1px solid var(--border);background:#0f0f26;color:var(--fg);padding:0 9px;font-size:11px}
   /* BADGE — solo due tinte: blu (sistema/appartenenza) e marrone (attenzione/stato).
      Resa "vetrata": fondo traslucido + blur + filo di luce interno. */
-  .badge{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid;
+  .badge{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 7px;border-radius:999px;font-size:10px;font-weight:400;letter-spacing:.03em;text-transform:uppercase;border:1px solid;
     backdrop-filter:blur(6px) saturate(140%);-webkit-backdrop-filter:blur(6px) saturate(140%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.35)}
   .b-blue{background:linear-gradient(180deg,rgba(79,70,229,.30),rgba(79,70,229,.14));color:#c3c0fb;border-color:rgba(129,120,248,.45)}
@@ -58,30 +60,32 @@
   .b-ok,.b-warn{background:linear-gradient(180deg,rgba(176,124,72,.30),rgba(120,80,44,.14));color:#e2b98c;border-color:rgba(196,146,92,.45)}
 
   .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
-  .lab{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:12px 0 6px}
+  .lab{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:400;margin:12px 0 6px}
   .lab:first-child{margin-top:0}
   .muted{color:var(--muted)}
   .tiny{font-size:11px}
 
-  /* card partner — geometria: colonna identità a sinistra (logo → bandiera centrata → paese/città
-     allineati a sinistra), corpo dati al centro, angolo alto-dx = valore + menu, riga bassa-dx = stati piatti */
+  /* card partner — geometria: colonna identità (logo + bandiera centrata sotto) a sinistra,
+     corpo dati allineato a sinistra su una sola colonna: nome → referente → ultimo contatto → paese/città.
+     Angolo alto-dx = score + menu. */
   .card{position:relative;display:flex;gap:14px;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px;cursor:pointer;transition:border-color .25s, box-shadow .25s}
   .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
-  /* colonna identità: larghezza fissa = allineamento verticale perfetto su tutte le righe */
-  .cid{width:66px;flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+  /* colonna identità: larghezza = logo, così la bandiera resta centrata sotto il logo */
+  .cid{width:48px;flex:none;display:flex;flex-direction:column;align-items:center;gap:8px}
   .cid .flagwrap{width:100%;display:flex;justify-content:center}
-  .cid .gcountry{font-size:10.5px;font-weight:700;line-height:1.15;color:var(--fg)}
-  .cid .gcity{font-size:10px;line-height:1.15;color:var(--muted)}
-  .clogo{width:48px;height:48px;border-radius:12px;overflow:hidden;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .clogo{width:48px;height:48px;border-radius:12px;overflow:hidden;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:400;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .clogo img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box}
-  .logo{width:34px;height:34px;flex:none;border-radius:8px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
+  .logo{width:34px;height:34px;flex:none;border-radius:8px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:400;color:#9a9ad2}
   .logo img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box}
-  .cmain{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
+  .cmain{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}
   .crow1{display:flex;align-items:center;gap:8px;padding-right:86px} /* spazio riservato all'angolo alto-dx */
-  .cname{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cname{font-size:13.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .crow2{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11.5px}
-  .crow3{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
+  .crow3{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:2px}
+  /* ultima riga: paese e città, allineati sotto il nome, alla stessa altezza della bandiera */
+  .crow4{display:flex;align-items:baseline;gap:8px;font-size:11px;color:var(--fg);margin-top:auto;padding-top:6px}
+  .crow4 .gcity{color:var(--muted)}
   /* bandiera REALE (immagine, non emoji): sempre visibile su ogni sistema */
   .flag-img{width:30px;height:22px;flex:none;border-radius:4px;object-fit:cover;border:1px solid #ffffff26;box-shadow:0 1px 4px rgba(0,0,0,.4)}
   .flag-img.sm{width:22px;height:16px;border-radius:3px}
@@ -91,12 +95,12 @@
   .ccorner.tr{top:12px;right:12px}
   .chip{height:21px;display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:6px;border:1px solid var(--border);background:#ffffff08;font-size:10px;color:var(--muted)}
   .cact{display:flex;align-items:center;gap:6px;flex:none}
-  .score{font-size:13px;font-weight:800;color:#a5a1f5}
+  .score{font-size:13px;font-weight:400;color:#a5a1f5}
   /* score = icona + numero, senza etichetta */
-  .spill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid #4f46e555;background:#4f46e51f;font-size:12px;font-weight:800;color:#a5a1f5}
+  .spill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid #4f46e555;background:#4f46e51f;font-size:12px;font-weight:400;color:#a5a1f5}
   .spill .g{font-size:10px;opacity:.8}
   /* badge piatti: nessun riquadro, solo testo con pallino colore */
-  .flat{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+  .flat{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:400;letter-spacing:.02em;color:var(--muted)}
   .flat::before{content:'';width:6px;height:6px;border-radius:50%;background:#818cf8}
   .flat.warn{color:#d9a066}
   .flat.warn::before{background:#c98a4b}
@@ -127,9 +131,9 @@
   /* detail */
   .dhead{display:flex;gap:12px;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--border)}
   .dlogo img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box}
-  .dlogo{width:48px;height:48px;border-radius:10px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;color:#9a9ad2}
+  .dlogo{width:48px;height:48px;border-radius:10px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:400;color:#9a9ad2}
   .dtabs{display:flex;gap:4px;margin:12px 0}
-  .dtab{padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;color:var(--muted);border:1px solid transparent;cursor:pointer}
+  .dtab{padding:5px 10px;border-radius:8px;font-size:11px;font-weight:400;color:var(--muted);border:1px solid transparent;cursor:pointer}
   .dtab.on{background:#1a1a3d;border-color:var(--border);color:#fff}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .panel{border:1px solid var(--border);border-radius:var(--r);background:var(--surface-2);padding:10px}
@@ -138,12 +142,12 @@
   /* metriche su due righe: etichetta sopra, valore sotto — occupano un quarto dello spazio del kv */
   .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px 14px}
   .metric{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .metric .m{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
-  .metric .v{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .metric .m{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:400}
+  .metric .v{font-size:12.5px;font-weight:400;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* servizi: icone compatte, il dettaglio si apre a richiesta */
   .svc{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .ico{min-width:34px;height:28px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:#ffffff08;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:#a5a1f5;cursor:help}
-  .ico.more{font-size:10px;font-weight:800;color:var(--muted)}
+  .ico{min-width:34px;height:28px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:#ffffff08;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:400;letter-spacing:.06em;color:#a5a1f5;cursor:help}
+  .ico.more{font-size:10px;font-weight:400;color:var(--muted)}
 
 
   .bulkbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#4f46e51f;border-bottom:1px solid #4f46e566}
@@ -162,7 +166,7 @@
 
   /* raggruppamenti */
   .tabgroup{display:flex;align-items:center;gap:6px;padding:3px 8px 3px 6px;border:1px solid var(--border);border-radius:999px;background:#0f0f26}
-  .tabgroup > .gname{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800;padding-right:2px}
+  .tabgroup > .gname{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:400;padding-right:2px}
   .grp{border:1px solid var(--border);border-radius:var(--r);background:#ffffff05;padding:8px;margin-bottom:8px}
   .grp > .lab{margin:0 0 6px}
   .grp:last-child{margin-bottom:0}
@@ -172,15 +176,15 @@
   .seg > .btn + .btn{border-left:1px solid var(--border)}
   .seg > .btn.on{background:var(--accent);color:#fff}
   .sect{display:flex;align-items:center;gap:8px;margin:14px 0 8px;grid-column:1/-1}
-  .sect .t{font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:#a5a1f5}
+  .sect .t{font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:400;color:#a5a1f5}
   .sect .line{flex:1;height:1px;background:var(--border)}
   .sect:first-child{margin-top:0}
   .stack > .btn{width:100%;margin-bottom:6px;justify-content:flex-start}
   .stack > .btn:last-child{margin-bottom:0}
 
   /* DROPDOWN — usato solo dove le opzioni sono >4 e mutuamente esclusive */
-  .dd{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:#12122e;color:var(--fg);font-size:11px;font-weight:600;cursor:pointer}
-  .dd .k{color:var(--muted);font-weight:600}
+  .dd{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:#12122e;color:var(--fg);font-size:11px;font-weight:400;cursor:pointer}
+  .dd .k{color:var(--muted);font-weight:400}
   .dd::after{content:'▾';color:var(--muted);font-size:10px}
   /* BANDIERA — un solo posto per riga; mai bandiera + sigla paese insieme */
   .flag{font-size:12px;line-height:1}
@@ -188,7 +192,7 @@
   .inv .panel b{font-size:12px}
   .inv ul{margin:6px 0 0;padding-left:16px;color:var(--muted);font-size:11.5px}
   .inv li{margin:2px 0}
-  .inv .n{float:right;color:#c3c0fb;font-weight:800;font-size:11px}
+  .inv .n{float:right;color:#c3c0fb;font-weight:400;font-size:11px}
 
   /* CLASSIFICA funzioni */
   .rank{width:100%;border-collapse:collapse;font-size:12px}
@@ -199,15 +203,15 @@
   .rank tr.pop td:first-child{border-left:2px solid var(--brown)}
   .rank tr.top td:first-child{border-left:2px solid var(--accent)}
   .rank td:first-child{border-left:2px solid transparent}
-  .rank .pr{font-weight:800;color:var(--muted);width:30px;text-align:right;padding-right:10px}
-  .cat{display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;padding:1px 6px;border-radius:5px;border:1px solid var(--border);color:var(--muted);background:#ffffff08}
+  .rank .pr{font-weight:400;color:var(--muted);width:30px;text-align:right;padding-right:10px}
+  .cat{display:inline-block;font-size:9px;font-weight:400;text-transform:uppercase;letter-spacing:.07em;padding:1px 6px;border-radius:5px;border:1px solid var(--border);color:var(--muted);background:#ffffff08}
   .cat-cerca{color:#c3c0fb;border-color:rgba(129,120,248,.4)}
   .cat-ordina{color:#c3c0fb;border-color:rgba(129,120,248,.4)}
   .cat-vedi{color:#c3c0fb;border-color:rgba(129,120,248,.4)}
   .cat-agisci{color:#e2b98c;border-color:rgba(196,146,92,.4)}
   .cat-regola{color:#e2b98c;border-color:rgba(196,146,92,.4)}
   .cat-stato{color:var(--muted)}
-  .dest{font-size:10px;font-weight:700;white-space:nowrap}
+  .dest{font-size:10px;font-weight:400;white-space:nowrap}
   .dest.vis{color:#a5a1f5}
   .dest.pop{color:#e2b98c}
   .dest.out{color:#f87171}
@@ -290,15 +294,14 @@ function pagehead(actions){return `<div class="pagehead">
   <button class="btn more" title="Menu azioni">⋮</button>
 </div>`;}
 
-// TOOLBAR → FINDBAR — unico blocco concentrato: cercare | filtrare | vedere | ordinare
+// FINDBAR — un solo blocco: cercare, filtrare, cambiare resa. Ordinamento e viste salvate
+// stanno dentro il menu ⋮: si impostano una volta, non meritano spazio permanente.
 function toolbar(extra){return `<div class="findbar">
   <div class="fsearch"><span class="ficon">⌕</span><input placeholder="Cerca partner, città, referente…" /></div>
   <button class="btn primary">⛭ Filtri <span class="badge b-blue" style="margin-left:2px">3</span></button>
-  <span class="sep"></span>
   ${extra||'<span class="seg"><button class="btn on">▦ Card</button><button class="btn">▤ Tabella</button></span>'}
-  <span class="dd" title="Ordinamento"><span class="k">Ordina</span> Score ↓</span>
-  <span class="dd" title="Vista salvata"><span class="k">Vista</span> Corea + attivi</span>
   <span class="tiny muted" style="white-space:nowrap">1.248 · 3 filtri</span>
+  <button class="btn more" title="Ordina · viste salvate · altro">⋮</button>
 </div>`;}
 
 
@@ -318,7 +321,6 @@ function card(c, sel){return `<div class="card ${sel?'sel':''}">
   <div class="cid">
     ${logoImg(c)}
     <div class="flagwrap">${flagImg(c.iso)}</div>
-    <div><div class="gcountry">${c.country}</div><div class="gcity">${c.c}</div></div>
   </div>
   <div class="ccorner tr">
     <span class="spill" title="Score ${c.s}">◆<span>${c.s}</span></span>
@@ -334,29 +336,28 @@ function card(c, sel){return `<div class="card ${sel?'sel':''}">
         <span class="flat">${c.badge}${c.extra?` +${c.extra}`:''}</span>
       </span>
     </div>
+    <div class="crow4"><span class="gcountry">${c.country}</span><span class="gcity">${c.c}</span></div>
   </div>
 </div>`;}
 
 
-// DETTAGLIO — panoramica divisa in 3 sezioni funzionali: Chi è / Relazione / Operatività
+// DETTAGLIO — l'identità sta già nell'elenco a sinistra: qui niente logo né bandiera ripetuti.
+// Solo nome, una riga di contesto, l'azione primaria e la chiusura.
 function sect(t){return `<div class="sect"><span class="t">${t}</span><span class="line"></span></div>`;}
 const detail = `<div class="detail">
   <div class="dhead">
-    <div class="dlogo"><img src="https://www.google.com/s2/favicons?domain=eugene-logistics.com&sz=128" alt="" onerror="this.replaceWith(document.createTextNode('EU'))"/></div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:15px;font-weight:700">"EUGENE" Logistics Co., Ltd.</div>
-      <div class="tiny muted" style="display:flex;align-items:center;gap:6px">${flagImg('kr','sm')} Busan, Corea del Sud · Membro WCA dal 2016 · Score 86</div>
+      <div style="font-size:15px">"EUGENE" Logistics Co., Ltd.</div>
+      <div class="tiny muted">Busan, Corea del Sud · membro dal 2016</div>
     </div>
     <button class="btn primary">Contatta</button>
-    <button class="btn more" title="Menu azioni">⋮</button>
     <button class="btn icon" title="Chiudi">✕</button>
   </div>
   <div class="dtabs">
     <div class="dtab on">Panoramica</div>
-    <span class="sep"></span>
-    <div class="dtab">Referenti (4)</div><div class="dtab">Comunicazioni</div>
-    <span class="sep"></span>
-    <div class="dtab">Biglietti (2)</div><div class="dtab">Deep Search</div>
+    <div class="dtab">Referenti (4)</div>
+    <div class="dtab">Comunicazioni</div>
+    <button class="btn more" title="Biglietti (2) · Deep Search">⋮</button>
   </div>
   <div class="grid2">
     ${sect('Chi è — anagrafica')}
@@ -562,7 +563,7 @@ document.getElementById('v6').innerHTML = `
 <p class="note"><b>Mobile.</b> I due rail diventano drawer richiamabili dalla toolbar (Filtri / Azioni). La card passa a due righe. Il dettaglio si apre a tutta pagina, mai affiancato.</p>
 <div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn more" title="Menu azioni">⋮</button></div>
 <div class="toolbar"><input class="input" placeholder="Cerca…"/><button class="btn icon">⛭</button></div>
-<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="cid">${logoImg(c)}<div class="flagwrap">${flagImg(c.iso)}</div><div><div class="gcountry">${c.country}</div><div class="gcity">${c.c}</div></div></div><div class="ccorner tr"><span class="spill">◆<span>${c.s}</span></span></div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.contact}</span></div><div class="crow3"><span class="chip">${c.ch} ${c.last}</span><span class="flats"><span class="flat">${c.badge}</span></span></div></div></div>`).join('')}</div>
+<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="cid">${logoImg(c)}<div class="flagwrap">${flagImg(c.iso)}</div></div><div class="ccorner tr"><span class="spill">◆<span>${c.s}</span></span></div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.contact}</span></div><div class="crow3"><span class="chip">${c.ch} ${c.last}</span><span class="flats"><span class="flat">${c.badge}</span></span></div><div class="crow4"><span>${c.country}</span><span class="gcity">${c.c}</span></div></div></div>`).join('')}</div>
 <div style="display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)"><button class="btn" style="flex:1">Filtri (3)</button><button class="btn" style="flex:1">Azioni</button></div></div>`;
 
 // V7 anatomia
