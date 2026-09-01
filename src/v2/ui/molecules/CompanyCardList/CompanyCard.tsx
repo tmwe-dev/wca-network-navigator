@@ -358,69 +358,6 @@ export function CompanyCard({
             {Math.round(score)}
           </span>
         )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              onClick={(e) => e.stopPropagation()}
-              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground"
-              aria-label="Azioni rapide"
-              title="Azioni rapide"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuLabel className="text-[10px] font-normal uppercase text-muted-foreground">
-              {primaryContactFull?.name || company.name}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onMenuEmail} disabled={!firstEmail}>
-              <Mail className="mr-2 h-3.5 w-3.5 text-primary" /> Invia email
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onMenuWhatsApp} disabled={!firstPhone}>
-              <MessageCircle className="mr-2 h-3.5 w-3.5 text-success" /> WhatsApp
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onMenuCall} disabled={!firstPhone}>
-              <Phone className="mr-2 h-3.5 w-3.5 text-chart-3" /> Chiama
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onMenuOpen}>
-              <ExternalLink className="mr-2 h-3.5 w-3.5" /> Apri dettaglio
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[10px] font-normal uppercase text-muted-foreground">
-              Deep Search
-            </DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 1 } }));
-              }}
-            >
-              <Search className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> Scout
-              <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 2 } }));
-              }}
-            >
-              <ScanSearch className="mr-2 h-3.5 w-3.5 text-primary" /> Detective
-              <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 3 } }));
-              }}
-            >
-              <Telescope className="mr-2 h-3.5 w-3.5 text-warning" /> Sherlock
-              <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {/* Corpo dati: una sola colonna allineata a sinistra. */}
