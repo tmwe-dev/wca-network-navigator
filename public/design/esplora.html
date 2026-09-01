@@ -232,13 +232,22 @@
 
 <script>
 const COMPANIES = [
-  {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', country:'Corea del Sud', f:'🇰🇷', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
-  {n:'Nordwind Spedition GmbH', c:'Hamburg', country:'Germania', f:'🇩🇪', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
-  {n:'Trans Adriatic Cargo Srl', c:'Trieste', country:'Italia', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, alert:'Scade', contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
-  {n:'Pacific Rim Forwarding', c:'Singapore', country:'Singapore', f:'🇸🇬', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
-  {n:'Atlas Freight Services', c:'Casablanca', country:'Marocco', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, alert:'Hold', contact:'—', last:'mai', ch:'✉'},
-  {n:'Baltic Line Logistics', c:'Gdańsk', country:'Polonia', f:'🇵🇱', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
+  {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', country:'Corea del Sud', iso:'kr', dom:'eugene-logistics.com', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
+  {n:'Nordwind Spedition GmbH', c:'Hamburg', country:'Germania', iso:'de', dom:'dachser.com', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
+  {n:'Trans Adriatic Cargo Srl', c:'Trieste', country:'Italia', iso:'it', dom:'fercam.com', k:'TA', s:69, badge:'CRM', extra:0, alert:'Scade', contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
+  {n:'Pacific Rim Forwarding', c:'Singapore', country:'Singapore', iso:'sg', dom:'psainternational.com', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
+  {n:'Atlas Freight Services', c:'Casablanca', country:'Marocco', iso:'ma', dom:'', k:'AF', s:52, badge:'BCA', extra:1, alert:'Hold', contact:'—', last:'mai', ch:'✉'},
+  {n:'Baltic Line Logistics', c:'Gdańsk', country:'Polonia', iso:'pl', dom:'raben-group.com', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
 ];
+
+/* Bandiera reale (flagcdn) e logo reale (favicon del dominio) con fallback iniziali. */
+function flagImg(iso, cls){return iso?`<img class="flag-img ${cls||''}" src="https://flagcdn.com/60x45/${iso}.png" alt="" loading="lazy"/>`:'';}
+function logoImg(c, cls){
+  return c.dom
+    ? `<div class="${cls||'clogo'}"><img src="https://www.google.com/s2/favicons?domain=${c.dom}&sz=128" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${c.k}'))"/></div>`
+    : `<div class="${cls||'clogo'}">${c.k}</div>`;
+}
+
 
 const topbar = `<div class="topbar">
   <span class="brand">TMWE</span>
