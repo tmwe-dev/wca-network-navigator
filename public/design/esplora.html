@@ -342,7 +342,56 @@ const railRight = `<div class="rail right">
 
 function shell(inner){return `<div class="shell">${topbar}${inner}</div>`;}
 
+// V0 — inventario elementi + funzioni, raggruppati per tipo
+const INV = [
+  ['A · Contesto e navigazione', 9, [
+    'Marchio / utente attivo (2)','Menu maschere ☰','Ricerca globale ⌘K','Breadcrumb Esplora / WCA Partner',
+    'Tab di dettaglio (5): Panoramica, Referenti, Comunicazioni, Biglietti, Deep Search',
+  ]],
+  ['B · Cercare e filtrare', 16, [
+    'Ricerca testuale in toolbar','Pulsante Filtri con contatore (badge blu)',
+    'Rail sinistro: 4 gruppi — Viste salvate, Dove, Chi, Come','13 faccette con conteggio',
+    'Dropdown «Vista salvata»','Filtri avanzati…',
+  ]],
+  ['C · Vedere e ordinare', 6, [
+    'Interruttore Card / Tabella','Dropdown «Ordina» (7 criteri)','Riga di conteggio risultati',
+    'Densità di lettura: 5 informazioni per card','Vista mobile (drawer)',
+  ]],
+  ['D · Leggere il dettaglio', 14, [
+    'Intestazione: logo, nome, luogo, membership, score','Panoramica in 3 sezioni: Chi è / Relazione / Persone',
+    '4 pannelli dati + 1 pannello persone','Servizi e mercati come chip (non badge)',
+  ]],
+  ['E · Agire su un elemento', 8, [
+    'Contatta (unica azione primaria)','Menu ⋯ di riga','Menu ⋯ di dettaglio','Chiudi dettaglio',
+    'Canali per referente: Email / WhatsApp / LinkedIn',
+  ]],
+  ['F · Agire in massa', 7, [
+    'Selezione ≥2 → barra bulk (sostituisce la toolbar)','Comunicare: Campagna, WhatsApp',
+    'Arricchire: Deep Search','Organizzare: Cockpit, Esporta','Deseleziona · menu ⋯',
+  ]],
+  ['G · Assistente', 3, ['Pulsante ✦ AI','Voce 🎙','Riepilogo 📊 (in popover, non in pagina)']],
+  ['H · Stato dei dati', 6, [
+    'Completezza, ultimo enrich, duplicati','Attività recente (3 righe)','Stato semantico come pallino, non come badge',
+  ]],
+];
+const totEl = INV.reduce((s,[,n])=>s+n,0);
+document.getElementById('v0').innerHTML = `
+<p class="note"><b>Censimento.</b> La maschera espone <b>${totEl} elementi interattivi</b> distribuiti su <b>${INV.length} famiglie funzionali</b>. Regola di ordinamento: si scende da <i>contesto → cercare → vedere → leggere → agire</i>. Nessun elemento può stare in due famiglie: se serve in due punti, uno dei due è un doppione da togliere.</p>
+<p class="note" style="border-color:var(--brown);background:rgba(176,124,72,.10)"><b>Regole cromatiche e di controllo.</b>
+ <b>Badge</b>: solo due tinte — <span class="badge b-blue">blu</span> per appartenenza e sistema (WCA, CRM, +N, contatori), <span class="badge b-brown">marrone</span> per attenzione e scadenza (Hold, Scade, Membership). Resa vetrata (traslucido + blur), mai piena.
+ <b>Bandiere</b>: una sola per riga, accanto alla città, mai insieme alla sigla paese; nel rail solo come indice del paese.
+ <b>Dropdown</b>: ammessi solo per scelte esclusive con più di 4 opzioni (Ordina, Vista salvata). Con 2–4 opzioni si usa il segmentato (Card/Tabella); per le azioni si usa il menu ⋯.</p>
+<div class="inv">
+${INV.map(([t,n,items])=>`<div class="panel"><b>${t}<span class="n">${n}</span></b><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('')}
+</div>
+<div class="legend" style="margin-top:14px">
+  <div class="panel tiny"><b>Badge ammessi</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="badge b-blue">WCA</span><span class="badge b-blue">CRM</span><span class="badge b-blue">+3</span><span class="badge b-brown">Hold</span><span class="badge b-brown">Scade</span></div></div>
+  <div class="panel tiny"><b>Non badge</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="chip">Air Freight</span><span class="chip">✉ 💬 in</span><span class="dot" style="background:var(--ok)"></span></div><div class="muted" style="margin-top:6px">Servizi e canali sono chip; lo stato è un pallino.</div></div>
+  <div class="panel tiny"><b>Controlli</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center"><span class="dd"><span class="k">Ordina</span> Score ↓</span><span class="seg"><button class="btn on">▦</button><button class="btn">▤</button></span><button class="btn icon">⋯</button></div></div>
+</div>`;
+
 // V1 lista + dettaglio
+
 document.getElementById('v1').innerHTML = `
 <p class="note"><b>Default.</b> Rail filtri a sinistra (unico posto dei filtri), elenco stretto al centro, dettaglio a destra. La card mostra <b>5 informazioni di livello 1</b>: identità, luogo, referente, ultimo contatto, score. Tutto il resto vive nel dettaglio.</p>
 ${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col"><div class="list" style="max-width:340px">${COMPANIES.map((c,i)=>card(c,i===0)).join('')}</div></div>${detail}</div>`)}`;
