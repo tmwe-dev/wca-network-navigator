@@ -157,7 +157,7 @@ export function EnrichmentInsightStrip({
       {summary && <p className="text-sm leading-relaxed text-foreground line-clamp-3">{summary}</p>}
 
       {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
-      {serviceLabels.length > 0 && (
+      {showServiceIcons && serviceLabels.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {serviceLabels.map((label) => {
             const Icon = resolveServiceIcon(label);
