@@ -142,13 +142,13 @@ export function PartnerDetailHeader({
 
 
           {/* Riga 3 — contatti sempre a sinistra */}
-          <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
+          <div className="flex items-center gap-4 mt-3 text-sm flex-wrap">
             {partner.phone && (
               <a
                 href={`tel:${String(partner.phone)}`}
                 className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
               >
-                <Phone className="w-3 h-3" strokeWidth={1.5} /> {String(partner.phone)}
+                <Phone className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.phone)}
               </a>
             )}
             {partner.email && (
@@ -156,7 +156,7 @@ export function PartnerDetailHeader({
                 href={`mailto:${String(partner.email)}`}
                 className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
               >
-                <Mail className="w-3 h-3" strokeWidth={1.5} /> {String(partner.email)}
+                <Mail className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.email)}
               </a>
             )}
             {partner.website && (
@@ -170,7 +170,7 @@ export function PartnerDetailHeader({
                 rel="noopener"
                 className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
               >
-                <Globe className="w-3 h-3" strokeWidth={1.5} /> {String(partner.website)}
+                <Globe className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.website)}
               </a>
             )}
           </div>
