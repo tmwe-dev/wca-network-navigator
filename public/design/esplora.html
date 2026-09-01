@@ -251,7 +251,7 @@ function pagehead(actions){return `<div class="pagehead">
   <span class="sep"></span>
   <button class="btn" title="Riepilogo">📊 Riepilogo</button>
   ${actions||''}
-  <button class="btn icon" title="Altre azioni">⋯</button>
+  <button class="btn more" title="Menu azioni">⋮</button>
 </div>`;}
 
 // TOOLBAR → FINDBAR — unico blocco concentrato: cercare | filtrare | vedere | ordinare
@@ -309,7 +309,7 @@ const detail = `<div class="detail">
       <div class="tiny muted">🇰🇷 Busan, Corea del Sud · Membro WCA dal 2016 · Score 86</div>
     </div>
     <button class="btn primary">Contatta</button>
-    <button class="btn icon">⋯</button>
+    <button class="btn more" title="Menu azioni">⋮</button>
     <button class="btn icon" title="Chiudi">✕</button>
   </div>
   <div class="dtabs">
@@ -407,12 +407,12 @@ const INV = [
     '4 pannelli dati + 1 pannello persone','Servizi e mercati come chip (non badge)',
   ]],
   ['E · Agire su un elemento', 8, [
-    'Contatta (unica azione primaria)','Menu ⋯ di riga','Menu ⋯ di dettaglio','Chiudi dettaglio',
+    'Contatta (unica azione primaria)','Menu ⋮ di riga','Menu ⋮ di dettaglio','Chiudi dettaglio',
     'Canali per referente: Email / WhatsApp / LinkedIn',
   ]],
   ['F · Agire in massa', 7, [
     'Selezione ≥2 → barra bulk (sostituisce la toolbar)','Comunicare: Campagna, WhatsApp',
-    'Arricchire: Deep Search','Organizzare: Cockpit, Esporta','Deseleziona · menu ⋯',
+    'Arricchire: Deep Search','Organizzare: Cockpit, Esporta','Deseleziona · menu ⋮',
   ]],
   ['G · Assistente', 3, ['Pulsante ✦ AI','Voce 🎙','Riepilogo 📊 (in popover, non in pagina)']],
   ['H · Stato dei dati', 6, [
@@ -425,18 +425,18 @@ document.getElementById('v0').innerHTML = `
 <p class="note" style="border-color:var(--brown);background:rgba(176,124,72,.10)"><b>Regole cromatiche e di controllo.</b>
  <b>Badge</b>: solo due tinte — <span class="badge b-blue">blu</span> per appartenenza e sistema (WCA, CRM, +N, contatori), <span class="badge b-brown">marrone</span> per attenzione e scadenza (Hold, Scade, Membership). Resa vetrata (traslucido + blur), mai piena.
  <b>Bandiere</b>: una sola per riga, accanto alla città, mai insieme alla sigla paese; nel rail solo come indice del paese.
- <b>Dropdown</b>: ammessi solo per scelte esclusive con più di 4 opzioni (Ordina, Vista salvata). Con 2–4 opzioni si usa il segmentato (Card/Tabella); per le azioni si usa il menu ⋯.</p>
+ <b>Dropdown</b>: ammessi solo per scelte esclusive con più di 4 opzioni (Ordina, Vista salvata). Con 2–4 opzioni si usa il segmentato (Card/Tabella); per le azioni si usa il menu ⋮.</p>
 <div class="inv">
 ${INV.map(([t,n,items])=>`<div class="panel"><b>${t}<span class="n">${n}</span></b><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('')}
 </div>
 <div class="legend" style="margin-top:14px">
   <div class="panel tiny"><b>Badge ammessi</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="badge b-blue">WCA</span><span class="badge b-blue">CRM</span><span class="badge b-blue">+3</span><span class="badge b-brown">Hold</span><span class="badge b-brown">Scade</span></div></div>
   <div class="panel tiny"><b>Non badge</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="chip">Air Freight</span><span class="chip">✉ 💬 in</span><span class="dot" style="background:var(--ok)"></span></div><div class="muted" style="margin-top:6px">Servizi e canali sono chip; lo stato è un pallino.</div></div>
-  <div class="panel tiny"><b>Controlli</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center"><span class="dd"><span class="k">Ordina</span> Score ↓</span><span class="seg"><button class="btn on">▦</button><button class="btn">▤</button></span><button class="btn icon">⋯</button></div></div>
+  <div class="panel tiny"><b>Controlli</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center"><span class="dd"><span class="k">Ordina</span> Score ↓</span><span class="seg"><button class="btn on">▦</button><button class="btn">▤</button></span><button class="btn more" title="Menu azioni">⋮</button></div></div>
 </div>
 
 ${sect('Classifica delle funzioni — più importanti in alto')}
-<p class="note" style="border-color:var(--border);background:#ffffff08">Ordinate per frequenza d'uso reale. <b style="color:#a5a1f5">■ visibile</b> = resta nella maschera di primo livello · <b style="color:#e2b98c">■ popover/menu</b> = esce dalla vista, vive in ⋯ o in un popover · <b style="color:#f87171">■ eliminare</b> = inutile o doppione. Le 6 categorie: <span class="cat cat-cerca">Cercare</span> <span class="cat cat-ordina">Ordinare</span> <span class="cat cat-vedi">Vedere</span> <span class="cat cat-agisci">Agire</span> <span class="cat cat-regola">Regole</span> <span class="cat cat-stato">Stato</span>.</p>
+<p class="note" style="border-color:var(--border);background:#ffffff08">Ordinate per frequenza d'uso reale. <b style="color:#a5a1f5">■ visibile</b> = resta nella maschera di primo livello · <b style="color:#e2b98c">■ popover/menu</b> = esce dalla vista, vive in ⋮ o in un popover · <b style="color:#f87171">■ eliminare</b> = inutile o doppione. Le 6 categorie: <span class="cat cat-cerca">Cercare</span> <span class="cat cat-ordina">Ordinare</span> <span class="cat cat-vedi">Vedere</span> <span class="cat cat-agisci">Agire</span> <span class="cat cat-regola">Regole</span> <span class="cat cat-stato">Stato</span>.</p>
 <div class="panel" style="padding:0;overflow:hidden">
 <table class="rank">
 <thead><tr><th style="width:30px">#</th><th>Funzione</th><th>Categoria</th><th>Destino</th><th>Motivo</th></tr></thead>
@@ -453,9 +453,9 @@ ${[
 ['Cambia vista Card / Tabella','Vedere','cat-vedi','Segmentato in toolbar','vis','Solo 2 opzioni: segmentato, non dropdown',''],
 ['Viste salvate','Cercare','cat-cerca','Dropdown + rail sinistro','pop','Elenco lungo e mutuamente esclusivo: dropdown','pop'],
 ['Selezione multipla e azioni bulk','Agire','cat-agisci','Barra che sostituisce la toolbar da ≥2','pop','Compare solo quando serve, non occupa spazio a riposo','pop'],
-['Aggiungi a Cockpit','Agire','cat-agisci','Menu ⋯ e rail destro','pop','Azione d\'organizzazione, non quotidiana','pop'],
+['Aggiungi a Cockpit','Agire','cat-agisci','Menu ⋮ e rail destro','pop','Azione d\'organizzazione, non quotidiana','pop'],
 ['Deep Search / Trova referenti','Agire','cat-agisci','Rail destro, gruppo Arricchire','pop','Potente ma a consumo: non deve competere col primario','pop'],
-['Esporta','Agire','cat-agisci','Menu ⋯','pop','Occasionale; mai un pulsante di primo livello','pop'],
+['Esporta','Agire','cat-agisci','Menu ⋮','pop','Occasionale; mai un pulsante di primo livello','pop'],
 ['Crea campagna','Agire','cat-agisci','Rail destro + bulk bar','pop','Importante ma non per-elemento','pop'],
 ['AI / Voce','Agire','cat-agisci','Header, posizione fissa','vis','Assistente trasversale: sempre nello stesso punto','top'],
 ['Riepilogo KPI','Vedere','cat-vedi','Popover «📊 Riepilogo»','pop','Consultazione, non lavoro: fuori dalla pagina','pop'],
@@ -468,7 +468,7 @@ ${[
 ['Breadcrumb di pagina','Vedere','cat-vedi','Header, piccolo','vis','Orientamento: costa poco, serve sempre',''],
 ['Tab di dettaglio (Panoramica, Referenti…)','Vedere','cat-vedi','Sotto l\'intestazione del dettaglio','vis','Unico modo per passare tra le sezioni',''],
 ['Reset filtri','Regole','cat-regola','Dentro il pannello filtri, piccolo','pop','Recupero errore, non gesto quotidiano','pop'],
-['Menu ⋯ di riga','Agire','cat-agisci','Solo in hover / riga aperta','pop','Raccoglie la coda lunga delle azioni','pop'],
+['Menu ⋮ di riga','Agire','cat-agisci','Solo in hover / riga aperta','pop','Raccoglie la coda lunga delle azioni','pop'],
 ['Contatore risultati + filtri attivi','Stato','cat-stato','Coda della toolbar, testo','vis','Feedback silenzioso, zero interazione',''],
 ['Ricerca globale ⌘K','Cercare','cat-cerca','Topbar, identica su tutte le maschere','vis','Standard di sistema, non della pagina',''],
 ['Menu maschere ☰','Vedere','cat-vedi','Topbar','vis','Navigazione globale',''],
@@ -477,13 +477,13 @@ ${[
 ['Badge «HQ» tipo ufficio','Stato','cat-stato','Eliminare → nel dettaglio','out','Informazione anagrafica, non un\'etichetta','dead'],
 ['Email in chiaro nella card','Vedere','cat-vedi','Eliminare → nel dettaglio','out','Doppione del referente; ruba una riga','dead'],
 ['Numero interazioni «37 int.» nella card','Stato','cat-stato','Eliminare → nel dettaglio','out','Precisione inutile in elenco','dead'],
-['Preferito ★ nella card','Agire','cat-agisci','Eliminare → menu ⋯','out','Frequenza bassissima; occupa il posto dello score','dead'],
+['Preferito ★ nella card','Agire','cat-agisci','Eliminare → menu ⋮','out','Frequenza bassissima; occupa il posto dello score','dead'],
 ['Sigla paese + bandiera insieme (KR 🇰🇷)','Vedere','cat-vedi','Eliminare il doppione','out','Ridondanza: si tiene solo la bandiera','dead'],
 ].map((r,i)=>`<tr class="${r[6]||''}"><td class="pr">${i+1}</td><td><b>${r[0]}</b></td><td><span class="cat ${r[2]}">${r[1]}</span></td><td><span class="dest ${r[4]}">${r[3]}</span></td><td class="muted tiny">${r[5]}</td></tr>`).join('')}
 </tbody>
 </table>
 </div>
-<p class="note" style="margin-top:12px"><b>Regola che ne esce.</b> In vista restano ~12 funzioni (tutto ciò che serve a <i>trovare → valutare → contattare</i>). Altri 14 vanno in popover, menu ⋯ o drawer. <b>7 sono da eliminare</b>: sono badge e micro-dati che oggi competono con le decisioni vere. Questa stessa scala (visibile / popover / eliminare) si applica identica a ogni altra maschera.</p>`;
+<p class="note" style="margin-top:12px"><b>Regola che ne esce.</b> In vista restano ~12 funzioni (tutto ciò che serve a <i>trovare → valutare → contattare</i>). Altri 14 vanno in popover, menu ⋮ o drawer. <b>7 sono da eliminare</b>: sono badge e micro-dati che oggi competono con le decisioni vere. Questa stessa scala (visibile / popover / eliminare) si applica identica a ogni altra maschera.</p>`;
 
 // V1 lista + dettaglio
 
@@ -499,31 +499,31 @@ ${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col">
 // V3 bulk
 document.getElementById('v3').innerHTML = `
 <p class="note"><b>Selezione multipla.</b> Da <b>2 elementi in su</b> compare la barra bulk sopra l'elenco: sostituisce la toolbar, non si somma. Il dettaglio si chiude, il rail destro mostra le azioni massive.</p>
-${shell(`${pagehead()}<div class="bulkbar"><b>3 selezionati</b><button class="btn ghost">Deseleziona</button><span style="flex:1"></span><span class="tiny muted">Comunicare</span><span class="seg"><button class="btn">✉ Campagna</button><button class="btn">💬 WA</button></span><span class="sep"></span><span class="tiny muted">Arricchire</span><span class="seg"><button class="btn">✦ Deep Search</button></span><span class="sep"></span><span class="tiny muted">Organizzare</span><span class="seg"><button class="btn">＋ Cockpit</button><button class="btn">⇩ Esporta</button></span><button class="btn icon">⋯</button></div><div class="body">${railLeft}<div class="col"><div class="list">${COMPANIES.map((c,i)=>card(c,i<3)).join('')}</div></div>${railRight}</div>`)}`;
+${shell(`${pagehead()}<div class="bulkbar"><b>3 selezionati</b><button class="btn ghost">Deseleziona</button><span style="flex:1"></span><span class="tiny muted">Comunicare</span><span class="seg"><button class="btn">✉ Campagna</button><button class="btn">💬 WA</button></span><span class="sep"></span><span class="tiny muted">Arricchire</span><span class="seg"><button class="btn">✦ Deep Search</button></span><span class="sep"></span><span class="tiny muted">Organizzare</span><span class="seg"><button class="btn">＋ Cockpit</button><button class="btn">⇩ Esporta</button></span><button class="btn more" title="Menu azioni">⋮</button></div><div class="body">${railLeft}<div class="col"><div class="list">${COMPANIES.map((c,i)=>card(c,i<3)).join('')}</div></div>${railRight}</div>`)}`;
 
 // V4 dettaglio full
 document.getElementById('v4').innerHTML = `
 <p class="note"><b>Dettaglio a tutta pagina.</b> Per lavorare a fondo su un partner (o su schermi stretti). L'elenco collassa in un pulsante «← Elenco»; il breadcrumb diventa il nome del partner.</p>
-${shell(`<div class="pagehead"><button class="btn ghost">← Elenco</button><span class="crumb">Esplora / WCA Partner / <b>"EUGENE" Logistics</b></span><span style="flex:1"></span><button class="btn">✦ AI</button><button class="btn icon">🎙</button><button class="btn primary">Contatta</button><button class="btn icon">⋯</button></div><div class="body"><div class="col" style="overflow:auto">${detail.replace('class="detail"','class="detail" style="border-left:0"')}</div>${railRight}</div>`)}`;
+${shell(`<div class="pagehead"><button class="btn ghost">← Elenco</button><span class="crumb">Esplora / WCA Partner / <b>"EUGENE" Logistics</b></span><span style="flex:1"></span><button class="btn">✦ AI</button><button class="btn icon">🎙</button><button class="btn primary">Contatta</button><button class="btn more" title="Menu azioni">⋮</button></div><div class="body"><div class="col" style="overflow:auto">${detail.replace('class="detail"','class="detail" style="border-left:0"')}</div>${railRight}</div>`)}`;
 
 // V5 tabella
 document.getElementById('v5').innerHTML = `
 <p class="note"><b>Vista tabella.</b> Stessa maschera, stessi filtri, stesse azioni: cambia solo la resa dei dati per confronto e lavoro massivo. Interruttore card/tabella nella toolbar.</p>
 ${shell(`${pagehead()}${toolbar('<span class="seg"><button class="btn">▦ Card</button><button class="btn on">▤ Tabella</button></span>')}<div class="body">${railLeft}<div class="col" style="overflow:auto"><table class="table"><thead><tr><th style="width:26px"></th><th colspan="3">Identità</th><th colspan="2">Contatto</th><th colspan="2">Relazione</th><th></th></tr><tr><th></th><th>Azienda</th><th>Paese</th><th>Città</th><th>Referente</th><th>Canali</th><th>Ultimo contatto</th><th>Score</th><th></th></tr></thead><tbody>
-${COMPANIES.concat(COMPANIES).map(c=>`<tr><td><input type="checkbox"/></td><td><b>${c.n}</b></td><td>${c.f}</td><td>${c.c}</td><td class="muted">${c.contact}</td><td>${c.ch}</td><td class="muted">${c.last}</td><td class="score">${c.s}</td><td><button class="btn icon">⋯</button></td></tr>`).join('')}
+${COMPANIES.concat(COMPANIES).map(c=>`<tr><td><input type="checkbox"/></td><td><b>${c.n}</b></td><td>${c.f}</td><td>${c.c}</td><td class="muted">${c.contact}</td><td>${c.ch}</td><td class="muted">${c.last}</td><td class="score">${c.s}</td><td><button class="btn more" title="Menu azioni">⋮</button></td></tr>`).join('')}
 </tbody></table></div></div>`)}`;
 
 // V6 mobile
 document.getElementById('v6').innerHTML = `
 <p class="note"><b>Mobile.</b> I due rail diventano drawer richiamabili dalla toolbar (Filtri / Azioni). La card passa a due righe. Il dettaglio si apre a tutta pagina, mai affiancato.</p>
-<div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn icon">⋯</button></div>
+<div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn more" title="Menu azioni">⋮</button></div>
 <div class="toolbar"><input class="input" placeholder="Cerca…"/><button class="btn icon">⛭</button></div>
 <div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="logo">${c.k}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge b-blue">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
 <div style="display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)"><button class="btn" style="flex:1">Filtri (3)</button><button class="btn" style="flex:1">Azioni</button></div></div>`;
 
 // V7 anatomia
 document.getElementById('v7').innerHTML = `
-<p class="note"><b>Anatomia della card.</b> Regola: 5 informazioni di livello 1, massimo 2 badge visibili (il resto in «+N»), un solo accento, un solo menu «⋯». Confronto prima/dopo.</p>
+<p class="note"><b>Anatomia della card.</b> Regola: 5 informazioni di livello 1, massimo 2 badge visibili (il resto in «+N»), un solo accento, un solo menu «⋮». Confronto prima/dopo.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
   <div><div class="lab">Oggi (14 elementi)</div>
     <div class="card" style="flex-wrap:wrap">
@@ -531,7 +531,7 @@ document.getElementById('v7').innerHTML = `
       <div class="cmain"><div class="crow1"><span class="cname" style="text-transform:uppercase">"EUGENE" LOGISTICS CO., LTD.</span>
       <span class="badge" style="background:#4f46e526;color:#a5a1f5;border-color:#4f46e566;box-shadow:none;backdrop-filter:none;border-radius:6px">WCA</span><span class="badge" style="background:#f59e0b1f;color:#fbbf24;border-color:#f59e0b4d;box-shadow:none;backdrop-filter:none;border-radius:6px">🏆</span><span class="badge" style="background:#22c55e1f;color:#6ee7a8;border-color:#22c55e4d;box-shadow:none;backdrop-filter:none;border-radius:6px">DS3</span><span class="badge" style="background:#ffffff0f;color:#8d8dae;border-color:#26265c;box-shadow:none;backdrop-filter:none;border-radius:6px">HQ</span><span class="badge" style="background:#ef44441f;color:#fca5a5;border-color:#ef44444d;box-shadow:none;backdrop-filter:none;border-radius:6px">HOLD</span></div>
       <div class="crow2">🇰🇷 KR · Busan · Contatto: Jin-Ho Park · jinho@eugenelog.co.kr · ⏱ 2g · 37 int. · ✉ 💬 in · ★</div></div>
-      <div class="cact"><span class="score">86</span><button class="btn icon">⋯</button></div>
+      <div class="cact"><span class="score">86</span><button class="btn more" title="Menu azioni">⋮</button></div>
     </div>
     <div class="tiny muted" style="margin-top:8px">Nessuna gerarchia: l'occhio non sa dove atterrare, i colori competono tra loro.</div>
   </div>
@@ -542,7 +542,7 @@ document.getElementById('v7').innerHTML = `
       <div class="panel tiny"><b>2 · Luogo</b><div class="muted">bandiera + città, cliccabili = filtro</div></div>
       <div class="panel tiny"><b>3 · Referente</b><div class="muted">nome + ruolo, uno solo</div></div>
       <div class="panel tiny"><b>4 · Segnale</b><div class="muted">canali attivi + ultimo contatto</div></div>
-      <div class="panel tiny"><b>5 · Valore</b><div class="muted">score + menu ⋯</div></div>
+      <div class="panel tiny"><b>5 · Valore</b><div class="muted">score + menu ⋮</div></div>
     </div>
   </div>
 </div>`;
