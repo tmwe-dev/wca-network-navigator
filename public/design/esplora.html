@@ -68,8 +68,10 @@
   .card{position:relative;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px 14px 12px;cursor:pointer;transition:border-color .25s, box-shadow .25s}
   .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
-  .clogo{width:48px;height:48px;border-radius:12px;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-  .logo{width:34px;height:34px;flex:none;border-radius:8px;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
+  .clogo{width:48px;height:48px;border-radius:12px;overflow:hidden;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .clogo img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box}
+  .logo{width:34px;height:34px;flex:none;border-radius:8px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
+  .logo img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box}
   .cmain{min-width:0;display:flex;flex-direction:column;gap:8px;padding-left:64px} /* 64px = logo 48 + 16 di respiro */
   .crow1{display:flex;align-items:center;gap:8px;padding-right:110px} /* spazio riservato ai badge angolo alto-dx */
   .cname{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -77,9 +79,12 @@
   .crow3{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .cfoot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:2px;padding-top:10px;border-top:1px solid #ffffff0d;flex-wrap:nowrap}
   .geo{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--fg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .geo .flag-lg{font-size:22px;line-height:1;flex:none}
+  /* bandiera REALE (immagine, non emoji): sempre visibile su ogni sistema */
+  .flag-img{width:30px;height:22px;flex:none;border-radius:4px;object-fit:cover;border:1px solid #ffffff26;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .flag-img.sm{width:22px;height:16px;border-radius:3px}
   .geo .gcountry{font-weight:700}
   .geo .gcity{color:var(--muted)}
+
   /* angoli come ancore: alto-sx = tag rete, alto-dx = badge stato, basso-dx = score + menu ⋮ */
   .ccorner{position:absolute;display:flex;gap:5px;align-items:center}
   .ccorner.tr{top:14px;right:14px}
