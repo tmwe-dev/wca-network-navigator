@@ -52,23 +52,8 @@ export function PartnerDetailHeader({
   return (
     <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
       <div className="flex items-start gap-3">
-        <div className="shrink-0">
-          {effectiveLogo ? (
-            <img
-              src={effectiveLogo}
-              alt={String(partner.company_name)}
-              className="w-12 h-12 rounded-xl object-contain bg-muted/30 border border-border/30"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-xl bg-muted/30 border border-border/30 flex items-center justify-center">
-              <span className="text-2xl">{getCountryFlag(String(partner.country_code))}</span>
-            </div>
-          )}
-        </div>
         <div className="flex-1 min-w-0">
+
           {/* Riga 1 — due colonne: sx nome + tipo + badge; dx bandiera/paese + città + stelline/coppa + #id */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col items-start gap-1 min-w-0">
