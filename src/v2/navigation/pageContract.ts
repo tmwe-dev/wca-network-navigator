@@ -3,13 +3,13 @@
  *
  * Obiettivo (Ristrutturazione UX 2026-06): unificare il comportamento delle
  * pagine senza toccarne la logica. Da qui derivano:
- *   - SINISTRA  → quali FILTRI mostrare (ContextFiltersRail).
- *   - DESTRA    → se mostrare il rail WORKFLOW (azioni, processi, scorciatoie).
+ *   - DESTRA → quali FILTRI mostrare (ContextFiltersRail).
+ *   - DESTRA → WORKFLOW solo quando la pagina non ha filtri contestuali.
  *
  * Regole d'oro:
- *   - Una pagina senza filtri NON mostra la linguetta sinistra (niente rail vuota).
- *   - Una pagina senza workflow NON mostra la linguetta destra (niente pannello
- *     "Mission Control" generico fuori contesto).
+ *   - Una pagina senza filtri NON mostra la linguetta filtri (niente rail vuota).
+ *   - Una pagina con filtri usa la linguetta destra per i filtri, non per
+ *     "Mission Control".
  *
  * Aggiungere/spostare una pagina = UN solo edit qui.
  */
@@ -144,10 +144,18 @@ export function resolveFilterRule(pathname: string, networkView: "partners" | "b
   return null;
 }
 
+/** True se la pagina espone filtri contestuali: il rail destro diventa Filtri. */
+export function pageHasContextFilters(pathname: string): boolean {
+  return FILTER_RULES.some(
+    (rule) => rule.match(pathname, { networkView: "partners" }) || rule.match(pathname, { networkView: "bca" }),
+  );
+}
+
 /**
  * WORKFLOW_PATHS — pagine in cui ha senso mostrare il rail DESTRO (workflow:
- * azioni rapide, missioni, suggerimenti, scorciatoie). Altrove la linguetta
- * destra resta nascosta per non mostrare il generico "Mission Control".
+ * azioni rapide, missioni, suggerimenti, scorciatoie). Se la pagina ha filtri,
+ * la linguetta destra è riservata ai filtri e Mission Control resta disponibile
+ * solo da shortcut/comando, evitando due trigger sovrapposti sullo stesso bordo.
  */
 const WORKFLOW_MATCHERS: ReadonlyArray<(p: string) => boolean> = [
   (p) => p.startsWith("/v2/explore"), // network, mappa, sherlock
@@ -161,5 +169,5 @@ const WORKFLOW_MATCHERS: ReadonlyArray<(p: string) => boolean> = [
 
 /** True se la pagina corrente deve esporre il rail workflow a destra. */
 export function pageHasWorkflow(pathname: string): boolean {
-  return WORKFLOW_MATCHERS.some((m) => m(pathname));
+  return !pageHasContextFilters(pathname) && WORKFLOW_MATCHERS.some((m) => m(pathname));
 }
