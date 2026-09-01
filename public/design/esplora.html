@@ -279,12 +279,12 @@ const railLeft = `<div class="rail">
 
 
 function card(c, sel){return `<div class="card ${sel?'sel':''}">
+  <div class="ccorner tl"><div class="clogo">${c.k}</div></div>
   <div class="ccorner tr">
     ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:''}
     <span class="badge b-blue">${c.badge}</span>
     ${c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
   </div>
-  <div class="clogo">${c.k}</div>
   <div class="cmain">
     <div class="crow1"><span class="cname">${c.n}</span></div>
     <div class="crow2"><span>${c.contact}</span></div>
@@ -294,7 +294,7 @@ function card(c, sel){return `<div class="card ${sel?'sel':''}">
     </div>
     <div class="cfoot">
       <span class="geo"><span class="flag-lg">${c.f}</span><span class="gcountry">${c.country}</span><span class="gcity">· ${c.c}</span></span>
-      <span class="cact"><span class="score">${c.s}</span><button class="btn icon" title="Azioni">⋯</button></span>
+      <span class="cact"><span class="score">${c.s}</span><button class="btn more" title="Menu azioni">⋮</button></span>
     </div>
   </div>
 </div>`;}
