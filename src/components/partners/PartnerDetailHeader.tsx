@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Star, StarOff, Phone, Mail, Globe, Plane, Box } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
-import { formatPartnerType, formatServiceCategory } from "@/lib/countries";
+import { formatPartnerType, formatServiceCategory, getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { getPartnerDisplayCity } from "@/lib/partnerUtils";
