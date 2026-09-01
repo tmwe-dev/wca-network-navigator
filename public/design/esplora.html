@@ -294,15 +294,14 @@ function pagehead(actions){return `<div class="pagehead">
   <button class="btn more" title="Menu azioni">⋮</button>
 </div>`;}
 
-// TOOLBAR → FINDBAR — unico blocco concentrato: cercare | filtrare | vedere | ordinare
+// FINDBAR — un solo blocco: cercare, filtrare, cambiare resa. Ordinamento e viste salvate
+// stanno dentro il menu ⋮: si impostano una volta, non meritano spazio permanente.
 function toolbar(extra){return `<div class="findbar">
   <div class="fsearch"><span class="ficon">⌕</span><input placeholder="Cerca partner, città, referente…" /></div>
   <button class="btn primary">⛭ Filtri <span class="badge b-blue" style="margin-left:2px">3</span></button>
-  <span class="sep"></span>
   ${extra||'<span class="seg"><button class="btn on">▦ Card</button><button class="btn">▤ Tabella</button></span>'}
-  <span class="dd" title="Ordinamento"><span class="k">Ordina</span> Score ↓</span>
-  <span class="dd" title="Vista salvata"><span class="k">Vista</span> Corea + attivi</span>
   <span class="tiny muted" style="white-space:nowrap">1.248 · 3 filtri</span>
+  <button class="btn more" title="Ordina · viste salvate · altro">⋮</button>
 </div>`;}
 
 
