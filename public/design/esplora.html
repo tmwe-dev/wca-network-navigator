@@ -108,6 +108,7 @@
   .findbar .seg > .btn{height:32px}
 
   /* filtri */
+  .fl{display:flex;align-items:center;gap:7px;min-width:0}
   .frow{display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:6px;font-size:12px;cursor:pointer}
   .frow:hover{background:#ffffff0a}
   .frow.on{background:#4f46e526;color:#fff}
@@ -283,7 +284,7 @@ function toolbar(extra){return `<div class="findbar">
 
 // RAIL SINISTRO — solo filtri, in 4 gruppi chiusi
 function fgroup(title, rows){return `<div class="grp"><div class="lab">${title}</div>${rows}</div>`;}
-const frows = (arr)=>arr.map(([a,b,on])=>`<div class="frow ${on?'on':''}">${a} <span class="cnt">${b}</span></div>`).join('');
+const frows = (arr)=>arr.map(([a,b,on])=>`<div class="frow ${on?'on':''}"><span class="fl">${a}</span><span class="cnt">${b}</span></div>`).join('');
 const railLeft = `<div class="rail">
   ${fgroup('Viste salvate', frows([['Corea + attivi',42,1],['Da ricontattare',18,0]]))}
   ${fgroup('Dove — geografia', frows([[flagImg('kr','sm')+' Corea',42,1],[flagImg('de','sm')+' Germania',88],[flagImg('it','sm')+' Italia',131],[flagImg('sg','sm')+' Singapore',27],[flagImg('pl','sm')+' Polonia',35],[flagImg('ma','sm')+' Marocco',9]]))}
