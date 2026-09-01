@@ -4,10 +4,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Star, StarOff, Phone, Mail, Globe } from "lucide-react";
 import { Plane } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
-import { getCountryFlag, formatPartnerType } from "@/lib/countries";
+import { formatPartnerType } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { getEffectiveLogoUrl, getPartnerDisplayCity } from "@/lib/partnerUtils";
+import { getPartnerDisplayCity } from "@/lib/partnerUtils";
 import { PARTNER_TYPE_ICONS } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
@@ -46,7 +46,6 @@ export function PartnerDetailHeader({
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[String(partner.partner_type || "")] || Box;
   const sherlockLevel = useSherlockLevel("partner", partner.id);
   const inHolding = isInHoldingPattern(partner.lead_status as string | null | undefined);
-  const effectiveLogo = getEffectiveLogoUrl(partner);
   const displayCity = getPartnerDisplayCity(partner);
 
   return (
