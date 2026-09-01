@@ -115,7 +115,8 @@
 
   /* detail */
   .dhead{display:flex;gap:12px;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--border)}
-  .dlogo{width:48px;height:48px;border-radius:10px;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;color:#9a9ad2}
+  .dlogo img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box}
+  .dlogo{width:48px;height:48px;border-radius:10px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;color:#9a9ad2}
   .dtabs{display:flex;gap:4px;margin:12px 0}
   .dtab{padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;color:var(--muted);border:1px solid transparent;cursor:pointer}
   .dtab.on{background:#1a1a3d;border-color:var(--border);color:#fff}
@@ -293,7 +294,7 @@ const railLeft = `<div class="rail">
 
 
 function card(c, sel){return `<div class="card ${sel?'sel':''}">
-  <div class="ccorner tl"><div class="clogo">${c.k}</div></div>
+  <div class="ccorner tl">${logoImg(c)}</div>
   <div class="ccorner tr">
     ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:''}
     <span class="badge b-blue">${c.badge}</span>
@@ -307,7 +308,7 @@ function card(c, sel){return `<div class="card ${sel?'sel':''}">
       <span class="chip">ultimo contatto ${c.last}</span>
     </div>
     <div class="cfoot">
-      <span class="geo"><span class="flag-lg">${c.f}</span><span class="gcountry">${c.country}</span><span class="gcity">· ${c.c}</span></span>
+      <span class="geo">${flagImg(c.iso)}<span class="gcountry">${c.country}</span><span class="gcity">· ${c.c}</span></span>
       <span class="cact"><span class="score">${c.s}</span><button class="btn more" title="Menu azioni">⋮</button></span>
     </div>
   </div>
@@ -317,7 +318,7 @@ function card(c, sel){return `<div class="card ${sel?'sel':''}">
 function sect(t){return `<div class="sect"><span class="t">${t}</span><span class="line"></span></div>`;}
 const detail = `<div class="detail">
   <div class="dhead">
-    <div class="dlogo">EU</div>
+    <div class="dlogo"><img src="https://www.google.com/s2/favicons?domain=eugene-logistics.com&sz=128" alt="" onerror="this.replaceWith(document.createTextNode('EU'))"/></div>
     <div style="flex:1;min-width:0">
       <div style="font-size:15px;font-weight:700">"EUGENE" Logistics Co., Ltd.</div>
       <div class="tiny muted">🇰🇷 Busan, Corea del Sud · Membro WCA dal 2016 · Score 86</div>
@@ -524,7 +525,7 @@ ${shell(`<div class="pagehead"><button class="btn ghost">← Elenco</button><spa
 document.getElementById('v5').innerHTML = `
 <p class="note"><b>Vista tabella.</b> Stessa maschera, stessi filtri, stesse azioni: cambia solo la resa dei dati per confronto e lavoro massivo. Interruttore card/tabella nella toolbar.</p>
 ${shell(`${pagehead()}${toolbar('<span class="seg"><button class="btn">▦ Card</button><button class="btn on">▤ Tabella</button></span>')}<div class="body">${railLeft}<div class="col" style="overflow:auto"><table class="table"><thead><tr><th style="width:26px"></th><th colspan="3">Identità</th><th colspan="2">Contatto</th><th colspan="2">Relazione</th><th></th></tr><tr><th></th><th>Azienda</th><th>Paese</th><th>Città</th><th>Referente</th><th>Canali</th><th>Ultimo contatto</th><th>Score</th><th></th></tr></thead><tbody>
-${COMPANIES.concat(COMPANIES).map(c=>`<tr><td><input type="checkbox"/></td><td><b>${c.n}</b></td><td>${c.f}</td><td>${c.c}</td><td class="muted">${c.contact}</td><td>${c.ch}</td><td class="muted">${c.last}</td><td class="score">${c.s}</td><td><button class="btn more" title="Menu azioni">⋮</button></td></tr>`).join('')}
+${COMPANIES.concat(COMPANIES).map(c=>`<tr><td><input type="checkbox"/></td><td><b>${c.n}</b></td><td>${flagImg(c.iso,'sm')}</td><td>${c.c}</td><td class="muted">${c.contact}</td><td>${c.ch}</td><td class="muted">${c.last}</td><td class="score">${c.s}</td><td><button class="btn more" title="Menu azioni">⋮</button></td></tr>`).join('')}
 </tbody></table></div></div>`)}`;
 
 // V6 mobile
@@ -532,7 +533,7 @@ document.getElementById('v6').innerHTML = `
 <p class="note"><b>Mobile.</b> I due rail diventano drawer richiamabili dalla toolbar (Filtri / Azioni). La card passa a due righe. Il dettaglio si apre a tutta pagina, mai affiancato.</p>
 <div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn more" title="Menu azioni">⋮</button></div>
 <div class="toolbar"><input class="input" placeholder="Cerca…"/><button class="btn icon">⛭</button></div>
-<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="logo">${c.k}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge b-blue">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
+<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card">${logoImg(c,'logo')}<div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span style="display:inline-flex;align-items:center;gap:6px">${flagImg(c.iso,'sm')} ${c.country} · ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge b-blue">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
 <div style="display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)"><button class="btn" style="flex:1">Filtri (3)</button><button class="btn" style="flex:1">Azioni</button></div></div>`;
 
 // V7 anatomia
