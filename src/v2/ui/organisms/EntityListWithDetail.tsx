@@ -336,32 +336,10 @@ export function EntityListWithDetail({
   void activeFiltersCount;
 
 
-  const overflowMenu = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="h-7 w-7 rounded-md border border-border/40 bg-card/40 text-muted-foreground inline-flex items-center justify-center transition-all hover:text-foreground"
-          title="Altre azioni"
-          aria-label="Altre azioni"
-        >
-          <MoreHorizontal className="w-3.5 h-3.5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="z-[80] min-w-[200px]">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          Elenco
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-xs" onClick={() => selection.selectAll(visibleIds)}>
-          {allSelected ? "Deseleziona tutto" : "Seleziona tutti i visibili"}
-        </DropdownMenuItem>
-        <DropdownMenuItem className="text-xs" onClick={() => setFiltersOpen(true)}>
-          Filtri avanzati…
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  // Niente menu "…" in toolbar: i filtri avanzati si aprono dalla linguetta
+  // laterale (evento `entity-filters-advanced`).
+  void visibleIds;
+  void allSelected;
 
 
   const list = (
