@@ -314,25 +314,28 @@ const railLeft = `<div class="rail">
 
 
 function card(c, sel){return `<div class="card ${sel?'sel':''}">
-  <div class="ccorner tl">${logoImg(c)}</div>
+  <div class="cid">
+    ${logoImg(c)}
+    <div class="flagwrap">${flagImg(c.iso)}</div>
+    <div><div class="gcountry">${c.country}</div><div class="gcity">${c.c}</div></div>
+  </div>
   <div class="ccorner tr">
-    ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:''}
-    <span class="badge b-blue">${c.badge}</span>
-    ${c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
+    <span class="spill" title="Score ${c.s}">◆<span>${c.s}</span></span>
+    <button class="btn more" title="Menu azioni">⋮</button>
   </div>
   <div class="cmain">
     <div class="crow1"><span class="cname">${c.n}</span></div>
     <div class="crow2"><span>${c.contact}</span></div>
     <div class="crow3">
-      <span class="chip">${c.ch}</span>
-      <span class="chip">ultimo contatto ${c.last}</span>
-    </div>
-    <div class="cfoot">
-      <span class="geo">${flagImg(c.iso)}<span class="gcountry">${c.country}</span><span class="gcity">· ${c.c}</span></span>
-      <span class="cact"><span class="score">${c.s}</span><button class="btn more" title="Menu azioni">⋮</button></span>
+      <span class="chip">${c.ch} ultimo contatto ${c.last}</span>
+      <span class="flats">
+        ${c.alert?`<span class="flat warn">${c.alert}</span>`:''}
+        <span class="flat">${c.badge}${c.extra?` +${c.extra}`:''}</span>
+      </span>
     </div>
   </div>
 </div>`;}
+
 
 // DETTAGLIO — panoramica divisa in 3 sezioni funzionali: Chi è / Relazione / Operatività
 function sect(t){return `<div class="sect"><span class="t">${t}</span><span class="line"></span></div>`;}
