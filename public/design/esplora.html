@@ -63,19 +63,40 @@
   .muted{color:var(--muted)}
   .tiny{font-size:11px}
 
-  /* card partner */
-  .card{border:1px solid var(--border);background:var(--surface-2);border-radius:var(--r);padding:10px;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
-  .card:hover{border-color:#4f46e580}
+  /* card partner — direzione "Crystal midnight": angoli usati come ancore,
+     logo grande, bandiera leggibile + Paese per esteso */
+  .card{position:relative;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:12px 12px 10px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:border-color .25s, box-shadow .25s}
+  .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
+  .clogo{width:44px;height:44px;flex:none;border-radius:12px;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .logo{width:34px;height:34px;flex:none;border-radius:8px;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
-  .cmain{flex:1;min-width:0}
+  .cmain{flex:1;min-width:0;padding-right:78px} /* spazio riservato al corner badge */
   .crow1{display:flex;align-items:center;gap:6px}
-  .cname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cname{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .crow2{display:flex;align-items:center;gap:10px;margin-top:3px;color:var(--muted);font-size:11px}
   .crow3{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .cfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;padding-top:8px;border-top:1px solid #ffffff0d;flex-wrap:nowrap}
+  .geo{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--fg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .geo .flag-lg{font-size:20px;line-height:1;flex:none}
+  .geo .gcountry{font-weight:700}
+  .geo .gcity{color:var(--muted)}
+  .ccorner{position:absolute;display:flex;gap:4px;align-items:center}
+  .ccorner.tr{top:10px;right:10px}
   .chip{height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 7px;border-radius:6px;border:1px solid var(--border);background:#ffffff08;font-size:10px;color:var(--muted)}
-  .cact{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-  .score{font-size:11px;font-weight:700;color:#a5a1f5}
+  .cact{display:flex;align-items:center;gap:8px}
+  .score{font-size:13px;font-weight:800;color:#a5a1f5}
+
+  /* FINDBAR — unico blocco concentrato: cerca + filtri + ordina + vista */
+  .findbar{display:flex;align-items:center;gap:8px;margin:10px 12px 0;padding:8px;border-radius:14px;border:1px solid #4f46e533;background:rgba(20,20,50,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px -12px rgba(10,10,26,.8)}
+  .fsearch{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:10px;border:1px solid #4f46e522;background:#0a0a1a99}
+  .fsearch:focus-within{border-color:#4f46e588}
+  .fsearch .ficon{color:#818cf8;font-size:14px;flex:none}
+  .fsearch input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--fg);font-size:12px}
+  .fsearch input::placeholder{color:#8d8dae66}
+  .findbar .btn{height:34px;border-radius:10px}
+  .findbar .dd{height:34px;border-radius:10px;background:#0a0a1a99}
+  .findbar .seg{height:34px}
+  .findbar .seg > .btn{height:32px}
 
   /* filtri */
   .frow{display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:6px;font-size:12px;cursor:pointer}
@@ -202,12 +223,12 @@
 
 <script>
 const COMPANIES = [
-  {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', f:'🇰🇷', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
-  {n:'Nordwind Spedition GmbH', c:'Hamburg', f:'🇩🇪', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
-  {n:'Trans Adriatic Cargo Srl', c:'Trieste', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, alert:'Scade', contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
-  {n:'Pacific Rim Forwarding', c:'Singapore', f:'🇸🇬', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
-  {n:'Atlas Freight Services', c:'Casablanca', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, alert:'Hold', contact:'—', last:'mai', ch:'✉'},
-  {n:'Baltic Line Logistics', c:'Gdańsk', f:'🇵🇱', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
+  {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', country:'Corea del Sud', f:'🇰🇷', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
+  {n:'Nordwind Spedition GmbH', c:'Hamburg', country:'Germania', f:'🇩🇪', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
+  {n:'Trans Adriatic Cargo Srl', c:'Trieste', country:'Italia', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, alert:'Scade', contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
+  {n:'Pacific Rim Forwarding', c:'Singapore', country:'Singapore', f:'🇸🇬', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
+  {n:'Atlas Freight Services', c:'Casablanca', country:'Marocco', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, alert:'Hold', contact:'—', last:'mai', ch:'✉'},
+  {n:'Baltic Line Logistics', c:'Gdańsk', country:'Polonia', f:'🇵🇱', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
 ];
 
 const topbar = `<div class="topbar">
@@ -229,17 +250,15 @@ function pagehead(actions){return `<div class="pagehead">
   <button class="btn icon" title="Altre azioni">⋯</button>
 </div>`;}
 
-// TOOLBAR — 3 gruppi: cercare | vedere | ordinare/contare
-function toolbar(extra){return `<div class="toolbar">
-  <input class="input" style="max-width:250px" placeholder="Cerca partner, città, referente…" />
-  <button class="btn">Filtri <span class="badge b-blue" style="margin-left:4px">3</span></button>
+// TOOLBAR → FINDBAR — unico blocco concentrato: cercare | filtrare | vedere | ordinare
+function toolbar(extra){return `<div class="findbar">
+  <div class="fsearch"><span class="ficon">⌕</span><input placeholder="Cerca partner, città, referente…" /></div>
+  <button class="btn primary">⛭ Filtri <span class="badge b-blue" style="margin-left:2px">3</span></button>
   <span class="sep"></span>
   ${extra||'<span class="seg"><button class="btn on">▦ Card</button><button class="btn">▤ Tabella</button></span>'}
-  <span class="sep"></span>
-  <span class="dd" title="Ordinamento (7 criteri: dropdown)"><span class="k">Ordina</span> Score ↓</span>
-  <span class="dd" title="Vista salvata (elenco lungo: dropdown)"><span class="k">Vista</span> Corea + attivi</span>
-  <span style="flex:1"></span>
-  <span class="tiny muted">1.248 aziende · 3 filtri attivi</span>
+  <span class="dd" title="Ordinamento"><span class="k">Ordina</span> Score ↓</span>
+  <span class="dd" title="Vista salvata"><span class="k">Vista</span> Corea + attivi</span>
+  <span class="tiny muted" style="white-space:nowrap">1.248 · 3 filtri</span>
 </div>`;}
 
 
@@ -255,24 +274,24 @@ const railLeft = `<div class="rail">
 </div>`;
 
 
-function card(c, sel, i){return `<div class="card ${sel?'sel':''}">
-  <div class="logo">${c.k}</div>
+function card(c, sel){return `<div class="card ${sel?'sel':''}">
+  <div class="ccorner tr">
+    ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:''}
+    <span class="badge b-blue">${c.badge}</span>
+    ${c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
+  </div>
+  <div class="clogo">${c.k}</div>
   <div class="cmain">
-    <div class="crow1">
-      <span class="cname">${c.n}</span>
-      <span class="badge b-blue">${c.badge}</span>
-      ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
-    </div>
-    <div class="crow2"><span><span class="flag">${c.f}</span> ${c.c}</span><span>·</span><span>${c.contact}</span></div>
-
+    <div class="crow1"><span class="cname">${c.n}</span></div>
+    <div class="crow2"><span>${c.contact}</span></div>
     <div class="crow3">
       <span class="chip">${c.ch}</span>
       <span class="chip">ultimo contatto ${c.last}</span>
     </div>
-  </div>
-  <div class="cact">
-    <span class="score">${c.s}</span>
-    <button class="btn icon" title="Azioni">⋯</button>
+    <div class="cfoot">
+      <span class="geo"><span class="flag-lg">${c.f}</span><span class="gcountry">${c.country}</span><span class="gcity">· ${c.c}</span></span>
+      <span class="cact"><span class="score">${c.s}</span><button class="btn icon" title="Azioni">⋯</button></span>
+    </div>
   </div>
 </div>`;}
 
