@@ -183,25 +183,11 @@ export function ListToolbar<K extends string = string>({
           </DropdownMenu>
         )}
 
-        <div className="relative flex-1 min-w-[180px] max-w-[320px]">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            placeholder={searchPlaceholder}
-            className="h-7 pl-7 pr-7 text-xs bg-card/50"
-          />
-          {search && onSearchChange && (
-            <button
-              type="button"
-              onClick={() => onSearchChange("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted/40 rounded"
-              aria-label="Pulisci ricerca"
-            >
-              <X className="w-3 h-3 text-muted-foreground" />
-            </button>
-          )}
-        </div>
+        {searchSlot ? (
+          createPortal(searchBox, searchSlot)
+        ) : (
+          <div className="flex-1 min-w-0">{searchBox}</div>
+        )}
 
         <div className="ml-auto flex items-center gap-1 shrink-0">
           {/* Sort: dropdown chiave + bottone direzione */}
