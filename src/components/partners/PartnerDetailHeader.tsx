@@ -1,21 +1,14 @@
 import type { PartnerViewModel } from "@/types/partner-views";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Star, StarOff, Phone, Mail, Globe } from "lucide-react";
-import { Plane } from "lucide-react";
+import { Star, StarOff, Phone, Mail, Globe, Plane, Box } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
-import { formatPartnerType } from "@/lib/countries";
+import { formatPartnerType, formatServiceCategory } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { getPartnerDisplayCity } from "@/lib/partnerUtils";
-import { PARTNER_TYPE_ICONS } from "@/components/partners/shared/ServiceIcons";
-import { MiniStars } from "@/components/partners/shared/MiniStars";
-import { TrophyRow } from "@/components/partners/shared/TrophyRow";
+import { PARTNER_TYPE_ICONS, resolveServiceIcon } from "@/components/partners/shared/ServiceIcons";
 import { SocialLinks } from "@/components/partners/SocialLinks";
-import { Box } from "lucide-react";
-import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
-import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
-import { EnrichmentBadge } from "@/v2/ui/atoms/EnrichmentBadge";
 import { EnrichmentInsightStrip } from "@/components/partners/EnrichmentInsightStrip";
 
 interface PartnerDetailHeaderProps {
@@ -31,6 +24,35 @@ interface PartnerDetailHeaderProps {
   onToggleFavorite: () => void;
 }
 
+/** Link contatto ridotto alla sola icona (tooltip con il valore completo). */
+function ContactIcon({
+  href,
+  label,
+  icon: Icon,
+  external,
+}: {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  external?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <a
+          href={href}
+          {...(external ? { target: "_blank", rel: "noopener" } : {})}
+          aria-label={label}
+          className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-primary/20 bg-card/70 text-primary hover:bg-primary/10 hover:border-primary/40 transition-colors"
+        >
+          <Icon className="w-4 h-4" strokeWidth={1.6} />
+        </a>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function PartnerDetailHeader({
   partner,
   enrichment,
@@ -44,147 +66,133 @@ export function PartnerDetailHeader({
   onToggleFavorite,
 }: PartnerDetailHeaderProps) {
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[String(partner.partner_type || "")] || Box;
-  const sherlockLevel = useSherlockLevel("partner", partner.id);
   const inHolding = isInHoldingPattern(partner.lead_status as string | null | undefined);
   const displayCity = getPartnerDisplayCity(partner);
+  void years;
+
+  const serviceLabels = [...new Set(services.map((s) => s.service_category))].slice(0, 12);
 
   return (
     <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-
-          {/* Riga 1 — nome + valutazione (stelle · anni) + preferiti, ben separati */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col items-start gap-1.5 min-w-0">
-              <h2 className="text-xl font-bold text-foreground truncate">{String(partner.company_name)}</h2>
-              <div className="flex items-center gap-2 flex-wrap min-w-0">
-                <EnrichmentBadge partner={partner} variant="pill" />
-                <span
-                  className={cn(
-                    "text-xs px-2 py-0.5 rounded-full border font-medium",
-                    isExpired
-                      ? "border-destructive/30 text-destructive"
-                      : isExpiringSoon
-                        ? "border-primary/30 text-primary"
-                        : "border-emerald-500/20 text-emerald-400",
-                  )}
-                >
-                  {expiryDate ? `Scade ${format(expiryDate, "MM/yyyy")}` : "N/A"}
-                </span>
-                {inHolding && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium">
-                        <Plane className="w-3.5 h-3.5" /> In attesa
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>Azienda nel circuito di attesa ({String(partner.lead_status)})</TooltipContent>
-                  </Tooltip>
-                )}
-                {sherlockLevel && (
-                  <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-sm text-foreground flex-wrap">
-                <PartnerTypeIcon className="w-4 h-4 opacity-60" strokeWidth={1.5} />
-                <span>{formatPartnerType(String(partner.partner_type || ""))}</span>
-                {partner.office_type && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 font-medium text-foreground">
-                    {partner.office_type === "head_office" ? "HQ" : "Branch"}
-                  </span>
-                )}
-                {networks.length > 0 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full border border-primary/20 text-foreground font-medium">
-                    {networks.length} network
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end gap-2 shrink-0">
-              {/* Preferiti: azione isolata, in alto a destra */}
+      {/* Riga 1 — tipologia (sotto il nome in testata) + preferiti */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center gap-2 text-sm text-foreground flex-wrap">
+            <PartnerTypeIcon className="w-4 h-4 opacity-60" strokeWidth={1.5} />
+            <span>{formatPartnerType(String(partner.partner_type || ""))}</span>
+            {partner.office_type && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 font-medium text-foreground">
+                {partner.office_type === "head_office" ? "HQ" : "Branch"}
+              </span>
+            )}
+            {networks.length > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full border border-primary/20 text-foreground font-medium">
+                {networks.length} network
+              </span>
+            )}
+            {inHolding && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onToggleFavorite}
-                    className={cn("h-8 w-8 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}
-                  >
-                    {partner.is_favorite ? (
-                      <Star className="w-5 h-5 fill-primary text-primary" />
-                    ) : (
-                      <StarOff className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </Button>
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium">
+                    <Plane className="w-3.5 h-3.5" /> In attesa
+                  </span>
                 </TooltipTrigger>
-                <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
+                <TooltipContent>Azienda nel circuito di attesa ({String(partner.lead_status)})</TooltipContent>
               </Tooltip>
+            )}
+          </div>
 
-              {/* Valutazione e anzianità: blocco proprio, separato */}
-              {(Number(partner.rating || 0) > 0 || years > 0) && (
-                <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/50 px-2.5 py-1">
-                  {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-4 h-4" />}
-                  {Number(partner.rating || 0) > 0 && years > 0 && <span className="h-4 w-px bg-border/70" />}
-                  {years > 0 && <TrophyRow years={years} />}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <span>{String(partner.country_name)}</span>
-                {displayCity && <span className="text-muted-foreground">{displayCity}</span>}
-                {partner.wca_id && (
-                  <span className="text-xs text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
-                )}
-              </div>
+          {/* Riga 2 — icone servizi, subito visibili sotto il nome */}
+          {serviceLabels.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {serviceLabels.map((label) => {
+                const Icon = resolveServiceIcon(label);
+                return (
+                  <span
+                    key={label}
+                    title={formatServiceCategory(label)}
+                    aria-label={formatServiceCategory(label)}
+                    className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-primary/20 bg-card/70 hover:bg-primary/10 transition-colors cursor-help"
+                  >
+                    <Icon className="h-4 w-4 text-primary" strokeWidth={1.6} />
+                  </span>
+                );
+              })}
             </div>
-          </div>
-
-
-          {/* Riga 3 — contatti sempre a sinistra */}
-          <div className="flex items-center gap-4 mt-3 text-sm flex-wrap">
-            {partner.phone && (
-              <a
-                href={`tel:${String(partner.phone)}`}
-                className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
-              >
-                <Phone className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.phone)}
-              </a>
-            )}
-            {partner.email && (
-              <a
-                href={`mailto:${String(partner.email)}`}
-                className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
-              >
-                <Mail className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.email)}
-              </a>
-            )}
-            {partner.website && (
-              <a
-                href={
-                  String(partner.website).startsWith("http")
-                    ? String(partner.website)
-                    : `https://${String(partner.website)}`
-                }
-                target="_blank"
-                rel="noopener"
-                className="flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
-              >
-                <Globe className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} /> {String(partner.website)}
-              </a>
-            )}
-          </div>
-          <div className="mt-1">
-            <SocialLinks partnerId={String(partner.id)} compact />
-          </div>
-          <EnrichmentInsightStrip
-            partner={partner}
-            enrichment={enrichment}
-            services={services}
-            branchCountries={branchCountries}
-            networks={networks}
-          />
+          )}
         </div>
+
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onToggleFavorite}
+                className={cn("h-8 w-8 p-0 rounded-lg", partner.is_favorite && "shadow-sm shadow-primary/30")}
+              >
+                {partner.is_favorite ? (
+                  <Star className="w-5 h-5 fill-primary text-primary" />
+                ) : (
+                  <StarOff className="w-5 h-5 text-muted-foreground" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
+          </Tooltip>
+
+          <div className="flex items-center gap-2 text-sm text-foreground">
+            <span>{String(partner.country_name)}</span>
+            {displayCity && <span className="text-muted-foreground">{displayCity}</span>}
+            {partner.wca_id && <span className="text-xs text-muted-foreground font-mono">#{String(partner.wca_id)}</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Riga 3 — contatti come sole icone, tutti sulla stessa riga */}
+      <div className="flex items-center gap-2 mt-3">
+        {partner.phone && (
+          <ContactIcon href={`tel:${String(partner.phone)}`} label={String(partner.phone)} icon={Phone} />
+        )}
+        {partner.email && (
+          <ContactIcon href={`mailto:${String(partner.email)}`} label={String(partner.email)} icon={Mail} />
+        )}
+        {partner.website && (
+          <ContactIcon
+            href={
+              String(partner.website).startsWith("http") ? String(partner.website) : `https://${String(partner.website)}`
+            }
+            label={String(partner.website)}
+            icon={Globe}
+            external
+          />
+        )}
+        <SocialLinks partnerId={String(partner.id)} compact />
+      </div>
+
+      <EnrichmentInsightStrip
+        partner={partner}
+        enrichment={enrichment}
+        services={services}
+        branchCountries={branchCountries}
+        networks={networks}
+        showServiceIcons={false}
+      />
+
+      {/* Riga finale — scadenza WCA in basso a destra */}
+      <div className="flex justify-end mt-3">
+        <span
+          className={cn(
+            "text-xs px-2 py-0.5 rounded-full border font-medium",
+            isExpired
+              ? "border-destructive/30 text-destructive"
+              : isExpiringSoon
+                ? "border-primary/30 text-primary"
+                : "border-emerald-500/20 text-emerald-400",
+          )}
+        >
+          {expiryDate ? `Scade ${format(expiryDate, "MM/yyyy")}` : "Scadenza N/A"}
+        </span>
       </div>
     </div>
   );
