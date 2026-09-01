@@ -209,15 +209,17 @@ function pagehead(actions){return `<div class="pagehead">
 
 // TOOLBAR — 3 gruppi: cercare | vedere | ordinare/contare
 function toolbar(extra){return `<div class="toolbar">
-  <input class="input" style="max-width:260px" placeholder="Cerca partner, città, referente…" />
-  <button class="btn">Filtri <span class="badge b-accent" style="margin-left:4px">3</span></button>
+  <input class="input" style="max-width:250px" placeholder="Cerca partner, città, referente…" />
+  <button class="btn">Filtri <span class="badge b-blue" style="margin-left:4px">3</span></button>
   <span class="sep"></span>
   ${extra||'<span class="seg"><button class="btn on">▦ Card</button><button class="btn">▤ Tabella</button></span>'}
   <span class="sep"></span>
-  <button class="btn ghost">Ordina: Score ↓</button>
+  <span class="dd" title="Ordinamento (7 criteri: dropdown)"><span class="k">Ordina</span> Score ↓</span>
+  <span class="dd" title="Vista salvata (elenco lungo: dropdown)"><span class="k">Vista</span> Corea + attivi</span>
   <span style="flex:1"></span>
   <span class="tiny muted">1.248 aziende · 3 filtri attivi</span>
 </div>`;}
+
 
 // RAIL SINISTRO — solo filtri, in 4 gruppi chiusi
 function fgroup(title, rows){return `<div class="grp"><div class="lab">${title}</div>${rows}</div>`;}
