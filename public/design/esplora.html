@@ -91,6 +91,7 @@
   .ccorner.tr{top:12px;right:12px}
   .chip{height:21px;display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:6px;border:1px solid var(--border);background:#ffffff08;font-size:10px;color:var(--muted)}
   .cact{display:flex;align-items:center;gap:6px;flex:none}
+  .score{font-size:13px;font-weight:800;color:#a5a1f5}
   /* score = icona + numero, senza etichetta */
   .spill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid #4f46e555;background:#4f46e51f;font-size:12px;font-weight:800;color:#a5a1f5}
   .spill .g{font-size:10px;opacity:.8}
@@ -561,7 +562,7 @@ document.getElementById('v6').innerHTML = `
 <p class="note"><b>Mobile.</b> I due rail diventano drawer richiamabili dalla toolbar (Filtri / Azioni). La card passa a due righe. Il dettaglio si apre a tutta pagina, mai affiancato.</p>
 <div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn more" title="Menu azioni">⋮</button></div>
 <div class="toolbar"><input class="input" placeholder="Cerca…"/><button class="btn icon">⛭</button></div>
-<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="ccorner tl">${logoImg(c)}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span style="display:inline-flex;align-items:center;gap:6px">${flagImg(c.iso,'sm')} ${c.country} · ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge b-blue">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
+<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="cid">${logoImg(c)}<div class="flagwrap">${flagImg(c.iso)}</div><div><div class="gcountry">${c.country}</div><div class="gcity">${c.c}</div></div></div><div class="ccorner tr"><span class="spill">◆<span>${c.s}</span></span></div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.contact}</span></div><div class="crow3"><span class="chip">${c.ch} ${c.last}</span><span class="flats"><span class="flat">${c.badge}</span></span></div></div></div>`).join('')}</div>
 <div style="display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)"><button class="btn" style="flex:1">Filtri (3)</button><button class="btn" style="flex:1">Azioni</button></div></div>`;
 
 // V7 anatomia
@@ -581,11 +582,11 @@ document.getElementById('v7').innerHTML = `
   <div><div class="lab">Template (5 elementi)</div>
     ${card(COMPANIES[0],false)}
     <div class="legend">
-      <div class="panel tiny"><b>1 · Identità</b><div class="muted">logo + nome + max 2 badge (+N)</div></div>
-      <div class="panel tiny"><b>2 · Luogo</b><div class="muted">bandiera + città, cliccabili = filtro</div></div>
+      <div class="panel tiny"><b>1 · Colonna identità</b><div class="muted">logo, bandiera centrata sotto, Paese/città allineati a sinistra</div></div>
+      <div class="panel tiny"><b>2 · Nome</b><div class="muted">riga piena, mai troncata dai badge</div></div>
       <div class="panel tiny"><b>3 · Referente</b><div class="muted">nome + ruolo, uno solo</div></div>
-      <div class="panel tiny"><b>4 · Segnale</b><div class="muted">canali attivi + ultimo contatto</div></div>
-      <div class="panel tiny"><b>5 · Valore</b><div class="muted">score + menu ⋮</div></div>
+      <div class="panel tiny"><b>4 · Riga bassa</b><div class="muted">ultimo contatto a sinistra, stati piatti (senza riquadro) a destra</div></div>
+      <div class="panel tiny"><b>5 · Angolo alto-dx</b><div class="muted">◆ score come icona+numero + menu ⋮</div></div>
     </div>
   </div>
 </div>`;
