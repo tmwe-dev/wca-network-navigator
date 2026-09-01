@@ -138,6 +138,28 @@
   .inv li{margin:2px 0}
   .inv .n{float:right;color:#c3c0fb;font-weight:800;font-size:11px}
 
+  /* CLASSIFICA funzioni */
+  .rank{width:100%;border-collapse:collapse;font-size:12px}
+  .rank th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border)}
+  .rank td{padding:6px 8px;border-bottom:1px solid #ffffff0d;vertical-align:middle}
+  .rank tr.dead td{opacity:.45}
+  .rank tr.dead td:first-child{border-left:2px solid var(--err)}
+  .rank tr.pop td:first-child{border-left:2px solid var(--brown)}
+  .rank tr.top td:first-child{border-left:2px solid var(--accent)}
+  .rank td:first-child{border-left:2px solid transparent}
+  .rank .pr{font-weight:800;color:var(--muted);width:30px;text-align:right;padding-right:10px}
+  .cat{display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;padding:1px 6px;border-radius:5px;border:1px solid var(--border);color:var(--muted);background:#ffffff08}
+  .cat-cerca{color:#c3c0fb;border-color:rgba(129,120,248,.4)}
+  .cat-ordina{color:#c3c0fb;border-color:rgba(129,120,248,.4)}
+  .cat-vedi{color:#c3c0fb;border-color:rgba(129,120,248,.4)}
+  .cat-agisci{color:#e2b98c;border-color:rgba(196,146,92,.4)}
+  .cat-regola{color:#e2b98c;border-color:rgba(196,146,92,.4)}
+  .cat-stato{color:var(--muted)}
+  .dest{font-size:10px;font-weight:700;white-space:nowrap}
+  .dest.vis{color:#a5a1f5}
+  .dest.pop{color:#e2b98c}
+  .dest.out{color:#f87171}
+
 </style>
 
 </head>
@@ -388,7 +410,57 @@ ${INV.map(([t,n,items])=>`<div class="panel"><b>${t}<span class="n">${n}</span><
   <div class="panel tiny"><b>Badge ammessi</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="badge b-blue">WCA</span><span class="badge b-blue">CRM</span><span class="badge b-blue">+3</span><span class="badge b-brown">Hold</span><span class="badge b-brown">Scade</span></div></div>
   <div class="panel tiny"><b>Non badge</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="chip">Air Freight</span><span class="chip">✉ 💬 in</span><span class="dot" style="background:var(--ok)"></span></div><div class="muted" style="margin-top:6px">Servizi e canali sono chip; lo stato è un pallino.</div></div>
   <div class="panel tiny"><b>Controlli</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center"><span class="dd"><span class="k">Ordina</span> Score ↓</span><span class="seg"><button class="btn on">▦</button><button class="btn">▤</button></span><button class="btn icon">⋯</button></div></div>
-</div>`;
+</div>
+
+${sect('Classifica delle funzioni — più importanti in alto')}
+<p class="note" style="border-color:var(--border);background:#ffffff08">Ordinate per frequenza d'uso reale. <b style="color:#a5a1f5">■ visibile</b> = resta nella maschera di primo livello · <b style="color:#e2b98c">■ popover/menu</b> = esce dalla vista, vive in ⋯ o in un popover · <b style="color:#f87171">■ eliminare</b> = inutile o doppione. Le 6 categorie: <span class="cat cat-cerca">Cercare</span> <span class="cat cat-ordina">Ordinare</span> <span class="cat cat-vedi">Vedere</span> <span class="cat cat-agisci">Agire</span> <span class="cat cat-regola">Regole</span> <span class="cat cat-stato">Stato</span>.</p>
+<div class="panel" style="padding:0;overflow:hidden">
+<table class="rank">
+<thead><tr><th style="width:30px">#</th><th>Funzione</th><th>Categoria</th><th>Destino</th><th>Motivo</th></tr></thead>
+<tbody>
+${[
+// [fn, cat, cls, dest, destcls, motivo, rowcls]
+['Ricerca testuale','Cercare','cat-cerca','Visibile in alto (toolbar)','vis','È il gesto n°1: trovare un partner','top'],
+['Contatta referente','Agire','cat-agisci','Visibile — unica azione primaria','vis','È lo scopo della maschera; tutto il resto serve a questo','top'],
+['Filtri geografici e di relazione','Cercare','cat-cerca','Rail sinistro, sempre aperti','vis','Restringono l\'elenco prima di qualunque lettura','top'],
+['Apri dettaglio partner','Vedere','cat-vedi','Click sulla riga/card','vis','Passaggio obbligato prima di agire','top'],
+['Punteggio / score visibile in card','Vedere','cat-vedi','Visibile, colonna destra della card','vis','Decide chi aprire per primo','top'],
+['Ultimo contatto + canali attivi','Stato','cat-stato','Visibile come chip sobri','vis','Evita doppi contatti e follow-up mancati','top'],
+['Ordina risultati','Ordinare','cat-ordina','Dropdown in toolbar','pop','Utile ma secondario: si imposta una volta e resta','pop'],
+['Cambia vista Card / Tabella','Vedere','cat-vedi','Segmentato in toolbar','vis','Solo 2 opzioni: segmentato, non dropdown',''],
+['Viste salvate','Cercare','cat-cerca','Dropdown + rail sinistro','pop','Elenco lungo e mutuamente esclusivo: dropdown','pop'],
+['Selezione multipla e azioni bulk','Agire','cat-agisci','Barra che sostituisce la toolbar da ≥2','pop','Compare solo quando serve, non occupa spazio a riposo','pop'],
+['Aggiungi a Cockpit','Agire','cat-agisci','Menu ⋯ e rail destro','pop','Azione d\'organizzazione, non quotidiana','pop'],
+['Deep Search / Trova referenti','Agire','cat-agisci','Rail destro, gruppo Arricchire','pop','Potente ma a consumo: non deve competere col primario','pop'],
+['Esporta','Agire','cat-agisci','Menu ⋯','pop','Occasionale; mai un pulsante di primo livello','pop'],
+['Crea campagna','Agire','cat-agisci','Rail destro + bulk bar','pop','Importante ma non per-elemento','pop'],
+['AI / Voce','Agire','cat-agisci','Header, posizione fissa','vis','Assistente trasversale: sempre nello stesso punto','top'],
+['Riepilogo KPI','Vedere','cat-vedi','Popover «📊 Riepilogo»','pop','Consultazione, non lavoro: fuori dalla pagina','pop'],
+['Filtri avanzati','Cercare','cat-cerca','Pulsante in fondo al rail → drawer','pop','Coprono la coda lunga; non devono affollare il rail','pop'],
+['Completezza dati / ultimo enrich / duplicati','Stato','cat-stato','Rail destro, gruppo Stato dati','pop','Diagnostica: utile a colpo d\'occhio, mai azione','pop'],
+['Attività recente','Stato','cat-stato','Rail destro, max 3 righe','pop','Contesto narrativo, coda del rail','pop'],
+['Badge di sistema (WCA, CRM, +N)','Stato','cat-stato','Visibile, max 2 per riga','vis','Appartenenza: identificano l\'origine del dato',''],
+['Badge di attenzione (Scade, Hold)','Regole','cat-regola','Visibile, sostituisce +N quando presente','vis','È l\'unico badge che può fermare l\'azione','top'],
+['Bandiera paese','Vedere','cat-vedi','Una sola per riga, accanto alla città','vis','Orientamento geografico istantaneo',''],
+['Breadcrumb di pagina','Vedere','cat-vedi','Header, piccolo','vis','Orientamento: costa poco, serve sempre',''],
+['Tab di dettaglio (Panoramica, Referenti…)','Vedere','cat-vedi','Sotto l\'intestazione del dettaglio','vis','Unico modo per passare tra le sezioni',''],
+['Reset filtri','Regole','cat-regola','Dentro il pannello filtri, piccolo','pop','Recupero errore, non gesto quotidiano','pop'],
+['Menu ⋯ di riga','Agire','cat-agisci','Solo in hover / riga aperta','pop','Raccoglie la coda lunga delle azioni','pop'],
+['Contatore risultati + filtri attivi','Stato','cat-stato','Coda della toolbar, testo','vis','Feedback silenzioso, zero interazione',''],
+['Ricerca globale ⌘K','Cercare','cat-cerca','Topbar, identica su tutte le maschere','vis','Standard di sistema, non della pagina',''],
+['Menu maschere ☰','Vedere','cat-vedi','Topbar','vis','Navigazione globale',''],
+['Badge «🏆 top partner»','Stato','cat-stato','Eliminare','out','Decorazione senza conseguenza operativa','dead'],
+['Badge «DS3» livello deep search','Stato','cat-stato','Eliminare → dentro Stato dati','out','Nessuno decide in base al livello di enrich','dead'],
+['Badge «HQ» tipo ufficio','Stato','cat-stato','Eliminare → nel dettaglio','out','Informazione anagrafica, non un\'etichetta','dead'],
+['Email in chiaro nella card','Vedere','cat-vedi','Eliminare → nel dettaglio','out','Doppione del referente; ruba una riga','dead'],
+['Numero interazioni «37 int.» nella card','Stato','cat-stato','Eliminare → nel dettaglio','out','Precisione inutile in elenco','dead'],
+['Preferito ★ nella card','Agire','cat-agisci','Eliminare → menu ⋯','out','Frequenza bassissima; occupa il posto dello score','dead'],
+['Sigla paese + bandiera insieme (KR 🇰🇷)','Vedere','cat-vedi','Eliminare il doppione','out','Ridondanza: si tiene solo la bandiera','dead'],
+].map((r,i)=>`<tr class="${r[6]||''}"><td class="pr">${i+1}</td><td><b>${r[0]}</b></td><td><span class="cat ${r[2]}">${r[1]}</span></td><td><span class="dest ${r[4]}">${r[3]}</span></td><td class="muted tiny">${r[5]}</td></tr>`).join('')}
+</tbody>
+</table>
+</div>
+<p class="note" style="margin-top:12px"><b>Regola che ne esce.</b> In vista restano ~12 funzioni (tutto ciò che serve a <i>trovare → valutare → contattare</i>). Altri 14 vanno in popover, menu ⋯ o drawer. <b>7 sono da eliminare</b>: sono badge e micro-dati che oggi competono con le decisioni vere. Questa stessa scala (visibile / popover / eliminare) si applica identica a ogni altra maschera.</p>`;
 
 // V1 lista + dettaglio
 
