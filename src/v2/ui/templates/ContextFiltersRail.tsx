@@ -173,7 +173,16 @@ export function ContextFiltersRail(): React.ReactElement | null {
             {context.content}
           </div>
         </div>
-        <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3">
+        <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3 space-y-2">
+          {ADVANCED_FILTER_KEYS.has(context.filterKey) && (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("entity-filters-advanced"))}
+              className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border/60 bg-card/40 text-xs font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" /> Filtri avanzati…
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setIsOpen(false)}
