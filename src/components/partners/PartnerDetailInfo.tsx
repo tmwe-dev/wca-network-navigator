@@ -213,7 +213,7 @@ export function PartnerDetailInfo({
         </Section>
       )}
 
-      {networks.length > 0 && (
+      {view === "profilo" && networks.length > 0 && (
         <Section>
           <SectionTitle icon={Hash}>Network ({networks.length})</SectionTitle>
           <div className="flex items-center gap-2 overflow-x-auto">
@@ -244,7 +244,7 @@ export function PartnerDetailInfo({
         </Section>
       )}
 
-      {allServices.length > 0 && (
+      {view === "profilo" && allServices.length > 0 && (
         <Section>
           <SectionTitle icon={Box}>Servizi ({allServices.length})</SectionTitle>
           <div className="flex flex-wrap gap-1.5">
@@ -265,7 +265,8 @@ export function PartnerDetailInfo({
       )}
 
       {/* Advanced details collapsible */}
-      {(partnerCertifications.length > 0 ||
+      {view === "profilo" &&
+        (partnerCertifications.length > 0 ||
         branchCountries.length > 0 ||
         (enrichment?.key_markets as unknown[])?.length > 0 ||
         (enrichment?.key_routes as unknown[])?.length > 0 ||
