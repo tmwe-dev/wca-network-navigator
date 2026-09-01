@@ -388,7 +388,7 @@ export function EntityListWithDetail({
         onHoldingFilterChange={updateHoldingFilter}
         rightSlot={
           <>
-            {filterButton}
+            
             {toolbarRightSlot}
             {overflowMenu}
           </>
