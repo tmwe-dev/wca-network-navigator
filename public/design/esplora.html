@@ -359,32 +359,36 @@ const detail = `<div class="detail">
   </div>
   <div class="grid2">
     ${sect('Chi è — anagrafica')}
-    <div class="panel">
-      <div class="lab">Identità</div>
-      <div class="kv"><span>Sede</span><b>Busan, KR</b></div>
-      <div class="kv"><span>Tipo ufficio</span><b>HQ</b></div>
-      <div class="kv"><span>Sito</span><b>eugenelog.co.kr</b></div>
-      <div class="kv"><span>Membership</span><b>scade 04/2027</b></div>
+    <div class="panel" style="grid-column:1/-1">
+      <div class="metrics">
+        <div class="metric"><span class="m">Sede</span><span class="v">Busan, KR</span></div>
+        <div class="metric"><span class="m">Ufficio</span><span class="v">HQ</span></div>
+        <div class="metric"><span class="m">Sito</span><span class="v">eugenelog.co.kr</span></div>
+        <div class="metric"><span class="m">Membership</span><span class="v">04/2027</span></div>
+      </div>
     </div>
-    <div class="panel">
+    <div class="panel" style="grid-column:1/-1">
       <div class="lab">Servizi e mercati</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${['Air Freight','Sea LCL','Sea FCL','Customs','Project Cargo','KR ↔ EU'].map(s=>`<span class="chip">${s}</span>`).join('')}
+      <div class="svc">
+        <span class="ico" title="Air Freight">✈</span>
+        <span class="ico" title="Sea LCL / FCL">🚢</span>
+        <span class="ico" title="Customs">🛃</span>
+        <span class="ico" title="Project Cargo">🏗</span>
+        <span class="ico" title="Corridoio KR ↔ EU">🌐</span>
+        <button class="btn ghost tiny" title="Apri tutti i servizi">+2 · dettaglio</button>
       </div>
     </div>
 
     ${sect('Relazione — come stiamo messi')}
-    <div class="panel">
-      <div class="lab">Stato</div>
-      <div class="kv"><span>Stato</span><b><span class="dot" style="background:var(--ok)"></span> Attivo</b></div>
-      <div class="kv"><span>Owner</span><b>Luca Arcanà</b></div>
-      <div class="kv"><span>Score</span><b>86</b></div>
-    </div>
-    <div class="panel">
-      <div class="lab">Storico</div>
-      <div class="kv"><span>Ultimo contatto</span><b>2 giorni fa</b></div>
-      <div class="kv"><span>Interazioni</span><b>37</b></div>
-      <div class="kv"><span>Prossima azione</span><b>Follow-up 05/09</b></div>
+    <div class="panel" style="grid-column:1/-1">
+      <div class="metrics">
+        <div class="metric"><span class="m">Stato</span><span class="v"><span class="dot" style="background:var(--ok)"></span> Attivo</span></div>
+        <div class="metric"><span class="m">Owner</span><span class="v">Luca Arcanà</span></div>
+        <div class="metric"><span class="m">Score</span><span class="v"><span class="spill">◆<span>86</span></span></span></div>
+        <div class="metric"><span class="m">Ultimo contatto</span><span class="v">2 giorni fa</span></div>
+        <div class="metric"><span class="m">Interazioni</span><span class="v">37</span></div>
+        <div class="metric"><span class="m">Prossima azione</span><span class="v">Follow-up 05/09</span></div>
+      </div>
     </div>
 
     ${sect('Persone — con chi parliamo')}
@@ -396,6 +400,7 @@ const detail = `<div class="detail">
       </div>
     </div>
   </div>
+
 </div>`;
 
 // RAIL DESTRO — azioni raggruppate per intenzione + stato
