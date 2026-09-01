@@ -75,12 +75,12 @@ export function EnrichmentCard({ partner }: EnrichmentCardProps) {
       </div>
 
       {/* Dates */}
-      <div className="flex flex-wrap gap-3 text-xs text-foreground">
+      <div className="flex flex-wrap gap-4 text-sm text-foreground">
         {partner.enriched_at && (
-          <span>🌐 Website: {format(new Date(partner.enriched_at), "dd MMM yyyy", { locale: it })}</span>
+          <span>Sito aggiornato: {format(new Date(partner.enriched_at), "dd MMM yyyy", { locale: it })}</span>
         )}
         {partner.ai_parsed_at && (
-          <span>🤖 AI: {format(new Date(partner.ai_parsed_at), "dd MMM yyyy", { locale: it })}</span>
+          <span>AI: {format(new Date(partner.ai_parsed_at), "dd MMM yyyy", { locale: it })}</span>
         )}
       </div>
 

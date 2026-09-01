@@ -111,7 +111,16 @@ export function EnrichmentInsightStrip({
     aiProfile?.summary,
     companyProfile?.recent_news,
   );
-  const markets = stringArray(enrichment?.key_markets).slice(0, 8);
+  const ownCountry = String(partner.country_code ?? "").toUpperCase();
+  const ownCountryName = String(partner.country_name ?? "").trim().toLowerCase();
+  const isOwnCountry = (label: string): boolean => {
+    const code = countryCodeFromLabel(label);
+    if (code && ownCountry && code.toUpperCase() === ownCountry) return true;
+    return !!ownCountryName && label.trim().toLowerCase() === ownCountryName;
+  };
+  const markets = stringArray(enrichment?.key_markets)
+    .filter((m) => !isOwnCountry(m))
+    .slice(0, 8);
   const routes = routeItems(enrichment?.key_routes).slice(0, 4);
   const additionalServices = stringArray(enrichment?.additional_services).slice(0, 8);
   const specialties = stringArray(companyProfile?.specialties).slice(0, 8);
@@ -142,7 +151,7 @@ export function EnrichmentInsightStrip({
   return (
     <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5 space-y-2.5">
       {/* Row 1 — pitch sintetico */}
-      {summary && <p className="text-[11px] leading-relaxed text-foreground line-clamp-2">{summary}</p>}
+      {summary && <p className="text-sm leading-relaxed text-foreground line-clamp-3">{summary}</p>}
 
       {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
       {serviceLabels.length > 0 && (
@@ -186,7 +195,7 @@ export function EnrichmentInsightStrip({
       {/* Row 4 — paesi (bandiera + nome, orizzontale, niente label MERCATO/FILIALE) */}
       {(markets.length > 0 || branchCountries.length > 0) && (
         <div className="flex flex-wrap gap-1.5">
-          {branchCountries.slice(0, 8).map((country) => (
+          {branchCountries.filter((c) => c.code.toUpperCase() !== ownCountry).slice(0, 8).map((country) => (
             <CountryChip key={`b-${country.code}`} code={country.code} label={country.name} highlight />
           ))}
           {markets.map((market) => (
@@ -198,7 +207,7 @@ export function EnrichmentInsightStrip({
       {/* Row 5 — rotte principali */}
       {routes.length > 0 && (
         <div>
-          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1">
             <MapPin className="h-3 w-3" /> Rotte principali
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -210,12 +219,12 @@ export function EnrichmentInsightStrip({
               return (
                 <span
                   key={`${from}-${to}-${index}`}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] text-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-xs text-foreground"
                 >
-                  <span className="text-sm leading-none">{fromCode ? getCountryFlag(fromCode) : "🌍"}</span>
+                  {fromCode && <span className="text-base leading-none">{getCountryFlag(fromCode)}</span>}
                   <span className="max-w-[7rem] truncate text-foreground">{from || "—"}</span>
                   <ArrowRight className="h-3 w-3 text-primary shrink-0" strokeWidth={1.8} />
-                  <span className="text-sm leading-none">{toCode ? getCountryFlag(toCode) : "🌍"}</span>
+                  {toCode && <span className="text-base leading-none">{getCountryFlag(toCode)}</span>}
                   <span className="max-w-[7rem] truncate text-foreground">{to || "—"}</span>
                 </span>
               );
@@ -227,7 +236,7 @@ export function EnrichmentInsightStrip({
       {/* Row 6 — network di appartenenza (loghi orizzontali) */}
       {networks.length > 0 && (
         <div className="border-t border-primary/10 pt-2">
-          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1">
             <Building className="h-3 w-3" /> Network ({networks.length})
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -256,12 +265,12 @@ function CountryChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-medium",
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium",
         toneClasses,
       )}
       title={highlight ? `Filiale · ${label}` : label}
     >
-      <span className="text-sm leading-none">{code ? getCountryFlag(code) : "🌍"}</span>
+      {code && <span className="text-base leading-none">{getCountryFlag(code)}</span>}
       <span className="max-w-[8rem] truncate">{label}</span>
     </span>
   );
@@ -278,7 +287,7 @@ function NetworkBadge({ name }: { readonly name: string }): React.ReactElement {
     .toUpperCase();
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 pl-1 pr-2 py-0.5 text-[10px] font-medium text-foreground"
+      className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 pl-1 pr-2 py-0.5 text-xs font-medium text-foreground"
       title={name}
     >
       <span className="inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded bg-primary/80 px-1 text-[9px] font-extrabold tracking-tight text-primary-foreground">
@@ -301,7 +310,7 @@ function Metric({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-[10px] font-medium text-foreground",
+        "inline-flex items-center gap-1.5 rounded-md border border-primary/15 bg-card/60 px-2 py-1 text-xs font-medium text-foreground",
         className,
       )}
     >
