@@ -334,14 +334,14 @@ export function CompanyCard({
             />
           </div>
         )}
-        <span
-          className={cn(
-            "flex items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-background text-[11px] text-muted-foreground",
-            compact ? "h-9 w-9" : "h-12 w-12",
-          )}
-          aria-hidden="true"
-        >
-          {logoSrc && !logoFailed ? (
+        {logoSrc && !logoFailed && (
+          <span
+            className={cn(
+              "flex items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-background",
+              compact ? "h-9 w-9" : "h-12 w-12",
+            )}
+            aria-hidden="true"
+          >
             <img
               src={logoSrc}
               alt=""
@@ -349,10 +349,9 @@ export function CompanyCard({
               className="h-full w-full object-contain p-1.5"
               onError={() => setLogoFailed(true)}
             />
-          ) : (
-            initials || "—"
-          )}
-        </span>
+          </span>
+        )}
+
         {iso && !flagFailed ? (
           onCountryClick ? (
             <button
