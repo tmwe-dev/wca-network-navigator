@@ -75,23 +75,6 @@ function nomePaese(code?: string | null): string | null {
   }
 }
 
-const DOMINI_GENERICI = new Set([
-  "gmail.com",
-  "yahoo.com",
-  "hotmail.com",
-  "outlook.com",
-  "libero.it",
-  "icloud.com",
-  "qq.com",
-  "163.com",
-  "naver.com",
-]);
-
-function dominioDaEmail(email?: string | null): string | null {
-  const d = email?.split("@")[1]?.trim().toLowerCase();
-  if (!d || DOMINI_GENERICI.has(d)) return null;
-  return d;
-}
 
 /** Badge "piatto": testo con pallino colore, nessun riquadro. */
 function Flat({
