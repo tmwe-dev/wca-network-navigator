@@ -75,23 +75,6 @@ function nomePaese(code?: string | null): string | null {
   }
 }
 
-const DOMINI_GENERICI = new Set([
-  "gmail.com",
-  "yahoo.com",
-  "hotmail.com",
-  "outlook.com",
-  "libero.it",
-  "icloud.com",
-  "qq.com",
-  "163.com",
-  "naver.com",
-]);
-
-function dominioDaEmail(email?: string | null): string | null {
-  const d = email?.split("@")[1]?.trim().toLowerCase();
-  if (!d || DOMINI_GENERICI.has(d)) return null;
-  return d;
-}
 
 /** Badge "piatto": testo con pallino colore, nessun riquadro. */
 function Flat({
@@ -175,18 +158,9 @@ export function CompanyCard({
 
   const [logoFailed, setLogoFailed] = React.useState(false);
   const [flagFailed, setFlagFailed] = React.useState(false);
-  const dominio = dominioDaEmail(firstEmail);
-  const logoSrc =
-    meta?.logoUrl ??
-    logoUrl ??
-    (dominio ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(dominio)}&sz=128` : null);
-  const initials = (name ?? "?")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
+  // Solo loghi certi: nessuna favicon indovinata dal dominio.
+  const logoSrc = meta?.logoUrl ?? logoUrl ?? null;
+
 
   const iso = (countryCode || "").trim().toLowerCase();
   const paese = nomePaese(countryCode);
@@ -343,14 +317,14 @@ export function CompanyCard({
             />
           </div>
         )}
-        <span
-          className={cn(
-            "flex items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-background text-[11px] text-muted-foreground",
-            compact ? "h-9 w-9" : "h-12 w-12",
-          )}
-          aria-hidden="true"
-        >
-          {logoSrc && !logoFailed ? (
+        {logoSrc && !logoFailed && (
+          <span
+            className={cn(
+              "flex items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-background",
+              compact ? "h-9 w-9" : "h-12 w-12",
+            )}
+            aria-hidden="true"
+          >
             <img
               src={logoSrc}
               alt=""
@@ -358,10 +332,9 @@ export function CompanyCard({
               className="h-full w-full object-contain p-1.5"
               onError={() => setLogoFailed(true)}
             />
-          ) : (
-            initials || "—"
-          )}
-        </span>
+          </span>
+        )}
+
         {iso && !flagFailed ? (
           onCountryClick ? (
             <button

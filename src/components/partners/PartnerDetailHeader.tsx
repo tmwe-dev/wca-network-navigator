@@ -4,10 +4,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Star, StarOff, Phone, Mail, Globe } from "lucide-react";
 import { Plane } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
-import { getCountryFlag, formatPartnerType } from "@/lib/countries";
+import { formatPartnerType } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { getEffectiveLogoUrl, getPartnerDisplayCity } from "@/lib/partnerUtils";
+import { getPartnerDisplayCity } from "@/lib/partnerUtils";
 import { PARTNER_TYPE_ICONS } from "@/components/partners/shared/ServiceIcons";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
@@ -46,29 +46,13 @@ export function PartnerDetailHeader({
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[String(partner.partner_type || "")] || Box;
   const sherlockLevel = useSherlockLevel("partner", partner.id);
   const inHolding = isInHoldingPattern(partner.lead_status as string | null | undefined);
-  const effectiveLogo = getEffectiveLogoUrl(partner);
   const displayCity = getPartnerDisplayCity(partner);
 
   return (
     <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
       <div className="flex items-start gap-3">
-        <div className="shrink-0">
-          {effectiveLogo ? (
-            <img
-              src={effectiveLogo}
-              alt={String(partner.company_name)}
-              className="w-12 h-12 rounded-xl object-contain bg-muted/30 border border-border/30"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-xl bg-muted/30 border border-border/30 flex items-center justify-center">
-              <span className="text-2xl">{getCountryFlag(String(partner.country_code))}</span>
-            </div>
-          )}
-        </div>
         <div className="flex-1 min-w-0">
+
           {/* Riga 1 — due colonne: sx nome + tipo + badge; dx bandiera/paese + città + stelline/coppa + #id */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col items-start gap-1 min-w-0">
@@ -116,12 +100,8 @@ export function PartnerDetailHeader({
                 )}
               </div>
             </div>
-            <div className="flex flex-col items-start gap-0.5 shrink-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
-                  <span className="text-base leading-none">{getCountryFlag(String(partner.country_code))}</span>
-                  <span className="font-medium">{String(partner.country_name)}</span>
-                </span>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <div className="flex items-center gap-2">
                 {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-3.5 h-3.5" />}
                 {years > 0 && <TrophyRow years={years} />}
                 <Tooltip>
@@ -142,15 +122,15 @@ export function PartnerDetailHeader({
                   <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
                 </Tooltip>
               </div>
-              {(displayCity || partner.wca_id) && (
-                <div className="flex items-center gap-2 text-xs text-foreground">
-                  {displayCity && <span>{displayCity}</span>}
-                  {partner.wca_id && (
-                    <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-xs text-foreground">
+                <span>{String(partner.country_name)}</span>
+                {displayCity && <span className="text-muted-foreground">{displayCity}</span>}
+                {partner.wca_id && (
+                  <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
+                )}
+              </div>
             </div>
+
           </div>
 
           {/* Riga 3 — contatti sempre a sinistra */}
