@@ -12,29 +12,9 @@
  * solo con dimensione e colore. Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import {
-  Plane,
-  MoreVertical,
-  Star,
-  Mail,
-  MessageCircle,
-  Phone,
-  ExternalLink,
-  Search,
-  ScanSearch,
-  Telescope,
-} from "lucide-react";
+import { Plane, Star, Mail, MessageCircle, Phone, Linkedin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { ChannelIcons } from "@/v2/ui/atoms/ChannelIcons";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "sonner";
 import type { CompanyEntity, CompanyCardListCallbacks } from "./types";
@@ -216,11 +196,6 @@ export function CompanyCard({
       return;
     }
     window.open(`tel:${firstPhone.replace(/[^0-9+]/g, "")}`, "_blank");
-  };
-
-  const onMenuOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onOpenCompany?.(company);
   };
 
   const leadLabel = (() => {
