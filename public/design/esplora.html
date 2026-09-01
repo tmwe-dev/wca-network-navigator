@@ -63,37 +63,46 @@
   .muted{color:var(--muted)}
   .tiny{font-size:11px}
 
-  /* card partner — direzione "Crystal midnight": angoli usati come ancore (sx+dx),
-     logo grande, bandiera leggibile + Paese per esteso, campi larghi e gruppi ben distanziati */
-  .card{position:relative;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px 14px 12px;cursor:pointer;transition:border-color .25s, box-shadow .25s}
+  /* card partner — geometria: colonna identità a sinistra (logo → bandiera centrata → paese/città
+     allineati a sinistra), corpo dati al centro, angolo alto-dx = valore + menu, riga bassa-dx = stati piatti */
+  .card{position:relative;display:flex;gap:14px;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px;cursor:pointer;transition:border-color .25s, box-shadow .25s}
   .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
+  /* colonna identità: larghezza fissa = allineamento verticale perfetto su tutte le righe */
+  .cid{width:56px;flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+  .cid .flagwrap{width:100%;display:flex;justify-content:center}
+  .cid .gcountry{font-size:10.5px;font-weight:700;line-height:1.15;color:var(--fg)}
+  .cid .gcity{font-size:10px;line-height:1.15;color:var(--muted)}
   .clogo{width:48px;height:48px;border-radius:12px;overflow:hidden;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .clogo img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box}
   .logo{width:34px;height:34px;flex:none;border-radius:8px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
   .logo img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box}
-  .cmain{min-width:0;display:flex;flex-direction:column;gap:8px;padding-left:64px} /* 64px = logo 48 + 16 di respiro */
-  .crow1{display:flex;align-items:center;gap:8px;padding-right:104px} /* spazio riservato ai badge angolo alto-dx */
+  .cmain{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
+  .crow1{display:flex;align-items:center;gap:8px;padding-right:86px} /* spazio riservato all'angolo alto-dx */
   .cname{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .crow2{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11.5px}
-  .crow3{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .cfoot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:2px;padding-top:10px;border-top:1px solid #ffffff0d;flex-wrap:nowrap}
-  .geo{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--fg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow3{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
   /* bandiera REALE (immagine, non emoji): sempre visibile su ogni sistema */
   .flag-img{width:30px;height:22px;flex:none;border-radius:4px;object-fit:cover;border:1px solid #ffffff26;box-shadow:0 1px 4px rgba(0,0,0,.4)}
   .flag-img.sm{width:22px;height:16px;border-radius:3px}
-  .geo .gcountry{font-weight:700}
-  .geo .gcity{color:var(--muted)}
 
-  /* angoli come ancore: alto-sx = tag rete, alto-dx = badge stato, basso-dx = score + menu ⋮ */
-  .ccorner{position:absolute;display:flex;gap:5px;align-items:center}
-  .ccorner.tr{top:14px;right:14px}
-  .ccorner.tl{top:14px;left:14px}
+  /* angoli come ancore: alto-sx = identità, alto-dx = valore + menu, basso-dx = stati piatti */
+  .ccorner{position:absolute;display:flex;gap:6px;align-items:center}
+  .ccorner.tr{top:12px;right:12px}
   .chip{height:21px;display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:6px;border:1px solid var(--border);background:#ffffff08;font-size:10px;color:var(--muted)}
-  .cact{display:flex;align-items:center;gap:10px;flex:none}
-  .score{font-size:14px;font-weight:800;color:#a5a1f5}
+  .cact{display:flex;align-items:center;gap:6px;flex:none}
+  /* score = icona + numero, senza etichetta */
+  .spill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid #4f46e555;background:#4f46e51f;font-size:12px;font-weight:800;color:#a5a1f5}
+  .spill .g{font-size:10px;opacity:.8}
+  /* badge piatti: nessun riquadro, solo testo con pallino colore */
+  .flat{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+  .flat::before{content:'';width:6px;height:6px;border-radius:50%;background:#818cf8}
+  .flat.warn{color:#d9a066}
+  .flat.warn::before{background:#c98a4b}
+  .flats{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   /* menu a 3 pallini verticali */
   .btn.more{width:26px;padding:0;justify-content:center;letter-spacing:1px;line-height:1}
+
 
   /* FINDBAR — unico blocco concentrato: cerca + filtri + ordina + vista */
   .findbar{display:flex;align-items:center;gap:8px;margin:10px 12px 0;padding:8px;border-radius:14px;border:1px solid #4f46e533;background:rgba(20,20,50,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px -12px rgba(10,10,26,.8)}
