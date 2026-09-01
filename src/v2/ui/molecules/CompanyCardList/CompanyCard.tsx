@@ -487,7 +487,45 @@ export function CompanyCard({
                 {recency.label}
               </span>
             )}
-            {channels && <ChannelIcons {...channels} size="sm" className="gap-1.5" />}
+            {/* Icone-azione: la stessa icona che segnala il canale lo attiva. */}
+            <div className="flex items-center gap-1">
+              {(channels?.email || firstEmail) && (
+                <button
+                  type="button"
+                  onClick={onMenuEmail}
+                  disabled={!firstEmail}
+                  title={firstEmail ? `Invia email a ${firstEmail}` : "Nessuna email disponibile"}
+                  aria-label="Invia email"
+                  className="rounded-md p-1 text-primary transition-colors hover:bg-primary/10 disabled:opacity-40"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {(channels?.whatsapp || firstPhone) && (
+                <button
+                  type="button"
+                  onClick={onMenuWhatsApp}
+                  disabled={!firstPhone}
+                  title={firstPhone ? `WhatsApp a ${firstPhone}` : "Nessun numero disponibile"}
+                  aria-label="Invia WhatsApp"
+                  className="rounded-md p-1 text-success transition-colors hover:bg-success/10 disabled:opacity-40"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {firstPhone && (
+                <button
+                  type="button"
+                  onClick={onMenuCall}
+                  title={`Chiama ${firstPhone}`}
+                  aria-label="Chiama"
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {channels?.linkedin && <Linkedin className="h-3.5 w-3.5 text-sky-500/80" aria-label="LinkedIn" />}
+            </div>
           </div>
         </div>
       </div>
