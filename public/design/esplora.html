@@ -182,9 +182,9 @@
 const COMPANIES = [
   {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', f:'🇰🇷', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
   {n:'Nordwind Spedition GmbH', c:'Hamburg', f:'🇩🇪', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
-  {n:'Trans Adriatic Cargo Srl', c:'Trieste', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
+  {n:'Trans Adriatic Cargo Srl', c:'Trieste', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, alert:'Scade', contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
   {n:'Pacific Rim Forwarding', c:'Singapore', f:'🇸🇬', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
-  {n:'Atlas Freight Services', c:'Casablanca', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, contact:'—', last:'mai', ch:'✉'},
+  {n:'Atlas Freight Services', c:'Casablanca', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, alert:'Hold', contact:'—', last:'mai', ch:'✉'},
   {n:'Baltic Line Logistics', c:'Gdańsk', f:'🇵🇱', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
 ];
 
@@ -374,7 +374,7 @@ document.getElementById('v6').innerHTML = `
 <p class="note"><b>Mobile.</b> I due rail diventano drawer richiamabili dalla toolbar (Filtri / Azioni). La card passa a due righe. Il dettaglio si apre a tutta pagina, mai affiancato.</p>
 <div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn icon">⋯</button></div>
 <div class="toolbar"><input class="input" placeholder="Cerca…"/><button class="btn icon">⛭</button></div>
-<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="logo">${c.k}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge ${c.badge==='WCA'?'b-accent':'b-neutral'}">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
+<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="logo">${c.k}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge b-blue">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
 <div style="display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)"><button class="btn" style="flex:1">Filtri (3)</button><button class="btn" style="flex:1">Azioni</button></div></div>`;
 
 // V7 anatomia
@@ -385,7 +385,7 @@ document.getElementById('v7').innerHTML = `
     <div class="card" style="flex-wrap:wrap">
       <div class="logo">EU</div>
       <div class="cmain"><div class="crow1"><span class="cname" style="text-transform:uppercase">"EUGENE" LOGISTICS CO., LTD.</span>
-      <span class="badge b-accent">WCA</span><span class="badge b-warn">🏆</span><span class="badge b-ok">DS3</span><span class="badge b-neutral">HQ</span><span class="badge b-warn">HOLD</span></div>
+      <span class="badge" style="background:#4f46e526;color:#a5a1f5;border-color:#4f46e566;box-shadow:none;backdrop-filter:none;border-radius:6px">WCA</span><span class="badge" style="background:#f59e0b1f;color:#fbbf24;border-color:#f59e0b4d;box-shadow:none;backdrop-filter:none;border-radius:6px">🏆</span><span class="badge" style="background:#22c55e1f;color:#6ee7a8;border-color:#22c55e4d;box-shadow:none;backdrop-filter:none;border-radius:6px">DS3</span><span class="badge" style="background:#ffffff0f;color:#8d8dae;border-color:#26265c;box-shadow:none;backdrop-filter:none;border-radius:6px">HQ</span><span class="badge" style="background:#ef44441f;color:#fca5a5;border-color:#ef44444d;box-shadow:none;backdrop-filter:none;border-radius:6px">HOLD</span></div>
       <div class="crow2">🇰🇷 KR · Busan · Contatto: Jin-Ho Park · jinho@eugenelog.co.kr · ⏱ 2g · 37 int. · ✉ 💬 in · ★</div></div>
       <div class="cact"><span class="score">86</span><button class="btn icon">⋯</button></div>
     </div>
