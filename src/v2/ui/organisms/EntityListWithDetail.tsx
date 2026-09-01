@@ -10,7 +10,7 @@
  */
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Filter as FilterIcon, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -112,9 +112,6 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
               </Tooltip>
             </div>
           )}
-          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Chiudi">
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
