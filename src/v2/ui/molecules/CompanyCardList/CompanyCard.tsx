@@ -168,6 +168,16 @@ export function CompanyCard({
   const enrichedLabel = React.useMemo(() => computeEnrichedLabel(enrichedAt), [enrichedAt]);
   const recency = React.useMemo(() => computeRecency(lastInteractionAt), [lastInteractionAt]);
 
+  /** Nomi degli altri referenti oltre al principale (per il «+N»). */
+  const altriContatti = React.useMemo<string[]>(() => {
+    const noti = (company.contacts ?? [])
+      .map((c) => (c.name || "").trim())
+      .filter((n) => n.length > 0 && n !== primaryContact?.name);
+    if (noti.length > 0) return noti;
+    const extra = Math.max(0, contactsCount - (primaryContact ? 1 : 0));
+    return extra > 0 ? Array.from({ length: extra }, () => "contatto senza nome") : [];
+  }, [company.contacts, primaryContact, contactsCount]);
+
   const onMenuEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!firstEmail) {
@@ -305,7 +315,7 @@ export function CompanyCard({
         opened && "border-primary bg-primary/[0.08]",
       )}
     >
-      {/* Colonna identità: larghezza = logo, bandiera centrata sotto. */}
+      {/* Colonna identità: solo checkbox + logo (la bandiera vive in basso, con la città). */}
       <div className={cn("flex shrink-0 flex-col items-center gap-2", compact ? "w-9" : "w-12")}>
         {onToggleSelect && (
           <div onClick={(e) => e.stopPropagation()}>
@@ -334,38 +344,8 @@ export function CompanyCard({
             />
           </span>
         )}
-
-        {iso && !flagFailed ? (
-          onCountryClick ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCountryClick(countryCode!);
-              }}
-              title={`Filtra per paese ${paese ?? ""}`}
-              aria-label={`Filtra per paese ${paese ?? ""}`}
-              className="rounded-[3px] transition-all hover:ring-1 hover:ring-primary/50"
-            >
-              <img
-                src={`https://flagcdn.com/60x45/${iso}.png`}
-                alt=""
-                loading="lazy"
-                onError={() => setFlagFailed(true)}
-                className="h-[22px] w-[30px] rounded-[3px] border border-border/70 object-cover"
-              />
-            </button>
-          ) : (
-            <img
-              src={`https://flagcdn.com/60x45/${iso}.png`}
-              alt=""
-              loading="lazy"
-              onError={() => setFlagFailed(true)}
-              className="h-[22px] w-[30px] rounded-[3px] border border-border/70 object-cover"
-            />
-          )
-        ) : null}
       </div>
+
 
       {/* Angolo alto-destra: score + menu. */}
       <div className="absolute right-3 top-3 flex items-center gap-1.5">
@@ -457,65 +437,124 @@ export function CompanyCard({
           )}
         </div>
 
-        <div className="flex min-w-0 items-center gap-2 text-[11.5px] text-muted-foreground">
-          <span className="min-w-0 truncate">
-            {primaryContact
-              ? `${primaryContact.name}${primaryContact.role ? ` · ${primaryContact.role}` : ""}`
-              : contactsCount === 0
-                ? "Nessun referente"
-                : `${contactsCount} contatt${contactsCount === 1 ? "o" : "i"}`}
-          </span>
-          {primaryContact && contactsCount > 1 && (
-            <span className="shrink-0 text-[10.5px] text-muted-foreground">+{contactsCount - 1}</span>
+        {/* Referente: nome ben visibile, ruolo in secondo piano. */}
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          {primaryContact ? (
+            <>
+              <span className="min-w-0 truncate text-[12.5px] leading-tight text-foreground">{primaryContact.name}</span>
+              {primaryContact.role && (
+                <span className="min-w-0 truncate text-[11px] text-muted-foreground">{primaryContact.role}</span>
+              )}
+            </>
+          ) : (
+            <span className="text-[11.5px] text-muted-foreground">
+              {contactsCount === 0 ? "Nessun referente" : `${contactsCount} contatti`}
+            </span>
+          )}
+          {altriContatti.length > 0 && (
+            <span
+              className="shrink-0 text-[10.5px] text-muted-foreground"
+              title={`Altri contatti: ${altriContatti.join(" · ")}`}
+            >
+              +{altriContatti.length}
+            </span>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 pt-0.5">
-          <span
-            className={cn(
-              "inline-flex h-[21px] items-center gap-1.5 rounded-md border border-border/60 bg-muted/20 px-2 text-[10.5px] leading-none",
-              recency.tone === "ok" && "text-success",
-              recency.tone === "warn" && "text-warning",
-              recency.tone === "alert" && "text-destructive",
-              recency.tone === "muted" && "text-muted-foreground",
-            )}
-            title={
-              lastInteractionAt ? `Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}` : "Mai contattato"
-            }
-          >
-            {channels && <ChannelIcons {...channels} size="sm" className="gap-1" />}
-            ultimo contatto {recency.label}
-          </span>
-          <span className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5">
+        {/* Quando la card è aperta mostriamo chi sono gli altri contatti. */}
+        {opened && altriContatti.length > 0 && (
+          <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+            {altriContatti.map((n, i) => (
+              <span key={`${n}-${i}`} className="truncate">
+                {n}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {statiTutti.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 pt-0.5">
             {statiVisibili.map((s) => s.node)}
             {statiNascosti.length > 0 && (
               <span className="text-[10.5px] text-muted-foreground" title={statiNascosti.map((s) => s.title).join(" · ")}>
                 +{statiNascosti.length}
               </span>
             )}
-          </span>
-        </div>
+          </div>
+        )}
 
-        <div className="mt-auto flex items-baseline gap-2 pt-1.5 text-[11px] text-foreground">
-          <span className="truncate">{paese ?? "—"}</span>
-          {city &&
-            (onCityClick ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCityClick(city);
-                }}
-                className="truncate text-muted-foreground transition-colors hover:text-primary"
-                title={`Filtra per città ${city}`}
+        {/* Riga bassa: bandiera + geografia a sinistra, canali (+ recency) a destra. */}
+        <div className="mt-auto flex items-center justify-between gap-3 pt-1.5">
+          <div className="flex min-w-0 items-center gap-2 text-[11.5px]">
+            {iso && !flagFailed ? (
+              onCountryClick ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCountryClick(countryCode!);
+                  }}
+                  title={`Filtra per paese ${paese ?? ""}`}
+                  aria-label={`Filtra per paese ${paese ?? ""}`}
+                  className="shrink-0 rounded-[3px] transition-all hover:ring-1 hover:ring-primary/50"
+                >
+                  <img
+                    src={`https://flagcdn.com/60x45/${iso}.png`}
+                    alt=""
+                    loading="lazy"
+                    onError={() => setFlagFailed(true)}
+                    className="h-[15px] w-[21px] rounded-[3px] border border-border/70 object-cover"
+                  />
+                </button>
+              ) : (
+                <img
+                  src={`https://flagcdn.com/60x45/${iso}.png`}
+                  alt=""
+                  loading="lazy"
+                  onError={() => setFlagFailed(true)}
+                  className="h-[15px] w-[21px] shrink-0 rounded-[3px] border border-border/70 object-cover"
+                />
+              )
+            ) : null}
+            <span className="truncate text-muted-foreground">{paese ?? "—"}</span>
+            {city &&
+              (onCityClick ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCityClick(city);
+                  }}
+                  className="truncate text-primary transition-colors hover:text-primary/80"
+                  title={`Filtra per città ${city}`}
+                >
+                  {city}
+                </button>
+              ) : (
+                <span className="truncate text-primary">{city}</span>
+              ))}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            {lastInteractionAt && (
+              <span
+                className={cn(
+                  "text-[10.5px] leading-none",
+                  recency.tone === "ok" && "text-success",
+                  recency.tone === "warn" && "text-warning",
+                  recency.tone === "alert" && "text-destructive",
+                  recency.tone === "muted" && "text-muted-foreground",
+                )}
+                title={`Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}`}
               >
-                {city}
-              </button>
-            ) : (
-              <span className="truncate text-muted-foreground">{city}</span>
-            ))}
+                {recency.label}
+              </span>
+            )}
+            {channels && <ChannelIcons {...channels} size="sm" className="gap-1.5" />}
+          </div>
         </div>
       </div>
+
     </article>
   );
 }
