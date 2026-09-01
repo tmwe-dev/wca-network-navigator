@@ -171,40 +171,40 @@ const topbar = `<div class="topbar">
   <span class="tiny muted">Luca Arcanà</span>
 </div>`;
 
+// HEADER — 3 gruppi: contesto | assistente | azioni di pagina
 function pagehead(actions){return `<div class="pagehead">
   <span class="crumb">Esplora / <b>WCA Partner</b></span>
   <span style="flex:1"></span>
-  <button class="btn" title="Assistente">✦ AI</button>
-  <button class="btn icon" title="Voce">🎙</button>
-  <button class="btn icon" title="Riepilogo">📊</button>
+  <span class="seg" title="Assistente"><button class="btn">✦ AI</button><button class="btn icon">🎙</button></span>
+  <span class="sep"></span>
+  <button class="btn" title="Riepilogo">📊 Riepilogo</button>
   ${actions||''}
-  <button class="btn icon" title="Altro">⋯</button>
+  <button class="btn icon" title="Altre azioni">⋯</button>
 </div>`;}
 
+// TOOLBAR — 3 gruppi: cercare | vedere | ordinare/contare
 function toolbar(extra){return `<div class="toolbar">
-  <input class="input" style="max-width:280px" placeholder="Cerca partner, città, referente…" />
+  <input class="input" style="max-width:260px" placeholder="Cerca partner, città, referente…" />
   <button class="btn">Filtri <span class="badge b-accent" style="margin-left:4px">3</span></button>
+  <span class="sep"></span>
+  ${extra||'<span class="seg"><button class="btn on">▦ Card</button><button class="btn">▤ Tabella</button></span>'}
+  <span class="sep"></span>
   <button class="btn ghost">Ordina: Score ↓</button>
   <span style="flex:1"></span>
-  <span class="tiny muted">1.248 aziende</span>
-  ${extra||''}
+  <span class="tiny muted">1.248 aziende · 3 filtri attivi</span>
 </div>`;}
 
+// RAIL SINISTRO — solo filtri, in 4 gruppi chiusi
+function fgroup(title, rows){return `<div class="grp"><div class="lab">${title}</div>${rows}</div>`;}
+const frows = (arr)=>arr.map(([a,b,on])=>`<div class="frow ${on?'on':''}">${a} <span class="cnt">${b}</span></div>`).join('');
 const railLeft = `<div class="rail">
-  <div class="lab">Ricerca salvate</div>
-  <div class="frow on">Corea + attivi <span class="cnt">42</span></div>
-  <div class="frow">Da ricontattare <span class="cnt">18</span></div>
-  <div class="lab">Paese</div>
-  ${[['🇰🇷 Corea',42],['🇩🇪 Germania',88],['🇮🇹 Italia',131],['🇸🇬 Singapore',27],['🇵🇱 Polonia',35],['🇲🇦 Marocco',9]].map(([a,b],i)=>`<div class="frow ${i===0?'on':''}">${a} <span class="cnt">${b}</span></div>`).join('')}
-  <div class="lab">Qualità dati</div>
-  <div class="frow">Con email <span class="cnt">920</span></div>
-  <div class="frow">Con LinkedIn <span class="cnt">411</span></div>
-  <div class="frow">Senza referente <span class="cnt">203</span></div>
-  <div class="lab">Stato</div>
-  <div class="frow">Attivo <span class="cnt">1.041</span></div>
-  <div class="frow">Holding <span class="cnt">64</span></div>
-  <button class="btn" style="width:100%;margin-top:12px">Filtri avanzati…</button>
+  ${fgroup('Viste salvate', frows([['Corea + attivi',42,1],['Da ricontattare',18,0]]))}
+  ${fgroup('Dove — geografia', frows([['🇰🇷 Corea',42,1],['🇩🇪 Germania',88],['🇮🇹 Italia',131],['🇸🇬 Singapore',27],['🇵🇱 Polonia',35],['🇲🇦 Marocco',9]]))}
+  ${fgroup('Chi — relazione', frows([['Attivo',1041],['Holding',64],['Mai contattato',143]]))}
+  ${fgroup('Come — qualità dati', frows([['Con email',920],['Con LinkedIn',411],['Senza referente',203]]))}
+  <button class="btn" style="width:100%;margin-top:4px;justify-content:center">Filtri avanzati…</button>
 </div>`;
+
 
 function card(c, sel, i){return `<div class="card ${sel?'sel':''}">
   <div class="logo">${c.k}</div>
