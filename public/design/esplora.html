@@ -63,28 +63,32 @@
   .muted{color:var(--muted)}
   .tiny{font-size:11px}
 
-  /* card partner — direzione "Crystal midnight": angoli usati come ancore,
-     logo grande, bandiera leggibile + Paese per esteso */
-  .card{position:relative;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:12px 12px 10px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:border-color .25s, box-shadow .25s}
+  /* card partner — direzione "Crystal midnight": angoli usati come ancore (sx+dx),
+     logo grande, bandiera leggibile + Paese per esteso, campi larghi e gruppi ben distanziati */
+  .card{position:relative;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px 14px 12px;display:flex;gap:16px;align-items:flex-start;cursor:pointer;transition:border-color .25s, box-shadow .25s}
   .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
-  .clogo{width:44px;height:44px;flex:none;border-radius:12px;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .clogo{width:48px;height:48px;flex:none;border-radius:12px;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .logo{width:34px;height:34px;flex:none;border-radius:8px;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
-  .cmain{flex:1;min-width:0;padding-right:78px} /* spazio riservato al corner badge */
-  .crow1{display:flex;align-items:center;gap:6px}
-  .cname{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .crow2{display:flex;align-items:center;gap:10px;margin-top:3px;color:var(--muted);font-size:11px}
-  .crow3{display:flex;align-items:center;gap:8px;margin-top:6px}
-  .cfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;padding-top:8px;border-top:1px solid #ffffff0d;flex-wrap:nowrap}
-  .geo{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--fg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .geo .flag-lg{font-size:20px;line-height:1;flex:none}
+  .cmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+  .crow1{display:flex;align-items:center;gap:8px;padding-right:110px} /* spazio riservato ai badge angolo alto-dx */
+  .cname{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow2{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11.5px}
+  .crow3{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .cfoot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:2px;padding-top:10px;border-top:1px solid #ffffff0d;flex-wrap:nowrap}
+  .geo{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--fg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .geo .flag-lg{font-size:22px;line-height:1;flex:none}
   .geo .gcountry{font-weight:700}
   .geo .gcity{color:var(--muted)}
-  .ccorner{position:absolute;display:flex;gap:4px;align-items:center}
-  .ccorner.tr{top:10px;right:10px}
-  .chip{height:20px;display:inline-flex;align-items:center;gap:4px;padding:0 7px;border-radius:6px;border:1px solid var(--border);background:#ffffff08;font-size:10px;color:var(--muted)}
-  .cact{display:flex;align-items:center;gap:8px}
-  .score{font-size:13px;font-weight:800;color:#a5a1f5}
+  /* angoli come ancore: alto-sx = tag rete, alto-dx = badge stato, basso-dx = score + menu ⋮ */
+  .ccorner{position:absolute;display:flex;gap:5px;align-items:center}
+  .ccorner.tr{top:12px;right:12px}
+  .ccorner.tl{top:12px;left:12px}
+  .chip{height:21px;display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:6px;border:1px solid var(--border);background:#ffffff08;font-size:10px;color:var(--muted)}
+  .cact{display:flex;align-items:center;gap:10px;flex:none}
+  .score{font-size:14px;font-weight:800;color:#a5a1f5}
+  /* menu a 3 pallini verticali */
+  .btn.more{width:26px;padding:0;justify-content:center;letter-spacing:1px;line-height:1}
 
   /* FINDBAR — unico blocco concentrato: cerca + filtri + ordina + vista */
   .findbar{display:flex;align-items:center;gap:8px;margin:10px 12px 0;padding:8px;border-radius:14px;border:1px solid #4f46e533;background:rgba(20,20,50,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px -12px rgba(10,10,26,.8)}
