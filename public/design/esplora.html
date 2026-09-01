@@ -286,7 +286,7 @@ function fgroup(title, rows){return `<div class="grp"><div class="lab">${title}<
 const frows = (arr)=>arr.map(([a,b,on])=>`<div class="frow ${on?'on':''}">${a} <span class="cnt">${b}</span></div>`).join('');
 const railLeft = `<div class="rail">
   ${fgroup('Viste salvate', frows([['Corea + attivi',42,1],['Da ricontattare',18,0]]))}
-  ${fgroup('Dove — geografia', frows([['🇰🇷 Corea',42,1],['🇩🇪 Germania',88],['🇮🇹 Italia',131],['🇸🇬 Singapore',27],['🇵🇱 Polonia',35],['🇲🇦 Marocco',9]]))}
+  ${fgroup('Dove — geografia', frows([[flagImg('kr','sm')+' Corea',42,1],[flagImg('de','sm')+' Germania',88],[flagImg('it','sm')+' Italia',131],[flagImg('sg','sm')+' Singapore',27],[flagImg('pl','sm')+' Polonia',35],[flagImg('ma','sm')+' Marocco',9]]))}
   ${fgroup('Chi — relazione', frows([['Attivo',1041],['Holding',64],['Mai contattato',143]]))}
   ${fgroup('Come — qualità dati', frows([['Con email',920],['Con LinkedIn',411],['Senza referente',203]]))}
   <button class="btn" style="width:100%;margin-top:4px;justify-content:center">Filtri avanzati…</button>
@@ -321,7 +321,7 @@ const detail = `<div class="detail">
     <div class="dlogo"><img src="https://www.google.com/s2/favicons?domain=eugene-logistics.com&sz=128" alt="" onerror="this.replaceWith(document.createTextNode('EU'))"/></div>
     <div style="flex:1;min-width:0">
       <div style="font-size:15px;font-weight:700">"EUGENE" Logistics Co., Ltd.</div>
-      <div class="tiny muted">🇰🇷 Busan, Corea del Sud · Membro WCA dal 2016 · Score 86</div>
+      <div class="tiny muted" style="display:flex;align-items:center;gap:6px">${flagImg('kr','sm')} Busan, Corea del Sud · Membro WCA dal 2016 · Score 86</div>
     </div>
     <button class="btn primary">Contatta</button>
     <button class="btn more" title="Menu azioni">⋮</button>
@@ -545,7 +545,7 @@ document.getElementById('v7').innerHTML = `
       <div class="logo">EU</div>
       <div class="cmain"><div class="crow1"><span class="cname" style="text-transform:uppercase">"EUGENE" LOGISTICS CO., LTD.</span>
       <span class="badge" style="background:#4f46e526;color:#a5a1f5;border-color:#4f46e566;box-shadow:none;backdrop-filter:none;border-radius:6px">WCA</span><span class="badge" style="background:#f59e0b1f;color:#fbbf24;border-color:#f59e0b4d;box-shadow:none;backdrop-filter:none;border-radius:6px">🏆</span><span class="badge" style="background:#22c55e1f;color:#6ee7a8;border-color:#22c55e4d;box-shadow:none;backdrop-filter:none;border-radius:6px">DS3</span><span class="badge" style="background:#ffffff0f;color:#8d8dae;border-color:#26265c;box-shadow:none;backdrop-filter:none;border-radius:6px">HQ</span><span class="badge" style="background:#ef44441f;color:#fca5a5;border-color:#ef44444d;box-shadow:none;backdrop-filter:none;border-radius:6px">HOLD</span></div>
-      <div class="crow2">🇰🇷 KR · Busan · Contatto: Jin-Ho Park · jinho@eugenelog.co.kr · ⏱ 2g · 37 int. · ✉ 💬 in · ★</div></div>
+      <div class="crow2">${flagImg('kr','sm')} Busan · Contatto: Jin-Ho Park · jinho@eugenelog.co.kr · ⏱ 2g · 37 int. · ✉ 💬 in · ★</div></div>
       <div class="cact"><span class="score">86</span><button class="btn more" title="Menu azioni">⋮</button></div>
     </div>
     <div class="tiny muted" style="margin-top:8px">Nessuna gerarchia: l'occhio non sa dove atterrare, i colori competono tra loro.</div>
