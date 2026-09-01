@@ -337,7 +337,7 @@ ${shell(`<div class="pagehead"><button class="btn ghost">← Elenco</button><spa
 // V5 tabella
 document.getElementById('v5').innerHTML = `
 <p class="note"><b>Vista tabella.</b> Stessa maschera, stessi filtri, stesse azioni: cambia solo la resa dei dati per confronto e lavoro massivo. Interruttore card/tabella nella toolbar.</p>
-${shell(`${pagehead()}${toolbar('<button class="btn">▤ Tabella</button><button class="btn ghost">▦ Card</button>')}<div class="body">${railLeft}<div class="col" style="overflow:auto"><table class="table"><thead><tr><th style="width:26px"></th><th>Azienda</th><th>Paese</th><th>Città</th><th>Referente</th><th>Canali</th><th>Ultimo contatto</th><th>Score</th><th></th></tr></thead><tbody>
+${shell(`${pagehead()}${toolbar('<span class="seg"><button class="btn">▦ Card</button><button class="btn on">▤ Tabella</button></span>')}<div class="body">${railLeft}<div class="col" style="overflow:auto"><table class="table"><thead><tr><th style="width:26px"></th><th colspan="3">Identità</th><th colspan="2">Contatto</th><th colspan="2">Relazione</th><th></th></tr><tr><th></th><th>Azienda</th><th>Paese</th><th>Città</th><th>Referente</th><th>Canali</th><th>Ultimo contatto</th><th>Score</th><th></th></tr></thead><tbody>
 ${COMPANIES.concat(COMPANIES).map(c=>`<tr><td><input type="checkbox"/></td><td><b>${c.n}</b></td><td>${c.f}</td><td>${c.c}</td><td class="muted">${c.contact}</td><td>${c.ch}</td><td class="muted">${c.last}</td><td class="score">${c.s}</td><td><button class="btn icon">⋯</button></td></tr>`).join('')}
 </tbody></table></div></div>`)}`;
 
