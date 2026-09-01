@@ -63,58 +63,63 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
 
   return (
     <div className="h-full flex flex-col bg-card">
-      <div className="flex items-center justify-between p-3 border-b border-border/40">
+      <div className="flex items-start justify-between gap-3 p-3 border-b border-border/40">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-sm font-semibold text-foreground truncate">{title}</h2>
+          {years > 0 && <TrophyRow years={years} />}
+          <h2 className="text-base font-semibold text-foreground truncate">{title}</h2>
           {sherlockLevel && <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {vm && (
-            <div className="flex items-center gap-0.5 mr-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => launchSherlock(1)}
-                    aria-label="Scout — Deep Search rapido"
-                  >
-                    <Search className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Scout · ~30s</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => launchSherlock(2)}
-                    aria-label="Detective — Deep Search medio"
-                  >
-                    <ScanSearch className="w-4 h-4 text-primary" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Detective · ~2min</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => launchSherlock(3)}
-                    aria-label="Sherlock — Deep Search completo"
-                  >
-                    <Telescope className="w-4 h-4 text-amber-500" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Sherlock · ~5min</TooltipContent>
-              </Tooltip>
-            </div>
-          )}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="flex items-center gap-1.5">
+            {vm && <EnrichmentBadge partner={vm} variant="pill" />}
+            {vm && (
+              <div className="flex items-center gap-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => launchSherlock(1)}
+                      aria-label="Scout — Deep Search rapido"
+                    >
+                      <Search className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Scout · ~30s</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => launchSherlock(2)}
+                      aria-label="Detective — Deep Search medio"
+                    >
+                      <ScanSearch className="w-4 h-4 text-primary" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Detective · ~2min</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => launchSherlock(3)}
+                      aria-label="Sherlock — Deep Search completo"
+                    >
+                      <Telescope className="w-4 h-4 text-amber-500" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sherlock · ~5min</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+          </div>
+          {rating > 0 && <MiniStars rating={rating} size="w-4 h-4" />}
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
