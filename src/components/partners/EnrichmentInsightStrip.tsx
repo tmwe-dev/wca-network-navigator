@@ -114,6 +114,8 @@ export function EnrichmentInsightStrip({
     aiProfile?.summary,
     companyProfile?.recent_news,
   );
+  // In panoramica mostriamo il profilo completo, non solo il riassunto.
+  const profileText = firstText(textValue(partner.profile_description), summary) ?? summary;
   const ownCountry = String(partner.country_code ?? "").toUpperCase();
   const ownCountryName = String(partner.country_name ?? "").trim().toLowerCase();
   const isOwnCountry = (label: string): boolean => {
@@ -152,9 +154,9 @@ export function EnrichmentInsightStrip({
   if (!hasData && !partner.enriched_at) return null;
 
   return (
-    <div className="mt-3 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5 space-y-2.5">
-      {/* Row 1 — pitch sintetico */}
-      {summary && <p className="text-sm leading-relaxed text-foreground line-clamp-3">{summary}</p>}
+    <div className="mt-2 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2 space-y-2">
+      {/* Row 1 — profilo completo (niente troncatura: l'utente legge subito) */}
+      {profileText && <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">{profileText}</p>}
 
       {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
       {showServiceIcons && serviceLabels.length > 0 && (

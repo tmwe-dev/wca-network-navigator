@@ -52,15 +52,16 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
   const isExpired = !!(expiryDate && expiryDate < new Date());
 
   return (
-    <div className="p-5 space-y-3">
+    <div className="p-3 space-y-2">
       <Tabs defaultValue="panoramica" className="w-full">
-        <TabsList className="w-full grid grid-cols-3">
+        <TabsList className="w-full grid grid-cols-3 h-8">
           <TabsTrigger value="panoramica">Panoramica</TabsTrigger>
           <TabsTrigger value="profilo">Profilo</TabsTrigger>
           <TabsTrigger value="contatti">Contatti ({contacts.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="panoramica" className="mt-3 space-y-3">
+        <TabsContent value="panoramica" className="mt-2 space-y-2">
+
           <PartnerDetailHeader
             partner={partner}
             enrichment={enrichment}

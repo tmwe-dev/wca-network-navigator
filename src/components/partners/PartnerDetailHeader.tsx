@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Star, StarOff, Phone, Mail, Globe, Plane, Box } from "lucide-react";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
-import { formatPartnerType, formatServiceCategory } from "@/lib/countries";
+import { formatPartnerType, formatServiceCategory, getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { getPartnerDisplayCity } from "@/lib/partnerUtils";
@@ -70,13 +70,21 @@ export function PartnerDetailHeader({
   const displayCity = getPartnerDisplayCity(partner);
   void years;
 
-  const serviceLabels = [...new Set(services.map((s) => s.service_category))].slice(0, 12);
+  // Le icone servizi comprendono anche i servizi emersi dall'arricchimento,
+  // così non spariscono quando `partner_services` è vuoto.
+  const extraServices = [
+    ...(Array.isArray(enrichment?.additional_services) ? (enrichment!.additional_services as unknown[]) : []),
+    ...(Array.isArray((enrichment?.company_profile as Record<string, unknown> | undefined)?.specialties)
+      ? (((enrichment!.company_profile as Record<string, unknown>).specialties as unknown[]) ?? [])
+      : []),
+  ].filter((s): s is string => typeof s === "string" && s.trim().length > 0);
+  const serviceLabels = [...new Set([...services.map((s) => s.service_category), ...extraServices])].slice(0, 12);
 
   return (
-    <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
-      {/* Riga 1 — tipologia (sotto il nome in testata) + preferiti */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 space-y-2">
+    <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-3">
+      {/* Riga 1 — tipologia + geografia sotto, preferiti a destra */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 text-sm text-foreground flex-wrap">
             <PartnerTypeIcon className="w-4 h-4 opacity-60" strokeWidth={1.5} />
             <span>{formatPartnerType(String(partner.partner_type || ""))}</span>
@@ -102,7 +110,19 @@ export function PartnerDetailHeader({
             )}
           </div>
 
-          {/* Riga 2 — icone servizi, subito visibili sotto il nome */}
+          {/* Riga 2 — bandiera + paese · città · #WCA, subito sotto la tipologia */}
+          <div className="flex items-center gap-2 text-sm">
+            {partner.country_code && (
+              <span className="text-base leading-none">{getCountryFlag(String(partner.country_code))}</span>
+            )}
+            <span className="text-foreground">{String(partner.country_name || "")}</span>
+            {displayCity && <span className="text-primary">{displayCity}</span>}
+            {partner.wca_id && (
+              <span className="text-xs text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
+            )}
+          </div>
+
+          {/* Riga 3 — icone servizi, subito visibili sotto il nome */}
           {serviceLabels.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {serviceLabels.map((label) => {
@@ -122,7 +142,7 @@ export function PartnerDetailHeader({
           )}
         </div>
 
-        <div className="flex flex-col items-end gap-2 shrink-0">
+        <div className="flex flex-col items-end gap-1 shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -140,14 +160,9 @@ export function PartnerDetailHeader({
             </TooltipTrigger>
             <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
           </Tooltip>
-
-          <div className="flex items-center gap-2 text-sm text-foreground">
-            <span>{String(partner.country_name)}</span>
-            {displayCity && <span className="text-muted-foreground">{displayCity}</span>}
-            {partner.wca_id && <span className="text-xs text-muted-foreground font-mono">#{String(partner.wca_id)}</span>}
-          </div>
         </div>
       </div>
+
 
       {/* Riga 3 — contatti come sole icone, tutti sulla stessa riga */}
       <div className="flex items-center gap-2 mt-3">
