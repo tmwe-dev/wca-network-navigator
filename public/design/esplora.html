@@ -327,7 +327,7 @@ ${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col">
 // V3 bulk
 document.getElementById('v3').innerHTML = `
 <p class="note"><b>Selezione multipla.</b> Da <b>2 elementi in su</b> compare la barra bulk sopra l'elenco: sostituisce la toolbar, non si somma. Il dettaglio si chiude, il rail destro mostra le azioni massive.</p>
-${shell(`${pagehead()}<div class="bulkbar"><b>3 selezionati</b><button class="btn ghost">Deseleziona</button><span style="flex:1"></span><button class="btn">✉ Campagna</button><button class="btn">✦ Deep Search</button><button class="btn">＋ Cockpit</button><button class="btn">Esporta</button><button class="btn icon">⋯</button></div><div class="body">${railLeft}<div class="col"><div class="list">${COMPANIES.map((c,i)=>card(c,i<3)).join('')}</div></div>${railRight}</div>`)}`;
+${shell(`${pagehead()}<div class="bulkbar"><b>3 selezionati</b><button class="btn ghost">Deseleziona</button><span style="flex:1"></span><span class="tiny muted">Comunicare</span><span class="seg"><button class="btn">✉ Campagna</button><button class="btn">💬 WA</button></span><span class="sep"></span><span class="tiny muted">Arricchire</span><span class="seg"><button class="btn">✦ Deep Search</button></span><span class="sep"></span><span class="tiny muted">Organizzare</span><span class="seg"><button class="btn">＋ Cockpit</button><button class="btn">⇩ Esporta</button></span><button class="btn icon">⋯</button></div><div class="body">${railLeft}<div class="col"><div class="list">${COMPANIES.map((c,i)=>card(c,i<3)).join('')}</div></div>${railRight}</div>`)}`;
 
 // V4 dettaglio full
 document.getElementById('v4').innerHTML = `
