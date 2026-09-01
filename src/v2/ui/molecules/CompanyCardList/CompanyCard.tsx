@@ -168,6 +168,16 @@ export function CompanyCard({
   const enrichedLabel = React.useMemo(() => computeEnrichedLabel(enrichedAt), [enrichedAt]);
   const recency = React.useMemo(() => computeRecency(lastInteractionAt), [lastInteractionAt]);
 
+  /** Nomi degli altri referenti oltre al principale (per il «+N»). */
+  const altriContatti = React.useMemo<string[]>(() => {
+    const noti = (company.contacts ?? [])
+      .map((c) => (c.name || "").trim())
+      .filter((n) => n.length > 0 && n !== primaryContact?.name);
+    if (noti.length > 0) return noti;
+    const extra = Math.max(0, contactsCount - (primaryContact ? 1 : 0));
+    return extra > 0 ? Array.from({ length: extra }, () => "contatto senza nome") : [];
+  }, [company.contacts, primaryContact, contactsCount]);
+
   const onMenuEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!firstEmail) {
