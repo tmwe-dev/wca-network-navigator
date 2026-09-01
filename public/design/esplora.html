@@ -125,6 +125,19 @@
   .sect:first-child{margin-top:0}
   .stack > .btn{width:100%;margin-bottom:6px;justify-content:flex-start}
   .stack > .btn:last-child{margin-bottom:0}
+
+  /* DROPDOWN — usato solo dove le opzioni sono >4 e mutuamente esclusive */
+  .dd{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:#12122e;color:var(--fg);font-size:11px;font-weight:600;cursor:pointer}
+  .dd .k{color:var(--muted);font-weight:600}
+  .dd::after{content:'▾';color:var(--muted);font-size:10px}
+  /* BANDIERA — un solo posto per riga; mai bandiera + sigla paese insieme */
+  .flag{font-size:12px;line-height:1}
+  .inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .inv .panel b{font-size:12px}
+  .inv ul{margin:6px 0 0;padding-left:16px;color:var(--muted);font-size:11.5px}
+  .inv li{margin:2px 0}
+  .inv .n{float:right;color:#c3c0fb;font-weight:800;font-size:11px}
+
 </style>
 
 </head>
