@@ -23,6 +23,8 @@ import { EnrichmentBadge } from "../atoms/EnrichmentBadge";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { CompanyMark } from "@/components/partners/shared/CompanyMark";
+import { ServiceIconRow } from "@/components/partners/shared/ServiceIconRow";
+
 
 import { getYearsMember } from "@/lib/countries";
 import type { SherlockLevel } from "@/v2/services/sherlock/sherlockTypes";
