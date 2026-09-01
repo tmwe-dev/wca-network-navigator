@@ -175,18 +175,9 @@ export function CompanyCard({
 
   const [logoFailed, setLogoFailed] = React.useState(false);
   const [flagFailed, setFlagFailed] = React.useState(false);
-  const dominio = dominioDaEmail(firstEmail);
-  const logoSrc =
-    meta?.logoUrl ??
-    logoUrl ??
-    (dominio ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(dominio)}&sz=128` : null);
-  const initials = (name ?? "?")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
+  // Solo loghi certi: nessuna favicon indovinata dal dominio.
+  const logoSrc = meta?.logoUrl ?? logoUrl ?? null;
+
 
   const iso = (countryCode || "").trim().toLowerCase();
   const paese = nomePaese(countryCode);
