@@ -63,37 +63,47 @@
   .muted{color:var(--muted)}
   .tiny{font-size:11px}
 
-  /* card partner — direzione "Crystal midnight": angoli usati come ancore (sx+dx),
-     logo grande, bandiera leggibile + Paese per esteso, campi larghi e gruppi ben distanziati */
-  .card{position:relative;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px 14px 12px;cursor:pointer;transition:border-color .25s, box-shadow .25s}
+  /* card partner — geometria: colonna identità a sinistra (logo → bandiera centrata → paese/città
+     allineati a sinistra), corpo dati al centro, angolo alto-dx = valore + menu, riga bassa-dx = stati piatti */
+  .card{position:relative;display:flex;gap:14px;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px;cursor:pointer;transition:border-color .25s, box-shadow .25s}
   .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
+  /* colonna identità: larghezza fissa = allineamento verticale perfetto su tutte le righe */
+  .cid{width:66px;flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+  .cid .flagwrap{width:100%;display:flex;justify-content:center}
+  .cid .gcountry{font-size:10.5px;font-weight:700;line-height:1.15;color:var(--fg)}
+  .cid .gcity{font-size:10px;line-height:1.15;color:var(--muted)}
   .clogo{width:48px;height:48px;border-radius:12px;overflow:hidden;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .clogo img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box}
   .logo{width:34px;height:34px;flex:none;border-radius:8px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
   .logo img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box}
-  .cmain{min-width:0;display:flex;flex-direction:column;gap:8px;padding-left:64px} /* 64px = logo 48 + 16 di respiro */
-  .crow1{display:flex;align-items:center;gap:8px;padding-right:104px} /* spazio riservato ai badge angolo alto-dx */
+  .cmain{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
+  .crow1{display:flex;align-items:center;gap:8px;padding-right:86px} /* spazio riservato all'angolo alto-dx */
   .cname{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .crow2{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11.5px}
-  .crow3{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .cfoot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:2px;padding-top:10px;border-top:1px solid #ffffff0d;flex-wrap:nowrap}
-  .geo{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--fg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow3{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
   /* bandiera REALE (immagine, non emoji): sempre visibile su ogni sistema */
   .flag-img{width:30px;height:22px;flex:none;border-radius:4px;object-fit:cover;border:1px solid #ffffff26;box-shadow:0 1px 4px rgba(0,0,0,.4)}
   .flag-img.sm{width:22px;height:16px;border-radius:3px}
-  .geo .gcountry{font-weight:700}
-  .geo .gcity{color:var(--muted)}
 
-  /* angoli come ancore: alto-sx = tag rete, alto-dx = badge stato, basso-dx = score + menu ⋮ */
-  .ccorner{position:absolute;display:flex;gap:5px;align-items:center}
-  .ccorner.tr{top:14px;right:14px}
-  .ccorner.tl{top:14px;left:14px}
+  /* angoli come ancore: alto-sx = identità, alto-dx = valore + menu, basso-dx = stati piatti */
+  .ccorner{position:absolute;display:flex;gap:6px;align-items:center}
+  .ccorner.tr{top:12px;right:12px}
   .chip{height:21px;display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:6px;border:1px solid var(--border);background:#ffffff08;font-size:10px;color:var(--muted)}
-  .cact{display:flex;align-items:center;gap:10px;flex:none}
-  .score{font-size:14px;font-weight:800;color:#a5a1f5}
+  .cact{display:flex;align-items:center;gap:6px;flex:none}
+  .score{font-size:13px;font-weight:800;color:#a5a1f5}
+  /* score = icona + numero, senza etichetta */
+  .spill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid #4f46e555;background:#4f46e51f;font-size:12px;font-weight:800;color:#a5a1f5}
+  .spill .g{font-size:10px;opacity:.8}
+  /* badge piatti: nessun riquadro, solo testo con pallino colore */
+  .flat{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+  .flat::before{content:'';width:6px;height:6px;border-radius:50%;background:#818cf8}
+  .flat.warn{color:#d9a066}
+  .flat.warn::before{background:#c98a4b}
+  .flats{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   /* menu a 3 pallini verticali */
   .btn.more{width:26px;padding:0;justify-content:center;letter-spacing:1px;line-height:1}
+
 
   /* FINDBAR — unico blocco concentrato: cerca + filtri + ordina + vista */
   .findbar{display:flex;align-items:center;gap:8px;margin:10px 12px 0;padding:8px;border-radius:14px;border:1px solid #4f46e533;background:rgba(20,20,50,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px -12px rgba(10,10,26,.8)}
@@ -125,6 +135,16 @@
   .panel{border:1px solid var(--border);border-radius:var(--r);background:var(--surface-2);padding:10px}
   .kv{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
   .kv span:first-child{color:var(--muted);font-size:11px}
+  /* metriche su due righe: etichetta sopra, valore sotto — occupano un quarto dello spazio del kv */
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px 14px}
+  .metric{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .metric .m{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+  .metric .v{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* servizi: icone compatte, il dettaglio si apre a richiesta */
+  .svc{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .ico{min-width:34px;height:28px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:#ffffff08;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:#a5a1f5;cursor:help}
+  .ico.more{font-size:10px;font-weight:800;color:var(--muted)}
+
 
   .bulkbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#4f46e51f;border-bottom:1px solid #4f46e566}
   .kpi{display:flex;gap:8px}
@@ -295,25 +315,28 @@ const railLeft = `<div class="rail">
 
 
 function card(c, sel){return `<div class="card ${sel?'sel':''}">
-  <div class="ccorner tl">${logoImg(c)}</div>
+  <div class="cid">
+    ${logoImg(c)}
+    <div class="flagwrap">${flagImg(c.iso)}</div>
+    <div><div class="gcountry">${c.country}</div><div class="gcity">${c.c}</div></div>
+  </div>
   <div class="ccorner tr">
-    ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:''}
-    <span class="badge b-blue">${c.badge}</span>
-    ${c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
+    <span class="spill" title="Score ${c.s}">◆<span>${c.s}</span></span>
+    <button class="btn more" title="Menu azioni">⋮</button>
   </div>
   <div class="cmain">
     <div class="crow1"><span class="cname">${c.n}</span></div>
     <div class="crow2"><span>${c.contact}</span></div>
     <div class="crow3">
-      <span class="chip">${c.ch}</span>
-      <span class="chip">ultimo contatto ${c.last}</span>
-    </div>
-    <div class="cfoot">
-      <span class="geo">${flagImg(c.iso)}<span class="gcountry">${c.country}</span><span class="gcity">· ${c.c}</span></span>
-      <span class="cact"><span class="score">${c.s}</span><button class="btn more" title="Menu azioni">⋮</button></span>
+      <span class="chip">${c.ch} ultimo contatto ${c.last}</span>
+      <span class="flats">
+        ${c.alert?`<span class="flat warn">${c.alert}</span>`:''}
+        <span class="flat">${c.badge}${c.extra?` +${c.extra}`:''}</span>
+      </span>
     </div>
   </div>
 </div>`;}
+
 
 // DETTAGLIO — panoramica divisa in 3 sezioni funzionali: Chi è / Relazione / Operatività
 function sect(t){return `<div class="sect"><span class="t">${t}</span><span class="line"></span></div>`;}
@@ -337,32 +360,36 @@ const detail = `<div class="detail">
   </div>
   <div class="grid2">
     ${sect('Chi è — anagrafica')}
-    <div class="panel">
-      <div class="lab">Identità</div>
-      <div class="kv"><span>Sede</span><b>Busan, KR</b></div>
-      <div class="kv"><span>Tipo ufficio</span><b>HQ</b></div>
-      <div class="kv"><span>Sito</span><b>eugenelog.co.kr</b></div>
-      <div class="kv"><span>Membership</span><b>scade 04/2027</b></div>
+    <div class="panel" style="grid-column:1/-1">
+      <div class="metrics">
+        <div class="metric"><span class="m">Sede</span><span class="v">Busan, KR</span></div>
+        <div class="metric"><span class="m">Ufficio</span><span class="v">HQ</span></div>
+        <div class="metric"><span class="m">Sito</span><span class="v">eugenelog.co.kr</span></div>
+        <div class="metric"><span class="m">Membership</span><span class="v">04/2027</span></div>
+      </div>
     </div>
-    <div class="panel">
+    <div class="panel" style="grid-column:1/-1">
       <div class="lab">Servizi e mercati</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${['Air Freight','Sea LCL','Sea FCL','Customs','Project Cargo','KR ↔ EU'].map(s=>`<span class="chip">${s}</span>`).join('')}
+      <div class="svc">
+        <span class="ico" title="Air Freight">AIR</span>
+        <span class="ico" title="Sea LCL / FCL">SEA</span>
+        <span class="ico" title="Sdoganamento">DOG</span>
+        <span class="ico" title="Project Cargo">PRJ</span>
+        <span class="ico" title="Corridoio KR ↔ EU">KR–EU</span>
+        <button class="btn ghost tiny" title="Apri tutti i servizi">+2 · dettaglio</button>
       </div>
     </div>
 
     ${sect('Relazione — come stiamo messi')}
-    <div class="panel">
-      <div class="lab">Stato</div>
-      <div class="kv"><span>Stato</span><b><span class="dot" style="background:var(--ok)"></span> Attivo</b></div>
-      <div class="kv"><span>Owner</span><b>Luca Arcanà</b></div>
-      <div class="kv"><span>Score</span><b>86</b></div>
-    </div>
-    <div class="panel">
-      <div class="lab">Storico</div>
-      <div class="kv"><span>Ultimo contatto</span><b>2 giorni fa</b></div>
-      <div class="kv"><span>Interazioni</span><b>37</b></div>
-      <div class="kv"><span>Prossima azione</span><b>Follow-up 05/09</b></div>
+    <div class="panel" style="grid-column:1/-1">
+      <div class="metrics">
+        <div class="metric"><span class="m">Stato</span><span class="v"><span class="dot" style="background:var(--ok)"></span> Attivo</span></div>
+        <div class="metric"><span class="m">Owner</span><span class="v">Luca Arcanà</span></div>
+        <div class="metric"><span class="m">Score</span><span class="v"><span class="spill">◆<span>86</span></span></span></div>
+        <div class="metric"><span class="m">Ultimo contatto</span><span class="v">2 giorni fa</span></div>
+        <div class="metric"><span class="m">Interazioni</span><span class="v">37</span></div>
+        <div class="metric"><span class="m">Prossima azione</span><span class="v">Follow-up 05/09</span></div>
+      </div>
     </div>
 
     ${sect('Persone — con chi parliamo')}
@@ -374,6 +401,7 @@ const detail = `<div class="detail">
       </div>
     </div>
   </div>
+
 </div>`;
 
 // RAIL DESTRO — azioni raggruppate per intenzione + stato
@@ -534,7 +562,7 @@ document.getElementById('v6').innerHTML = `
 <p class="note"><b>Mobile.</b> I due rail diventano drawer richiamabili dalla toolbar (Filtri / Azioni). La card passa a due righe. Il dettaglio si apre a tutta pagina, mai affiancato.</p>
 <div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn more" title="Menu azioni">⋮</button></div>
 <div class="toolbar"><input class="input" placeholder="Cerca…"/><button class="btn icon">⛭</button></div>
-<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="ccorner tl">${logoImg(c)}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span style="display:inline-flex;align-items:center;gap:6px">${flagImg(c.iso,'sm')} ${c.country} · ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge b-blue">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
+<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="cid">${logoImg(c)}<div class="flagwrap">${flagImg(c.iso)}</div><div><div class="gcountry">${c.country}</div><div class="gcity">${c.c}</div></div></div><div class="ccorner tr"><span class="spill">◆<span>${c.s}</span></span></div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.contact}</span></div><div class="crow3"><span class="chip">${c.ch} ${c.last}</span><span class="flats"><span class="flat">${c.badge}</span></span></div></div></div>`).join('')}</div>
 <div style="display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)"><button class="btn" style="flex:1">Filtri (3)</button><button class="btn" style="flex:1">Azioni</button></div></div>`;
 
 // V7 anatomia
@@ -554,11 +582,11 @@ document.getElementById('v7').innerHTML = `
   <div><div class="lab">Template (5 elementi)</div>
     ${card(COMPANIES[0],false)}
     <div class="legend">
-      <div class="panel tiny"><b>1 · Identità</b><div class="muted">logo + nome + max 2 badge (+N)</div></div>
-      <div class="panel tiny"><b>2 · Luogo</b><div class="muted">bandiera + città, cliccabili = filtro</div></div>
+      <div class="panel tiny"><b>1 · Colonna identità</b><div class="muted">logo, bandiera centrata sotto, Paese/città allineati a sinistra</div></div>
+      <div class="panel tiny"><b>2 · Nome</b><div class="muted">riga piena, mai troncata dai badge</div></div>
       <div class="panel tiny"><b>3 · Referente</b><div class="muted">nome + ruolo, uno solo</div></div>
-      <div class="panel tiny"><b>4 · Segnale</b><div class="muted">canali attivi + ultimo contatto</div></div>
-      <div class="panel tiny"><b>5 · Valore</b><div class="muted">score + menu ⋮</div></div>
+      <div class="panel tiny"><b>4 · Riga bassa</b><div class="muted">ultimo contatto a sinistra, stati piatti (senza riquadro) a destra</div></div>
+      <div class="panel tiny"><b>5 · Angolo alto-dx</b><div class="muted">◆ score come icona+numero + menu ⋮</div></div>
     </div>
   </div>
 </div>`;
