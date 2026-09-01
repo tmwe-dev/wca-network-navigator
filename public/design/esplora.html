@@ -101,22 +101,48 @@
 
   .phone{width:360px;height:640px;border:1px solid var(--border);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;background:var(--surface);margin:0 auto}
   .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:14px}
+
+  /* raggruppamenti */
+  .tabgroup{display:flex;align-items:center;gap:6px;padding:3px 8px 3px 6px;border:1px solid var(--border);border-radius:999px;background:#0f0f26}
+  .tabgroup > .gname{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800;padding-right:2px}
+  .grp{border:1px solid var(--border);border-radius:var(--r);background:#ffffff05;padding:8px;margin-bottom:8px}
+  .grp > .lab{margin:0 0 6px}
+  .grp:last-child{margin-bottom:0}
+  .sep{width:1px;height:16px;background:var(--border);margin:0 2px;flex:none}
+  .seg{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .seg > .btn{border:0;border-radius:0;background:transparent}
+  .seg > .btn + .btn{border-left:1px solid var(--border)}
+  .seg > .btn.on{background:var(--accent);color:#fff}
+  .sect{display:flex;align-items:center;gap:8px;margin:14px 0 8px;grid-column:1/-1}
+  .sect .t{font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:#a5a1f5}
+  .sect .line{flex:1;height:1px;background:var(--border)}
+  .sect:first-child{margin-top:0}
+  .stack > .btn{width:100%;margin-bottom:6px;justify-content:flex-start}
+  .stack > .btn:last-child{margin-bottom:0}
 </style>
+
 </head>
 <body>
 <div class="wrap">
   <h1>Maschera «Esplora → WCA Partner» — template unico</h1>
-  <div class="sub">Stesso scheletro, 6 stati. Nessun colore decorativo: solo accento unico + stati semantici.</div>
+  <div class="sub">Stesso scheletro, 7 stati. Ogni cosa è raggruppata per funzione: filtrare (rail sinistro), leggere (corpo), agire (rail destro).</div>
 
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" aria-selected="true" data-v="v1">1 · Lista + Dettaglio (default)</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v2">2 · Solo lista (esplorazione)</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v3">3 · Selezione multipla (bulk)</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v4">4 · Dettaglio a tutta pagina</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v5">5 · Vista tabella (densa)</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v6">6 · Mobile</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v7">7 · Anatomia card</button>
+    <span class="tabgroup"><span class="gname">Lavoro</span>
+      <button class="tab" role="tab" aria-selected="true" data-v="v1">1 · Lista + Dettaglio</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v2">2 · Solo lista</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v3">3 · Selezione multipla</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v4">4 · Dettaglio pieno</button>
+    </span>
+    <span class="tabgroup"><span class="gname">Rese dati</span>
+      <button class="tab" role="tab" aria-selected="false" data-v="v5">5 · Tabella</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v6">6 · Mobile</button>
+    </span>
+    <span class="tabgroup"><span class="gname">Regole</span>
+      <button class="tab" role="tab" aria-selected="false" data-v="v7">7 · Anatomia card</button>
+    </span>
   </div>
+
 
   <section id="v1"></section>
   <section id="v2" hidden></section>
@@ -145,40 +171,40 @@ const topbar = `<div class="topbar">
   <span class="tiny muted">Luca Arcanà</span>
 </div>`;
 
+// HEADER — 3 gruppi: contesto | assistente | azioni di pagina
 function pagehead(actions){return `<div class="pagehead">
   <span class="crumb">Esplora / <b>WCA Partner</b></span>
   <span style="flex:1"></span>
-  <button class="btn" title="Assistente">✦ AI</button>
-  <button class="btn icon" title="Voce">🎙</button>
-  <button class="btn icon" title="Riepilogo">📊</button>
+  <span class="seg" title="Assistente"><button class="btn">✦ AI</button><button class="btn icon">🎙</button></span>
+  <span class="sep"></span>
+  <button class="btn" title="Riepilogo">📊 Riepilogo</button>
   ${actions||''}
-  <button class="btn icon" title="Altro">⋯</button>
+  <button class="btn icon" title="Altre azioni">⋯</button>
 </div>`;}
 
+// TOOLBAR — 3 gruppi: cercare | vedere | ordinare/contare
 function toolbar(extra){return `<div class="toolbar">
-  <input class="input" style="max-width:280px" placeholder="Cerca partner, città, referente…" />
+  <input class="input" style="max-width:260px" placeholder="Cerca partner, città, referente…" />
   <button class="btn">Filtri <span class="badge b-accent" style="margin-left:4px">3</span></button>
+  <span class="sep"></span>
+  ${extra||'<span class="seg"><button class="btn on">▦ Card</button><button class="btn">▤ Tabella</button></span>'}
+  <span class="sep"></span>
   <button class="btn ghost">Ordina: Score ↓</button>
   <span style="flex:1"></span>
-  <span class="tiny muted">1.248 aziende</span>
-  ${extra||''}
+  <span class="tiny muted">1.248 aziende · 3 filtri attivi</span>
 </div>`;}
 
+// RAIL SINISTRO — solo filtri, in 4 gruppi chiusi
+function fgroup(title, rows){return `<div class="grp"><div class="lab">${title}</div>${rows}</div>`;}
+const frows = (arr)=>arr.map(([a,b,on])=>`<div class="frow ${on?'on':''}">${a} <span class="cnt">${b}</span></div>`).join('');
 const railLeft = `<div class="rail">
-  <div class="lab">Ricerca salvate</div>
-  <div class="frow on">Corea + attivi <span class="cnt">42</span></div>
-  <div class="frow">Da ricontattare <span class="cnt">18</span></div>
-  <div class="lab">Paese</div>
-  ${[['🇰🇷 Corea',42],['🇩🇪 Germania',88],['🇮🇹 Italia',131],['🇸🇬 Singapore',27],['🇵🇱 Polonia',35],['🇲🇦 Marocco',9]].map(([a,b],i)=>`<div class="frow ${i===0?'on':''}">${a} <span class="cnt">${b}</span></div>`).join('')}
-  <div class="lab">Qualità dati</div>
-  <div class="frow">Con email <span class="cnt">920</span></div>
-  <div class="frow">Con LinkedIn <span class="cnt">411</span></div>
-  <div class="frow">Senza referente <span class="cnt">203</span></div>
-  <div class="lab">Stato</div>
-  <div class="frow">Attivo <span class="cnt">1.041</span></div>
-  <div class="frow">Holding <span class="cnt">64</span></div>
-  <button class="btn" style="width:100%;margin-top:12px">Filtri avanzati…</button>
+  ${fgroup('Viste salvate', frows([['Corea + attivi',42,1],['Da ricontattare',18,0]]))}
+  ${fgroup('Dove — geografia', frows([['🇰🇷 Corea',42,1],['🇩🇪 Germania',88],['🇮🇹 Italia',131],['🇸🇬 Singapore',27],['🇵🇱 Polonia',35],['🇲🇦 Marocco',9]]))}
+  ${fgroup('Chi — relazione', frows([['Attivo',1041],['Holding',64],['Mai contattato',143]]))}
+  ${fgroup('Come — qualità dati', frows([['Con email',920],['Con LinkedIn',411],['Senza referente',203]]))}
+  <button class="btn" style="width:100%;margin-top:4px;justify-content:center">Filtri avanzati…</button>
 </div>`;
+
 
 function card(c, sel, i){return `<div class="card ${sel?'sel':''}">
   <div class="logo">${c.k}</div>
@@ -200,6 +226,8 @@ function card(c, sel, i){return `<div class="card ${sel?'sel':''}">
   </div>
 </div>`;}
 
+// DETTAGLIO — panoramica divisa in 3 sezioni funzionali: Chi è / Relazione / Operatività
+function sect(t){return `<div class="sect"><span class="t">${t}</span><span class="line"></span></div>`;}
 const detail = `<div class="detail">
   <div class="dhead">
     <div class="dlogo">EU</div>
@@ -212,10 +240,14 @@ const detail = `<div class="detail">
     <button class="btn icon" title="Chiudi">✕</button>
   </div>
   <div class="dtabs">
-    <div class="dtab on">Panoramica</div><div class="dtab">Referenti (4)</div>
-    <div class="dtab">Comunicazioni</div><div class="dtab">Biglietti (2)</div><div class="dtab">Deep Search</div>
+    <div class="dtab on">Panoramica</div>
+    <span class="sep"></span>
+    <div class="dtab">Referenti (4)</div><div class="dtab">Comunicazioni</div>
+    <span class="sep"></span>
+    <div class="dtab">Biglietti (2)</div><div class="dtab">Deep Search</div>
   </div>
   <div class="grid2">
+    ${sect('Chi è — anagrafica')}
     <div class="panel">
       <div class="lab">Identità</div>
       <div class="kv"><span>Sede</span><b>Busan, KR</b></div>
@@ -224,41 +256,61 @@ const detail = `<div class="detail">
       <div class="kv"><span>Membership</span><b>scade 04/2027</b></div>
     </div>
     <div class="panel">
-      <div class="lab">Relazione</div>
+      <div class="lab">Servizi e mercati</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${['Air Freight','Sea LCL','Sea FCL','Customs','Project Cargo','KR ↔ EU'].map(s=>`<span class="chip">${s}</span>`).join('')}
+      </div>
+    </div>
+
+    ${sect('Relazione — come stiamo messi')}
+    <div class="panel">
+      <div class="lab">Stato</div>
       <div class="kv"><span>Stato</span><b><span class="dot" style="background:var(--ok)"></span> Attivo</b></div>
+      <div class="kv"><span>Owner</span><b>Luca Arcanà</b></div>
+      <div class="kv"><span>Score</span><b>86</b></div>
+    </div>
+    <div class="panel">
+      <div class="lab">Storico</div>
       <div class="kv"><span>Ultimo contatto</span><b>2 giorni fa</b></div>
       <div class="kv"><span>Interazioni</span><b>37</b></div>
-      <div class="kv"><span>Owner</span><b>Luca Arcanà</b></div>
+      <div class="kv"><span>Prossima azione</span><b>Follow-up 05/09</b></div>
     </div>
+
+    ${sect('Persone — con chi parliamo')}
     <div class="panel" style="grid-column:1/-1">
-      <div class="lab">Referente principale</div>
       <div style="display:flex;align-items:center;gap:10px">
         <div class="logo">JP</div>
         <div style="flex:1"><b>Jin-Ho Park</b><div class="tiny muted">Sales Director · jinho@eugenelog.co.kr</div></div>
-        <button class="btn">✉ Email</button><button class="btn">💬 WA</button><button class="btn">in</button>
-      </div>
-    </div>
-    <div class="panel" style="grid-column:1/-1">
-      <div class="lab">Servizi e mercati</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${['Air Freight','Sea LCL','Sea FCL','Customs','Project Cargo','Warehousing','KR ↔ EU','KR ↔ US'].map(s=>`<span class="chip">${s}</span>`).join('')}
+        <span class="seg"><button class="btn">✉ Email</button><button class="btn">💬 WA</button><button class="btn">in</button></span>
       </div>
     </div>
   </div>
 </div>`;
 
+// RAIL DESTRO — azioni raggruppate per intenzione + stato
 const railRight = `<div class="rail right">
-  <div class="lab">Azioni</div>
-  <button class="btn primary" style="width:100%;margin-bottom:6px">✦ Deep Search</button>
-  <button class="btn" style="width:100%;margin-bottom:6px">Aggiungi a Cockpit</button>
-  <button class="btn" style="width:100%;margin-bottom:6px">Crea campagna</button>
-  <div class="lab">Stato dati</div>
-  <div class="kv"><span>Completezza</span><b>72%</b></div>
-  <div class="kv"><span>Ultimo enrich</span><b>14/08</b></div>
-  <div class="kv"><span>Duplicati</span><b>0</b></div>
-  <div class="lab">Attività recente</div>
-  <div class="tiny muted">✉ Risposta ricevuta · 2 g<br/>✦ Deep Search L2 · 14/08<br/>💬 WhatsApp inviato · 03/08</div>
+  <div class="grp"><div class="lab">Comunicare</div><div class="stack">
+    <button class="btn primary">✉ Contatta referente</button>
+    <button class="btn">📣 Crea campagna</button>
+  </div></div>
+  <div class="grp"><div class="lab">Arricchire</div><div class="stack">
+    <button class="btn">✦ Deep Search</button>
+    <button class="btn">🔎 Trova referenti</button>
+  </div></div>
+  <div class="grp"><div class="lab">Organizzare</div><div class="stack">
+    <button class="btn">＋ Aggiungi a Cockpit</button>
+    <button class="btn">⇩ Esporta</button>
+  </div></div>
+  <div class="grp"><div class="lab">Stato dati</div>
+    <div class="kv"><span>Completezza</span><b>72%</b></div>
+    <div class="kv"><span>Ultimo enrich</span><b>14/08</b></div>
+    <div class="kv"><span>Duplicati</span><b>0</b></div>
+  </div>
+  <div class="grp"><div class="lab">Attività recente</div>
+    <div class="tiny muted">✉ Risposta ricevuta · 2 g<br/>✦ Deep Search L2 · 14/08<br/>💬 WhatsApp inviato · 03/08</div>
+  </div>
 </div>`;
+
 
 function shell(inner){return `<div class="shell">${topbar}${inner}</div>`;}
 
@@ -275,7 +327,7 @@ ${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col">
 // V3 bulk
 document.getElementById('v3').innerHTML = `
 <p class="note"><b>Selezione multipla.</b> Da <b>2 elementi in su</b> compare la barra bulk sopra l'elenco: sostituisce la toolbar, non si somma. Il dettaglio si chiude, il rail destro mostra le azioni massive.</p>
-${shell(`${pagehead()}<div class="bulkbar"><b>3 selezionati</b><button class="btn ghost">Deseleziona</button><span style="flex:1"></span><button class="btn">✉ Campagna</button><button class="btn">✦ Deep Search</button><button class="btn">＋ Cockpit</button><button class="btn">Esporta</button><button class="btn icon">⋯</button></div><div class="body">${railLeft}<div class="col"><div class="list">${COMPANIES.map((c,i)=>card(c,i<3)).join('')}</div></div>${railRight}</div>`)}`;
+${shell(`${pagehead()}<div class="bulkbar"><b>3 selezionati</b><button class="btn ghost">Deseleziona</button><span style="flex:1"></span><span class="tiny muted">Comunicare</span><span class="seg"><button class="btn">✉ Campagna</button><button class="btn">💬 WA</button></span><span class="sep"></span><span class="tiny muted">Arricchire</span><span class="seg"><button class="btn">✦ Deep Search</button></span><span class="sep"></span><span class="tiny muted">Organizzare</span><span class="seg"><button class="btn">＋ Cockpit</button><button class="btn">⇩ Esporta</button></span><button class="btn icon">⋯</button></div><div class="body">${railLeft}<div class="col"><div class="list">${COMPANIES.map((c,i)=>card(c,i<3)).join('')}</div></div>${railRight}</div>`)}`;
 
 // V4 dettaglio full
 document.getElementById('v4').innerHTML = `
@@ -285,7 +337,7 @@ ${shell(`<div class="pagehead"><button class="btn ghost">← Elenco</button><spa
 // V5 tabella
 document.getElementById('v5').innerHTML = `
 <p class="note"><b>Vista tabella.</b> Stessa maschera, stessi filtri, stesse azioni: cambia solo la resa dei dati per confronto e lavoro massivo. Interruttore card/tabella nella toolbar.</p>
-${shell(`${pagehead()}${toolbar('<button class="btn">▤ Tabella</button><button class="btn ghost">▦ Card</button>')}<div class="body">${railLeft}<div class="col" style="overflow:auto"><table class="table"><thead><tr><th style="width:26px"></th><th>Azienda</th><th>Paese</th><th>Città</th><th>Referente</th><th>Canali</th><th>Ultimo contatto</th><th>Score</th><th></th></tr></thead><tbody>
+${shell(`${pagehead()}${toolbar('<span class="seg"><button class="btn">▦ Card</button><button class="btn on">▤ Tabella</button></span>')}<div class="body">${railLeft}<div class="col" style="overflow:auto"><table class="table"><thead><tr><th style="width:26px"></th><th colspan="3">Identità</th><th colspan="2">Contatto</th><th colspan="2">Relazione</th><th></th></tr><tr><th></th><th>Azienda</th><th>Paese</th><th>Città</th><th>Referente</th><th>Canali</th><th>Ultimo contatto</th><th>Score</th><th></th></tr></thead><tbody>
 ${COMPANIES.concat(COMPANIES).map(c=>`<tr><td><input type="checkbox"/></td><td><b>${c.n}</b></td><td>${c.f}</td><td>${c.c}</td><td class="muted">${c.contact}</td><td>${c.ch}</td><td class="muted">${c.last}</td><td class="score">${c.s}</td><td><button class="btn icon">⋯</button></td></tr>`).join('')}
 </tbody></table></div></div>`)}`;
 
