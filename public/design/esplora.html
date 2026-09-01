@@ -8,7 +8,7 @@
   :root{
     --bg:#0a0a1a; --surface:#141432; --surface-2:#181840; --border:#26265c;
     --fg:#e8e8f5; --muted:#8d8dae; --accent:#4f46e5;
-    --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --ai:#a855f7;
+    --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --ai:#a855f7; --brown:#b07c48;
     --r:10px;
   }
   *{box-sizing:border-box}
@@ -46,11 +46,17 @@
   .btn.ghost{background:transparent;color:var(--muted)}
   .btn.icon{width:26px;padding:0;justify-content:center}
   .input{height:26px;flex:1;min-width:0;border-radius:8px;border:1px solid var(--border);background:#0f0f26;color:var(--fg);padding:0 9px;font-size:11px}
-  .badge{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid}
-  .b-neutral{background:#ffffff0f;color:var(--muted);border-color:var(--border)}
-  .b-accent{background:#4f46e526;color:#a5a1f5;border-color:#4f46e566}
-  .b-ok{background:#22c55e1f;color:#6ee7a8;border-color:#22c55e4d}
-  .b-warn{background:#f59e0b1f;color:#fbbf24;border-color:#f59e0b4d}
+  /* BADGE — solo due tinte: blu (sistema/appartenenza) e marrone (attenzione/stato).
+     Resa "vetrata": fondo traslucido + blur + filo di luce interno. */
+  .badge{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid;
+    backdrop-filter:blur(6px) saturate(140%);-webkit-backdrop-filter:blur(6px) saturate(140%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.35)}
+  .b-blue{background:linear-gradient(180deg,rgba(79,70,229,.30),rgba(79,70,229,.14));color:#c3c0fb;border-color:rgba(129,120,248,.45)}
+  .b-brown{background:linear-gradient(180deg,rgba(176,124,72,.30),rgba(120,80,44,.14));color:#e2b98c;border-color:rgba(196,146,92,.45)}
+  /* alias legacy → si collassano sulle due sole tinte ammesse */
+  .b-neutral,.b-accent{background:linear-gradient(180deg,rgba(79,70,229,.30),rgba(79,70,229,.14));color:#c3c0fb;border-color:rgba(129,120,248,.45)}
+  .b-ok,.b-warn{background:linear-gradient(180deg,rgba(176,124,72,.30),rgba(120,80,44,.14));color:#e2b98c;border-color:rgba(196,146,92,.45)}
+
   .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
   .lab{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:12px 0 6px}
   .lab:first-child{margin-top:0}
@@ -119,6 +125,19 @@
   .sect:first-child{margin-top:0}
   .stack > .btn{width:100%;margin-bottom:6px;justify-content:flex-start}
   .stack > .btn:last-child{margin-bottom:0}
+
+  /* DROPDOWN — usato solo dove le opzioni sono >4 e mutuamente esclusive */
+  .dd{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:#12122e;color:var(--fg);font-size:11px;font-weight:600;cursor:pointer}
+  .dd .k{color:var(--muted);font-weight:600}
+  .dd::after{content:'▾';color:var(--muted);font-size:10px}
+  /* BANDIERA — un solo posto per riga; mai bandiera + sigla paese insieme */
+  .flag{font-size:12px;line-height:1}
+  .inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .inv .panel b{font-size:12px}
+  .inv ul{margin:6px 0 0;padding-left:16px;color:var(--muted);font-size:11.5px}
+  .inv li{margin:2px 0}
+  .inv .n{float:right;color:#c3c0fb;font-weight:800;font-size:11px}
+
 </style>
 
 </head>
@@ -128,8 +147,12 @@
   <div class="sub">Stesso scheletro, 7 stati. Ogni cosa è raggruppata per funzione: filtrare (rail sinistro), leggere (corpo), agire (rail destro).</div>
 
   <div class="tabs" role="tablist">
+    <span class="tabgroup"><span class="gname">Censimento</span>
+      <button class="tab" role="tab" aria-selected="true" data-v="v0">0 · Inventario e funzioni</button>
+    </span>
     <span class="tabgroup"><span class="gname">Lavoro</span>
-      <button class="tab" role="tab" aria-selected="true" data-v="v1">1 · Lista + Dettaglio</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v1">1 · Lista + Dettaglio</button>
+
       <button class="tab" role="tab" aria-selected="false" data-v="v2">2 · Solo lista</button>
       <button class="tab" role="tab" aria-selected="false" data-v="v3">3 · Selezione multipla</button>
       <button class="tab" role="tab" aria-selected="false" data-v="v4">4 · Dettaglio pieno</button>
@@ -144,7 +167,9 @@
   </div>
 
 
-  <section id="v1"></section>
+  <section id="v0"></section>
+  <section id="v1" hidden></section>
+
   <section id="v2" hidden></section>
   <section id="v3" hidden></section>
   <section id="v4" hidden></section>
@@ -157,9 +182,9 @@
 const COMPANIES = [
   {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', f:'🇰🇷', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
   {n:'Nordwind Spedition GmbH', c:'Hamburg', f:'🇩🇪', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
-  {n:'Trans Adriatic Cargo Srl', c:'Trieste', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
+  {n:'Trans Adriatic Cargo Srl', c:'Trieste', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, alert:'Scade', contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
   {n:'Pacific Rim Forwarding', c:'Singapore', f:'🇸🇬', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
-  {n:'Atlas Freight Services', c:'Casablanca', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, contact:'—', last:'mai', ch:'✉'},
+  {n:'Atlas Freight Services', c:'Casablanca', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, alert:'Hold', contact:'—', last:'mai', ch:'✉'},
   {n:'Baltic Line Logistics', c:'Gdańsk', f:'🇵🇱', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
 ];
 
@@ -184,15 +209,17 @@ function pagehead(actions){return `<div class="pagehead">
 
 // TOOLBAR — 3 gruppi: cercare | vedere | ordinare/contare
 function toolbar(extra){return `<div class="toolbar">
-  <input class="input" style="max-width:260px" placeholder="Cerca partner, città, referente…" />
-  <button class="btn">Filtri <span class="badge b-accent" style="margin-left:4px">3</span></button>
+  <input class="input" style="max-width:250px" placeholder="Cerca partner, città, referente…" />
+  <button class="btn">Filtri <span class="badge b-blue" style="margin-left:4px">3</span></button>
   <span class="sep"></span>
   ${extra||'<span class="seg"><button class="btn on">▦ Card</button><button class="btn">▤ Tabella</button></span>'}
   <span class="sep"></span>
-  <button class="btn ghost">Ordina: Score ↓</button>
+  <span class="dd" title="Ordinamento (7 criteri: dropdown)"><span class="k">Ordina</span> Score ↓</span>
+  <span class="dd" title="Vista salvata (elenco lungo: dropdown)"><span class="k">Vista</span> Corea + attivi</span>
   <span style="flex:1"></span>
   <span class="tiny muted">1.248 aziende · 3 filtri attivi</span>
 </div>`;}
+
 
 // RAIL SINISTRO — solo filtri, in 4 gruppi chiusi
 function fgroup(title, rows){return `<div class="grp"><div class="lab">${title}</div>${rows}</div>`;}
@@ -211,10 +238,11 @@ function card(c, sel, i){return `<div class="card ${sel?'sel':''}">
   <div class="cmain">
     <div class="crow1">
       <span class="cname">${c.n}</span>
-      <span class="badge ${c.badge==='WCA'?'b-accent':'b-neutral'}">${c.badge}</span>
-      ${c.extra?`<span class="badge b-neutral">+${c.extra}</span>`:''}
+      <span class="badge b-blue">${c.badge}</span>
+      ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
     </div>
-    <div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span>${c.contact}</span></div>
+    <div class="crow2"><span><span class="flag">${c.f}</span> ${c.c}</span><span>·</span><span>${c.contact}</span></div>
+
     <div class="crow3">
       <span class="chip">${c.ch}</span>
       <span class="chip">ultimo contatto ${c.last}</span>
@@ -314,7 +342,56 @@ const railRight = `<div class="rail right">
 
 function shell(inner){return `<div class="shell">${topbar}${inner}</div>`;}
 
+// V0 — inventario elementi + funzioni, raggruppati per tipo
+const INV = [
+  ['A · Contesto e navigazione', 9, [
+    'Marchio / utente attivo (2)','Menu maschere ☰','Ricerca globale ⌘K','Breadcrumb Esplora / WCA Partner',
+    'Tab di dettaglio (5): Panoramica, Referenti, Comunicazioni, Biglietti, Deep Search',
+  ]],
+  ['B · Cercare e filtrare', 16, [
+    'Ricerca testuale in toolbar','Pulsante Filtri con contatore (badge blu)',
+    'Rail sinistro: 4 gruppi — Viste salvate, Dove, Chi, Come','13 faccette con conteggio',
+    'Dropdown «Vista salvata»','Filtri avanzati…',
+  ]],
+  ['C · Vedere e ordinare', 6, [
+    'Interruttore Card / Tabella','Dropdown «Ordina» (7 criteri)','Riga di conteggio risultati',
+    'Densità di lettura: 5 informazioni per card','Vista mobile (drawer)',
+  ]],
+  ['D · Leggere il dettaglio', 14, [
+    'Intestazione: logo, nome, luogo, membership, score','Panoramica in 3 sezioni: Chi è / Relazione / Persone',
+    '4 pannelli dati + 1 pannello persone','Servizi e mercati come chip (non badge)',
+  ]],
+  ['E · Agire su un elemento', 8, [
+    'Contatta (unica azione primaria)','Menu ⋯ di riga','Menu ⋯ di dettaglio','Chiudi dettaglio',
+    'Canali per referente: Email / WhatsApp / LinkedIn',
+  ]],
+  ['F · Agire in massa', 7, [
+    'Selezione ≥2 → barra bulk (sostituisce la toolbar)','Comunicare: Campagna, WhatsApp',
+    'Arricchire: Deep Search','Organizzare: Cockpit, Esporta','Deseleziona · menu ⋯',
+  ]],
+  ['G · Assistente', 3, ['Pulsante ✦ AI','Voce 🎙','Riepilogo 📊 (in popover, non in pagina)']],
+  ['H · Stato dei dati', 6, [
+    'Completezza, ultimo enrich, duplicati','Attività recente (3 righe)','Stato semantico come pallino, non come badge',
+  ]],
+];
+const totEl = INV.reduce((s,[,n])=>s+n,0);
+document.getElementById('v0').innerHTML = `
+<p class="note"><b>Censimento.</b> La maschera espone <b>${totEl} elementi interattivi</b> distribuiti su <b>${INV.length} famiglie funzionali</b>. Regola di ordinamento: si scende da <i>contesto → cercare → vedere → leggere → agire</i>. Nessun elemento può stare in due famiglie: se serve in due punti, uno dei due è un doppione da togliere.</p>
+<p class="note" style="border-color:var(--brown);background:rgba(176,124,72,.10)"><b>Regole cromatiche e di controllo.</b>
+ <b>Badge</b>: solo due tinte — <span class="badge b-blue">blu</span> per appartenenza e sistema (WCA, CRM, +N, contatori), <span class="badge b-brown">marrone</span> per attenzione e scadenza (Hold, Scade, Membership). Resa vetrata (traslucido + blur), mai piena.
+ <b>Bandiere</b>: una sola per riga, accanto alla città, mai insieme alla sigla paese; nel rail solo come indice del paese.
+ <b>Dropdown</b>: ammessi solo per scelte esclusive con più di 4 opzioni (Ordina, Vista salvata). Con 2–4 opzioni si usa il segmentato (Card/Tabella); per le azioni si usa il menu ⋯.</p>
+<div class="inv">
+${INV.map(([t,n,items])=>`<div class="panel"><b>${t}<span class="n">${n}</span></b><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('')}
+</div>
+<div class="legend" style="margin-top:14px">
+  <div class="panel tiny"><b>Badge ammessi</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="badge b-blue">WCA</span><span class="badge b-blue">CRM</span><span class="badge b-blue">+3</span><span class="badge b-brown">Hold</span><span class="badge b-brown">Scade</span></div></div>
+  <div class="panel tiny"><b>Non badge</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span class="chip">Air Freight</span><span class="chip">✉ 💬 in</span><span class="dot" style="background:var(--ok)"></span></div><div class="muted" style="margin-top:6px">Servizi e canali sono chip; lo stato è un pallino.</div></div>
+  <div class="panel tiny"><b>Controlli</b><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center"><span class="dd"><span class="k">Ordina</span> Score ↓</span><span class="seg"><button class="btn on">▦</button><button class="btn">▤</button></span><button class="btn icon">⋯</button></div></div>
+</div>`;
+
 // V1 lista + dettaglio
+
 document.getElementById('v1').innerHTML = `
 <p class="note"><b>Default.</b> Rail filtri a sinistra (unico posto dei filtri), elenco stretto al centro, dettaglio a destra. La card mostra <b>5 informazioni di livello 1</b>: identità, luogo, referente, ultimo contatto, score. Tutto il resto vive nel dettaglio.</p>
 ${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col"><div class="list" style="max-width:340px">${COMPANIES.map((c,i)=>card(c,i===0)).join('')}</div></div>${detail}</div>`)}`;
@@ -346,7 +423,7 @@ document.getElementById('v6').innerHTML = `
 <p class="note"><b>Mobile.</b> I due rail diventano drawer richiamabili dalla toolbar (Filtri / Azioni). La card passa a due righe. Il dettaglio si apre a tutta pagina, mai affiancato.</p>
 <div class="phone">${topbar}<div class="pagehead"><span class="crumb"><b>WCA Partner</b></span><span style="flex:1"></span><button class="btn icon">✦</button><button class="btn icon">🎙</button><button class="btn icon">⋯</button></div>
 <div class="toolbar"><input class="input" placeholder="Cerca…"/><button class="btn icon">⛭</button></div>
-<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="logo">${c.k}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge ${c.badge==='WCA'?'b-accent':'b-neutral'}">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
+<div class="list">${COMPANIES.slice(0,4).map(c=>`<div class="card"><div class="logo">${c.k}</div><div class="cmain"><div class="crow1"><span class="cname">${c.n}</span></div><div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span class="score">${c.s}</span></div><div class="crow3"><span class="badge b-blue">${c.badge}</span><span class="chip">${c.last}</span></div></div></div>`).join('')}</div>
 <div style="display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)"><button class="btn" style="flex:1">Filtri (3)</button><button class="btn" style="flex:1">Azioni</button></div></div>`;
 
 // V7 anatomia
@@ -357,7 +434,7 @@ document.getElementById('v7').innerHTML = `
     <div class="card" style="flex-wrap:wrap">
       <div class="logo">EU</div>
       <div class="cmain"><div class="crow1"><span class="cname" style="text-transform:uppercase">"EUGENE" LOGISTICS CO., LTD.</span>
-      <span class="badge b-accent">WCA</span><span class="badge b-warn">🏆</span><span class="badge b-ok">DS3</span><span class="badge b-neutral">HQ</span><span class="badge b-warn">HOLD</span></div>
+      <span class="badge" style="background:#4f46e526;color:#a5a1f5;border-color:#4f46e566;box-shadow:none;backdrop-filter:none;border-radius:6px">WCA</span><span class="badge" style="background:#f59e0b1f;color:#fbbf24;border-color:#f59e0b4d;box-shadow:none;backdrop-filter:none;border-radius:6px">🏆</span><span class="badge" style="background:#22c55e1f;color:#6ee7a8;border-color:#22c55e4d;box-shadow:none;backdrop-filter:none;border-radius:6px">DS3</span><span class="badge" style="background:#ffffff0f;color:#8d8dae;border-color:#26265c;box-shadow:none;backdrop-filter:none;border-radius:6px">HQ</span><span class="badge" style="background:#ef44441f;color:#fca5a5;border-color:#ef44444d;box-shadow:none;backdrop-filter:none;border-radius:6px">HOLD</span></div>
       <div class="crow2">🇰🇷 KR · Busan · Contatto: Jin-Ho Park · jinho@eugenelog.co.kr · ⏱ 2g · 37 int. · ✉ 💬 in · ★</div></div>
       <div class="cact"><span class="score">86</span><button class="btn icon">⋯</button></div>
     </div>
