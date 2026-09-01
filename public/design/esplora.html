@@ -134,6 +134,16 @@
   .panel{border:1px solid var(--border);border-radius:var(--r);background:var(--surface-2);padding:10px}
   .kv{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
   .kv span:first-child{color:var(--muted);font-size:11px}
+  /* metriche su due righe: etichetta sopra, valore sotto — occupano un quarto dello spazio del kv */
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px 14px}
+  .metric{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .metric .m{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+  .metric .v{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* servizi: icone compatte, il dettaglio si apre a richiesta */
+  .svc{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .ico{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:#ffffff08;display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:help}
+  .ico.more{font-size:10px;font-weight:800;color:var(--muted)}
+
 
   .bulkbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#4f46e51f;border-bottom:1px solid #4f46e566}
   .kpi{display:flex;gap:8px}
