@@ -23,6 +23,8 @@ import { EnrichmentBadge } from "../atoms/EnrichmentBadge";
 import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { CompanyMark } from "@/components/partners/shared/CompanyMark";
+import { ServiceIconRow } from "@/components/partners/shared/ServiceIconRow";
+
 
 import { getYearsMember } from "@/lib/countries";
 import type { SherlockLevel } from "@/v2/services/sherlock/sherlockTypes";
@@ -72,12 +74,24 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
   return (
     <div className="h-full flex flex-col bg-card">
       <div className="flex items-start justify-between gap-3 px-3 py-2 border-b border-border/40">
-        <div className="flex items-center gap-2 min-w-0">
-          {vm && <CompanyMark logoUrl={(vm.logo_url as string | null) ?? null} website={(vm.website as string | null) ?? null} name={title} />}
-          <h2 className="text-base font-semibold text-foreground truncate">{title}</h2>
-          {years > 0 && <TrophyRow years={years} />}
-          {sherlockLevel && <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            {vm && <CompanyMark logoUrl={(vm.logo_url as string | null) ?? null} name={title} />}
+            <h2 className="text-base font-semibold text-foreground truncate">{title}</h2>
+            {years > 0 && <TrophyRow years={years} />}
+            {sherlockLevel && (
+              <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
+            )}
+          </div>
+          {vm && (
+            <ServiceIconRow
+              services={(vm.partner_services as { service_category: string }[] | undefined) ?? []}
+              enrichment={(vm.enrichment_data as Record<string, unknown> | null) ?? null}
+              className="mt-1.5"
+            />
+          )}
         </div>
+
 
         <div className="flex flex-col items-end gap-1 shrink-0">
           <div className="flex items-center gap-1.5">
