@@ -222,12 +222,12 @@
 
 <script>
 const COMPANIES = [
-  {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', f:'🇰🇷', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
-  {n:'Nordwind Spedition GmbH', c:'Hamburg', f:'🇩🇪', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
-  {n:'Trans Adriatic Cargo Srl', c:'Trieste', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, alert:'Scade', contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
-  {n:'Pacific Rim Forwarding', c:'Singapore', f:'🇸🇬', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
-  {n:'Atlas Freight Services', c:'Casablanca', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, alert:'Hold', contact:'—', last:'mai', ch:'✉'},
-  {n:'Baltic Line Logistics', c:'Gdańsk', f:'🇵🇱', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
+  {n:'"EUGENE" Logistics Co., Ltd.', c:'Busan', country:'Corea del Sud', f:'🇰🇷', k:'EU', s:86, badge:'WCA', extra:2, contact:'Jin-Ho Park · Sales Dir.', last:'2 g fa', ch:'✉ 💬 in'},
+  {n:'Nordwind Spedition GmbH', c:'Hamburg', country:'Germania', f:'🇩🇪', k:'NS', s:74, badge:'WCA', extra:1, contact:'Anke Wolff · KAM', last:'6 g fa', ch:'✉ in'},
+  {n:'Trans Adriatic Cargo Srl', c:'Trieste', country:'Italia', f:'🇮🇹', k:'TA', s:69, badge:'CRM', extra:0, alert:'Scade', contact:'Marco Bellini', last:'oggi', ch:'✉ 💬'},
+  {n:'Pacific Rim Forwarding', c:'Singapore', country:'Singapore', f:'🇸🇬', k:'PR', s:91, badge:'WCA', extra:3, contact:'Wei Lim · MD', last:'1 mese', ch:'✉'},
+  {n:'Atlas Freight Services', c:'Casablanca', country:'Marocco', f:'🇲🇦', k:'AF', s:52, badge:'BCA', extra:1, alert:'Hold', contact:'—', last:'mai', ch:'✉'},
+  {n:'Baltic Line Logistics', c:'Gdańsk', country:'Polonia', f:'🇵🇱', k:'BL', s:63, badge:'WCA', extra:0, contact:'Ewa Nowak', last:'12 g fa', ch:'✉ in'},
 ];
 
 const topbar = `<div class="topbar">
@@ -249,17 +249,15 @@ function pagehead(actions){return `<div class="pagehead">
   <button class="btn icon" title="Altre azioni">⋯</button>
 </div>`;}
 
-// TOOLBAR — 3 gruppi: cercare | vedere | ordinare/contare
-function toolbar(extra){return `<div class="toolbar">
-  <input class="input" style="max-width:250px" placeholder="Cerca partner, città, referente…" />
-  <button class="btn">Filtri <span class="badge b-blue" style="margin-left:4px">3</span></button>
+// TOOLBAR → FINDBAR — unico blocco concentrato: cercare | filtrare | vedere | ordinare
+function toolbar(extra){return `<div class="findbar">
+  <div class="fsearch"><span class="ficon">⌕</span><input placeholder="Cerca partner, città, referente…" /></div>
+  <button class="btn primary">⛭ Filtri <span class="badge b-blue" style="margin-left:2px">3</span></button>
   <span class="sep"></span>
   ${extra||'<span class="seg"><button class="btn on">▦ Card</button><button class="btn">▤ Tabella</button></span>'}
-  <span class="sep"></span>
-  <span class="dd" title="Ordinamento (7 criteri: dropdown)"><span class="k">Ordina</span> Score ↓</span>
-  <span class="dd" title="Vista salvata (elenco lungo: dropdown)"><span class="k">Vista</span> Corea + attivi</span>
-  <span style="flex:1"></span>
-  <span class="tiny muted">1.248 aziende · 3 filtri attivi</span>
+  <span class="dd" title="Ordinamento"><span class="k">Ordina</span> Score ↓</span>
+  <span class="dd" title="Vista salvata"><span class="k">Vista</span> Corea + attivi</span>
+  <span class="tiny muted" style="white-space:nowrap">1.248 · 3 filtri</span>
 </div>`;}
 
 
