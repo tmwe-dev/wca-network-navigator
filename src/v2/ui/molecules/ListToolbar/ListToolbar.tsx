@@ -10,6 +10,7 @@
  * Logic-less: tutto lo stato (sort, search, chips) arriva via props.
  */
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Search, X, Plane, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
