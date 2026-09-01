@@ -305,7 +305,7 @@ export function CompanyCard({
         opened && "border-primary bg-primary/[0.08]",
       )}
     >
-      {/* Colonna identità: larghezza = logo, bandiera centrata sotto. */}
+      {/* Colonna identità: solo checkbox + logo (la bandiera vive in basso, con la città). */}
       <div className={cn("flex shrink-0 flex-col items-center gap-2", compact ? "w-9" : "w-12")}>
         {onToggleSelect && (
           <div onClick={(e) => e.stopPropagation()}>
@@ -334,38 +334,8 @@ export function CompanyCard({
             />
           </span>
         )}
-
-        {iso && !flagFailed ? (
-          onCountryClick ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCountryClick(countryCode!);
-              }}
-              title={`Filtra per paese ${paese ?? ""}`}
-              aria-label={`Filtra per paese ${paese ?? ""}`}
-              className="rounded-[3px] transition-all hover:ring-1 hover:ring-primary/50"
-            >
-              <img
-                src={`https://flagcdn.com/60x45/${iso}.png`}
-                alt=""
-                loading="lazy"
-                onError={() => setFlagFailed(true)}
-                className="h-[22px] w-[30px] rounded-[3px] border border-border/70 object-cover"
-              />
-            </button>
-          ) : (
-            <img
-              src={`https://flagcdn.com/60x45/${iso}.png`}
-              alt=""
-              loading="lazy"
-              onError={() => setFlagFailed(true)}
-              className="h-[22px] w-[30px] rounded-[3px] border border-border/70 object-cover"
-            />
-          )
-        ) : null}
       </div>
+
 
       {/* Angolo alto-destra: score + menu. */}
       <div className="absolute right-3 top-3 flex items-center gap-1.5">
