@@ -10,15 +10,6 @@
  */
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { MoreHorizontal } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
