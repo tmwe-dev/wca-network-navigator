@@ -238,10 +238,11 @@ function card(c, sel, i){return `<div class="card ${sel?'sel':''}">
   <div class="cmain">
     <div class="crow1">
       <span class="cname">${c.n}</span>
-      <span class="badge ${c.badge==='WCA'?'b-accent':'b-neutral'}">${c.badge}</span>
-      ${c.extra?`<span class="badge b-neutral">+${c.extra}</span>`:''}
+      <span class="badge b-blue">${c.badge}</span>
+      ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
     </div>
-    <div class="crow2"><span>${c.f} ${c.c}</span><span>·</span><span>${c.contact}</span></div>
+    <div class="crow2"><span><span class="flag">${c.f}</span> ${c.c}</span><span>·</span><span>${c.contact}</span></div>
+
     <div class="crow3">
       <span class="chip">${c.ch}</span>
       <span class="chip">ultimo contatto ${c.last}</span>
