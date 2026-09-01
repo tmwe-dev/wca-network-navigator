@@ -39,6 +39,13 @@ const HOLDING_TONE: Record<HoldingFilterMode, string> = {
   only: "bg-primary/15 text-primary border-primary/40",
 };
 
+/** Ciclo su clic: senza attesa → solo attesa → tutti. */
+const HOLDING_NEXT: Record<HoldingFilterMode, HoldingFilterMode> = {
+  exclude: "only",
+  only: "include",
+  include: "exclude",
+};
+
 
 export interface SortOption<K extends string = string> {
   key: K;
