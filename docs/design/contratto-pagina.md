@@ -83,8 +83,15 @@ due rese diverse dello stesso dato).
 
 - **Una** azione primaria per schermata (accento pieno). Tutte le altre sono
   `variant="outline"` o `ghost`.
-- Le azioni su singolo elemento vivono in un menu `…` alla fine della riga,
-  non come icone sempre visibili.
+- Le azioni su singolo elemento **non** usano il menu `…`: l'icona che segnala
+  il canale (busta, WhatsApp, telefono) è essa stessa il pulsante d'azione.
+  Icone spente = canale assente.
+- **Ordinamento**: un solo controllo. Clic breve inverte A→Z / Z→A,
+  pressione lunga (o tasto destro) apre la tendina dei criteri.
+- **Filtri**: nessun pulsante «Filtri» in toolbar. Si entra solo dalla linguetta
+  laterale (icona imbuto); i filtri avanzati stanno in fondo al rail.
+- **Stati ciclici** (es. circuito di attesa): una sola icona che cambia colore
+  al clic, mai una fila di pillole testuali.
 - Ogni pulsante icona ha `aria-label`.
 
 ## 8. Stati vuoti, caricamento, errore
@@ -96,7 +103,9 @@ Nessuno spinner a pagina intera: skeleton nel pannello.
 ## 9. Checklist di conformità (da applicare in migrazione)
 
 - [ ] Usa `StandardPageFrame`, non header fatto a mano
-- [ ] Max 3 azioni in header + menu «…»
+- [ ] Max 3 azioni in header, nessun menu «…» in toolbar elenco
+- [ ] Sort unico (clic = direzione, pressione lunga = criterio)
+- [ ] Icone canale cliccabili al posto del menu riga
 - [ ] Pulsante AI presente e in posizione standard
 - [ ] Nessun filtro nel corpo pagina
 - [ ] Max 5 informazioni di livello 1 per riga/card
