@@ -27,6 +27,8 @@ interface Props {
   readonly services: readonly PartnerService[];
   readonly branchCountries: readonly BranchCountry[];
   readonly networks?: readonly { readonly id: string; readonly network_name: string }[];
+  /** Le icone servizi sono già mostrate in testata: qui si possono nascondere. */
+  readonly showServiceIcons?: boolean;
 }
 
 const COUNTRY_ALIASES: Readonly<Record<string, string>> = {
@@ -95,6 +97,7 @@ export function EnrichmentInsightStrip({
   services,
   branchCountries,
   networks = [],
+  showServiceIcons = true,
 }: Props): React.ReactElement | null {
   const companyProfile =
     enrichment?.company_profile && typeof enrichment.company_profile === "object"
@@ -154,7 +157,7 @@ export function EnrichmentInsightStrip({
       {summary && <p className="text-sm leading-relaxed text-foreground line-clamp-3">{summary}</p>}
 
       {/* Row 2 — capabilities (icone distinte per ogni servizio) */}
-      {serviceLabels.length > 0 && (
+      {showServiceIcons && serviceLabels.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {serviceLabels.map((label) => {
             const Icon = resolveServiceIcon(label);

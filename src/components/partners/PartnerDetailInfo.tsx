@@ -89,6 +89,8 @@ interface PartnerDetailInfoProps {
   allServices: PartnerService[];
   branchCountries: { code: string; name: string }[];
   hasBranches: boolean;
+  /** Quale tab sta chiedendo il contenuto. */
+  view?: "profilo" | "contatti";
 }
 
 export function PartnerDetailInfo({
@@ -99,12 +101,14 @@ export function PartnerDetailInfo({
   allServices,
   branchCountries,
   hasBranches,
+  view = "profilo",
 }: PartnerDetailInfoProps) {
   const partnerCertifications = (partner.partner_certifications || []) as PartnerCertification[];
   const { handleSendEmail, handleSendWhatsApp } = useDirectContactActions();
 
   return (
     <>
+      {view === "profilo" && (
       <EnrichmentCard
         partner={{
           id: String(partner.id),
@@ -113,8 +117,9 @@ export function PartnerDetailInfo({
           ai_parsed_at: partner.ai_parsed_at ?? null,
         }}
       />
+      )}
 
-      {partner.profile_description && (
+      {view === "profilo" && partner.profile_description && (
         <Section>
           <SectionTitle icon={FileText}>Profilo Aziendale</SectionTitle>
           <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
@@ -123,7 +128,7 @@ export function PartnerDetailInfo({
         </Section>
       )}
 
-      {contacts.length > 0 && (
+      {view === "contatti" && contacts.length > 0 && (
         <Section>
           <SectionTitle icon={Users}>Contatti Ufficio ({contacts.length})</SectionTitle>
           <div className="space-y-2">
@@ -208,7 +213,7 @@ export function PartnerDetailInfo({
         </Section>
       )}
 
-      {networks.length > 0 && (
+      {view === "profilo" && networks.length > 0 && (
         <Section>
           <SectionTitle icon={Hash}>Network ({networks.length})</SectionTitle>
           <div className="flex items-center gap-2 overflow-x-auto">
@@ -239,7 +244,7 @@ export function PartnerDetailInfo({
         </Section>
       )}
 
-      {allServices.length > 0 && (
+      {view === "profilo" && allServices.length > 0 && (
         <Section>
           <SectionTitle icon={Box}>Servizi ({allServices.length})</SectionTitle>
           <div className="flex flex-wrap gap-1.5">
@@ -260,7 +265,8 @@ export function PartnerDetailInfo({
       )}
 
       {/* Advanced details collapsible */}
-      {(partnerCertifications.length > 0 ||
+      {view === "profilo" &&
+        (partnerCertifications.length > 0 ||
         branchCountries.length > 0 ||
         (enrichment?.key_markets as unknown[])?.length > 0 ||
         (enrichment?.key_routes as unknown[])?.length > 0 ||
