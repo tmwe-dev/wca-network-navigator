@@ -114,6 +114,8 @@ export function EnrichmentInsightStrip({
     aiProfile?.summary,
     companyProfile?.recent_news,
   );
+  // In panoramica mostriamo il profilo completo, non solo il riassunto.
+  const profileText = firstText(textValue(partner.profile_description), summary) ?? summary;
   const ownCountry = String(partner.country_code ?? "").toUpperCase();
   const ownCountryName = String(partner.country_name ?? "").trim().toLowerCase();
   const isOwnCountry = (label: string): boolean => {
