@@ -1,14 +1,21 @@
 /**
- * CompanyCard — card partner ordinata, con dati separati per area visiva.
- * Logic-less, alimentato da `CompanyEntity`.
+ * CompanyCard — card partner secondo la geometria approvata (template
+ * `public/design/esplora.html`):
+ *
+ *   [ identità ]  nome azienda                       ◆score  ⋮
+ *   [ logo 48 ]   referente · ruolo
+ *   [ bandiera ]  ultimo contatto        stati piatti
+ *                 Paese · Città
+ *
+ * Angolo alto-sinistra = identità, alto-destra = valore + menu,
+ * basso = contesto geografico. Nessun grassetto: la gerarchia si fa
+ * solo con dimensione e colore. Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
 import {
   Plane,
-  Trophy,
-  MoreHorizontal,
+  MoreVertical,
   Star,
-  Clock,
   Mail,
   MessageCircle,
   Phone,
@@ -16,15 +23,10 @@ import {
   Search,
   ScanSearch,
   Telescope,
-  ShieldAlert,
-  MapPin,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { EntityRowFlag } from "@/v2/ui/atoms/EntityRowFlag";
 import { ChannelIcons } from "@/v2/ui/atoms/ChannelIcons";
-import { ScorePill } from "@/v2/ui/atoms/ScorePill";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -36,9 +38,7 @@ import {
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "sonner";
 import type { CompanyEntity, CompanyCardListCallbacks } from "./types";
-import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
 import { useBlacklistedPartnerIds, useBlacklistedCompanyNames } from "@/hooks/useBlacklist";
-import { CARD_BORDER, CARD_STRIPE, BADGE_BASE, CHIP_BASE } from "./CompanyCard.constants";
 import { computeRecency, computeEnrichedLabel } from "./CompanyCard.helpers";
 
 export interface CompanyCardProps extends CompanyCardListCallbacks {
@@ -61,6 +61,72 @@ export interface CompanyCardProps extends CompanyCardListCallbacks {
   onCityClick?: (city: string) => void;
 }
 
+const SHERLOCK_LABEL: Record<1 | 2 | 3, string> = { 1: "Scout", 2: "Detective", 3: "Sherlock" };
+
+let displayNames: Intl.DisplayNames | null = null;
+function nomePaese(code?: string | null): string | null {
+  const c = (code || "").trim().toUpperCase();
+  if (c.length !== 2) return c || null;
+  try {
+    displayNames ??= new Intl.DisplayNames(["it"], { type: "region" });
+    return displayNames.of(c) ?? c;
+  } catch {
+    return c;
+  }
+}
+
+const DOMINI_GENERICI = new Set([
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "libero.it",
+  "icloud.com",
+  "qq.com",
+  "163.com",
+  "naver.com",
+]);
+
+function dominioDaEmail(email?: string | null): string | null {
+  const d = email?.split("@")[1]?.trim().toLowerCase();
+  if (!d || DOMINI_GENERICI.has(d)) return null;
+  return d;
+}
+
+/** Badge "piatto": testo con pallino colore, nessun riquadro. */
+function Flat({
+  children,
+  tone = "info",
+  title,
+}: {
+  children: React.ReactNode;
+  tone?: "info" | "warn" | "ok" | "danger";
+  title?: string;
+}): React.ReactElement {
+  const dot =
+    tone === "warn"
+      ? "bg-warning"
+      : tone === "ok"
+        ? "bg-success"
+        : tone === "danger"
+          ? "bg-destructive"
+          : "bg-primary";
+  const text =
+    tone === "warn"
+      ? "text-warning"
+      : tone === "ok"
+        ? "text-success"
+        : tone === "danger"
+          ? "text-destructive"
+          : "text-muted-foreground";
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 text-[10.5px] leading-none", text)} title={title}>
+      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dot)} />
+      {children}
+    </span>
+  );
+}
+
 export function CompanyCard({
   company,
   onOpenCompany,
@@ -80,7 +146,6 @@ export function CompanyCard({
     badge,
     contactsCount,
     meta,
-    source,
     score,
     primaryContact,
     channels,
@@ -108,17 +173,26 @@ export function CompanyCard({
   const firstEmail = primaryContactFull?.email || primaryEmail || null;
   const firstPhone = primaryContactFull?.phone || primaryPhone || null;
 
-  const logoFromMeta = meta?.logoUrl ?? logoUrl ?? null;
   const [logoFailed, setLogoFailed] = React.useState(false);
+  const [flagFailed, setFlagFailed] = React.useState(false);
+  const dominio = dominioDaEmail(firstEmail);
+  const logoSrc =
+    meta?.logoUrl ??
+    logoUrl ??
+    (dominio ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(dominio)}&sz=128` : null);
   const initials = (name ?? "?")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((w) => w[0])
-    .join("");
+    .join("")
+    .toUpperCase();
 
+  const iso = (countryCode || "").trim().toLowerCase();
+  const paese = nomePaese(countryCode);
   const isCustomer = leadStatus === "converted";
   const enrichedLabel = React.useMemo(() => computeEnrichedLabel(enrichedAt), [enrichedAt]);
+  const recency = React.useMemo(() => computeRecency(lastInteractionAt), [lastInteractionAt]);
 
   const onMenuEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -165,436 +239,308 @@ export function CompanyCard({
     onOpenCompany?.(company);
   };
 
-  const recency = React.useMemo(() => computeRecency(lastInteractionAt), [lastInteractionAt]);
-
-  const leadStatusBadge = (() => {
-    if (!leadStatus || leadStatus === "new") return null;
-    const map: Record<string, { label: string; cls: string }> = {
-      contacted: { label: "Contattato", cls: "bg-chart-2/15 text-chart-2 border-chart-2/30" },
-      qualified: { label: "Qualificato", cls: "bg-success/15 text-success border-success/30" },
-      holding: { label: "In attesa", cls: "bg-primary/15 text-primary border-primary/30" },
-      archived: { label: "Archiviato", cls: "bg-muted/40 text-muted-foreground border-border/40" },
-      blacklisted: { label: "Blacklist", cls: "bg-destructive/15 text-destructive border-destructive/30" },
+  const leadLabel = (() => {
+    const map: Record<string, string> = {
+      contacted: "Contattato",
+      qualified: "Qualificato",
+      holding: "In attesa",
+      archived: "Archiviato",
+      blacklisted: "Blacklist",
     };
-    const m = map[leadStatus];
-    if (!m) return null;
-    return (
-      <Badge variant="outline" className={cn(BADGE_BASE, m.cls)}>
-        {m.label}
-      </Badge>
-    );
+    return leadStatus ? (map[leadStatus] ?? null) : null;
   })();
 
-  /** Livello 1 = max 2 badge visibili; il resto collassa in «+N» (mostrato al click sulla card). */
-  const capBadges = (nodes: React.ReactNode[], titles: string[]) => {
-    const list = nodes.filter(Boolean);
-    if (opened || list.length <= 2) return list;
-    const hidden = list.length - 2;
-    return [
-      ...list.slice(0, 2),
-      <span
-        key="more"
-        className={cn(BADGE_BASE, "bg-muted/40 text-muted-foreground border-border/40")}
-        title={titles.join(" · ")}
-      >
-        +{hidden}
-      </span>,
-    ];
-  };
+  /** Stati piatti: max 3 visibili, il resto in «+N» (tutti quando la card è aperta). */
+  const statiTutti: Array<{ key: string; node: React.ReactNode; title: string }> = [
+    badge ? { key: "src", node: <Flat key="src">{badge.label}</Flat>, title: badge.label } : null,
+    isBlacklisted
+      ? {
+          key: "bl",
+          node: (
+            <Flat key="bl" tone="danger" title="Azienda presente nella blacklist WCA World">
+              Blacklist
+            </Flat>
+          ),
+          title: "Blacklist",
+        }
+      : null,
+    isCustomer ? { key: "cli", node: <Flat key="cli" tone="ok">Cliente</Flat>, title: "Cliente" } : null,
+    leadLabel
+      ? {
+          key: "lead",
+          node: (
+            <Flat key="lead" tone={leadStatus === "holding" ? "warn" : "info"}>
+              {leadLabel}
+            </Flat>
+          ),
+          title: leadLabel,
+        }
+      : null,
+    meta?.wcaYears != null
+      ? {
+          key: "years",
+          node: (
+            <Flat key="years" title={`${meta.wcaYears} anni di membership WCA`}>
+              {meta.wcaYears} anni
+            </Flat>
+          ),
+          title: `${meta.wcaYears} anni WCA`,
+        }
+      : null,
+    hasBca
+      ? {
+          key: "bca",
+          node: (
+            <Flat key="bca" title="Biglietti da visita collegati">
+              BCA{bcaCount && bcaCount > 1 ? ` ${bcaCount}` : ""}
+            </Flat>
+          ),
+          title: "BCA",
+        }
+      : null,
+    sherlockLevel
+      ? {
+          key: "sherlock",
+          node: (
+            <Flat
+              key="sherlock"
+              title={sherlockCompletedAt ? `Deep Search: ${new Date(sherlockCompletedAt).toLocaleString()}` : undefined}
+            >
+              {SHERLOCK_LABEL[sherlockLevel]}
+            </Flat>
+          ),
+          title: SHERLOCK_LABEL[sherlockLevel],
+        }
+      : null,
+    opened && enrichedLabel ? { key: "ds", node: <Flat key="ds" tone="ok">{enrichedLabel}</Flat>, title: enrichedLabel } : null,
+    opened && origin ? { key: "org", node: <Flat key="org">{origin}</Flat>, title: origin } : null,
+  ].filter(Boolean) as Array<{ key: string; node: React.ReactNode; title: string }>;
 
-  const sourceBadgeNodes: React.ReactNode[] = [
-    badge ? (
-      <Badge
-        key="src"
-        variant="outline"
-        className={cn(
-          BADGE_BASE,
-          badge.tone === "wca" && "bg-primary/15 text-primary border-primary/30",
-          badge.tone === "primary" && "bg-primary/15 text-primary border-primary/30",
-          badge.tone === "neutral" && "bg-muted/40 text-muted-foreground border-border/40",
-        )}
-      >
-        {badge.label}
-      </Badge>
-    ) : null,
-    meta?.wcaYears != null ? (
-      <Badge
-        key="years"
-        variant="outline"
-        className={cn(BADGE_BASE, "bg-muted/40 text-muted-foreground border-border/40")}
-        title={`${meta.wcaYears} anni di membership WCA`}
-      >
-        <Trophy className="h-3 w-3" />
-        {meta.wcaYears}
-      </Badge>
-    ) : null,
-    hasBca ? (
-      <Badge
-        key="bca"
-        variant="outline"
-        className={cn(BADGE_BASE, "bg-muted/40 text-muted-foreground border-border/40")}
-        title="Biglietti da visita collegati"
-      >
-        BCA{bcaCount && bcaCount > 1 ? ` ${bcaCount}` : ""}
-      </Badge>
-    ) : null,
-  ];
-
-  const sourceBadgesSlot = (
-    <div className="flex flex-wrap justify-start gap-1.5">
-      {capBadges(sourceBadgeNodes, ["Origine", "Anni WCA", "BCA"])}
-    </div>
-  );
-
-  const statusBadgeNodes: React.ReactNode[] = [
-    isBlacklisted ? (
-      <Badge
-        key="bl"
-        variant="outline"
-        className={cn(BADGE_BASE, "bg-destructive/15 text-destructive border-destructive/40")}
-        title="Azienda presente nella blacklist WCA World"
-      >
-        <ShieldAlert className="h-3 w-3" />
-        Blacklist
-      </Badge>
-    ) : null,
-    isCustomer ? (
-      <Badge key="cli" variant="outline" className={cn(BADGE_BASE, "bg-success/20 text-success border-success/40")}>
-        Cliente
-      </Badge>
-    ) : null,
-    leadStatusBadge ? <React.Fragment key="lead">{leadStatusBadge}</React.Fragment> : null,
-    sherlockLevel ? (
-      <SherlockLevelBadge key="sherlock" level={sherlockLevel} completedAt={sherlockCompletedAt} />
-    ) : null,
-  ];
-
-  const statusBadgesSlot = (
-    <div className="flex flex-wrap justify-end gap-1.5">
-      {capBadges(statusBadgeNodes, ["Blacklist", "Cliente", "Stato lead", "Sherlock"])}
-      {isFavorite && <Star className="h-4 w-4 shrink-0 fill-warning text-warning" />}
-      {meta?.holding && (
-        <span title="In circuito di attesa">
-          <Plane className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </span>
-      )}
-    </div>
-  );
-
-
-  const recencySlot = (
-    <span
-      className={cn(
-        BADGE_BASE,
-        "bg-muted/20",
-        recency.tone === "ok" && "text-success border-success/30",
-        recency.tone === "warn" && "text-warning border-warning/30",
-        recency.tone === "alert" && "text-destructive border-destructive/30",
-        recency.tone === "muted" && "text-muted-foreground border-border/50",
-      )}
-      title={lastInteractionAt ? `Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}` : "Mai contattato"}
-    >
-      <Clock className="h-3 w-3" />
-      {recency.label}
-    </span>
-  );
-
-  const contactSlot = primaryContact ? (
-    <div
-      className={cn(
-        "grid min-w-0 gap-2 rounded-md border border-border/50 bg-muted/15 px-2.5 py-2",
-        compact
-          ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
-          : "sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]",
-      )}
-    >
-      <div className="min-w-0">
-        <span className="block text-[10px] font-semibold leading-none text-muted-foreground">Contatto</span>
-        <span className="mt-1 block truncate text-[13px] font-semibold leading-tight text-foreground">
-          {primaryContact.name}
-        </span>
-      </div>
-      <div className="min-w-0">
-        <span className="block text-[10px] font-semibold leading-none text-muted-foreground">Ruolo</span>
-        <span className="mt-1 block truncate text-[12px] leading-tight text-muted-foreground">
-          {primaryContact.role || "—"}
-        </span>
-      </div>
-      {contactsCount > 1 && (
-        <span className="self-end rounded-md border border-border/50 bg-muted/30 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
-          +{contactsCount - 1}
-        </span>
-      )}
-    </div>
-  ) : (
-    <div className="rounded-md border border-border/45 bg-muted/15 px-2.5 py-2 text-[12px] italic text-muted-foreground">
-      {contactsCount === 0 ? "Nessun referente" : `${contactsCount} contatt${contactsCount === 1 ? "o" : "i"}`}
-    </div>
-  );
-
-  const contactMethodsSlot = (firstEmail || firstPhone) && (
-    <div className={cn("grid min-w-0 gap-1.5", compact ? "grid-cols-2" : "sm:grid-cols-2")}>
-      {firstEmail && (
-        <a
-          href={`mailto:${firstEmail}`}
-          onClick={(e) => e.stopPropagation()}
-          className={cn(
-            CHIP_BASE,
-            "border-border/50 bg-muted/25 text-muted-foreground hover:border-primary/45 hover:text-primary",
-          )}
-          title={firstEmail}
-        >
-          <Mail className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{firstEmail}</span>
-        </a>
-      )}
-      {firstPhone && (
-        <a
-          href={`tel:${firstPhone.replace(/[^0-9+]/g, "")}`}
-          onClick={(e) => e.stopPropagation()}
-          className={cn(
-            CHIP_BASE,
-            "border-border/50 bg-muted/25 text-muted-foreground hover:border-primary/45 hover:text-primary",
-          )}
-          title={firstPhone}
-        >
-          <Phone className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{firstPhone}</span>
-        </a>
-      )}
-    </div>
-  );
-
-  // Livello 2: arricchimento e origine appaiono solo sulla card aperta.
-  const metaSlot = (city || (opened && (enrichedLabel || origin))) && (
-    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-      {city &&
-        (onCityClick ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCityClick(city);
-            }}
-            className={cn(
-              CHIP_BASE,
-              "max-w-[180px] border-border/55 bg-muted/35 text-foreground hover:border-primary/45 hover:text-primary",
-            )}
-            title={`Filtra per città ${city}`}
-          >
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{city}</span>
-          </button>
-        ) : (
-          <span className={cn(CHIP_BASE, "max-w-[180px] border-border/55 bg-muted/35 text-foreground")}>
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{city}</span>
-          </span>
-        ))}
-      {opened && enrichedLabel && (
-        <span
-          className={cn(CHIP_BASE, "border-success/25 bg-success/10 text-success")}
-          title={enrichedAt ? `Ultima Deep Search: ${new Date(enrichedAt).toLocaleString()}` : undefined}
-        >
-          {enrichedLabel}
-        </span>
-      )}
-      {opened && origin && (
-        <span
-          className={cn(CHIP_BASE, "max-w-[150px] border-border/45 bg-muted/25 text-muted-foreground")}
-          title={`Origine: ${origin}`}
-        >
-          <span className="truncate">{origin}</span>
-        </span>
-      )}
-    </div>
-
-  );
-
-  const countryNode = <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />;
+  const maxStati = opened ? statiTutti.length : compact ? 2 : 3;
+  const statiVisibili = statiTutti.slice(0, maxStati);
+  const statiNascosti = statiTutti.slice(maxStati);
 
   return (
     <article
       onClick={() => onOpenCompany?.(company)}
       className={cn(
-        "group relative overflow-hidden rounded-lg border bg-card/70 shadow-sm transition-all",
-        compact ? "p-2.5" : "p-3",
-        CARD_BORDER[source],
-        selected && "ring-1 ring-primary/50 bg-primary/[0.05]",
-        opened &&
-          "ring-1 ring-primary/70 border-primary/70 bg-primary/[0.07] shadow-[0_0_0_1px_hsl(var(--primary)/0.25)]",
+        "group relative flex cursor-pointer gap-3.5 rounded-2xl border border-border/60 bg-card/70 transition-all",
+        compact ? "p-3" : "p-3.5",
+        "hover:border-primary/50 hover:shadow-[0_0_40px_-14px_hsl(var(--primary)/0.35)]",
+        selected && "border-primary/70 bg-primary/[0.06]",
+        opened && "border-primary bg-primary/[0.08]",
       )}
     >
-      <div className={cn("absolute left-0 top-0 h-full w-1 bg-gradient-to-b", CARD_STRIPE[source])} />
-
-      <div
-        className={cn(
-          "grid min-w-0 gap-3",
-          compact ? "grid-cols-[42px_minmax(0,1fr)_28px]" : "grid-cols-[64px_minmax(0,1fr)_minmax(128px,auto)]",
+      {/* Colonna identità: larghezza = logo, bandiera centrata sotto. */}
+      <div className={cn("flex shrink-0 flex-col items-center gap-2", compact ? "w-9" : "w-12")}>
+        {onToggleSelect && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={!!selected}
+              onCheckedChange={() => onToggleSelect(company.id)}
+              aria-label={`Seleziona ${company.name}`}
+              className="h-4 w-4"
+            />
+          </div>
         )}
-      >
-        <div className="flex flex-col items-center gap-2 pl-1">
-          {onToggleSelect && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <Checkbox
-                checked={!!selected}
-                onCheckedChange={() => onToggleSelect(company.id)}
-                aria-label={`Seleziona ${company.name}`}
-                className="h-4 w-4"
-              />
-            </div>
+        <span
+          className={cn(
+            "flex items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-background text-[11px] text-muted-foreground",
+            compact ? "h-9 w-9" : "h-12 w-12",
           )}
-          {onCountryClick && countryCode ? (
+          aria-hidden="true"
+        >
+          {logoSrc && !logoFailed ? (
+            <img
+              src={logoSrc}
+              alt=""
+              loading="lazy"
+              className="h-full w-full object-contain p-1.5"
+              onError={() => setLogoFailed(true)}
+            />
+          ) : (
+            initials || "—"
+          )}
+        </span>
+        {iso && !flagFailed ? (
+          onCountryClick ? (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onCountryClick(countryCode);
+                onCountryClick(countryCode!);
               }}
-              className="rounded-md transition-all hover:ring-1 hover:ring-primary/45"
-              aria-label={`Filtra per paese ${countryCode}`}
-              title={`Filtra per paese ${countryCode}`}
+              title={`Filtra per paese ${paese ?? ""}`}
+              aria-label={`Filtra per paese ${paese ?? ""}`}
+              className="rounded-[3px] transition-all hover:ring-1 hover:ring-primary/50"
             >
-              {countryNode}
+              <img
+                src={`https://flagcdn.com/60x45/${iso}.png`}
+                alt=""
+                loading="lazy"
+                onError={() => setFlagFailed(true)}
+                className="h-[22px] w-[30px] rounded-[3px] border border-border/70 object-cover"
+              />
             </button>
           ) : (
-            countryNode
+            <img
+              src={`https://flagcdn.com/60x45/${iso}.png`}
+              alt=""
+              loading="lazy"
+              onError={() => setFlagFailed(true)}
+              className="h-[22px] w-[30px] rounded-[3px] border border-border/70 object-cover"
+            />
+          )
+        ) : null}
+      </div>
+
+      {/* Angolo alto-destra: score + menu. */}
+      <div className="absolute right-3 top-3 flex items-center gap-1.5">
+        {score != null && !Number.isNaN(score) && (
+          <span
+            className="inline-flex h-[22px] items-center gap-1 rounded-full border border-primary/35 bg-primary/10 px-2 text-[12px] leading-none text-primary"
+            title={`Score ${Math.round(score)}/100`}
+          >
+            <span className="text-[9px] opacity-80">◆</span>
+            {Math.round(score)}
+          </span>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground"
+              aria-label="Azioni rapide"
+              title="Azioni rapide"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuLabel className="text-[10px] font-normal uppercase text-muted-foreground">
+              {primaryContactFull?.name || company.name}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onMenuEmail} disabled={!firstEmail}>
+              <Mail className="mr-2 h-3.5 w-3.5 text-primary" /> Invia email
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onMenuWhatsApp} disabled={!firstPhone}>
+              <MessageCircle className="mr-2 h-3.5 w-3.5 text-success" /> WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onMenuCall} disabled={!firstPhone}>
+              <Phone className="mr-2 h-3.5 w-3.5 text-chart-3" /> Chiama
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onMenuOpen}>
+              <ExternalLink className="mr-2 h-3.5 w-3.5" /> Apri dettaglio
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-[10px] font-normal uppercase text-muted-foreground">
+              Deep Search
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 1 } }));
+              }}
+            >
+              <Search className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> Scout
+              <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 2 } }));
+              }}
+            >
+              <ScanSearch className="mr-2 h-3.5 w-3.5 text-primary" /> Detective
+              <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 3 } }));
+              }}
+            >
+              <Telescope className="mr-2 h-3.5 w-3.5 text-warning" /> Sherlock
+              <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Corpo dati: una sola colonna allineata a sinistra. */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex min-w-0 items-center gap-2 pr-[86px]">
+          <h3 className="min-w-0 flex-1 truncate text-[13.5px] font-normal leading-tight text-foreground">
+            {name || "—"}
+          </h3>
+          {isFavorite && <Star className="h-3.5 w-3.5 shrink-0 fill-warning text-warning" />}
+          {meta?.holding && (
+            <span title="In circuito di attesa">
+              <Plane className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            </span>
           )}
         </div>
 
-        <div className="min-w-0 space-y-2">
-          <div className="min-w-0 space-y-1.5">
-            <div className="flex min-w-0 items-start gap-2">
-              <span
-                className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted/40 text-[9px] font-bold uppercase text-muted-foreground"
-                aria-hidden="true"
-              >
-                {logoFromMeta && !logoFailed ? (
-                  <img
-                    src={logoFromMeta}
-                    alt=""
-                    loading="lazy"
-                    className="h-full w-full object-contain"
-                    onError={() => setLogoFailed(true)}
-                  />
-                ) : (
-                  initials
-                )}
+        <div className="flex min-w-0 items-center gap-2 text-[11.5px] text-muted-foreground">
+          <span className="min-w-0 truncate">
+            {primaryContact
+              ? `${primaryContact.name}${primaryContact.role ? ` · ${primaryContact.role}` : ""}`
+              : contactsCount === 0
+                ? "Nessun referente"
+                : `${contactsCount} contatt${contactsCount === 1 ? "o" : "i"}`}
+          </span>
+          {primaryContact && contactsCount > 1 && (
+            <span className="shrink-0 text-[10.5px] text-muted-foreground">+{contactsCount - 1}</span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 pt-0.5">
+          <span
+            className={cn(
+              "inline-flex h-[21px] items-center gap-1.5 rounded-md border border-border/60 bg-muted/20 px-2 text-[10.5px] leading-none",
+              recency.tone === "ok" && "text-success",
+              recency.tone === "warn" && "text-warning",
+              recency.tone === "alert" && "text-destructive",
+              recency.tone === "muted" && "text-muted-foreground",
+            )}
+            title={
+              lastInteractionAt ? `Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}` : "Mai contattato"
+            }
+          >
+            {channels && <ChannelIcons {...channels} size="sm" className="gap-1" />}
+            ultimo contatto {recency.label}
+          </span>
+          <span className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5">
+            {statiVisibili.map((s) => s.node)}
+            {statiNascosti.length > 0 && (
+              <span className="text-[10.5px] text-muted-foreground" title={statiNascosti.map((s) => s.title).join(" · ")}>
+                +{statiNascosti.length}
               </span>
-
-              <h3 className="min-w-0 flex-1 truncate text-[17px] font-extrabold uppercase leading-tight text-foreground">
-                {name || "—"}
-              </h3>
-              {compact && <div className="shrink-0">{sourceBadgesSlot}</div>}
-            </div>
-          </div>
-
-          {contactSlot}
-          {contactMethodsSlot}
-          {metaSlot}
-
-          {compact && (
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5 border-t border-border/35 pt-2">
-              {recencySlot}
-              <ScorePill value={score ?? null} className="h-5 rounded-md px-1.5 text-[10px]" />
-              {channels && <ChannelIcons {...channels} size="md" className="gap-1.5" />}
-            </div>
-          )}
+            )}
+          </span>
         </div>
 
-        <div
-          className={cn("flex min-w-0 flex-col items-end", compact ? "justify-between gap-2" : "justify-between gap-3")}
-        >
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+        <div className="mt-auto flex items-baseline gap-2 pt-1.5 text-[11px] text-foreground">
+          <span className="truncate">{paese ?? "—"}</span>
+          {city &&
+            (onCityClick ? (
               <button
                 type="button"
-                onClick={(e) => e.stopPropagation()}
-                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground"
-                aria-label="Azioni rapide"
-                title="Azioni rapide"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCityClick(city);
+                }}
+                className="truncate text-muted-foreground transition-colors hover:text-primary"
+                title={`Filtra per città ${city}`}
               >
-                <MoreHorizontal className="h-4 w-4" />
+                {city}
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">
-                {primaryContactFull?.name || company.name}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onMenuEmail} disabled={!firstEmail}>
-                <Mail className="mr-2 h-3.5 w-3.5 text-primary" /> Invia email
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onMenuWhatsApp} disabled={!firstPhone}>
-                <MessageCircle className="mr-2 h-3.5 w-3.5 text-success" /> WhatsApp
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onMenuCall} disabled={!firstPhone}>
-                <Phone className="mr-2 h-3.5 w-3.5 text-chart-3" /> Chiama
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onMenuOpen}>
-                <ExternalLink className="mr-2 h-3.5 w-3.5" /> Apri dettaglio
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Deep Search</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.dispatchEvent(
-                    new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 1 } }),
-                  );
-                }}
-              >
-                <Search className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> Scout
-                <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.dispatchEvent(
-                    new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 2 } }),
-                  );
-                }}
-              >
-                <ScanSearch className="mr-2 h-3.5 w-3.5 text-primary" /> Detective
-                <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.dispatchEvent(
-                    new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 3 } }),
-                  );
-                }}
-              >
-                <Telescope className="mr-2 h-3.5 w-3.5 text-warning" /> Sherlock
-                <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {compact && (
-            <div className="mt-auto max-w-[28px] [&_.rounded-md]:px-1 [&_.rounded-md]:text-[0px] [&_svg]:h-3.5 [&_svg]:w-3.5">
-              {statusBadgesSlot}
-            </div>
-          )}
-
-          {!compact && (
-            <div className="flex min-w-[128px] flex-col items-end gap-1.5">
-              {sourceBadgesSlot}
-              {statusBadgesSlot}
-            </div>
-          )}
-
-          {!compact && (
-            <div className="flex min-w-[128px] flex-col items-end gap-1.5 border-t border-border/35 pt-2">
-              <div className="flex flex-wrap justify-end gap-1.5">
-                {recencySlot}
-                <ScorePill value={score ?? null} className="h-5 rounded-md px-1.5 text-[10px]" />
-              </div>
-              {channels && <ChannelIcons {...channels} size="md" className="justify-end gap-1.5" />}
-            </div>
-          )}
+            ) : (
+              <span className="truncate text-muted-foreground">{city}</span>
+            ))}
         </div>
       </div>
     </article>
