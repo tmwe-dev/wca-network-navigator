@@ -117,8 +117,9 @@ export function PartnerDetailInfo({
           ai_parsed_at: partner.ai_parsed_at ?? null,
         }}
       />
+      )}
 
-      {partner.profile_description && (
+      {view === "profilo" && partner.profile_description && (
         <Section>
           <SectionTitle icon={FileText}>Profilo Aziendale</SectionTitle>
           <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
@@ -127,7 +128,7 @@ export function PartnerDetailInfo({
         </Section>
       )}
 
-      {contacts.length > 0 && (
+      {view === "contatti" && contacts.length > 0 && (
         <Section>
           <SectionTitle icon={Users}>Contatti Ufficio ({contacts.length})</SectionTitle>
           <div className="space-y-2">
