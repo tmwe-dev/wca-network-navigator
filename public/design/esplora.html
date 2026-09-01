@@ -125,17 +125,24 @@
 <body>
 <div class="wrap">
   <h1>Maschera «Esplora → WCA Partner» — template unico</h1>
-  <div class="sub">Stesso scheletro, 6 stati. Nessun colore decorativo: solo accento unico + stati semantici.</div>
+  <div class="sub">Stesso scheletro, 7 stati. Ogni cosa è raggruppata per funzione: filtrare (rail sinistro), leggere (corpo), agire (rail destro).</div>
 
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" aria-selected="true" data-v="v1">1 · Lista + Dettaglio (default)</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v2">2 · Solo lista (esplorazione)</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v3">3 · Selezione multipla (bulk)</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v4">4 · Dettaglio a tutta pagina</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v5">5 · Vista tabella (densa)</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v6">6 · Mobile</button>
-    <button class="tab" role="tab" aria-selected="false" data-v="v7">7 · Anatomia card</button>
+    <span class="tabgroup"><span class="gname">Lavoro</span>
+      <button class="tab" role="tab" aria-selected="true" data-v="v1">1 · Lista + Dettaglio</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v2">2 · Solo lista</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v3">3 · Selezione multipla</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v4">4 · Dettaglio pieno</button>
+    </span>
+    <span class="tabgroup"><span class="gname">Rese dati</span>
+      <button class="tab" role="tab" aria-selected="false" data-v="v5">5 · Tabella</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="v6">6 · Mobile</button>
+    </span>
+    <span class="tabgroup"><span class="gname">Regole</span>
+      <button class="tab" role="tab" aria-selected="false" data-v="v7">7 · Anatomia card</button>
+    </span>
   </div>
+
 
   <section id="v1"></section>
   <section id="v2" hidden></section>
