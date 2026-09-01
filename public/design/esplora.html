@@ -65,12 +65,12 @@
 
   /* card partner — direzione "Crystal midnight": angoli usati come ancore (sx+dx),
      logo grande, bandiera leggibile + Paese per esteso, campi larghi e gruppi ben distanziati */
-  .card{position:relative;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px 14px 12px;display:flex;gap:16px;align-items:flex-start;cursor:pointer;transition:border-color .25s, box-shadow .25s}
+  .card{position:relative;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px 14px 12px;cursor:pointer;transition:border-color .25s, box-shadow .25s}
   .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
-  .clogo{width:48px;height:48px;flex:none;border-radius:12px;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .clogo{width:48px;height:48px;border-radius:12px;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .logo{width:34px;height:34px;flex:none;border-radius:8px;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
-  .cmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+  .cmain{min-width:0;display:flex;flex-direction:column;gap:8px;padding-left:64px} /* 64px = logo 48 + 16 di respiro */
   .crow1{display:flex;align-items:center;gap:8px;padding-right:110px} /* spazio riservato ai badge angolo alto-dx */
   .cname{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .crow2{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11.5px}
