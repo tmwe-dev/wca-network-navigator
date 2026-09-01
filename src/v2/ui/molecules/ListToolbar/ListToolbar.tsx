@@ -123,6 +123,33 @@ export function ListToolbar<K extends string = string>({
     else onCycleSort(sortKey); // stessa key → inverte dir
   };
 
+  // Sort: clic breve inverte la direzione, pressione lunga apre la tendina.
+  const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
+  const longPressRef = React.useRef<{ timer: number | null; fired: boolean }>({ timer: null, fired: false });
+
+  const startLongPress = (e: React.PointerEvent) => {
+    e.preventDefault();
+    longPressRef.current.fired = false;
+    longPressRef.current.timer = window.setTimeout(() => {
+      longPressRef.current.fired = true;
+      setSortMenuOpen(true);
+    }, 450);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressRef.current.timer !== null) {
+      window.clearTimeout(longPressRef.current.timer);
+      longPressRef.current.timer = null;
+    }
+  };
+
+  const endLongPress = () => {
+    cancelLongPress();
+    if (!longPressRef.current.fired) handleDirToggle();
+  };
+
+  React.useEffect(() => cancelLongPress, []);
+
   const searchBox = (
     <div className="relative w-full min-w-[180px] max-w-[420px]">
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
