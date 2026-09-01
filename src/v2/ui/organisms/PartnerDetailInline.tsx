@@ -69,12 +69,14 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
 
   return (
     <div className="h-full flex flex-col bg-card">
-      <div className="flex items-start justify-between gap-3 p-3 border-b border-border/40">
+      <div className="flex items-start justify-between gap-3 px-3 py-2 border-b border-border/40">
         <div className="flex items-center gap-2 min-w-0">
-          {years > 0 && <TrophyRow years={years} />}
+          {vm && <CompanyMark logoUrl={(vm.logo_url as string | null) ?? null} website={(vm.website as string | null) ?? null} name={title} />}
           <h2 className="text-base font-semibold text-foreground truncate">{title}</h2>
+          {years > 0 && <TrophyRow years={years} />}
           {sherlockLevel && <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />}
         </div>
+
         <div className="flex flex-col items-end gap-1 shrink-0">
           <div className="flex items-center gap-1.5">
             {vm && <EnrichmentBadge partner={vm} variant="pill" />}
