@@ -101,7 +101,25 @@
 
   .phone{width:360px;height:640px;border:1px solid var(--border);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;background:var(--surface);margin:0 auto}
   .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:14px}
-</style>
+
+  /* raggruppamenti */
+  .tabgroup{display:flex;align-items:center;gap:6px;padding:3px 8px 3px 6px;border:1px solid var(--border);border-radius:999px;background:#0f0f26}
+  .tabgroup > .gname{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800;padding-right:2px}
+  .grp{border:1px solid var(--border);border-radius:var(--r);background:#ffffff05;padding:8px;margin-bottom:8px}
+  .grp > .lab{margin:0 0 6px}
+  .grp:last-child{margin-bottom:0}
+  .sep{width:1px;height:16px;background:var(--border);margin:0 2px;flex:none}
+  .seg{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .seg > .btn{border:0;border-radius:0;background:transparent}
+  .seg > .btn + .btn{border-left:1px solid var(--border)}
+  .seg > .btn.on{background:var(--accent);color:#fff}
+  .sect{display:flex;align-items:center;gap:8px;margin:14px 0 8px;grid-column:1/-1}
+  .sect .t{font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:#a5a1f5}
+  .sect .line{flex:1;height:1px;background:var(--border)}
+  .sect:first-child{margin-top:0}
+  .stack > .btn{width:100%;margin-bottom:6px;justify-content:flex-start}
+  .stack > .btn:last-child{margin-bottom:0}
+
 </head>
 <body>
 <div class="wrap">
