@@ -10,15 +10,6 @@
  */
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { MoreHorizontal } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
@@ -336,32 +327,10 @@ export function EntityListWithDetail({
   void activeFiltersCount;
 
 
-  const overflowMenu = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="h-7 w-7 rounded-md border border-border/40 bg-card/40 text-muted-foreground inline-flex items-center justify-center transition-all hover:text-foreground"
-          title="Altre azioni"
-          aria-label="Altre azioni"
-        >
-          <MoreHorizontal className="w-3.5 h-3.5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="z-[80] min-w-[200px]">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          Elenco
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-xs" onClick={() => selection.selectAll(visibleIds)}>
-          {allSelected ? "Deseleziona tutto" : "Seleziona tutti i visibili"}
-        </DropdownMenuItem>
-        <DropdownMenuItem className="text-xs" onClick={() => setFiltersOpen(true)}>
-          Filtri avanzati…
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  // Niente menu "…" in toolbar: i filtri avanzati si aprono dalla linguetta
+  // laterale (evento `entity-filters-advanced`).
+  void visibleIds;
+  void allSelected;
 
 
   const list = (
@@ -386,13 +355,7 @@ export function EntityListWithDetail({
         onRemoveChip={handleRemoveChip}
         holdingFilter={holdingFilter}
         onHoldingFilterChange={updateHoldingFilter}
-        rightSlot={
-          <>
-            
-            {toolbarRightSlot}
-            {overflowMenu}
-          </>
-        }
+        rightSlot={toolbarRightSlot}
 
       />
       <div className="flex-1 min-h-0 px-3 pt-2 overflow-hidden">

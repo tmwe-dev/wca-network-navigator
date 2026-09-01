@@ -12,29 +12,9 @@
  * solo con dimensione e colore. Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import {
-  Plane,
-  MoreVertical,
-  Star,
-  Mail,
-  MessageCircle,
-  Phone,
-  ExternalLink,
-  Search,
-  ScanSearch,
-  Telescope,
-} from "lucide-react";
+import { Plane, Star, Mail, MessageCircle, Phone, Linkedin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { ChannelIcons } from "@/v2/ui/atoms/ChannelIcons";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "sonner";
 import type { CompanyEntity, CompanyCardListCallbacks } from "./types";
@@ -218,11 +198,6 @@ export function CompanyCard({
     window.open(`tel:${firstPhone.replace(/[^0-9+]/g, "")}`, "_blank");
   };
 
-  const onMenuOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onOpenCompany?.(company);
-  };
-
   const leadLabel = (() => {
     const map: Record<string, string> = {
       contacted: "Contattato",
@@ -358,69 +333,6 @@ export function CompanyCard({
             {Math.round(score)}
           </span>
         )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              onClick={(e) => e.stopPropagation()}
-              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground"
-              aria-label="Azioni rapide"
-              title="Azioni rapide"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuLabel className="text-[10px] font-normal uppercase text-muted-foreground">
-              {primaryContactFull?.name || company.name}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onMenuEmail} disabled={!firstEmail}>
-              <Mail className="mr-2 h-3.5 w-3.5 text-primary" /> Invia email
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onMenuWhatsApp} disabled={!firstPhone}>
-              <MessageCircle className="mr-2 h-3.5 w-3.5 text-success" /> WhatsApp
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onMenuCall} disabled={!firstPhone}>
-              <Phone className="mr-2 h-3.5 w-3.5 text-chart-3" /> Chiama
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onMenuOpen}>
-              <ExternalLink className="mr-2 h-3.5 w-3.5" /> Apri dettaglio
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[10px] font-normal uppercase text-muted-foreground">
-              Deep Search
-            </DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 1 } }));
-              }}
-            >
-              <Search className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> Scout
-              <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 2 } }));
-              }}
-            >
-              <ScanSearch className="mr-2 h-3.5 w-3.5 text-primary" /> Detective
-              <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: { partnerId: company.id, level: 3 } }));
-              }}
-            >
-              <Telescope className="mr-2 h-3.5 w-3.5 text-warning" /> Sherlock
-              <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {/* Corpo dati: una sola colonna allineata a sinistra. */}
@@ -550,7 +462,45 @@ export function CompanyCard({
                 {recency.label}
               </span>
             )}
-            {channels && <ChannelIcons {...channels} size="sm" className="gap-1.5" />}
+            {/* Icone-azione: la stessa icona che segnala il canale lo attiva. */}
+            <div className="flex items-center gap-1">
+              {(channels?.email || firstEmail) && (
+                <button
+                  type="button"
+                  onClick={onMenuEmail}
+                  disabled={!firstEmail}
+                  title={firstEmail ? `Invia email a ${firstEmail}` : "Nessuna email disponibile"}
+                  aria-label="Invia email"
+                  className="rounded-md p-1 text-primary transition-colors hover:bg-primary/10 disabled:opacity-40"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {(channels?.whatsapp || firstPhone) && (
+                <button
+                  type="button"
+                  onClick={onMenuWhatsApp}
+                  disabled={!firstPhone}
+                  title={firstPhone ? `WhatsApp a ${firstPhone}` : "Nessun numero disponibile"}
+                  aria-label="Invia WhatsApp"
+                  className="rounded-md p-1 text-success transition-colors hover:bg-success/10 disabled:opacity-40"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {firstPhone && (
+                <button
+                  type="button"
+                  onClick={onMenuCall}
+                  title={`Chiama ${firstPhone}`}
+                  aria-label="Chiama"
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {channels?.linkedin && <Linkedin className="h-3.5 w-3.5 text-sky-500/80" aria-label="LinkedIn" />}
+            </div>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
-import { PanelLeftClose, SlidersHorizontal, Check } from "lucide-react";
+import { PanelLeftClose, SlidersHorizontal, Check, Filter } from "lucide-react";
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
 import { BCAFiltersRailContent } from "@/components/contacts/bca/BCAFiltersRailContent";
@@ -41,15 +41,19 @@ const FILTER_CONTENT: Record<FilterKey, () => React.ReactNode> = {
 function getFilterContext(
   pathname: string,
   networkView: "partners" | "bca",
-): { title: string; content: React.ReactNode; bannerKey: SidebarContextKey } | null {
+): { title: string; content: React.ReactNode; bannerKey: SidebarContextKey; filterKey: FilterKey } | null {
   const rule = resolveFilterRule(pathname, networkView);
   if (!rule) return null;
   return {
     title: rule.title,
     content: FILTER_CONTENT[rule.filterKey](),
     bannerKey: rule.bannerKey,
+    filterKey: rule.filterKey,
   };
 }
+
+/** Contesti elenco/dettaglio che espongono anche i filtri avanzati locali. */
+const ADVANCED_FILTER_KEYS: ReadonlySet<FilterKey> = new Set<FilterKey>(["network", "bca", "crm-contacts"]);
 
 export function ContextFiltersRail(): React.ReactElement | null {
   const { pathname } = useLocation();
@@ -122,7 +126,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
         aria-label={isOpen ? `Chiudi ${context.title}` : `Apri ${context.title}`}
         aria-expanded={isOpen}
       >
-        {isOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <SlidersHorizontal className="h-3.5 w-3.5" />}
+        {isOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <Filter className="h-3.5 w-3.5" />}
       </button>
 
       {/* Backdrop oscurato — clic per chiudere */}
@@ -169,7 +173,16 @@ export function ContextFiltersRail(): React.ReactElement | null {
             {context.content}
           </div>
         </div>
-        <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3">
+        <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3 space-y-2">
+          {ADVANCED_FILTER_KEYS.has(context.filterKey) && (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("entity-filters-advanced"))}
+              className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border/60 bg-card/40 text-xs font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" /> Filtri avanzati…
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setIsOpen(false)}

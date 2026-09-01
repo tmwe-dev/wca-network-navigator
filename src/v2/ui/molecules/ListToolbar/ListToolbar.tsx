@@ -11,7 +11,7 @@
  */
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Search, X, Plane, Check } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, Search, X, Plane, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ActiveFiltersBar, type ActiveFilterChip } from "@/v2/ui/molecules/ActiveFiltersBar";
@@ -37,6 +37,13 @@ const HOLDING_TONE: Record<HoldingFilterMode, string> = {
   exclude: "bg-muted/40 text-muted-foreground border-border/50",
   include: "bg-warning/15 text-warning border-warning/40",
   only: "bg-primary/15 text-primary border-primary/40",
+};
+
+/** Ciclo su clic: senza attesa → solo attesa → tutti. */
+const HOLDING_NEXT: Record<HoldingFilterMode, HoldingFilterMode> = {
+  exclude: "only",
+  only: "include",
+  include: "exclude",
 };
 
 
@@ -116,6 +123,33 @@ export function ListToolbar<K extends string = string>({
     else onCycleSort(sortKey); // stessa key → inverte dir
   };
 
+  // Sort: clic breve inverte la direzione, pressione lunga apre la tendina.
+  const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
+  const longPressRef = React.useRef<{ timer: number | null; fired: boolean }>({ timer: null, fired: false });
+
+  const startLongPress = (e: React.PointerEvent) => {
+    e.preventDefault();
+    longPressRef.current.fired = false;
+    longPressRef.current.timer = window.setTimeout(() => {
+      longPressRef.current.fired = true;
+      setSortMenuOpen(true);
+    }, 450);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressRef.current.timer !== null) {
+      window.clearTimeout(longPressRef.current.timer);
+      longPressRef.current.timer = null;
+    }
+  };
+
+  const endLongPress = () => {
+    cancelLongPress();
+    if (!longPressRef.current.fired) handleDirToggle();
+  };
+
+  React.useEffect(() => cancelLongPress, []);
+
   const searchBox = (
     <div className="relative w-full min-w-[180px] max-w-[420px]">
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -148,39 +182,18 @@ export function ListToolbar<K extends string = string>({
         )}
 
         {holdingFilter && onHoldingFilterChange && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "h-6 px-2 rounded-full text-[10px] font-semibold border inline-flex items-center gap-1 transition-all",
-                  HOLDING_TONE[holdingFilter],
-                )}
-                title="Filtro circuito di attesa"
-              >
-                <Plane className="w-3 h-3" />
-                {HOLDING_LABEL[holdingFilter]}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="z-[80]">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Circuito di attesa
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {(["exclude", "include", "only"] as HoldingFilterMode[]).map((m) => (
-                <DropdownMenuItem
-                  key={m}
-                  onClick={() => onHoldingFilterChange(m)}
-                  className="text-xs flex items-center gap-2"
-                >
-                  <span className="w-3 inline-flex justify-center">
-                    {holdingFilter === m && <Check className="w-3 h-3 text-primary" />}
-                  </span>
-                  {HOLDING_LABEL[m]}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <button
+            type="button"
+            onClick={() => onHoldingFilterChange(HOLDING_NEXT[holdingFilter])}
+            className={cn(
+              "h-7 w-7 rounded-md border inline-flex items-center justify-center transition-all shrink-0",
+              HOLDING_TONE[holdingFilter],
+            )}
+            title={`Circuito di attesa — ${HOLDING_LABEL[holdingFilter]} (clic per cambiare)`}
+            aria-label={`Circuito di attesa: ${HOLDING_LABEL[holdingFilter]}`}
+          >
+            <Plane className="w-3.5 h-3.5" />
+          </button>
         )}
 
         {searchSlot ? (
@@ -190,17 +203,23 @@ export function ListToolbar<K extends string = string>({
         )}
 
         <div className="ml-auto flex items-center gap-1 shrink-0">
-          {/* Sort: dropdown chiave + bottone direzione */}
-          <DropdownMenu>
+          {/* Sort unico: clic = A→Z / Z→A, pressione lunga = scelta del criterio */}
+          <DropdownMenu open={sortMenuOpen} onOpenChange={setSortMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
+                onPointerDown={startLongPress}
+                onPointerUp={endLongPress}
+                onPointerLeave={cancelLongPress}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setSortMenuOpen(true);
+                }}
                 className="h-7 px-2 rounded-md text-[11px] font-medium border inline-flex items-center gap-1 bg-card/40 text-muted-foreground border-border/40 hover:text-foreground hover:border-border transition-all"
-                title="Ordina per…"
+                title={`Ordina per ${currentSortLabel} (${sortDir === "asc" ? "A→Z" : "Z→A"}) — clic inverte, pressione lunga cambia criterio`}
               >
-                <ArrowUpDown className="w-3 h-3" />
-                <span className="hidden xl:inline">Ordina:</span>
-                <span className="text-foreground font-semibold">{currentSortLabel}</span>
+                {sortDir === "asc" ? <ArrowUpAZ className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
+                <span className="text-foreground">{currentSortLabel}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="z-[80] min-w-[160px]">
@@ -222,20 +241,6 @@ export function ListToolbar<K extends string = string>({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <button
-            type="button"
-            onClick={handleDirToggle}
-            className="h-7 w-7 rounded-md border bg-card/40 text-muted-foreground border-border/40 hover:text-foreground hover:border-border transition-all inline-flex items-center justify-center"
-            title={
-              sortDir === "asc"
-                ? "Ordine crescente (A→Z) — clicca per invertire"
-                : "Ordine decrescente (Z→A) — clicca per invertire"
-            }
-            aria-label="Inverti direzione ordinamento"
-          >
-            {sortDir === "asc" ? <ArrowUpAZ className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
-          </button>
 
           {rightSlot}
         </div>
