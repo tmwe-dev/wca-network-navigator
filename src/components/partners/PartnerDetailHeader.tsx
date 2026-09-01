@@ -122,24 +122,8 @@ export function PartnerDetailHeader({
             )}
           </div>
 
-          {/* Riga 3 — icone servizi, subito visibili sotto il nome */}
-          {serviceLabels.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {serviceLabels.map((label) => {
-                const Icon = resolveServiceIcon(label);
-                return (
-                  <span
-                    key={label}
-                    title={formatServiceCategory(label)}
-                    aria-label={formatServiceCategory(label)}
-                    className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-primary/20 bg-card/70 hover:bg-primary/10 transition-colors cursor-help"
-                  >
-                    <Icon className="h-4 w-4 text-primary" strokeWidth={1.6} />
-                  </span>
-                );
-              })}
-            </div>
-          )}
+          {/* Le icone servizi sono mostrate nella testata, sotto il nome azienda. */}
+
         </div>
 
         <div className="flex flex-col items-end gap-1 shrink-0">
