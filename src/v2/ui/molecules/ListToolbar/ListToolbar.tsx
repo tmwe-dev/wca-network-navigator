@@ -11,7 +11,7 @@
  */
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Search, X, Plane, Check } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, Search, X, Plane, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ActiveFiltersBar, type ActiveFilterChip } from "@/v2/ui/molecules/ActiveFiltersBar";
