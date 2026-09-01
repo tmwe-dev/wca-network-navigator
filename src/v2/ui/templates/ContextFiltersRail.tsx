@@ -41,15 +41,19 @@ const FILTER_CONTENT: Record<FilterKey, () => React.ReactNode> = {
 function getFilterContext(
   pathname: string,
   networkView: "partners" | "bca",
-): { title: string; content: React.ReactNode; bannerKey: SidebarContextKey } | null {
+): { title: string; content: React.ReactNode; bannerKey: SidebarContextKey; filterKey: FilterKey } | null {
   const rule = resolveFilterRule(pathname, networkView);
   if (!rule) return null;
   return {
     title: rule.title,
     content: FILTER_CONTENT[rule.filterKey](),
     bannerKey: rule.bannerKey,
+    filterKey: rule.filterKey,
   };
 }
+
+/** Contesti elenco/dettaglio che espongono anche i filtri avanzati locali. */
+const ADVANCED_FILTER_KEYS: ReadonlySet<FilterKey> = new Set<FilterKey>(["network", "bca", "crm-contacts"]);
 
 export function ContextFiltersRail(): React.ReactElement | null {
   const { pathname } = useLocation();
