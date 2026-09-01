@@ -89,6 +89,8 @@ interface PartnerDetailInfoProps {
   allServices: PartnerService[];
   branchCountries: { code: string; name: string }[];
   hasBranches: boolean;
+  /** Quale tab sta chiedendo il contenuto. */
+  view?: "profilo" | "contatti";
 }
 
 export function PartnerDetailInfo({
@@ -99,12 +101,14 @@ export function PartnerDetailInfo({
   allServices,
   branchCountries,
   hasBranches,
+  view = "profilo",
 }: PartnerDetailInfoProps) {
   const partnerCertifications = (partner.partner_certifications || []) as PartnerCertification[];
   const { handleSendEmail, handleSendWhatsApp } = useDirectContactActions();
 
   return (
     <>
+      {view === "profilo" && (
       <EnrichmentCard
         partner={{
           id: String(partner.id),
