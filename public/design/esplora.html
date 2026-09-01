@@ -69,6 +69,7 @@
   .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
   .clogo{width:44px;height:44px;flex:none;border-radius:12px;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .logo{width:34px;height:34px;flex:none;border-radius:8px;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
   .cmain{flex:1;min-width:0;padding-right:78px} /* spazio riservato al corner badge */
   .crow1{display:flex;align-items:center;gap:6px}
   .cname{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -273,24 +274,24 @@ const railLeft = `<div class="rail">
 </div>`;
 
 
-function card(c, sel, i){return `<div class="card ${sel?'sel':''}">
-  <div class="logo">${c.k}</div>
+function card(c, sel){return `<div class="card ${sel?'sel':''}">
+  <div class="ccorner tr">
+    ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:''}
+    <span class="badge b-blue">${c.badge}</span>
+    ${c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
+  </div>
+  <div class="clogo">${c.k}</div>
   <div class="cmain">
-    <div class="crow1">
-      <span class="cname">${c.n}</span>
-      <span class="badge b-blue">${c.badge}</span>
-      ${c.alert?`<span class="badge b-brown">${c.alert}</span>`:c.extra?`<span class="badge b-blue">+${c.extra}</span>`:''}
-    </div>
-    <div class="crow2"><span><span class="flag">${c.f}</span> ${c.c}</span><span>·</span><span>${c.contact}</span></div>
-
+    <div class="crow1"><span class="cname">${c.n}</span></div>
+    <div class="crow2"><span>${c.contact}</span></div>
     <div class="crow3">
       <span class="chip">${c.ch}</span>
       <span class="chip">ultimo contatto ${c.last}</span>
     </div>
-  </div>
-  <div class="cact">
-    <span class="score">${c.s}</span>
-    <button class="btn icon" title="Azioni">⋯</button>
+    <div class="cfoot">
+      <span class="geo"><span class="flag-lg">${c.f}</span><span class="gcountry">${c.country}</span><span class="gcity">· ${c.c}</span></span>
+      <span class="cact"><span class="score">${c.s}</span><button class="btn icon" title="Azioni">⋯</button></span>
+    </div>
   </div>
 </div>`;}
 
