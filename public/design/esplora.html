@@ -65,25 +65,27 @@
   .muted{color:var(--muted)}
   .tiny{font-size:11px}
 
-  /* card partner — geometria: colonna identità a sinistra (logo → bandiera centrata → paese/città
-     allineati a sinistra), corpo dati al centro, angolo alto-dx = valore + menu, riga bassa-dx = stati piatti */
+  /* card partner — geometria: colonna identità (logo + bandiera centrata sotto) a sinistra,
+     corpo dati allineato a sinistra su una sola colonna: nome → referente → ultimo contatto → paese/città.
+     Angolo alto-dx = score + menu. */
   .card{position:relative;display:flex;gap:14px;border:1px solid var(--border);background:var(--surface-2);border-radius:16px;padding:14px;cursor:pointer;transition:border-color .25s, box-shadow .25s}
   .card:hover{border-color:#4f46e580;box-shadow:0 0 40px -14px rgba(79,70,229,.35)}
   .card.sel{border-color:var(--accent);background:#4f46e514}
-  /* colonna identità: larghezza fissa = allineamento verticale perfetto su tutte le righe */
-  .cid{width:66px;flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+  /* colonna identità: larghezza = logo, così la bandiera resta centrata sotto il logo */
+  .cid{width:48px;flex:none;display:flex;flex-direction:column;align-items:center;gap:8px}
   .cid .flagwrap{width:100%;display:flex;justify-content:center}
-  .cid .gcountry{font-size:10.5px;font-weight:400;line-height:1.15;color:var(--fg)}
-  .cid .gcity{font-size:10px;line-height:1.15;color:var(--muted)}
   .clogo{width:48px;height:48px;border-radius:12px;overflow:hidden;background:#0a0a1a;border:1px solid #4f46e533;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:400;color:#9a9ad2;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .clogo img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box}
   .logo{width:34px;height:34px;flex:none;border-radius:8px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:400;color:#9a9ad2}
   .logo img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box}
-  .cmain{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
+  .cmain{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}
   .crow1{display:flex;align-items:center;gap:8px;padding-right:86px} /* spazio riservato all'angolo alto-dx */
   .cname{font-size:13.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .crow2{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11.5px}
-  .crow3{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
+  .crow3{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:2px}
+  /* ultima riga: paese e città, allineati sotto il nome, alla stessa altezza della bandiera */
+  .crow4{display:flex;align-items:baseline;gap:8px;font-size:11px;color:var(--fg);margin-top:auto;padding-top:6px}
+  .crow4 .gcity{color:var(--muted)}
   /* bandiera REALE (immagine, non emoji): sempre visibile su ogni sistema */
   .flag-img{width:30px;height:22px;flex:none;border-radius:4px;object-fit:cover;border:1px solid #ffffff26;box-shadow:0 1px 4px rgba(0,0,0,.4)}
   .flag-img.sm{width:22px;height:16px;border-radius:3px}
