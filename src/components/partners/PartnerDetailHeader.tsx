@@ -101,12 +101,8 @@ export function PartnerDetailHeader({
                 )}
               </div>
             </div>
-            <div className="flex flex-col items-start gap-0.5 shrink-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
-                  <span className="text-base leading-none">{getCountryFlag(String(partner.country_code))}</span>
-                  <span className="font-medium">{String(partner.country_name)}</span>
-                </span>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <div className="flex items-center gap-2">
                 {Number(partner.rating || 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-3.5 h-3.5" />}
                 {years > 0 && <TrophyRow years={years} />}
                 <Tooltip>
@@ -127,15 +123,15 @@ export function PartnerDetailHeader({
                   <TooltipContent>{partner.is_favorite ? "Rimuovi preferiti" : "Aggiungi preferiti"}</TooltipContent>
                 </Tooltip>
               </div>
-              {(displayCity || partner.wca_id) && (
-                <div className="flex items-center gap-2 text-xs text-foreground">
-                  {displayCity && <span>{displayCity}</span>}
-                  {partner.wca_id && (
-                    <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-xs text-foreground">
+                <span>{String(partner.country_name)}</span>
+                {displayCity && <span className="text-muted-foreground">{displayCity}</span>}
+                {partner.wca_id && (
+                  <span className="text-[10px] text-muted-foreground font-mono">#{String(partner.wca_id)}</span>
+                )}
+              </div>
             </div>
+
           </div>
 
           {/* Riga 3 — contatti sempre a sinistra */}
