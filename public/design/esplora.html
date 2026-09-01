@@ -73,7 +73,7 @@
   .logo{width:34px;height:34px;flex:none;border-radius:8px;overflow:hidden;background:#22224f;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#9a9ad2}
   .logo img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box}
   .cmain{min-width:0;display:flex;flex-direction:column;gap:8px;padding-left:64px} /* 64px = logo 48 + 16 di respiro */
-  .crow1{display:flex;align-items:center;gap:8px;padding-right:110px} /* spazio riservato ai badge angolo alto-dx */
+  .crow1{display:flex;align-items:center;gap:8px;padding-right:104px} /* spazio riservato ai badge angolo alto-dx */
   .cname{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .crow2{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11.5px}
   .crow3{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -504,7 +504,7 @@ ${[
 
 document.getElementById('v1').innerHTML = `
 <p class="note"><b>Default.</b> Rail filtri a sinistra (unico posto dei filtri), elenco stretto al centro, dettaglio a destra. La card mostra <b>5 informazioni di livello 1</b>: identità, luogo, referente, ultimo contatto, score. Tutto il resto vive nel dettaglio.</p>
-${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col"><div class="list" style="max-width:340px">${COMPANIES.map((c,i)=>card(c,i===0)).join('')}</div></div>${detail}</div>`)}`;
+${shell(`${pagehead()}${toolbar()}<div class="body">${railLeft}<div class="col"><div class="list" style="max-width:430px">${COMPANIES.map((c,i)=>card(c,i===0)).join('')}</div></div>${detail}</div>`)}`;
 
 // V2 solo lista
 document.getElementById('v2').innerHTML = `
