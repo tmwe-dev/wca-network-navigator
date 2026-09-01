@@ -464,8 +464,8 @@ export function CompanyCard({
         {/* Quando la card è aperta mostriamo chi sono gli altri contatti. */}
         {opened && altriContatti.length > 0 && (
           <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-            {altriContatti.map((n) => (
-              <span key={n} className="truncate">
+            {altriContatti.map((n, i) => (
+              <span key={`${n}-${i}`} className="truncate">
                 {n}
               </span>
             ))}
