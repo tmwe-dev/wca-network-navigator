@@ -176,17 +176,23 @@ export function ListToolbar<K extends string = string>({
         )}
 
         <div className="ml-auto flex items-center gap-1 shrink-0">
-          {/* Sort: dropdown chiave + bottone direzione */}
-          <DropdownMenu>
+          {/* Sort unico: clic = A→Z / Z→A, pressione lunga = scelta del criterio */}
+          <DropdownMenu open={sortMenuOpen} onOpenChange={setSortMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
+                onPointerDown={startLongPress}
+                onPointerUp={endLongPress}
+                onPointerLeave={cancelLongPress}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setSortMenuOpen(true);
+                }}
                 className="h-7 px-2 rounded-md text-[11px] font-medium border inline-flex items-center gap-1 bg-card/40 text-muted-foreground border-border/40 hover:text-foreground hover:border-border transition-all"
-                title="Ordina per…"
+                title={`Ordina per ${currentSortLabel} (${sortDir === "asc" ? "A→Z" : "Z→A"}) — clic inverte, pressione lunga cambia criterio`}
               >
-                <ArrowUpDown className="w-3 h-3" />
-                <span className="hidden xl:inline">Ordina:</span>
-                <span className="text-foreground font-semibold">{currentSortLabel}</span>
+                {sortDir === "asc" ? <ArrowUpAZ className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
+                <span className="text-foreground">{currentSortLabel}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="z-[80] min-w-[160px]">
@@ -208,20 +214,6 @@ export function ListToolbar<K extends string = string>({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <button
-            type="button"
-            onClick={handleDirToggle}
-            className="h-7 w-7 rounded-md border bg-card/40 text-muted-foreground border-border/40 hover:text-foreground hover:border-border transition-all inline-flex items-center justify-center"
-            title={
-              sortDir === "asc"
-                ? "Ordine crescente (A→Z) — clicca per invertire"
-                : "Ordine decrescente (Z→A) — clicca per invertire"
-            }
-            aria-label="Inverti direzione ordinamento"
-          >
-            {sortDir === "asc" ? <ArrowUpAZ className="w-3.5 h-3.5" /> : <ArrowDownAZ className="w-3.5 h-3.5" />}
-          </button>
 
           {rightSlot}
         </div>
