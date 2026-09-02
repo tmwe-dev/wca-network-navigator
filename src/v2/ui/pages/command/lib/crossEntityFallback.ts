@@ -8,7 +8,7 @@
  *
  * Restituisce dati pronti per un ToolResult di tipo tabella.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { rpcFindAnything } from "@/data/aiFindAnything";
 import type { QueryFilter } from "./safeQueryExecutor";
 
 export interface CrossEntityMatch {
