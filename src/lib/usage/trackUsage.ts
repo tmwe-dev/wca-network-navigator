@@ -8,6 +8,7 @@
  * consentito a utenti autenticati via RLS (policy INSERT authenticated).
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { createLogger } from "@/lib/log";
 
 const logger = createLogger("usage");
@@ -18,7 +19,7 @@ export type UsageKind = "route" | "feature" | "quarantine";
 const WINDOW_MS = 60_000;
 const recent = new Map<string, number>();
 
-export function trackUsage(name: string, kind: UsageKind = "feature", meta: Record<string, unknown> = {}): void {
+export function trackUsage(name: string, kind: UsageKind = "feature", meta: Record<string, Json> = {}): void {
   const key = `${kind}:${name}`;
   const now = Date.now();
   const last = recent.get(key) ?? 0;
