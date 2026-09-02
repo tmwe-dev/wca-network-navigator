@@ -61,23 +61,34 @@ for (const name of functions) {
   callers[name] = hits;
 }
 
-/** Funzioni invocate da pg_cron (snapshot letto dal DB, aggiornabile). */
-let cronInvoked = [];
-try {
-  cronInvoked = JSON.parse(readFileSync(".lovable/bonifica/edge-cron-invoked.json", "utf8"));
-} catch {
-  /* snapshot assente: nessun cron noto */
+/** Snapshot letti dal DB (rigenerabili), usati come prova positiva di vita. */
+function loadSnapshot(file) {
+  try {
+    return JSON.parse(readFileSync(`.lovable/bonifica/${file}`, "utf8"));
+  } catch {
+    return [];
+  }
 }
+const cronInvoked = loadSnapshot("edge-cron-invoked.json");
+const trafficObserved = loadSnapshot("edge-traffic-observed.json");
 
 const repoCalled = functions.filter((n) => callers[n].length > 0);
 const cronOnly = functions.filter((n) => callers[n].length === 0 && cronInvoked.includes(n));
-const orphans = functions.filter((n) => callers[n].length === 0 && !cronInvoked.includes(n));
+const trafficOnly = functions.filter(
+  (n) => callers[n].length === 0 && !cronInvoked.includes(n) && trafficObserved.includes(n),
+);
+const orphans = functions.filter(
+  (n) => callers[n].length === 0 && !cronInvoked.includes(n) && !trafficObserved.includes(n),
+);
 
 console.log(`Edge functions totali: ${functions.length}`);
 console.log(`Chiamate dal repo: ${repoCalled.length}`);
 console.log(`Solo da cron DB: ${cronOnly.length}`);
+console.log(`Solo da traffico osservato: ${trafficOnly.length}`);
 console.log(`Senza chiamanti noti (candidati orfani): ${orphans.length}\n`);
 cronOnly.forEach((n) => console.log(`  [cron] ${n}`));
+trafficOnly.forEach((n) => console.log(`  [traffico] ${n}`));
 console.log("");
 orphans.forEach((n) => console.log(`  [orfano?] ${n}`));
+
 
