@@ -1,11 +1,11 @@
 {
   "protocollo": "bonifica-v1.0",
   "fase": "0-congelamento",
-  "created_at": "2026-09-02T08:36:26.351Z",
-  "git_sha": "fbe1cf9b3a3081c3a13f3c6294385788d611d1d8",
+  "created_at": "2026-09-02T09:29:29.828Z",
+  "git_sha": "41c1f6fa8566c6ce63b4321a62f065cf0036d774",
   "git_status_porcelain_lines": 0,
   "files": {
-    "tracked_total": 4286,
+    "tracked_total": 4289,
     "src_ts_tsx": 2416,
     "edge_functions": 150,
     "db_migrations": 424,
@@ -14,7 +14,7 @@
   },
   "lines": {
     "src": 344764,
-    "edge_functions": 91837,
+    "edge_functions": 90536,
     "migrations": 25495
   },
   "dependencies": {
