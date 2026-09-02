@@ -113,3 +113,7 @@ verify_jwt = false
 [functions.tmwe-oauth-start]
 # AUTH: public OAuth init by design (returns redirect URL, no sensitive data)
 verify_jwt = false
+[functions.ai-query-planner]
+# AUTH: enforced in-code via requireInternalOrUser (Bearer JWT o internal secret).
+# verify_jwt = true bloccava il preflight OPTIONS dal browser (401) rompendo il tool "Ricerca AI" di Command.
+verify_jwt = false

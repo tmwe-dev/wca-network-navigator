@@ -149,12 +149,14 @@ function openAiLimitMessage(error: AiGatewayError): string {
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  // Il preflight CORS non porta credenziali: deve rispondere 200 senza auth.
   if (req.method === "OPTIONS") {
-    // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
-    const auth = await requireInternalOrUser(req, null, corsHeaders);
-    if (auth.kind === "error") return auth.response;
     return new Response("ok", { headers: corsHeaders });
   }
+
+  // Auth condiviso: JWT utente oppure chiamata interna server-to-server.
+  const auth = await requireInternalOrUser(req, null, corsHeaders);
+  if (auth.kind === "error") return auth.response;
 
   try {
     const body = await req.json().catch(() => ({}));
