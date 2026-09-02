@@ -38,7 +38,8 @@ const RATCHET = {
   definerFunctionsWithoutSearchPath: 1,
   tablesWithoutGrant: 202,
   missingInTypes: 17,
-  missingInMigrations: 70,
+  // 2026-09-02: +6 tabelle create via SQL diretto (telemetria bonifica / usage_events).
+  missingInMigrations: 76,
 };
 
 describe("migration audit (offline)", () => {
