@@ -4,17 +4,7 @@ import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Mail,
-  Phone,
-  MessageCircle,
-  Handshake,
-  Globe,
-  Loader2,
-  Search,
-  Briefcase,
-  CheckCircle2,
-} from "lucide-react";
+import { Mail, Phone, MessageCircle, Handshake, Globe, Loader2, Search, Briefcase, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BCAOcrConfidence } from "./BCAOcrConfidence";
 import { BCACreateContact } from "./BCACreateContact";
@@ -297,7 +287,11 @@ export function BusinessCardDetailPanel({
         {/* Contatto */}
         <Sezione titolo="Contatto">
           {card.email && (
-            <Riga icona={<Mail className="w-3.5 h-3.5 text-primary shrink-0" />} etichetta="Email" valore={card.email} />
+            <Riga
+              icona={<Mail className="w-3.5 h-3.5 text-primary shrink-0" />}
+              etichetta="Email"
+              valore={card.email}
+            />
           )}
           {card.phone && (
             <Riga
