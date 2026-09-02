@@ -364,46 +364,66 @@ export function BusinessCardDetailPanel({
           </Sezione>
         )}
 
+        {card.tags && card.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {card.tags.map((t) => (
+              <Badge key={t} variant="outline" className="text-[10px]">
+                {t}
+              </Badge>
+            ))}
+          </div>
+        )}
 
-      {card.tags && card.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {card.tags.map((t) => (
-            <Badge key={t} variant="outline" className="text-[9px]">
-              {t}
-            </Badge>
-          ))}
-        </div>
-      )}
+        {card.notes &&
+          (() => {
+            // eslint-disable-next-line no-control-regex
+            const isGarbled = /[;|]{3,}|[\x00-\x1f]/.test(card.notes);
+            return (
+              <Sezione titolo="Note">
+                <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                  {isGarbled ? (
+                    <>
+                      {card.notes.slice(0, 120)}... <span className="italic">(dati grezzi)</span>
+                    </>
+                  ) : (
+                    card.notes
+                  )}
+                </p>
+              </Sezione>
+            );
+          })()}
 
-      {card.notes &&
-        (() => {
-          // eslint-disable-next-line no-control-regex
-          const isGarbled = /[;|]{3,}|[\x00-\x1f]/.test(card.notes);
-          return (
-            <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/30">
-              {isGarbled ? (
-                <>
-                  {card.notes.slice(0, 120)}... <span className="text-muted-foreground italic">(dati grezzi)</span>
-                </>
-              ) : (
-                card.notes
-              )}
-            </div>
-          );
-        })()}
+        {card.company_name && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs gap-2 bg-muted/40 border-border/60"
+            onClick={() => window.open(googleLogoSearchUrl(card.company_name!), "_blank")}
+          >
+            <Globe className="w-3.5 h-3.5 text-primary" /> Cerca logo su Google
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
-      {card.company_name && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full text-xs gap-2 border-primary/15 hover:bg-primary/10"
-          onClick={() => window.open(googleLogoSearchUrl(card.company_name!), "_blank")}
-        >
-          <Globe className="w-3.5 h-3.5 text-primary" /> Cerca logo su Google
-        </Button>
-      )}
+/* ═══ Blocchi piatti riusabili ═══ */
+function Sezione({ titolo, children }: { titolo: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5">
+      <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">{titolo}</p>
+      {children}
+    </section>
+  );
+}
 
-      {card.match_status !== "matched" && <ManualPartnerMatcher card={card} />}
+function Riga({ icona, etichetta, valore }: { icona: React.ReactNode; etichetta: string; valore: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      {icona}
+      <span className="text-muted-foreground w-16 shrink-0">{etichetta}</span>
+      <span className="text-foreground truncate">{valore}</span>
     </div>
   );
 }
