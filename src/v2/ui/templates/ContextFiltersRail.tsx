@@ -103,15 +103,13 @@ export function ContextFiltersRail(): React.ReactElement | null {
 
   if (!context) return null;
 
-  // Pattern OVERLAY COERENTE: la linguetta sta sul bordo DESTRO e il pannello
-  // filtri entra dallo STESSO lato (destra), scorrendo sopra il contenuto.
-  // Quando è aperto, la linguetta si sposta a filo del pannello e diventa il
-  // suo tasto di chiusura: un solo trigger, un solo lato, nessun doppione.
-  // L'<aside> è sempre montato (anche chiuso) per preservare lo stato dei
-  // filtri, ma è translato fuori schermo quando chiuso.
+  // Pattern OVERLAY: linguetta sul bordo SINISTRO e pannello filtri che entra
+  // dallo STESSO lato (sinistra), scorrendo sopra il contenuto. Quando è
+  // aperto, la linguetta si sposta a filo del pannello e diventa il tasto di
+  // chiusura: un solo trigger, un solo lato, nessun doppione.
   return (
     <>
-      {/* Linguetta SEMPRE visibile, ancorata al bordo DESTRO */}
+      {/* Linguetta SEMPRE visibile, ancorata al bordo SINISTRO */}
       <button
         ref={toggleRef}
         type="button"
@@ -120,16 +118,17 @@ export function ContextFiltersRail(): React.ReactElement | null {
           setIsOpen((open) => !open);
         }}
         className={[
-          "fixed top-1/2 -translate-y-1/2 z-[70] flex h-14 w-7 items-center justify-center rounded-l-lg border border-r-0 border-primary/30 bg-primary/20 text-primary backdrop-blur-md transition-all duration-200 hover:border-primary/50 hover:bg-primary/25",
-          isOpen ? "right-[88vw] sm:right-80" : "right-0",
+          "fixed top-1/2 -translate-y-1/2 z-[70] flex h-14 w-7 items-center justify-center rounded-r-lg border border-l-0 border-primary/30 bg-primary/20 text-primary backdrop-blur-md transition-all duration-200 hover:border-primary/50 hover:bg-primary/25",
+          isOpen ? "left-[88vw] sm:left-80" : "left-0",
           navMenuOpen && !isOpen ? "opacity-0 pointer-events-none" : "",
         ].join(" ")}
         aria-label={isOpen ? `Chiudi ${context.title}` : `Apri ${context.title}`}
         aria-expanded={isOpen}
         data-testid="context-filters-toggle"
       >
-        {isOpen ? <PanelRightClose className="h-3.5 w-3.5" /> : <Filter className="h-3.5 w-3.5" />}
+        {isOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <Filter className="h-3.5 w-3.5" />}
       </button>
+
 
       {/* Backdrop oscurato — clic per chiudere */}
       <div
