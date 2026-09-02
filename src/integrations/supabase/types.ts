@@ -12101,6 +12101,33 @@ export type Database = {
           },
         ]
       }
+      usage_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          meta: Json
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       usage_metering: {
         Row: {
           id: string
