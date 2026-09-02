@@ -10,7 +10,7 @@ import {
   sanitizeFilename,
   parseMultipartFallback,
   type MimeLeafPart,
-} from "./mimeDecoder.ts";
+} from "../_shared/mimeDecoder.ts";
 import {
   extractLiteralBytesFromResponse,
   extractLiteralTextFromResponse,
