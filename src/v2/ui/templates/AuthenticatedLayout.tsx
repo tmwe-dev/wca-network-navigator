@@ -200,10 +200,15 @@ export function AuthenticatedLayout(): React.ReactElement | null {
         e.preventDefault();
         setMissionOpen((o) => !o);
       }
-      // Filters Drawer: Cmd/Ctrl+Shift+F
+      // Filtri: Cmd/Ctrl+Shift+F — sulle pagine con filtri contestuali apre la
+      // sidebar della linguetta destra, altrove il drawer legacy. Mai entrambi.
       if (e.key === "F" && (e.metaKey || e.ctrlKey) && e.shiftKey) {
         e.preventDefault();
-        setFiltersOpen((o) => !o);
+        if (pageHasContextFilters(location.pathname)) {
+          window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }));
+        } else {
+          setFiltersOpen((o) => !o);
+        }
       }
     };
     const drawerHandler = (e: Event) => {
