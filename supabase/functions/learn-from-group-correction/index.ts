@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("learn-from-group-correction");
 
@@ -25,6 +26,7 @@ const log = createLogger("learn-from-group-correction");
  * Fire-and-forget dal client: gli errori non devono mai bloccare l'UI.
  */
 serve(async (req) => {
+  trackUsage("learn-from-group-correction", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const dynCors = getCorsHeaders(req.headers.get("origin"));

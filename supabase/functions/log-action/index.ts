@@ -14,6 +14,7 @@ import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("log-action");
 
@@ -48,6 +49,7 @@ interface LogActionBody {
 }
 
 Deno.serve(async (req) => {
+  trackUsage("log-action", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");

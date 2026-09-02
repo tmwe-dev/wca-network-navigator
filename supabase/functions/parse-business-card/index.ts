@@ -6,6 +6,7 @@ import { z, safeParseAiJson, safeParseToolArgs } from "../_shared/aiJsonValidato
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("parse-business-card");
 
@@ -25,6 +26,7 @@ const BusinessCardSchema = z
 const BC_FALLBACK = {} as z.infer<typeof BusinessCardSchema>;
 
 serve(async (req) => {
+  trackUsage("parse-business-card", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

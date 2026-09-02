@@ -8,10 +8,12 @@ import { forwardToFunction } from "../_shared/proxyUtils.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("generate-content");
 
 serve(async (req) => {
+  trackUsage("generate-content", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

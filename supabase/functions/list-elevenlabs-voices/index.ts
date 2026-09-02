@@ -3,6 +3,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { edgeError, edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("list-elevenlabs-voices");
 
@@ -16,6 +17,7 @@ interface VoiceRaw {
 }
 
 serve(async (req) => {
+  trackUsage("list-elevenlabs-voices", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

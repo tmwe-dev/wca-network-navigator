@@ -2,10 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("save-ra-prospects");
 
 Deno.serve(async (req) => {
+  trackUsage("save-ra-prospects", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

@@ -17,6 +17,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { resolveInjectionReview } from "../_shared/injectionGuard.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 interface ReqBody {
   review_id?: string;
@@ -25,6 +26,7 @@ interface ReqBody {
 }
 
 Deno.serve(async (req) => {
+  trackUsage("confirm-injection-review", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

@@ -8,6 +8,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("response-pattern-aggregator");
 
@@ -25,6 +26,7 @@ interface PatternStats {
 }
 
 Deno.serve(async (req) => {
+  trackUsage("response-pattern-aggregator", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");

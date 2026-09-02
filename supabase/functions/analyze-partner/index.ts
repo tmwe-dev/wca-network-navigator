@@ -6,6 +6,7 @@ import { resolveCaller } from "../_shared/ownership.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const VALID_SERVICES = [
   "air_freight",
@@ -73,6 +74,7 @@ async function consumeCredits(
 }
 
 Deno.serve(async (req) => {
+  trackUsage("analyze-partner", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

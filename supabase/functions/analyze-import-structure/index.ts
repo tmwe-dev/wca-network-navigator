@@ -4,6 +4,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const TARGET_SCHEMA = {
   company_name: "Nome dell'azienda (es. 'Global Logistics Srl', 'DHL Express')",
@@ -188,6 +189,7 @@ function deriveMappingFromParsedRows(
 }
 
 serve(async (req) => {
+  trackUsage("analyze-import-structure", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

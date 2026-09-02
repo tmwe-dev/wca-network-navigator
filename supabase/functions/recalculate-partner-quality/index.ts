@@ -14,6 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 interface BatchResult {
   processed: number;
@@ -24,6 +25,7 @@ interface BatchResult {
 }
 
 Deno.serve(async (req) => {
+  trackUsage("recalculate-partner-quality", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

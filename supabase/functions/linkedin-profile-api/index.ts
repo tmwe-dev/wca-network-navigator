@@ -2,12 +2,14 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("linkedin-profile-api");
 
 const PROXYCURL_API_KEY = Deno.env.get("PROXYCURL_API_KEY");
 
 Deno.serve(async (req) => {
+  trackUsage("linkedin-profile-api", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

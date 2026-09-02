@@ -8,10 +8,12 @@ import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 import { assertDraftOwned } from "../_shared/ownership.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("process-email-queue");
 
 Deno.serve(async (req) => {
+  trackUsage("process-email-queue", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

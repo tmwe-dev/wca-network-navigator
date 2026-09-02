@@ -16,6 +16,7 @@ import { detectEmailType } from "../_shared/emailTypeDetector.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 interface KbEntry {
   title: string;
@@ -119,6 +120,7 @@ async function loadHistoryStats(
 }
 
 serve(async (req) => {
+  trackUsage("improve-email", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

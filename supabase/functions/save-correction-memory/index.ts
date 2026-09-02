@@ -7,10 +7,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("save-correction-memory");
 
 serve(async (req) => {
+  trackUsage("save-correction-memory", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");

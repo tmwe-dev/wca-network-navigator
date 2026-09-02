@@ -33,6 +33,7 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("agentic-decide");
 
@@ -110,6 +111,7 @@ const SCHEMA = {
 };
 
 serve(async (req) => {
+  trackUsage("agentic-decide", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   // Auth condiviso: JWT utente oppure chiamata interna server-to-server.

@@ -5,10 +5,12 @@ import { resolveMailbox } from "../_shared/resolveMailbox.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { handleVerify, handleTest, handleFetch, handleSendEmail } from "./handlers.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("email-imap-proxy");
 
 Deno.serve(async (req) => {
+  trackUsage("email-imap-proxy", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

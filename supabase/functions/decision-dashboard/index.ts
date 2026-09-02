@@ -22,8 +22,10 @@ import {
   expireStaleActions,
 } from "../_shared/approvalFlow.ts";
 import type { AutonomyLevel } from "../_shared/decisionEngine.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 Deno.serve(async (req) => {
+  trackUsage("decision-dashboard", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const preflight = corsPreflight(req);
   if (preflight) return preflight;
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));

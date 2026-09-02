@@ -15,6 +15,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 interface Body {
   raw_content: string;
@@ -42,6 +43,7 @@ const SYSTEM = [
 ].join("\n");
 
 Deno.serve(async (req) => {
+  trackUsage("kb-intake-analyze", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const cors = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   // Auth condiviso: JWT utente oppure chiamata interna server-to-server.

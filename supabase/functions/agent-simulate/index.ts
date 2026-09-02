@@ -22,6 +22,7 @@ import {
 import { loadAgentPersona, renderPersonaBlock } from "../_shared/agentPersonaLoader.ts";
 import { EDGE_FN_REGISTRY, getEdgeFnSpec, isEdgeFnAgentId } from "../_shared/edgeFnPromptRegistry.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 // Mirror of agent-loop tool registry. Kept here so the simulator stays
 // in sync without importing the live function (each edge fn is isolated).
@@ -56,6 +57,7 @@ function jsonResp(body: unknown, status: number, cors: Record<string, string>): 
 }
 
 serve(async (req: Request) => {
+  trackUsage("agent-simulate", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const cors = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 

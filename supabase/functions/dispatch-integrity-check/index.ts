@@ -14,11 +14,13 @@
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabaseClient.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const WINDOW_HOURS = 72;
 const MAX_DETAILS = 50;
 
 Deno.serve(async (req: Request) => {
+  trackUsage("dispatch-integrity-check", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const preflight = corsPreflight(req);
   if (preflight) return preflight;
 

@@ -21,6 +21,7 @@ import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { createTracer, newTraceId } from "../_shared/pipelineTrace.ts";
 import { aiFetch } from "../_shared/aiCallShim.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const CLASSIFICATIONS = [
   "interested",
@@ -64,6 +65,7 @@ async function authenticate(req: Request, corsH: Record<string, string>): Promis
 }
 
 Deno.serve(async (req) => {
+  trackUsage("simulate-funnemail-classify", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const corsH = getCorsHeaders(req.headers.get("origin"));
