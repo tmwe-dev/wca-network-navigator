@@ -43,7 +43,7 @@ import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutHeader } from "./LayoutHeader";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { ContextFiltersRail } from "./ContextFiltersRail";
-import { pageHasWorkflow } from "@/v2/navigation/pageContract";
+import { pageHasContextFilters, pageHasWorkflow } from "@/v2/navigation/pageContract";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
@@ -206,18 +206,33 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     const drawerHandler = (e: Event) => {
       const d = (e as CustomEvent).detail?.drawer;
       if (d === "mission") setMissionOpen(true);
-      else if (d === "filters") setFiltersOpen(true);
+      else if (d === "filters" && !pageHasContextFilters(location.pathname)) setFiltersOpen(true);
     };
     const globalSearchHandler = () => setCommandOpen(true);
+    const contextFiltersOpeningHandler = () => {
+      setMissionOpen(false);
+      setFiltersOpen(false);
+    };
     document.addEventListener("keydown", down);
     window.addEventListener("open-drawer", drawerHandler);
     window.addEventListener("open-global-search", globalSearchHandler);
+    window.addEventListener("context-filters-opening", contextFiltersOpeningHandler);
     return () => {
       document.removeEventListener("keydown", down);
       window.removeEventListener("open-drawer", drawerHandler);
       window.removeEventListener("open-global-search", globalSearchHandler);
+      window.removeEventListener("context-filters-opening", contextFiltersOpeningHandler);
     };
-  }, []);
+  }, [location.pathname]);
+
+  // Network, Contatti e Biglietti usano esclusivamente la sidebar filtri
+  // contestuale. Chiudiamo eventuali overlay legacy rimasti aperti durante
+  // la navigazione, altrimenti intercettano il click sulla linguetta destra.
+  useEffect(() => {
+    if (!pageHasContextFilters(location.pathname)) return;
+    setMissionOpen(false);
+    setFiltersOpen(false);
+  }, [location.pathname]);
 
 
   useEffect(() => {
