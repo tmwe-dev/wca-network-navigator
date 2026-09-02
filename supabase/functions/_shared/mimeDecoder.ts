@@ -6,7 +6,7 @@
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("check-inbox-booking");
+const log = createLogger("inbox-shared");
 
 // ━━━ RFC 2045/2046 — Content-Transfer-Encoding & Charset ━━━
 

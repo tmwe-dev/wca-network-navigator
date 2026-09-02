@@ -1,6 +1,6 @@
 import { createLogger } from "../_shared/structuredLogger.ts";
 
-const log = createLogger("check-inbox");
+const log = createLogger("inbox-shared");
 /**
  * enqueueEnrichment — accoda mail in arrivo da mittenti SCONOSCIUTI per
  * arricchimento + classificazione AI in background (process-inbound-enrichment).
