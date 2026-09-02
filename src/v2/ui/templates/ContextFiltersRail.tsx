@@ -93,16 +93,6 @@ export function ContextFiltersRail(): React.ReactElement | null {
   }, []);
 
   React.useEffect(() => {
-    const closeLegacyOverlays = () => {
-      window.dispatchEvent(new CustomEvent("context-filters-opening"));
-      setIsOpen((open) => !open);
-    };
-    const trigger = toggleRef.current;
-    trigger?.addEventListener("context-filter-toggle", closeLegacyOverlays);
-    return () => trigger?.removeEventListener("context-filter-toggle", closeLegacyOverlays);
-  }, []);
-
-  React.useEffect(() => {
     const onNav = (e: Event) => {
       const detail = (e as CustomEvent<{ open?: boolean }>).detail;
       setNavMenuOpen(!!detail?.open);
