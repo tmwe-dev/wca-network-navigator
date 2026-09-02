@@ -34,3 +34,10 @@ Piano approvato: `.lovable/plan/piano-applicazione-del-protocollo-bonifica-a-wca
 - Nessuna decisione su una sola lente: basta una lente "vivo" perché sia vivo; servono tre "morto" per tagliare.
 - Interfacce pubbliche (bridge estensioni WA/LI/email, webhook): solo deprecazione annunciata, mai taglio diretto.
 - Nodi critici (DAL, AI charter, journalistReview, soft-delete, RLS, edge AI): nessuna rimozione senza verdetto a tre lenti concordi.
+
+## Stato: Fase 7 chiusa (2026-09-02)
+
+Consegna formale in `fascicolo-20260902.md` (8 voci obbligatorie).
+Bilancio: 4 cluster di duplicati unificati, **zero rimozioni di comportamento**,
+81 pezzi in quarantena osservata (20 frontend Q1 + 61 edge Q2) con scadenza 2026-10-02.
+Prossimo giro subordinato alla riattivazione dei cron per 7 giorni con metriche.
