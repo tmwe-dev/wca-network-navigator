@@ -1,14 +1,13 @@
+import * as React from "react";
 import { useState, useCallback } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Building2,
   Mail,
   Phone,
   MessageCircle,
-  Send,
   Handshake,
   Globe,
   Loader2,
@@ -30,6 +29,7 @@ import { toast } from "@/hooks/use-toast";
 import { STATUS_COLORS, STATUS_LABELS, countryFlag, googleLogoSearchUrl } from "./bcaUtils";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { CompanyMark } from "@/components/partners/shared/CompanyMark";
 
 /* ═══ Manual Partner Matcher ═══ */
 function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
