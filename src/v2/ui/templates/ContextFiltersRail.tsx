@@ -140,13 +140,13 @@ export function ContextFiltersRail(): React.ReactElement | null {
         ].join(" ")}
       />
 
-      {/* Pannello filtri — fixed, slide-in da DESTRA, sopra il contenuto. */}
+      {/* Pannello filtri — fixed, slide-in da SINISTRA, sopra il contenuto. */}
       <aside
         ref={asideRef}
         data-testid="context-filters-panel"
         className={[
-          "fixed right-0 top-0 z-[60] flex h-[100dvh] w-[88vw] max-w-xs sm:w-80 flex-col border-l border-border/40 bg-card/95 backdrop-blur-md shadow-2xl transition-transform duration-200 ease-out",
-          isOpen ? "translate-x-0" : "translate-x-full",
+          "fixed left-0 top-0 z-[60] flex h-[100dvh] w-[88vw] max-w-xs sm:w-80 flex-col border-r border-border/40 bg-card/95 backdrop-blur-md shadow-2xl transition-transform duration-200 ease-out",
+          isOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
         aria-label={context.title}
         aria-hidden={!isOpen}
