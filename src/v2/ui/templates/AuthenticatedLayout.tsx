@@ -35,6 +35,7 @@ import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionProvider } from "@/contexts/MissionContext";
 
 import { useWcaSession } from "@/hooks/useWcaSession";
+import { useRouteUsage } from "@/lib/usage/useRouteUsage";
 import { BackgroundServices } from "./BackgroundServices";
 import { FULL_NAV_ITEMS } from "./navConfig";
 import { useTranslation } from "react-i18next";
@@ -172,6 +173,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   // sono spostati in <BackgroundServices> e avviati su requestIdleCallback
   // dopo first paint per non bloccare il TTI.
   const wcaSession = useWcaSession();
+  // Protocollo Bonifica — Lente 2 (traffico reale sulle rotte). Fire-and-forget.
+  useRouteUsage();
 
   // Prefetch top routes during idle so navigation is instant.
   useEffect(() => {
