@@ -75,3 +75,21 @@ e verifica, mai in blocco.
 node scripts/bonifica/edge-orfani.mjs
 ```
 Gli snapshot JSON vanno riaggiornati dal DB prima di ogni revisione del lotto.
+
+## Bias dichiarato: kill-switch cron attivo (rilevato 2026-09-02)
+
+`system_flags.cron_paused = true` dal **2026-08-01**. Verifiche:
+- `cron_runs`: 0 righe negli ultimi 30 giorni;
+- log edge recenti: `cron_paused_skip` su `agent-task-drainer` e `outreach_scheduler`;
+- `edge_metrics`: ~330 eventi/giorno, quindi il traffico osservato e' **solo di origine UI/manuale**.
+
+Conseguenza sulla Lente 2: per tutte le funzioni la cui unica sorgente di invocazione e'
+un cron job, l'assenza di traffico negli ultimi 30 giorni **non e' prova di morte**.
+Candidati Q2 potenzialmente affetti da questo bias (catene cron-driven):
+`agent-loop`, `mission-executor`, `process-email-queue`, `check-inbox-booking`,
+`calculate-lead-scores`, `response-pattern-aggregator`, `dispatch-integrity-check`,
+`prompt-registry-drift-check`, `funnemail-send-autoresponder`, `replay-domain-events`.
+
+Regola aggiuntiva: nessuna rimozione dalla quarantena Q2 finche' il kill-switch non e' stato
+riattivato per almeno 7 giorni consecutivi con metriche raccolte. La riattivazione e' una
+decisione operativa dell'utente (riattiva invii reali), non della bonifica.
