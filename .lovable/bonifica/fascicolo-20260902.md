@@ -58,7 +58,7 @@ Unica differenza residua nei tre moduli A3/A4/A7: l'etichetta del logger, ora `i
 ## 8. Condizioni per il prossimo giro
 
 1. Riattivare `cron_paused` (decisione operativa dell'utente: riattiva invii reali) e raccogliere **7 giorni consecutivi** di metriche.
-2. Estendere `trackUsage` alle edge functions Q2 non ancora instrumentate.
+2. ~~Estendere `trackUsage` alle edge functions Q2 non ancora instrumentate~~ — **fatto 2026-09-02**: tutte le 61 funzioni Q2 instrumentate (`trackUsage(name, "quarantine")`, fire-and-forget) e ridistribuite. Script: `scripts/bonifica/instrument-q2.mjs`. Da ora ogni invocazione reale lascia traccia in `usage_events`.
 3. Alla scadenza del 2026-10-02, revisione lotto per lotto: uscita dalla quarantena solo con prova positiva; rimozioni in commit di sola sottrazione, mai in blocco.
 
 ## Riproducibilità
