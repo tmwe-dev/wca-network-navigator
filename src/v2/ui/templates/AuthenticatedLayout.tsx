@@ -206,7 +206,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     const drawerHandler = (e: Event) => {
       const d = (e as CustomEvent).detail?.drawer;
       if (d === "mission") setMissionOpen(true);
-      else if (d === "filters") setFiltersOpen(true);
+      else if (d === "filters" && !pageHasContextFilters(location.pathname)) setFiltersOpen(true);
     };
     const globalSearchHandler = () => setCommandOpen(true);
     document.addEventListener("keydown", down);
@@ -217,7 +217,16 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       window.removeEventListener("open-drawer", drawerHandler);
       window.removeEventListener("open-global-search", globalSearchHandler);
     };
-  }, []);
+  }, [location.pathname]);
+
+  // Network, Contatti e Biglietti usano esclusivamente la sidebar filtri
+  // contestuale. Chiudiamo eventuali overlay legacy rimasti aperti durante
+  // la navigazione, altrimenti intercettano il click sulla linguetta destra.
+  useEffect(() => {
+    if (!pageHasContextFilters(location.pathname)) return;
+    setMissionOpen(false);
+    setFiltersOpen(false);
+  }, [location.pathname]);
 
 
   useEffect(() => {

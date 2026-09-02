@@ -93,6 +93,16 @@ export function ContextFiltersRail(): React.ReactElement | null {
   }, []);
 
   React.useEffect(() => {
+    const closeLegacyOverlays = () => {
+      window.dispatchEvent(new CustomEvent("context-filters-opening"));
+      setIsOpen((open) => !open);
+    };
+    const trigger = toggleRef.current;
+    trigger?.addEventListener("context-filter-toggle", closeLegacyOverlays);
+    return () => trigger?.removeEventListener("context-filter-toggle", closeLegacyOverlays);
+  }, []);
+
+  React.useEffect(() => {
     const onNav = (e: Event) => {
       const detail = (e as CustomEvent<{ open?: boolean }>).detail;
       setNavMenuOpen(!!detail?.open);
@@ -117,7 +127,10 @@ export function ContextFiltersRail(): React.ReactElement | null {
       <button
         ref={toggleRef}
         type="button"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent("context-filters-opening"));
+          setIsOpen((open) => !open);
+        }}
         className={[
           "fixed top-1/2 -translate-y-1/2 z-[70] flex h-14 w-7 items-center justify-center rounded-l-lg border border-r-0 border-primary/30 bg-primary/20 text-primary backdrop-blur-md transition-all duration-200 hover:border-primary/50 hover:bg-primary/25",
           isOpen ? "right-[88vw] sm:right-80" : "right-0",
