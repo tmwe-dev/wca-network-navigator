@@ -23,7 +23,7 @@ import {
 import { processMessage, matchResponseActivity } from "./messageProcessor.ts";
 import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "../_shared/inboxPostProcess.ts";
 import { resyncUnreadFlags } from "./flagResync.ts";
-import { enqueueInboundEnrichment } from "./enqueueEnrichment.ts";
+import { enqueueInboundEnrichment } from "../_shared/enqueueEnrichment.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox-booking");

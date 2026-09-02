@@ -4,7 +4,7 @@
  */
 
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
-import { decodeRfc2047 } from "./mimeDecoder.ts";
+import { decodeRfc2047 } from "../_shared/mimeDecoder.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 
 const log = createLogger("check-inbox");

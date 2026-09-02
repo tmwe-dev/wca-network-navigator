@@ -4,7 +4,7 @@
  */
 
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import { sha256hex, sanitizeMessageId, decodeRfc2047 } from "./mimeDecoder.ts";
+import { sha256hex, sanitizeMessageId, decodeRfc2047 } from "../_shared/mimeDecoder.ts";
 import {
   envelopeAddr,
   envelopeAddrName,
@@ -16,7 +16,7 @@ import {
   computeThreadId,
 } from "./imapParser.ts";
 import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperations.ts";
-import { detectBounce, handleBounce } from "./bounceDetector.ts";
+import { detectBounce, handleBounce } from "../_shared/bounceDetector.ts";
 import { extractBodyAndAttachments } from "./bodyExtractor.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
