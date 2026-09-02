@@ -44,6 +44,7 @@ import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutHeader } from "./LayoutHeader";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { ContextFiltersRail } from "./ContextFiltersRail";
+import { AdvancedFiltersRail } from "./AdvancedFiltersRail";
 import { pageHasContextFilters, pageHasWorkflow } from "@/v2/navigation/pageContract";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
