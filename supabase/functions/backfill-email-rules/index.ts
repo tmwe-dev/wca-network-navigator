@@ -21,7 +21,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { getCaCertsForHost } from "./caCerts.ts";
+import { getCaCertsForHost } from "../_shared/caCerts.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
 

@@ -3,7 +3,7 @@
  */
 
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import { getCaCertsForHost } from "./caCerts.ts";
+import { getCaCertsForHost } from "../_shared/caCerts.ts";
 import { getNextUidBatch } from "./imapParser.ts";
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
