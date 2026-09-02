@@ -1,5 +1,5 @@
 import { ImapClient } from "jsr:@workingdevshero/deno-imap";
-import { getCaCertsForHost } from "./caCerts.ts";
+import { getCaCertsForHost } from "../_shared/caCerts.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
