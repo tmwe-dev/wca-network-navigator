@@ -7,7 +7,7 @@
  * Vincoli: fire-and-forget, nessun dato sensibile in `meta`, inserimento
  * consentito a utenti autenticati via RLS (policy INSERT authenticated).
  */
-import { supabase } from "@/integrations/supabase/client";
+import { insertUsageEvent } from "@/data/usageEvents";
 import type { Json } from "@/integrations/supabase/types";
 import { createLogger } from "@/lib/log";
 
