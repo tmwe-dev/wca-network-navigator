@@ -61,10 +61,23 @@ for (const name of functions) {
   callers[name] = hits;
 }
 
-const orphans = functions.filter((n) => callers[n].length === 0);
-const live = functions.length - orphans.length;
+/** Funzioni invocate da pg_cron (snapshot letto dal DB, aggiornabile). */
+let cronInvoked = [];
+try {
+  cronInvoked = JSON.parse(readFileSync(".lovable/bonifica/edge-cron-invoked.json", "utf8"));
+} catch {
+  /* snapshot assente: nessun cron noto */
+}
+
+const repoCalled = functions.filter((n) => callers[n].length > 0);
+const cronOnly = functions.filter((n) => callers[n].length === 0 && cronInvoked.includes(n));
+const orphans = functions.filter((n) => callers[n].length === 0 && !cronInvoked.includes(n));
 
 console.log(`Edge functions totali: ${functions.length}`);
-console.log(`Con almeno un chiamante nel repo: ${live}`);
-console.log(`Senza chiamanti (candidati orfani): ${orphans.length}\n`);
-orphans.forEach((n) => console.log(`  - ${n}`));
+console.log(`Chiamate dal repo: ${repoCalled.length}`);
+console.log(`Solo da cron DB: ${cronOnly.length}`);
+console.log(`Senza chiamanti noti (candidati orfani): ${orphans.length}\n`);
+cronOnly.forEach((n) => console.log(`  [cron] ${n}`));
+console.log("");
+orphans.forEach((n) => console.log(`  [orfano?] ${n}`));
+
