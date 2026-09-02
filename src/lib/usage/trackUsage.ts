@@ -7,7 +7,7 @@
  * Vincoli: fire-and-forget, nessun dato sensibile in `meta`, inserimento
  * consentito a utenti autenticati via RLS (policy INSERT authenticated).
  */
-import { supabase } from "@/integrations/supabase/client";
+import { insertUsageEvent } from "@/data/usageEvents";
 import type { Json } from "@/integrations/supabase/types";
 import { createLogger } from "@/lib/log";
 
@@ -25,10 +25,7 @@ export function trackUsage(name: string, kind: UsageKind = "feature", meta: Reco
   const last = recent.get(key) ?? 0;
   if (now - last < WINDOW_MS) return;
   recent.set(key, now);
-  void supabase
-    .from("usage_events")
-    .insert({ name, kind, meta })
-    .then(({ error }) => {
-      if (error) logger.warn("trackUsage fallita", { name, kind, error: error.message });
-    });
+  void insertUsageEvent({ name, kind, meta }).then((err) => {
+    if (err) logger.warn("trackUsage fallita", { name, kind, error: err });
+  });
 }

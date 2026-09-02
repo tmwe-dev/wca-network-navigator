@@ -8,7 +8,7 @@
  *
  * Restituisce dati pronti per un ToolResult di tipo tabella.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { rpcFindAnything } from "@/data/aiFindAnything";
 import type { QueryFilter } from "./safeQueryExecutor";
 
 export interface CrossEntityMatch {
@@ -50,13 +50,9 @@ export async function findAnything(term: string, limit = 10): Promise<CrossEntit
   const cleaned = term.trim();
   if (cleaned.length < 2) return null;
   try {
-    const { data, error } = await supabase.rpc("ai_find_anything", { p_query: cleaned, p_limit: limit });
-    if (error || !data) return null;
-    const payload = data as unknown as {
-      results?: CrossEntityMatch[];
-      partial?: boolean;
-    };
-    const matches = Array.isArray(payload.results) ? payload.results : [];
+    const payload = await rpcFindAnything(cleaned, limit);
+    if (!payload) return null;
+    const matches = Array.isArray(payload.results) ? (payload.results as CrossEntityMatch[]) : [];
     if (matches.length === 0) return null;
     return { term: cleaned, matches, partial: Boolean(payload.partial) };
   } catch {

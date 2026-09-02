@@ -23,8 +23,8 @@ describe("Auth and routing legacy leak guardrails", () => {
     expect(commandPaletteSource).not.toMatch(/["'`]\/v1(?:\/|["'`])/);
     expect(commandPaletteSource).not.toContain("v1Path");
     expect(commandPaletteSource).not.toContain('startsWith("/v1")');
-    // Deve continuare a puntare alla navigazione V2 canonica.
-    expect(commandPaletteSource).toContain('from "@/v2/ui/templates/navConfig"');
+    // Deve continuare a puntare alla navigazione V2 canonica (indice di ricerca V2).
+    expect(commandPaletteSource).toContain('from "@/v2/search/searchIndex"');
   });
 
   it("legacy V1 URLs redirect to V2", () => {
