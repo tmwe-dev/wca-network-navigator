@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 /**
  * ai-tracking-healthcheck — Verifica copertura tracking AI cost.
@@ -61,6 +62,7 @@ const EXPECTED_LLM_FUNCTIONS = [
 ];
 
 serve(async (req) => {
+  trackUsage("ai-tracking-healthcheck", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const cors = getCorsHeaders(req);

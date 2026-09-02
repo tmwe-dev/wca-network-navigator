@@ -31,6 +31,7 @@ import { initEmailProcessManager } from "../_shared/processManagers/emailProcess
 import type { WCADomainEvent } from "../_shared/domainEvents.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("replay-domain-events");
 
@@ -252,6 +253,7 @@ async function dispatchEvent(
  * Invoked by CRON or manual trigger.
  */
 serve(async (req: Request) => {
+  trackUsage("replay-domain-events", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   // Only accept POST requests (CRON uses POST)
   if (req.method !== "POST" && req.method !== "GET") {
     return edgeErrorWithStatus("INTERNAL_ERROR", "Method not allowed", 405, { "Content-Type": "application/json" });

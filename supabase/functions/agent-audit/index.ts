@@ -18,6 +18,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { loadAgentCapabilities, DEFAULT_CAPABILITIES, READ_ONLY_TOOL_SET } from "../_shared/agentCapabilitiesLoader.ts";
 import { loadAgentPersona } from "../_shared/agentPersonaLoader.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 // Mirror of agent-loop tool registry. Hardcoded source of truth.
 const TOOL_REGISTRY: ReadonlyArray<{ name: string; hardcoded_approval: boolean }> = [
@@ -86,6 +87,7 @@ interface AgentRow {
 }
 
 serve(async (req: Request) => {
+  trackUsage("agent-audit", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const cors = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 

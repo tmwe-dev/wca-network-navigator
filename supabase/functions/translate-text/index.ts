@@ -21,6 +21,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 interface TranslatePayload {
   subject?: string;
@@ -56,6 +57,7 @@ function normalize(s: string | undefined | null): string {
 }
 
 serve(async (req) => {
+  trackUsage("translate-text", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const preflight = corsPreflight(req);
   if (preflight) return preflight;
   const origin = req.headers.get("origin");

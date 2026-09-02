@@ -3,10 +3,12 @@ import { getCaCertsForHost } from "../_shared/caCerts.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 type DebugGlobal = typeof globalThis & { __lastDebug?: Record<string, unknown> };
 
 Deno.serve(async (req) => {
+  trackUsage("imap-list-folders", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const auth = await requireInternalOrUser(req, null, corsHeaders);
   if (auth.kind === "error") return auth.response;

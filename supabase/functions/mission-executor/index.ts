@@ -4,10 +4,12 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("mission-executor");
 
 serve(async (req) => {
+  trackUsage("mission-executor", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");

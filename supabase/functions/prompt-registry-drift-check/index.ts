@@ -16,6 +16,7 @@ import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { EDGE_FN_REGISTRY } from "../_shared/edgeFnPromptRegistry.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 interface DriftItem {
   edge_function: string;
@@ -27,6 +28,7 @@ interface DriftItem {
 }
 
 Deno.serve(async (req) => {
+  trackUsage("prompt-registry-drift-check", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const cors = getCorsHeaders(req.headers.get("origin"));

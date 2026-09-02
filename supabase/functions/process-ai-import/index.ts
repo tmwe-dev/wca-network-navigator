@@ -17,6 +17,7 @@ import { aiFetch } from "../_shared/aiCallShim.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("process-ai-import");
 
@@ -26,6 +27,7 @@ type SupabaseClient = ReturnType<typeof createClient>;
 const BATCH_SIZE = 25;
 
 serve(async (req) => {
+  trackUsage("process-ai-import", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

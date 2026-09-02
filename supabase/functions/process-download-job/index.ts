@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { assertJobOwned } from "../_shared/ownership.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("process-download-job");
 
@@ -15,6 +16,7 @@ type SupabaseClient = ReturnType<typeof createClient>;
  * This function only manages job state (status, completion, verification).
  */
 Deno.serve(async (req) => {
+  trackUsage("process-download-job", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

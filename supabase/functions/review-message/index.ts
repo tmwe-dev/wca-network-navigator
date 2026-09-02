@@ -14,12 +14,14 @@ import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import type { JournalistReviewInput, ReviewChannel } from "../_shared/journalistTypes.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("review-message");
 
 const ALLOWED_CHANNELS: ReviewChannel[] = ["whatsapp", "linkedin"];
 
 Deno.serve(async (req) => {
+  trackUsage("review-message", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const preflight = corsPreflight(req);
   if (preflight) return preflight;
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));

@@ -18,10 +18,12 @@ import { loadLinkedInSettings } from "../_shared/linkedinSettings.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("send-linkedin");
 
 Deno.serve(async (req) => {
+  trackUsage("send-linkedin", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const preflight = corsPreflight(req);
   if (preflight) return preflight;
 

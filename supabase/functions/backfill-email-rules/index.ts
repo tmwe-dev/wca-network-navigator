@@ -24,6 +24,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getCaCertsForHost } from "../_shared/caCerts.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("backfill-email-rules");
 
@@ -270,6 +271,7 @@ async function backfillAddress(
 }
 
 Deno.serve(async (req) => {
+  trackUsage("backfill-email-rules", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");

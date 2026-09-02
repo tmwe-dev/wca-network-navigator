@@ -15,6 +15,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const MAX_BATCH = 200;
 const DEFAULT_DAYS = 7;
@@ -28,6 +29,7 @@ interface BackfillRequest {
 }
 
 Deno.serve(async (req) => {
+  trackUsage("funnemail-backfill-inbound", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const headers = getSecurityHeaders(getCorsHeaders(req.headers.get("origin")));

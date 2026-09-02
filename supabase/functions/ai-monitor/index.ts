@@ -15,6 +15,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("ai-monitor");
 
@@ -26,6 +27,7 @@ function jsonResponse(data: unknown, corsHeaders: Record<string, string>, status
 }
 
 Deno.serve(async (req) => {
+  trackUsage("ai-monitor", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 

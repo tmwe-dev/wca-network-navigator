@@ -13,6 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const FAMILY_MAP: Record<string, string> = {
   // doctrine
@@ -65,6 +66,7 @@ const INTENT_ROUTING: Record<string, string[]> = {
 };
 
 Deno.serve(async (req) => {
+  trackUsage("kb-index-map", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const cors = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   // Auth condiviso: JWT utente oppure chiamata interna server-to-server.

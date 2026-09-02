@@ -4,6 +4,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("apply-classification-insight");
 
@@ -13,6 +14,7 @@ const log = createLogger("apply-classification-insight");
  * Hard guard: solo utenti autenticati. Non sovrascrive: append controllato + dedup.
  */
 serve(async (req) => {
+  trackUsage("apply-classification-insight", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const dynCors = getCorsHeaders(req.headers.get("origin"));

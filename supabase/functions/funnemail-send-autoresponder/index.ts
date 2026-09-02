@@ -22,6 +22,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("funnemail-send-autoresponder");
 
@@ -46,6 +47,7 @@ function renderTemplate(tpl: string, vars: Record<string, string>): string {
 }
 
 Deno.serve(async (req) => {
+  trackUsage("funnemail-send-autoresponder", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");

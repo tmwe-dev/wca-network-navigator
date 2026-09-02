@@ -25,10 +25,12 @@ import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "..
 import { resyncUnreadFlags } from "./flagResync.ts";
 import { enqueueInboundEnrichment } from "../_shared/enqueueEnrichment.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("check-inbox-booking");
 
 Deno.serve(async (req) => {
+  trackUsage("check-inbox-booking", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 

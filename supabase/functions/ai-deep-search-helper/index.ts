@@ -15,6 +15,7 @@ import { requireAuth } from "../_shared/authGuard.ts";
 import { aiChat, ALLOWED_MODELS, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("ai-deep-search-helper");
 
@@ -22,6 +23,7 @@ const DEFAULT_MODEL = "google/gemini-2.5-flash-lite";
 const MAX_PROMPT_LEN = 8000;
 
 serve(async (req) => {
+  trackUsage("ai-deep-search-helper", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

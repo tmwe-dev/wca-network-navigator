@@ -6,6 +6,7 @@ import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { requireAuth } from "../_shared/authGuard.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("analyze-email-edit");
 
@@ -23,6 +24,7 @@ function stripHtml(html: string): string {
 }
 
 serve(async (req) => {
+  trackUsage("analyze-email-edit", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
 

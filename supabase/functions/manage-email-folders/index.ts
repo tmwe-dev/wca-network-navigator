@@ -19,6 +19,7 @@ import { getCaCertsForHost } from "../_shared/caCerts.ts";
 import { resolveMailbox, MailboxNotConfiguredError } from "../_shared/resolveMailbox.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const log = createLogger("manage-email-folders");
 
@@ -30,6 +31,7 @@ const log = createLogger("manage-email-folders");
  * after emails have been downloaded and categorized.
  */
 serve(async (req) => {
+  trackUsage("manage-email-folders", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { trackUsage } from "../_shared/usageTrack.ts";
 
 const SUPPORTED_PROVIDERS = ["openai", "google", "anthropic"] as const;
 type Provider = (typeof SUPPORTED_PROVIDERS)[number];
@@ -25,6 +26,7 @@ function limitsEnabled(): boolean {
 }
 
 serve(async (req) => {
+  trackUsage("consume-credits", "quarantine", { note: "Q2 bonifica, scadenza 2026-10-02" });
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");
