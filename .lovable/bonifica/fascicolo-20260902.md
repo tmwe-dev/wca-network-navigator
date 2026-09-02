@@ -68,3 +68,7 @@ node scripts/bonifica/snapshot.mjs
 node scripts/bonifica/orfani.mjs
 node scripts/bonifica/edge-orfani.mjs
 ```
+
+### Verifica end-to-end telemetria (2026-09-02, ore 09:24 UTC)
+
+Chiamata di prova a `wca-country-counts` (candidato Q2): risposta 401 dell'auth guard, **ma** evento registrato in `usage_events` (`kind=quarantine`, timestamp 2026-09-02 09:24:22 UTC). Prova che il tracciamento è posizionato prima dei guardrail e funziona: ogni invocazione reale — anche rifiutata — lascia traccia da oggi.
