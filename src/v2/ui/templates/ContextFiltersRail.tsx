@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
-import { PanelRightClose, SlidersHorizontal, Check, Filter } from "lucide-react";
+import { PanelLeftClose, SlidersHorizontal, Check, Filter } from "lucide-react";
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
 import { BCAFiltersRailContent } from "@/components/contacts/bca/BCAFiltersRailContent";
