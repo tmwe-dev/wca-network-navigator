@@ -3,6 +3,7 @@
  * List left (40%) + Detail right (60%) with auto breadcrumb and resizable handle.
  */
 import { useState, useCallback, useEffect } from "react";
+import { StandardPageFrame } from "@/v2/ui/templates/StandardPageFrame";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
 import { Users, X } from "lucide-react";
 import { getContactById, bulkUpdateContactsOrigin, listDistinctContactOrigins, contactKeys } from "@/data/contacts";
@@ -22,7 +23,6 @@ import { BulkChangeOriginDialog } from "@/v2/ui/organisms/BulkChangeOriginDialog
 import { supabase } from "@/integrations/supabase/client";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { addCockpitPreselection } from "@/lib/cockpitPreselection";
-
 
 const log = createLogger("Contacts");
 
@@ -141,7 +141,6 @@ export function ContactsPage() {
     }
   }, []);
 
-
   const handleBulkCampaign = useCallback((sel: CompanyEntity[]) => {
     const withEmail = sel.filter((s) => s.channels?.email);
     window.dispatchEvent(
@@ -187,46 +186,48 @@ export function ContactsPage() {
   ) : null;
 
   return (
-    <div data-testid="page-contacts-hub" className="flex flex-col h-full min-h-0 overflow-hidden">
-      <EntityListWithDetail
-        source="crm"
-        companies={companies}
-        isLoading={isLoading}
-        emptyMessage="Nessun contatto"
-        sortStorageKey="list:crm"
-        sortOptions={CRM_SORT_OPTIONS}
-        globalChips={chips}
-        searchPlaceholder="Cerca contatto, azienda, città…"
-        onOpenContact={handleOpenContact}
-        detailSlot={detail}
-        openedId={selectedContact?.id ?? null}
-        onBulkAddToCockpit={handleBulkAddToCockpit}
-        onBulkCreateCampaign={handleBulkCampaign}
-        onBulkChangeOrigin={handleBulkChangeOrigin}
-        toolbarRightSlot={
-          hasMore ? (
-            <button
-              onClick={() => void fetchNextPage()}
-              className="h-7 px-2 rounded-md text-[11px] bg-muted/40 hover:bg-muted/60 text-muted-foreground border border-border/40"
-              title="Carica altri contatti"
-            >
-              Carica altri
-            </button>
-          ) : null
-        }
-      />
-      <BulkChangeOriginDialog
-        open={originDialogOpen}
-        onOpenChange={setOriginDialogOpen}
-        selected={originDialogSelection}
-        availableOrigins={distinctOrigins}
-        onConfirm={handleConfirmChangeOrigin}
-        onSuccess={() => {
-          // Pulisce selezione checkbox emettendo l'evento usato dalla lista
-          window.dispatchEvent(new CustomEvent("clear-company-selection"));
-        }}
-      />
-    </div>
+    <StandardPageFrame testId="page-contacts-hub" title="Contatti CRM" contentOverflow="contain" className="h-full">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <EntityListWithDetail
+          source="crm"
+          companies={companies}
+          isLoading={isLoading}
+          emptyMessage="Nessun contatto"
+          sortStorageKey="list:crm"
+          sortOptions={CRM_SORT_OPTIONS}
+          globalChips={chips}
+          searchPlaceholder="Cerca contatto, azienda, città…"
+          onOpenContact={handleOpenContact}
+          detailSlot={detail}
+          openedId={selectedContact?.id ?? null}
+          onBulkAddToCockpit={handleBulkAddToCockpit}
+          onBulkCreateCampaign={handleBulkCampaign}
+          onBulkChangeOrigin={handleBulkChangeOrigin}
+          toolbarRightSlot={
+            hasMore ? (
+              <button
+                onClick={() => void fetchNextPage()}
+                className="h-7 px-2 rounded-md text-[11px] bg-muted/40 hover:bg-muted/60 text-muted-foreground border border-border/40"
+                title="Carica altri contatti"
+              >
+                Carica altri
+              </button>
+            ) : null
+          }
+        />
+        <BulkChangeOriginDialog
+          open={originDialogOpen}
+          onOpenChange={setOriginDialogOpen}
+          selected={originDialogSelection}
+          availableOrigins={distinctOrigins}
+          onConfirm={handleConfirmChangeOrigin}
+          onSuccess={() => {
+            // Pulisce selezione checkbox emettendo l'evento usato dalla lista
+            window.dispatchEvent(new CustomEvent("clear-company-selection"));
+          }}
+        />
+      </div>
+    </StandardPageFrame>
   );
 }
 

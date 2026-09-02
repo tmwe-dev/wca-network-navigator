@@ -1,21 +1,10 @@
+import * as React from "react";
 import { useState, useCallback } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Building2,
-  Mail,
-  Phone,
-  MessageCircle,
-  Send,
-  Handshake,
-  Globe,
-  Loader2,
-  Search,
-  Briefcase,
-  CheckCircle2,
-} from "lucide-react";
+import { Mail, Phone, MessageCircle, Handshake, Globe, Loader2, Search, Briefcase, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BCAOcrConfidence } from "./BCAOcrConfidence";
 import { BCACreateContact } from "./BCACreateContact";
@@ -30,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { STATUS_COLORS, STATUS_LABELS, countryFlag, googleLogoSearchUrl } from "./bcaUtils";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { CompanyMark } from "@/components/partners/shared/CompanyMark";
 
 /* ═══ Manual Partner Matcher ═══ */
 function ManualPartnerMatcher({ card }: { card: BusinessCardWithPartner }) {
@@ -197,53 +187,44 @@ export function BusinessCardDetailPanel({
     });
   }, [card, navigate]);
 
+  const statoLabel = STATUS_LABELS[card.match_status] || "In attesa";
+  const bandiera = countryFlag(card.partner?.country_code);
+  const luogo = [card.location, card.partner?.country_code].filter(Boolean).join(" · ");
+
   return (
-    <div className="h-full overflow-y-auto p-4 space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/15 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-bold text-foreground truncate">{card.company_name || "Senza azienda"}</h2>
-            {card.contact_name && (
-              <p className="text-xs text-muted-foreground truncate">
-                {card.contact_name}
-                {card.position ? ` · ${card.position}` : ""}
-              </p>
-            )}
-          </div>
-        </div>
-        {card.partner && (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/15">
-            {card.partner.logo_url && (
-              <OptimizedImage src={card.partner.logo_url} alt="" className="w-6 h-6 rounded object-contain" />
-            )}
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium text-emerald-400">Partner WCA Matchato</p>
-              <p className="text-xs text-foreground truncate">{card.partner.company_name}</p>
+    <div className="h-full flex flex-col bg-card">
+      {/* ─── Intestazione identità (standard V2) ─── */}
+      <div className="shrink-0 border-b border-border/40 px-3 py-2.5">
+        <div className="flex items-start gap-2.5">
+          <CompanyMark
+            logoUrl={card.partner?.logo_url ?? null}
+            website={card.partner?.website ?? null}
+            name={card.company_name}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              {bandiera && <span className="text-sm leading-none shrink-0">{bandiera}</span>}
+              <h2 className="text-base font-semibold text-foreground truncate">
+                {card.company_name || "Senza azienda"}
+              </h2>
             </div>
+            <p className="text-xs text-muted-foreground truncate">
+              {[card.contact_name, card.position, luogo].filter(Boolean).join(" · ") || "Dati contatto assenti"}
+            </p>
           </div>
-        )}
-      </div>
-
-      {card.photo_url && (
-        <div className="rounded-lg overflow-hidden border border-border/30">
-          <OptimizedImage src={card.photo_url} alt="Biglietto" className="w-full object-contain" />
+          <Badge className={cn("text-[10px] shrink-0", STATUS_COLORS[card.match_status] || STATUS_COLORS.pending)}>
+            {statoLabel}
+            {card.match_confidence > 0 ? ` ${Math.round(card.match_confidence)}%` : ""}
+          </Badge>
         </div>
-      )}
 
-      {/* Quick actions */}
-      <div className="space-y-1.5">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1">
-          <Send className="w-3 h-3" /> Comunicazione
-        </p>
-        <div className="grid grid-cols-2 gap-1.5">
+        {/* Azioni sempre visibili: bordo + sfondo, nessun hover-only */}
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
           {card.email && (
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start"
+              className="h-8 text-xs gap-1.5 bg-muted/40 border-border/60"
               onClick={() =>
                 handleSendEmail({
                   email: card.email!,
@@ -253,15 +234,14 @@ export function BusinessCardDetailPanel({
                 })
               }
             >
-              <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="truncate">Email</span>
+              <Mail className="w-3.5 h-3.5 text-primary shrink-0" /> Email
             </Button>
           )}
           {waPhone && (
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs gap-1.5 border-emerald-500/15 hover:bg-emerald-500/10 justify-start"
+              className="h-8 text-xs gap-1.5 bg-muted/40 border-border/60"
               disabled={waSending === card.id || !waAvailable}
               onClick={() =>
                 handleSendWhatsApp({
@@ -277,21 +257,15 @@ export function BusinessCardDetailPanel({
               {waSending === card.id ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               )}
-              <span className="truncate">WhatsApp</span>
+              WhatsApp
             </Button>
           )}
           {(card.phone || card.mobile) && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start"
-              asChild
-            >
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 bg-muted/40 border-border/60" asChild>
               <a href={`tel:${card.phone || card.mobile}`}>
-                <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span className="truncate">Chiama</span>
+                <Phone className="w-3.5 h-3.5 text-primary shrink-0" /> Chiama
               </a>
             </Button>
           )}
@@ -299,109 +273,151 @@ export function BusinessCardDetailPanel({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start"
+              className="h-8 text-xs gap-1.5 bg-muted/40 border-border/60"
               onClick={handleWorkspace}
             >
-              <Briefcase className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="truncate">Workspace</span>
+              <Briefcase className="w-3.5 h-3.5 text-primary shrink-0" /> Workspace
             </Button>
           )}
         </div>
       </div>
 
-      {/* Smart Actions */}
-      <BCASmartActions card={card} />
-
-      {/* OCR Confidence */}
-      <BCAOcrConfidence card={card} />
-
-      {/* Create Contact */}
-      <BCACreateContact card={card} />
-
-      <div className="space-y-1.5 bg-muted/20 rounded-lg p-3 border border-border/30">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1">Dettagli contatto</p>
-        {card.email && (
-          <div className="flex items-center gap-2 text-xs text-foreground">
-            <Mail className="w-3.5 h-3.5 text-primary shrink-0" /> <span className="truncate">{card.email}</span>
-          </div>
-        )}
-        {card.phone && (
-          <div className="flex items-center gap-2 text-xs text-foreground">
-            <Phone className="w-3.5 h-3.5 text-primary shrink-0" /> {card.phone}
-          </div>
-        )}
-        {card.mobile && card.mobile !== card.phone && (
-          <div className="flex items-center gap-2 text-xs text-foreground">
-            <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {card.mobile}
-          </div>
-        )}
-      </div>
-
-      {card.event_name && (
-        <div className="space-y-1 bg-primary/5 rounded-lg p-3 border border-primary/10">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Evento</p>
-          <div className="flex items-center gap-1.5">
-            <Handshake className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs text-foreground">{card.event_name}</span>
-          </div>
-          {card.met_at && (
-            <p className="text-[10px] text-muted-foreground ml-5">
-              {format(new Date(card.met_at), "dd MMMM yyyy", { locale: it })}
-            </p>
+      {/* ─── Corpo ─── */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+        {/* Contatto */}
+        <Sezione titolo="Contatto">
+          {card.email && (
+            <Riga
+              icona={<Mail className="w-3.5 h-3.5 text-primary shrink-0" />}
+              etichetta="Email"
+              valore={card.email}
+            />
           )}
-          {card.location && <p className="text-[10px] text-muted-foreground ml-5">{card.location}</p>}
-        </div>
-      )}
+          {card.phone && (
+            <Riga
+              icona={<Phone className="w-3.5 h-3.5 text-primary shrink-0" />}
+              etichetta="Telefono"
+              valore={card.phone}
+            />
+          )}
+          {card.mobile && card.mobile !== card.phone && (
+            <Riga
+              icona={<Phone className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+              etichetta="Mobile"
+              valore={card.mobile}
+            />
+          )}
+          {!card.email && !card.phone && !card.mobile && (
+            <p className="text-xs text-muted-foreground">Nessun recapito sul biglietto.</p>
+          )}
+        </Sezione>
 
-      <div className="space-y-2 bg-gradient-to-br from-primary/5 via-card to-primary/5 rounded-lg p-3 border border-primary/10">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Stato</p>
-        <Badge className={cn("text-[10px]", STATUS_COLORS[card.match_status] || STATUS_COLORS.pending)}>
-          {STATUS_LABELS[card.match_status] || "In attesa"}
-        </Badge>
-        {card.match_confidence > 0 && (
-          <p className="text-[10px] text-muted-foreground">Confidenza match: {Math.round(card.match_confidence)}%</p>
+        {/* Match WCA */}
+        <Sezione titolo="Partner WCA">
+          {card.partner ? (
+            <div className="flex items-center gap-2">
+              {card.partner.logo_url && (
+                <OptimizedImage src={card.partner.logo_url} alt="" className="w-6 h-6 rounded object-contain" />
+              )}
+              <span className="text-xs text-foreground truncate">{card.partner.company_name}</span>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Biglietto non ancora abbinato a un partner.</p>
+          )}
+          {card.match_status !== "matched" && <ManualPartnerMatcher card={card} />}
+        </Sezione>
+
+        {/* Evento */}
+        {card.event_name && (
+          <Sezione titolo="Evento">
+            <div className="flex items-center gap-1.5">
+              <Handshake className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-xs text-foreground truncate">{card.event_name}</span>
+            </div>
+            {card.met_at && (
+              <p className="text-[11px] text-muted-foreground ml-5">
+                {format(new Date(card.met_at), "dd MMMM yyyy", { locale: it })}
+              </p>
+            )}
+            {card.location && <p className="text-[11px] text-muted-foreground ml-5">{card.location}</p>}
+          </Sezione>
+        )}
+
+        {/* Azioni AI + qualità dato */}
+        <BCASmartActions card={card} />
+        <BCAOcrConfidence card={card} />
+        <BCACreateContact card={card} />
+
+        {card.photo_url && (
+          <Sezione titolo="Biglietto">
+            <OptimizedImage
+              src={card.photo_url}
+              alt="Biglietto da visita"
+              className="w-full rounded-md object-contain"
+            />
+          </Sezione>
+        )}
+
+        {card.tags && card.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {card.tags.map((t) => (
+              <Badge key={t} variant="outline" className="text-[10px]">
+                {t}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {card.notes &&
+          (() => {
+            // eslint-disable-next-line no-control-regex
+            const isGarbled = /[;|]{3,}|[\x00-\x1f]/.test(card.notes);
+            return (
+              <Sezione titolo="Note">
+                <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                  {isGarbled ? (
+                    <>
+                      {card.notes.slice(0, 120)}... <span className="italic">(dati grezzi)</span>
+                    </>
+                  ) : (
+                    card.notes
+                  )}
+                </p>
+              </Sezione>
+            );
+          })()}
+
+        {card.company_name && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs gap-2 bg-muted/40 border-border/60"
+            onClick={() => window.open(googleLogoSearchUrl(card.company_name!), "_blank")}
+          >
+            <Globe className="w-3.5 h-3.5 text-primary" /> Cerca logo su Google
+          </Button>
         )}
       </div>
+    </div>
+  );
+}
 
-      {card.tags && card.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {card.tags.map((t) => (
-            <Badge key={t} variant="outline" className="text-[9px]">
-              {t}
-            </Badge>
-          ))}
-        </div>
-      )}
+/* ═══ Blocchi piatti riusabili ═══ */
+function Sezione({ titolo, children }: { titolo: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5">
+      <p className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">{titolo}</p>
+      {children}
+    </section>
+  );
+}
 
-      {card.notes &&
-        (() => {
-          // eslint-disable-next-line no-control-regex
-          const isGarbled = /[;|]{3,}|[\x00-\x1f]/.test(card.notes);
-          return (
-            <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/30">
-              {isGarbled ? (
-                <>
-                  {card.notes.slice(0, 120)}... <span className="text-muted-foreground italic">(dati grezzi)</span>
-                </>
-              ) : (
-                card.notes
-              )}
-            </div>
-          );
-        })()}
-
-      {card.company_name && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full text-xs gap-2 border-primary/15 hover:bg-primary/10"
-          onClick={() => window.open(googleLogoSearchUrl(card.company_name!), "_blank")}
-        >
-          <Globe className="w-3.5 h-3.5 text-primary" /> Cerca logo su Google
-        </Button>
-      )}
-
-      {card.match_status !== "matched" && <ManualPartnerMatcher card={card} />}
+function Riga({ icona, etichetta, valore }: { icona: React.ReactNode; etichetta: string; valore: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      {icona}
+      <span className="text-muted-foreground w-16 shrink-0">{etichetta}</span>
+      <span className="text-foreground truncate">{valore}</span>
     </div>
   );
 }
