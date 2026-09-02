@@ -52,9 +52,6 @@ function getFilterContext(
   };
 }
 
-/** Contesti elenco/dettaglio che espongono anche i filtri avanzati locali. */
-const ADVANCED_FILTER_KEYS: ReadonlySet<FilterKey> = new Set<FilterKey>(["network", "bca", "crm-contacts"]);
-
 export function ContextFiltersRail(): React.ReactElement | null {
   const { pathname } = useLocation();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -123,7 +120,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
         }}
         className={[
           "fixed top-1/2 -translate-y-1/2 z-[70] flex h-14 w-7 items-center justify-center rounded-l-lg border border-r-0 border-primary/30 bg-primary/20 text-primary backdrop-blur-md transition-all duration-200 hover:border-primary/50 hover:bg-primary/25",
-          isOpen ? "right-[88vw] sm:right-80" : "right-0",
+          "right-0",
           navMenuOpen && !isOpen ? "opacity-0 pointer-events-none" : "",
         ].join(" ")}
         aria-label={isOpen ? `Chiudi ${context.title}` : `Apri ${context.title}`}
@@ -142,12 +139,12 @@ export function ContextFiltersRail(): React.ReactElement | null {
         ].join(" ")}
       />
 
-      {/* Pannello sidebar — fixed, slide-in da destra, sopra il contenuto */}
+      {/* Pannello filtri — fixed, slide-in da sinistra, sopra il contenuto. */}
       <aside
         ref={asideRef}
         className={[
-          "fixed right-0 top-0 z-[60] flex h-[100dvh] w-[88vw] max-w-xs sm:w-80 flex-col border-l border-border/40 bg-card/95 backdrop-blur-md shadow-2xl transition-transform duration-200 ease-out",
-          isOpen ? "translate-x-0" : "translate-x-full",
+          "fixed left-0 top-0 z-[60] flex h-[100dvh] w-[88vw] max-w-xs sm:w-80 flex-col border-r border-border/40 bg-card/95 backdrop-blur-md shadow-2xl transition-transform duration-200 ease-out",
+          isOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
         aria-label={context.title}
         aria-hidden={!isOpen}
@@ -177,15 +174,6 @@ export function ContextFiltersRail(): React.ReactElement | null {
           </div>
         </div>
         <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3 space-y-2">
-          {ADVANCED_FILTER_KEYS.has(context.filterKey) && (
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent("entity-filters-advanced"))}
-              className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border/60 bg-card/40 text-xs font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" /> Filtri avanzati…
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setIsOpen(false)}
