@@ -438,6 +438,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             <BcaFiltersGate>
                               <div className="flex-1 flex overflow-hidden">
                                 <ContextFiltersRail />
+                                <AdvancedFiltersRail />
                                 <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                                   <OfflineBanner />
                                   {/* Banner blacklist: mostrato SOLO su rotte di acquisizione/network dove è pertinente. */}
