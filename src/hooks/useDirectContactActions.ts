@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLogAction } from "@/hooks/useLogAction";
 import { toast } from "sonner";
+import { openWhatsAppQuick } from "@/components/whatsapp/whatsappQuickStore";
+
 
 /**
  * Shared hook for direct contact communication actions (email composer, WhatsApp bridge).
