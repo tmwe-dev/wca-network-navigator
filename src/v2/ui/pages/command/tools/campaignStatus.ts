@@ -26,7 +26,15 @@ export const campaignStatusTool: Tool = {
 
   async execute(): Promise<ToolResult> {
     const res = await fetchCampaignJobs();
-    if (res._tag === "Err") throw new Error(res.error.message ?? "Errore lettura campagne");
+    if (res._tag === "Err") {
+      return {
+        kind: "result",
+        title: "Stato campagne non disponibile",
+        message: `Impossibile leggere le campagne: ${res.error.message ?? "errore sconosciuto"}`,
+        status: "error",
+        meta: { count: 0, sourceLabel: "Supabase · campaign_jobs" },
+      };
+    }
 
     const jobs = res.value;
 

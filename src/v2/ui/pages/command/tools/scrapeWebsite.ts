@@ -14,7 +14,7 @@ export const scrapeWebsiteTool: Tool = {
   label: "Scrape sito (URL)",
   description: "Estrae testo, metadati e link da un URL pubblico. Read-only, niente salvataggio in DB.",
   match: (p) =>
-    /\b(scrape|estrai|leggi|analizza)\b[^.]{0,30}\b(sito|url|website|pagina)\b/i.test(p) ||
+    /\b(scrap\w*|estrai|leggi|analizz\w*)\b[^.]{0,30}\b(sito|url|website|pagina)\b/i.test(p) ||
     /\bscrape\b\s+https?:\/\//i.test(p),
 
   execute: async (prompt): Promise<ToolResult> => {
