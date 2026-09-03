@@ -79,6 +79,9 @@ export const updatePartnerStatusTool: Tool = {
 
     if (!ref) throw new Error("Riferimento partner mancante (partner_id o partner_ref)");
     if (!newStatus) throw new Error("Nuovo stato mancante (lead_status)");
+    if (!LEAD_STATUSES.has(newStatus)) {
+      throw new Error(`Stato "${newStatus}" non valido. Valori ammessi: ${[...LEAD_STATUSES].join(", ")}.`);
+    }
 
     const resolved = await resolvePartnerRef(ref);
     if (!resolved) throw new Error(`Partner "${ref}" non trovato`);
