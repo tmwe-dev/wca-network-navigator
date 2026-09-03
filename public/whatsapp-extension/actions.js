@@ -1721,30 +1721,21 @@ var Actions =
           const exacts = candidates.filter(function (x) {
             return x.exact;
           });
-          let chosen = null;
-          if (exacts.length === 1) chosen = exacts[0];
-          else if (exacts.length === 0 && candidates.length === 1) chosen = candidates[0];
+          // Policy 5.10.21: in caso di doppioni/incongruenze NON si aborta.
+          // La sidebar di ricerca è ordinata per recency (chat più recente in alto),
+          // quindi si sceglie sempre il PRIMO candidato in ordine DOM = il più recente.
+          const pool = exacts.length > 0 ? exacts : candidates;
+          const chosen = pool.length > 0 ? pool[0] : null;
           const clearBtn =
             H.qsDeep('[data-testid="search-input-clear"]') ||
             H.qsDeep('[data-testid="x-alt"]') ||
             H.qsDeep('[data-testid="search-close"]');
           if (!chosen) {
             if (clearBtn) clearBtn.click();
-            if (candidates.length === 0) {
-              resolve({ success: false, error: "Chat non trovata nella sidebar: " + target });
-              return;
-            }
-            resolve({
-              success: false,
-              error:
-                'Match ambiguo per "' +
-                target +
-                '" (' +
-                candidates.length +
-                " contatti corrispondenti). Inserisci il numero E.164 per invio diretto.",
-            });
+            resolve({ success: false, error: "Chat non trovata nella sidebar: " + target });
             return;
           }
+
           const c = chosen.el;
           (
             c.closest('[data-testid="cell-frame-container"]') ||
