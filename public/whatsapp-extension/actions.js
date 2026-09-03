@@ -657,6 +657,7 @@ var Actions =
             .map(function (it) {
               return {
                 contact: it.contactName,
+                jid: it.jid || null,
                 lastMessage: it.lastMessage || "",
                 time: it.timestamp || new Date().toISOString(),
                 unreadCount: it.unreadCount || 0,
@@ -774,6 +775,7 @@ var Actions =
         const chat = chatItems[i];
         const item = {
           contactName: null,
+          jid: null,
           lastMessage: null,
           timestamp: null,
           unreadCount: 0,
@@ -782,6 +784,15 @@ var Actions =
         };
         let contactScore = 0,
           badgeScore = 0;
+
+        // Conserva l'identificativo stabile della chat quando WhatsApp lo espone.
+        // Il numero contenuto nel JID permette invii diretti senza risolvere il nome.
+        const idHost = chat.closest("[data-id]") || H.qsWithin(chat, "[data-id]");
+        if (idHost) {
+          const rawId = idHost.getAttribute("data-id") || "";
+          const jidMatch = rawId.match(/(?:^|_)(\d{7,})@(?:c|s)\.us/i) || rawId.match(/(\d{7,})@/);
+          if (jidMatch) item.jid = jidMatch[1] + "@c.us";
+        }
 
         // Contact name
         const cstr = [
@@ -1693,13 +1704,15 @@ var Actions =
             const titleEl = c.querySelector("span[title]");
             const title = titleEl ? (titleEl.getAttribute("title") || titleEl.textContent || "").trim() : "";
             if (!title) continue;
-            // Dedup: WhatsApp mostra la stessa chat in più sezioni della ricerca
-            // ("Chat" e "Messaggi"). Chiave = jid quando disponibile, altrimenti titolo.
+            // Dedup solo con un identificativo WhatsApp stabile. Due persone omonime
+            // non devono mai essere fuse usando il solo titolo visualizzato.
             const idHost = c.closest("[data-id]") || c.querySelector("[data-id]");
             const jid = idHost ? idHost.getAttribute("data-id") || "" : "";
-            const key = (jid || "title:" + title.toLowerCase()).trim();
-            if (seenKeys.has(key)) continue;
-            seenKeys.add(key);
+            const key = jid.trim();
+            if (key) {
+              if (seenKeys.has(key)) continue;
+              seenKeys.add(key);
+            }
             const tl = title.toLowerCase();
             if (tl === targetLower) candidates.push({ el: c, title: title, exact: true });
             else if (tl.includes(targetLower)) candidates.push({ el: c, title: title, exact: false });

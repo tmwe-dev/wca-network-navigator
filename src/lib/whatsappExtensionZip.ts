@@ -15,7 +15,7 @@ import {
 export { DEFAULT_EXTENSION_CATALOG };
 export type { ExtensionCatalog, ExtensionCatalogChannel, ExtensionCatalogItem, ExtensionCatalogSection };
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.20";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.59";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
