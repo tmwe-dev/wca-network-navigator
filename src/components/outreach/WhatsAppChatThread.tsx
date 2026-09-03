@@ -67,19 +67,21 @@ export function WhatsAppChatThread({
   const createBridgeSender = useCallback(
     (_recipient: string) => {
       return async (recipient: string, body: string) => {
-        let r = await sendWhatsApp(recipient, body);
-        if (!r.success) {
-          const phone = extractPhoneFromThread(thread);
-          if (phone) {
-            log.info("retry with phone", { phone });
-            r = await sendWhatsApp(phone, body);
-          }
+        // Priorità al numero E.164 estratto dal thread: evita i "match ambiguo"
+        // della ricerca per nome nell'estensione e garantisce il destinatario esatto.
+        const phone = extractPhoneFromThread(thread);
+        if (phone) {
+          log.info("send via phone (thread)", { phone });
+          const byPhone = await sendWhatsApp(phone, body);
+          if (byPhone.success) return byPhone;
+          log.warn("phone send failed, fallback to name", { error: byPhone.error });
         }
-        return r;
+        return await sendWhatsApp(recipient, body);
       };
     },
     [sendWhatsApp, thread],
   );
+
 
   const uploadAndSendFile = useCallback(
     async (file: File) => {
