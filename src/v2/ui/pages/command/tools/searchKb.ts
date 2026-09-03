@@ -9,7 +9,7 @@ export const searchKbTool: Tool = {
   label: "Cerca nella knowledge base",
   description: "Cerca documentazione e workflow nella KB del sistema WCA",
   match: (prompt: string) =>
-    !/\b(crea|aggiungi|nuova|aggiorna|modifica|elimina|ingest|indicizza|carica)\b[^\n]{0,40}?\b(kb|knowledge|entry)\b/i.test(
+    !/\b(crea|genera|aggiungi|nuova|aggiorna|modifica|elimina|ingest|indicizza|carica)\b[^\n]{0,40}?\b(kb|knowledge|entry)\b/i.test(
       prompt,
     ) &&
     /\b(kb|knowledge|documentazione|come\s+(si\s+)?fa|workflow|guida|manuale)\b/i.test(prompt),
