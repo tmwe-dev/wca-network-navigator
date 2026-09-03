@@ -58,20 +58,15 @@ export function useDirectContactActions() {
       setWaSending(key);
       try {
         const cleanPhone = opts.phone.replace(/[\s\-().]/g, "").replace(/^\+/, "");
-        // Apriamo la chat WhatsApp DENTRO l'app (Inbox V2 → tab WhatsApp), non su wa.me.
-        // Il messaggio verrà scritto nel composer interno e tracciato come inviato.
-        navigate("/v2/inbox", {
-          state: {
-            openWhatsAppPhone: cleanPhone,
-            openWhatsAppContactName: opts.contactName ?? null,
-            openWhatsAppCompany: opts.companyName ?? null,
-            openWhatsAppPartnerId: opts.partnerId ?? null,
-            openWhatsAppContactId: opts.contactId ?? null,
-          },
+        // Apriamo il composer WhatsApp diretto sul numero: nessuna dipendenza da chat pregresse.
+        openWhatsAppQuick({
+          phone: cleanPhone,
+          contactName: opts.contactName ?? null,
+          companyName: opts.companyName ?? null,
+          contactId: opts.contactId ?? null,
+          partnerId: opts.partnerId ?? null,
         });
-        const result: { success: boolean; error?: string } = { success: true };
-        if (result?.success) {
-          toast.success(`Chat WhatsApp aperta con ${opts.contactName || cleanPhone}`);
+        {
           // LOVABLE-93: logAction chiama log-action edge → postSendPipeline server-side
           const resolvedSourceType =
             opts.sourceType === "contact"
@@ -91,10 +86,8 @@ export function useDirectContactActions() {
           });
           opts.onSuccess?.();
           return true;
-        } else {
-          toast.error(`Contatto non trovato su WhatsApp: ${result?.error || "Errore sconosciuto"}`);
-          return false;
         }
+
       } catch (e: unknown) {
         toast.error(e instanceof Error ? e.message : "Errore invio WhatsApp");
         return false;
