@@ -32,12 +32,12 @@ export interface ExtensionCatalog {
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.20",
+    latestVersion: "5.10.21",
     items: [
       {
-        version: "5.10.20",
-        filename: "whatsapp-extension-5.10.20.zip",
-        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.20.zip",
+        version: "5.10.21",
+        filename: "whatsapp-extension-5.10.21.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.21.zip",
         current: true,
         note: "Identità destinatario sicura: conserva JID/numero e deduplica solo tramite identificativo WhatsApp stabile, senza fondere omonimi.",
       },
