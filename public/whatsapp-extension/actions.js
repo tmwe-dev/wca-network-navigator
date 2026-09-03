@@ -1688,14 +1688,23 @@ var Actions =
             .trim()
             .toLowerCase();
           const candidates = [];
+          const seenKeys = new Set();
           for (const c of chats) {
             const titleEl = c.querySelector("span[title]");
             const title = titleEl ? (titleEl.getAttribute("title") || titleEl.textContent || "").trim() : "";
             if (!title) continue;
+            // Dedup: WhatsApp mostra la stessa chat in più sezioni della ricerca
+            // ("Chat" e "Messaggi"). Chiave = jid quando disponibile, altrimenti titolo.
+            const idHost = c.closest("[data-id]") || c.querySelector("[data-id]");
+            const jid = idHost ? idHost.getAttribute("data-id") || "" : "";
+            const key = (jid || "title:" + title.toLowerCase()).trim();
+            if (seenKeys.has(key)) continue;
+            seenKeys.add(key);
             const tl = title.toLowerCase();
             if (tl === targetLower) candidates.push({ el: c, title: title, exact: true });
             else if (tl.includes(targetLower)) candidates.push({ el: c, title: title, exact: false });
           }
+
           const exacts = candidates.filter(function (x) {
             return x.exact;
           });
