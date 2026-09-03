@@ -9,7 +9,10 @@ export const dashboardSnapshotTool: Tool = {
   id: "dashboard-snapshot",
   label: "Panoramica sistema",
   description: "Mostra un riepilogo del sistema: partner, contatti, attività, agenti, campagne",
-  match: (p) => /dashboard|panoramica|riepilogo|stato (del )?sistema/i.test(p),
+  // "stato del sistema" appartiene alla diagnostica (health-check) quando
+  // il prompt cita esplicitamente health/diagnosi: qui restiamo sui numeri.
+  match: (p) =>
+    !/health\s*check|diagnos(?:i|tica)/i.test(p) && /dashboard|panoramica|riepilogo|stato (del )?sistema/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
     const result = await fetchDashboardCounts();
