@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 const MATCH =
-  /(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:partner\s+)?/i;
+  /(?!.*\bprospect\b)(?:scrapa|analizza|arricchisci|enrich)\s+(?:il\s+)?(?:sito|website)\s+(?:di|del|della)?\s+(?:partner\s+)?/i;
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
