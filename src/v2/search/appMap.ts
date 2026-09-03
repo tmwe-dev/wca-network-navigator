@@ -180,7 +180,13 @@ export function findDestinations(query: string, limit = 5): readonly AppMapMatch
     const hay = normalize(
       [p.label, p.group, p.path, p.purpose ?? "", (p.features ?? []).join(" "), (p.fields ?? []).join(" ")].join(" "),
     );
-    const score = terms.reduce((acc, t) => acc + (hay.includes(t) ? (normalize(p.label).includes(t) ? 3 : 1) : 0), 0);
+    const label = normalize(p.label);
+    const lastSeg = normalize(p.path.split("/").filter(Boolean).pop() ?? "");
+    const score = terms.reduce((acc, t) => {
+      if (label === t || lastSeg === t) return acc + 8; // match esatto sul nome della maschera
+      if (label.includes(t) || lastSeg.includes(t)) return acc + 3;
+      return acc + (hay.includes(t) ? 1 : 0);
+    }, 0);
     if (score > 0) candidates.push({ path: p.path, label: p.label, hint: p.purpose ?? p.group, score });
   }
 
