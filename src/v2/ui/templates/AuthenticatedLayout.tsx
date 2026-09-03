@@ -532,6 +532,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                               <ContactRecordDrawer />
                             </DrawerErrorBoundary>
                           </Suspense>
+                          <Suspense fallback={null}>
+                            <WhatsAppQuickDialog />
+                          </Suspense>
+
                           <ClaudeBadge />
                           {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
                           <Suspense fallback={null}>
