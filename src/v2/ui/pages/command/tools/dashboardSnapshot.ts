@@ -16,9 +16,29 @@ export const dashboardSnapshotTool: Tool = {
 
   execute: async (): Promise<ToolResult> => {
     const result = await fetchDashboardCounts();
-    const c = isOk(result)
-      ? result.value
-      : { partners: 0, contacts: 0, pendingActivities: 0, activeAgents: 0, campaignJobs: 0, emailDrafts: 0 };
+
+    if (!isOk(result)) {
+      return {
+        kind: "result",
+        title: "Panoramica sistema non disponibile",
+        message: `Impossibile leggere i conteggi di sistema: ${result.error.message ?? "errore sconosciuto"}`,
+        status: "error",
+        meta: { count: 0, sourceLabel: "Dati live del tuo sistema" },
+      };
+    }
+
+    const c = result.value;
+    const total = c.partners + c.contacts + c.pendingActivities + c.activeAgents + c.campaignJobs + c.emailDrafts;
+
+    if (total === 0) {
+      return {
+        kind: "result",
+        title: "Panoramica sistema vuota",
+        message: "Nessun dato presente: partner, contatti, attività, agenti e campagne sono tutti a zero.",
+        status: "empty",
+        meta: { count: 0, sourceLabel: "Dati live del tuo sistema" },
+      };
+    }
 
     return {
       kind: "table",

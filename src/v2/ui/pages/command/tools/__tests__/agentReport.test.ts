@@ -50,14 +50,22 @@ describe("agentReportTool", () => {
     expect(res.events[0].agent).toBe("Manuale");
   });
 
-  it("execute: errore su fetchAgents propaga throw esplicito", async () => {
+  it("execute: errore su fetchAgents ritorna ToolResult di errore", async () => {
     vi.mocked(fetchAgents).mockResolvedValue(err({ code: "DATABASE_ERROR", message: "agents down" } as any));
-    await expect(agentReportTool.execute("report agenti", undefined)).rejects.toThrow("agents down");
+    const res = await agentReportTool.execute("report agenti", undefined);
+    expect(res.kind).toBe("result");
+    if (res.kind !== "result") throw new Error("expected result");
+    expect(res.status).toBe("error");
+    expect(res.message).toContain("agents down");
   });
 
-  it("execute: errore su fetchActivities propaga throw esplicito", async () => {
+  it("execute: errore su fetchActivities ritorna ToolResult di errore", async () => {
     vi.mocked(fetchAgents).mockResolvedValue(ok([]));
     vi.mocked(fetchActivities).mockResolvedValue(err({ code: "DATABASE_ERROR", message: "activities down" } as any));
-    await expect(agentReportTool.execute("report agenti", undefined)).rejects.toThrow("activities down");
+    const res = await agentReportTool.execute("report agenti", undefined);
+    expect(res.kind).toBe("result");
+    if (res.kind !== "result") throw new Error("expected result");
+    expect(res.status).toBe("error");
+    expect(res.message).toContain("activities down");
   });
 });

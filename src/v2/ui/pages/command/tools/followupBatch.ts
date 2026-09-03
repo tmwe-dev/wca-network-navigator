@@ -44,7 +44,13 @@ export const followupBatchTool: Tool = {
     });
 
     if (result._tag === "Err") {
-      throw new Error(result.error.message ?? "Errore lettura contatti");
+      return {
+        kind: "result",
+        title: "Follow-up non disponibile",
+        message: `Impossibile leggere i contatti: ${result.error.message ?? "errore sconosciuto"}`,
+        status: "error",
+        meta: { count: 0, sourceLabel: "Contatti CRM" },
+      };
     }
 
     const contacts = result.value;

@@ -42,8 +42,12 @@ describe("campaignStatusTool", () => {
     expect(res.nodes[0].label).toBe("Nessuna campagna trovata");
   });
 
-  it("execute: errore DAL propaga throw esplicito", async () => {
+  it("execute: errore DAL ritorna ToolResult di errore (non throw)", async () => {
     vi.mocked(fetchCampaignJobs).mockResolvedValue(err({ code: "DATABASE_ERROR", message: "jobs down" } as any));
-    await expect(campaignStatusTool.execute("stato campagne", undefined)).rejects.toThrow("jobs down");
+    const res = await campaignStatusTool.execute("stato campagne", undefined);
+    expect(res.kind).toBe("result");
+    if (res.kind !== "result") throw new Error("expected result");
+    expect(res.status).toBe("error");
+    expect(res.message).toContain("jobs down");
   });
 });

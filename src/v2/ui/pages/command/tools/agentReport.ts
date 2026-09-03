@@ -29,11 +29,27 @@ export const agentReportTool: Tool = {
 
   async execute(): Promise<ToolResult> {
     const agentsRes = await fetchAgents();
-    if (agentsRes._tag === "Err") throw new Error(agentsRes.error.message ?? "Errore lettura agenti");
+    if (agentsRes._tag === "Err") {
+      return {
+        kind: "result",
+        title: "Report agenti non disponibile",
+        message: `Impossibile leggere gli agenti: ${agentsRes.error.message ?? "errore sconosciuto"}`,
+        status: "error",
+        meta: { count: 0, sourceLabel: "Supabase · agents" },
+      };
+    }
 
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const actsRes = await fetchActivities({ since, limit: 200 });
-    if (actsRes._tag === "Err") throw new Error(actsRes.error.message ?? "Errore lettura attività");
+    if (actsRes._tag === "Err") {
+      return {
+        kind: "result",
+        title: "Report agenti non disponibile",
+        message: `Impossibile leggere le attività: ${actsRes.error.message ?? "errore sconosciuto"}`,
+        status: "error",
+        meta: { count: 0, sourceLabel: "Supabase · activities" },
+      };
+    }
 
     const agents = agentsRes.value;
     const activities = actsRes.value;

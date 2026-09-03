@@ -48,8 +48,12 @@ describe("followupBatchTool", () => {
     expect(res.cards).toHaveLength(0);
   });
 
-  it("execute: errore DAL viene propagato come throw esplicito (non silenzioso)", async () => {
+  it("execute: errore DAL ritorna ToolResult di errore (non throw)", async () => {
     vi.mocked(fetchContacts).mockResolvedValue(err({ code: "DATABASE_ERROR", message: "boom" } as any));
-    await expect(followupBatchTool.execute("clienti inattivi", undefined)).rejects.toThrow("boom");
+    const res = await followupBatchTool.execute("clienti inattivi", undefined);
+    expect(res.kind).toBe("result");
+    if (res.kind !== "result") throw new Error("expected result");
+    expect(res.status).toBe("error");
+    expect(res.message).toContain("boom");
   });
 });

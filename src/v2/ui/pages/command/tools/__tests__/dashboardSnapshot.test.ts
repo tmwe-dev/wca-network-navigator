@@ -37,11 +37,22 @@ describe("dashboardSnapshotTool", () => {
     expect(res.rows.find((r) => r.metric === "Partner WCA")?.value).toBe(10);
   });
 
-  it("execute: su errore ritorna comunque zeri senza throw", async () => {
+  it("execute: su errore ritorna result di errore (non zeri silenziosi)", async () => {
     vi.mocked(fetchDashboardCounts).mockResolvedValue(err({ code: "DATABASE_ERROR", message: "boom" } as any));
     const res = await dashboardSnapshotTool.execute("dashboard", undefined);
-    expect(res.kind).toBe("table");
-    if (res.kind !== "table") throw new Error("expected table");
-    expect(res.rows.find((r) => r.metric === "Partner WCA")?.value).toBe(0);
+    expect(res.kind).toBe("result");
+    if (res.kind !== "result") throw new Error("expected result");
+    expect(res.status).toBe("error");
+    expect(res.message).toContain("boom");
+  });
+
+  it("execute: tutti i conteggi a zero ritorna result 'empty'", async () => {
+    vi.mocked(fetchDashboardCounts).mockResolvedValue(
+      ok({ partners: 0, contacts: 0, pendingActivities: 0, activeAgents: 0, campaignJobs: 0, emailDrafts: 0 }),
+    );
+    const res = await dashboardSnapshotTool.execute("dashboard", undefined);
+    expect(res.kind).toBe("result");
+    if (res.kind !== "result") throw new Error("expected result");
+    expect(res.status).toBe("empty");
   });
 });
