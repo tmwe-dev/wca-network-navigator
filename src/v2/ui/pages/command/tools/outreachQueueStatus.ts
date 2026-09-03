@@ -9,7 +9,10 @@ export const outreachQueueStatusTool: Tool = {
   id: "outreach-queue",
   label: "Coda outreach",
   description: "Mostra la coda di outreach in attesa e in corso",
-  match: (p) => /coda|outreach|in attesa|pending/i.test(p) && !/campagn|email|componi/i.test(p),
+  match: (p) =>
+    /coda|outreach|in attesa|pending/i.test(p) &&
+    // Solo intento di lettura stato: accodare/programmare è compito di enqueue-outreach.
+    !/campagn|email|componi|programma|pianifica|accoda|schedula|avvia|cancella|annulla|rimuovi/i.test(p),
 
   execute: async (): Promise<ToolResult> => {
     const result = await fetchOutreachQueue();

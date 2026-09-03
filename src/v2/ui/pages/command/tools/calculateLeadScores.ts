@@ -8,7 +8,8 @@ export const calculateLeadScoresTool: Tool = {
   id: "calculate-lead-scores",
   label: "Ricalcola lead score",
   description: "Ricalcola massivamente i punteggi di tutti i lead nel database",
-  match: (p) => /(calcola|ricalcola|aggiorna).*score/i.test(p),
+  // "quality score" ha un tool dedicato (recalculate-partner-quality).
+  match: (p) => /(calcola|ricalcola|aggiorna).*score/i.test(p) && !/\bquality\b/i.test(p),
 
   execute: async (_prompt, context?: ToolContext): Promise<ToolResult> => {
     if (!context?.confirmed) {

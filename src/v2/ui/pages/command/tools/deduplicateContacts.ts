@@ -8,7 +8,7 @@ export const deduplicateContactsTool: Tool = {
   id: "deduplicate-contacts",
   label: "Deduplica contatti",
   description: "Trova e unisce contatti duplicati nel database CRM",
-  match: (p) => /(deduplica|trova duplicati|merge contatti)/i.test(p),
+  match: (p) => /(deduplica|trova duplicati|merge contatti)/i.test(p) && !/\bpartner/i.test(p),
 
   execute: async (_prompt, context?: ToolContext): Promise<ToolResult> => {
     if (!context?.confirmed) {

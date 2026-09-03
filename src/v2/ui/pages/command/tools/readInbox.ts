@@ -23,7 +23,9 @@ export const readInboxTool: Tool = {
   description:
     "Mostra i messaggi ricevuti (inbound) più recenti: email/WhatsApp/LinkedIn in entrata, mittente, oggetto, stato lettura.",
   match: (p) =>
-    /\b(posta\s+in\s+arrivo|inbox|messaggi\s+ricevut|email\s+ricevut|email\s+in\s+entrata|inbound|in\s+entrata|non\s+letti|da\s+leggere|risposte\s+ricevut)\b/i.test(
+    // "applica le regole … inbox" ha un tool dedicato.
+    !/\b(applica|riapplica|esegui)\b[^.]{0,30}\b(regole|rules)\b/i.test(p) &&
+    /\b(posta\s+in\s+arrivo|inbox|messaggi\s+ricevut\w*|email\s+ricevut\w*|email\s+in\s+entrata|inbound|in\s+entrata|non\s+lett[ie]|da\s+leggere|risposte\s+ricevut\w*)/i.test(
       p,
     ),
 

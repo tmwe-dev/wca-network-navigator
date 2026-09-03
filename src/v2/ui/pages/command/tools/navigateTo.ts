@@ -17,7 +17,8 @@ export const navigateToTool: Tool = {
   label: "Vai a una pagina o funzione",
   description:
     "Instrada l'utente verso qualsiasi pagina o funzione dell'applicazione (routing). Usalo per 'vai a…', 'apri…', 'dove trovo…'.",
-  match: (prompt: string) => TRIGGER.test(prompt),
+  // Un URL esplicito indica automazione browser/scraping, non routing interno.
+  match: (prompt: string) => TRIGGER.test(prompt) && !/https?:\/\//i.test(prompt),
 
   execute: async (prompt: string): Promise<ToolResult> => {
     const matches = findDestinations(prompt, 5);

@@ -152,6 +152,10 @@ export const composeEmailTool: Tool = {
 
   match(prompt: string): boolean {
     const p = prompt.toLowerCase();
+    // Canali diversi dall'email hanno tool dedicati.
+    if (/\b(whatsapp|\bwa\b|linkedin)\b/.test(p)) return false;
+    // Invio immediato esplicito: se ne occupa send-email-direct.
+    if (/\b(invia|manda|spedisci)\s+(subito|adesso|ora)\b/.test(p) && /oggetto|testo|corpo|body/.test(p)) return false;
     if (
       /(?:scriv|compon|invi|prepar|mand|gener|fai|redig).*(?:e-?mail|mail|messagg|lettera|invito|complimenti)|\bbozz[ae].*(?:e-?mail|mail)|\bemail\s+a\s|draft.*email/.test(
         p,

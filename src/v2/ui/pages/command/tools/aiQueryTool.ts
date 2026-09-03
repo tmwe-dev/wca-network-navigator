@@ -122,6 +122,9 @@ export const aiQueryTool: Tool = {
       /\bemail\s+ai\b/,
       /\bmail\s+ai\b/,
       /\binvit/,
+      /\bripristin/,
+      // Lessico inbox: read-inbox ha un tool dedicato.
+      /\b(inbox|posta\s+in\s+arrivo|messaggi\s+ricevut|email\s+ricevut|non\s+lett[ie])/,
     ];
     if (actionPatterns.some((re) => re.test(lower))) return false;
 

@@ -21,6 +21,13 @@ export const campaignStatusTool: Tool = {
 
   match(prompt: string): boolean {
     const p = prompt.toLowerCase();
+    // Esclude prompt che puntano alla knowledge base: search-kb ha precedenza semantica.
+    if (/\b(kb|knowledge\s*base)\b/.test(p)) return false;
+    // Domande "come si fa…" sono richieste di documentazione, non di stato.
+    if (/\bcome\s+(si\s+fa|si\s+|posso|devo)\b/.test(p)) return false;
+    // Documentazione o creazione: non è una lettura di stato campagne.
+    if (/\b(workflow|guida|procedura|documentazione)\b/.test(p)) return false;
+    if (/\b(crea|creare|nuova)\b/.test(p)) return false;
     return /campagn|campaign|lancia|flusso/.test(p);
   },
 

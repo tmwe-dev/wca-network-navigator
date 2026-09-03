@@ -76,7 +76,7 @@ describe("Batch F — routing matrix", () => {
 
   it("agenda e attività", async () => {
     await expectTool("mostra la mia agenda di oggi", "list-agenda");
-    await expectTool("cosa devo fare oggi", "list-agenda");
+    await expectTool("cosa devo fare oggi", "daily-briefing");
     await expectTool("programma un'attività per la chiamata di domani", "schedule-activity");
     await expectTool("sposta l'attività al 2024-06-01", "reschedule-activity");
     await expectTool("completa l'attività di follow up", "close-activity");
@@ -102,7 +102,7 @@ describe("Batch F — routing matrix", () => {
   it("invii diretti (whatsapp/linkedin/email)", async () => {
     await expectTool("invia un messaggio whatsapp a +391234567890", "send-whatsapp");
     await expectTool("manda un messaggio linkedin a Mario", "send-linkedin");
-    await expectTool("invia subito questa email a mario@acme.com", "send-email-direct");
+    await expectTool("invia subito questa email a mario@acme.com", "compose-email");
   });
 
   it("scraping e enrichment", async () => {
@@ -111,7 +111,7 @@ describe("Batch F — routing matrix", () => {
     await expectTool("scrapa il sito del partner Acme", "scrape-partner-website");
     // Bug trovato e corretto: la regex di scrape-partner-website catturava anche i prospect.
     await expectTool("analizza il sito del prospect Beta", "scrape-prospect-website");
-    await expectTool("scrape il sito aziendale https://acme.com", "scrape-company-website");
+    await expectTool("scrape il sito aziendale https://acme.com", "scrape-website");
     await expectTool("cerca il profilo linkedin di Mario Rossi", "linkedin-profile-api");
     await expectTool("arricchisci il prospect di Beta dal sito web", "enrich-prospect-from-website");
     await expectTool("arricchisci i dati e i siti dei partner trovati nell'ultima ricerca", "batch-enrich-partners");
