@@ -5,6 +5,7 @@
  * distinguendo "campo vuoto" da "filtro sbagliato" (diagnosi dalla RPC).
  */
 import { rpcFieldValues } from "@/data/aiFieldValues";
+import { rpcIntrospectSchema } from "@/data/rpc";
 import type { Tool, ToolResult } from "./types";
 
 /** Sinonimi in linguaggio naturale → tabella reale. */
@@ -41,11 +42,23 @@ export const fieldValuesTool: Tool = {
       };
     }
 
-    const data = await rpcFieldValues(parsed.table, parsed.column, 20);
+    let column = parsed.column;
+    let data = await rpcFieldValues(parsed.table, column, 20);
+
+    // Fallback: il campo indicato dall'utente può non esistere con quel nome esatto.
+    if (data?.error) {
+      const schema = await rpcIntrospectSchema([parsed.table]);
+      const cols = schema?.[0]?.columns?.map((c) => c.name) ?? [];
+      const guess = cols.find((c) => c === column) ?? cols.find((c) => c.includes(column) || column.includes(c));
+      if (guess && guess !== column) {
+        column = guess;
+        data = await rpcFieldValues(parsed.table, column, 20);
+      }
+    }
     if (!data || data.error) {
       return {
         kind: "result",
-        title: `Campo ${parsed.table}.${parsed.column}`,
+        title: `Campo ${parsed.table}.${column}`,
         status: "error",
         message: data?.error ?? "Campo o tabella non leggibili.",
       };
@@ -58,7 +71,7 @@ export const fieldValuesTool: Tool = {
 
     return {
       kind: "table",
-      title: `Valori · ${parsed.table}.${parsed.column}`,
+      title: `Valori · ${parsed.table}.${column}`,
       meta: {
         count: rows.length,
         sourceLabel: `DB · ${data.distinct_values ?? rows.length} valori distinti · ${data.non_null ?? 0}/${data.total_rows ?? 0} valorizzati`,

@@ -5,6 +5,7 @@
  */
 import { FULL_NAV_ITEMS } from "@/v2/ui/templates/navConfig";
 import { SECONDARY_NAV } from "@/v2/navigation/registry";
+import { MENU_ITEMS } from "@/v2/navigation/menuItems";
 
 export interface SearchPageEntry {
   readonly label: string;
@@ -45,6 +46,12 @@ export const SEARCH_PAGES: readonly SearchPageEntry[] = (() => {
     };
     push(g.items ?? [], g.title);
     for (const sg of g.subGroups ?? []) push(sg.items, `${g.title} › ${sg.title}`);
+  }
+  // Menu unico V2: garantisce che TUTTE le maschere siano indicizzate/navigabili.
+  for (const m of MENU_ITEMS) {
+    if (seen.has(m.path)) continue;
+    seen.add(m.path);
+    out.push({ label: m.label, path: m.path, group: "Maschere" });
   }
   return out;
 })();
