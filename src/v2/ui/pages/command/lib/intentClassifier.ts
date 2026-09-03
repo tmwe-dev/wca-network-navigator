@@ -12,6 +12,7 @@
  */
 import { detectSmalltalk, type SmalltalkMatch } from "./smalltalkDetector";
 import { TOOLS } from "../tools/registry";
+import { resolveDirectTool } from "./directRouter";
 import type { Tool } from "../tools/types";
 
 export type Intent =
@@ -27,6 +28,11 @@ export type Intent =
 export function classifyIntent(rawText: string): Intent {
   const small = detectSmalltalk(rawText);
   if (small) return { kind: "smalltalk", match: small };
+
+  // Un tool di lettura specifico (KB, inbox, agenda, navigazione…) vince sul
+  // fast-lane composer: "cerca nella KB la procedura di invio email" contiene
+  // la parola "email" ma NON è una richiesta di composizione.
+  if (resolveDirectTool(rawText)) return { kind: "plan" };
 
   const composer = TOOLS.find((t) => t.id === "compose-email");
   if (composer?.match(rawText)) {
