@@ -49,7 +49,7 @@ export const createCampaignTool: Tool = {
       country_name: String(p.country_name ?? ""),
     });
 
-    if (!isOk(result)) throw new Error(result.error.message);
+    if (!isOk(result)) throw new Error(result.error?.message ?? "Creazione campagna fallita");
 
     return {
       kind: "result",
