@@ -55,7 +55,7 @@ export const deleteKbEntryTool: Tool = {
   id: "delete-kb-entry",
   label: "Elimina KB entry",
   description: "Soft-delete di una entry della Knowledge Base",
-  match: (p) => /\b(elimina|cancella|rimuovi)\s+(entry|voce)\s+(kb|knowledge)/i.test(p),
+  match: (p) => /\b(elimina|cancella|rimuovi)\s+(?:la\s+|una\s+)?(entry|voce)\s+(kb|knowledge)/i.test(p),
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     const payload = mergePayload<DeletePayload>(context?.payload, {});
     const ref = String(payload.entry_id || payload.title || "").trim();
