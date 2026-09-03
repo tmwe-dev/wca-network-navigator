@@ -11,6 +11,12 @@ const log = createLogger("PWAUpdatePrompt");
 export function PWAUpdatePrompt() {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  // Il reload è consentito SOLO dopo click esplicito su "Aggiorna ora".
+  // Con workbox skipWaiting+clientsClaim il nuovo SW prende il controllo da solo:
+  // un reload automatico su `controllerchange` azzerava la conversazione in corso
+  // (Command, bozze, form) a metà lavoro.
+  const userTriggeredUpdateRef = useRef(false);
+
 
   useEffect(() => {
     let cancelled = false;
