@@ -209,6 +209,25 @@ export const aiQueryTool: Tool = {
       contextHint: context?.contextHint,
     });
     const plans: QueryPlan[] | null = isOk(planRes) ? planRes.value.plans : null;
+    // Distinzione esplicita fra "planner irraggiungibile" (rete/CORS/edge down) e
+    // "planner raggiunto ma rate-limited": prima mostravamo sempre il messaggio di
+    // rate limit, nascondendo i guasti di trasporto durante i test fisici.
+    if (!isOk(planRes)) {
+      const rawErr =
+        (planRes as { error?: { message?: string } }).error?.message ??
+        (planRes as unknown as { message?: string }).message ??
+        "";
+      const looksRateLimited = /429|troppe richieste|rate limit|quota|riprova tra/i.test(rawErr);
+      return {
+        kind: "result",
+        title: looksRateLimited ? "Query AI · Servizio AI momentaneamente occupato" : "Query AI · Planner irraggiungibile",
+        message: looksRateLimited
+          ? "Il motore AI è momentaneamente occupato (troppe richieste). Riprova tra qualche secondo."
+          : `Non riesco a contattare l'AI Query Planner${rawErr ? `: ${rawErr}` : "."} Verifica connettività/edge function e riprova.`,
+        status: looksRateLimited ? "rate-limited" : "error",
+        meta: { count: 0, sourceLabel: "AI Query Planner" },
+      };
+    }
     const isRateLimited = (p: QueryPlan[] | null) =>
       !p ||
       (p[0]?.table === "INVALID" &&
@@ -227,6 +246,7 @@ export const aiQueryTool: Tool = {
         meta: { count: 0, sourceLabel: "AI Query Planner" },
       };
     }
+
 
     const firstPlan = plans![0];
 
