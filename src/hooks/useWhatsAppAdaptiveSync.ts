@@ -76,6 +76,7 @@ function detectDirection(text: string): { direction: "inbound" | "outbound"; cle
 
 interface SidebarChat {
   contact: string;
+  jid?: string;
   lastMessage?: string;
   time?: string;
   unreadCount?: number;
@@ -238,7 +239,7 @@ export function useWhatsAppAdaptiveSync() {
 
       // 3. Decide which chats need a thread read
       const nowMs = Date.now();
-      const toRead: Array<{ name: string; cursorMs: number }> = [];
+      const toRead: Array<{ name: string; jid?: string; cursorMs: number }> = [];
       for (const c of chats) {
         const lower = c.contact.toLowerCase();
         const cursorMs = cursors.get(lower) ?? 0;
@@ -246,7 +247,7 @@ export function useWhatsAppAdaptiveSync() {
         const sidebarMs = sidebarTs ? new Date(sidebarTs).getTime() : nowMs;
         // If we never saw this chat, OR sidebar shows newer activity → read.
         if (cursorMs === 0 || sidebarMs > cursorMs + 60_000) {
-          toRead.push({ name: c.contact, cursorMs });
+          toRead.push({ name: c.contact, jid: c.jid, cursorMs });
         }
       }
 
@@ -268,10 +269,10 @@ export function useWhatsAppAdaptiveSync() {
       let totalNew = 0;
       for (let i = 0; i < queue.length; i++) {
         if (!mountedRef.current) break;
-        const { name, cursorMs } = queue[i];
+        const { name, jid, cursorMs } = queue[i];
         try {
           await throttle("whatsapp", "open", `Apri chat: ${name}`);
-          const threadRes = await readThread(name, MAX_MESSAGES_PER_THREAD);
+          const threadRes = await readThread(name, MAX_MESSAGES_PER_THREAD, jid);
           if (threadRes.success && Array.isArray(threadRes.messages)) {
             await throttle("whatsapp", "read", `Leggo messaggi: ${name}`);
             const newCount = await saveThreadMessages(

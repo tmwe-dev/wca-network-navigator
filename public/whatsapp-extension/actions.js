@@ -1428,7 +1428,107 @@ var Actions =
         });
     }
 
-    async function readThread(contactName, maxMessages) {
+    // Opens the exact sidebar row captured during the sidebar snapshot.
+    // When WhatsApp exposes a JID, it is authoritative; only legacy rows
+    // without a JID fall back to the first exact-name result (the latest row
+    // returned by the sidebar search).
+    async function _pageOpenAndReadThread(contactName, contactJid) {
+      const H = window.__waH;
+      const normalizeJid = function (value) {
+        const match = String(value || "").match(/(\d{7,})@/);
+        return match ? match[1] : "";
+      };
+      const expectedJid = normalizeJid(contactJid);
+      const targetLower = String(contactName || "").trim().toLowerCase();
+
+      function rowJid(row) {
+        const idHost = row.closest("[data-id]") || H.qsWithin(row, "[data-id]");
+        return normalizeJid(idHost ? idHost.getAttribute("data-id") : "");
+      }
+      function rowTitle(row) {
+        const titleEl = H.qsWithin(row, "span[title]");
+        return titleEl ? (titleEl.getAttribute("title") || titleEl.textContent || "").trim() : "";
+      }
+      function clickRow(row) {
+        (
+          row.closest('[data-testid="cell-frame-container"]') ||
+          row.closest('[data-testid="chat-cell-wrapper"]') ||
+          row
+        ).click();
+      }
+      function allRows() {
+        return H.filterVisible(
+          H.qsaDeep(
+            '[data-testid="cell-frame-container"],[data-testid="chat-cell-wrapper"],[role="listitem"],[role="row"]',
+          ),
+        );
+      }
+
+      let chosen = null;
+      if (expectedJid) {
+        chosen = allRows().find(function (row) {
+          return rowJid(row) === expectedJid;
+        });
+      }
+
+      if (!chosen) {
+        const searchBox =
+          H.qsDeep('[data-testid="chat-list-search-container"] [contenteditable="true"]') ||
+          H.qsDeep('[data-testid="chat-list-search"] [contenteditable="true"]') ||
+          H.qsDeep('[data-testid="chat-list-search-container"]') ||
+          H.qsDeep('[data-testid="chat-list-search"]') ||
+          H.qsDeep('div[contenteditable="true"][data-tab="3"]') ||
+          H.qsDeep('[aria-label*="search" i]') ||
+          H.qsDeep('[aria-label*="cerca" i]');
+        if (!searchBox) return { success: false, error: "Search box not found" };
+
+        H.modernClearAndType(searchBox, contactName);
+        await new Promise(function (resolve) {
+          setTimeout(resolve, 1500);
+        });
+
+        const rows = allRows();
+        if (expectedJid) {
+          chosen = rows.find(function (row) {
+            return rowJid(row) === expectedJid;
+          });
+        }
+        if (!chosen) {
+          const exactRows = rows.filter(function (row) {
+            return rowTitle(row).toLowerCase() === targetLower;
+          });
+          const partialRows = rows.filter(function (row) {
+            return rowTitle(row).toLowerCase().includes(targetLower);
+          });
+          chosen = exactRows[0] || partialRows[0] || null;
+        }
+
+        const clearBtn =
+          H.qsDeep('[data-testid="search-input-clear"]') ||
+          H.qsDeep('[data-testid="x-alt"]') ||
+          H.qsDeep('[data-testid="search-close"]');
+        if (!chosen) {
+          if (clearBtn) clearBtn.click();
+          return { success: false, error: "Chat non trovata: " + contactName };
+        }
+        clickRow(chosen);
+        if (clearBtn) clearBtn.click();
+      } else {
+        clickRow(chosen);
+      }
+
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 1800);
+      });
+      const panel =
+        H.qsDeep('[data-testid="conversation-panel-messages"]') ||
+        H.qsDeep('#main [role="application"]') ||
+        H.qsDeep("#main");
+      if (!panel) return { success: false, error: "Conversation panel not found" };
+      return { success: true, html: panel.outerHTML.slice(0, 180000), jid: expectedJid || rowJid(chosen) || null };
+    }
+
+    async function readThread(contactName, maxMessages, contactJid) {
       const LIMIT = maxMessages || 50;
       try {
         const r = await TabManager.getOrCreateWaTab();
@@ -1440,7 +1540,7 @@ var Actions =
         // Step 1: open the target chat (this part stays as-is)
         const results = await chrome.scripting.executeScript({
           target: { tabId: r.tab.id },
-          args: [contactName],
+          args: [contactName, contactJid || null],
           func: _pageOpenAndReadThread,
         });
 
@@ -1504,8 +1604,8 @@ var Actions =
         // Legacy Path B: hardcoded DOM extraction
         const domResults = await chrome.scripting.executeScript({
           target: { tabId: r.tab.id },
-          args: [contactName, LIMIT],
-          func: _pageDomReadMessages,
+          args: [contactName, ""],
+          func: _pageScrollAndRead,
         });
         const domRes = domResults && domResults[0] ? domResults[0].result : null;
         if (domRes) domRes.method = "legacy-dom:" + (domRes.method || "unknown");
@@ -1721,7 +1821,7 @@ var Actions =
           const exacts = candidates.filter(function (x) {
             return x.exact;
           });
-          // Policy 5.10.21: in caso di doppioni/incongruenze NON si aborta.
+          // Policy legacy 5.10.21: in caso di record senza JID non si aborta.
           // La sidebar di ricerca è ordinata per recency (chat più recente in alto),
           // quindi si sceglie sempre il PRIMO candidato in ordine DOM = il più recente.
           const pool = exacts.length > 0 ? exacts : candidates;

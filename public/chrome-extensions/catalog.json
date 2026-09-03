@@ -1,14 +1,14 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.21",
+    "latestVersion": "5.10.22",
     "items": [
       {
-        "version": "5.10.21",
-        "filename": "whatsapp-extension-5.10.21.zip",
-        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.21.zip",
+        "version": "5.10.22",
+        "filename": "whatsapp-extension-5.10.22.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.22.zip",
         "current": true,
-        "note": "Identità destinatario sicura: conserva JID/numero e deduplica solo tramite identificativo WhatsApp stabile, senza fondere omonimi."
+        "note": "Sincronizzazione thread ripristinata: apre il JID esatto acquisito dalla sidebar e usa la chat più recente solo per record legacy senza identificativo."
       },
       {
         "version": "5.10.19",

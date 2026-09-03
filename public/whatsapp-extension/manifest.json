@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.21",
-  "description": "5.10.21 — Doppioni chat: in caso di più chat con lo stesso nome viene scelta automaticamente la più recente, niente più errore di match ambiguo.",
+  "version": "5.10.22",
+  "description": "5.10.22 — Sincronizzazione thread ripristinata e apertura sicura tramite JID; per record legacy omonimi usa la chat più recente.",
   "permissions": [
     "tabs",
     "activeTab",
