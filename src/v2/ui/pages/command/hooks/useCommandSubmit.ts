@@ -34,6 +34,7 @@ import { type PlanExecutionState } from "../planRunner";
 import { normalizePrompt } from "../lib/lexicalNormalizer";
 import { classifyIntent } from "../lib/intentClassifier";
 import { shouldForceAiQuery } from "../lib/planFallback";
+import { resolveDirectTool, buildSingleToolPlan } from "../lib/directRouter";
 import { buildPlanState, buildAiQueryFallbackPlan } from "../lib/buildPlanState";
 import { buildPlanPreview, labelForToolId } from "../lib/planPreview";
 import { withTimeout } from "../lib/withTimeout";
@@ -370,6 +371,15 @@ export function useCommandSubmit(state: CommandStateApi) {
 
       // Fast-lane compose-email (già classificata): salta il planner.
       if (intent.kind === "compose-email" && (await runDirectComposer(text, hint))) return;
+
+      // ROUTING DETERMINISTICO: un tool specifico di lettura (navigazione,
+      // posta in arrivo, agenda, coda outreach, KB, dashboard…) vince sul
+      // fast-lane generico `ai-query`. Vedi lib/directRouter.ts.
+      const directToolId = resolveDirectTool(text);
+      if (directToolId) {
+        await runSyntheticPlan(buildSingleToolPlan(directToolId), text, hint, directToolId);
+        return;
+      }
 
       // Fast-lane READ: le ricerche semplici non devono passare dal planner
       // generale + planner query. Una sola chiamata AI riduce token, latenza e
