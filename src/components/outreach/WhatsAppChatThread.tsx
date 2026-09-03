@@ -72,9 +72,9 @@ export function WhatsAppChatThread({
         const phone = extractPhoneFromThread(thread);
         if (phone) {
           log.info("send via phone (thread)", { phone });
-          const byPhone = await sendWhatsApp(phone, body);
-          if (byPhone.success) return byPhone;
-          log.warn("phone send failed, fallback to name", { error: byPhone.error });
+            // Se il numero è noto non effettuare mai un secondo tentativo per nome:
+            // potrebbe aprire una chat omonima e duplicare/inoltrare il messaggio.
+            return await sendWhatsApp(phone, body);
         }
         return await sendWhatsApp(recipient, body);
       };

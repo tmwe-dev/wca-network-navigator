@@ -21,6 +21,10 @@ export function extractPhoneFromThread(thread: ChatThread): string | null {
       const m = payload.jid.match(/^(\d{5,})@/);
       if (m) return m[1];
     }
+    if (typeof payload.chatId === "string") {
+      const m = payload.chatId.match(/(\d{5,})@/);
+      if (m) return m[1];
+    }
     if (typeof payload.sender === "string") {
       const d = payload.sender.replace(/\D/g, "");
       if (d.length >= 5) return d;

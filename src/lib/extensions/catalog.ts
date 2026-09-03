@@ -32,13 +32,20 @@ export interface ExtensionCatalog {
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.19",
+    latestVersion: "5.10.20",
     items: [
+      {
+        version: "5.10.20",
+        filename: "whatsapp-extension-5.10.20.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.20.zip",
+        current: true,
+        note: "Identità destinatario sicura: conserva JID/numero e deduplica solo tramite identificativo WhatsApp stabile, senza fondere omonimi.",
+      },
       {
         version: "5.10.19",
         filename: "whatsapp-extension-5.10.19.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.19.zip",
-        current: true,
+        current: false,
         note: "Persistent Worker Tab: pre-warm onInstalled/onStartup di una sola tab di servizio web.whatsapp.com in background. Read/send usano la worker tab già hot. Invalidazione su tabs.onRemoved + handler ensureWorkerTab esposto alla UI.",
       },
       {
