@@ -160,7 +160,14 @@ export async function executePlan(
 
     try {
       const resolvedParams = resolveParams(step.params, current.results);
-      const promptText = JSON.stringify(resolvedParams);
+      // Il tool riceve come testo: i params serializzati quando esistono,
+      // altrimenti il prompt utente originale. Senza questo fallback un piano
+      // sintetico (params vuoti) consegnava "{}" ai tool che analizzano il
+      // linguaggio naturale (navigate-to, search-kb, …) → 0 risultati.
+      const promptText =
+        Object.keys(resolvedParams).length === 0 && extras?.originalPrompt
+          ? extras.originalPrompt
+          : JSON.stringify(resolvedParams);
       const result = await withTimeout(
         tool.execute(promptText, {
           confirmed: false,
@@ -230,7 +237,10 @@ export async function executeApprovedStep(
 
   try {
     const resolvedParams = resolveParams(step.params, current.results);
-    const promptText = JSON.stringify(resolvedParams);
+    const promptText =
+      Object.keys(resolvedParams).length === 0 && extras?.originalPrompt
+        ? extras.originalPrompt
+        : JSON.stringify(resolvedParams);
     const result = await withTimeout(
       tool.execute(promptText, {
         confirmed: true,
