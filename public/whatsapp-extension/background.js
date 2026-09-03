@@ -147,7 +147,7 @@ var ACTION_HANDLERS = {
     }
     TabManager.enqueueAction(async function () {
       try {
-        sendResponse(await Actions.readThread(msg.contact, msg.maxMessages || 50));
+        sendResponse(await Actions.readThread(msg.contact, msg.maxMessages || 50, msg.jid || null));
       } catch (err) {
         sendResponse(Config.errorResponse(Config.ERROR.THREAD_FAILED, err.message));
       }

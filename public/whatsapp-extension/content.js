@@ -82,7 +82,7 @@
     if (!data || typeof data !== "object") return "Invalid payload";
     if (!data.action || typeof data.action !== "string") return "Missing action";
     if (ALLOWED_ACTIONS.indexOf(data.action) === -1) return "Unknown action: " + data.action;
-    var stringFields = ["phone", "text", "contact", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
+    var stringFields = ["phone", "text", "contact", "jid", "lastKnownText", "supabaseUrl", "anonKey", "authToken"];
     for (var i = 0; i < stringFields.length; i++) {
       var field = stringFields[i];
       if (data[field] && typeof data[field] === "string" && data[field].length > MAX_STRING_LENGTH) {
@@ -113,6 +113,7 @@
         "phone",
         "text",
         "contact",
+        "jid",
         "maxMessages",
         "maxScrolls",
         "lastKnownText",

@@ -214,7 +214,7 @@ export function useWhatsAppExtensionBridge() {
   const readUnread = useCallback(() => sendMsg("readUnread", {}, 45000), [sendMsg]);
 
   const readThread = useCallback(
-    (contact: string, maxMessages = 50) => sendMsg("readThread", { contact, maxMessages }, 60000),
+    (contact: string, maxMessages = 50, jid?: string) => sendMsg("readThread", { contact, maxMessages, jid }, 60000),
     [sendMsg],
   );
 
