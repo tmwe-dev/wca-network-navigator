@@ -12,7 +12,9 @@ export const outreachQueueStatusTool: Tool = {
   match: (p) =>
     /coda|outreach|in attesa|pending/i.test(p) &&
     // Solo intento di lettura stato: accodare/programmare è compito di enqueue-outreach.
-    !/campagn|email|componi|programma|pianifica|accoda|schedula|avvia|cancella|annulla|rimuovi/i.test(p),
+    !/campagn|email|componi|programma|pianifica|accoda|schedula|avvia|cancella|annulla|rimuovi|azione|action|esegui/i.test(
+      p,
+    ),
 
   execute: async (): Promise<ToolResult> => {
     const result = await fetchOutreachQueue();
