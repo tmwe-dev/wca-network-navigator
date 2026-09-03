@@ -37,7 +37,7 @@ export const kbIngestDocumentTool: Tool = {
   label: "Ingestisci documento KB",
   description: "Indicizza un documento (PDF/DOCX/MD/TXT) nella Knowledge Base con embedding e chunking.",
   match: (p) =>
-    /\b(?:ingest|indicizza|carica|aggiungi)\b[^.]{0,40}\b(?:knowledge|kb|knowledge\s*base)\b|\bkb[-\s]ingest\b/i.test(
+    /\b(?:ingest|indicizza|carica|aggiungi)\b[^\n]{0,40}?\b(?:knowledge|kb|knowledge\s*base)\b|\bkb[-\s]ingest\b/i.test(
       p,
     ),
 
