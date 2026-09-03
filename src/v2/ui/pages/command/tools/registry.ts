@@ -73,6 +73,7 @@ import { restoreContactTool } from "./restoreContact";
 import { runPromptTestTool } from "./runPromptTest";
 import { navigateToTool } from "./navigateTo";
 import { appMapTool } from "./appMapTool";
+import { fieldValuesTool } from "./fieldValues";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -82,6 +83,7 @@ const TOOLS: readonly Tool[] = [
   // Composers / special
   composeEmailTool,
   // Reads
+  fieldValuesTool,
   dashboardSnapshotTool,
   outreachQueueStatusTool,
   dailyBriefingTool,
