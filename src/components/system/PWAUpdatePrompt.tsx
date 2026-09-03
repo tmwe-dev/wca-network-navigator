@@ -3,7 +3,7 @@
  * versione del service worker è disponibile, e permette l'aggiornamento immediato.
  * Risolve il problema di cache stale dopo Publish.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("PWAUpdatePrompt");
@@ -11,6 +11,12 @@ const log = createLogger("PWAUpdatePrompt");
 export function PWAUpdatePrompt() {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  // Il reload è consentito SOLO dopo click esplicito su "Aggiorna ora".
+  // Con workbox skipWaiting+clientsClaim il nuovo SW prende il controllo da solo:
+  // un reload automatico su `controllerchange` azzerava la conversazione in corso
+  // (Command, bozze, form) a metà lavoro.
+  const userTriggeredUpdateRef = useRef(false);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +57,10 @@ export function PWAUpdatePrompt() {
         };
 
         registration.addEventListener("updatefound", onUpdateFound);
-        navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!userTriggeredUpdateRef.current) return;
+          window.location.reload();
+        });
         intervalId = setInterval(() => {
           registration.update().catch(() => undefined);
         }, 60_000);
@@ -80,7 +89,11 @@ export function PWAUpdatePrompt() {
       </div>
       <div className="flex gap-2 mt-3">
         <button
-          onClick={() => waitingWorker.postMessage({ type: "SKIP_WAITING" })}
+          onClick={() => {
+            userTriggeredUpdateRef.current = true;
+            waitingWorker.postMessage({ type: "SKIP_WAITING" });
+            window.location.reload();
+          }}
           className="flex-1 bg-card/60 dark:bg-card/40 border border-primary/60 text-primary text-sm py-2 px-3 rounded-md hover:bg-primary/15 hover:border-primary transition-colors font-medium"
         >
           Aggiorna ora
