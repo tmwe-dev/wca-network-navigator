@@ -55,6 +55,8 @@ import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 const ContactRecordDrawer = lazyRetry(() =>
   import("@/components/contact-drawer/ContactRecordDrawer").then((m) => ({ default: m.ContactRecordDrawer })),
 );
+const WhatsAppQuickDialog = lazyRetry(() => import("@/components/whatsapp/WhatsAppQuickDialog"));
+
 const MissionDrawer = lazyRetry(() =>
   import("@/components/global/MissionDrawer").then((m) => ({ default: m.MissionDrawer })),
 );
