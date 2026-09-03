@@ -31,7 +31,8 @@ export const batchEnrichPartnersTool: Tool = {
   label: "Arricchimento batch partner",
   description:
     "Arricchisce dati e siti dei partner trovati nell'ultima ricerca (es. partner di Malta). Una sola conferma, poi esegue.",
-  match: (p: string) => MATCH.test(p),
+  // I prospect hanno un tool dedicato (enrich-prospect-from-website).
+  match: (p: string) => MATCH.test(p) && !/\bprospect/i.test(p),
 
   execute: async (prompt, context): Promise<ToolResult> => {
     const ctx = getLastQueryResultContext();

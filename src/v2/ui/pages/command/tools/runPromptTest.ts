@@ -11,7 +11,7 @@ export const runPromptTestTool: Tool = {
   id: "run-prompt-test",
   label: "Esegui test prompt",
   description: "Esegue i test di regressione per un prompt operativo",
-  match: (p) => /\b(esegui|lancia|run)\s+(test|regression)\s+(del\s+)?prompt/i.test(p),
+  match: (p) => /\b(esegui|lancia|run)\s+(?:il\s+|la\s+)?(test|regression)\s+(?:del\s+|dei\s+)?prompt/i.test(p),
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     const id = prompt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
     const payload = mergePayload<Payload>(context?.payload, { prompt_id: id });

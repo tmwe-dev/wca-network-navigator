@@ -11,7 +11,7 @@ export const restoreContactTool: Tool = {
   id: "restore-contact",
   label: "Ripristina contatto",
   description: "Ripristina un contatto dal cestinone",
-  match: (p) => /\b(ripristina|recupera|restore)\s+contatt/i.test(p),
+  match: (p) => /\b(ripristina|recupera|restore)\s+(?:il\s+|lo\s+|un\s+)?contatt/i.test(p),
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     const id = prompt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
     const email = prompt.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)?.[0];

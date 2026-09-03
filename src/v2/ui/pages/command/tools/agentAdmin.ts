@@ -63,7 +63,8 @@ export const updateAgentPersonaTool: Tool = {
   id: "update-agent-persona",
   label: "Aggiorna persona agente",
   description: "Aggiorna la persona (tono/lingua/prompt) di un agente",
-  match: (p) => /\b(aggiorna|modifica)\s+(persona|tono|prompt)\s+(dell')?agente/i.test(p),
+  match: (p) =>
+    /\b(aggiorna|modifica|cambia)\s+(?:il\s+|la\s+|lo\s+)?(persona|tono|prompt)\s+(?:dell'|del\s+|di\s+|dell\s+)?agente/i.test(p),
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     const payload = mergePayload<PersonaPayload>(context?.payload, {});
     const ref = String(payload.agent_id || payload.agent_name || "").trim();

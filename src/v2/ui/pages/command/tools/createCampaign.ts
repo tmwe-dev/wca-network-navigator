@@ -20,7 +20,7 @@ export const createCampaignTool: Tool = {
   id: "create-campaign",
   label: "Crea campagna",
   description: "Crea un nuovo job di campagna outreach",
-  match: (p) => /(crea|lancia|nuova)\s+campagna/i.test(p),
+  match: (p) => /\b(crea|lancia|nuova)\s+(?:la\s+|una\s+|nuova\s+)?campagna/i.test(p),
 
   execute: async (prompt, context?: ToolContext): Promise<ToolResult> => {
     if (!context?.confirmed) {

@@ -26,6 +26,10 @@ export const followupBatchTool: Tool = {
   match(prompt: string): boolean {
     const p = prompt.toLowerCase();
     if (p.includes("partner") && !p.includes("inattiv") && !p.includes("follow")) return false;
+    // Azioni su una singola attività hanno tool dedicati (close/reschedule-activity).
+    if (/\b(completa|chiudi|riprogramma|sposta)\b.*\battivit/.test(p)) return false;
+    // Suggerimenti/raggruppamenti email hanno tool dedicati.
+    if (/\b(suggerisci|proponi|raggruppa|cluster)\b/.test(p)) return false;
     return /follow|inattiv|riprend|ricontatt|batch.*client/.test(p);
   },
 
