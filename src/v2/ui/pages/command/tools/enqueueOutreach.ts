@@ -32,7 +32,7 @@ export const enqueueOutreachTool: Tool = {
     if (items.length === 0) throw new Error("Nessun item da accodare");
 
     const result = await enqueueOutreach(items as never[]);
-    if (!isOk(result)) throw new Error(result.error.message);
+    if (!isOk(result)) throw new Error(result.error?.message ?? "Accodamento outreach fallito");
 
     return {
       kind: "result",
