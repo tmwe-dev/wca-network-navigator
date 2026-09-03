@@ -1821,7 +1821,7 @@ var Actions =
           const exacts = candidates.filter(function (x) {
             return x.exact;
           });
-          // Policy 5.10.21: in caso di doppioni/incongruenze NON si aborta.
+          // Policy legacy 5.10.21: in caso di record senza JID non si aborta.
           // La sidebar di ricerca è ordinata per recency (chat più recente in alto),
           // quindi si sceglie sempre il PRIMO candidato in ordine DOM = il più recente.
           const pool = exacts.length > 0 ? exacts : candidates;
