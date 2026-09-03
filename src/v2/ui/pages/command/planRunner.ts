@@ -237,7 +237,10 @@ export async function executeApprovedStep(
 
   try {
     const resolvedParams = resolveParams(step.params, current.results);
-    const promptText = JSON.stringify(resolvedParams);
+    const promptText =
+      Object.keys(resolvedParams).length === 0 && extras?.originalPrompt
+        ? extras.originalPrompt
+        : JSON.stringify(resolvedParams);
     const result = await withTimeout(
       tool.execute(promptText, {
         confirmed: true,
