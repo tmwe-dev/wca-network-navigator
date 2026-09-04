@@ -38,7 +38,7 @@ interface Props {
   globalSync: GlobalSyncState;
 }
 
-export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): React.ReactElement {
+export function StatusPanelBody({ onAiClick, outreachQueue, globalSync }: Props): React.ReactElement {
   const isOnline = useOnlineStatus();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -92,19 +92,8 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
             : "Tutto OK";
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" aria-label={`Stato sistema: ${summary}`}>
-          <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
-          {outreachQueue.pendingCount > 0 && (
-            <Badge variant="outline" className="h-4 px-1 text-[10px] tabular-nums">
-              {outreachQueue.pendingCount}
-            </Badge>
-          )}
-          <span className="sr-only">{summary}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-[26rem] max-w-[calc(100vw-1rem)] p-3 space-y-3">
+    <div className="space-y-3">
+
         <div className="flex items-center justify-between border-b border-border/40 pb-2">
           <div className="flex items-center gap-2">
             {isOnline ? (
@@ -230,7 +219,23 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
             />
           </div>
         </div>
+    </div>
+  );
+}
+
+/** Retrocompat: pill autonoma con popover (non più usata nella top bar unificata). */
+export function StatusPill(props: Props): React.ReactElement {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" aria-label="Stato sistema">
+          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[26rem] max-w-[calc(100vw-1rem)] p-3">
+        <StatusPanelBody {...props} />
       </PopoverContent>
     </Popover>
   );
 }
+

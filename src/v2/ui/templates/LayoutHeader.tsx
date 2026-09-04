@@ -14,14 +14,9 @@ import { useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { MainMenu } from "./MainMenu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { NotificationCenter } from "@/components/notifications/NotificationCenter";
-import { OperationalContextSelector } from "@/components/header/OperationalContextSelector";
-import { StatusPill } from "./header/StatusPill";
-import { AutomationsPanel } from "./header/AutomationsPanel";
-import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
-import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
-import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
+import { SystemHub } from "./header/SystemHub";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
+
 import { useInitTheme } from "@/v2/ui/theme/ThemePicker";
 
 interface OutreachQueue {
@@ -112,15 +107,12 @@ export function LayoutHeader({
       {/* CENTER — slot ricerca della maschera corrente (riempito via Portal) */}
       <div id="page-search-slot" className="flex min-w-0 flex-[1.2] items-center justify-center px-3" />
 
-      {/* RIGHT cluster — stato, automazioni e strumenti (tutte le icone qui) */}
+      {/* RIGHT cluster — UNA sola icona: hub di sistema con tab orizzontali */}
       <div className="flex items-center gap-0.5 shrink-0">
-        <StatusPill onAiClick={onAiClick ?? (() => {})} outreachQueue={outreachQueue} globalSync={globalSync} />
-        <AutomationsPanel />
-        <NotificationCenter />
-        <DownloadExtensionsButton />
-        <WhatsAppSyncButton />
-        <OperationalContextSelector />
-        <HeaderToolsMenu
+        <SystemHub
+          onAiClick={onAiClick ?? (() => {})}
+          outreachQueue={outreachQueue}
+          globalSync={globalSync}
           onAddContact={onAddContact}
           onAgentDash={onAgentDash}
           onTestExt={onTestExt}
@@ -128,6 +120,7 @@ export function LayoutHeader({
           onToggleTheme={onToggleTheme}
         />
       </div>
+
     </header>
   );
 }
