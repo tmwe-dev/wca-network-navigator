@@ -141,12 +141,11 @@ function dispatchStatusLabel(s: string | null | undefined): string {
 
 type TabKey = "cron" | "channels";
 
-export function AutomationsPanel(): React.ReactElement {
+export function AutomationsBody({ active = true }: { active?: boolean }): React.ReactElement {
   const [tab, setTab] = React.useState<TabKey>("cron");
-  // Gate ALL polling on popover open: la top-bar prima martellava
-  // `cron_job_status()` ogni 30 s a utente, generando >9k call/settimana
-  // (query media 1.3 s) — l'audit 2026-07-17 l'ha marcata come emorragia I/O.
-  const [open, setOpen] = React.useState(false);
+  // Polling gated su `active`: la top-bar prima martellava `cron_job_status()`
+  // ogni 30 s a utente (audit 2026-07-17: emorragia I/O).
+  const open = active;
 
   const { data: jobs = [], isLoading: loadingJobs } = useQuery<CronJobStatus[]>({
     queryKey: queryKeys.cronJobs.list,
@@ -177,30 +176,10 @@ export function AutomationsPanel(): React.ReactElement {
     return Date.now() - new Date(r.start_time).getTime() < 24 * 3600_000;
   }).length;
 
-  const dot = failed24h > 0 ? "bg-amber-500" : totalActive > 0 ? "bg-emerald-500" : "bg-muted";
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2 text-xs"
-          aria-label="Automazioni"
-          title="Automazioni"
-        >
-          <Cog className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="sr-only">Automazioni</span>
-          <span className={`inline-block h-2 w-2 rounded-full ${dot}`} />
-          {failed24h > 0 && (
-            <Badge variant="outline" className="h-4 px-1 text-[10px] text-amber-600 border-amber-500/40">
-              {failed24h}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-[34rem] max-w-[calc(100vw-1rem)] p-3 space-y-3">
+    <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-border/40 pb-2">
+
           <div className="flex items-center gap-2">
             <Cog className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Automazioni</span>
@@ -366,7 +345,24 @@ export function AutomationsPanel(): React.ReactElement {
             </ScrollArea>
           </section>
         )}
+    </div>
+  );
+}
+
+/** Retrocompat: pannello autonomo con trigger a icona. */
+export function AutomationsPanel(): React.ReactElement {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" aria-label="Automazioni">
+          <Cog className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[34rem] max-w-[calc(100vw-1rem)] p-3">
+        <AutomationsBody active={open} />
       </PopoverContent>
     </Popover>
   );
 }
+
