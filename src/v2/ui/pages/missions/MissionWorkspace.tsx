@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatusDot } from "@/v2/ui/molecules/StatusDot";
-import { openCoPilot, openCoPilotVoice } from "@/v2/ui/templates/StandardPageFrame";
+import { openCoPilot } from "@/v2/ui/templates/StandardPageFrame";
 import { EVENT_LABELS, statusMeta, type MissionEvent } from "./missionMeta";
 import type { WorkspaceMessage } from "@/v2/hooks/useMissionWorkspaceChat";
 import type { AgentMissionRow } from "@/data/agentMissions";
