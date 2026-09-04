@@ -95,6 +95,51 @@ export const AI_FUNCTION_NAMES = new Set<string>([
   "simulate-funnemail-classify",
 ]);
 
+/** Shape del trace pipeline restituito dalle edge instrumentate (_shared/pipelineRecorder.ts). */
+interface EdgePipelineStep {
+  index: number;
+  key: string;
+  label: string;
+  status: "success" | "skipped" | "warning" | "error";
+  duration_ms: number;
+  summary?: Record<string, unknown>;
+  note?: string;
+}
+interface EdgePipelineTrace {
+  pipeline: string;
+  started_at: string;
+  total_ms: number;
+  steps: EdgePipelineStep[];
+}
+
+/** Ripubblica i passaggi server-side come eventi `flow.step` nella Trace Console. */
+function emitPipelineSteps(
+  payload: unknown,
+  ctx: { scope: string; functionName: string; route?: string; correlationId: string },
+): void {
+  const trace = (payload as { _pipeline?: EdgePipelineTrace } | null)?._pipeline;
+  if (!trace || !Array.isArray(trace.steps)) return;
+  for (const step of trace.steps) {
+    traceCollector.push({
+      type: "flow.step",
+      scope: ctx.scope,
+      source: `${trace.pipeline}#${step.index}. ${step.label}`,
+      route: ctx.route,
+      status: step.status === "success" ? "success" : step.status === "error" ? "error" : step.status,
+      duration_ms: step.duration_ms,
+      payload_summary: {
+        pipeline: trace.pipeline,
+        step_index: step.index,
+        step_key: step.key,
+        label: step.label,
+        note: step.note,
+        result: step.summary ?? null,
+      },
+      correlation_id: ctx.correlationId,
+    });
+  }
+}
+
 export async function invokeAi<TResponse = unknown, TBody = Record<string, unknown>>(
   functionName: string,
   options: InvokeAiOptions<TBody>,
@@ -144,6 +189,7 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
   try {
     const res = await invokeEdge<TResponse>(functionName, invokeOpts);
     _result = res;
+    emitPipelineSteps(res, { scope, functionName, route, correlationId: corr });
     traceCollector.push({
       type: "ai.invoke",
       scope,
@@ -159,6 +205,12 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
     _ok = false;
     const e = err as { message?: string; code?: string; httpStatus?: number };
     _errMsg = e?.message ?? String(err);
+    emitPipelineSteps((e as { details?: { body?: unknown } })?.details?.body, {
+      scope,
+      functionName,
+      route,
+      correlationId: corr,
+    });
     traceCollector.push({
       type: "ai.invoke",
       scope,
