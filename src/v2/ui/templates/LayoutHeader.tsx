@@ -112,15 +112,12 @@ export function LayoutHeader({
       {/* CENTER — slot ricerca della maschera corrente (riempito via Portal) */}
       <div id="page-search-slot" className="flex min-w-0 flex-[1.2] items-center justify-center px-3" />
 
-      {/* RIGHT cluster — stato, automazioni e strumenti (tutte le icone qui) */}
+      {/* RIGHT cluster — UNA sola icona: hub di sistema con tab orizzontali */}
       <div className="flex items-center gap-0.5 shrink-0">
-        <StatusPill onAiClick={onAiClick ?? (() => {})} outreachQueue={outreachQueue} globalSync={globalSync} />
-        <AutomationsPanel />
-        <NotificationCenter />
-        <DownloadExtensionsButton />
-        <WhatsAppSyncButton />
-        <OperationalContextSelector />
-        <HeaderToolsMenu
+        <SystemHub
+          onAiClick={onAiClick ?? (() => {})}
+          outreachQueue={outreachQueue}
+          globalSync={globalSync}
           onAddContact={onAddContact}
           onAgentDash={onAgentDash}
           onTestExt={onTestExt}
@@ -128,6 +125,7 @@ export function LayoutHeader({
           onToggleTheme={onToggleTheme}
         />
       </div>
+
     </header>
   );
 }
