@@ -16,7 +16,7 @@
  */
 import * as React from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Sparkles, ChevronRight, Mic } from "lucide-react";
+import { Sparkles, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buildCrumbs } from "./breadcrumbConfig";
 import { SectionTabs, type SectionTab } from "./SectionTabs";
@@ -24,11 +24,6 @@ import { SectionTabs, type SectionTab } from "./SectionTabs";
 /** Apre il Floating Co-Pilot già attivo sul contesto pagina. */
 export function openCoPilot(): void {
   window.dispatchEvent(new CustomEvent("copilot-open"));
-}
-
-/** Apre il Co-Pilot e avvia direttamente la conversazione vocale. */
-export function openCoPilotVoice(): void {
-  window.dispatchEvent(new CustomEvent("copilot-voice"));
 }
 
 
@@ -118,25 +113,14 @@ export function StandardPageFrame({
 
         <div className="flex items-center gap-2 shrink-0">
           {!hideAi && (
-            <>
-              <button
-                type="button"
-                onClick={openCoPilotVoice}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
-                aria-label="Parla con l'assistente vocale"
-                title="Assistente vocale"
-              >
-                <Mic className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={openCoPilot}
-                className="inline-flex h-7 items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/15 hover:border-primary transition-colors"
-                aria-label="Apri assistente AI"
-              >
-                <Sparkles className="h-3.5 w-3.5" /> AI
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={openCoPilot}
+              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/15 hover:border-primary transition-colors"
+              aria-label="Apri assistente AI"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> AI
+            </button>
           )}
 
           {actions}

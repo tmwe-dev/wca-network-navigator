@@ -4,7 +4,7 @@
  * Puramente presentazionale: riceve dati e callback dalla pagina.
  */
 import * as React from "react";
-import { Rocket, SendHorizonal, Sparkles, Mic, Activity } from "lucide-react";
+import { Rocket, SendHorizonal, Sparkles, Activity } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -182,15 +182,6 @@ export function MissionWorkspace({
             className="min-h-[32px] max-h-40 resize-none border-0 bg-transparent p-1 text-xs shadow-none focus-visible:ring-0"
           />
           <div className="flex shrink-0 items-center gap-1 pb-0.5">
-            <button
-              type="button"
-              onClick={openCoPilotVoice}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
-              aria-label="Parla con l'assistente vocale"
-              title="Voce"
-            >
-              <Mic className="h-3.5 w-3.5" />
-            </button>
             <button
               type="button"
               onClick={openCoPilot}
