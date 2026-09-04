@@ -25,6 +25,7 @@ import { buildEmailContract, validateEmailContract, type ResolvedEmailType } fro
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
 import { createLogger } from "../_shared/structuredLogger.ts";
 import { edgeErrorWithStatus } from "../_shared/handleEdgeError.ts";
+import { PipelineRecorder } from "../_shared/pipelineRecorder.ts";
 
 const log = createLogger("generate-email");
 
@@ -36,6 +37,7 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   const metrics = startMetrics("generate-email");
+  const rec = new PipelineRecorder("generate-email");
   try {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
@@ -202,6 +204,16 @@ serve(async (req) => {
       );
     }
 
+    rec.step("entity", "Caricamento entità (partner + contatto)", "success", {
+      source_type: sourceType,
+      partner: partner?.company_name ?? null,
+      partner_id: partner?.id ?? null,
+      contact: contact?.name ?? null,
+      contact_email: contactEmail,
+      standalone: !!standalone,
+      quality,
+    });
+
     // ── LOVABLE-81/82: Costruisci contratto + detector tipo (non bloccante per standalone) ──
     let typeResolution: ResolvedEmailType | null = null;
     const contractWarnings: string[] = [];
@@ -222,6 +234,10 @@ serve(async (req) => {
         const validation = validateEmailContract(contract);
         contractWarnings.push(...build_warnings, ...validation.warnings);
         if (!validation.valid) {
+          rec.step("contract", "Contract + validazione", "error", {
+            errors: validation.errors,
+            warnings: validation.warnings,
+          });
           // Errori bloccanti del contratto (es. blacklisted) → 422 esplicito
           return new Response(
             JSON.stringify({
@@ -229,12 +245,28 @@ serve(async (req) => {
               error: "CONTRACT_INVALID",
               errors: validation.errors,
               warnings: validation.warnings,
+              _pipeline: rec.toJSON(),
             }),
             { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
           );
         }
+        rec.step("contract", "Contract + validazione", contractWarnings.length ? "warning" : "success", {
+          email_type: oracle_type || "primo_contatto",
+          warnings: contractWarnings,
+        });
         // Detector tipo/descrizione/history/stato
         typeResolution = detectEmailType(contract);
+        rec.step(
+          "type_detector",
+          "Detector tipo email",
+          typeResolution.proceed ? (typeResolution.conflicts.length ? "warning" : "success") : "error",
+          {
+            original_type: typeResolution.original_type,
+            resolved_type: typeResolution.resolved_type,
+            proceed: typeResolution.proceed,
+            conflicts: typeResolution.conflicts,
+          },
+        );
         if (!typeResolution.proceed) {
           return new Response(
             JSON.stringify({
@@ -245,11 +277,14 @@ serve(async (req) => {
                 .filter((c) => c.severity === "blocking")
                 .map((c) => c.suggestion)
                 .join(". ")}`,
+              _pipeline: rec.toJSON(),
             }),
             { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
           );
         }
       } catch (cerr) {
+        rec.step("contract", "Contract + detector", "warning", undefined,
+          cerr instanceof Error ? cerr.message : String(cerr));
         console.warn(
           "[generate-email] contract/detector failed (non-blocking):",
           cerr instanceof Error ? cerr.message : cerr,
@@ -273,14 +308,31 @@ serve(async (req) => {
       );
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; recentContact?: unknown };
+      rec.step("context", "Context assembler", "error", undefined, err.message);
       if (err.code === "duplicate_branch") {
         return new Response(
-          JSON.stringify({ error: "duplicate_branch", message: err.message, recent_contact: err.recentContact }),
+          JSON.stringify({
+            error: "duplicate_branch",
+            message: err.message,
+            recent_contact: err.recentContact,
+            _pipeline: rec.toJSON(),
+          }),
           { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
       throw e;
     }
+
+    rec.step("context", "Context assembler (dossier + storico + KB)", "success", {
+      kb_sections: ctx.salesKBSections || [],
+      history_present: !!ctx.historyContext,
+      touch_count: ctx.touchCount ?? 0,
+      days_since_last_contact: ctx.daysSinceLastContact ?? null,
+      deep_search_status: ctx.deepSearchStatus ?? "missing",
+      playbook_active: ctx.playbookActive ?? false,
+      documents_count: document_ids?.length ?? 0,
+      operative_prompts_applied: ctx.operativePromptsApplied ?? [],
+    });
 
     // ── LOVABLE-93: Decision Engine — evaluate before generation ──
     let decisionContext: Record<string, unknown> | undefined;
@@ -305,9 +357,14 @@ serve(async (req) => {
             },
           };
         }
+        rec.step("decision_engine", "Decision Engine", "success", decisionContext ?? { action: "no_action" });
       } catch (decErr) {
+        rec.step("decision_engine", "Decision Engine", "warning", undefined,
+          decErr instanceof Error ? decErr.message : String(decErr));
         console.warn("[generate-email] Decision Engine evaluation failed (non-blocking):", decErr);
       }
+    } else {
+      rec.step("decision_engine", "Decision Engine", "skipped", undefined, "standalone o partner senza id");
     }
 
     // ── LOVABLE-110: Carica learned_patterns (preferenze + regole approvate) ──
@@ -370,6 +427,15 @@ serve(async (req) => {
     const systemBlocks = built.systemBlocks;
     const promptOverridden = baseSystemPrompt !== built.systemPrompt || userPrompt !== built.userPrompt;
 
+    rec.step("prompt", "Prompt builder (Prompt Lab + calligrafia)", "success", {
+      system_chars: systemPrompt.length,
+      user_chars: userPrompt.length,
+      system_blocks: systemBlocks.map((b: { label: string }) => b.label),
+      blocks: blocks.map((b: { label: string }) => b.label),
+      prompt_overridden: promptOverridden,
+      learned_patterns: effectiveLearnedPatterns ? effectiveLearnedPatterns.split("\n").length : 0,
+    });
+
     // ── AI call ──
     const model = getModel(quality);
     const aiStart = Date.now();
@@ -391,12 +457,26 @@ serve(async (req) => {
       seed: Math.floor(Math.random() * 1_000_000_000),
     });
     const aiLatencyMs = Date.now() - aiStart;
+    rec.step("llm", "Chiamata LLM", "success", {
+      model,
+      quality,
+      latency_ms: aiLatencyMs,
+      tokens_in: result.usage?.promptTokens ?? null,
+      tokens_out: result.usage?.completionTokens ?? null,
+      output_chars: (result.content || "").length,
+    });
 
     // ── Parse response ──
     const { subject, body } = parseEmailResponse(result.content || "", ctx.signatureBlock);
     const groundingSourceText = `${systemPrompt}\n${userPrompt}`;
     const preReviewGrounding = guardGeneratedEmailGrounding({ subject, body, sourceText: groundingSourceText });
     const groundingWarnings: GroundingGuardWarning[] = [...preReviewGrounding.warnings];
+    rec.step("parser", "Parser risposta + grounding guard", preReviewGrounding.warnings.length ? "warning" : "success", {
+      subject: subject,
+      body_chars: (body || "").length,
+      signature_attached: !!ctx.signatureBlock,
+      grounding_warnings: preReviewGrounding.warnings,
+    });
 
     // ── GIORNALISTA AI — Caporedattore Finale (LOVABLE-80 v2) ──
     let finalSubject = preReviewGrounding.subject;
@@ -463,7 +543,25 @@ serve(async (req) => {
         finalBody = postReviewGrounding.body;
         groundingWarnings.push(...postReviewGrounding.warnings);
       }
+        rec.step(
+          "journalist",
+          "Journalist review (caporedattore)",
+          journalistResult.verdict === "block" ? "error" : journalistResult.verdict === "pass" ? "success" : "warning",
+          {
+            verdict: journalistResult.verdict,
+            journalist: journalistResult.journalist,
+            quality_score: journalistResult.quality_score,
+            warnings: journalistResult.warnings,
+            edits_count: journalistResult.edits?.length ?? 0,
+            reasoning: journalistResult.reasoning_summary,
+          },
+        );
+      } else {
+        rec.step("journalist", "Journalist review", "skipped", undefined, "nessun corpo email generato");
+      }
     } catch (jerr) {
+      rec.step("journalist", "Journalist review", "warning", undefined,
+        jerr instanceof Error ? jerr.message : String(jerr));
       log.error("[generate-email] journalistReview failed:", jerr);
       const fallbackGrounding = guardGeneratedEmailGrounding({
         subject: finalSubject,
@@ -514,6 +612,13 @@ serve(async (req) => {
         tokens: result.usage?.promptTokens,
         journalist_verdict: journalistResult?.verdict ?? null,
       },
+    });
+
+    rec.step("credits", "Addebito crediti", "success", {
+      journalist_verdict: journalistResult?.verdict ?? null,
+      half_charge: journalistResult?.verdict === "block",
+      tokens_in: result.usage?.promptTokens ?? null,
+      tokens_out: result.usage?.completionTokens ?? null,
     });
 
     metrics.userId = userId;
@@ -567,6 +672,7 @@ serve(async (req) => {
         // LOVABLE-75: segnale al frontend che NON ci sono dati di arricchimento per questo partner.
         // Il backend non chiama mai più enrich-partner-website live: arricchimento si fa da Settings o Email Forge.
         enrichment_missing: ctx.deepSearchStatus === "missing",
+        _pipeline: rec.toJSON(),
         contract_used: true,
         contract_warnings: contractWarnings,
         type_resolution: typeResolution,
