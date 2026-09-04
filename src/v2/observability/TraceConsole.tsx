@@ -21,7 +21,7 @@ const STORAGE_KEY = "trace_console_state_v1";
 
 interface PersistedState {
   open: boolean;
-  tab: "trace" | "checklist";
+  tab: "trace" | "pipeline" | "checklist";
   filters: { type: TraceEventType | "all"; search: string };
   position: { x: number; y: number };
 }
@@ -39,7 +39,7 @@ function loadState(): PersistedState {
 function defaultState(): PersistedState {
   return {
     open: false,
-    tab: "trace",
+    tab: "pipeline",
     filters: { type: "all", search: "" },
     position: { x: 16, y: 16 },
   };
@@ -127,6 +127,7 @@ export function TraceConsole() {
   }, [events, state.filters]);
 
   const checklists = useMemo(() => buildChecklists(events), [events]);
+  const pipelines = useMemo(() => buildPipelineRuns(events), [events]);
 
   if (!user) return null; // niente console per anon (after hooks)
 
@@ -139,21 +140,10 @@ export function TraceConsole() {
 
   return (
     <>
-      {/* Floating trigger always visible */}
-      <button
-        type="button"
-        onClick={() => setState((s) => ({ ...s, open: !s.open }))}
-        className="fixed bottom-4 right-4 z-[9998] h-10 w-10 rounded-full border border-border bg-background/90 backdrop-blur shadow-md flex items-center justify-center text-xs font-mono hover:bg-accent transition"
-        title="Trace Console (Ctrl+Shift+T)"
-        aria-label="Trace Console"
-      >
-        🩺
-      </button>
-
       {state.open && (
         <div
-          className="fixed z-[9999] w-[520px] max-w-[95vw] h-[60vh] max-h-[640px] flex flex-col rounded-lg border border-border bg-background/98 backdrop-blur shadow-2xl text-foreground"
-          style={{ left: state.position.x, bottom: state.position.y + 56 }}
+          className="fixed z-[9999] w-[620px] max-w-[95vw] h-[72vh] max-h-[760px] flex flex-col rounded-lg border border-border bg-background/98 backdrop-blur shadow-2xl text-foreground"
+          style={{ right: state.position.x, top: 56 }}
           role="dialog"
           aria-label="Trace Console"
         >
@@ -196,6 +186,12 @@ export function TraceConsole() {
               onClick={() => setState((s) => ({ ...s, tab: "trace" }))}
             >
               Trace ({events.length})
+            </button>
+            <button
+              className={`flex-1 py-1.5 ${state.tab === "pipeline" ? "bg-accent" : "hover:bg-accent/50"}`}
+              onClick={() => setState((s) => ({ ...s, tab: "pipeline" }))}
+            >
+              Pipeline ({pipelines.length})
             </button>
             <button
               className={`flex-1 py-1.5 ${state.tab === "checklist" ? "bg-accent" : "hover:bg-accent/50"}`}
@@ -243,6 +239,18 @@ export function TraceConsole() {
                 )}
               </div>
             </>
+          )}
+
+          {state.tab === "pipeline" && (
+            <div className="flex-1 overflow-auto p-2 space-y-2 text-xs">
+              {pipelines.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  Nessuna pipeline registrata — esegui "Genera" o "Migliora" su un'email.
+                </div>
+              ) : (
+                pipelines.map((run) => <PipelineRunCard key={`${run.correlation_id}-${run.pipeline}`} run={run} />)
+              )}
+            </div>
           )}
 
           {state.tab === "checklist" && (
@@ -313,6 +321,107 @@ error:   ${JSON.stringify(ev.error, null, 2)}`
           }`}
         </pre>
       )}
+    </div>
+  );
+}
+
+
+/* ─────────────────────── Pipeline runs (step server-side) ─────────────────── */
+
+interface PipelineRun {
+  correlation_id: string;
+  pipeline: string;
+  startedAt: number;
+  totalMs: number;
+  steps: TraceEvent[];
+  hasError: boolean;
+  hasWarning: boolean;
+}
+
+/** Raggruppa gli eventi `flow.step` emessi dalle edge instrumentate. */
+export function buildPipelineRuns(events: TraceEvent[]): PipelineRun[] {
+  const map = new Map<string, PipelineRun>();
+  for (const e of events) {
+    if (e.type !== "flow.step") continue;
+    const pipeline = String(e.payload_summary?.pipeline ?? e.scope ?? "pipeline");
+    const key = `${e.correlation_id}::${pipeline}`;
+    let run = map.get(key);
+    if (!run) {
+      run = {
+        correlation_id: e.correlation_id,
+        pipeline,
+        startedAt: e.ts,
+        totalMs: 0,
+        steps: [],
+        hasError: false,
+        hasWarning: false,
+      };
+      map.set(key, run);
+    }
+    run.steps.push(e);
+    run.startedAt = Math.min(run.startedAt, e.ts);
+    run.totalMs += e.duration_ms ?? 0;
+    if (e.status === "error") run.hasError = true;
+    if (e.status === "warning") run.hasWarning = true;
+  }
+  const runs = [...map.values()];
+  for (const r of runs) {
+    r.steps.sort((a, b) => Number(a.payload_summary?.step_index ?? 0) - Number(b.payload_summary?.step_index ?? 0));
+  }
+  runs.sort((a, b) => b.startedAt - a.startedAt);
+  return runs;
+}
+
+function stepIcon(status?: string): string {
+  if (status === "success") return "✅";
+  if (status === "error") return "❌";
+  if (status === "warning") return "⚠️";
+  if (status === "skipped") return "⚪";
+  return "•";
+}
+
+function PipelineRunCard({ run }: { run: PipelineRun }) {
+  const [openStep, setOpenStep] = useState<string | null>(null);
+  return (
+    <div className="rounded border border-border p-2">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold">{run.pipeline}</div>
+        <div
+          className={`text-[10px] ${run.hasError ? "text-rose-500" : run.hasWarning ? "text-amber-500" : "text-emerald-500"}`}
+        >
+          {run.steps.length} step · {run.totalMs}ms
+        </div>
+      </div>
+      <div className="text-[10px] text-muted-foreground mb-1.5">
+        {fmtTime(run.startedAt)} · corr {run.correlation_id.slice(0, 8)}
+      </div>
+      <ol className="space-y-1">
+        {run.steps.map((s) => {
+          const summary = s.payload_summary ?? {};
+          const isOpen = openStep === s.id;
+          const result = summary.result as Record<string, unknown> | null;
+          return (
+            <li key={s.id} className="rounded border border-border/60">
+              <button
+                type="button"
+                onClick={() => setOpenStep(isOpen ? null : s.id)}
+                className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-accent/40"
+              >
+                <span>{stepIcon(s.status)}</span>
+                <span className="text-muted-foreground font-mono text-[10px]">{String(summary.step_index ?? "")}</span>
+                <span className="flex-1 truncate">{String(summary.label ?? s.source ?? "step")}</span>
+                <span className="text-[10px] text-muted-foreground">{s.duration_ms ?? 0}ms</span>
+              </button>
+              {isOpen && (
+                <pre className="px-2 pb-2 text-[10px] text-muted-foreground whitespace-pre-wrap break-all">
+                  {summary.note ? `note: ${String(summary.note)}\n` : ""}
+                  {result ? JSON.stringify(result, null, 2) : "nessun dettaglio"}
+                </pre>
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
