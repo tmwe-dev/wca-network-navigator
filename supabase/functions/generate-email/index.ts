@@ -542,7 +542,6 @@ serve(async (req) => {
         finalSubject = postReviewGrounding.subject;
         finalBody = postReviewGrounding.body;
         groundingWarnings.push(...postReviewGrounding.warnings);
-      }
         rec.step(
           "journalist",
           "Journalist review (caporedattore)",
